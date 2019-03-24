@@ -1,0 +1,80 @@
+{
+  "config":
+  {
+    "token": "",
+    "debug-token": "",
+    "prefix": "-",
+    "botName": "Democraciv Bot",
+    "botDescription": "Discord Bot for the r/Democraciv community.",
+    "botVersion": "0.4.0",
+    "botIconURL": "https://cdn.discordapp.com/attachments/487233770152394765/487241649542529035/test.png",
+    "author": "DerJonas#8109",
+    "authorID": "212972352890339328",
+    "enableWelcomeMessage": true,
+    "welcomeChannel": "welcome",
+    "enableLogging": true,
+    "excludedChannelsFromLogging": [],
+    "logChannel": "mod-logs",
+    "commandCooldown": "2.5"
+  },
+
+  "strings":
+  {
+    "welcomeMessage" : "{member}, welcome to {guild}! We are currently playing our fifth game as Norway in Sid Meier's Civilization 6.\n\nYou may want to check #information or #help for tips and guides to get you started.\n\nHere's our Wiki: https://www.reddit.com/r/democraciv/wiki/"
+  },
+
+  "reddit":
+  {
+    "enableRedditAnnouncements": true,
+    "redditAnnouncementChannel": "reddit",
+    "clientID": "",
+    "clientSecret": "",
+    "userAgent": "Reddit App for the r/Democraciv Discord Server"
+  },
+
+  "twitch":
+  {
+    "enableTwitchAnnouncements": true,
+    "twitchAnnouncementChannel": "announcement",
+    "twitchChannelID": "138763356",
+    "twitchChannelName": "Democraciv"
+  },
+
+  "links":
+  {
+    "importantLinks": "**Wiki**\nhttps://www.reddit.com/r/democraciv/wiki/\n**Constitution**\nhttps://goo.gl/FQXEbu\n**List of Laws**\nhttps://goo.gl/TFQ988\n**Parties**\nhttps://www.reddit.com/r/democraciv/wiki/parties",
+    "constitution": "https://docs.google.com/document/d/1pAjJfrRH5Hp-m38Q_fIVVRYGTDHhAErOMTDXI_f69_c/edit?usp=drivesdk",
+    "laws": "https://docs.google.com/document/d/1wgdAG4kBi-KsfYIJ2nkAN3A_NokBwXul1UOFGyWZENM/edit?usp=sharing",
+    "parties": "https://www.reddit.com/r/democraciv/wiki/parties",
+    "legislature": "https://www.reddit.com/r/democraciv/wiki/legislature",
+    "executive": "https://www.reddit.com/r/democraciv/wiki/executive",
+    "judicial": "https://www.reddit.com/r/democraciv/wiki/court",
+    "wiki": "https://www.reddit.com/r/democraciv/wiki/",
+    "beginnersGuide": "https://www.reddit.com/r/democraciv/wiki/beginnersguide",
+    "schedule": "https://www.reddit.com/r/democraciv/wiki/schedule",
+    "discord": "https://discord.gg/AK7dYMG",
+    "subreddit": "https://www.reddit.com/r/democraciv",
+    "androidApp": "https://play.google.com/store/apps/details?id=com.democraciv.derjonas.democraciv",
+    "archive": "https://www.reddit.com/r/democraciv/wiki/archive",
+    "mk4": "https://www.reddit.com/r/democraciv/wiki/mk4",
+    "mk3": "https://www.reddit.com/r/democraciv/wiki/mk3",
+    "mk2": "https://www.reddit.com/r/democraciv/wiki/mk2",
+    "mk1": "https://www.reddit.com/r/democraciv/wiki/mk1",
+    "government": "https://www.reddit.com/r/democraciv/wiki/government",
+    "government-1": "https://www.reddit.com/r/democraciv/wiki/government-1"
+  },
+
+  "parties":
+  {
+    "Space Communist Party": "https://discord.gg/x7ayj2N",
+    "Grand Pirate Party": "https://discord.gg/saQwfb5",
+    "Theocratic Fundamentalists": "https://discord.gg/Nzc7WcK",
+    "Cloud 9": "https://discord.gg/8TZBAfr",
+    "Monarchist Party of Norway": "https://discord.gg/PchxUkZ",
+    "DemocraCorp": "https://discord.gg/ARK9BZg",
+    "Home Rule": "https://discord.gg/D5uWTBU",
+    "State Rights Party": "https://discord.gg/MvrkQ97",
+    "Industro-Optimists": "https://discord.gg/S44gbSc",
+    "Independent": ""
+  }
+}
