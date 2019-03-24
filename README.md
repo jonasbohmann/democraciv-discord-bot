@@ -23,7 +23,7 @@ Module | Description | Requires no permissions
 ------------ | ------------- | -------------
 module.links | Collection of useful links for the game (Wiki, Constitution, political parties etc.) | ✅
 module.about | Commands regarding the bot itself | ✅
-module.admin | Re-, ln- and load modules and the config | ❌
+module.admin | Re-, un- and load modules and the config | ❌
 module.fun | Just -say for now | ❌
 module.help | Scaling -help command | ✅
 module.random | Common choice commands (Heads or Tails etc.) | ✅
