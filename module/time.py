@@ -11,7 +11,8 @@ class Time:
         self.bot = bot
     
     async def returnTime(self, ctx, us: str, time: datetime, name, aliases = []):
-        aliases = '/'.join([name] + aliases).upper()
+        """Displays the current time in based on the inputted values."""
+        aliases = '/'.join([name] + aliases).upper() # Turns the list of aliases into a formatted string
         if us == 'us':
             embed = discord.Embed(title='Time - ' + aliases + ' - US Format',
                                   description=datetime.strftime(time, "%m/%d/%Y, %I:%M:%S %p"), colour=0x7f0000)
