@@ -9,6 +9,19 @@ from discord.ext import commands
 class Time:
     def __init__(self, bot):
         self.bot = bot
+    
+    async def returnTime(self, ctx, us: str, time, name, aliases):
+        aliases = '/'.join([name] + aliases).upper()
+        if us == 'us':
+            embed = discord.Embed(title='Time - ' + aliases + ' - US Format',
+                                  description=datetime.strftime(time, "%m/%d/%Y, %I:%M:%S %p"), colour=0x7f0000)
+            embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
+            await ctx.send(content=None, embed=embed)
+            return
+        embed = discord.Embed(title='Time - ' + aliases, description=datetime.strftime(time, "%d.%m.%Y, %H:%M:%S"),
+                              colour=0x7f0000)
+        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
+        await ctx.send(content=None, embed=embed)
 
     @commands.group(name='time')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -18,17 +31,7 @@ class Time:
     @time.command(name='est', aliases=['edt'])
     async def est(self, ctx, us: str = None):
         """Displays the current time in EST."""
-        time = datetime.now(tz=pytz.timezone('EST5EDT'))
-        if us == 'us':
-            embed = discord.Embed(title='Time - EST/EDT - US Format',
-                                  description=datetime.strftime(time, "%m/%d/%Y, %I:%M:%S %p"), colour=0x7f0000)
-            embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-            await ctx.send(content=None, embed=embed)
-            return
-        embed = discord.Embed(title='Time - EST/EDT', description=datetime.strftime(time, "%d.%m.%Y, %H:%M:%S"),
-                              colour=0x7f0000)
-        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-        await ctx.send(content=None, embed=embed)
+        await self.returnTime(ctx, us, datetime.now(tz=pytz.timezone('EST5EDT')), 'est', ['edt'])
 
     @time.command(name='cet', aliases=['cest'])
     async def cet(self, ctx, us: str = None):
