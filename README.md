@@ -8,8 +8,19 @@ Discord Bot for r/Democraciv written in Python 3. Provides useful information, p
 * [python-twitch-client](https://github.com/tsifrer/python-twitch-client) 0.6.0 or higher
 * [praw](https://github.com/praw-dev/praw) latest available version
  
-
 See `requirements.txt` for details.
+
+## Installation
+
+After installing all the dependencies, create a `token.json` in the config folder.
+
+The file should look like this:
+```
+ {
+  "token": "INSERT_TOKEN_HERE"
+ }
+```
+Add the token of your Discord App like above. Then, run `client.py`.
 
 ## Features
 * Modular system for commands
