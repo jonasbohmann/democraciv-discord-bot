@@ -67,32 +67,12 @@ class Time:
     @time.command(name='eet', aliases=['eest'])
     async def eet(self, ctx, us: str = None):
         """Displays the current time in EET."""
-        time = datetime.now(tz=pytz.timezone('EET'))
-        if us == 'us':
-            embed = discord.Embed(title='Time - EET/EEST - US Format',
-                                  description=datetime.strftime(time, "%m/%d/%Y, %I:%M:%S %p"), colour=0x7f0000)
-            embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-            await ctx.send(content=None, embed=embed)
-            return
-        embed = discord.Embed(title='Time - EET/EEST', description=datetime.strftime(time, "%d.%m.%Y, %H:%M:%S"),
-                              colour=0x7f0000)
-        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-        await ctx.send(content=None, embed=embed)
+        await self.returnTime(ctx, us, datetime.now(tz=pytz.timezone('EET')), 'eet', ['eest'])
 
     @time.command(name='ast', aliases=['adt'])
     async def ast(self, ctx, us: str = None):
         """Displays the current time in AST."""
-        time = datetime.now(tz=pytz.timezone('Canada/Atlantic'))
-        if us == 'us':
-            embed = discord.Embed(title='Time - AST/ADT - US Format',
-                                  description=datetime.strftime(time, "%m/%d/%Y, %I:%M:%S %p"), colour=0x7f0000)
-            embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-            await ctx.send(content=None, embed=embed)
-            return
-        embed = discord.Embed(title='Time - AST/ADT', description=datetime.strftime(time, "%d.%m.%Y, %H:%M:%S"),
-                              colour=0x7f0000)
-        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-        await ctx.send(content=None, embed=embed)
+        await self.returnTime(ctx, us, datetime.now(tz=pytz.timezone('Canada/Atlantic')), 'ast', ['adt'])
 
 
 def setup(bot):
