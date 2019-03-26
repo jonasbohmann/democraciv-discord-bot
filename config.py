@@ -27,6 +27,18 @@ except FileNotFoundError:
     print("ERROR - Couldn't find config.json")
 
 
+try:
+    fileDir = os.path.dirname(os.path.realpath('__file__'))
+    filename2 = os.path.join(fileDir, 'config/token.json')
+    token = json.loads(open(filename2).read())
+except FileNotFoundError:
+    print("ERROR - Couldn't find token.json")
+
+
+def getToken():
+    return token['token']
+
+
 def getConfig():
     return config['config']
 

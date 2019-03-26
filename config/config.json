@@ -1,8 +1,6 @@
 {
   "config":
   {
-    "token": "",
-    "debug-token": "",
     "prefix": "-",
     "botName": "Democraciv Bot",
     "botDescription": "Discord Bot for the r/Democraciv community.",

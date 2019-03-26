@@ -73,6 +73,6 @@ async def on_message(message):
 
 
 try:
-    client.run(config.getConfig()['token'], reconnect=True, bot=True, timeout=3600)
+    client.run(config.getToken(), reconnect=True, bot=True, timeout=3600)
 except asyncio.TimeoutError:
     print('ERROR - TimeoutError')
