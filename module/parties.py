@@ -14,6 +14,15 @@ from discord.ext import commands
 class Party:
     def __init__(self, bot):
         self.bot = bot
+        self.capwordParties = {
+            'Democracorp': 'DemocraCorp',
+            'Monarchist Party Of Norway': 'Monarchist Party of Norway',
+            'Industro-optimists': 'Industro-Optimists'
+        }
+    
+    def fixCapwords(self, party):
+        """Fixes party names with unusual caps"""
+        return self.capwordParties.get(party, party)
 
     @commands.command(name='join')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -28,12 +37,7 @@ class Party:
         party = string.capwords(' '.join(party))
 
         # Fix capwords
-        if party == 'Democracorp':
-            party = 'DemocraCorp'
-        elif party == 'Monarchist Party Of Norway':
-            party = 'Monarchist Party of Norway'
-        elif party == 'Industro-optimists':
-            party = 'Industro-Optimists'
+        party = self.fixCapwords(party)
 
         member = ctx.message.author
         role = discord.utils.get(ctx.guild.roles, name=party)
@@ -91,6 +95,9 @@ class Party:
         party = string.capwords(' '.join(party))
         partyKeys = (config.getParties().keys())
 
+        # Fix capwords
+        party = self.fixCapwords(party)
+
         member = ctx.message.author
         role = discord.utils.get(ctx.guild.roles, name=party)
 
@@ -130,6 +137,7 @@ class Party:
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def members(self, ctx, list: str = None, *party: str):
         """Lists all party members"""
+
         if not list:
             msg = ''
             partyKeys = config.getParties().keys()
@@ -142,9 +150,14 @@ class Party:
             embed = discord.Embed(title=f'Ranking of Political Parties', description=f'{msg}', colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             await ctx.send(embed=embed)
+
         if list == 'list':
-            roleName = ' '.join(party)
-            role = discord.utils.get(ctx.guild.roles, name=roleName)
+            party = string.capwords(' '.join(party))
+
+            # Fix capwords
+            party = self.fixCapwords(party)
+
+            role = discord.utils.get(ctx.guild.roles, name=party)
             msg = ''
             for member in ctx.guild.members:
                 if role in member.roles:

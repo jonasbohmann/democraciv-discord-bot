@@ -1,4 +1,4 @@
-## democraciv-bot
+## democraciv-discord-bot
 Discord Bot for r/Democraciv written in Python 3. Provides useful information, political party management and more. 
 
 ## Requirements
@@ -38,8 +38,11 @@ module.admin | Re-, un- and load modules and the config | ❌
 module.fun | Just -say for now | ❌
 module.help | Scaling -help command | ✅
 module.random | Common choice commands (Heads or Tails etc.) | ✅
-module.role | Join and leave political parties | ✅
+module.parties | Join and leave political parties | ✅
 module.time | Get current time in different timezones | ✅
+module.twitch | Announces when twitch.tv/democraciv goes live *(Under construction)* | ✅
+module.reddit | Post new reddit threads from r/democraciv to #reddit (*Under construction)* | ✅
+module.vote | Start voting on a specified topic with emojis *(Under construction)* | ✅
 module.wikipedia | Search for a topic on wikipedia | ✅
 event.logging | Logs events (member joins/leaves etc.) to a specified channel | 
 event.error_handler | Handles internal erros | 
