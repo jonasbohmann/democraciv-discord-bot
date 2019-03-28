@@ -24,7 +24,7 @@ class Time:
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
         await ctx.send(content=None, embed=embed)
 
-    @commands.group(name='time')
+    @commands.group(name='time', case_insensitive=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def time(self, ctx):
         """Displays the current time. Specify the timezone as argument.\nExample: -time est\nAdd \"us\" at the end to get the time in US formatting."""
