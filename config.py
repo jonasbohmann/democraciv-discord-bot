@@ -1,6 +1,7 @@
 import os
 import json
 import string
+import discord
 
 
 # -- Discord Bot for the r/Democraciv Server --
@@ -89,19 +90,46 @@ def dumpConfigParties():
         json.dump(config_parties, myfile, indent=2)
 
 
-async def addParty(guild, invite, party: list):
+async def addParty(guild, invite, party: str):
     """Adds the inputted party paired with the invite, returns if the party was successfully added"""
-    party = ' '.join(party)
-    if string.capwords(party) in config_parties['parties'] or string.capwords(party) in config_parties['capwordParties']:
+
+    capsParty = string.capwords(party)
+    if capsParty in config_parties['parties'] or capsParty in config_parties['capwordParties']:
         return False
     else:
-        if string.capwords(party) == party:
-            config_parties['parties'][string.capwords(party)] = invite
+        if capsParty == party:
+            config_parties['parties'][capsParty] = invite
         else:
-            config_parties['capwordParties'][string.capwords(party)] = party
+            config_parties['capwordParties'][capsParty] = party
             config_parties['parties'][party] = invite
+        
         dumpConfigParties()
         await guild.create_role(name=party)
+    return True
+
+
+async def deleteParty(guild, party: str):
+    """Deletes the inputted party, returns if the party was successfully deleted"""
+
+    capsParty = string.capwords(party)
+    if capsParty in config_parties['parties'] or capsParty in config_parties['capwordParties']:
+        if capsParty in config_parties['parties']:
+            role = discord.utils.get(guild.roles, name=capsParty)
+            if type(role) != None:
+                await role.delete()
+            
+            del config_parties['parties'][capsParty]
+        elif capsParty in config_parties['capwordParties']:
+            role = discord.utils.get(guild.roles, name=config_parties['capwordParties'][capsParty])
+            if type(role) != None:
+                await role.delete()
+            
+            del config_parties['parties'][config_parties['capwordParties'][capsParty]]
+            del config_parties['capwordParties'][capsParty]
+        
+        dumpConfigParties()
+    else:
+        return False
     return True
     
 

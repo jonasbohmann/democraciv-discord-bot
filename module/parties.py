@@ -171,24 +171,28 @@ class Party:
             await ctx.send(':x: You have to give me both the name and server invite of a political party to add!')
 
         else:
+            party = ' '.join(party)
             hasNewParty = await config.addParty(ctx.guild, invite, party)
-            strParty = ' '.join(party)
             
             if hasNewParty:
-                await ctx.send(f':white_check_mark: Added {strParty} with {invite}!')
+                await ctx.send(f':white_check_mark: Added {party} with {invite}!')
             else:
-                await ctx.send(f':x: Unable to create {strParty}')
+                await ctx.send(f':x: Unable to create {party}')
 
-    @commands.command(name='deleteparty', hidden=True)
+    @commands.command(name='deleteparty')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def deleteparty(self, ctx, invite: str, *party: str):
-        if not party or not invite:
-            await ctx.send(':x: You have to give me both the name and server invite of a political party to add!')
+    async def deleteparty(self, ctx, *party: str):
+        if not party:
+            await ctx.send(':x: You have to give me the name of a political party to delete!')
 
         else:
-            # config.deleteParty(party)
-            # await ctx.send(f':white_check_mark: Deleted {party}!')
-            await ctx.send(':x: This is under construction!')
+            party = ' '.join(party)
+            deletedParty = await config.deleteParty(ctx.guild, party)
+
+            if deletedParty:
+                await ctx.send(f':white_check_mark: Deleted {party}!')
+            else:
+                await ctx.send(f':x: Unable to delete {party}')
 
 
 def setup(bot):
