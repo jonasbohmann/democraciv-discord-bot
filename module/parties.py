@@ -164,20 +164,20 @@ class Party:
                 embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
                 await ctx.send(embed=embed)
 
-    @commands.command(name='addparty', hidden=True)
+    @commands.command(name='addparty')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def addparty(self, ctx, *party: str, invite: str):
+    async def addparty(self, ctx, invite: str, *party: str):
         if not party or not invite:
             await ctx.send(':x: You have to give me both the name and server invite of a political party to add!')
 
         else:
-            # config.addParty(party, invite)
-            # await ctx.send(f':white_check_mark: Added {party} with {invite}!')
-            await ctx.send(':x: This is under construction!')
+            config.addParty(invite, party)
+            strParty=' '.join(party)
+            await ctx.send(f':white_check_mark: Added {strParty} with {invite}!')
 
     @commands.command(name='deleteparty', hidden=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def deleteparty(self, ctx, *party: str, invite: str):
+    async def deleteparty(self, ctx, invite: str, *party: str):
         if not party or not invite:
             await ctx.send(':x: You have to give me both the name and server invite of a political party to add!')
 

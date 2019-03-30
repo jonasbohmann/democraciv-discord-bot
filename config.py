@@ -1,5 +1,6 @@
 import os
 import json
+import string
 
 
 # -- Discord Bot for the r/Democraciv Server --
@@ -70,6 +71,7 @@ def getPrefix():
 def getParties():
     return config_parties['parties']
 
+
 def getCapwordParties():
     return config_parties['capwordParties']
 
@@ -81,6 +83,21 @@ def getReddit():
 def getTwitch():
     return config['twitch']
 
+
+def dumpConfigParties():
+    with open(filename3, 'w') as myfile:
+        json.dump(config_parties, myfile, indent=2)
+
+
+def addParty(invite, party):
+    party = ' '.join(party)
+    if string.capwords(party) == party:
+        config_parties['parties'][string.capwords(party)] = invite
+    else:
+        config_parties['capwordParties'][string.capwords(party)] = party
+        config_parties['parties'][party] = invite
+    dumpConfigParties()
+    
 
 if __name__ == '__main__':
     print('Excuse me?')

@@ -1,6 +1,5 @@
 {
-  "parties":
-  {
+  "parties": {
     "Space Communist Party": "https://discord.gg/x7ayj2N",
     "Grand Pirate Party": "https://discord.gg/saQwfb5",
     "Theocratic Fundamentalists": "https://discord.gg/Nzc7WcK",
@@ -12,9 +11,7 @@
     "Industro-Optimists": "https://discord.gg/S44gbSc",
     "Independent": ""
   },
-  
-  "capwordParties":
-  {
+  "capwordParties": {
     "Democracorp": "DemocraCorp",
     "Monarchist Party Of Norway": "Monarchist Party of Norway",
     "Industro-optimists": "Industro-Optimists"
