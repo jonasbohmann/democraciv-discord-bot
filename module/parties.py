@@ -171,9 +171,13 @@ class Party:
             await ctx.send(':x: You have to give me both the name and server invite of a political party to add!')
 
         else:
-            config.addParty(invite, party)
-            strParty=' '.join(party)
-            await ctx.send(f':white_check_mark: Added {strParty} with {invite}!')
+            hasNewParty = await config.addParty(ctx.guild, invite, party)
+            strParty = ' '.join(party)
+            
+            if hasNewParty:
+                await ctx.send(f':white_check_mark: Added {strParty} with {invite}!')
+            else:
+                await ctx.send(f':x: Unable to create {strParty}')
 
     @commands.command(name='deleteparty', hidden=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)

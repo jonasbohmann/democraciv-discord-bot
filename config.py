@@ -89,14 +89,20 @@ def dumpConfigParties():
         json.dump(config_parties, myfile, indent=2)
 
 
-def addParty(invite, party):
+async def addParty(guild, invite, party: list):
+    """Adds the inputted party paired with the invite, returns if the party was successfully added"""
     party = ' '.join(party)
-    if string.capwords(party) == party:
-        config_parties['parties'][string.capwords(party)] = invite
+    if string.capwords(party) in config_parties['parties'] or string.capwords(party) in config_parties['capwordParties']:
+        return False
     else:
-        config_parties['capwordParties'][string.capwords(party)] = party
-        config_parties['parties'][party] = invite
-    dumpConfigParties()
+        if string.capwords(party) == party:
+            config_parties['parties'][string.capwords(party)] = invite
+        else:
+            config_parties['capwordParties'][string.capwords(party)] = party
+            config_parties['parties'][party] = invite
+        dumpConfigParties()
+        await guild.create_role(name=party)
+    return True
     
 
 if __name__ == '__main__':
