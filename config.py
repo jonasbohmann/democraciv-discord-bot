@@ -35,6 +35,14 @@ except FileNotFoundError:
     print("ERROR - Couldn't find token.json")
 
 
+try:
+    fileDir = os.path.dirname(os.path.realpath('__file__'))
+    filename3 = os.path.join(fileDir, 'config/config_parties.json')
+    config_parties = json.loads(open(filename3).read())
+except FileNotFoundError:
+    print("ERROR - Couldn't find config_parties.json")
+
+
 def getToken():
     return token['token']
 
@@ -60,7 +68,10 @@ def getPrefix():
 
 
 def getParties():
-    return config['parties']
+    return config_parties['parties']
+
+def getCapwordParties():
+    return config_parties['capwordParties']
 
 
 def getReddit():

@@ -14,15 +14,10 @@ from discord.ext import commands
 class Party:
     def __init__(self, bot):
         self.bot = bot
-        self.capwordParties = {
-            'Democracorp': 'DemocraCorp',
-            'Monarchist Party Of Norway': 'Monarchist Party of Norway',
-            'Industro-optimists': 'Industro-Optimists'
-        }
     
     def fixCapwords(self, party):
         """Fixes party names with unusual caps"""
-        return self.capwordParties.get(party, party)
+        return config.getCapwordParties().get(party, party)
 
     @commands.command(name='join')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
