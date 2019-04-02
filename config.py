@@ -94,8 +94,10 @@ async def addParty(guild, invite, party: str):
     """Adds the inputted party paired with the invite, returns if the party was successfully added"""
 
     capsParty = string.capwords(party)
+    # If the party already ready exists, return False
     if capsParty in config_parties['parties'] or capsParty in config_parties['capwordParties']:
         return False
+    # Otherwise, create the party
     else:
         if capsParty == party:
             config_parties['parties'][capsParty] = invite
@@ -112,9 +114,11 @@ async def deleteParty(guild, party: str):
     """Deletes the inputted party, returns if the party was successfully deleted"""
 
     capsParty = string.capwords(party)
+    # If the party already exists, delete it
     if capsParty in config_parties['parties'] or capsParty in config_parties['capwordParties']:
         if capsParty in config_parties['parties']:
             role = discord.utils.get(guild.roles, name=capsParty)
+            # If the party has a role, delete the role
             if type(role) != None:
                 await role.delete()
             
@@ -128,6 +132,7 @@ async def deleteParty(guild, party: str):
             del config_parties['capwordParties'][capsParty]
         
         dumpConfigParties()
+    # Otherwise return False
     else:
         return False
     return True

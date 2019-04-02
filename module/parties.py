@@ -166,6 +166,7 @@ class Party:
 
     @commands.command(name='addparty')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.has_permissions(administrator=True)
     async def addparty(self, ctx, invite: str, *party: str):
         if not party or not invite:
             await ctx.send(':x: You have to give me both the name and server invite of a political party to add!')
@@ -181,6 +182,7 @@ class Party:
 
     @commands.command(name='deleteparty')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.has_permissions(administrator=True)
     async def deleteparty(self, ctx, *party: str):
         if not party:
             await ctx.send(':x: You have to give me the name of a political party to delete!')
