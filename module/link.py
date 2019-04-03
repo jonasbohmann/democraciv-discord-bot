@@ -171,7 +171,7 @@ class Link:
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def residency(self, ctx):
         """See the current population of every city"""
-        embed = discord.Embed(title='Democraciv Archive - MK1', description=config.getLinks()['residencyList'],
+        embed = discord.Embed(title='Residency Spreadsheet', description=config.getLinks()['residencyList'],
                               colour=0x7f0000)
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
         await ctx.send(content=None, embed=embed)
