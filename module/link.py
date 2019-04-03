@@ -3,6 +3,7 @@ import discord
 
 from discord.ext import commands
 
+
 # -- link.py | module.links --
 #
 # Collection of link commands.
@@ -157,7 +158,33 @@ class Link:
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
         await ctx.send(content=None, embed=embed)
 
+    @commands.command(name='move')
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def move(self, ctx):
+        """Change your city of residence"""
+        embed = discord.Embed(title='Change your City of Residency', description=config.getLinks()['residencyForm'],
+                              colour=0x7f0000)
+        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
+        await ctx.send(content=None, embed=embed)
 
+    @commands.command(name='residency')
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def residency(self, ctx):
+        """See the current population of every city"""
+        embed = discord.Embed(title='Democraciv Archive - MK1', description=config.getLinks()['residencyList'],
+                              colour=0x7f0000)
+        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
+        await ctx.send(content=None, embed=embed)
+
+    @commands.command(name='sue')
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def sue(self, ctx):
+        """Submit a Case to the Supreme Court"""
+        embed = discord.Embed(title='Submit a Case to the Supreme Court',
+                              description=config.getLinks()['supremeCourtCaseSubmitter'],
+                              colour=0x7f0000)
+        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
+        await ctx.send(content=None, embed=embed)
 
 
 def setup(bot):
