@@ -14,15 +14,10 @@ from discord.ext import commands
 class Party:
     def __init__(self, bot):
         self.bot = bot
-        self.capwordParties = {
-            'Democracorp': 'DemocraCorp',
-            'Monarchist Party Of Norway': 'Monarchist Party of Norway',
-            'Industro-optimists': 'Industro-Optimists'
-        }
     
     def fixCapwords(self, party):
         """Fixes party names with unusual caps"""
-        return self.capwordParties.get(party, party)
+        return config.getCapwordParties().get(party, party)
 
     @commands.command(name='join')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -169,27 +164,37 @@ class Party:
                 embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
                 await ctx.send(embed=embed)
 
-    @commands.command(name='addparty', hidden=True)
+    @commands.command(name='addparty')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def addparty(self, ctx, *party: str, invite: str):
+    @commands.has_permissions(administrator=True)
+    async def addparty(self, ctx, invite: str, *party: str):
         if not party or not invite:
             await ctx.send(':x: You have to give me both the name and server invite of a political party to add!')
 
         else:
-            # config.addParty(party, invite)
-            # await ctx.send(f':white_check_mark: Added {party} with {invite}!')
-            await ctx.send(':x: This is under construction!')
+            party = ' '.join(party)
+            hasNewParty = await config.addParty(ctx.guild, invite, party)
+            
+            if hasNewParty:
+                await ctx.send(f':white_check_mark: Added {party} with {invite}!')
+            else:
+                await ctx.send(f':x: Unable to create {party}')
 
-    @commands.command(name='deleteparty', hidden=True)
+    @commands.command(name='deleteparty')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def deleteparty(self, ctx, *party: str, invite: str):
-        if not party or not invite:
-            await ctx.send(':x: You have to give me both the name and server invite of a political party to add!')
+    @commands.has_permissions(administrator=True)
+    async def deleteparty(self, ctx, *party: str):
+        if not party:
+            await ctx.send(':x: You have to give me the name of a political party to delete!')
 
         else:
-            # config.deleteParty(party)
-            # await ctx.send(f':white_check_mark: Deleted {party}!')
-            await ctx.send(':x: This is under construction!')
+            party = ' '.join(party)
+            deletedParty = await config.deleteParty(ctx.guild, party)
+
+            if deletedParty:
+                await ctx.send(f':white_check_mark: Deleted {party}!')
+            else:
+                await ctx.send(f':x: Unable to delete {party}')
 
 
 def setup(bot):
