@@ -3,7 +3,6 @@ import json
 import string
 import discord
 
-
 # -- Discord Bot for the r/Democraciv Server --
 #
 # Author: DerJonas
@@ -28,14 +27,12 @@ try:
 except FileNotFoundError:
     print("ERROR - Couldn't find config.json")
 
-
 try:
     fileDir = os.path.dirname(os.path.realpath('__file__'))
     filename2 = os.path.join(fileDir, 'config/token.json')
     token = json.loads(open(filename2).read())
 except FileNotFoundError:
     print("ERROR - Couldn't find token.json")
-
 
 try:
     fileDir = os.path.dirname(os.path.realpath('__file__'))
@@ -104,7 +101,7 @@ async def addParty(guild, invite, party: str):
         else:
             config_parties['capwordParties'][capsParty] = party
             config_parties['parties'][party] = invite
-        
+
         dumpConfigParties()
         await guild.create_role(name=party)
     return True
@@ -119,24 +116,24 @@ async def deleteParty(guild, party: str):
         if capsParty in config_parties['parties']:
             role = discord.utils.get(guild.roles, name=capsParty)
             # If the party has a role, delete the role
-            if role != None:
+            if role is not None:
                 await role.delete()
-            
+
             del config_parties['parties'][capsParty]
         elif capsParty in config_parties['capwordParties']:
             role = discord.utils.get(guild.roles, name=config_parties['capwordParties'][capsParty])
-            if role != None:
+            if role is not None:
                 await role.delete()
-            
+
             del config_parties['parties'][config_parties['capwordParties'][capsParty]]
             del config_parties['capwordParties'][capsParty]
-        
+
         dumpConfigParties()
     # Otherwise return False
     else:
         return False
     return True
-    
+
 
 if __name__ == '__main__':
     print('Excuse me?')
