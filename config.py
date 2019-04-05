@@ -119,13 +119,13 @@ async def deleteParty(guild, party: str):
         if capsParty in config_parties['parties']:
             role = discord.utils.get(guild.roles, name=capsParty)
             # If the party has a role, delete the role
-            if type(role) != None:
+            if role != None:
                 await role.delete()
             
             del config_parties['parties'][capsParty]
         elif capsParty in config_parties['capwordParties']:
             role = discord.utils.get(guild.roles, name=config_parties['capwordParties'][capsParty])
-            if type(role) != None:
+            if role != None:
                 await role.delete()
             
             del config_parties['parties'][config_parties['capwordParties'][capsParty]]
