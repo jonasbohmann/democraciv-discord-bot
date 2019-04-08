@@ -186,6 +186,16 @@ class Link:
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
         await ctx.send(content=None, embed=embed)
 
+    @commands.command(name='register')
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def register(self, ctx):
+        """Register to Vote"""
+        embed = discord.Embed(title='Register to Vote',
+                              description=config.getLinks()['register'],
+                              colour=0x7f0000)
+        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
+        await ctx.send(content=None, embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Link(bot))
