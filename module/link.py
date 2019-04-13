@@ -26,7 +26,7 @@ class Link:
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def constitution(self, ctx):
         """Get a link to our constitution"""
-        embed = discord.Embed(title='The Constitution of Norway', description=config.getLinks()['constitution'],
+        embed = discord.Embed(title='The Constitution of the Kingdom of Norway', description=config.getLinks()['constitution'],
                               colour=0x7f0000)
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
         await ctx.send(content=None, embed=embed)
@@ -36,7 +36,7 @@ class Link:
     async def government(self, ctx, number: str = None):
         """Get a link to the wiki page of our government"""
         if not number:
-            embed = discord.Embed(title='Government of Norway', description=config.getLinks()['government'],
+            embed = discord.Embed(title='Government of the Kingdom of Norway', description=config.getLinks()['government'],
                                   colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             await ctx.send(content=None, embed=embed)
@@ -53,7 +53,7 @@ class Link:
 
         link = 'government-' + number
         if link in config.getLinks():
-            embed = discord.Embed(title=ordinal + ' Government of Norway', description=config.getLinks()[link],
+            embed = discord.Embed(title=ordinal + ' Government of the Kingdom of Norway', description=config.getLinks()[link],
                                   colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             await ctx.send(content=None, embed=embed)
@@ -192,6 +192,16 @@ class Link:
         """Register to Vote"""
         embed = discord.Embed(title='Register to Vote',
                               description=config.getLinks()['register'],
+                              colour=0x7f0000)
+        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
+        await ctx.send(content=None, embed=embed)#
+
+    @commands.command(name='states')
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def states(self, ctx):
+        """Overview of our States"""
+        embed = discord.Embed(title='The States of the Kingdom of Norway',
+                              description=config.getLinks()['states'],
                               colour=0x7f0000)
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
         await ctx.send(content=None, embed=embed)
