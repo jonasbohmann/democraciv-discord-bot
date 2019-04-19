@@ -1,10 +1,9 @@
 ## democraciv-discord-bot
 Discord Bot for r/Democraciv written in Python 3. Provides useful information, political party management and more. 
 
-## RequirementsSee
+## Requirements
 **Important**: This bot does not work with the latest discord.py from [pypi](https://pypi.org/project/discord.py/)! You have to install 
 an older version from git, see `requirements.txt` for details.
-
 Updating to discord.py 1.1.0 is planned.
 
 
