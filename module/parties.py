@@ -143,7 +143,6 @@ class Party:
             partyKeys = config.getParties().keys()
             for party in partyKeys:
                 role = discord.utils.get(dcivGuild.roles, name=party)
-                print(role)
                 if len(role.members) == 1:
                     msg += f'**{party}**\n{len(role.members)} member\n\n'
                 else:

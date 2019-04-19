@@ -34,9 +34,8 @@
   "twitch":
   {
     "enableTwitchAnnouncements": true,
-    "twitchAnnouncementChannel": "announcement",
-    "twitchChannelID": "138763356",
-    "twitchChannelName": "Democraciv"
+    "twitchAnnouncementChannel": "announcements",
+    "twitchChannelName": "democraciv"
   },
 
   "links":

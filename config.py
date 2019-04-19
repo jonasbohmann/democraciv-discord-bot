@@ -45,6 +45,8 @@ except FileNotFoundError:
 def getToken():
     return token['token']
 
+def getTokenFile():
+    return token
 
 def getConfig():
     return config['config']
