@@ -1,30 +1,47 @@
 ## democraciv-discord-bot
 Discord Bot for r/Democraciv written in Python 3. Provides useful information, political party management and more. 
 
-## Requirements
+## RequirementsSee
+**Important**: This bot does not work with the latest discord.py from [pypi](https://pypi.org/project/discord.py/)! You have to install 
+an older version from git, see `requirements.txt` for details.
+
+Updating to discord.py 1.1.0 is planned.
+
+
 * [Python](https://www.python.org/downloads//) 3.6 or higher
 * [discord.py-rewrite](https://github.com/Rapptz/discord.py/tree/3f06f247c039a23948e7bb0014ea31db533b4ba2) commit 3f06f24
 * [wikipedia](https://pypi.org/project/wikipedia/) 1.4.0 or higher
-* [python-twitch-client](https://github.com/tsifrer/python-twitch-client) 0.6.0 or higher
 * [praw](https://github.com/praw-dev/praw) latest available version
  
-See `requirements.txt` for details.
+Check `requirements.txt` for details.
 
 ## Installation
-
 After installing all the dependencies, create a `token.json` in the config folder.
 
 The file should look like this:
 ```
  {
   "token": "INSERT_TOKEN_HERE"
+  "twitchAPIKey": "INSERT_TWITCH_API_KEY_HERE"
  }
 ```
 Add the token of your Discord App like above. Then, run `client.py`.
 
+### Twitch 
+
+If you want to use the Twitch announcements feature, you have to get an API key from [here](https://dev.twitch.tv/console/apps)
+and add it to the `token.json` in the config folder.
+
+You can configure everything else that is Twitch related in the `config.json`.
+
+**If you do not want to use the Twitch announcements feature**, you have to set `enableTwitchAnnouncements` in the
+`config.json` to `false`.
+
+
 ## Features
 * Modular system for commands
 * Help command that automatically scales
+* Announcements for twitch.tv/democraciv
 * Event Logging 
 
 ## Modules
@@ -40,7 +57,6 @@ module.help | Scaling -help command | ✅
 module.random | Common choice commands (Heads or Tails etc.) | ✅
 module.parties | Join and leave political parties | ✅
 module.time | Get current time in different timezones | ✅
-module.twitch | Announces when twitch.tv/democraciv goes live *(Under construction)* | ✅
 module.reddit | Post new reddit threads from r/democraciv to #reddit (*Under construction)* | ✅
 module.vote | Start voting on a specified topic with emojis *(Under construction)* | ✅
 module.wikipedia | Search for a topic on wikipedia | ✅
@@ -48,9 +64,9 @@ event.logging | Logs events (member joins/leaves etc.) to a specified channel |
 event.error_handler | Handles internal erros | 
 
 ## Planned
-* SQL Database for seperate configs per server
-* Announcments for Twitch and Reddit posts
+* Announcments for Reddit posts
 * Proportional Representation voting
+* SQL Database for seperate configs per server
 
 ## Democraciv Discord Server
 Join the [Democraciv Discord Server](https://discord.gg/AK7dYMG) to see the bot in action.
