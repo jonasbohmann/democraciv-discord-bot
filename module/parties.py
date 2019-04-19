@@ -133,11 +133,17 @@ class Party:
     async def members(self, ctx, list: str = None, *party: str):
         """Lists all party members"""
 
+        dcivGuild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
+
+        if dcivGuild is None:
+            await ctx.send(':x: You have to invite me to the Democraciv server first!')
+
         if not list:
             msg = ''
             partyKeys = config.getParties().keys()
             for party in partyKeys:
-                role = discord.utils.get(ctx.guild.roles, name=party)
+                role = discord.utils.get(dcivGuild.roles, name=party)
+                print(role)
                 if len(role.members) == 1:
                     msg += f'**{party}**\n{len(role.members)} member\n\n'
                 else:
@@ -152,9 +158,9 @@ class Party:
             # Fix capwords
             party = self.fixCapwords(party)
 
-            role = discord.utils.get(ctx.guild.roles, name=party)
+            role = discord.utils.get(dcivGuild.roles, name=party)
             msg = ''
-            for member in ctx.guild.members:
+            for member in dcivGuild.members:
                 if role in member.roles:
                     msg += f'{member.name}\n'
             if msg == '':

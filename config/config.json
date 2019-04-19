@@ -13,7 +13,8 @@
     "enableLogging": true,
     "excludedChannelsFromLogging": ["209410498804973569", "316202361389318144", "405504659650772994", "499669824847478785", "548501683173457930", "370315302732431360", "486206795862507531", "465655352424267776", "209432307730350080"],
     "logChannel": "mod-logs",
-    "commandCooldown": "2.5"
+    "commandCooldown": "2.5",
+    "democracivServerID": "208984105310879744"
   },
 
   "strings":
