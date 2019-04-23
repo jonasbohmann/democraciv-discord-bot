@@ -2,6 +2,7 @@ python>=3.6.0
 git+https://github.com/Rapptz/discord.py@3f06f247c039a23948e7bb0014ea31db533b4ba2#egg=discord.py[voice]
 wikipedia
 pytz
+requests
 aiohttp
 websockets
 praw

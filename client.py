@@ -113,7 +113,7 @@ async def on_ready():
         pkg_resources.get_distribution('discord.py').version))
     print('-------------------------------------------------------')
     if config.getTwitch()['enableTwitchAnnouncements']:
-        client.loop.create_task(twitch_task())
+        client.bg_task = client.loop.create_task(twitch_task())
     await client.change_presence(
         activity=discord.Game(name=config.getPrefix() + 'help | Watching over r/Democraciv'))
 
