@@ -60,7 +60,8 @@ if __name__ == '__main__':
 
 
 def checkTwitchLivestream():
-    twitchAPIUrl = "https://api.twitch.tv/kraken/streams/" + config.getTwitch()['twitchChannelName'] + "?client_id=" + config.getTokenFile()['twitchAPIKey']
+    twitchAPIUrl = "https://api.twitch.tv/kraken/streams/" + config.getTwitch()['twitchChannelName'] + "?client_id=" + \
+                   config.getTokenFile()['twitchAPIKey']
     twitchRequest = requests.get(twitchAPIUrl)
     twitch = json.loads(twitchRequest.content)
     global activeStream
@@ -76,22 +77,30 @@ def checkTwitchLivestream():
 async def twitch_task():
     await client.wait_until_ready()
     global activeStream
+    streamer = config.getTwitch()['twitchChannelName']
 
-    dcivGuild = client.get_guild(int(config.getConfig()["democracivServerID"]))
-    channel = discord.utils.get(dcivGuild.text_channels, name=config.getTwitch()['twitchAnnouncementChannel'])
+    try:
+        dcivGuild = client.get_guild(int(config.getConfig()["democracivServerID"]))
+        channel = discord.utils.get(dcivGuild.text_channels, name=config.getTwitch()['twitchAnnouncementChannel'])
+    except AttributeError:
+        print(
+            f'ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
+            f'in the config to a server I am in or disable Twitch announcements.')
+        return
 
     while not client.is_closed():
         twitch_data = checkTwitchLivestream()
         if twitch_data is not False:
             if activeStream is False:
                 activeStream = True
-                embed = discord.Embed(title=":satellite: Live on Twitch", colour=0x7f0000)
+                embed = discord.Embed(title=f":satellite: {streamer} - Live on Twitch", colour=0x7f0000)
                 embed.add_field(name="Title", value=twitch_data[0], inline=False)
-                embed.add_field(name="Link", value="https://twitch.tv/democraciv", inline=False)
+                embed.add_field(name="Link", value=f"https://twitch.tv/{streamer}", inline=False)
                 embed.set_image(url=twitch_data[1])
                 embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
                 embed.timestamp = datetime.datetime.utcnow()
-                await channel.send('@everyone Democraciv is live on Twitch!')
+                if config.getTwitch()['everyonePingOnAnnouncement']:
+                    await channel.send(f'@everyone {streamer} is live on Twitch!')
                 await channel.send(embed=embed)
                 await asyncio.sleep(30)
             else:
