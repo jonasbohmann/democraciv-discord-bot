@@ -102,9 +102,7 @@ async def twitch_task():
                 if config.getTwitch()['everyonePingOnAnnouncement']:
                     await channel.send(f'@everyone {streamer} is live on Twitch!')
                 await channel.send(embed=embed)
-                await asyncio.sleep(30)
-            else:
-                await asyncio.sleep(30)
+        await asyncio.sleep(30)
 
 
 @client.event
