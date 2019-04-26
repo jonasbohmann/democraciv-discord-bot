@@ -31,8 +31,8 @@ class Role:
         if endgame_role not in member.roles:
             await ctx.send(
                 f':white_check_mark: You joined {endgame_channel.mention}!\n\nKeep in mind that talking about '
-                'Avengers: Endgame spoilers anywhere outside of #endgame-spoilers is against the rules and '
-                'a punishable offense.')
+                f'Avengers: Endgame spoilers anywhere outside of {endgame_channel.mention} is against the rules and '
+                f'a punishable offense.')
             await member.add_roles(endgame_role)
 
         elif endgame_role in member.roles:
