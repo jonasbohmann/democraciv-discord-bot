@@ -46,6 +46,7 @@ initial_extensions = ['module.link',
                       'module.help',
                       'module.wikipedia',
                       'module.random',
+                      'module.role',
                       'event.logging',
                       'event.error_handler']
 
@@ -80,11 +81,11 @@ async def twitch_task():
     streamer = config.getTwitch()['twitchChannelName']
 
     try:
-        dcivGuild = client.get_guild(int(config.getConfig()["democracivServerID"]))
+        dcivGuild = client.get_guild(int(config.getConfig()["homeServerID"]))
         channel = discord.utils.get(dcivGuild.text_channels, name=config.getTwitch()['twitchAnnouncementChannel'])
     except AttributeError:
         print(
-            f'ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
+            f'ERROR - I could not find the Democraciv Discord Server! Change "homeServerID" '
             f'in the config to a server I am in or disable Twitch announcements.')
         return
 

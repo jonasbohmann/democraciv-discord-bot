@@ -133,7 +133,7 @@ class Party:
     async def members(self, ctx, list: str = None, *party: str):
         """Lists all party members"""
 
-        dcivGuild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
+        dcivGuild = self.bot.get_guild(int(config.getConfig()["homeServerID"]))
 
         if dcivGuild is None:
             await ctx.send(':x: You have to invite me to the Democraciv server first!')
