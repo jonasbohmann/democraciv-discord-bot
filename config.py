@@ -41,12 +41,21 @@ try:
 except FileNotFoundError:
     print("ERROR - Couldn't find config_parties.json")
 
+try:
+    fileDir = os.path.dirname(os.path.realpath('__file__'))
+    filename4 = os.path.join(fileDir, 'config/last_reddit_post.json')
+    last_reddit_post = json.loads(open(filename4).read())
+except FileNotFoundError:
+    print("ERROR - Couldn't find last_reddit_post.json")
+
 
 def getToken():
     return token['token']
 
+
 def getTokenFile():
     return token
+
 
 def getConfig():
     return config['config']
@@ -82,6 +91,15 @@ def getReddit():
 
 def getTwitch():
     return config['twitch']
+
+
+def getLastRedditPost():
+    return last_reddit_post
+
+
+def setLastRedditPost():
+    with open(filename4, 'w') as my_file:
+        json.dump(last_reddit_post, my_file, indent=1)
 
 
 def dumpConfigParties():

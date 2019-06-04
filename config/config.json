@@ -25,10 +25,9 @@
   "reddit":
   {
     "enableRedditAnnouncements": true,
+    "subreddit": "democraciv",
     "redditAnnouncementChannel": "reddit",
-    "clientID": "",
-    "clientSecret": "",
-    "userAgent": "Reddit App for the r/Democraciv Discord Server"
+    "userAgent": "discord:democraciv-discord-bot:0.7.1 (by /u/Jovanos)"
   },
 
   "twitch":
