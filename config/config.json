@@ -19,7 +19,7 @@
 
   "strings":
   {
-    "welcomeMessage" : "{member}, welcome to {guild}! We are currently playing our fifth game as Norway in Sid Meier's Civilization 6.\n\nYou may want to check #information or #help for tips and guides to get you started.\n\nHere's our Wiki: https://www.reddit.com/r/democraciv/wiki/"
+    "welcomeMessage" : "{member}, welcome to {guild}! We are currently playing our fifth game as Norway in Sid Meier's Civilization 6.\n\nYou may want to check {information} or {help} for tips and guides to get you started.\n\nHere's our Wiki: https://www.reddit.com/r/democraciv/wiki/"
   },
 
   "reddit":

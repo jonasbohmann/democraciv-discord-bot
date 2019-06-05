@@ -80,8 +80,13 @@ class Log:
     async def on_member_join(self, member):
         if config.getConfig()['enableWelcomeMessage']:
             guild = member.guild
+            information_channel = discord.utils.get(guild.text_channels, name='information')
+            help_channel = discord.utils.get(guild.text_channels, name='help')
+
             welcomeChannel = discord.utils.get(guild.text_channels, name=config.getConfig()['welcomeChannel'])
-            welcomeMessage = config.getStrings()['welcomeMessage'].format(member=member.mention, guild=guild.name)
+            welcomeMessage = config.getStrings()['welcomeMessage'].format(member=member.mention, guild=guild.name,
+                                                                          information=information_channel.mention,
+                                                                          help=help_channel.mention)
             await welcomeChannel.send(welcomeMessage)
         if config.getConfig()['enableLogging']:
             guild = member.guild
