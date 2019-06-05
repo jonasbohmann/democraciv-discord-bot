@@ -156,4 +156,4 @@ async def deleteParty(guild, party: str):
 
 
 if __name__ == '__main__':
-    print('Excuse me?')
+    pass

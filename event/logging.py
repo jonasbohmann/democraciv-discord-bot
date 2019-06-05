@@ -84,10 +84,6 @@ class Log:
             help_channel = discord.utils.get(guild.text_channels, name='help')
             welcomeChannel = discord.utils.get(guild.text_channels, name=config.getConfig()['welcomeChannel'])
 
-            print(information_channel)
-            print(help_channel)
-            print(welcomeChannel)
-
             # General case without mentioning anything in "{}" from the config's welcomeMessage
             if information_channel is None or help_channel is None:
                 welcomeMessage = config.getStrings()['welcomeMessage']
