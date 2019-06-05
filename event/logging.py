@@ -82,12 +82,23 @@ class Log:
             guild = member.guild
             information_channel = discord.utils.get(guild.text_channels, name='information')
             help_channel = discord.utils.get(guild.text_channels, name='help')
-
             welcomeChannel = discord.utils.get(guild.text_channels, name=config.getConfig()['welcomeChannel'])
-            welcomeMessage = config.getStrings()['welcomeMessage'].format(member=member.mention, guild=guild.name,
-                                                                          information=information_channel.mention,
-                                                                          help=help_channel.mention)
+
+            print(information_channel)
+            print(help_channel)
+            print(welcomeChannel)
+
+            # General case without mentioning anything in "{}" from the config's welcomeMessage
+            if information_channel is None or help_channel is None:
+                welcomeMessage = config.getStrings()['welcomeMessage']
+
+            # Democraciv-specific case with mentioning {}'s
+            else:
+                welcomeMessage = config.getStrings()['welcomeMessage'].format(member=member.mention, guild=guild.name,
+                                                                              information=information_channel.mention,
+                                                                              help=help_channel.mention)
             await welcomeChannel.send(welcomeMessage)
+
         if config.getConfig()['enableLogging']:
             guild = member.guild
             logChannel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
@@ -100,6 +111,7 @@ class Log:
             embed.set_thumbnail(url=member.avatar_url)
             embed.timestamp = datetime.datetime.utcnow()
             await logChannel.send(content=None, embed=embed)
+
         return
 
     async def on_member_remove(self, member):
