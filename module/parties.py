@@ -143,6 +143,9 @@ class Party:
             partyKeys = config.getParties().keys()
             for party in partyKeys:
                 role = discord.utils.get(dcivGuild.roles, name=party)
+                if role is None:
+                    await ctx.send(f':x: "{party}" was added as a party but has no role on this server!')
+                    continue
                 if len(role.members) == 1:
                     msg += f'**{party}**\n{len(role.members)} member\n\n'
                 else:
