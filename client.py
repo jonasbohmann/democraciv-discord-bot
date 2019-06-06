@@ -97,8 +97,18 @@ async def reddit_task():
             try:
                 image_link = reddit_post.preview['images'][0]['resolutions'][4]['url']
                 embed.set_thumbnail(url=image_link)
-            except (AttributeError, UnboundLocalError) as e:
-                print('ERROR - In Reddit.get_posts, could not get image_link. Post likely has no image.')
+            except (AttributeError, UnboundLocalError, IndexError) as e:
+                print('ERROR - In Reddit.get_posts, could not get image_link. Trying preview[3]...')
+                try:
+                    image_link = reddit_post.preview['images'][0]['resolutions'][3]['url']
+                    embed.set_thumbnail(url=image_link)
+                except (AttributeError, UnboundLocalError, IndexError) as e:
+                    print('ERROR - In Reddit.get_posts, could not get image_link. Trying preview[2]..')
+                    try:
+                        image_link = reddit_post.preview['images'][0]['resolutions'][2]['url']
+                        embed.set_thumbnail(url=image_link)
+                    except (AttributeError, UnboundLocalError, IndexError) as e:
+                        print('ERROR - In Reddit.get_posts, could not get image_link. Post likely has no image.')
 
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             embed.timestamp = datetime.datetime.utcnow()
