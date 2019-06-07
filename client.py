@@ -187,7 +187,6 @@ async def on_ready():
 @client.event
 async def on_message(message):
     if isinstance(message.channel, discord.DMChannel):
-        await message.author.send(':x: Sorry, but I don\'t accept commands through direct messages!')
         return
     if message.author.bot:
         return
