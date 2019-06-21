@@ -2,13 +2,9 @@
 Discord Bot for r/Democraciv written in Python 3. Provides useful information, political party management and more. 
 
 ## Requirements
-**Important**: This bot does not work with the latest discord.py from [pypi](https://pypi.org/project/discord.py/)! You have to install 
-an older version from git, see `requirements.txt` for details.
-Updating to discord.py 1.1.0 is planned.
-
 
 * [Python](https://www.python.org/downloads//) 3.6 or higher
-* [discord.py-rewrite](https://github.com/Rapptz/discord.py/tree/3f06f247c039a23948e7bb0014ea31db533b4ba2) commit 3f06f24
+* [discord.py-rewrite](https://github.com/Rapptz/discord.py/tree/3f06f247c039a23948e7bb0014ea31db533b4ba2) 1.2.2
 * [wikipedia](https://pypi.org/project/wikipedia/) 1.4.0 or higher
 * [praw](https://github.com/praw-dev/praw) 6.2.0 or higher
  

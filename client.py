@@ -16,7 +16,7 @@ from discord.ext import commands
 #
 # Author: DerJonas
 # Interpreter: Python3.7
-# Library: discord.py 1.0.0a
+# Library: discord.py 1.2.2
 # License: MIT
 # Source: https://github.com/jonasbohmann/democraciv-discord-bot
 #
