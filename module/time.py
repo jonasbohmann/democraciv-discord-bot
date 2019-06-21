@@ -6,7 +6,7 @@ from datetime import datetime
 from discord.ext import commands
 
 
-class Time:
+class Time(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     

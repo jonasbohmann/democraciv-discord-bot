@@ -20,7 +20,7 @@ def getUptime():
     return str(datetime.timedelta(seconds=difference))
 
 
-class About:
+class About(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
