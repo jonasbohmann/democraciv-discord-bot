@@ -7,7 +7,7 @@ from discord.ext import commands
 wikipedia.set_lang('en')
 
 
-class Wikipedia:
+class Wikipedia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 

@@ -16,7 +16,7 @@ from discord.ext import commands
 #
 # Author: DerJonas
 # Interpreter: Python3.7
-# Library: discord.py 1.0.0a
+# Library: discord.py 1.2.2
 # License: MIT
 # Source: https://github.com/jonasbohmann/democraciv-discord-bot
 #
@@ -38,12 +38,13 @@ author = discord.AppInfo.owner
 activeStream = False
 
 # -- Reddit --
-reddit = praw.Reddit(client_id=config.getTokenFile()['redditClientID'],
-                     client_secret=config.getTokenFile()['redditClientSecret'],
-                     user_agent=config.getReddit()['userAgent'])
+if config.getReddit()["enableRedditAnnouncements"]:
+    reddit = praw.Reddit(client_id=config.getTokenFile()['redditClientID'],
+                         client_secret=config.getTokenFile()['redditClientSecret'],
+                         user_agent=config.getReddit()['userAgent'])
 
-subreddit = reddit.subreddit(config.getReddit()['subreddit'])
-last_reddit_post = config.getLastRedditPost()
+    subreddit = reddit.subreddit(config.getReddit()['subreddit'])
+    last_reddit_post = config.getLastRedditPost()
 
 # -- Cogs --
 initial_extensions = ['module.link',
@@ -203,6 +204,6 @@ if __name__ == '__main__':
             traceback.print_exc()
 
 try:
-    client.run(config.getToken(), reconnect=True, bot=True, timeout=3600)
+    client.run(config.getToken(), reconnect=True, bot=True)
 except asyncio.TimeoutError as e:
     print(f'ERROR - TimeoutError\n{e}')

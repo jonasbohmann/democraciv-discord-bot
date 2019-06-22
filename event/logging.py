@@ -2,6 +2,7 @@ import config
 import discord
 import datetime
 
+from discord.ext import commands
 
 # -- logging.py | event.logging --
 #
@@ -9,7 +10,7 @@ import datetime
 #
 
 
-class Log:
+class Log(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 

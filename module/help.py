@@ -20,16 +20,19 @@ def helper(ctx):
     """Displays all commands"""
     cmds_ = []
     cogs = ctx.bot.cogs
-    for i in cogs:
-        cmd_ = ctx.bot.get_cog_commands(i)
+    for cog_name, cog_object in cogs.items():
+        cmd_ = cog_object.get_commands()
         cmd_ = [x for x in cmd_ if not x.hidden]
         for x in list(chunks(list(cmd_), 6)):
             embed = discord.Embed(color=0x7f0000)
             embed.set_thumbnail(url=config.getConfig()['botIconURL'])
-            embed.set_author(name=f"{i} Commands ({len(cmd_)})")
-            embed.description = ctx.bot.cogs[i].__doc__
+            embed.set_author(name=f"{cog_name} Commands ({len(cmd_)})")
+            embed.description = cog_object.__doc__
             for y in x:
-                embed.add_field(name=y.signature, value=y.help, inline=False)
+                name = '|'.join([y.name] + y.aliases)
+                name = f'[{name}]' if '|' in name else name
+                name += f' {y.signature}'
+                embed.add_field(name=name, value=y.help, inline=False)
             cmds_.append(embed)
 
         number = 0
@@ -199,7 +202,7 @@ async def paginate(ctx, input_):
                 paging = False
 
 
-class Help:
+class Help(commands.Cog):
     """Help command"""
 
     def __init__(self, bot):
