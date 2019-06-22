@@ -16,6 +16,7 @@ class Log(commands.Cog):
 
     # -- Message Events --
 
+    @commands.Cog.listener()
     async def on_message_edit(self, before, after):
         if before.content == after.content:
             return
@@ -40,6 +41,7 @@ class Log(commands.Cog):
                 return
         return
 
+    @commands.Cog.listener()
     async def on_message_delete(self, message):
         if config.getConfig()['enableLogging']:
             if str(message.channel.id) not in config.getConfig()['excludedChannelsFromLogging']:
@@ -58,6 +60,7 @@ class Log(commands.Cog):
                 return
         return
 
+    @commands.Cog.listener()
     async def on_raw_bulk_message_delete(self, payload):
         if config.getConfig()['enableLogging']:
             if str(payload.channel_id) not in config.getConfig()['excludedChannelsFromLogging']:
@@ -78,6 +81,7 @@ class Log(commands.Cog):
 
     # -- Member Events --
 
+    @commands.Cog.listener()
     async def on_member_join(self, member):
         if config.getConfig()['enableWelcomeMessage']:
             guild = member.guild
@@ -111,6 +115,7 @@ class Log(commands.Cog):
 
         return
 
+    @commands.Cog.listener()
     async def on_member_remove(self, member):
         if config.getConfig()['enableLogging']:
             guild = member.guild
@@ -123,6 +128,7 @@ class Log(commands.Cog):
             await channel.send(content=None, embed=embed)
         return
 
+    @commands.Cog.listener()
     async def on_member_update(self, before, after):
         if config.getConfig()['enableLogging']:
             if before.display_name != after.display_name:
@@ -175,6 +181,7 @@ class Log(commands.Cog):
                 return
         return
 
+    @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
         if config.getConfig()['enableLogging']:
             channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
@@ -187,6 +194,7 @@ class Log(commands.Cog):
             await channel.send(content=None, embed=embed)
         return
 
+    @commands.Cog.listener()
     async def on_member_unban(self, guild, user):
         if config.getConfig()['enableLogging']:
             channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
@@ -201,6 +209,7 @@ class Log(commands.Cog):
 
     # -- Guild Events --
 
+    @commands.Cog.listener()
     async def on_guild_role_create(self, role):
         if config.getConfig()['enableLogging']:
             guild = role.guild
@@ -214,6 +223,7 @@ class Log(commands.Cog):
             await logChannel.send(content=None, embed=embed)
         return
 
+    @commands.Cog.listener()
     async def on_guild_role_delete(self, role):
         if config.getConfig()['enableLogging']:
             guild = role.guild
@@ -228,6 +238,7 @@ class Log(commands.Cog):
             await logChannel.send(content=None, embed=embed)
         return
 
+    @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
         if config.getConfig()['enableLogging']:
             guild = channel.guild
@@ -240,6 +251,7 @@ class Log(commands.Cog):
             await logchannel.send(content=None, embed=embed)
         return
 
+    @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
         if config.getConfig()['enableLogging']:
             guild = channel.guild

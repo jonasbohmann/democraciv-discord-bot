@@ -11,7 +11,7 @@ from discord.ext import commands
 # Management of Political Parties
 #
 
-class Party(commands.Cog):
+class Party(commands.Cog, name='Political Parties'):
     def __init__(self, bot):
         self.bot = bot
     
