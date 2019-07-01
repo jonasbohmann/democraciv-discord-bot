@@ -1,19 +1,22 @@
 {
   "parties": {
-    "Grand Pirate Party": "https://discord.gg/saQwfb5",
-    "Theocratic Fundamentalists": "https://discord.gg/Nzc7WcK",
     "Monarchist Party of Norway": "https://discord.gg/PchxUkZ",
+    "Grand Pirate Party": "https://discord.gg/grNVYek",
+    "Theocratic Fundamentalists": "https://discord.gg/Nzc7WcK",
     "Cloud 9": "https://discord.gg/8TZBAfr",
     "DemocraCorp": "https://discord.gg/ARK9BZg",
-    "Home Rule": "https://discord.gg/D5uWTBU",
-    "State Rights Party": "https://discord.gg/MvrkQ97",
-    "Industro-Optimists": "https://discord.gg/S44gbSc",
     "Populist Party": "https://discord.gg/MvrkQ97",
+    "The Eclectic Cooperative": "https://discord.gg/JYwveeu",
+    "Norse": "https://discord.gg/hUkghm",
+    "Wes\u2019s Party for a Pink Role": "",
+    "TIRPON": "https://discord.gg/MSBjVkf",
+    "Stoic Party": "Contact @Joe Parrish for an invite to this party.",
     "Independent": ""
-  },
+   },
   "capwordParties": {
     "Democracorp": "DemocraCorp",
     "Monarchist Party Of Norway": "Monarchist Party of Norway",
-    "Industro-optimists": "Industro-Optimists"
+    "Wes\u2019s Party For A Pink Role": "Wes\u2019s Party for a Pink Role",
+    "Tirpon": "TIRPON"
   }
 }
