@@ -4,7 +4,7 @@ Discord Bot for r/Democraciv written in Python 3. Provides useful information, p
 ## Requirements
 
 * [Python](https://www.python.org/downloads//) 3.6 or higher
-* [discord.py](https://github.com/Rapptz/discord.py) 1.2.2
+* [discord.py](https://github.com/Rapptz/discord.py) 1.2.3 or higher
 * [wikipedia](https://pypi.org/project/wikipedia/) 1.4.0 or higher
 * [praw](https://github.com/praw-dev/praw) 6.2.0 or higher
  
