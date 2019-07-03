@@ -65,7 +65,6 @@ initial_extensions = ['module.link',
 # -- Reddit --
 # Background task that gets new posts from r/democraciv every 30 seconds
 
-@client.event
 async def reddit_task():
     await client.wait_until_ready()
 
@@ -138,7 +137,6 @@ def checkTwitchLivestream():
 # -- Twitch  --
 # Background task that posts an alert if twitch.tv/democraciv is live
 
-@client.event
 async def twitch_task():
     await client.wait_until_ready()
     global activeStream
