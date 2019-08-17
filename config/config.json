@@ -4,8 +4,8 @@
     "prefix": "-",
     "botName": "Democraciv Bot",
     "botDescription": "Discord Bot for the r/Democraciv community.",
-    "botVersion": "0.8.0",
-    "botIconURL": "https://cdn.discordapp.com/attachments/487233770152394765/487241649542529035/test.png",
+    "botVersion": "0.8.1",
+    "botIconURL": "https://cdn.discordapp.com/attachments/585502938571604056/586310405618532362/final_pride2.png",
     "author": "DerJonas#8109",
     "authorID": "212972352890339328",
     "enableWelcomeMessage": true,
@@ -19,7 +19,7 @@
 
   "strings":
   {
-    "welcomeMessage" : "{member}, welcome to {guild}! We are currently playing our fifth game as Norway in Sid Meier's Civilization 6.\n\nYou may want to check {information} or {help} for tips and guides to get you started.\n\nHere's our Wiki: https://www.reddit.com/r/democraciv/wiki/"
+    "welcomeMessage" : "{member}, welcome to {guild}! We are currently planning our next game, Democraciv MK6.\n\nAfter we've drafted a new constitution and decided on which civilization to play as, the game will start!\n\nHere's our Wiki for more information about us: https://www.reddit.com/r/democraciv/wiki/"
   },
 
   "reddit":
@@ -27,7 +27,7 @@
     "enableRedditAnnouncements": true,
     "subreddit": "democraciv",
     "redditAnnouncementChannel": "reddit",
-    "userAgent": "discord:democraciv-discord-bot:0.8.0 (by /u/Jovanos)"
+    "userAgent": "discord:democraciv-discord-bot:0.8.1 (by /u/Jovanos)"
   },
 
   "twitch":
@@ -55,6 +55,7 @@
     "androidApp": "https://play.google.com/store/apps/details?id=com.democraciv.derjonas.democraciv",
     "archive": "https://www.reddit.com/r/democraciv/wiki/archive",
     "gameSessions": "https://www.youtube.com/playlist?list=PLW2ZPkv4dA9HFod3IY-9S_0UWoNZevfM8",
+    "mk5": "https://www.reddit.com/r/democraciv/wiki/mk5",
     "mk4": "https://www.reddit.com/r/democraciv/wiki/mk4",
     "mk3": "https://www.reddit.com/r/democraciv/wiki/mk3",
     "mk2": "https://www.reddit.com/r/democraciv/wiki/mk2",
