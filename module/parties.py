@@ -15,9 +15,9 @@ class Party(commands.Cog, name='Political Parties'):
     def __init__(self, bot):
         self.bot = bot
     
-    def fixCapwords(self, party):
-        """Fixes party names with unusual caps"""
-        return config.getCapwordParties().get(party, party)
+    def getPartyFromAlias(self, alias: str):
+        """Gets party name from related alias, returns alias if it is not found"""
+        return config.getPartyAliases().get(alias, alias)
 
     @commands.command(name='join')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -31,8 +31,7 @@ class Party(commands.Cog, name='Political Parties'):
 
         party = string.capwords(' '.join(party))
 
-        # Fix capwords
-        party = self.fixCapwords(party)
+        party = self.getPartyFromAlias(party)
 
         member = ctx.message.author
         role = discord.utils.get(ctx.guild.roles, name=party)
@@ -90,8 +89,7 @@ class Party(commands.Cog, name='Political Parties'):
         party = string.capwords(' '.join(party))
         partyKeys = (config.getParties().keys())
 
-        # Fix capwords
-        party = self.fixCapwords(party)
+        party = self.getPartyFromAlias(party)
 
         member = ctx.message.author
         role = discord.utils.get(ctx.guild.roles, name=party)
@@ -157,8 +155,7 @@ class Party(commands.Cog, name='Political Parties'):
         if list == 'list':
             party = string.capwords(' '.join(party))
 
-            # Fix capwords
-            party = self.fixCapwords(party)
+            party = self.getPartyFromAlias(party)
 
             role = discord.utils.get(dcivGuild.roles, name=party)
             msg = ''

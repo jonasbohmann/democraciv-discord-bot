@@ -81,8 +81,8 @@ def getParties():
     return config_parties['parties']
 
 
-def getCapwordParties():
-    return config_parties['capwordParties']
+def getPartyAliases():
+    return config_parties['aliases']
 
 
 def getReddit():
@@ -112,14 +112,14 @@ async def addParty(guild, invite, party: str):
 
     capsParty = string.capwords(party)
     # If the party already ready exists, return False
-    if capsParty in config_parties['parties'] or capsParty in config_parties['capwordParties']:
+    if capsParty in config_parties['parties'] or capsParty in config_parties['aliases']:
         return False
     # Otherwise, create the party
     else:
         if capsParty == party:
             config_parties['parties'][capsParty] = invite
         else:
-            config_parties['capwordParties'][capsParty] = party
+            config_parties['aliases'][capsParty] = party
             config_parties['parties'][party] = invite
 
         dumpConfigParties()
@@ -132,7 +132,7 @@ async def deleteParty(guild, party: str):
 
     capsParty = string.capwords(party)
     # If the party already exists, delete it
-    if capsParty in config_parties['parties'] or capsParty in config_parties['capwordParties']:
+    if capsParty in config_parties['parties'] or capsParty in config_parties['aliases']:
         if capsParty in config_parties['parties']:
             role = discord.utils.get(guild.roles, name=capsParty)
             # If the party has a role, delete the role
@@ -140,13 +140,13 @@ async def deleteParty(guild, party: str):
                 await role.delete()
 
             del config_parties['parties'][capsParty]
-        elif capsParty in config_parties['capwordParties']:
-            role = discord.utils.get(guild.roles, name=config_parties['capwordParties'][capsParty])
+        elif capsParty in config_parties['aliases']:
+            role = discord.utils.get(guild.roles, name=config_parties['aliases'][capsParty])
             if role is not None:
                 await role.delete()
 
-            del config_parties['parties'][config_parties['capwordParties'][capsParty]]
-            del config_parties['capwordParties'][capsParty]
+            del config_parties['parties'][config_parties['aliases'][capsParty]]
+            del config_parties['aliases'][capsParty]
 
         dumpConfigParties()
     # Otherwise return False
