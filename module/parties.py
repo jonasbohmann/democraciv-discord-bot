@@ -232,6 +232,35 @@ class Party(commands.Cog, name='Political Parties'):
         else:
             await ctx.send(f':white_check_mark: Deleted {alias}!')
     
+    @commands.command(name='listaliases', hidden=True)
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.has_permissions(administrator=True)
+    async def listaliases(self, ctx, *party: str):
+        party = string.capwords(' '.join(party))
+        capsParty = party
+
+        parties, aliases = config.getParties(), config.getPartyAliases()
+        if party in parties:
+            pass
+        elif party in aliases:
+            party = aliases[party]
+            capsParty = string.capwords(party)
+        else:
+            await ctx.send(f':x: {party} not found!')
+            return
+
+        msg = ''
+        for alias in aliases:
+            if aliases[alias] == party and alias != capsParty:
+                msg += f'{alias}\n'
+
+        if msg:
+            embed = discord.Embed(title=f'Aliases of {party}', description=f'{msg}', colour=0x7f0000)
+            embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f":x: No aliases found for {party}!")
+    
     async def getArguments(self, ctx, arguments: str, expectedArguments: int = -1):
         """Returns arguments split upon commas as a tuple of strings.
         If arguments does not equal expectedArguments or there are blank arguments, posts a discord message and returns None.

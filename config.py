@@ -157,15 +157,19 @@ async def deleteParty(guild, party: str):
 
 async def addPartyAlias(party: str, alias: str) -> str:
     """Added alias as a new alias to party, returns an empty string if it was successfully added, otherwise returns error as string."""
-    capsAlias = string.capwords(alias)
-    if party not in config_parties['parties'] and string.capwords(party) not in config_parties['aliases']:
+    capsAlias, party = string.capwords(alias), string.capwords(party)
+
+    if party not in config_parties['parties'] and party not in config_parties['aliases']:
         return f'{party} not found!'
     elif alias in config_parties['parties'] or capsAlias in config_parties['parties']:
-        return f'{alias} is already the name of a party!'
+        return f'{capsAlias} is already the name of a party!'
     elif capsAlias in config_parties['aliases']:
         party = config_parties['aliases'][capsAlias]
-        return f'{alias} is already an alias for {party}!'
+        return f'{capsAlias} is already an alias for {party}!'
     else:
+        # If party has unusual caps, fix caps
+        if party not in config_parties['parties']:
+            party = config_parties['aliases'][party]
         config_parties['aliases'][capsAlias] = party
         dumpConfigParties()
 
