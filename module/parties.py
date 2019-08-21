@@ -179,12 +179,12 @@ class Party(commands.Cog, name='Political Parties'):
 
         else:
             party = ' '.join(party)
-            hasNewParty = await config.addParty(ctx.guild, invite, party)
+            error = await config.addParty(ctx.guild, invite, party)
             
-            if hasNewParty:
-                await ctx.send(f':white_check_mark: Added {party} with {invite}!')
+            if error:
+                await ctx.send(f':x: {error}')
             else:
-                await ctx.send(f':x: Unable to create {party}')
+                await ctx.send(f':white_check_mark: Added {party} with {invite}!')
 
     @commands.command(name='deleteparty', hidden=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -196,12 +196,12 @@ class Party(commands.Cog, name='Political Parties'):
 
         else:
             party = ' '.join(party)
-            deletedParty = await config.deleteParty(ctx.guild, party)
+            error = await config.deleteParty(ctx.guild, party)
 
-            if deletedParty:
-                await ctx.send(f':white_check_mark: Deleted {party}!')
+            if error:
+                await ctx.send(f':x: {error}')
             else:
-                await ctx.send(f':x: Unable to delete {party}')
+                await ctx.send(f':white_check_mark: Deleted {party}!')
     
     @commands.command(name='addalias', hidden=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -217,6 +217,10 @@ class Party(commands.Cog, name='Political Parties'):
         if error:
             await ctx.send(f':x: {error}')
         else:
+            # Get proper names
+            alias = string.capwords(alias)
+            party = config.getPartyAliases()[alias]
+
             await ctx.send(f':white_check_mark: Added {alias} as an alias for {party}!')
     
     @commands.command(name='deletealias', hidden=True)
@@ -230,12 +234,15 @@ class Party(commands.Cog, name='Political Parties'):
         if error:
             await ctx.send(f':x: {error}')
         else:
+            # Get proper name
+            alias = string.capwords(alias)
             await ctx.send(f':white_check_mark: Deleted {alias}!')
     
     @commands.command(name='listaliases', hidden=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     async def listaliases(self, ctx, *party: str):
+        """Lists the given parties aliases, if any exist"""
         party = string.capwords(' '.join(party))
         capsParty = party
 
