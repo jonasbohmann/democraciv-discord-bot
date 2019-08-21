@@ -202,7 +202,38 @@ class Party(commands.Cog, name='Political Parties'):
                 await ctx.send(f':white_check_mark: Deleted {party}!')
             else:
                 await ctx.send(f':x: Unable to delete {party}')
+    
+    @commands.command(name='addalias', hidden=True)
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.has_permissions(administrator=True)
+    async def addalias(self, ctx, *partyAndAlias: str):
+        """Adds a new alias to party"""
+        partyAndAlias: tuple = await self.getArguments(ctx, ' '.join(partyAndAlias), 2)
+        if partyAndAlias is None:
+            return
+        party, alias = partyAndAlias
+        error = await config.addPartyAlias(party, alias)
 
+        if error:
+            await ctx.send(f':x: {error}')
+        else:
+            await ctx.send(f':white_check_mark: Added {alias} as an alias for {party}!')
+    
+    async def getArguments(self, ctx, arguments: str, expectedArguments: int = -1):
+        """Returns arguments split upon commas as a tuple of strings.
+        If arguments does not equal expectedArguments or there are blank arguments, posts a discord message and returns None.
+        If expectedArguments is -1, does not check for argument count."""
+        argumentCount = arguments.count(',') + 1
+        if expectedArguments != -1 and argumentCount != expectedArguments:
+            await ctx.send(f':x: Was given {argumentCount} arguments but expected {expectedArguments}!')
+            return None
+        
+        arguments = tuple(argument.strip() for argument in arguments.split(','))
+        if '' in arguments:
+            await ctx.send(f':x: Cannot accept blank arguments!')
+            return None
+
+        return arguments
 
 def setup(bot):
     bot.add_cog(Party(bot))
