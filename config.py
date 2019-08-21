@@ -109,6 +109,8 @@ def dumpConfigParties():
 
 async def addParty(guild, invite, party: str) -> str:
     """Adds the inputted party paired with the invite, returns an empty string if it was successfully added, otherwise returns error as string."""
+    if ',' in party:
+        return f'May not have \',\' in party name!'
 
     capsParty = string.capwords(party)
     if capsParty in config_parties['parties']:
