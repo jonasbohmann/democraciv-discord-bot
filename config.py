@@ -129,29 +129,34 @@ async def addParty(guild, invite, party: str) -> str:
 
 
 async def deleteParty(guild, party: str) -> str:
-    """Deletes the inputted party, returns an empty string if it was successfully deleted, otherwise returns error as string."""
+    """Deletes the inputted party and related aliases, returns an empty string if it was successfully deleted, otherwise returns error as string."""
 
-    party = string.capwords(party)
+    capsParty = string.capwords(party)
 
     # If the given party name is actually an alias, return an error
-    if party in config_parties['aliases'] and string.capwords(config_parties['aliases'][party]) != party:
+    if capsParty in config_parties['aliases'] and string.capwords(config_parties['aliases'][capsParty]) != capsParty:
         return f'May not delete an alias! See `-deletealias`.'
     # If the party already exists, delete it
-    if party in config_parties['parties'] or party in config_parties['aliases']:
-        if party in config_parties['parties']:
+    if capsParty in config_parties['parties'] or capsParty in config_parties['aliases']:
+        if capsParty in config_parties['parties']:
             role = discord.utils.get(guild.roles, name=party)
             # If the party has a role, delete the role
             if role is not None:
                 await role.delete()
 
-            del config_parties['parties'][party]
-        elif party in config_parties['aliases']:
-            role = discord.utils.get(guild.roles, name=config_parties['aliases'][party])
+            del config_parties['parties'][capsParty]
+        elif capsParty in config_parties['aliases']:
+            role = discord.utils.get(guild.roles, name=config_parties['aliases'][capsParty])
             if role is not None:
                 await role.delete()
 
-            del config_parties['parties'][config_parties['aliases'][party]]
-            del config_parties['aliases'][party]
+            del config_parties['parties'][config_parties['aliases'][capsParty]]
+            del config_parties['aliases'][capsParty]
+        
+        # Delete related aliases
+        for alias in list(config_parties['aliases']):
+            if config_parties['aliases'][alias] == party and alias != capsParty:
+               del config_parties['aliases'][alias]
 
         dumpConfigParties()
     # Otherwise return False
