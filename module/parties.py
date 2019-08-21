@@ -219,6 +219,19 @@ class Party(commands.Cog, name='Political Parties'):
         else:
             await ctx.send(f':white_check_mark: Added {alias} as an alias for {party}!')
     
+    @commands.command(name='deletealias', hidden=True)
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.has_permissions(administrator=True)
+    async def deletealias(self, ctx, *alias: str):
+        """Deletes pre-existing alias"""
+        alias = ' '.join(alias)
+        error = await config.deletePartyAlias(alias)
+
+        if error:
+            await ctx.send(f':x: {error}')
+        else:
+            await ctx.send(f':white_check_mark: Deleted {alias}!')
+    
     async def getArguments(self, ctx, arguments: str, expectedArguments: int = -1):
         """Returns arguments split upon commas as a tuple of strings.
         If arguments does not equal expectedArguments or there are blank arguments, posts a discord message and returns None.

@@ -172,5 +172,20 @@ async def addPartyAlias(party: str, alias: str) -> str:
     return ''
 
 
+async def deletePartyAlias(alias: str) -> str:
+    """Deletes a party alias, returns an empty string if it was successfully deleted, otherwise returns error as string."""
+    capsAlias = string.capwords(alias)
+    if capsAlias not in config_parties['aliases']:
+        return f'{alias} not found!'
+    # Check if alias is a party name
+    elif string.capwords(config_parties['aliases'][capsAlias]) == capsAlias:
+        return 'May not delete party name!'
+    else:
+        del config_parties['aliases'][capsAlias]
+        dumpConfigParties()
+    
+    return ''
+
+
 if __name__ == '__main__':
     pass
