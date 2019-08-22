@@ -238,9 +238,8 @@ class Party(commands.Cog, name='Political Parties'):
             alias = string.capwords(alias)
             await ctx.send(f':white_check_mark: Deleted {alias}!')
 
-    @commands.command(name='listaliases', hidden=True)
+    @commands.command(name='listaliases')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    @commands.has_permissions(administrator=True)
     async def listaliases(self, ctx, *party: str):
         """Lists the given parties aliases, if any exist"""
         party = string.capwords(' '.join(party))
