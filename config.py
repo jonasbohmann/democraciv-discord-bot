@@ -81,8 +81,8 @@ def getParties():
     return config_parties['parties']
 
 
-def getCapwordParties():
-    return config_parties['capwordParties']
+def getPartyAliases():
+    return config_parties['aliases']
 
 
 def getReddit():
@@ -107,52 +107,100 @@ def dumpConfigParties():
         json.dump(config_parties, myfile, indent=2)
 
 
-async def addParty(guild, invite, party: str):
-    """Adds the inputted party paired with the invite, returns if the party was successfully added"""
+async def addParty(guild, invite, party: str) -> str:
+    """Adds the inputted party paired with the invite, returns an empty string if it was successfully added, otherwise returns error as string."""
+    if ',' in party:
+        return f'May not have \',\' in party name!'
 
     capsParty = string.capwords(party)
-    # If the party already ready exists, return False
-    if capsParty in config_parties['parties'] or capsParty in config_parties['capwordParties']:
-        return False
+    if capsParty in config_parties['parties']:
+        return f'{capsParty} already exists!'
+    elif capsParty in config_parties['aliases']:
+        return f'{capsParty} is already an alias!'
     # Otherwise, create the party
     else:
         if capsParty == party:
             config_parties['parties'][capsParty] = invite
         else:
-            config_parties['capwordParties'][capsParty] = party
+            config_parties['aliases'][capsParty] = party
             config_parties['parties'][party] = invite
 
         dumpConfigParties()
         await guild.create_role(name=party)
-    return True
+    return ''
 
 
-async def deleteParty(guild, party: str):
-    """Deletes the inputted party, returns if the party was successfully deleted"""
+async def deleteParty(guild, party: str) -> str:
+    """Deletes the inputted party and related aliases, returns an empty string if it was successfully deleted, otherwise returns error as string."""
 
     capsParty = string.capwords(party)
+
+    # If the given party name is actually an alias, return an error
+    if capsParty in config_parties['aliases'] and string.capwords(config_parties['aliases'][capsParty]) != capsParty:
+        return f'May not delete an alias! See `-deletealias`.'
     # If the party already exists, delete it
-    if capsParty in config_parties['parties'] or capsParty in config_parties['capwordParties']:
+    if capsParty in config_parties['parties'] or capsParty in config_parties['aliases']:
         if capsParty in config_parties['parties']:
-            role = discord.utils.get(guild.roles, name=capsParty)
+            role = discord.utils.get(guild.roles, name=party)
             # If the party has a role, delete the role
             if role is not None:
                 await role.delete()
 
             del config_parties['parties'][capsParty]
-        elif capsParty in config_parties['capwordParties']:
-            role = discord.utils.get(guild.roles, name=config_parties['capwordParties'][capsParty])
+        elif capsParty in config_parties['aliases']:
+            role = discord.utils.get(guild.roles, name=config_parties['aliases'][capsParty])
             if role is not None:
                 await role.delete()
 
-            del config_parties['parties'][config_parties['capwordParties'][capsParty]]
-            del config_parties['capwordParties'][capsParty]
+            del config_parties['parties'][config_parties['aliases'][capsParty]]
+            del config_parties['aliases'][capsParty]
+        
+        # Delete related aliases
+        for alias in list(config_parties['aliases']):
+            if config_parties['aliases'][alias] == party and alias != capsParty:
+               del config_parties['aliases'][alias]
 
         dumpConfigParties()
     # Otherwise return False
     else:
-        return False
-    return True
+        return f'{party} not found!'
+    return ''
+
+
+async def addPartyAlias(party: str, alias: str) -> str:
+    """Added alias as a new alias to party, returns an empty string if it was successfully added, otherwise returns error as string."""
+    capsAlias, party = string.capwords(alias), string.capwords(party)
+
+    if party not in config_parties['parties'] and party not in config_parties['aliases']:
+        return f'{party} not found!'
+    elif alias in config_parties['parties'] or capsAlias in config_parties['parties']:
+        return f'{capsAlias} is already the name of a party!'
+    elif capsAlias in config_parties['aliases']:
+        party = config_parties['aliases'][capsAlias]
+        return f'{capsAlias} is already an alias for {party}!'
+    else:
+        # If party has unusual caps, fix caps
+        if party not in config_parties['parties']:
+            party = config_parties['aliases'][party]
+        config_parties['aliases'][capsAlias] = party
+        dumpConfigParties()
+
+    return ''
+
+
+async def deletePartyAlias(alias: str) -> str:
+    """Deletes a party alias, returns an empty string if it was successfully deleted, otherwise returns error as string."""
+    capsAlias = string.capwords(alias)
+    if capsAlias not in config_parties['aliases']:
+        return f'{alias} not found!'
+    # Check if alias is a party name
+    elif string.capwords(config_parties['aliases'][capsAlias]) == capsAlias:
+        return 'May not delete party name!'
+    else:
+        del config_parties['aliases'][capsAlias]
+        dumpConfigParties()
+    
+    return ''
 
 
 if __name__ == '__main__':

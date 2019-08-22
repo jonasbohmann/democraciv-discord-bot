@@ -15,9 +15,9 @@ class Party(commands.Cog, name='Political Parties'):
     def __init__(self, bot):
         self.bot = bot
     
-    def fixCapwords(self, party):
-        """Fixes party names with unusual caps"""
-        return config.getCapwordParties().get(party, party)
+    def getPartyFromAlias(self, alias: str):
+        """Gets party name from related alias, returns alias if it is not found"""
+        return config.getPartyAliases().get(alias, alias)
 
     @commands.command(name='join')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -31,8 +31,7 @@ class Party(commands.Cog, name='Political Parties'):
 
         party = string.capwords(' '.join(party))
 
-        # Fix capwords
-        party = self.fixCapwords(party)
+        party = self.getPartyFromAlias(party)
 
         member = ctx.message.author
         role = discord.utils.get(ctx.guild.roles, name=party)
@@ -90,8 +89,7 @@ class Party(commands.Cog, name='Political Parties'):
         party = string.capwords(' '.join(party))
         partyKeys = (config.getParties().keys())
 
-        # Fix capwords
-        party = self.fixCapwords(party)
+        party = self.getPartyFromAlias(party)
 
         member = ctx.message.author
         role = discord.utils.get(ctx.guild.roles, name=party)
@@ -157,8 +155,7 @@ class Party(commands.Cog, name='Political Parties'):
         if list == 'list':
             party = string.capwords(' '.join(party))
 
-            # Fix capwords
-            party = self.fixCapwords(party)
+            party = self.getPartyFromAlias(party)
 
             role = discord.utils.get(dcivGuild.roles, name=party)
             msg = ''
@@ -182,12 +179,12 @@ class Party(commands.Cog, name='Political Parties'):
 
         else:
             party = ' '.join(party)
-            hasNewParty = await config.addParty(ctx.guild, invite, party)
+            error = await config.addParty(ctx.guild, invite, party)
             
-            if hasNewParty:
-                await ctx.send(f':white_check_mark: Added {party} with {invite}!')
+            if error:
+                await ctx.send(f':x: {error}')
             else:
-                await ctx.send(f':x: Unable to create {party}')
+                await ctx.send(f':white_check_mark: Added {party} with {invite}!')
 
     @commands.command(name='deleteparty', hidden=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -199,13 +196,93 @@ class Party(commands.Cog, name='Political Parties'):
 
         else:
             party = ' '.join(party)
-            deletedParty = await config.deleteParty(ctx.guild, party)
+            error = await config.deleteParty(ctx.guild, party)
 
-            if deletedParty:
-                await ctx.send(f':white_check_mark: Deleted {party}!')
+            if error:
+                await ctx.send(f':x: {error}')
             else:
-                await ctx.send(f':x: Unable to delete {party}')
+                await ctx.send(f':white_check_mark: Deleted {party}!')
+    
+    @commands.command(name='addalias', hidden=True)
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.has_permissions(administrator=True)
+    async def addalias(self, ctx, *partyAndAlias: str):
+        """Adds a new alias to party"""
+        partyAndAlias: tuple = await self.getArguments(ctx, ' '.join(partyAndAlias), 2)
+        if partyAndAlias is None:
+            return
+        party, alias = partyAndAlias
+        error = await config.addPartyAlias(party, alias)
 
+        if error:
+            await ctx.send(f':x: {error}')
+        else:
+            # Get proper names
+            alias = string.capwords(alias)
+            party = config.getPartyAliases()[alias]
+
+            await ctx.send(f':white_check_mark: Added {alias} as an alias for {party}!')
+    
+    @commands.command(name='deletealias', hidden=True)
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.has_permissions(administrator=True)
+    async def deletealias(self, ctx, *alias: str):
+        """Deletes pre-existing alias"""
+        alias = ' '.join(alias)
+        error = await config.deletePartyAlias(alias)
+
+        if error:
+            await ctx.send(f':x: {error}')
+        else:
+            # Get proper name
+            alias = string.capwords(alias)
+            await ctx.send(f':white_check_mark: Deleted {alias}!')
+    
+    @commands.command(name='listaliases', hidden=True)
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.has_permissions(administrator=True)
+    async def listaliases(self, ctx, *party: str):
+        """Lists the given parties aliases, if any exist"""
+        party = string.capwords(' '.join(party))
+        capsParty = party
+
+        parties, aliases = config.getParties(), config.getPartyAliases()
+        if party in parties:
+            pass
+        elif party in aliases:
+            party = aliases[party]
+            capsParty = string.capwords(party)
+        else:
+            await ctx.send(f':x: {party} not found!')
+            return
+
+        msg = ''
+        for alias in aliases:
+            if aliases[alias] == party and alias != capsParty:
+                msg += f'{alias}\n'
+
+        if msg:
+            embed = discord.Embed(title=f'Aliases of {party}', description=f'{msg}', colour=0x7f0000)
+            embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f":x: No aliases found for {party}!")
+    
+    async def getArguments(self, ctx, arguments: str, expectedArguments: int = -1):
+        """Returns arguments split upon commas as a tuple of strings.
+        If arguments does not equal expectedArguments or there are blank arguments, posts a discord message and returns None.
+        If expectedArguments is -1, does not check for argument count."""
+        argumentCount = arguments.count(',') + 1
+        if expectedArguments != -1 and argumentCount != expectedArguments:
+            await ctx.send(f':x: Was given {argumentCount} arguments but expected {expectedArguments}!')
+            return None
+        
+        arguments = tuple(argument.strip() for argument in arguments.split(','))
+        if '' in arguments:
+            await ctx.send(f':x: Cannot accept blank arguments!')
+            return None
+
+        return arguments
 
 def setup(bot):
     bot.add_cog(Party(bot))
