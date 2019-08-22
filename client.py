@@ -189,6 +189,18 @@ async def on_message(message):
         return
     if message.author.bot:
         return
+
+    # WIP DemocraCorp Ban
+    # (in case we need this in the future)
+
+    # banned_dcorp_words = ['democracorp', 'dcorp', 'vote buying', 'fair votes', 'fair votes act', '#dc-discussion', 'dc',' round table', 'dc debate', 'vote bought', 'bougth votes', 'storting bought']
+
+    # message_content = message.clean_content.lower()
+
+    # if any(words in message_content for words in banned_dcorp_words):
+    #    await message.delete()
+    #    await message.channel.send(':x: Discussion about anything related to Democracorp has been banned.')
+
     await client.process_commands(message)
 
 

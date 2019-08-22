@@ -154,11 +154,11 @@ async def deleteParty(guild, party: str) -> str:
 
             del config_parties['parties'][config_parties['aliases'][capsParty]]
             del config_parties['aliases'][capsParty]
-        
+
         # Delete related aliases
         for alias in list(config_parties['aliases']):
             if config_parties['aliases'][alias] == party and alias != capsParty:
-               del config_parties['aliases'][alias]
+                del config_parties['aliases'][alias]
 
         dumpConfigParties()
     # Otherwise return False
@@ -199,7 +199,7 @@ async def deletePartyAlias(alias: str) -> str:
     else:
         del config_parties['aliases'][capsAlias]
         dumpConfigParties()
-    
+
     return ''
 
 

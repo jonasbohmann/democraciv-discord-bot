@@ -65,7 +65,7 @@ class About(commands.Cog):
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
         await ctx.send(content=None, embed=embed)
 
-    @commands.command(name='source', hidden=True)
+    @commands.command(name='source')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def source(self, ctx):
         """Check out the source code on GitHub"""
@@ -74,6 +74,18 @@ class About(commands.Cog):
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
         await ctx.send(content=None, embed=embed)
 
+    @commands.command(name='contributors')
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def contributors(self, ctx):
+        """See who helped with this project :heart:"""
+        embed = discord.Embed(title='Contributors :heart:', description="https://github.com/jonasbohmann/democraciv-discord-bot/graphs/contributors",
+                              colour=0x7f0000)
+        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
+        await ctx.send(content=None, embed=embed)
+
 
 def setup(bot):
     bot.add_cog(About(bot))
+
+
+

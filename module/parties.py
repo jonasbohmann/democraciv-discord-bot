@@ -14,7 +14,7 @@ from discord.ext import commands
 class Party(commands.Cog, name='Political Parties'):
     def __init__(self, bot):
         self.bot = bot
-    
+
     def getPartyFromAlias(self, alias: str):
         """Gets party name from related alias, returns alias if it is not found"""
         return config.getPartyAliases().get(alias, alias)
@@ -180,7 +180,7 @@ class Party(commands.Cog, name='Political Parties'):
         else:
             party = ' '.join(party)
             error = await config.addParty(ctx.guild, invite, party)
-            
+
             if error:
                 await ctx.send(f':x: {error}')
             else:
@@ -202,7 +202,7 @@ class Party(commands.Cog, name='Political Parties'):
                 await ctx.send(f':x: {error}')
             else:
                 await ctx.send(f':white_check_mark: Deleted {party}!')
-    
+
     @commands.command(name='addalias', hidden=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
@@ -222,7 +222,7 @@ class Party(commands.Cog, name='Political Parties'):
             party = config.getPartyAliases()[alias]
 
             await ctx.send(f':white_check_mark: Added {alias} as an alias for {party}!')
-    
+
     @commands.command(name='deletealias', hidden=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
@@ -237,7 +237,7 @@ class Party(commands.Cog, name='Political Parties'):
             # Get proper name
             alias = string.capwords(alias)
             await ctx.send(f':white_check_mark: Deleted {alias}!')
-    
+
     @commands.command(name='listaliases', hidden=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
@@ -267,7 +267,7 @@ class Party(commands.Cog, name='Political Parties'):
             await ctx.send(embed=embed)
         else:
             await ctx.send(f":x: No aliases found for {party}!")
-    
+
     async def getArguments(self, ctx, arguments: str, expectedArguments: int = -1):
         """Returns arguments split upon commas as a tuple of strings.
         If arguments does not equal expectedArguments or there are blank arguments, posts a discord message and returns None.
@@ -276,13 +276,14 @@ class Party(commands.Cog, name='Political Parties'):
         if expectedArguments != -1 and argumentCount != expectedArguments:
             await ctx.send(f':x: Was given {argumentCount} arguments but expected {expectedArguments}!')
             return None
-        
+
         arguments = tuple(argument.strip() for argument in arguments.split(','))
         if '' in arguments:
             await ctx.send(f':x: Cannot accept blank arguments!')
             return None
 
         return arguments
+
 
 def setup(bot):
     bot.add_cog(Party(bot))
