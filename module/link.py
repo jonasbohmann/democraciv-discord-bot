@@ -112,7 +112,7 @@ class Link(commands.Cog):
 
     @commands.command(name='mk5')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def mk4(self, ctx):
+    async def mk5(self, ctx):
         """MK5-Archives"""
         embed = discord.Embed(title='Democraciv Archive - MK5', description=config.getLinks()['mk5'], colour=0x7f0000)
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
