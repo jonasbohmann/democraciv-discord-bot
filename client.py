@@ -130,7 +130,7 @@ def checkTwitchLivestream():
 
     try:
        twitch['data'][0]['id']
-    except IndexError, KeyError:
+    except (IndexError, KeyError) as e:
        activeStream = False
        return False
     
