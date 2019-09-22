@@ -121,17 +121,22 @@ async def reddit_task():
 # HTTP request to the Twitch API for twitch_task
 
 def checkTwitchLivestream():
-    twitchAPIUrl = "https://api.twitch.tv/kraken/streams/" + config.getTwitch()['twitchChannelName'] + "?client_id=" + \
-                   config.getTokenFile()['twitchAPIKey']
-    twitchRequest = requests.get(twitchAPIUrl)
+    twitchAPIUrl = "https://api.twitch.tv/helix/streams?user_login=" + config.getTwitch()['twitchChannelName']
+    newTwitchAPIToken = config.getTokenFile()['twitchAPIKey']
+    httpHeader = {'Client-ID': newTwitchAPIToken}
+    twitchRequest = requests.get(twitchAPIUrl, headers=httpHeader)
     twitch = json.loads(twitchRequest.content)
     global activeStream
 
-    if twitch['stream'] is not None:
-        return [twitch['stream']['channel']['status'], twitch['stream']['preview']['medium']]
-    else:
-        activeStream = False
-        return False
+    try:
+       twitch['data'][0]['id']
+    except IndexError, KeyError:
+       activeStream = False
+       return False
+    
+    thumbnail = twitch['data'][0]['thumbnail_url'].replace('{width}', '720').replace('{height}', '380')
+    return [twitch['data'][0]['title'], thumbnail]
+       
 
 
 # -- Twitch  --
@@ -165,7 +170,7 @@ async def twitch_task():
                 if config.getTwitch()['everyonePingOnAnnouncement']:
                     await channel.send(f'@everyone {streamer} is live on Twitch!')
                 await channel.send(embed=embed)
-        await asyncio.sleep(30)
+        await asyncio.sleep(60)
 
 
 @client.event

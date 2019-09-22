@@ -1,8 +1,12 @@
+import config
+import discord
+
 from discord.ext import commands
+
 
 # -- fun.py | module.fun --
 #
-# Fun commands. So far only -say, that requires administrator permissions.
+# Fun commands.
 #
 
 
