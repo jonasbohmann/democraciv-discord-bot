@@ -100,7 +100,6 @@ async def reddit_task():
             for x in range(3):
                 if image_link is not None:
                     embed.set_thumbnail(url=image_link)
-                    print(image_link)
                     break
                 try:
                     image_link = reddit_post.preview['images'][0]['resolutions'][index]['url']
