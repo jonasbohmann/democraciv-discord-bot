@@ -53,7 +53,12 @@ class Log(commands.Cog):
                                 value=message.author.mention + ' ' + message.author.name + '#' + message.author.discriminator,
                                 inline=True)
                 embed.add_field(name='Channel', value=message.channel.mention, inline=True)
-                embed.add_field(name='Message', value=message.clean_content, inline=False)
+
+                if not message.embeds:
+                    # If the deleted message is an embed, sending this new embed will raise an error as
+                    # message.clean_content does not work with embeds
+                    embed.add_field(name='Message', value=message.clean_content, inline=False)
+
                 embed.timestamp = datetime.datetime.utcnow()
                 await channel.send(content=None, embed=embed)
             else:
