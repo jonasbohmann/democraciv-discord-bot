@@ -120,7 +120,13 @@ def checkTwitchLivestream():
     twitchAPIUrl = "https://api.twitch.tv/helix/streams?user_login=" + config.getTwitch()['twitchChannelName']
     newTwitchAPIToken = config.getTokenFile()['twitchAPIKey']
     httpHeader = {'Client-ID': newTwitchAPIToken}
-    twitchRequest = requests.get(twitchAPIUrl, headers=httpHeader)
+
+    try:
+        twitchRequest = requests.get(twitchAPIUrl, headers=httpHeader)
+    except (ConnectionError) as e:
+        print("ERROR - ConnectionError in Twitch requests.get()!\n")
+        print(e)
+
     twitch = json.loads(twitchRequest.content)
     global activeStream
 
@@ -165,7 +171,7 @@ async def twitch_task():
                 if config.getTwitch()['everyonePingOnAnnouncement']:
                     await channel.send(f'@everyone {streamer} is live on Twitch!')
                 await channel.send(embed=embed)
-        await asyncio.sleep(60)
+        await asyncio.sleep(180)
 
 
 @client.event
