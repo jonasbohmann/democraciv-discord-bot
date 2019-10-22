@@ -123,7 +123,7 @@ def checkTwitchLivestream():
 
     try:
         twitchRequest = requests.get(twitchAPIUrl, headers=httpHeader)
-    except (ConnectionError) as e:
+    except ConnectionError as e:
         print("ERROR - ConnectionError in Twitch requests.get()!\n")
         print(e)
 
