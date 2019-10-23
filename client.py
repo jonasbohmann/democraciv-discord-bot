@@ -94,21 +94,17 @@ async def reddit_task():
             embed.add_field(name="Thread", value=f"[{title}](https://reddit.com{comments_link})", inline=False)
             embed.add_field(name="Author", value=f"u/{author}", inline=False)
 
-            try:
-                image_link = reddit_post.preview['images'][0]['resolutions'][4]['url']
-                embed.set_thumbnail(url=image_link)
-            except (AttributeError, UnboundLocalError, IndexError) as e:
-                print('ERROR - In Reddit.get_posts, could not get image_link. Trying preview[3]...')
-                try:
-                    image_link = reddit_post.preview['images'][0]['resolutions'][3]['url']
+            # Fetch image of post if it has one
+            index = 4
+            image_link = None
+            for x in range(3):
+                if image_link is not None:
                     embed.set_thumbnail(url=image_link)
+                    break
+                try:
+                    image_link = reddit_post.preview['images'][0]['resolutions'][index]['url']
                 except (AttributeError, UnboundLocalError, IndexError) as e:
-                    print('ERROR - In Reddit.get_posts, could not get image_link. Trying preview[2]..')
-                    try:
-                        image_link = reddit_post.preview['images'][0]['resolutions'][2]['url']
-                        embed.set_thumbnail(url=image_link)
-                    except (AttributeError, UnboundLocalError, IndexError) as e:
-                        print('ERROR - In Reddit.get_posts, could not get image_link. Post likely has no image.')
+                    index = index - 1
 
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             embed.timestamp = datetime.datetime.utcnow()
@@ -124,19 +120,24 @@ def checkTwitchLivestream():
     twitchAPIUrl = "https://api.twitch.tv/helix/streams?user_login=" + config.getTwitch()['twitchChannelName']
     newTwitchAPIToken = config.getTokenFile()['twitchAPIKey']
     httpHeader = {'Client-ID': newTwitchAPIToken}
-    twitchRequest = requests.get(twitchAPIUrl, headers=httpHeader)
+
+    try:
+        twitchRequest = requests.get(twitchAPIUrl, headers=httpHeader)
+    except ConnectionError as e:
+        print("ERROR - ConnectionError in Twitch requests.get()!\n")
+        print(e)
+
     twitch = json.loads(twitchRequest.content)
     global activeStream
 
     try:
-       twitch['data'][0]['id']
+        twitch['data'][0]['id']
     except (IndexError, KeyError) as e:
-       activeStream = False
-       return False
-    
+        activeStream = False
+        return False
+
     thumbnail = twitch['data'][0]['thumbnail_url'].replace('{width}', '720').replace('{height}', '380')
     return [twitch['data'][0]['title'], thumbnail]
-       
 
 
 # -- Twitch  --
@@ -170,7 +171,7 @@ async def twitch_task():
                 if config.getTwitch()['everyonePingOnAnnouncement']:
                     await channel.send(f'@everyone {streamer} is live on Twitch!')
                 await channel.send(embed=embed)
-        await asyncio.sleep(60)
+        await asyncio.sleep(180)
 
 
 @client.event

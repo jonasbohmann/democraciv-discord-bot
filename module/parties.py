@@ -28,11 +28,8 @@ class Party(commands.Cog, name='Political Parties'):
             return
 
         partyKeys = (config.getParties().keys())
-
         party = string.capwords(' '.join(party))
-
         party = self.getPartyFromAlias(party)
-
         member = ctx.message.author
         role = discord.utils.get(ctx.guild.roles, name=party)
 
