@@ -80,7 +80,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def form(self, ctx):
         """Form a Political Party"""
-        link = "https://goo.gl/forms/pW3lcPCYmYrUC41T2"
+        link = "https://forms.gle/ETyFrr6qucr95MMA9"
         await ctx.send(f"You can fill out this form with all the details to form a political party:\n{link}")
 
     @commands.command(name='leave')
