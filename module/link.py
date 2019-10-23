@@ -26,7 +26,7 @@ class Link(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def constitution(self, ctx):
         """Get a link to our constitution"""
-        embed = discord.Embed(title='The Constitution of the Kingdom of Norway', description=config.getLinks()['constitution'],
+        embed = discord.Embed(title='The Constitution of Democraciv MK6', description=config.getLinks()['constitution'],
                               colour=0x7f0000)
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
         await ctx.send(content=None, embed=embed)
@@ -36,7 +36,7 @@ class Link(commands.Cog):
     async def government(self, ctx, number: str = None):
         """Get a link to the wiki page of our government"""
         if not number:
-            embed = discord.Embed(title='Government of the Kingdom of Norway', description=config.getLinks()['government'],
+            embed = discord.Embed(title='Government of Democraciv MK6', description=config.getLinks()['government'],
                                   colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             await ctx.send(content=None, embed=embed)
@@ -53,7 +53,7 @@ class Link(commands.Cog):
 
         link = 'government-' + number
         if link in config.getLinks():
-            embed = discord.Embed(title=ordinal + ' Government of the Kingdom of Norway', description=config.getLinks()[link],
+            embed = discord.Embed(title=ordinal + ' Government of Democraciv MK6', description=config.getLinks()[link],
                                   colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             await ctx.send(content=None, embed=embed)
@@ -208,7 +208,7 @@ class Link(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def states(self, ctx):
         """Overview of our States"""
-        embed = discord.Embed(title='The States of the Kingdom of Norway',
+        embed = discord.Embed(title='The States of Democraciv MK6',
                               description=config.getLinks()['states'],
                               colour=0x7f0000)
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
