@@ -37,18 +37,21 @@ class Party(commands.Cog, name='Political Parties'):
 
         if party in config.getParties():
             if party not in [y.name for y in member.roles]:
+                if party in inviteOnlyParties:
+                    msg = f':x: {party} is invite-only. Ask the party leader for an invitation.'
+                    await ctx.send(msg)
+
+
                 if party == 'Independent':
                     msg = f':white_check_mark: You are now an {party}!'
                     await ctx.send(msg)
                     await member.add_roles(role)
-                if party in inviteOnlyParties:
-                    msg = f':x: {party} is invite-only. Ask the party leader for an invitation.'
-                    await ctx.send(msg)
                 else:
                     msg = f':white_check_mark: You joined {party}! Now head to their Discord Server and introduce yourself:'
                     await ctx.send(msg)
                     await ctx.send(config.getParties()[party])
                     await member.add_roles(role)
+
             elif party in [y.name for y in member.roles]:
                 await ctx.send(f'You are already part of {party}!')
                 return
