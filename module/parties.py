@@ -33,14 +33,17 @@ class Party(commands.Cog, name='Political Parties'):
         member = ctx.message.author
         role = discord.utils.get(ctx.guild.roles, name=party)
 
-        inviteOnlyParties = []
+        inviteOnlyParties = {'المتنورين': 'Norseman_Warrior'}
 
         if party in config.getParties():
             if party not in [y.name for y in member.roles]:
                 if party in inviteOnlyParties:
-                    msg = f':x: {party} is invite-only. Ask the party leader for an invitation.'
-                    await ctx.send(msg)
 
+                    partyLeaderMention = discord.utils.get(ctx.guild.members, name=inviteOnlyParties[party])
+
+                    msg = f':x: {party} is invite-only. Ask {partyLeaderMention.mention} for an invitation. '
+                    await ctx.send(msg)
+                    return
 
                 if party == 'Independent':
                     msg = f':white_check_mark: You are now an {party}!'
