@@ -11,7 +11,7 @@
     "enableWelcomeMessage": true,
     "welcomeChannel": "welcome",
     "enableLogging": true,
-    "excludedChannelsFromLogging": ["571091468832342016", "209410498804973569", "316202361389318144", "405504659650772994", "499669824847478785", "548501683173457930", "370315302732431360", "486206795862507531", "465655352424267776", "209432307730350080"],
+    "excludedChannelsFromLogging": ["571091468832342016", "209410498804973569", "316202361389318144", "405504659650772994", "499669824847478785", "548501683173457930", "370315302732431360", "486206795862507531", "465655352424267776", "209432307730350080", "637051202827452464", "637051294959403018", "637051239284080651"],
     "logChannel": "mod-logs",
     "commandCooldown": "2.5",
     "homeServerID": "208984105310879744"
@@ -19,7 +19,7 @@
 
   "strings":
   {
-    "welcomeMessage" : "{member}, welcome to {guild}! We are currently planning our next game, Democraciv MK6.\n\nAfter we've drafted a new constitution and decided on which civilization to play as, the game will start!\n\nHere's our Wiki for more information about us: https://www.reddit.com/r/democraciv/wiki/"
+    "welcomeMessage" : "{member}, welcome to {guild}! We are currently playing our sixth game as Arabia in Sid Meier's Civilization 5.\n\nIf you need help catching up, feel free to ask in {help} or check {information}.\n\nHere's our Wiki for more information about us: https://www.reddit.com/r/democraciv/wiki/"
   },
 
   "reddit":
@@ -42,7 +42,7 @@
   {
     "importantLinks": "**Wiki**\nhttps://www.reddit.com/r/democraciv/wiki/\n**Constitution**\nhttps://goo.gl/FQXEbu\n**List of Laws**\nhttps://goo.gl/TFQ988\n**Parties**\nhttps://www.reddit.com/r/democraciv/wiki/parties",
     "constitution": "https://docs.google.com/document/d/1deWktyhCDWlmC88C2eP7vjpH6sP6NuJ7KfrXX8kcO-s/edit",
-    "laws": "",
+    "laws": "https://docs.google.com/document/d/1nmDfOy3DypadML817J_d2pCc8FpDlO7HUUhHOajWG2o/edit?usp=sharing",
     "parties": "https://www.reddit.com/r/democraciv/wiki/parties",
     "legislature": "https://www.reddit.com/r/democraciv/wiki/legislature",
     "executive": "https://www.reddit.com/r/democraciv/wiki/executive",
@@ -54,22 +54,22 @@
     "subreddit": "https://www.reddit.com/r/democraciv",
     "androidApp": "https://play.google.com/store/apps/details?id=com.democraciv.derjonas.democraciv",
     "archive": "https://www.reddit.com/r/democraciv/wiki/archive",
-    "gameSessions": "https://www.youtube.com/playlist?list=PLW2ZPkv4dA9HFod3IY-9S_0UWoNZevfM8",
+    "gameSessions": "https://www.youtube.com/playlist?list=PLW2ZPkv4dA9Ge32D6idp-30C0UEa1sCNN",
     "mk5": "https://www.reddit.com/r/democraciv/wiki/mk5",
     "mk4": "https://www.reddit.com/r/democraciv/wiki/mk4",
     "mk3": "https://www.reddit.com/r/democraciv/wiki/mk3",
     "mk2": "https://www.reddit.com/r/democraciv/wiki/mk2",
     "mk1": "https://www.reddit.com/r/democraciv/wiki/mk1",
     "government": "https://www.reddit.com/r/democraciv/wiki/government",
-    "government-1": "https://www.reddit.com/r/democraciv/wiki/government-1",
-    "government-2": "https://www.reddit.com/r/democraciv/wiki/government-2",
-    "government-3": "https://www.reddit.com/r/democraciv/wiki/government-3",
-    "government-4": "https://www.reddit.com/r/democraciv/wiki/government-4",
-    "government-5": "https://www.reddit.com/r/democraciv/wiki/government-5",
-    "government-6": "https://www.reddit.com/r/democraciv/wiki/government-6",
+    "government-1": "https://www.reddit.com/r/democraciv/wiki/government/1",
+    "government-2": "https://www.reddit.com/r/democraciv/wiki/government/2",
+    "government-3": "https://www.reddit.com/r/democraciv/wiki/government/3",
+    "government-4": "https://www.reddit.com/r/democraciv/wiki/government/4",
+    "government-5": "https://www.reddit.com/r/democraciv/wiki/government/5",
+    "government-6": "https://www.reddit.com/r/democraciv/wiki/government/6",
     "residencyList": "",
     "residencyForm": "",
-    "supremeCourtCaseSubmitter": "",
+    "supremeCourtCaseSubmitter": "https://forms.gle/E16hME3Uf4Vps8TP9",
     "register": "https://goo.gl/forms/b4aVtsGCs7ZFvSAx2",
     "states": "https://www.reddit.com/r/democraciv/wiki/states",
     "turnout": "https://docs.google.com/spreadsheets/u/1/d/e/2PACX-1vQfAP2cXrWC1Iu53F6vJZDPg5hxSDRZXd3mIf25VjyB9-6-bQvjktOBaedC2obUF1tIjqqMYCOFM_3F/pubhtml?gid=983409241&single=true"
