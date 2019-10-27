@@ -163,9 +163,9 @@ class Party(commands.Cog, name='Political Parties'):
             # Append Independents to message
             independentRole = discord.utils.get(dcivGuild.roles, name='Independent')
             if len(independentRole.members) == 1:
-                msg += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizen\n\n'
+                msg += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizen\n\n'
             else:
-                msg += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizens\n\n'
+                msg += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizens\n\n'
 
             embed = discord.Embed(title=f'Ranking of Political Parties in Arabia', description=f'{msg}', colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
