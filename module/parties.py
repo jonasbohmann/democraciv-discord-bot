@@ -137,7 +137,7 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='members')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def members(self, ctx, list: str = None, *party: str):
+    async def members(self, ctx, *party: str):
         """Lists all party members"""
 
         dcivGuild = self.bot.get_guild(int(config.getConfig()["homeServerID"]))
@@ -145,7 +145,7 @@ class Party(commands.Cog, name='Political Parties'):
         if dcivGuild is None:
             await ctx.send(':x: You have to invite me to the Democraciv server first!')
 
-        if not list:
+        if not party:
             msg = ''
             partyKeys = config.getParties().keys()
             for party in partyKeys:
@@ -153,28 +153,44 @@ class Party(commands.Cog, name='Political Parties'):
                 if role is None:
                     await ctx.send(f':x: "{party}" was added as a party but has no role on this server!')
                     continue
+                if party == 'Independent':
+                    continue
                 if len(role.members) == 1:
                     msg += f'**{party}**\n{len(role.members)} member\n\n'
                 else:
                     msg += f'**{party}**\n{len(role.members)} members\n\n'
-            embed = discord.Embed(title=f'Ranking of Political Parties', description=f'{msg}', colour=0x7f0000)
+
+            # Append Independents to message
+            independentRole = discord.utils.get(dcivGuild.roles, name='Independent')
+            if len(independentRole.members) == 1:
+                msg += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizen\n\n'
+            else:
+                msg += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizens\n\n'
+
+            embed = discord.Embed(title=f'Ranking of Political Parties in Arabia', description=f'{msg}', colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             await ctx.send(embed=embed)
 
-        if list == 'list':
+        elif party:
             party = string.capwords(' '.join(party))
 
             party = self.getPartyFromAlias(party)
 
             role = discord.utils.get(dcivGuild.roles, name=party)
+
             msg = ''
             for member in dcivGuild.members:
                 if role in member.roles:
                     msg += f'{member.name}\n'
             if msg == '':
-                await ctx.send(":x: Couldn't find role!")
+                await ctx.send(f":x: '{party}' either doesn't exist or it has 0 members!")
             else:
-                embed = discord.Embed(title=f'Members of {role}', description=f'{msg}', colour=0x7f0000)
+                if party == 'Independent':
+                    title = 'Independent Citizens'
+                else:
+                    title = f'Members of {role}'
+
+                embed = discord.Embed(title=title, description=f'{msg}', colour=0x7f0000)
                 embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
                 await ctx.send(embed=embed)
 

@@ -75,7 +75,7 @@ class Link(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def laws(self, ctx):
         """Get a link to the Code of Law"""
-        embed = discord.Embed(title='Code of Law', description=config.getLinks()['laws'], colour=0x7f0000)
+        embed = discord.Embed(title='Legal Code of Arabia', description=config.getLinks()['laws'], colour=0x7f0000)
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
         await ctx.send(content=None, embed=embed)
 
@@ -90,7 +90,7 @@ class Link(commands.Cog):
     @commands.command(name='beginnersguide', aliases=['b'])
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def beginnersguide(self, ctx):
-        """Getting Started in r/Democraciv"""
+        """Getting Started in Democraciv"""
         embed = discord.Embed(title="Beginner's Guide", description=config.getLinks()['beginnersGuide'],
                               colour=0x7f0000)
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
