@@ -224,6 +224,16 @@ class Link(commands.Cog):
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
         await ctx.send(content=None, embed=embed)
 
+    @commands.command(name='quire')
+    @commands.has_permissions(administrator=True)
+    async def quire(self, ctx):
+        """Quire Project Management"""
+        embed = discord.Embed(title='Quire',
+                              description=config.getLinks()['quire'],
+                              colour=0x7f0000)
+        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
+        await ctx.send(content=None, embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Link(bot))

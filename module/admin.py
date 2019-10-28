@@ -74,7 +74,7 @@ class Admin(commands.Cog):
             return True
 
         deleted = await ctx.channel.purge(limit=num, check=msgcheck)
-        await ctx.send(f':white_check_mark: Deleted **{len(deleted)}/{num}** possible messages.', delete_after=10)
+        await ctx.send(f':white_check_mark: Deleted **{len(deleted)}/{num}** messages.', delete_after=10)
 
 
 def setup(bot):
