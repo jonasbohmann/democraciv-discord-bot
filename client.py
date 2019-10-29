@@ -10,6 +10,7 @@ import traceback
 import discord.utils
 import pkg_resources
 
+from event.twitch import Twitch
 from event.reddit import Reddit
 from discord.ext import commands
 
@@ -30,6 +31,7 @@ from discord.ext import commands
 #
 # All things relevant to event logging are handled here as well.
 #
+from event.twitch import Twitch
 
 client = commands.Bot(command_prefix=config.getPrefix(), description=config.getConfig()['botDescription'],
                       case_insensitive=True)
@@ -53,75 +55,14 @@ initial_extensions = ['module.link',
                       'event.logging',
                       'event.error_handler']
 
-
-# -- Twitch --
-# HTTP request to the Twitch API for twitch_task
-
-def checkTwitchLivestream():
-    twitchAPIUrl = "https://api.twitch.tv/helix/streams?user_login=" + config.getTwitch()['twitchChannelName']
-    newTwitchAPIToken = config.getTokenFile()['twitchAPIKey']
-    httpHeader = {'Client-ID': newTwitchAPIToken}
-
-    try:
-        twitchRequest = requests.get(twitchAPIUrl, headers=httpHeader)
-    except ConnectionError as e:
-        print("ERROR - ConnectionError in Twitch requests.get()!\n")
-        print(e)
-
-    twitch = json.loads(twitchRequest.content)
-    global activeStream
-
-    try:
-        twitch['data'][0]['id']
-    except (IndexError, KeyError) as e:
-        activeStream = False
-        return False
-
-    thumbnail = twitch['data'][0]['thumbnail_url'].replace('{width}', '720').replace('{height}', '380')
-    return [twitch['data'][0]['title'], thumbnail]
-
-
-# -- Twitch  --
-# Background task that posts an alert if twitch.tv/democraciv is live
-
-async def twitch_task():
-    await client.wait_until_ready()
-    global activeStream
-    streamer = config.getTwitch()['twitchChannelName']
-
-    try:
-        dcivGuild = client.get_guild(int(config.getConfig()["homeServerID"]))
-        channel = discord.utils.get(dcivGuild.text_channels, name=config.getTwitch()['twitchAnnouncementChannel'])
-    except AttributeError:
-        print(
-            f'ERROR - I could not find the Democraciv Discord Server! Change "homeServerID" '
-            f'in the config to a server I am in or disable Twitch announcements.')
-        return
-
-    while not client.is_closed():
-        twitch_data = checkTwitchLivestream()
-        if twitch_data is not False:
-            if activeStream is False:
-                activeStream = True
-                embed = discord.Embed(title=f":satellite: {streamer} - Live on Twitch", colour=0x7f0000)
-                embed.add_field(name="Title", value=twitch_data[0], inline=False)
-                embed.add_field(name="Link", value=f"https://twitch.tv/{streamer}", inline=False)
-                embed.set_image(url=twitch_data[1])
-                embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-                embed.timestamp = datetime.datetime.utcnow()
-                if config.getTwitch()['everyonePingOnAnnouncement']:
-                    await channel.send(f'@everyone {streamer} is live on Twitch!')
-                await channel.send(embed=embed)
-        await asyncio.sleep(180)
-
-
 @client.event
 async def on_ready():
     print('Logged in as ' + client.user.name + ' with discord.py ' + str(
         pkg_resources.get_distribution('discord.py').version))
     print('-------------------------------------------------------')
     if config.getTwitch()['enableTwitchAnnouncements']:
-        client.loop.create_task(twitch_task())
+        twitch = Twitch(client)
+        client.loop.create_task(twitch.twitch_task())
 
     if config.getReddit()['enableRedditAnnouncements']:
         reddit = Reddit(client)
