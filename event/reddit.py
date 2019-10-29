@@ -4,6 +4,7 @@ import asyncio
 import discord
 import datetime
 
+from util.embed import embed_builder
 
 class Reddit:
 
@@ -40,7 +41,7 @@ class Reddit:
                 config.getLastRedditPost()['id'] = submission.id
                 config.setLastRedditPost()
 
-                embed = discord.Embed(title=f":mailbox_with_mail: New post on r/{config.getReddit()['subreddit']}",
+                embed = embed_builder(title=f":mailbox_with_mail: New post on r/{config.getReddit()['subreddit']}",
                                       colour=0x7f0000)
                 embed.add_field(name="Thread", value=f"[{title}](https://reddit.com{comments_link})", inline=False)
                 embed.add_field(name="Author", value=f"u/{author}", inline=False)

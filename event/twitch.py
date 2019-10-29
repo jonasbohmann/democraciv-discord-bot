@@ -5,6 +5,7 @@ import discord
 import requests
 import datetime
 
+from util.embed import embed_builder
 
 # -- Twitch  --
 # Background task that posts an alert if twitch.tv/democraciv is live
@@ -54,7 +55,7 @@ class Twitch:
             if twitch_data is not False:
                 if self.activeStream is False:
                     self.activeStream = True
-                    embed = discord.Embed(title=f":satellite: {self.streamer} - Live on Twitch", colour=0x7f0000)
+                    embed = embed_builder(title=f":satellite: {self.streamer} - Live on Twitch", description="")
                     embed.add_field(name="Title", value=twitch_data[0], inline=False)
                     embed.add_field(name="Link", value=f"https://twitch.tv/{self.streamer}", inline=False)
                     embed.set_image(url=twitch_data[1])

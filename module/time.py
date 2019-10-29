@@ -4,6 +4,7 @@ import discord
 
 from datetime import datetime
 from discord.ext import commands
+from util.embed import embed_builder
 
 
 class Time(commands.Cog):
@@ -14,12 +15,12 @@ class Time(commands.Cog):
         """Displays the current time in based on the inputted values."""
         aliases = '/'.join([name] + aliases).upper() # Turns the list of aliases into a formatted string
         if us == 'us':
-            embed = discord.Embed(title='Time - ' + aliases + ' - US Format',
+            embed = embed_builder(title='Time - ' + aliases + ' - US Format',
                                   description=datetime.strftime(time, "%m/%d/%Y, %I:%M:%S %p"), colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             await ctx.send(content=None, embed=embed)
             return
-        embed = discord.Embed(title='Time - ' + aliases, description=datetime.strftime(time, "%d.%m.%Y, %H:%M:%S"),
+        embed = embed_builder(title='Time - ' + aliases, description=datetime.strftime(time, "%d.%m.%Y, %H:%M:%S"),
                               colour=0x7f0000)
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
         await ctx.send(content=None, embed=embed)

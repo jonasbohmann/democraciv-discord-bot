@@ -3,6 +3,7 @@ import discord
 import datetime
 
 from discord.ext import commands
+from util.embed import embed_builder
 
 
 class ErrorHandler(commands.Cog):
@@ -25,7 +26,7 @@ class ErrorHandler(commands.Cog):
             await ctx.send(str(error))
             guild = ctx.guild
             channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
-            embed = discord.Embed(title=':x: Command Error', colour=0x7f0000)
+            embed = embed_builder(title=':x: Command Error', colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             embed.add_field(name='Error', value='CommandOnCooldown')
             embed.add_field(name='Guild', value=ctx.guild)
@@ -41,7 +42,7 @@ class ErrorHandler(commands.Cog):
             await ctx.send(str(error))
             guild = ctx.guild
             channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
-            embed = discord.Embed(title=':x: Command Error', colour=0x7f0000)
+            embed = embed_builder(title=':x: Command Error', colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             embed.add_field(name='Error', value='MissingPermissions')
             embed.add_field(name='Guild', value=ctx.guild)
@@ -57,7 +58,7 @@ class ErrorHandler(commands.Cog):
             await ctx.send(str(error))
             guild = ctx.guild
             channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
-            embed = discord.Embed(title=':x: Command Error', colour=0x7f0000)
+            embed = embed_builder(title=':x: Command Error', colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             embed.add_field(name='Error', value='MissingRequiredArgument')
             embed.add_field(name='Guild', value=ctx.guild)

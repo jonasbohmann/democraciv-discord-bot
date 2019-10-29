@@ -2,8 +2,8 @@ import config
 import string
 import discord
 import datetime
-import operator
 
+from util.embed import embed_builder
 from discord.ext import commands
 
 
@@ -84,7 +84,7 @@ class Party(commands.Cog, name='Political Parties'):
             if config.getConfig()['enableLogging']:
                 guild = ctx.guild
                 logchannel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
-                embed = discord.Embed(title=':family_mwgb: Joined Political Party', colour=0x7f0000)
+                embed = embed_builder(title=':family_mwgb: Joined Political Party', colour=0x7f0000)
                 embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,
                                 inline=False)
                 embed.add_field(name='Party', value=party)
@@ -140,7 +140,7 @@ class Party(commands.Cog, name='Political Parties'):
             if config.getConfig()['enableLogging']:
                 guild = ctx.guild
                 logchannel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
-                embed = discord.Embed(title=':triumph: Left Political Party', colour=0x7f0000)
+                embed = embed_builder(title=':triumph: Left Political Party', colour=0x7f0000)
                 embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,
                                 inline=False)
                 embed.add_field(name='Party', value=party)
@@ -188,7 +188,7 @@ class Party(commands.Cog, name='Political Parties'):
                 partyListEmbedContent += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizen' \
                                          f's\n\n'
 
-            embed = discord.Embed(title=f'Ranking of Political Parties in Arabia',
+            embed = embed_builder(title=f'Ranking of Political Parties in Arabia',
                                   description=f'{partyListEmbedContent}', colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             await ctx.send(embed=embed)
@@ -212,7 +212,7 @@ class Party(commands.Cog, name='Political Parties'):
                 else:
                     title = f'Members of {role}'
 
-                embed = discord.Embed(title=title, description=f'{msg}', colour=0x7f0000)
+                embed = embed_builder(title=title, description=f'{msg}', colour=0x7f0000)
                 embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
                 await ctx.send(embed=embed)
 
@@ -308,7 +308,7 @@ class Party(commands.Cog, name='Political Parties'):
                 msg += f'{alias}\n'
 
         if msg:
-            embed = discord.Embed(title=f'Aliases of {party}', description=f'{msg}', colour=0x7f0000)
+            embed = embed_builder(title=f'Aliases of {party}', description=f'{msg}', colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             await ctx.send(embed=embed)
         else:
