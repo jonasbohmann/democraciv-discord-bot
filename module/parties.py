@@ -2,6 +2,7 @@ import config
 import string
 import discord
 import datetime
+import operator
 
 from discord.ext import commands
 
@@ -19,6 +20,23 @@ class Party(commands.Cog, name='Political Parties'):
         """Gets party name from related alias, returns alias if it is not found"""
         return config.getPartyAliases().get(alias, alias)
 
+    def collectPartiesAndMembers(self):
+        partiesAndMembers = []
+        partyKeys = config.getParties().keys()
+
+        dcivGuild = self.bot.get_guild(int(config.getConfig()["homeServerID"]))
+
+        for party in partyKeys:
+            role = discord.utils.get(dcivGuild.roles, name=party)
+
+            if role is None:
+                print(f'ERROR -  In Party.collectPartiesAndMembers: "{party}" was added as a party but has no role on this server!')
+                continue
+
+            partiesAndMembers.append((party, len(role.members)))
+
+        return partiesAndMembers
+
     @commands.command(name='join')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def join(self, ctx, *party: str):
@@ -33,6 +51,7 @@ class Party(commands.Cog, name='Political Parties'):
         member = ctx.message.author
         role = discord.utils.get(ctx.guild.roles, name=party)
 
+        # Dict with party: partyLeader
         inviteOnlyParties = {'المتنورين': 466851004290170902}
 
         if party in config.getParties():
@@ -146,28 +165,26 @@ class Party(commands.Cog, name='Political Parties'):
             await ctx.send(':x: You have to invite me to the Democraciv server first!')
 
         if not party:
-            msg = ''
-            partyKeys = config.getParties().keys()
-            for party in partyKeys:
-                role = discord.utils.get(dcivGuild.roles, name=party)
-                if role is None:
-                    await ctx.send(f':x: "{party}" was added as a party but has no role on this server!')
+            partyListEmbedContent = ''
+
+            sortedPartiesAndMembers = sorted(self.collectPartiesAndMembers(), key=lambda x: x[1], reverse=True)
+
+            for party in sortedPartiesAndMembers:
+                if party[0] == 'Independent':
                     continue
-                if party == 'Independent':
-                    continue
-                if len(role.members) == 1:
-                    msg += f'**{party}**\n{len(role.members)} member\n\n'
+                if party[1] == 1:
+                    msg += f'**{party[0]}**\n{party[1]} member\n\n'
                 else:
-                    msg += f'**{party}**\n{len(role.members)} members\n\n'
+                    msg += f'**{party[0]}**\n{party[1]} members\n\n'
 
             # Append Independents to message
             independentRole = discord.utils.get(dcivGuild.roles, name='Independent')
             if len(independentRole.members) == 1:
-                msg += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizen\n\n'
+                partyListEmbedContent += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizen\n\n'
             else:
-                msg += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizens\n\n'
+                partyListEmbedContent += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizens\n\n'
 
-            embed = discord.Embed(title=f'Ranking of Political Parties in Arabia', description=f'{msg}', colour=0x7f0000)
+            embed = discord.Embed(title=f'Ranking of Political Parties in Arabia', description=f'{partyListEmbedContent}', colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             await ctx.send(embed=embed)
 
