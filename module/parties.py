@@ -173,9 +173,9 @@ class Party(commands.Cog, name='Political Parties'):
                 if party[0] == 'Independent':
                     continue
                 if party[1] == 1:
-                    msg += f'**{party[0]}**\n{party[1]} member\n\n'
+                    partyListEmbedContent += f'**{party[0]}**\n{party[1]} member\n\n'
                 else:
-                    msg += f'**{party[0]}**\n{party[1]} members\n\n'
+                    partyListEmbedContent += f'**{party[0]}**\n{party[1]} members\n\n'
 
             # Append Independents to message
             independentRole = discord.utils.get(dcivGuild.roles, name='Independent')
