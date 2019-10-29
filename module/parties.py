@@ -12,6 +12,7 @@ from discord.ext import commands
 # Management of Political Parties
 #
 
+
 class Party(commands.Cog, name='Political Parties'):
     def __init__(self, bot):
         self.bot = bot
@@ -30,7 +31,8 @@ class Party(commands.Cog, name='Political Parties'):
             role = discord.utils.get(dcivGuild.roles, name=party)
 
             if role is None:
-                print(f'ERROR -  In Party.collectPartiesAndMembers: "{party}" was added as a party but has no role on this server!')
+                print(f'ERROR -  In Party.collectPartiesAndMembers: "{party}" was added as a party but has no role on '
+                      f'this server!')
                 continue
 
             partiesAndMembers.append((party, len(role.members)))
@@ -57,7 +59,6 @@ class Party(commands.Cog, name='Political Parties'):
         if party in config.getParties():
             if party not in [y.name for y in member.roles]:
                 if party in inviteOnlyParties:
-
                     partyLeaderMention = self.bot.get_user(inviteOnlyParties[party])
 
                     msg = f':x: {party} is invite-only. Ask {partyLeaderMention.mention} for an invitation. '
@@ -69,7 +70,8 @@ class Party(commands.Cog, name='Political Parties'):
                     await ctx.send(msg)
                     await member.add_roles(role)
                 else:
-                    msg = f':white_check_mark: You joined {party}! Now head to their Discord Server and introduce yourself:'
+                    msg = f':white_check_mark: You joined {party}! Now head to their Discord Server and introduce ' \
+                          f'yourself: '
                     await ctx.send(msg)
                     await ctx.send(config.getParties()[party])
                     await member.add_roles(role)
@@ -180,11 +182,14 @@ class Party(commands.Cog, name='Political Parties'):
             # Append Independents to message
             independentRole = discord.utils.get(dcivGuild.roles, name='Independent')
             if len(independentRole.members) == 1:
-                partyListEmbedContent += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizen\n\n'
+                partyListEmbedContent += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizen' \
+                                         f'\n\n '
             else:
-                partyListEmbedContent += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizens\n\n'
+                partyListEmbedContent += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independentRole.members)} citizen' \
+                                         f's\n\n'
 
-            embed = discord.Embed(title=f'Ranking of Political Parties in Arabia', description=f'{partyListEmbedContent}', colour=0x7f0000)
+            embed = discord.Embed(title=f'Ranking of Political Parties in Arabia',
+                                  description=f'{partyListEmbedContent}', colour=0x7f0000)
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             await ctx.send(embed=embed)
 

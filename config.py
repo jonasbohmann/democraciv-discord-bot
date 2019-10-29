@@ -7,7 +7,7 @@ import discord
 #
 # Author: DerJonas
 # Interpreter: Python3.7
-# Library: discord.py 1.0.0a
+# Library: discord.py
 # License: MIT
 # Source: https://github.com/jonasbohmann/democraciv-discord-bot
 #
@@ -108,7 +108,8 @@ def dumpConfigParties():
 
 
 async def addParty(guild, invite, party: str) -> str:
-    """Adds the inputted party paired with the invite, returns an empty string if it was successfully added, otherwise returns error as string."""
+    """Adds the inputted party paired with the invite, returns an empty string if it was successfully added,
+    otherwise returns error as string. """
     if ',' in party:
         return f'May not have \',\' in party name!'
 
@@ -131,7 +132,8 @@ async def addParty(guild, invite, party: str) -> str:
 
 
 async def deleteParty(guild, party: str) -> str:
-    """Deletes the inputted party and related aliases, returns an empty string if it was successfully deleted, otherwise returns error as string."""
+    """Deletes the inputted party and related aliases, returns an empty string if it was successfully deleted,
+    otherwise returns error as string. """
 
     capsParty = string.capwords(party)
 
@@ -168,7 +170,8 @@ async def deleteParty(guild, party: str) -> str:
 
 
 async def addPartyAlias(party: str, alias: str) -> str:
-    """Added alias as a new alias to party, returns an empty string if it was successfully added, otherwise returns error as string."""
+    """Added alias as a new alias to party, returns an empty string if it was successfully added, otherwise returns
+    error as string. """
     capsAlias, party = string.capwords(alias), string.capwords(party)
 
     if party not in config_parties['parties'] and party not in config_parties['aliases']:
@@ -189,7 +192,8 @@ async def addPartyAlias(party: str, alias: str) -> str:
 
 
 async def deletePartyAlias(alias: str) -> str:
-    """Deletes a party alias, returns an empty string if it was successfully deleted, otherwise returns error as string."""
+    """Deletes a party alias, returns an empty string if it was successfully deleted, otherwise returns error as
+    string. """
     capsAlias = string.capwords(alias)
     if capsAlias not in config_parties['aliases']:
         return f'{alias} not found!'

@@ -18,7 +18,7 @@ from discord.ext import commands
 #
 # Author: DerJonas
 # Interpreter: Python3.7
-# Library: discord.py 1.2.2
+# Library: discord.py
 # License: MIT
 # Source: https://github.com/jonasbohmann/democraciv-discord-bot
 #
@@ -55,6 +55,7 @@ initial_extensions = ['module.link',
                       'event.logging',
                       'event.error_handler']
 
+
 @client.event
 async def on_ready():
     print('Logged in as ' + client.user.name + ' with discord.py ' + str(
@@ -78,17 +79,6 @@ async def on_message(message):
         return
     if message.author.bot:
         return
-
-    # WIP DemocraCorp Ban
-    # (in case we need this in the future)
-
-    # banned_dcorp_words = ['democracorp', 'dcorp', 'vote buying', 'fair votes', 'fair votes act', '#dc-discussion', 'dc',' round table', 'dc debate', 'vote bought', 'bougth votes', 'storting bought']
-
-    # message_content = message.clean_content.lower()
-
-    # if any(words in message_content for words in banned_dcorp_words):
-    #    await message.delete()
-    #    await message.channel.send(':x: Discussion about anything related to Democracorp has been banned.')
 
     await client.process_commands(message)
 

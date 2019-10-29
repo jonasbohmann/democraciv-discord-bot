@@ -78,7 +78,8 @@ class About(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def contributors(self, ctx):
         """See who helped with this project :heart:"""
-        embed = discord.Embed(title='Contributors :heart:', description="https://github.com/jonasbohmann/democraciv-discord-bot/graphs/contributors",
+        embed = discord.Embed(title='Contributors :heart:', description="https://github.com/jonasbohmann/democraciv"
+                                                                        "-discord-bot/graphs/contributors",
                               colour=0x7f0000)
         embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
         await ctx.send(content=None, embed=embed)
