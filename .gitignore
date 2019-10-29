@@ -3,4 +3,5 @@
 /__pycache__/
 /module/__pycache__/
 /event/__pycache__/
+/util/__pycache__/
 /config/token.json
