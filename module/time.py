@@ -10,8 +10,10 @@ class Time(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def returnTime(self, ctx, us: str, time: datetime, name, aliases=[]):
+    async def returnTime(self, ctx, us: str, time: datetime, name, aliases=None):
         """Displays the current time in based on the inputted values."""
+        if aliases is None:
+            aliases = []
         aliases = '/'.join([name] + aliases).upper()  # Turns the list of aliases into a formatted string
         if us == 'us':
             embed = embed_builder(title='Time - ' + aliases + ' - US Format',

@@ -12,12 +12,12 @@ from util.embed import embed_builder
 # Commands regarding the bot itself.
 #
 
-startTime = time.time()
+start_time = time.time()
 
 
 def getUptime():
-    currentTime = time.time()
-    difference = int(round(currentTime - startTime))
+    current_time = time.time()
+    difference = int(round(current_time - start_time))
     return str(datetime.timedelta(seconds=difference))
 
 

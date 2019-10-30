@@ -79,7 +79,7 @@ class Link(commands.Cog):
 
     @commands.command(name='beginnersguide', aliases=['b'])
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def beginnersguide(self, ctx):
+    async def beginnersGuide(self, ctx):
         """Getting Started in Democraciv"""
         embed = embed_builder(title="Beginner's Guide", description=config.getLinks()['beginnersGuide'])
         await ctx.send(embed=embed)
@@ -134,7 +134,7 @@ class Link(commands.Cog):
 
     @commands.command(name='gamesessions', aliases=['gs'])
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def gamesessions(self, ctx):
+    async def gameSessions(self, ctx):
         """Game Sessions on YouTube"""
         embed = embed_builder(title='Game Sessions', description=config.getLinks()['gameSessions'])
         await ctx.send(embed=embed)

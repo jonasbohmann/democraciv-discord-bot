@@ -7,6 +7,7 @@ import datetime
 
 from util.embed import embed_builder
 
+
 # -- Twitch  --
 # Background task that posts an alert if twitch.tv/democraciv is live
 
@@ -14,20 +15,20 @@ class Twitch:
 
     def __init__(self, bot):
         self.bot = bot
-        self.twitchAPIUrl = "https://api.twitch.tv/helix/streams?user_login=" + config.getTwitch()['twitchChannelName']
-        self.newTwitchAPIToken = config.getTokenFile()['twitchAPIKey']
-        self.httpHeader = {'Client-ID': self.newTwitchAPIToken}
+        self.twitch_API_url = "https://api.twitch.tv/helix/streams?user_login=" + config.getTwitch()['twitchChannelName']
+        self.twitch_API_token = config.getTokenFile()['twitchAPIKey']
+        self.http_header = {'Client-ID': self.twitch_API_token}
         self.streamer = config.getTwitch()['twitchChannelName']
         self.activeStream = False
 
     def checkTwitchLivestream(self):
         try:
-            twitchRequest = requests.get(self.twitchAPIUrl, headers=self.httpHeader)
+            twitch_request = requests.get(self.twitch_API_url, headers=self.http_header)
         except ConnectionError as e:
             print("ERROR - ConnectionError in Twitch requests.get()!\n")
             print(e)
 
-        twitch = json.loads(twitchRequest.content)
+        twitch = json.loads(twitch_request.content)
 
         try:
             twitch['data'][0]['id']
@@ -42,8 +43,8 @@ class Twitch:
         await self.bot.wait_until_ready()
 
         try:
-            dcivGuild = self.bot.get_guild(int(config.getConfig()["homeServerID"]))
-            channel = discord.utils.get(dcivGuild.text_channels, name=config.getTwitch()['twitchAnnouncementChannel'])
+            dciv_guild = self.bot.get_guild(int(config.getConfig()["homeServerID"]))
+            channel = discord.utils.get(dciv_guild.text_channels, name=config.getTwitch()['twitchAnnouncementChannel'])
         except AttributeError:
             print(
                 f'ERROR - I could not find the Democraciv Discord Server! Change "homeServerID" '

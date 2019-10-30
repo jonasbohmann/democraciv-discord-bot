@@ -6,14 +6,15 @@ import datetime
 
 from util.embed import embed_builder
 
+
 class Reddit:
 
     def __init__(self, bot):
         self.bot = bot
-        self.redditClient = praw.Reddit(client_id=config.getTokenFile()['redditClientID'],
-                                        client_secret=config.getTokenFile()['redditClientSecret'],
-                                        user_agent=config.getReddit()['userAgent'])
-        self.subreddit = self.redditClient.subreddit(config.getReddit()['subreddit'])
+        self.reddit_client = praw.Reddit(client_id=config.getTokenFile()['redditClientID'],
+                                         client_secret=config.getTokenFile()['redditClientSecret'],
+                                         user_agent=config.getReddit()['userAgent'])
+        self.subreddit = self.reddit_client.subreddit(config.getReddit()['subreddit'])
 
     async def reddit_task(self):
         last_reddit_post = config.getLastRedditPost()
@@ -21,8 +22,8 @@ class Reddit:
         await self.bot.wait_until_ready()
 
         try:
-            dcivGuild = self.bot.get_guild(int(config.getConfig()["homeServerID"]))
-            channel = discord.utils.get(dcivGuild.text_channels, name=config.getReddit()['redditAnnouncementChannel'])
+            dciv_guild = self.bot.get_guild(int(config.getConfig()["homeServerID"]))
+            channel = discord.utils.get(dciv_guild.text_channels, name=config.getReddit()['redditAnnouncementChannel'])
         except AttributeError:
             print(
                 f'ERROR - I could not find the Democraciv Discord Server! Change "homeServerID" '
