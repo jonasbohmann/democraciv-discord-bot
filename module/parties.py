@@ -21,18 +21,17 @@ class Party(commands.Cog, name='Political Parties'):
         """Gets party name from related alias, returns alias if it is not found"""
         return config.getPartyAliases().get(alias, alias)
 
-    def collectPartiesAndMembers(self):
+    async def collectPartiesAndMembers(self, ctx):
         partiesAndMembers = []
         partyKeys = config.getParties().keys()
-
         dcivGuild = self.bot.get_guild(int(config.getConfig()["homeServerID"]))
 
         for party in partyKeys:
             role = discord.utils.get(dcivGuild.roles, name=party)
 
             if role is None:
-                print(f'ERROR -  In Party.collectPartiesAndMembers: "{party}" was added as a party but has no role on '
-                      f'this server!')
+                await ctx.send(f':x: "{party}" was added as a party but has '
+                               f'no role on this server!')
                 continue
 
             partiesAndMembers.append((party, len(role.members)))
@@ -169,7 +168,7 @@ class Party(commands.Cog, name='Political Parties'):
         if not party:
             partyListEmbedContent = ''
 
-            sortedPartiesAndMembers = sorted(self.collectPartiesAndMembers(), key=lambda x: x[1], reverse=True)
+            sortedPartiesAndMembers = sorted(await self.collectPartiesAndMembers(ctx), key=lambda x: x[1], reverse=True)
 
             for party in sortedPartiesAndMembers:
                 if party[0] == 'Independent':
