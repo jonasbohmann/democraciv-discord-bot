@@ -3,6 +3,7 @@ import json
 import string
 import discord
 
+
 # -- Discord Bot for the r/Democraciv Server --
 #
 # Author: DerJonas
@@ -20,33 +21,21 @@ import discord
 #
 
 
-try:
-    fileDir = os.path.dirname(os.path.realpath('__file__'))
-    filename1 = os.path.join(fileDir, 'config/config.json')
-    config = json.loads(open(filename1).read())
-except FileNotFoundError:
-    print("ERROR - Couldn't find config.json")
+def parseJSONFromFile(filePath):
+    try:
+        fileDir = os.path.dirname(os.path.realpath('__file__'))
+        filename = os.path.join(fileDir, filePath)
+        return json.loads(open(filename).read())
+    except FileNotFoundError:
+        print(f"ERROR - Couldn't find file: {filePath}")
+        return None
 
-try:
-    fileDir = os.path.dirname(os.path.realpath('__file__'))
-    filename2 = os.path.join(fileDir, 'config/token.json')
-    token = json.loads(open(filename2).read())
-except FileNotFoundError:
-    print("ERROR - Couldn't find token.json")
 
-try:
-    fileDir = os.path.dirname(os.path.realpath('__file__'))
-    filename3 = os.path.join(fileDir, 'config/config_parties.json')
-    config_parties = json.loads(open(filename3).read())
-except FileNotFoundError:
-    print("ERROR - Couldn't find config_parties.json")
-
-try:
-    fileDir = os.path.dirname(os.path.realpath('__file__'))
-    filename4 = os.path.join(fileDir, 'config/last_reddit_post.json')
-    last_reddit_post = json.loads(open(filename4).read())
-except FileNotFoundError:
-    print("ERROR - Couldn't find last_reddit_post.json")
+# Load every config file into memory
+config = parseJSONFromFile('config/config.json')
+token = parseJSONFromFile('config/token.json')
+config_parties = parseJSONFromFile('config_parties.json')
+last_reddit_post = parseJSONFromFile('last_reddit_post.json')
 
 
 def getToken():
@@ -98,13 +87,13 @@ def getLastRedditPost():
 
 
 def setLastRedditPost():
-    with open(filename4, 'w') as my_file:
-        json.dump(last_reddit_post, my_file, indent=1)
+    with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/last_reddit_post.json'), 'w') as file:
+        json.dump(last_reddit_post, file, indent=1)
 
 
 def dumpConfigParties():
-    with open(filename3, 'w') as myfile:
-        json.dump(config_parties, myfile, indent=2)
+    with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/config_parties.json'), 'w') as file:
+        json.dump(config_parties, file, indent=2)
 
 
 async def addParty(guild, invite, party: str) -> str:
