@@ -36,6 +36,7 @@ config = parseJSONFromFile('config/config.json')
 token = parseJSONFromFile('config/token.json')
 config_parties = parseJSONFromFile('config/config_parties.json')
 last_reddit_post = parseJSONFromFile('config/last_reddit_post.json')
+roles = parseJSONFromFile('config/roles.json')
 
 
 def getToken():
@@ -80,6 +81,10 @@ def getReddit():
 
 def getTwitch():
     return config['twitch']
+
+
+def getRoles():
+    return roles['roles']
 
 
 def getLastRedditPost():

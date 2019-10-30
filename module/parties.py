@@ -213,7 +213,6 @@ class Party(commands.Cog, name='Political Parties'):
                     title = f'Members of {role}'
 
                 embed = embed_builder(title=title, description=f'{msg}', colour=0x7f0000)
-                embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
                 await ctx.send(embed=embed)
 
     @commands.command(name='addparty', hidden=True)

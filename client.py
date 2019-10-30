@@ -42,7 +42,7 @@ initial_extensions = ['module.link',
                       'module.help',
                       'module.wikipedia',
                       'module.random',
-                      'module.role',
+                      'module.roles',
                       'event.logging',
                       'event.error_handler']
 
