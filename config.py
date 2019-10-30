@@ -34,7 +34,7 @@ def parseJSONFromFile(filePath):
 # Load every config file into memory
 config = parseJSONFromFile('config/config.json')
 token = parseJSONFromFile('config/token.json')
-config_parties = parseJSONFromFile('config/config_parties.json')
+config_parties = parseJSONFromFile('config/parties.json')
 last_reddit_post = parseJSONFromFile('config/last_reddit_post.json')
 roles = parseJSONFromFile('config/roles.json')
 
@@ -97,7 +97,7 @@ def setLastRedditPost():
 
 
 def dumpConfigParties():
-    with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/config_parties.json'), 'w') as file:
+    with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/parties.json'), 'w') as file:
         json.dump(config_parties, file, indent=2)
 
 
