@@ -34,8 +34,8 @@ def parseJSONFromFile(filePath):
 # Load every config file into memory
 config = parseJSONFromFile('config/config.json')
 token = parseJSONFromFile('config/token.json')
-config_parties = parseJSONFromFile('config_parties.json')
-last_reddit_post = parseJSONFromFile('last_reddit_post.json')
+config_parties = parseJSONFromFile('config/config_parties.json')
+last_reddit_post = parseJSONFromFile('config/last_reddit_post.json')
 
 
 def getToken():

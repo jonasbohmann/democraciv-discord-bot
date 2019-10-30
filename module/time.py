@@ -1,6 +1,5 @@
 import pytz
 import config
-import discord
 
 from datetime import datetime
 from discord.ext import commands
@@ -10,10 +9,10 @@ from util.embed import embed_builder
 class Time(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-    
-    async def returnTime(self, ctx, us: str, time: datetime, name, aliases = []):
+
+    async def returnTime(self, ctx, us: str, time: datetime, name, aliases=[]):
         """Displays the current time in based on the inputted values."""
-        aliases = '/'.join([name] + aliases).upper() # Turns the list of aliases into a formatted string
+        aliases = '/'.join([name] + aliases).upper()  # Turns the list of aliases into a formatted string
         if us == 'us':
             embed = embed_builder(title='Time - ' + aliases + ' - US Format',
                                   description=datetime.strftime(time, "%m/%d/%Y, %I:%M:%S %p"), colour=0x7f0000)
@@ -28,7 +27,8 @@ class Time(commands.Cog):
     @commands.group(name='time', case_insensitive=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def time(self, ctx):
-        """Displays the current time. Specify the timezone as argument.\nExample: -time est\nAdd \"us\" at the end to get the time in US formatting."""
+        """Displays the current time. Specify the timezone as argument.\nExample: -time est\nAdd \"us\" at the end to
+        get the time in US formatting. """
 
     @time.command(name='est', aliases=['edt'])
     async def est(self, ctx, us: str = None):

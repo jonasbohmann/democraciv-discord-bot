@@ -25,8 +25,7 @@ from discord.ext import commands
 # Main part of the bot. Loads all modules on startup. Remove or add new modules by adding or removing them to/from
 # "initial_extensions".
 #
-# All things relevant to event logging are handled here as well.
-#
+
 
 client = commands.Bot(command_prefix=config.getPrefix(), description=config.getConfig()['botDescription'],
                       case_insensitive=True)

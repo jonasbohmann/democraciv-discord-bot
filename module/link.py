@@ -1,5 +1,4 @@
 import config
-import discord
 
 from util.embed import embed_builder
 from discord.ext import commands
