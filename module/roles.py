@@ -55,6 +55,40 @@ class Roles(commands.Cog):
                 await ctx.send(f":white_check_mark: The '{role}' role was removed from you.")
                 await member.remove_roles(discord_role)
 
+    @commands.command(name='addrole', hidden=True)
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.has_permissions(administrator=True)
+    async def addRole(self, ctx, join_message: str, *role: str):
+        """Add a new role to the server"""
+        if not role or not join_message:
+            await ctx.send(':x: You have to give me both the name and a short join message of a role to add!')
+
+        else:
+            role = ' '.join(role)
+            error = await config.addRole(ctx.guild, join_message, role)
+
+            if error:
+                await ctx.send(f':x: {error}')
+            else:
+                await ctx.send(f':white_check_mark: Added {role} with "{join_message}"!')
+
+    @commands.command(name='deleterole', hidden=True)
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.has_permissions(administrator=True)
+    async def deleteRole(self, ctx, *role: str):
+        """Delete a role from the server"""
+        if not role:
+            await ctx.send(':x: You have to give me the name of a role to delete!')
+
+        else:
+            role = ' '.join(role)
+            error = await config.deleteRole(ctx.guild, role)
+
+            if error:
+                await ctx.send(f':x: {error}')
+            else:
+                await ctx.send(f':white_check_mark: Deleted {role}!')
+
 
 def setup(bot):
     bot.add_cog(Roles(bot))

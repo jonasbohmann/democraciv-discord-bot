@@ -101,6 +101,53 @@ def dumpConfigParties():
         json.dump(config_parties, file, indent=2)
 
 
+def dumpConfigRoles():
+    with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/roles.json'), 'w') as file:
+        json.dump(roles, file, indent=2)
+
+
+async def addRole(guild, join_message, role: str) -> str:
+    """Adds the inputted role paired with the join message, returns an empty string if it was successfully added
+    , otherwise returns error as string. """
+    if ',' in role:
+        return f'May not have \',\' in role name!'
+
+    caps_role = string.capwords(role)
+    if caps_role in roles['roles']:
+        return f'{caps_role} already exists!'
+
+    # Otherwise, create the role
+    else:
+        if caps_role == role:
+            roles['roles'][caps_role] = join_message
+
+        dumpConfigRoles()
+        await guild.create_role(name=role)
+    return ''
+
+
+async def deleteRole(guild, role: str) -> str:
+    """Deletes the inputted role, returns an empty string if it was successfully deleted,
+    otherwise returns error as string. """
+
+    caps_role = string.capwords(role)
+
+    # If the role already exists, delete it
+    if caps_role in roles['roles']:
+        role = discord.utils.get(guild.roles, name=role)
+        # If the role has a role, delete the role (lol)
+        if role is not None:
+            await role.delete()
+        del roles['roles'][caps_role]
+
+        dumpConfigRoles()
+
+    # Otherwise return False
+    else:
+        return f'{role} not found!'
+    return ''
+
+
 async def addParty(guild, invite, party: str) -> str:
     """Adds the inputted party paired with the invite, returns an empty string if it was successfully added,
     otherwise returns error as string. """
