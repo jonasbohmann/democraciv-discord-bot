@@ -39,51 +39,43 @@ class About(commands.Cog):
         embed.add_field(name='Prefix', value=config.getPrefix(), inline=True)
         embed.add_field(name='Ping', value=(str(self.getPing()) + 'ms'), inline=True)
         embed.add_field(name='Commands', value='See ' + config.getPrefix() + 'help', inline=True)
-        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-        await ctx.send(content=None, embed=embed)
+        await ctx.send(embed=embed)
 
     @commands.command(name='uptime')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def uptime(self, ctx):
         """Check how long I've been working"""
-        embed = embed_builder(title='Uptime', description=getUptime(), colour=0x7f0000)
-        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-        await ctx.send(content=None, embed=embed)
+        embed = embed_builder(title='Uptime', description=getUptime())
+        await ctx.send(embed=embed)
 
     @commands.command(name='ping')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def ping(self, ctx):
         """Pong!"""
-        embed = embed_builder(title='Ping', description=(str(self.getPing()) + 'ms'), colour=0x7f0000)
-        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-        await ctx.send(content=None, embed=embed)
+        embed = embed_builder(title='Ping', description=(str(self.getPing()) + 'ms'))
+        await ctx.send(embed=embed)
 
     @commands.command(name='pong', hidden=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def pong(self, ctx):
         """Ping!"""
-        embed = embed_builder(title='Ping', description=(str(self.getPing()) + 'ms'), colour=0x7f0000)
-        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-        await ctx.send(content=None, embed=embed)
+        embed = embed_builder(title='Ping', description=(str(self.getPing()) + 'ms'))
+        await ctx.send(embed=embed)
 
     @commands.command(name='source')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def source(self, ctx):
         """Check out the source code on GitHub"""
-        embed = embed_builder(title='Source', description="https://github.com/jonasbohmann/democraciv-discord-bot",
-                              colour=0x7f0000)
-        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-        await ctx.send(content=None, embed=embed)
+        embed = embed_builder(title='Source', description="https://github.com/jonasbohmann/democraciv-discord-bot")
+        await ctx.send(embed=embed)
 
     @commands.command(name='contributors')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def contributors(self, ctx):
         """See who helped with this project :heart:"""
         embed = embed_builder(title='Contributors :heart:', description="https://github.com/jonasbohmann/democraciv"
-                                                                        "-discord-bot/graphs/contributors",
-                              colour=0x7f0000)
-        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-        await ctx.send(content=None, embed=embed)
+                                                                        "-discord-bot/graphs/contributors")
+        await ctx.send(embed=embed)
 
 
 def setup(bot):

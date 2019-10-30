@@ -15,14 +15,13 @@ class Time(commands.Cog):
         aliases = '/'.join([name] + aliases).upper()  # Turns the list of aliases into a formatted string
         if us == 'us':
             embed = embed_builder(title='Time - ' + aliases + ' - US Format',
-                                  description=datetime.strftime(time, "%m/%d/%Y, %I:%M:%S %p"), colour=0x7f0000)
-            embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-            await ctx.send(content=None, embed=embed)
+                                  description=datetime.strftime(time, "%m/%d/%Y, %I:%M:%S %p"))
+
+            await ctx.send(embed=embed)
             return
-        embed = embed_builder(title='Time - ' + aliases, description=datetime.strftime(time, "%d.%m.%Y, %H:%M:%S"),
-                              colour=0x7f0000)
-        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-        await ctx.send(content=None, embed=embed)
+
+        embed = embed_builder(title='Time - ' + aliases, description=datetime.strftime(time, "%d.%m.%Y, %H:%M:%S"))
+        await ctx.send(embed=embed)
 
     @commands.group(name='time', case_insensitive=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)

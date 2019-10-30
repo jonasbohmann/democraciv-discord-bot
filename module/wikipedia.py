@@ -1,5 +1,4 @@
 import config
-import discord
 import wikipedia
 
 from discord.ext import commands
@@ -19,8 +18,7 @@ class Wikipedia(commands.Cog):
         page = wikipedia.page(topic)
         embed = embed_builder(title=page.title, description=wikipedia.summary(topic, sentences=2), colour=0x7f0000)
         embed.add_field(name='Link', value=page.url)
-        embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-        await ctx.send(content=None, embed=embed)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):
