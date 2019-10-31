@@ -34,7 +34,7 @@ class Log(commands.Cog):
                     embed = embed_builder(title=':pencil2: Message Edited', description="")
                     embed.add_field(name='Author',
                                     value=before.author.mention + ' ' + before.author.name + '#'
-                                                                + before.author.discriminator,
+                                          + before.author.discriminator,
                                     inline=True)
                     embed.add_field(name='Channel', value=before.channel.mention, inline=True)
                     embed.add_field(name='Before', value=before.clean_content, inline=False)
@@ -55,7 +55,7 @@ class Log(commands.Cog):
                 embed = embed_builder(title=':wastebasket: Message Deleted', description="")
                 embed.add_field(name='Author',
                                 value=message.author.mention + ' ' + message.author.name + '#'
-                                                             + message.author.discriminator,
+                                      + message.author.discriminator,
                                 inline=True)
                 embed.add_field(name='Channel', value=message.channel.mention, inline=True)
 
@@ -65,7 +65,7 @@ class Log(commands.Cog):
                     embed.add_field(name='Message', value=message.clean_content, inline=False)
 
                 embed.timestamp = datetime.datetime.utcnow()
-                await channel.send(content=None, embed=embed)
+                await channel.send(embed=embed)
             else:
                 return
         return
@@ -84,7 +84,7 @@ class Log(commands.Cog):
                 embed.add_field(name='Channel',
                                 value=channel.mention, inline=True)
                 embed.timestamp = datetime.datetime.utcnow()
-                await log_channel.send(content=None, embed=embed)
+                await log_channel.send(embed=embed)
             else:
                 return
         return
@@ -98,7 +98,8 @@ class Log(commands.Cog):
         if config.getGuildConfig(guild.id)['enableWelcomeMessage']:
             information_channel = discord.utils.get(guild.text_channels, name='information')
             help_channel = discord.utils.get(guild.text_channels, name='help')
-            welcome_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['welcomeChannel'])
+            welcome_channel = discord.utils.get(guild.text_channels,
+                                                name=config.getGuildConfig(guild.id)['welcomeChannel'])
 
             # General case without mentioning anything in "{}" from the config's welcome_message
             if information_channel is None or help_channel is None:
@@ -106,9 +107,10 @@ class Log(commands.Cog):
 
             # Democraciv-specific case with mentioning {}'s
             else:
-                welcome_message = config.getStrings(guild.id)['welcomeMessage'].format(member=member.mention, guild=guild.name,
-                                                                               information=information_channel.mention,
-                                                                               help=help_channel.mention)
+                welcome_message = config.getStrings(guild.id)['welcomeMessage'].format(member=member.mention,
+                                                                                       guild=guild.name,
+                                                                                       information=information_channel.mention,
+                                                                                       help=help_channel.mention)
             await welcome_channel.send(welcome_message)
 
         if config.getGuildConfig(guild.id)['enableLogging']:
@@ -121,7 +123,7 @@ class Log(commands.Cog):
             embed.add_field(name='Mobile', value=member.is_on_mobile())
             embed.set_thumbnail(url=member.avatar_url)
             embed.timestamp = datetime.datetime.utcnow()
-            await log_channel.send(content=None, embed=embed)
+            await log_channel.send(embed=embed)
 
         return
 
@@ -135,7 +137,7 @@ class Log(commands.Cog):
             embed.add_field(name='Name', value=member.name + '#' + member.discriminator)
             embed.set_thumbnail(url=member.avatar_url)
             embed.timestamp = datetime.datetime.utcnow()
-            await channel.send(content=None, embed=embed)
+            await channel.send(embed=embed)
         return
 
     @commands.Cog.listener()
@@ -152,7 +154,7 @@ class Log(commands.Cog):
                 embed.add_field(name='After', value=after.display_name)
                 embed.set_thumbnail(url=before.avatar_url)
                 embed.timestamp = datetime.datetime.utcnow()
-                await log_channel.send(content=None, embed=embed)
+                await log_channel.send(embed=embed)
 
             if before.roles != after.roles:
 
@@ -161,7 +163,8 @@ class Log(commands.Cog):
                         if x not in before.roles:
                             given_role = x.name
                     guild = before.guild
-                    log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
+                    log_channel = discord.utils.get(guild.text_channels,
+                                                    name=config.getGuildConfig(guild.id)['logChannel'])
                     embed = embed_builder(title=':sunglasses: Role given to Member', description="")
                     embed.add_field(name='Member',
                                     value=before.mention + ' ' + before.name + '#' + before.discriminator,
@@ -169,14 +172,15 @@ class Log(commands.Cog):
                     embed.add_field(name='Role', value=given_role)
                     embed.set_thumbnail(url=before.avatar_url)
                     embed.timestamp = datetime.datetime.utcnow()
-                    await log_channel.send(content=None, embed=embed)
+                    await log_channel.send(embed=embed)
 
                 if len(before.roles) > len(after.roles):
                     for x in before.roles:
                         if x not in after.roles:
                             removed_role = x.name
                     guild = before.guild
-                    log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
+                    log_channel = discord.utils.get(guild.text_channels,
+                                                    name=config.getGuildConfig(guild.id)['logChannel'])
                     embed = embed_builder(title=':zipper_mouth: Role removed from Member', description="")
                     embed.add_field(name='Member',
                                     value=before.mention + ' ' + before.name + '#' + before.discriminator,
@@ -184,7 +188,7 @@ class Log(commands.Cog):
                     embed.add_field(name='Role', value=removed_role)
                     embed.set_thumbnail(url=before.avatar_url)
                     embed.timestamp = datetime.datetime.utcnow()
-                    await log_channel.send(content=None, embed=embed)
+                    await log_channel.send(embed=embed)
             else:
                 return
         return
@@ -198,7 +202,7 @@ class Log(commands.Cog):
             embed.add_field(name='Name', value=user.name + '#' + user.discriminator)
             embed.set_thumbnail(url=user.avatar_url)
             embed.timestamp = datetime.datetime.utcnow()
-            await channel.send(content=None, embed=embed)
+            await channel.send(embed=embed)
         return
 
     @commands.Cog.listener()
@@ -210,10 +214,37 @@ class Log(commands.Cog):
             embed.add_field(name='Name', value=user.name + '#' + user.discriminator)
             embed.set_thumbnail(url=user.avatar_url)
             embed.timestamp = datetime.datetime.utcnow()
-            await channel.send(content=None, embed=embed)
+            await channel.send(embed=embed)
         return
 
     # -- Guild Events --
+
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild):
+        introduction_channel = guild.text_channels[0]
+
+        # Alert owner of this bot that the bot was invited to some place
+        owner_user = self.bot.get_user(int(config.getConfig()['authorID']))
+        await owner_user.create_dm()
+        owner_dm_channel = owner_user.dm_channel
+        await owner_dm_channel.send(f":warning: I was added to {guild.name} ({guild.id}). Here are some invites:")
+
+        # Get invite for new guild to send to owner_dm_channel
+        guild_invites = await guild.invites()
+        try:
+            guild_invite_1 = str(guild_invites[0])
+            await owner_dm_channel.send(guild_invite_1)
+        except IndexError as e:
+            pass
+
+        # Send introduction message to random guild channel
+        embed = embed_builder(title=':two_hearts: Hey there!', description="Thanks for inviting me!\n\nYou can check "
+                                                                           "`-help` to get some more information "
+                                                                           "about me.")
+
+        await introduction_channel.send(embed=embed)
+
+        return
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role):
@@ -226,7 +257,7 @@ class Log(commands.Cog):
             embed.add_field(name='Colour', value=role.colour)
             embed.add_field(name='ID', value=role.id, inline=False)
             embed.timestamp = datetime.datetime.utcnow()
-            await log_channel.send(content=None, embed=embed)
+            await log_channel.send(embed=embed)
         return
 
     @commands.Cog.listener()
@@ -241,7 +272,7 @@ class Log(commands.Cog):
                             value=datetime.datetime.strftime(role.created_at, "%d.%m.%Y, %H:%M:%S"))
             embed.add_field(name='ID', value=role.id, inline=False)
             embed.timestamp = datetime.datetime.utcnow()
-            await log_channel.send(content=None, embed=embed)
+            await log_channel.send(embed=embed)
         return
 
     @commands.Cog.listener()
@@ -254,7 +285,7 @@ class Log(commands.Cog):
             embed.add_field(name='Name', value=channel.mention)
             embed.add_field(name='Category', value=channel.category)
             embed.timestamp = datetime.datetime.utcnow()
-            await log_channel.send(content=None, embed=embed)
+            await log_channel.send(embed=embed)
         return
 
     @commands.Cog.listener()
@@ -267,7 +298,7 @@ class Log(commands.Cog):
             embed.add_field(name='Name', value=channel.name)
             embed.add_field(name='Category', value=channel.category)
             embed.timestamp = datetime.datetime.utcnow()
-            await log_channel.send(content=None, embed=embed)
+            await log_channel.send(embed=embed)
         return
 
 
