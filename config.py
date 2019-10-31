@@ -125,9 +125,7 @@ def getRoles(guild_id):
         return None
 
 
-# End
-
-
+# Dump JSON functions
 def setLastRedditPost():
     with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/last_reddit_post.json'), 'w') as file:
         json.dump(last_reddit_post, file, indent=1)

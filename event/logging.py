@@ -103,7 +103,7 @@ class Log(commands.Cog):
 
             # General case without mentioning anything in "{}" from the config's welcome_message
             if information_channel is None or help_channel is None:
-                welcome_message = config.getStrings(guild.id)['welcomeMessage']
+                welcome_message = config.getStrings(guild.id)['welcomeMessage'].format(member=member.mention)
 
             # Democraciv-specific case with mentioning {}'s
             else:

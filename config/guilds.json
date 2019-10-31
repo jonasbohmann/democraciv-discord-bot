@@ -26,9 +26,6 @@
             "strings": {
                 "welcomeMessage": "{member}, welcome to {guild}! We are currently playing our sixth game as Arabia in Sid Meier's Civilization 5.\n\nIf you need help catching up, feel free to ask in {help} or check {information}.\n\nHere's our Wiki for more information about us: https://www.reddit.com/r/democraciv/wiki/"
             },
-            "reddit": {
-                "enableRedditAnnouncements": true
-            },
             "roles": {
                 "Archives": ":white_check_mark: You've gained access to the archives of Democraciv.",
                 "Convention": ":white_check_mark: You're now part of the MK7 convention! Follow #organizer-announcements for more!"
@@ -50,6 +47,23 @@
                 "test": "test",
                 "ehren": "xD"
             }
+        },
+        "636347358283563058": {
+            "name": "Deaftists - 141135",
+            "config": {
+                "enableWelcomeMessage": true,
+                "welcomeChannel": "welcome",
+                "enableLogging": true,
+                "excludedChannelsFromLogging": [],
+                "logChannel": "mod-logs"
+            },
+            "strings": {
+                "welcomeMessage": "Welcome {member} to the Defeatist Faction!\nWe stand for a worse Arabia and the complete loss of the game."
+            },
+            "roles": {
+                "Test": "Test."
+            }
         }
+    }
     }
 }
