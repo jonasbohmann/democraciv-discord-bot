@@ -48,9 +48,11 @@ You can configure everything else that is Reddit related in the `config.json`.
 ## Features
 * Modular system for commands
 * Help command that automatically scales
+* Welcome messages
 * Announcements for twitch.tv/democraciv
 * Announcements for new post from reddit.com/r/democraciv
-* Political party (role) management
+* Political party management
+* Self-assignable role management
 * Event Logging 
 
 ## Modules
@@ -64,6 +66,7 @@ module.admin | Re-, un- and load modules and the config | ❌
 module.fun | Just -say for now | ❌
 module.help | Scaling -help command | ✅
 module.random | Common choice commands (Heads or Tails etc.) | ✅
+module.roles | Add or remove roles from you | ✅
 module.parties | Join and leave political parties | ✅
 module.time | Get current time in different timezones | ✅
 module.vote | Start voting on a specified topic with emojis *(Under construction)* | ✅
@@ -73,7 +76,7 @@ event.error_handler | Handles internal erros |
 
 ## Planned
 * Proportional Representation voting
-* SQL Database for seperate configs per server
+* Seperate configs per server
 
 ## Democraciv Discord Server
 Join the [Democraciv Discord Server](https://discord.gg/AK7dYMG) to see the bot in action.
