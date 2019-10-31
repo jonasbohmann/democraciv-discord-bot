@@ -39,7 +39,7 @@ class Roles(commands.Cog):
             await ctx.send(":x: You have to tell me which role you want to join or leave!")
             return
 
-        role = ''.join(role)
+        role = ' '.join(role)
         member = ctx.message.author
         discord_role = discord.utils.get(ctx.guild.roles, name=role)
 
