@@ -124,16 +124,13 @@ async def addRole(guild, join_message, role: str) -> str:
 async def deleteRole(guild, role: str) -> str:
     """Deletes the inputted role, returns an empty string if it was successfully deleted,
     otherwise returns error as string. """
-
-    caps_role = string.capwords(role)
-
     # If the role already exists, delete it
-    if caps_role in roles['roles']:
-        role = discord.utils.get(guild.roles, name=role)
+    if role in roles['roles']:
+        discord_role = discord.utils.get(guild.roles, name=role)
         # If the role has a role, delete the role (lol)
         if role is not None:
-            await role.delete()
-        del roles['roles'][caps_role]
+            await discord_role.delete()
+        del roles['roles'][role]
 
         dumpConfigRoles()
 
