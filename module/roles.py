@@ -64,7 +64,8 @@ class Roles(commands.Cog):
             return message.author == ctx.message.author and message.channel == ctx.message.channel
 
         await ctx.send(":information_source: Answer with the name of the role you want to add: \n\n:warning: The name "
-                       "should not contain *multiple* spaces between any word!")
+                       "should not contain *multiple* spaces between two words!\nExample: 'Test Role' works, but 'Test "
+                       "  Role' will not work.")
         role_name = await self.bot.wait_for('message', check=check, timeout=60.0)
 
         await ctx.send(":information_source: Answer with a short message the user should see when he gets the role: ")
