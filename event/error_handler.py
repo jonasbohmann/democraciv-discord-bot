@@ -25,7 +25,7 @@ class ErrorHandler(commands.Cog):
         if isinstance(error, commands.CommandOnCooldown):
             await ctx.send(str(error))
             guild = ctx.guild
-            channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+            channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = embed_builder(title=':x: Command Error', description="")
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             embed.add_field(name='Error', value='CommandOnCooldown')
@@ -41,7 +41,7 @@ class ErrorHandler(commands.Cog):
         if isinstance(error, commands.MissingPermissions):
             await ctx.send(str(error))
             guild = ctx.guild
-            channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+            channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = embed_builder(title=':x: Command Error', description="")
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             embed.add_field(name='Error', value='MissingPermissions')
@@ -57,7 +57,7 @@ class ErrorHandler(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(str(error))
             guild = ctx.guild
-            channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+            channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = embed_builder(title=':x: Command Error', description="")
             embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
             embed.add_field(name='Error', value='MissingRequiredArgument')

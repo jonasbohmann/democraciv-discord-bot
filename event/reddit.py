@@ -22,11 +22,11 @@ class Reddit:
         await self.bot.wait_until_ready()
 
         try:
-            dciv_guild = self.bot.get_guild(int(config.getConfig()["homeServerID"]))
+            dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
             channel = discord.utils.get(dciv_guild.text_channels, name=config.getReddit()['redditAnnouncementChannel'])
         except AttributeError:
             print(
-                f'ERROR - I could not find the Democraciv Discord Server! Change "homeServerID" '
+                f'ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
                 f'in the config to a server I am in or disable Reddit announcements.')
             return
 

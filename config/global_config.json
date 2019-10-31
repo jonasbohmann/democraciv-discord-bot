@@ -8,22 +8,13 @@
     "botIconURL": "https://cdn.discordapp.com/attachments/585502938571604056/586310405618532362/final_pride2.png",
     "author": "DerJonas#8109",
     "authorID": "212972352890339328",
-    "enableWelcomeMessage": true,
-    "welcomeChannel": "welcome",
-    "enableLogging": true,
-    "excludedChannelsFromLogging": ["571091468832342016", "209410498804973569", "316202361389318144", "405504659650772994", "499669824847478785", "548501683173457930", "370315302732431360", "486206795862507531", "465655352424267776", "209432307730350080", "637051202827452464", "637051294959403018", "637051239284080651"],
-    "logChannel": "mod-logs",
     "commandCooldown": "2.5",
-    "homeServerID": "208984105310879744"
-  },
-
-  "strings":
-  {
-    "welcomeMessage" : "{member}, welcome to {guild}! We are currently playing our sixth game as Arabia in Sid Meier's Civilization 5.\n\nIf you need help catching up, feel free to ask in {help} or check {information}.\n\nHere's our Wiki for more information about us: https://www.reddit.com/r/democraciv/wiki/"
+    "democracivServerID": "208984105310879744"
   },
 
   "reddit":
   {
+
     "enableRedditAnnouncements": true,
     "subreddit": "democraciv",
     "redditAnnouncementChannel": "reddit",

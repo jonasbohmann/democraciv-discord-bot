@@ -24,7 +24,7 @@ class Party(commands.Cog, name='Political Parties'):
     async def collectPartiesAndMembers(self, ctx):
         parties_and_members = []
         party_keys = config.getParties().keys()
-        dciv_guild = self.bot.get_guild(int(config.getConfig()["homeServerID"]))
+        dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
 
         for party in party_keys:
             role = discord.utils.get(dciv_guild.roles, name=party)
@@ -50,6 +50,7 @@ class Party(commands.Cog, name='Political Parties'):
         party = string.capwords(' '.join(party))
         party = self.getPartyFromAlias(party)
         member = ctx.message.author
+        guild = ctx.message.guild
         role = discord.utils.get(ctx.guild.roles, name=party)
 
         # Dict with party: partyLeader
@@ -80,10 +81,10 @@ class Party(commands.Cog, name='Political Parties'):
                 return
 
             # Logging
-            if config.getConfig()['enableLogging']:
+            if config.getGuildConfig(guild.id)['enableLogging']:
                 guild = ctx.guild
-                logchannel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
-                embed = embed_builder(title=':family_mwgb: Joined Political Party', colour=0x7f0000)
+                logchannel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
+                embed = embed_builder(title=':family_mwgb: Joined Political Party', description="")
                 embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,
                                 inline=False)
                 embed.add_field(name='Party', value=party)
@@ -120,6 +121,7 @@ class Party(commands.Cog, name='Political Parties'):
         party = self.getPartyFromAlias(party)
 
         member = ctx.message.author
+        guild = ctx.message.guild
         role = discord.utils.get(ctx.guild.roles, name=party)
 
         if party in config.getParties():
@@ -135,10 +137,10 @@ class Party(commands.Cog, name='Political Parties'):
                 return
 
             # Logging
-            if config.getConfig()['enableLogging']:
+            if config.getGuildConfig(guild.id)['enableLogging']:
                 guild = ctx.guild
-                logchannel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
-                embed = embed_builder(title=':triumph: Left Political Party', colour=0x7f0000)
+                logchannel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
+                embed = embed_builder(title=':triumph: Left Political Party', description="")
                 embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,
                                 inline=False)
                 embed.add_field(name='Party', value=party)
@@ -158,7 +160,7 @@ class Party(commands.Cog, name='Political Parties'):
     async def members(self, ctx, *party: str):
         """Lists all party members"""
 
-        dciv_guild = self.bot.get_guild(int(config.getConfig()["homeServerID"]))
+        dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
 
         if dciv_guild is None:
             await ctx.send(':x: You have to invite me to the Democraciv server first!')

@@ -16,7 +16,7 @@ import discord
 
 # -- config.py --
 #
-# Script that handles the loading of the config.json.
+# Script that handles the loading of the global_config.json.
 # Throws error if the file is not found.
 #
 
@@ -32,11 +32,12 @@ def parseJSONFromFile(file_path):
 
 
 # Load every config file into memory
-config = parseJSONFromFile('config/config.json')
+config = parseJSONFromFile('config/global_config.json')
 token = parseJSONFromFile('config/token.json')
 config_parties = parseJSONFromFile('config/parties.json')
 last_reddit_post = parseJSONFromFile('config/last_reddit_post.json')
 roles = parseJSONFromFile('config/roles.json')
+guilds = parseJSONFromFile('config/guilds.json')
 
 
 def getToken():
@@ -47,24 +48,24 @@ def getTokenFile():
     return token
 
 
+def getGuilds():
+    return guilds['guilds']
+
+
 def getConfig():
     return config['config']
+
+
+def getPrefix():
+    return config['config']['prefix']
 
 
 def getLinks():
     return config['links']
 
 
-def getStrings():
-    return config['strings']
-
-
 def getCooldown():
     return config['config']['commandCooldown']
-
-
-def getPrefix():
-    return config['config']['prefix']
 
 
 def getParties():
@@ -89,6 +90,34 @@ def getRoles():
 
 def getLastRedditPost():
     return last_reddit_post
+
+
+# Guild dependant
+def checkIfGuildExists(guild_id):
+    for guild in getGuilds():
+        if guild == guild_id:
+            return True
+    return False
+
+
+def getStrings(guild_id):
+    guild_id = str(guild_id)
+
+    if checkIfGuildExists(guild_id):
+        return getGuilds()[guild_id]['strings']
+    else:
+        print(f'ERROR - In config.py could not find {guild_id}')
+        return None
+
+
+def getGuildConfig(guild_id):
+    guild_id = str(guild_id)
+
+    if checkIfGuildExists(guild_id):
+        return getGuilds()[guild_id]['config']
+    else:
+        print(f'ERROR - In config.py could not find {guild_id}')
+        return None
 
 
 def setLastRedditPost():

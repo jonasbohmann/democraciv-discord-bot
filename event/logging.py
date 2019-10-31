@@ -20,16 +20,17 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
+        guild = before.guild
+
         if before.content == after.content:
             return
-        if config.getConfig()['enableLogging']:
-            if str(before.channel.id) not in config.getConfig()['excludedChannelsFromLogging']:
+        if config.getGuildConfig(guild.id)['enableLogging']:
+            if str(before.channel.id) not in config.getGuildConfig(guild.id)['excludedChannelsFromLogging']:
                 if not before.clean_content or not after.clean_content:  # Removing this throws a http
                     # 400 bad request exception
                     return
                 elif before.clean_content and after.clean_content:
-                    guild = before.guild
-                    channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+                    channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                     embed = embed_builder(title=':pencil2: Message Edited', description="")
                     embed.add_field(name='Author',
                                     value=before.author.mention + ' ' + before.author.name + '#'
@@ -46,10 +47,11 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
-        if config.getConfig()['enableLogging']:
-            if str(message.channel.id) not in config.getConfig()['excludedChannelsFromLogging']:
-                guild = message.guild
-                channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+        guild = message.guild
+
+        if config.getGuildConfig(guild.id)['enableLogging']:
+            if str(message.channel.id) not in config.getGuildConfig(guild.id)['excludedChannelsFromLogging']:
+                channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                 embed = embed_builder(title=':wastebasket: Message Deleted', description="")
                 embed.add_field(name='Author',
                                 value=message.author.mention + ' ' + message.author.name + '#'
@@ -70,11 +72,12 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_bulk_message_delete(self, payload):
-        if config.getConfig()['enableLogging']:
-            if str(payload.channel_id) not in config.getConfig()['excludedChannelsFromLogging']:
-                guild = self.bot.get_guild(payload.guild_id)
+        guild = self.bot.get_guild(payload.guild_id)
+
+        if config.getGuildConfig(guild.id)['enableLogging']:
+            if str(payload.channel_id) not in config.getGuildConfig(guild.id)['excludedChannelsFromLogging']:
                 channel = self.bot.get_channel(payload.channel_id)
-                log_channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+                log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                 embed = embed_builder(title=':wastebasket: :wastebasket: Bulk of Messages Deleted', description="")
                 embed.add_field(name='Amount',
                                 value=f'{len(payload.message_ids)}\n', inline=True)
@@ -90,26 +93,27 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        if config.getConfig()['enableWelcomeMessage']:
-            guild = member.guild
+        guild = member.guild
+
+        if config.getGuildConfig(guild.id)['enableWelcomeMessage']:
             information_channel = discord.utils.get(guild.text_channels, name='information')
             help_channel = discord.utils.get(guild.text_channels, name='help')
-            welcome_channel = discord.utils.get(guild.text_channels, name=config.getConfig()['welcomeChannel'])
+            welcome_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['welcomeChannel'])
 
             # General case without mentioning anything in "{}" from the config's welcome_message
             if information_channel is None or help_channel is None:
-                welcome_message = config.getStrings()['welcomeMessage']
+                welcome_message = config.getStrings(guild.id)['welcomeMessage']
 
             # Democraciv-specific case with mentioning {}'s
             else:
-                welcome_message = config.getStrings()['welcomeMessage'].format(member=member.mention, guild=guild.name,
+                welcome_message = config.getStrings(guild.id)['welcomeMessage'].format(member=member.mention, guild=guild.name,
                                                                                information=information_channel.mention,
                                                                                help=help_channel.mention)
             await welcome_channel.send(welcome_message)
 
-        if config.getConfig()['enableLogging']:
+        if config.getGuildConfig(guild.id)['enableLogging']:
             guild = member.guild
-            log_channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+            log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = embed_builder(title=':tada: Member Joined', description="")
             embed.add_field(name='Member', value=member.mention)
             embed.add_field(name='Name', value=member.name + '#' + member.discriminator)
@@ -123,9 +127,10 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        if config.getConfig()['enableLogging']:
-            guild = member.guild
-            channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+        guild = member.guild
+
+        if config.getGuildConfig(guild.id)['enableLogging']:
+            channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = embed_builder(title=':no_pedestrians: Member Left', description="")
             embed.add_field(name='Name', value=member.name + '#' + member.discriminator)
             embed.set_thumbnail(url=member.avatar_url)
@@ -135,10 +140,11 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
-        if config.getConfig()['enableLogging']:
+        guild = before.guild
+
+        if config.getGuildConfig(guild.id)['enableLogging']:
             if before.display_name != after.display_name:
-                guild = before.guild
-                log_channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+                log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                 embed = embed_builder(title=':arrows_counterclockwise: Nickname Changed', description="")
                 embed.add_field(name='Member', value=before.mention + ' ' + before.name + '#' + before.discriminator,
                                 inline=False)
@@ -155,7 +161,7 @@ class Log(commands.Cog):
                         if x not in before.roles:
                             given_role = x.name
                     guild = before.guild
-                    log_channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+                    log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                     embed = embed_builder(title=':sunglasses: Role given to Member', description="")
                     embed.add_field(name='Member',
                                     value=before.mention + ' ' + before.name + '#' + before.discriminator,
@@ -170,7 +176,7 @@ class Log(commands.Cog):
                         if x not in after.roles:
                             removed_role = x.name
                     guild = before.guild
-                    log_channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+                    log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                     embed = embed_builder(title=':zipper_mouth: Role removed from Member', description="")
                     embed.add_field(name='Member',
                                     value=before.mention + ' ' + before.name + '#' + before.discriminator,
@@ -185,8 +191,8 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
-        if config.getConfig()['enableLogging']:
-            channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+        if config.getGuildConfig(guild.id)['enableLogging']:
+            channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = embed_builder(title=':no_entry: Member Banned', description="")
             embed.add_field(name='Member', value=user.mention)
             embed.add_field(name='Name', value=user.name + '#' + user.discriminator)
@@ -197,8 +203,8 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild, user):
-        if config.getConfig()['enableLogging']:
-            channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+        if config.getGuildConfig(guild.id)['enableLogging']:
+            channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = embed_builder(title=':dove: Member Unbanned', description="")
             embed.add_field(name='Member', value=user.mention)
             embed.add_field(name='Name', value=user.name + '#' + user.discriminator)
@@ -211,9 +217,10 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role):
-        if config.getConfig()['enableLogging']:
-            guild = role.guild
-            log_channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+        guild = role.guild
+
+        if config.getGuildConfig(guild.id)['enableLogging']:
+            log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = embed_builder(title=':new: Role Created', description="")
             embed.add_field(name='Role', value=role.name)
             embed.add_field(name='Colour', value=role.colour)
@@ -224,9 +231,10 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role):
-        if config.getConfig()['enableLogging']:
-            guild = role.guild
-            log_channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+        guild = role.guild
+
+        if config.getGuildConfig(guild.id)['enableLogging']:
+            log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = embed_builder(title=':exclamation: Role Deleted', description="")
             embed.add_field(name='Role', value=role.name)
             embed.add_field(name='Creation Date',
@@ -238,9 +246,10 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
-        if config.getConfig()['enableLogging']:
-            guild = channel.guild
-            log_channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+        guild = channel.guild
+
+        if config.getGuildConfig(guild.id)['enableLogging']:
+            log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = embed_builder(title=':new: Channel Created', description="")
             embed.add_field(name='Name', value=channel.mention)
             embed.add_field(name='Category', value=channel.category)
@@ -250,9 +259,10 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
-        if config.getConfig()['enableLogging']:
-            guild = channel.guild
-            log_channel = discord.utils.get(guild.text_channels, name=config.getConfig()['logChannel'])
+        guild = channel.guild
+
+        if config.getGuildConfig(guild.id)['enableLogging']:
+            log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = embed_builder(title=':exclamation: Channel Deleted', description="")
             embed.add_field(name='Name', value=channel.name)
             embed.add_field(name='Category', value=channel.category)
