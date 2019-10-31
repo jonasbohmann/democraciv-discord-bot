@@ -1,38 +1,55 @@
 {
-  "guilds": {
-    "208984105310879744": {
-      "name": "Democraciv",
-      "config": {
-        "enableWelcomeMessage": true,
-        "welcomeChannel": "welcome",
-        "enableLogging": true,
-        "excludedChannelsFromLogging": ["571091468832342016", "209410498804973569", "316202361389318144", "405504659650772994", "499669824847478785", "548501683173457930", "370315302732431360", "486206795862507531", "465655352424267776", "209432307730350080", "637051202827452464", "637051294959403018", "637051239284080651"],
-        "logChannel": "mod-logs"
-      },
-
-      "strings": {
-        "welcomeMessage" : "{member}, welcome to {guild}! We are currently playing our sixth game as Arabia in Sid Meier's Civilization 5.\n\nIf you need help catching up, feel free to ask in {help} or check {information}.\n\nHere's our Wiki for more information about us: https://www.reddit.com/r/democraciv/wiki/"
-      },
-
-      "reddit":{
-        "enableRedditAnnouncements": true
-      }
-    },
-
-    "232108753477042187": {
-      "name": "Jonas Test Server",
-      "config": {
-        "enableWelcomeMessage": true,
-        "welcomeChannel": "welcome",
-        "enableLogging": true,
-        "excludedChannelsFromLogging": [],
-        "logChannel": "testlogs"
-      },
-
-      "strings": {
-        "welcomeMessage" : "Joa nä"
-      }
-
+    "guilds": {
+        "208984105310879744": {
+            "name": "Democraciv",
+            "config": {
+                "enableWelcomeMessage": true,
+                "welcomeChannel": "welcome",
+                "enableLogging": true,
+                "excludedChannelsFromLogging": [
+                    "571091468832342016",
+                    "209410498804973569",
+                    "316202361389318144",
+                    "405504659650772994",
+                    "499669824847478785",
+                    "548501683173457930",
+                    "370315302732431360",
+                    "486206795862507531",
+                    "465655352424267776",
+                    "209432307730350080",
+                    "637051202827452464",
+                    "637051294959403018",
+                    "637051239284080651"
+                ],
+                "logChannel": "mod-logs"
+            },
+            "strings": {
+                "welcomeMessage": "{member}, welcome to {guild}! We are currently playing our sixth game as Arabia in Sid Meier's Civilization 5.\n\nIf you need help catching up, feel free to ask in {help} or check {information}.\n\nHere's our Wiki for more information about us: https://www.reddit.com/r/democraciv/wiki/"
+            },
+            "reddit": {
+                "enableRedditAnnouncements": true
+            },
+            "roles": {
+                "Archives": ":white_check_mark: You've gained access to the archives of Democraciv.",
+                "Convention": ":white_check_mark: You're now part of the MK7 convention! Follow #organizer-announcements for more!"
+            }
+        },
+        "232108753477042187": {
+            "name": "Jonas Test Server",
+            "config": {
+                "enableWelcomeMessage": true,
+                "welcomeChannel": "welcome",
+                "enableLogging": true,
+                "excludedChannelsFromLogging": [],
+                "logChannel": "testlogs"
+            },
+            "strings": {
+                "welcomeMessage": "Joa n\u00c3\u00a4"
+            },
+            "roles": {
+                "test": "test",
+                "ehren": "xD"
+            }
+        }
     }
-  }
 }

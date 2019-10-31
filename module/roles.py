@@ -20,7 +20,7 @@ class Roles(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def roles(self, ctx):
         """Get a list of self-assignable roles"""
-        available_roles = config.getRoles()
+        available_roles = config.getRoles(ctx.guild.id)
         embed_message = ""
 
         for role in available_roles:
@@ -48,7 +48,7 @@ class Roles(commands.Cog):
             return
         else:
             if discord_role not in member.roles:
-                await ctx.send(config.getRoles()[role])
+                await ctx.send(config.getRoles(ctx.guild.id)[role])
                 await member.add_roles(discord_role)
 
             elif discord_role in member.roles:

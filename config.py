@@ -36,7 +36,6 @@ config = parseJSONFromFile('config/global_config.json')
 token = parseJSONFromFile('config/token.json')
 config_parties = parseJSONFromFile('config/parties.json')
 last_reddit_post = parseJSONFromFile('config/last_reddit_post.json')
-roles = parseJSONFromFile('config/roles.json')
 guilds = parseJSONFromFile('config/guilds.json')
 
 
@@ -84,10 +83,6 @@ def getTwitch():
     return config['twitch']
 
 
-def getRoles():
-    return roles['roles']
-
-
 def getLastRedditPost():
     return last_reddit_post
 
@@ -120,6 +115,19 @@ def getGuildConfig(guild_id):
         return None
 
 
+def getRoles(guild_id):
+    guild_id = str(guild_id)
+
+    if checkIfGuildExists(guild_id):
+        return getGuilds()[guild_id]['roles']
+    else:
+        print(f'ERROR - In config.py could not find {guild_id}')
+        return None
+
+
+# End
+
+
 def setLastRedditPost():
     with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/last_reddit_post.json'), 'w') as file:
         json.dump(last_reddit_post, file, indent=1)
@@ -130,22 +138,24 @@ def dumpConfigParties():
         json.dump(config_parties, file, indent=2)
 
 
-def dumpConfigRoles():
-    with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/roles.json'), 'w') as file:
-        json.dump(roles, file, indent=2)
+def dumpConfigRoles(guild_id):
+    guild_id = str(guild_id)
+
+    with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/guilds.json'), 'w') as file:
+        json.dump(guilds, file, indent=4)
 
 
 async def addRole(guild, join_message, role: str) -> str:
     """Adds the inputted role paired with the join message, returns an empty string if it was successfully added
     , otherwise returns error as string. """
-    if role in roles['roles']:
+    if role in getRoles(guild.id):
         return f'{role} already exists!'
 
     # Otherwise, create the role
     else:
-        roles['roles'][role] = join_message
+        getRoles(guild.id)[role] = join_message
 
-        dumpConfigRoles()
+        dumpConfigRoles(guild.id)
         await guild.create_role(name=role)
     return ''
 
@@ -154,14 +164,14 @@ async def deleteRole(guild, role: str) -> str:
     """Deletes the inputted role, returns an empty string if it was successfully deleted,
     otherwise returns error as string. """
     # If the role already exists, delete it
-    if role in roles['roles']:
+    if role in getRoles(guild.id):
         discord_role = discord.utils.get(guild.roles, name=role)
         # If the role has a role, delete the role (lol)
         if role is not None:
             await discord_role.delete()
-        del roles['roles'][role]
+        del getRoles(guild.id)[role]
 
-        dumpConfigRoles()
+        dumpConfigRoles(guild.id)
 
     # Otherwise return False
     else:
