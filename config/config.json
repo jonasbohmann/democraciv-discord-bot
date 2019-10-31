@@ -14,8 +14,7 @@
     "excludedChannelsFromLogging": ["571091468832342016", "209410498804973569", "316202361389318144", "405504659650772994", "499669824847478785", "548501683173457930", "370315302732431360", "486206795862507531", "465655352424267776", "209432307730350080", "637051202827452464", "637051294959403018", "637051239284080651"],
     "logChannel": "mod-logs",
     "commandCooldown": "2.5",
-    "ahomeServerID": "208984105310879744",
-    "homeServerID": "232108753477042187"
+    "homeServerID": "208984105310879744"
   },
 
   "strings":
@@ -25,7 +24,7 @@
 
   "reddit":
   {
-    "enableRedditAnnouncements": false,
+    "enableRedditAnnouncements": true,
     "subreddit": "democraciv",
     "redditAnnouncementChannel": "reddit",
     "userAgent": "discord:democraciv-discord-bot:0.9.0 (by /u/Jovanos)"
@@ -33,9 +32,9 @@
 
   "twitch":
   {
-    "enableTwitchAnnouncements": false,
+    "enableTwitchAnnouncements": true,
     "twitchAnnouncementChannel": "announcements",
-    "twitchChannelName": "pietsmiettv",
+    "twitchChannelName": "democraciv",
     "everyonePingOnAnnouncement": true
   },
 
