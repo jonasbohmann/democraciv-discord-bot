@@ -102,8 +102,13 @@ class Log(commands.Cog):
                                                 name=config.getGuildConfig(guild.id)['welcomeChannel'])
 
             # General case without mentioning anything in "{}" from the config's welcome_message
-            if information_channel is None or help_channel is None:
+            if information_channel is None and help_channel is None:
                 welcome_message = config.getStrings(guild.id)['welcomeMessage'].format(member=member.mention)
+
+            # General case without mentioning help_channel
+            if help_channel is None:
+                welcome_message = config.getStrings(guild.id)['welcomeMessage'].format(member=member.mention,
+                                                                                       information=information_channel.mention)
 
             # Democraciv-specific case with mentioning {}'s
             else:

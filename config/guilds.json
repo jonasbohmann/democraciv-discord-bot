@@ -63,6 +63,23 @@
             "roles": {
                 "Test": "Test."
             }
+        },
+        "636380607315705857": {
+            "name": "Union of Steel - UltimateDude",
+            "config": {
+                "enableWelcomeMessage": true,
+                "welcomeChannel": "welcome",
+                "enableLogging": true,
+                "excludedChannelsFromLogging": [],
+                "logChannel": "mod-logs"
+            },
+            "strings": {
+                "welcomeMessage": "Welcome {member} to The Union of Steel!\n\nWe are a fascist party in Democraciv!\n\nCheck out our manifesto in {information}!"
+            },
+            "roles": {
+
+            }
+
         }
     }
 
