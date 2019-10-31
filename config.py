@@ -109,17 +109,12 @@ def dumpConfigRoles():
 async def addRole(guild, join_message, role: str) -> str:
     """Adds the inputted role paired with the join message, returns an empty string if it was successfully added
     , otherwise returns error as string. """
-    if ',' in role:
-        return f'May not have \',\' in role name!'
-
-    caps_role = string.capwords(role)
-    if caps_role in roles['roles']:
-        return f'{caps_role} already exists!'
+    if role in roles['roles']:
+        return f'{role} already exists!'
 
     # Otherwise, create the role
     else:
-        if caps_role == role:
-            roles['roles'][caps_role] = join_message
+        roles['roles'][role] = join_message
 
         dumpConfigRoles()
         await guild.create_role(name=role)
