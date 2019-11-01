@@ -70,29 +70,38 @@
                 "enableWelcomeMessage": true,
                 "welcomeChannel": "welcome",
                 "enableLogging": true,
-                "excludedChannelsFromLogging": ["638906898606850058",
-                                                "637100354932310078",
-                                                "637100227630989352",
-                                                "637778292639924235",
-                                                "637092231613775905",
-                                                "637100039566524427",
-                                                "637091970254372886",
-                                                "637473133594411018",
-                                                "637754502262423582",
-                                                "637856337929306142",
-                                                "639306404338860052",
-                                                "637809544398897157",
-                                                "636741533051387938", "638894014950539264"],
+                "excludedChannelsFromLogging": [
+                    "638906898606850058",
+                    "637100354932310078",
+                    "637100227630989352",
+                    "637778292639924235",
+                    "637092231613775905",
+                    "637100039566524427",
+                    "637091970254372886",
+                    "637473133594411018",
+                    "637754502262423582",
+                    "637856337929306142",
+                    "639306404338860052",
+                    "637809544398897157",
+                    "636741533051387938",
+                    "638894014950539264"
+                ],
                 "logChannel": "mod-logs"
             },
             "strings": {
                 "welcomeMessage": "Welcome {member} to The Union of Steel!\n\nWe are a fascist party in Democraciv!\n\nCheck out our manifesto in {information}!"
             },
             "roles": {
-
+                "Industrious Scholar": "Production AND Science?",
+                "DMU": "The economy's boring...",
+                "MEAN": "Time to blow up some power plants!",
+                "Super Pals": "Peace is lame.",
+                "FNATIC": "Aggressive takeovers from mega-corporations? No thanks.",
+                "Peaceful Growth Collective": "Just chill, man.",
+                "The Imperial Front": "Executive power ftw!",
+                "Defeatist": "Losing is fun too!",
+                "\u0627\u0644\u0645\u062a\u0646\u0648\u0631\u064a\u0646": "What even is this party?"
             }
-
         }
     }
-
 }
