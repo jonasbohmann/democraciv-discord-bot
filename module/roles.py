@@ -26,6 +26,9 @@ class Roles(commands.Cog):
         for role in available_roles:
             embed_message += f"{role}\n"
 
+        if embed_message == "":
+            embed_message = "This server has no roles."
+
         embed = embed_builder(title="Roles", description="In order to add or remove a role from you, use `-role Role`")
         embed.add_field(name="Available Roles", value=embed_message)
         await ctx.send(embed=embed)

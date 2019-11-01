@@ -96,7 +96,8 @@ class Log(commands.Cog):
         guild = member.guild
 
         if config.getGuildConfig(guild.id)['enableWelcomeMessage']:
-            information_channel = discord.utils.get(guild.text_channels, name='information')
+            information_channel = discord.utils.get(guild.text_channels,
+                                                    name=config.getGuildConfig(guild.id)['informationChannel'])
             help_channel = discord.utils.get(guild.text_channels, name='help')
             welcome_channel = discord.utils.get(guild.text_channels,
                                                 name=config.getGuildConfig(guild.id)['welcomeChannel'])
