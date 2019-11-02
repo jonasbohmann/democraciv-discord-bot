@@ -5,6 +5,7 @@
             "config": {
                 "enableWelcomeMessage": true,
                 "welcomeChannel": "welcome",
+                "informationChannel": "information",
                 "enableLogging": true,
                 "excludedChannelsFromLogging": [
                     "571091468832342016",
@@ -69,6 +70,7 @@
             "config": {
                 "enableWelcomeMessage": true,
                 "welcomeChannel": "welcome",
+                "informationChannel": "information",
                 "enableLogging": true,
                 "excludedChannelsFromLogging": [
                     "638906898606850058",
@@ -102,6 +104,23 @@
                 "Defeatist": "Losing is fun too!",
                 "\u0627\u0644\u0645\u062a\u0646\u0648\u0631\u064a\u0646": "What even is this party?"
             }
-        }
+        },
+        "636597058987622410": {
+            "name": "IPOS - Juuz",
+            "config": {
+                "enableWelcomeMessage": true,
+                "welcomeChannel": "general",
+                "enableLogging": true,
+                "informationChannel": "platform",
+                "excludedChannelsFromLogging": [],
+                "logChannel": "logs"
+            },
+            "strings": {
+                "welcomeMessage": "Welcome to the IPOS Discord server, {member}! You can read more about our platform in {information}. If you're a member of another party, you can ask for a diplomacy role."
+            },
+            "roles": {
+
+            }
+       }
     }
 }
