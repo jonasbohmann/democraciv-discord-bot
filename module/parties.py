@@ -4,6 +4,7 @@ import discord
 import datetime
 
 from util.embed import embed_builder
+from util.checks import checkIfOnDemocracivGuild
 from discord.ext import commands
 
 
@@ -21,10 +22,6 @@ def getPartyFromAlias(alias: str):
 class Party(commands.Cog, name='Political Parties'):
     def __init__(self, bot):
         self.bot = bot
-
-    def checkIfOnDemocracivGuild(self, guild_id):
-        dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
-        return dciv_guild == guild_id
 
     async def collectPartiesAndMembers(self, ctx):
         parties_and_members = []
@@ -47,7 +44,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def join(self, ctx, *party: str):
         """Join a Political Party"""
-        if not self.checkIfOnDemocracivGuild(ctx.guild.id):
+        if not checkIfOnDemocracivGuild(self.bot, ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -120,7 +117,7 @@ class Party(commands.Cog, name='Political Parties'):
     async def leave(self, ctx, *party: str):
         """Leave a Political Party"""
 
-        if not self.checkIfOnDemocracivGuild(ctx.guild.id):
+        if not checkIfOnDemocracivGuild(self.bot, ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -233,7 +230,7 @@ class Party(commands.Cog, name='Political Parties'):
     async def addParty(self, ctx, invite: str, *party: str):
         """Add a new political party to the server"""
 
-        if not self.checkIfOnDemocracivGuild(ctx.guild.id):
+        if not checkIfOnDemocracivGuild(self.bot, ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -254,7 +251,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.has_permissions(administrator=True)
     async def deleteParty(self, ctx, *party: str):
         """Delete a political party from the server"""
-        if not self.checkIfOnDemocracivGuild(ctx.guild.id):
+        if not checkIfOnDemocracivGuild(self.bot, ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -275,7 +272,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.has_permissions(administrator=True)
     async def addAlias(self, ctx, *party_and_alias: str):
         """Adds a new alias to party"""
-        if not self.checkIfOnDemocracivGuild(ctx.guild.id):
+        if not checkIfOnDemocracivGuild(self.bot, ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -299,7 +296,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.has_permissions(administrator=True)
     async def deleteAlias(self, ctx, *alias: str):
         """Deletes pre-existing alias"""
-        if not self.checkIfOnDemocracivGuild(ctx.guild.id):
+        if not checkIfOnDemocracivGuild(self.bot, ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
