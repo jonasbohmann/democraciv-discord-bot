@@ -4,6 +4,8 @@ import importlib
 import traceback
 
 from discord.ext import commands
+from util.checks import checkIfOnDemocracivGuild
+
 
 # -- admin.py | module.admin --
 #
@@ -15,16 +17,11 @@ class Admin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    def checkIfOnDemocracivGuild(self, guild_id):
-        dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
-        return dciv_guild == guild_id
-
-
     @commands.command(name='load', hidden=True)
     @commands.has_permissions(administrator=True)
     async def load(self, ctx, *, module):
         """Loads a module."""
-        if not self.checkIfOnDemocracivGuild(ctx.guild.id):
+        if not checkIfOnDemocracivGuild(self.bot, ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
