@@ -71,7 +71,7 @@ class Roles(commands.Cog):
                        "  Role' will not work.")
         role_name = await self.bot.wait_for('message', check=check, timeout=60.0)
 
-        await ctx.send(":information_source: Answer with a short message the user should see when he gets the role: ")
+        await ctx.send(":information_source: Answer with a short message the user should see when they get the role: ")
         role_join_message = await self.bot.wait_for('message', check=check, timeout=60.0)
 
         error = await config.addRole(ctx.guild, role_join_message.content, role_name.content)
