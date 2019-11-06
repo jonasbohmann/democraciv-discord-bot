@@ -5,7 +5,7 @@ import traceback
 
 from discord.ext import commands
 from util.embed import embed_builder
-from util.checks import checkIfOnDemocracivGuild
+from util.checks import isDemocracivGuild
 
 
 # -- guild.py | module.guild --
