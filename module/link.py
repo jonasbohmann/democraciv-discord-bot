@@ -205,9 +205,9 @@ class Link(commands.Cog):
                               description=config.getLinks()['legislative-docket'])
         await ctx.send(embed=embed)
 
-    @commands.command(name='worksheet', aliases=['w'])
+    @commands.command(name='ministry', aliases=['m'])
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def worksheet(self, ctx):
+    async def ministry(self, ctx):
         """The Ministry's worksheet"""
         embed = embed_builder(title='Worksheet of the Arabian Ministry',
                               description=config.getLinks()['executive-worksheet'])
