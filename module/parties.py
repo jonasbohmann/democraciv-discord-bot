@@ -45,7 +45,7 @@ class Party(commands.Cog, name='Political Parties'):
     async def join(self, ctx, *party: str):
         """Join a Political Party"""
         if not checkIfOnDemocracivGuild(self.bot, ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
+            await ctx.send(":x: You can only join political parties on the Democraciv Discord!")
             return
 
         if not party:
@@ -118,7 +118,7 @@ class Party(commands.Cog, name='Political Parties'):
         """Leave a Political Party"""
 
         if not checkIfOnDemocracivGuild(self.bot, ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
+            await ctx.send(":x: You can only leave political parties on the Democraciv Discord!")
             return
 
         if not party:
