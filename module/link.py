@@ -197,6 +197,22 @@ class Link(commands.Cog):
                               description=config.getLinks()['quire'])
         await ctx.send(embed=embed)
 
+    @commands.command(name='docket', aliases=['d'])
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def docket(self, ctx):
+        """Docket for the Arabian Legislature"""
+        embed = embed_builder(title='Docket for the Arabian Legislature',
+                              description=config.getLinks()['legislative-docket'])
+        await ctx.send(embed=embed)
+
+    @commands.command(name='worksheet', aliases=['w'])
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def worksheet(self, ctx):
+        """The Ministry's worksheet"""
+        embed = embed_builder(title='Worksheet of the Arabian Ministry',
+                              description=config.getLinks()['executive-worksheet'])
+        await ctx.send(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Link(bot))
