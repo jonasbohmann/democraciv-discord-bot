@@ -43,6 +43,7 @@ initial_extensions = ['module.link',
                       'module.wikipedia',
                       'module.random',
                       'module.roles',
+                      'module.guild',
                       'event.logging',
                       'event.error_handler']
 

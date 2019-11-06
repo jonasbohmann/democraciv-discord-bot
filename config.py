@@ -125,6 +125,18 @@ def getRoles(guild_id):
         return None
 
 
+def addExcludedLogChannel(guild_id, channel_id):
+    guild_id = str(guild_id)
+    channel_id = str(channel_id)
+
+    if checkIfGuildExists(guild_id):
+        # TODO
+        return True
+    else:
+        print(f'ERROR - In config.py could not find {guild_id}')
+        return False
+
+
 # Dump JSON functions
 def setLastRedditPost():
     with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/last_reddit_post.json'), 'w') as file:
