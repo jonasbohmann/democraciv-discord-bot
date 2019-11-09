@@ -39,7 +39,7 @@
                 "welcomeChannel": "welcome",
                 "enableLogging": true,
                 "excludedChannelsFromLogging": [],
-                "logChannel": "testlogs"
+                "logChannel": "help"
             },
             "strings": {
                 "welcomeMessage": "Joa n\u00c3\u00a4"
@@ -118,9 +118,7 @@
             "strings": {
                 "welcomeMessage": "Welcome to the IPOS Discord server, {member}! You can read more about our platform in {information}. If you're a member of another party, you can ask for a diplomacy role."
             },
-            "roles": {
-
-            }
-       }
+            "roles": {}
+        }
     }
 }

@@ -1,11 +1,14 @@
+import asyncio
+
 import config
 import discord
-import importlib
-import traceback
+import logging
 
 from discord.ext import commands
 from util.embed import embed_builder
 from util.checks import isDemocracivGuild
+
+logging.basicConfig(level=logging.INFO)
 
 
 # -- guild.py | module.guild --
@@ -54,16 +57,63 @@ class Guild(commands.Cog):
         is_logging_enabled = config.getGuildConfig(ctx.guild.id)['enableLogging']
         current_logging_channel = config.getGuildConfig(ctx.guild.id)['logChannel']
 
-        def check(message):
-            return message.author == ctx.message.author and message.channel == ctx.message.channel
+        embed = embed_builder(title=f":spy: Logging Module for {ctx.guild.name}",
+                              description="React with the :gear: emoji to change the settings of this module.")
 
-        embed = embed_builder(title=f":spy: Logging Module for {ctx.guild.name}", description="")
         embed.add_field(name="Enabled", value=f"{str(is_logging_enabled)}")
         embed.add_field(name="Channel", value=f"#{current_logging_channel}")
 
-        # TODO
+        info_embed = await ctx.send(embed=embed)
+        await info_embed.add_reaction("\U00002699")
 
-        await ctx.send(embed=embed)
+        def check(r_, u_):
+            return u_ == ctx.author and r_.message.id == info_embed.id and str(r_.emoji) == "\U00002699"
+
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=check, timeout=60),
+                                            ctx.bot.wait_for('reaction_remove', check=check, timeout=60)],
+                                           return_when=asyncio.FIRST_COMPLETED)
+
+        if done:
+            await self.edit_log_settings(ctx)
+
+    async def edit_log_settings(self, ctx):
+
+        def message_check(message):
+            return message.author == ctx.message.author and message.channel == ctx.message.channel
+
+        def reaction_check(r_, u_):
+            return u_ == ctx.author and r_.message.id == status_question.id
+
+        status_question = await ctx.send(
+            "React with :white_check_mark: to enable the logging module, or with :x: to disable the logging module.")
+        await status_question.add_reaction("\U00002705")
+        await status_question.add_reaction("\U0000274c")
+
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=reaction_check, timeout=60),
+                                            ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=60)],
+                                           return_when=asyncio.FIRST_COMPLETED)
+
+        reaction, user = done.pop().result()
+
+        if str(reaction.emoji) == "\U00002705":
+            config.updateLoggingModule(ctx.guild.id, True)
+            await ctx.send(":white_check_mark: Enabled the logging module.")
+
+            await ctx.send(
+                ":information_source: Answer with the name of the channel the logging module should use:")
+            channel = await self.bot.wait_for('message', check=message_check, timeout=60.0)
+            new_logging_channel = channel.content
+            if new_logging_channel.startswith("#"):
+                new_logging_channel.strip("#")
+
+            success = config.setLoggingChannel(ctx.guild.id, new_logging_channel)
+
+            if success:
+                await ctx.send(f":white_check_mark: Set the logging channel to #{new_logging_channel}")
+
+        elif str(reaction.emoji) == "\U0000274c":
+            config.updateLoggingModule(ctx.guild.id, False)
+            await ctx.send(":white_check_mark: Disabled the logging module.")
 
     @guild.command(name='exclude')
     async def exclude(self, ctx, channel: str):

@@ -2,6 +2,7 @@ import sys
 import config
 import discord
 import asyncio
+import logging
 import traceback
 import discord.utils
 import pkg_resources
@@ -30,6 +31,9 @@ from discord.ext import commands
 client = commands.Bot(command_prefix=config.getPrefix(), description=config.getConfig()['botDescription'],
                       case_insensitive=True)
 author = discord.AppInfo.owner
+
+logging.basicConfig(level=logging.INFO)
+
 
 # -- Cogs --
 initial_extensions = ['module.link',
