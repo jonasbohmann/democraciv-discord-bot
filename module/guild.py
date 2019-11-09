@@ -28,10 +28,12 @@ class Guild(commands.Cog):
 
         configuration_list_message = "`-guild welcome` to enable/disable welcome messages for this guild\n" \
                                      "`-guild logs` to enable/disable logging for this guild\n" \
-                                     "`-guild exclude [name]` to add a channel to be excluded from the logging channel\n"
+                                     "`-guild exclude [name]` to add a channel to be excluded from " \
+                                     "the logging channel\n"
 
         embed = embed_builder(title=f"Guild Configuration for {ctx.guild.name}",
-                              description=f"Here is a list of things you can configure:\n\n{configuration_list_message}")
+                              description=f"Here is a list of things you can configure:"
+                                          f"\n\n{configuration_list_message}")
         await ctx.send(embed=embed)
 
     @guild.command(name='welcome')
@@ -69,11 +71,21 @@ class Guild(commands.Cog):
         def check(r_, u_):
             return u_ == ctx.author and r_.message.id == info_embed.id and str(r_.emoji) == "\U00002699"
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=check, timeout=60),
-                                            ctx.bot.wait_for('reaction_remove', check=check, timeout=60)],
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=check, timeout=120),
+                                            ctx.bot.wait_for('reaction_remove', check=check, timeout=120)],
                                            return_when=asyncio.FIRST_COMPLETED)
 
-        if done:
+        try:
+            dump = done.pop().result()
+        except asyncio.TimeoutError:
+            for future in pending:
+                future.cancel()
+            return
+
+        for future in pending:
+            future.cancel()
+
+        if dump:
             await self.edit_log_settings(ctx)
 
     async def edit_log_settings(self, ctx):
@@ -93,27 +105,43 @@ class Guild(commands.Cog):
                                             ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=60)],
                                            return_when=asyncio.FIRST_COMPLETED)
 
-        reaction, user = done.pop().result()
+        try:
+            reaction, user = done.pop().result()
 
-        if str(reaction.emoji) == "\U00002705":
-            config.updateLoggingModule(ctx.guild.id, True)
-            await ctx.send(":white_check_mark: Enabled the logging module.")
+            if str(reaction.emoji) == "\U00002705":
+                config.updateLoggingModule(ctx.guild.id, True)
+                await ctx.send(":white_check_mark: Enabled the logging module.")
 
-            await ctx.send(
-                ":information_source: Answer with the name of the channel the logging module should use:")
-            channel = await self.bot.wait_for('message', check=message_check, timeout=60.0)
-            new_logging_channel = channel.content
-            if new_logging_channel.startswith("#"):
-                new_logging_channel.strip("#")
+                await ctx.send(
+                    ":information_source: Answer with the name of the channel the logging module should use:")
+                try:
+                    channel = await self.bot.wait_for('message', check=message_check, timeout=60.0)
+                except asyncio.TimeoutError:
+                    await ctx.send(":x: Aborted.")
+                    return
 
-            success = config.setLoggingChannel(ctx.guild.id, new_logging_channel)
+                if not channel:
+                    await ctx.send(":x: Aborted.")
+                    return
 
-            if success:
-                await ctx.send(f":white_check_mark: Set the logging channel to #{new_logging_channel}")
+                new_logging_channel = channel.content
+                if new_logging_channel.startswith("#"):
+                    new_logging_channel.strip("#")
 
-        elif str(reaction.emoji) == "\U0000274c":
-            config.updateLoggingModule(ctx.guild.id, False)
-            await ctx.send(":white_check_mark: Disabled the logging module.")
+                success = config.setLoggingChannel(ctx.guild.id, new_logging_channel)
+
+                if success:
+                    await ctx.send(f":white_check_mark: Set the logging channel to #{new_logging_channel}")
+
+            elif str(reaction.emoji) == "\U0000274c":
+                config.updateLoggingModule(ctx.guild.id, False)
+                await ctx.send(":white_check_mark: Disabled the logging module.")
+
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Aborted.")
+
+        for future in pending:
+            future.cancel()
 
     @guild.command(name='exclude')
     async def exclude(self, ctx, channel: str):

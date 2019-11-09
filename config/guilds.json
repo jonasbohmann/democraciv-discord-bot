@@ -37,9 +37,9 @@
             "config": {
                 "enableWelcomeMessage": true,
                 "welcomeChannel": "welcome",
-                "enableLogging": true,
+                "enableLogging": false,
                 "excludedChannelsFromLogging": [],
-                "logChannel": "help"
+                "logChannel": "reddit"
             },
             "strings": {
                 "welcomeMessage": "Joa n\u00c3\u00a4"
