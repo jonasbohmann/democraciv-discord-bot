@@ -18,7 +18,17 @@ class Link(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def links(self, ctx):
         """Get a list of important links"""
-        embed = embed_builder(title='Important Links', description=config.getLinks()['importantLinks'])
+
+        important_links_list = f"[Wiki]({config.getLinks()['wiki']})\n" \
+                               f"[Subreddit]({config.getLinks()['subreddit']})\n" \
+                               f"[Constitution]({config.getLinks()['constitution']})\n" \
+                               f"[Legal Code]({config.getLinks()['laws']})\n" \
+                               f"[Political Parties]({config.getLinks()['parties']})\n" \
+                               f"[Election Schedule]({config.getLinks()['schedule']})\n" \
+                               f"[Docket of the Arabian Legislature]({config.getLinks()['legislative-docket']})\n" \
+                               f"[Worksheet of the Arabian Ministry]({config.getLinks()['executive-worksheet']})\n"
+
+        embed = embed_builder(title='Important Links', description=important_links_list)
         await ctx.send(embed=embed)
 
     @commands.command(name='constitution', aliases=['c', 'const'])

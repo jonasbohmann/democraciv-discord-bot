@@ -12,6 +12,12 @@ class ErrorHandler(commands.Cog):
 
     @commands.Cog.listener()
     async def on_error(self, ctx, error):
+        # Alert owner of this bot that error occurred
+        owner_user = self.bot.get_user(int(config.getConfig()['authorID']))
+        await owner_user.create_dm()
+        owner_dm_channel = owner_user.dm_channel
+        await owner_dm_channel.send(f":x: An error occurred on {ctx.guild.name} at {datetime.datetime.now()}!\n\n{error}")
+
         raise error
 
     @commands.Cog.listener()
