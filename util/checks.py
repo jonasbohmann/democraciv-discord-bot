@@ -1,10 +1,8 @@
 import config
 
 
-def isDemocracivGuild(client, guild_id):
-    dciv_guild = client.get_guild(int(config.getConfig()["democracivServerID"]))
-
-    return dciv_guild.id == guild_id
+def isDemocracivGuild(guild_id):
+    return int(config.getConfig()["democracivServerID"]) == int(guild_id)
 
 
 if __name__ == '__main__':

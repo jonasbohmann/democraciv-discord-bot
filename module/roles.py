@@ -1,3 +1,4 @@
+import asyncio
 import string
 import config
 import discord
@@ -58,21 +59,35 @@ class Roles(commands.Cog):
                 await ctx.send(f":white_check_mark: The '{role}' role was removed from you.")
                 await member.remove_roles(discord_role)
 
-    @commands.command(name='addrole', hidden=True)
+    @commands.command(name='addrole')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     async def addRole(self, ctx):
-        """Add a new role to the server"""
+        """Create a new role on this guild and add it to the bot's -roles list. Doesn't take any arguments."""
+
         def check(message):
             return message.author == ctx.message.author and message.channel == ctx.message.channel
 
-        await ctx.send(":information_source: Answer with the name of the role you want to add: \n\n:warning: The name "
-                       "should not contain *multiple* spaces between two words!\nExample: 'Test Role' works, but 'Test "
-                       "  Role' will not work.")
-        role_name = await self.bot.wait_for('message', check=check, timeout=60.0)
+        await ctx.send(":information_source: Answer with the name of the role you want to create:\n\n:warning: "
+                       "The name should not contain *multiple* spaces between two words!\nExample:"
+                       " 'Test Role' works, but 'Test    Role' will not work.")
+        try:
+            role_name = await self.bot.wait_for('message', check=check, timeout=240)
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Aborted.")
+
+        # Check if role already exists
+        discord_role = discord.utils.get(ctx.guild.roles, name=role_name.content)
+        if discord_role:
+            await ctx.send(f":x: This guild already has a role named {role_name.content}! Delete the old role before"
+                           f" you use `-addrole` to create a role named {role_name.content} again.")
+            return
 
         await ctx.send(":information_source: Answer with a short message the user should see when they get the role: ")
-        role_join_message = await self.bot.wait_for('message', check=check, timeout=60.0)
+        try:
+            role_join_message = await self.bot.wait_for('message', check=check, timeout=300)
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Aborted.")
 
         error = await config.addRole(ctx.guild, role_join_message.content, role_name.content)
 
@@ -82,11 +97,11 @@ class Roles(commands.Cog):
             await ctx.send(f':white_check_mark: Added the role "{role_name.content}" with the join message '
                            f'"{role_join_message.content}"!')
 
-    @commands.command(name='deleterole', hidden=True)
+    @commands.command(name='deleterole')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     async def deleteRole(self, ctx, *role: str):
-        """Delete a role from the server"""
+        """Delete a role from the guild and from the bot's -roles list."""
         if not role:
             await ctx.send(':x: You have to give me the name of a role to delete!')
 

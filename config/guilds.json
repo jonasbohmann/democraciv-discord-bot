@@ -41,7 +41,7 @@
             "name": "Jonas Test Server",
             "config": {
                 "enableWelcomeMessage": false,
-                "welcomeChannel": "team",
+                "welcomeChannel": "council",
                 "enableLogging": true,
                 "excludedChannelsFromLogging": [
                     "571092204064342016",
@@ -51,15 +51,12 @@
                     "585502938571604056",
                     "585502938571604056"
                 ],
-                "logChannel": "todo"
+                "logChannel": "welcome"
             },
             "strings": {
-                "welcomeMessage": "{member} welcome burder xDDD joooooooooooooooooooooooooo"
+                "welcomeMessage": "asasa"
             },
-            "roles": {
-                "test": "test",
-                "ehren": "xD"
-            }
+            "roles": {}
         },
         "636347358283563058": {
             "name": "Deaftists - 141135",
@@ -145,10 +142,10 @@
                 "logChannel": "mod-logs"
             },
             "strings": {
-                "welcomeMessage": "Welcome to the Arabian guild server, please do -role Visitor"
+                "welcomeMessage": "Welcome to the Arabian Guild server! Please do `-role Visitor` to get the Visitor role."
             },
             "roles": {
-                "Visitor": "Welcome to the Arabian Guild server, please ping Angus or Retro for help."
+                "Visitor": "You're a Visitor now! Ping Angus or Retro if you need help."
             }
         }
     }

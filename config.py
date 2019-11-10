@@ -107,7 +107,7 @@ def initializeNewGuild(guild: discord.Guild):
         getGuilds()[str(guild.id)] = payload
 
         with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/guilds.json'), 'w') as file:
-            json.dump(guilds, file, indent=2)
+            json.dump(guilds, file, indent=4)
 
         return True
 
