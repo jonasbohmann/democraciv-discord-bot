@@ -39,7 +39,7 @@
         "232108753477042187": {
             "name": "Jonas Test Server",
             "config": {
-                "enableWelcomeMessage": true,
+                "enableWelcomeMessage": false,
                 "welcomeChannel": "council",
                 "enableLogging": true,
                 "excludedChannelsFromLogging": [
@@ -55,9 +55,7 @@
             "strings": {
                 "welcomeMessage": "asasa"
             },
-            "roles": {
-                "Visitor": "Ehre"
-            }
+            "roles": {}
         },
         "636347358283563058": {
             "name": "Deaftists - 141135",

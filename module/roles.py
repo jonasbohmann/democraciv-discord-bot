@@ -59,11 +59,11 @@ class Roles(commands.Cog):
                 await ctx.send(f":white_check_mark: The '{role}' role was removed from you.")
                 await member.remove_roles(discord_role)
 
-    @commands.command(name='addrole', hidden=True)
+    @commands.command(name='addrole')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     async def addRole(self, ctx):
-        """Add a new role to the server"""
+        """Create a new role on this guild and add it to the bot's -roles list. Doesn't take any arguments."""
 
         def check(message):
             return message.author == ctx.message.author and message.channel == ctx.message.channel
@@ -97,11 +97,11 @@ class Roles(commands.Cog):
             await ctx.send(f':white_check_mark: Added the role "{role_name.content}" with the join message '
                            f'"{role_join_message.content}"!')
 
-    @commands.command(name='deleterole', hidden=True)
+    @commands.command(name='deleterole')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     async def deleteRole(self, ctx, *role: str):
-        """Delete a role from the server"""
+        """Delete a role from the guild and from the bot's -roles list."""
         if not role:
             await ctx.send(':x: You have to give me the name of a role to delete!')
 

@@ -85,7 +85,7 @@ class Admin(commands.Cog):
         await importlib.reload(config)
 
     @commands.has_permissions(manage_messages=True)
-    @commands.command(name="clear", hidden=True)
+    @commands.command(name="clear")
     async def clear(self, ctx, num: int, target: discord.Member = None):
         if num > 500 or num < 0:
             return await ctx.send(":x: Invalid amount. Maximum is 500.")
