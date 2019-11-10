@@ -22,7 +22,6 @@ class Guild(commands.Cog):
         self.bot = bot
 
     @commands.group(name='guild', case_insensitive=True, invoke_without_command=True)
-    @commands.has_permissions(administrator=True)
     async def guild(self, ctx):
         """Configure me for this guild."""
 
@@ -37,6 +36,7 @@ class Guild(commands.Cog):
         await ctx.send(embed=embed)
 
     @guild.command(name='welcome')
+    @commands.has_permissions(administrator=True)
     async def welcome(self, ctx):
         is_welcome_enabled = config.getGuildConfig(ctx.guild.id)['enableWelcomeMessage']
         current_welcome_channel = config.getGuildConfig(ctx.guild.id)['welcomeChannel']
@@ -141,6 +141,7 @@ class Guild(commands.Cog):
             future.cancel()
 
     @guild.command(name='logs')
+    @commands.has_permissions(administrator=True)
     async def logs(self, ctx):
         is_logging_enabled = config.getGuildConfig(ctx.guild.id)['enableLogging']
         current_logging_channel = config.getGuildConfig(ctx.guild.id)['logChannel']
@@ -229,6 +230,7 @@ class Guild(commands.Cog):
             future.cancel()
 
     @guild.command(name='exclude')
+    @commands.has_permissions(administrator=True)
     async def exclude(self, ctx, channel: str = None):
         current_logging_channel = config.getGuildConfig(ctx.guild.id)['logChannel']
 
