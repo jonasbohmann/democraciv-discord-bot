@@ -229,24 +229,38 @@ class Guild(commands.Cog):
             future.cancel()
 
     @guild.command(name='exclude')
-    async def exclude(self, ctx, channel: str):
+    async def exclude(self, ctx, channel: str = None):
         current_logging_channel = config.getGuildConfig(ctx.guild.id)['logChannel']
 
         def check(message):
             return message.author == ctx.message.author and message.channel == ctx.message.channel
 
-        channel_object = discord.utils.get(ctx.guild.text_channels, name=channel)
+        current_excluded_channels_by_name = ""
 
-        if not channel_object:
-            await ctx.send(f":x: Couldn't find #{channel}!")
+        for channels in config.getGuildConfig(ctx.guild.id)['excludedChannelsFromLogging']:
+            channels = self.bot.get_channel(int(channels))
+            current_excluded_channels_by_name += f"#{channels.name}\n"
+
+        if not channel:
+            embed = embed_builder(title=f"Current Excluded Channels on {ctx.guild.name}",
+                                  description=current_excluded_channels_by_name)
+            await ctx.send(embed=embed)
             return
 
-        if config.addExcludedLogChannel(ctx.guild.id, str(channel_object.id)):
-            await ctx.send(f":white_check_mark: Excluded channel #{channel} from showing up in "
-                           f"#{current_logging_channel}!")
         else:
-            await ctx.send(f":x: Unexpected error occurred.")
-            return
+
+            channel_object = discord.utils.get(ctx.guild.text_channels, name=channel)
+
+            if not channel_object:
+                await ctx.send(f":x: Couldn't find #{channel}!")
+                return
+
+            if config.addExcludedLogChannel(ctx.guild.id, str(channel_object.id)):
+                await ctx.send(f":white_check_mark: Excluded channel #{channel} from showing up in "
+                               f"#{current_logging_channel}!")
+            else:
+                await ctx.send(f":x: Unexpected error occurred.")
+                return
 
 
 def setup(bot):

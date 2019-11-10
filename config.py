@@ -130,7 +130,9 @@ def addExcludedLogChannel(guild_id, channel_id):
     channel_id = str(channel_id)
 
     if checkIfGuildExists(guild_id):
-        # TODO
+        getGuildConfig(guild_id)['excludedChannelsFromLogging'].append(channel_id)
+        with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/guilds.json'), 'w') as file:
+            json.dump(guilds, file, indent=4)
         return True
     else:
         print(f'ERROR - In config.py could not find {guild_id}')

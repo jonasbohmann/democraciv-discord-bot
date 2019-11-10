@@ -37,9 +37,12 @@
             "config": {
                 "enableWelcomeMessage": false,
                 "welcomeChannel": "team",
-                "enableLogging": false,
-                "excludedChannelsFromLogging": [],
-                "logChannel": "reddit"
+                "enableLogging": true,
+                "excludedChannelsFromLogging": [
+                    "571092204064342016",
+                    "639549494693724170"
+                ],
+                "logChannel": "todo"
             },
             "strings": {
                 "welcomeMessage": "{member} welcome burder xDDD joooooooooooooooooooooooooo"
