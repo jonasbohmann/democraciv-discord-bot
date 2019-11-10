@@ -39,8 +39,8 @@
         "232108753477042187": {
             "name": "Jonas Test Server",
             "config": {
-                "enableWelcomeMessage": false,
-                "welcomeChannel": "team",
+                "enableWelcomeMessage": true,
+                "welcomeChannel": "council",
                 "enableLogging": true,
                 "excludedChannelsFromLogging": [
                     "571092204064342016",
@@ -50,13 +50,13 @@
                     "585502938571604056",
                     "585502938571604056"
                 ],
-                "logChannel": "todo"
+                "logChannel": "welcome"
             },
             "strings": {
-                "welcomeMessage": "s"
+                "welcomeMessage": "asasa"
             },
             "roles": {
-                "Visitor": "Please ping Anugs!"
+                "Visitor": "Ehre"
             }
         },
         "636347358283563058": {
