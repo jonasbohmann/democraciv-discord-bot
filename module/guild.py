@@ -1,7 +1,6 @@
-import asyncio
-
 import config
 import discord
+import asyncio
 import logging
 
 from discord.ext import commands
@@ -42,10 +41,18 @@ class Guild(commands.Cog):
         current_welcome_channel = config.getGuildConfig(ctx.guild.id)['welcomeChannel']
         current_welcome_message = config.getStrings(ctx.guild.id)['welcomeMessage']
 
+        if current_welcome_channel == "":
+            current_welcome_channel = "This guild currently has no welcome channel."
+        else:
+            current_welcome_channel = "#" + current_welcome_channel
+
+        if current_welcome_message == "":
+            current_welcome_message = "This guild currently has no welcome message."
+
         embed = embed_builder(title=f":wave: Welcome Module for {ctx.guild.name}",
                               description="React with the :gear: emoji to change the settings of this module.")
         embed.add_field(name="Enabled", value=f"{str(is_welcome_enabled)}")
-        embed.add_field(name="Channel", value=f"#{current_welcome_channel}")
+        embed.add_field(name="Channel", value=f"{current_welcome_channel}")
         embed.add_field(name="Message", value=f"{current_welcome_message}", inline=False)
 
         info_embed = await ctx.send(embed=embed)
@@ -62,10 +69,8 @@ class Guild(commands.Cog):
             dump = done.pop().result()
             await self.edit_welcome_settings(ctx)
 
-        except asyncio.TimeoutError:
-            for future in pending:
-                future.cancel()
-            return
+        except (asyncio.TimeoutError, TimeoutError):
+            pass
 
         for future in pending:
             future.cancel()
@@ -99,7 +104,7 @@ class Guild(commands.Cog):
                     ":information_source: Answer with the name of the channel the welcome module should use:")
                 try:
                     channel = await self.bot.wait_for('message', check=message_check, timeout=60.0)
-                except asyncio.TimeoutError:
+                except (asyncio.TimeoutError, TimeoutError):
                     await ctx.send(":x: Aborted.")
                     return
 
@@ -122,7 +127,7 @@ class Guild(commands.Cog):
                     f"every time a new member joins.\n\n:warning: Write '{{member}}' to have the Bot mention the user!")
                 try:
                     welcome_message = await self.bot.wait_for('message', check=message_check, timeout=120.0)
-                except asyncio.TimeoutError:
+                except (asyncio.TimeoutError, TimeoutError):
                     await ctx.send(":x: Aborted.")
                     return
 
@@ -134,8 +139,9 @@ class Guild(commands.Cog):
                 config.updateWelcomeModule(ctx.guild.id, False)
                 await ctx.send(":white_check_mark: Disabled the welcome module.")
 
-        except asyncio.TimeoutError:
+        except (asyncio.TimeoutError, TimeoutError):
             await ctx.send(":x: Aborted.")
+            pass
 
         for future in pending:
             future.cancel()
@@ -146,11 +152,16 @@ class Guild(commands.Cog):
         is_logging_enabled = config.getGuildConfig(ctx.guild.id)['enableLogging']
         current_logging_channel = config.getGuildConfig(ctx.guild.id)['logChannel']
 
+        if current_logging_channel == "":
+            current_logging_channel = "This guild currently has no welcome channel."
+        else:
+            current_logging_channel = "#" + current_logging_channel
+
         embed = embed_builder(title=f":spy: Logging Module for {ctx.guild.name}",
                               description="React with the :gear: emoji to change the settings of this module.")
 
         embed.add_field(name="Enabled", value=f"{str(is_logging_enabled)}")
-        embed.add_field(name="Channel", value=f"#{current_logging_channel}")
+        embed.add_field(name="Channel", value=f"{current_logging_channel}")
 
         info_embed = await ctx.send(embed=embed)
         await info_embed.add_reaction("\U00002699")
@@ -166,10 +177,8 @@ class Guild(commands.Cog):
             dump = done.pop().result()
             await self.edit_log_settings(ctx)
 
-        except asyncio.TimeoutError:
-            for future in pending:
-                future.cancel()
-            return
+        except (asyncio.TimeoutError, TimeoutError):
+            pass
 
         for future in pending:
             future.cancel()
@@ -188,9 +197,8 @@ class Guild(commands.Cog):
         await status_question.add_reaction("\U0000274c")
 
         done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=reaction_check, timeout=60),
-                                            ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=60)],
-                                           return_when=asyncio.FIRST_COMPLETED)
-
+                                                ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=60)],
+                                                return_when=asyncio.FIRST_COMPLETED)
         try:
             reaction, user = done.pop().result()
 
@@ -202,9 +210,9 @@ class Guild(commands.Cog):
                     ":information_source: Answer with the name of the channel the logging module should use:")
                 try:
                     channel = await self.bot.wait_for('message', check=message_check, timeout=60.0)
-                except asyncio.TimeoutError:
+                except (asyncio.TimeoutError, TimeoutError):
                     await ctx.send(":x: Aborted.")
-                    return
+                    pass
 
                 if not channel:
                     await ctx.send(":x: Aborted.")
@@ -223,8 +231,9 @@ class Guild(commands.Cog):
                 config.updateLoggingModule(ctx.guild.id, False)
                 await ctx.send(":white_check_mark: Disabled the logging module.")
 
-        except asyncio.TimeoutError:
+        except (asyncio.TimeoutError, TimeoutError):
             await ctx.send(":x: Aborted.")
+            pass
 
         for future in pending:
             future.cancel()
@@ -244,7 +253,7 @@ class Guild(commands.Cog):
             current_excluded_channels_by_name += f"#{channels.name}\n"
 
         if not channel:
-            embed = embed_builder(title=f"Current Excluded Channels on {ctx.guild.name}",
+            embed = embed_builder(title=f"Current from Logging Excluded Channels on {ctx.guild.name}",
                                   description=current_excluded_channels_by_name)
             await ctx.send(embed=embed)
             return

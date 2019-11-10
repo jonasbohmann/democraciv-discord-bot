@@ -95,6 +95,27 @@ def checkIfGuildExists(guild_id):
     return False
 
 
+def initializeNewGuild(guild: discord.Guild):
+    if not checkIfGuildExists(str(guild.id)):
+        payload = {"name": guild.name,
+                   "config": {"enableWelcomeMessage": False, "welcomeChannel": "", "enableLogging": False,
+                              "excludedChannelsFromLogging": [], "logChannel": ""},
+                   "strings": {"welcomeMessage": ""},
+                   "roles": {}
+                   }
+
+        getGuilds()[str(guild.id)] = payload
+
+        with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/guilds.json'), 'w') as file:
+            json.dump(guilds, file, indent=2)
+
+        return True
+
+    else:
+        print(f"ERROR - Could not initialize guild {guild.name}")
+        return False
+
+
 def getStrings(guild_id):
     guild_id = str(guild_id)
 

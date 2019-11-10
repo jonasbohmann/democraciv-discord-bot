@@ -267,11 +267,22 @@ class Log(commands.Cog):
             pass
 
         # Send introduction message to random guild channel
-        embed = embed_builder(title=':two_hearts: Hey there!', description="Thanks for inviting me!\n\nYou can check "
-                                                                           "`-help` to get some more information "
-                                                                           "about me.")
+        embed = embed_builder(title=':two_hearts: Hey there!', description=f"Thanks for inviting me!\n\nYou can check "
+                                                                           f"`-help` to get some more information "
+                                                                           f"about me.\n\nUse the `-guild` command to "
+                                                                           f"configure me for this guild.\n\nIf you "
+                                                                           f"have any questions or suggestions, "
+                                                                           f"send a DM to {owner_user.mention}!")
 
-        await introduction_channel.send(embed=embed)
+        # Add new guild to guilds.json
+        success = config.initializeNewGuild(guild)
+
+        if success:
+            await introduction_channel.send(embed=embed)
+
+        elif not success:
+            await introduction_channel.send(f":x: Unexpected error occurred while initializing this guild.\n"
+                                            f"Help me {owner_user.mention} :worried:")
 
         return
 
@@ -279,15 +290,19 @@ class Log(commands.Cog):
     async def on_guild_role_create(self, role):
         guild = role.guild
 
-        if config.getGuildConfig(guild.id)['enableLogging']:
-            log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-            embed = embed_builder(title=':new: Role Created', description="")
-            embed.add_field(name='Role', value=role.name)
-            embed.add_field(name='Colour', value=role.colour)
-            embed.add_field(name='ID', value=role.id, inline=False)
-            embed.timestamp = datetime.datetime.utcnow()
-            await log_channel.send(embed=embed)
-        return
+        # Handle exception if bot was just added to new guild
+        try:
+            if config.getGuildConfig(guild.id)['enableLogging']:
+                log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
+                embed = embed_builder(title=':new: Role Created', description="")
+                embed.add_field(name='Role', value=role.name)
+                embed.add_field(name='Colour', value=role.colour)
+                embed.add_field(name='ID', value=role.id, inline=False)
+                embed.timestamp = datetime.datetime.utcnow()
+                await log_channel.send(embed=embed)
+            return
+        except TypeError:
+            return
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role):
