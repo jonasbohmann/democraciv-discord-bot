@@ -14,7 +14,6 @@
 
   "reddit":
   {
-
     "enableRedditAnnouncements": true,
     "subreddit": "democraciv",
     "redditAnnouncementChannel": "reddit",

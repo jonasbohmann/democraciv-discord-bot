@@ -47,7 +47,7 @@
                 "logChannel": "todo"
             },
             "strings": {
-                "welcomeMessage": "{member} welcome burder xDDD joooooooooooooooooooooooooo"
+                "welcomeMessage": "{member}"
             },
             "roles": {
                 "test": "test",
@@ -122,20 +122,6 @@
             },
             "strings": {
                 "welcomeMessage": "Welcome to the IPOS Discord server, {member}! You can read more about our platform in {information}. If you're a member of another party, you can ask for a diplomacy role."
-            },
-            "roles": {}
-        },
-        "586308477148856322": {
-            "name": "testdigga",
-            "config": {
-                "enableWelcomeMessage": false,
-                "welcomeChannel": "",
-                "enableLogging": true,
-                "excludedChannelsFromLogging": [],
-                "logChannel": "general"
-            },
-            "strings": {
-                "welcomeMessage": ""
             },
             "roles": {}
         }

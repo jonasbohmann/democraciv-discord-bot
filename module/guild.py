@@ -5,8 +5,7 @@ import logging
 
 from discord.ext import commands
 from util.embed import embed_builder
-from util.checks import isDemocracivGuild
-
+p
 logging.basicConfig(level=logging.INFO)
 
 
