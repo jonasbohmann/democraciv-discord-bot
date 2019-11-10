@@ -36,7 +36,7 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def unload(self, ctx, *, module):
         """Unloads a module."""
-        if not self.isDemocracivGuild(ctx.guild.id):
+        if not isDemocracivGuild(self.bot, ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -51,7 +51,7 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def reload(self, ctx, *, module):
         """Reloads a module."""
-        if not self.isDemocracivGuild(ctx.guild.id):
+        if not isDemocracivGuild(self.bot, ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -66,7 +66,7 @@ class Admin(commands.Cog):
     @commands.command(name='stop', hidden=True)
     @commands.has_permissions(administrator=True)
     async def stop(self, ctx):
-        if not self.isDemocracivGuild(ctx.guild.id):
+        if not isDemocracivGuild(self.bot, ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -77,7 +77,7 @@ class Admin(commands.Cog):
     @commands.command(name='reloadconfig', aliases=['rlc', 'rc', 'rlcfg'], hidden=True)
     @commands.has_permissions(administrator=True)
     async def reloadConfig(self, ctx):
-        if not self.isDemocracivGuild(ctx.guild.id):
+        if not isDemocracivGuild(self.bot, ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
