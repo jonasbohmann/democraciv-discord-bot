@@ -60,8 +60,8 @@ class Guild(commands.Cog):
         def check(r_, u_):
             return u_ == ctx.author and r_.message.id == info_embed.id and str(r_.emoji) == "\U00002699"
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=check, timeout=120),
-                                            ctx.bot.wait_for('reaction_remove', check=check, timeout=120)],
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=check, timeout=240),
+                                            ctx.bot.wait_for('reaction_remove', check=check, timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
 
         try:
@@ -87,8 +87,8 @@ class Guild(commands.Cog):
         await status_question.add_reaction("\U00002705")
         await status_question.add_reaction("\U0000274c")
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=reaction_check, timeout=60),
-                                            ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=60)],
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=reaction_check, timeout=240),
+                                            ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
 
         try:
@@ -102,7 +102,7 @@ class Guild(commands.Cog):
                 await ctx.send(
                     ":information_source: Answer with the name of the channel the welcome module should use:")
                 try:
-                    channel = await self.bot.wait_for('message', check=message_check, timeout=60.0)
+                    channel = await self.bot.wait_for('message', check=message_check, timeout=120)
                 except (asyncio.TimeoutError, TimeoutError):
                     await ctx.send(":x: Aborted.")
                     return
@@ -125,7 +125,7 @@ class Guild(commands.Cog):
                     f":information_source: Answer with the message that should be sent to #{new_welcome_channel} "
                     f"every time a new member joins.\n\n:warning: Write '{{member}}' to have the Bot mention the user!")
                 try:
-                    welcome_message = await self.bot.wait_for('message', check=message_check, timeout=120.0)
+                    welcome_message = await self.bot.wait_for('message', check=message_check, timeout=300)
                 except (asyncio.TimeoutError, TimeoutError):
                     await ctx.send(":x: Aborted.")
                     return
@@ -168,8 +168,8 @@ class Guild(commands.Cog):
         def check(r_, u_):
             return u_ == ctx.author and r_.message.id == info_embed.id and str(r_.emoji) == "\U00002699"
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=check, timeout=120),
-                                            ctx.bot.wait_for('reaction_remove', check=check, timeout=120)],
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=check, timeout=240),
+                                            ctx.bot.wait_for('reaction_remove', check=check, timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
 
         try:
@@ -195,8 +195,8 @@ class Guild(commands.Cog):
         await status_question.add_reaction("\U00002705")
         await status_question.add_reaction("\U0000274c")
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=reaction_check, timeout=60),
-                                            ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=60)],
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=reaction_check, timeout=240),
+                                            ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
         try:
             reaction, user = done.pop().result()
@@ -208,7 +208,7 @@ class Guild(commands.Cog):
                 await ctx.send(
                     ":information_source: Answer with the name of the channel the logging module should use:")
                 try:
-                    channel = await self.bot.wait_for('message', check=message_check, timeout=60.0)
+                    channel = await self.bot.wait_for('message', check=message_check, timeout=120)
                 except (asyncio.TimeoutError, TimeoutError):
                     await ctx.send(":x: Aborted.")
                     pass

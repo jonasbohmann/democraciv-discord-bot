@@ -69,10 +69,10 @@ class Roles(commands.Cog):
         await ctx.send(":information_source: Answer with the name of the role you want to add: \n\n:warning: The name "
                        "should not contain *multiple* spaces between two words!\nExample: 'Test Role' works, but 'Test "
                        "  Role' will not work.")
-        role_name = await self.bot.wait_for('message', check=check, timeout=60.0)
+        role_name = await self.bot.wait_for('message', check=check, timeout=240)
 
         await ctx.send(":information_source: Answer with a short message the user should see when they get the role: ")
-        role_join_message = await self.bot.wait_for('message', check=check, timeout=60.0)
+        role_join_message = await self.bot.wait_for('message', check=check, timeout=240)
 
         error = await config.addRole(ctx.guild, role_join_message.content, role_name.content)
 
