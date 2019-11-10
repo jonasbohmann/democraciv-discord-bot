@@ -170,6 +170,54 @@ def updateLoggingModule(guild_id, status: bool):
         print(f'ERROR - In config.py could not find {guild_id}')
         return None
 
+
+def updateWelcomeModule(guild_id, status: bool):
+    guild_id = str(guild_id)
+
+    if checkIfGuildExists(guild_id):
+        # Enable module
+        if status:
+            getGuildConfig(guild_id)["enableWelcomeMessage"] = True
+            with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/guilds.json'), 'w') as file:
+                json.dump(guilds, file, indent=4)
+
+        # Disable module
+        if not status:
+            getGuildConfig(guild_id)["enableWelcomeMessage"] = False
+            with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/guilds.json'), 'w') as file:
+                json.dump(guilds, file, indent=4)
+    else:
+        print(f'ERROR - In config.py could not find {guild_id}')
+        return None
+
+
+def setWelcomeChannel(guild_id, channel):
+    guild_id = str(guild_id)
+    channel = str(channel)
+
+    if checkIfGuildExists(guild_id):
+        getGuildConfig(guild_id)["welcomeChannel"] = channel
+        with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/guilds.json'), 'w') as file:
+            json.dump(guilds, file, indent=4)
+        return True
+    else:
+        print(f'ERROR - In config.py could not find {guild_id}')
+        return False
+
+
+def setWelcomeMessage(guild_id, message):
+    guild_id = str(guild_id)
+
+    if checkIfGuildExists(guild_id):
+        getStrings(guild_id)["welcomeMessage"] = message
+        with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/guilds.json'), 'w') as file:
+            json.dump(guilds, file, indent=4)
+        return True
+    else:
+        print(f'ERROR - In config.py could not find {guild_id}')
+        return False
+
+
 # Dump JSON functions
 def setLastRedditPost():
     with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/last_reddit_post.json'), 'w') as file:

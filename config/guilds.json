@@ -35,14 +35,14 @@
         "232108753477042187": {
             "name": "Jonas Test Server",
             "config": {
-                "enableWelcomeMessage": true,
-                "welcomeChannel": "welcome",
+                "enableWelcomeMessage": false,
+                "welcomeChannel": "team",
                 "enableLogging": false,
                 "excludedChannelsFromLogging": [],
                 "logChannel": "reddit"
             },
             "strings": {
-                "welcomeMessage": "Joa n\u00c3\u00a4"
+                "welcomeMessage": "{member} welcome burder xDDD joooooooooooooooooooooooooo"
             },
             "roles": {
                 "test": "test",
