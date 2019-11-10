@@ -249,14 +249,25 @@ class Guild(commands.Cog):
 
         else:
 
-            channel_object = discord.utils.get(ctx.guild.text_channels, name=channel)
+            if channel.startswith("<#"):
+                channel = channel.replace("<#", "")
+                channel = channel.rstrip('>')
+                channel_object = self.bot.get_channel(int(channel))
+
+            else:
+                channel_object = discord.utils.get(ctx.guild.text_channels, name=channel)
 
             if not channel_object:
                 await ctx.send(f":x: Couldn't find #{channel}!")
                 return
 
+            if str(channel_object.id) in config.getGuildConfig(ctx.guild.id)['excludedChannelsFromLogging']:
+                await ctx.send(f":x: That channel is already excluded from showing up in "
+                               f"#{current_logging_channel}!")
+                return
+
             if config.addExcludedLogChannel(ctx.guild.id, str(channel_object.id)):
-                await ctx.send(f":white_check_mark: Excluded channel #{channel} from showing up in "
+                await ctx.send(f":white_check_mark: Excluded channel #{channel_object.name} from showing up in "
                                f"#{current_logging_channel}!")
             else:
                 await ctx.send(f":x: Unexpected error occurred.")
