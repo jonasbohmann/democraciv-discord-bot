@@ -58,13 +58,14 @@ You can configure everything else that is Reddit related in the `config.json`.
 ## Modules
 You can add and remove modules by adding or removing them from `initial_extensions` in `client.py`.
 
-Module | Description | Requires no permissions
+Module | Description | Requires no permissions to use
 ------------ | ------------- | -------------
 module.links | Collection of useful links for the game (Wiki, Constitution, political parties etc.) | ✅
 module.about | Commands regarding the bot itself | ✅
 module.admin | Re-, un- and load modules and the config | ❌
 module.fun | Just -say for now | ❌
 module.help | Scaling -help command | ✅
+module.guild | Configure various functions of this bot for your guild | ✅
 module.random | Common choice commands (Heads or Tails etc.) | ✅
 module.roles | Add or remove roles from you | ✅
 module.parties | Join and leave political parties | ✅
@@ -76,7 +77,6 @@ event.error_handler | Handles internal erros |
 
 ## Planned
 * Proportional Representation voting
-* Seperate configs per server
 
 ## Democraciv Discord Server
 Join the [Democraciv Discord Server](https://discord.gg/AK7dYMG) to see the bot in action.
