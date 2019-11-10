@@ -5,7 +5,7 @@ import logging
 
 from discord.ext import commands
 from util.embed import embed_builder
-p
+
 logging.basicConfig(level=logging.INFO)
 
 
