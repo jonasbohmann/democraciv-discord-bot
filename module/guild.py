@@ -197,8 +197,8 @@ class Guild(commands.Cog):
         await status_question.add_reaction("\U0000274c")
 
         done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=reaction_check, timeout=60),
-                                                ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=60)],
-                                                return_when=asyncio.FIRST_COMPLETED)
+                                            ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=60)],
+                                           return_when=asyncio.FIRST_COMPLETED)
         try:
             reaction, user = done.pop().result()
 
@@ -241,10 +241,19 @@ class Guild(commands.Cog):
     @guild.command(name='exclude')
     @commands.has_permissions(administrator=True)
     async def exclude(self, ctx, channel: str = None):
+        """
+        See all excluded channels with `-guild exclude`-
+        Add a channel to the excluded channels with `-guild exclude [channel_name].
+        Remove a channel from the excluded channels with `-guild exclude [excluded_channel_name]`.
+        """
         current_logging_channel = config.getGuildConfig(ctx.guild.id)['logChannel']
 
         def check(message):
             return message.author == ctx.message.author and message.channel == ctx.message.channel
+
+        help_description = "Add a channel to the excluded channels with:\n`-guild exclude " \
+                           "[channel_name]`\nand remove a channel from the excluded channels " \
+                           "with:\n`-guild exclude [excluded_channel_name]`.\n"
 
         current_excluded_channels_by_name = ""
 
@@ -252,9 +261,13 @@ class Guild(commands.Cog):
             channels = self.bot.get_channel(int(channels))
             current_excluded_channels_by_name += f"#{channels.name}\n"
 
+        if current_excluded_channels_by_name == "":
+            current_excluded_channels_by_name = "There are no from logging excluded channels on this guild."
+
         if not channel:
-            embed = embed_builder(title=f"Current from Logging Excluded Channels on {ctx.guild.name}",
-                                  description=current_excluded_channels_by_name)
+            embed = embed_builder(title=f"Logging-Excluded Channels on {ctx.guild.name}",
+                                  description=help_description)
+            embed.add_field(name="Currently Excluded Channels", value=current_excluded_channels_by_name)
             await ctx.send(embed=embed)
             return
 
@@ -272,10 +285,15 @@ class Guild(commands.Cog):
                 await ctx.send(f":x: Couldn't find #{channel}!")
                 return
 
+            # Remove channel
             if str(channel_object.id) in config.getGuildConfig(ctx.guild.id)['excludedChannelsFromLogging']:
-                await ctx.send(f":x: That channel is already excluded from showing up in "
-                               f"#{current_logging_channel}!")
-                return
+                if config.removeExcludedLogChannel(ctx.guild.id, str(channel_object.id)):
+                    await ctx.send(f":white_check_mark: #{channel_object.name} is no longer excluded from"
+                                   f" showing up in #{current_logging_channel}!")
+                    return
+                else:
+                    await ctx.send(f":x: Unexpected error occurred.")
+                    return
 
             if config.addExcludedLogChannel(ctx.guild.id, str(channel_object.id)):
                 await ctx.send(f":white_check_mark: Excluded channel #{channel_object.name} from showing up in "
