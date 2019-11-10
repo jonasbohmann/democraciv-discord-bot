@@ -4,6 +4,7 @@ import datetime
 
 from discord.ext import commands
 from util.embed import embed_builder
+from util.checks import isDemocracivGuild
 
 
 # -- logging.py | event.logging --
@@ -96,51 +97,12 @@ class Log(commands.Cog):
         guild = member.guild
 
         if config.getGuildConfig(guild.id)['enableWelcomeMessage']:
-            try:
-                information_channel = discord.utils.get(guild.text_channels,
-                                                        name=config.getGuildConfig(guild.id)['informationChannel'])
-            except KeyError:
-                information_channel = None
-
-            try:
-                help_channel = discord.utils.get(guild.text_channels, name='help')
-            except KeyError:
-                help_channel = None
-
             welcome_channel = discord.utils.get(guild.text_channels,
                                                 name=config.getGuildConfig(guild.id)['welcomeChannel'])
 
-            # General case without mentioning anything in "{}" from the config's welcome_message
-            if information_channel is None and help_channel is None:
-                welcome_message = config.getStrings(guild.id)['welcomeMessage'].format(member=member.mention)
-                await welcome_channel.send(welcome_message)
-                return
-
-            # General case without mentioning help_channel
-            if help_channel is None:
-                welcome_message = config.getStrings(guild.id)['welcomeMessage'].format(member=member.mention,
-                                                                                       information=information_channel.mention)
-                await welcome_channel.send(welcome_message)
-                return
-
-            if information_channel is None:
-                welcome_message = config.getStrings(guild.id)['welcomeMessage'].format(member=member.mention,
-                                                                                       help=help_channel.mention)
-                await welcome_channel.send(welcome_message)
-                return
-
-            # Democraciv-specific case with mentioning {}'s
-            if information_channel and help_channel:
-                welcome_message = config.getStrings(guild.id)['welcomeMessage'].format(member=member.mention,
-                                                                                       guild=guild.name,
-                                                                                       information=information_channel.mention,
-                                                                                       help=help_channel.mention)
-                await welcome_channel.send(welcome_message)
-                return
-
-            else:
-                welcome_message = config.getStrings(guild.id)['welcomeMessage']
-                await welcome_channel.send(welcome_message)
+            # Apparently this doesn't raise an error if {member} is not in welcome_message
+            welcome_message = config.getStrings(guild.id)['welcomeMessage'].format(member=member.mention)
+            await welcome_channel.send(welcome_message)
 
         if config.getGuildConfig(guild.id)['enableLogging']:
             guild = member.guild
