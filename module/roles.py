@@ -52,12 +52,23 @@ class Roles(commands.Cog):
             return
         else:
             if discord_role not in member.roles:
+                try:
+                    await member.add_roles(discord_role)
+                except discord.Forbidden:
+                    await ctx.send(f":x: Either the '{discord_role.name}' role is higher than my role, or I "
+                                   f"don't have the Administrator permission to give you the role!")
+                    return
                 await ctx.send(config.getRoles(ctx.guild.id)[role])
-                await member.add_roles(discord_role)
+
 
             elif discord_role in member.roles:
+                try:
+                    await member.remove_roles(discord_role)
+                except discord.Forbidden:
+                    await ctx.send(f":x: Either the '{discord_role.name}' role is higher than my role, or I "
+                                   f"don't have the Administrator permission to give you the role!")
+                    return
                 await ctx.send(f":white_check_mark: The '{role}' role was removed from you.")
-                await member.remove_roles(discord_role)
 
     @commands.command(name='addrole')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
