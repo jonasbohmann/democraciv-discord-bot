@@ -1,3 +1,5 @@
+import asyncio
+
 import config
 import discord
 import psutil
@@ -128,6 +130,8 @@ class Admin(commands.Cog):
         info = embed_builder(title=":drop_of_blood: Health Diagnosis", description="Running diagnosis...")
         await ctx.send(embed=info)
 
+        await asyncio.sleep(2)
+
         system_embed = embed_builder(title="System Diagnosis", description="")
         system_embed.add_field(name="Library", value=f"discord.py "
                                                      f"{str(pkg_resources.get_distribution('discord.py').version)}"
@@ -158,8 +162,8 @@ class Admin(commands.Cog):
         permission_embed.add_field(name="Administrator", value=str(my_permissions.administrator))
         permission_embed.add_field(name="Manage Guild", value=str(my_permissions.manage_guild))
         permission_embed.add_field(name="Manage Roles", value=str(my_permissions.manage_roles))
-        permission_embed.add_field(name="Manage Channels", value=str(my_permissions.manage_channels))
-        permission_embed.add_field(name="Manage Messages", value=str(my_permissions.manage_messages))
+        permission_embed.add_field(name="Manage Channels", value=str(my_permissions.manage_channels), inline=False)
+        permission_embed.add_field(name="Manage Messages", value=str(my_permissions.manage_messages), inline=False)
         permission_embed.add_field(name="Top Role", value=str(my_top_role), inline=False)
         await ctx.send(embed=permission_embed)
 
@@ -167,7 +171,8 @@ class Admin(commands.Cog):
         reddit_embed.add_field(name="Enabled", value=config.getReddit()["enableRedditAnnouncements"])
         reddit_embed.add_field(name="Last Reddit Post", value=config.getLastRedditPost()['id'])
         reddit_embed.add_field(name="Subreddit", value=config.getReddit()["subreddit"], inline=True)
-        reddit_embed.add_field(name="Discord Channel", value="#" + config.getReddit()["redditAnnouncementChannel"], inline=True)
+        reddit_embed.add_field(name="Discord Channel", value="#" + config.getReddit()["redditAnnouncementChannel"]
+                               , inline=True)
         reddit_embed.add_field(name="User Agent", value=config.getReddit()["userAgent"], inline=False)
         await ctx.send(embed=reddit_embed)
 
