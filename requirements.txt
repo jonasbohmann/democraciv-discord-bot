@@ -5,3 +5,4 @@ websockets
 wikipedia
 pytz
 praw
+psutil

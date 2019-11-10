@@ -1,10 +1,13 @@
 import config
 import discord
+import psutil
 import importlib
 import traceback
+import pkg_resources
 
 from discord.ext import commands
 from util.checks import isDemocracivGuild
+from util.embed import embed_builder
 
 
 # -- admin.py | module.admin --
@@ -103,6 +106,79 @@ class Admin(commands.Cog):
             return
 
         await ctx.send(f':white_check_mark: Deleted **{len(deleted)}** messages.', delete_after=5)
+
+    @commands.command(name='health', aliases=['status', 'diagnosis'], hidden=True)
+    async def health(self, ctx):
+        # Long & ugly function that spits out some debug information
+
+        if ctx.message.author.id != int(config.getConfig()['authorID']):
+            return
+
+        my_member_object = ctx.guild.me
+        my_permissions = my_member_object.guild_permissions
+        my_top_role = my_member_object.top_role
+        is_guild_initialized = config.checkIfGuildExists(ctx.guild.id)
+        guild_payload = config.getGuilds()[str(ctx.guild.id)]
+        guild_config = guild_payload['config']
+        guild_name = guild_payload['name']
+        guild_strings = guild_payload['strings']
+        guild_roles = guild_payload['roles']
+        dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
+
+        info = embed_builder(title=":drop_of_blood: Health Diagnosis", description="Running diagnosis...")
+        await ctx.send(embed=info)
+
+        system_embed = embed_builder(title="System Diagnosis", description="")
+        system_embed.add_field(name="Library", value=f"discord.py "
+                                                     f"{str(pkg_resources.get_distribution('discord.py').version)}"
+                               , inline=False)
+        system_embed.add_field(name="CPU Usage", value=f"{str(psutil.cpu_percent())}%", inline=False)
+        system_embed.add_field(name="RAM Usage", value=f"{str(psutil.virtual_memory()[2])}%", inline=False)
+        await ctx.send(embed=system_embed)
+
+        discord_embed = embed_builder(title="Discord Diagnosis", description="")
+        discord_embed.add_field(name="Guilds", value=f"{len(self.bot.guilds)}")
+        discord_embed.add_field(name="Users", value=f"{len(self.bot.users)}")
+        discord_embed.add_field(name="Cache Ready", value=f"{str(self.bot.is_ready())}", inline=False)
+        await ctx.send(embed=discord_embed)
+
+        config_embed = embed_builder(title="Config Diagnosis", description="")
+        config_embed.add_field(name="Connected Democraciv Guild", value=f"{dciv_guild}")
+        await ctx.send(embed=config_embed)
+
+        guild_embed = embed_builder(title="Guild Diagnosis", description="")
+        guild_embed.add_field(name="Guild Initialized", value=str(is_guild_initialized))
+        guild_embed.add_field(name="Name", value=f"{guild_name}")
+        guild_embed.add_field(name="Config", value=f"```{guild_config}```", inline=False)
+        guild_embed.add_field(name="Strings", value=f"```{guild_strings}```", inline=False)
+        guild_embed.add_field(name="Roles", value=f"```{guild_roles}```", inline=False)
+        await ctx.send(embed=guild_embed)
+
+        permission_embed = embed_builder(title="Permission Diagnosis", description="")
+        permission_embed.add_field(name="Administrator", value=str(my_permissions.administrator))
+        permission_embed.add_field(name="Manage Guild", value=str(my_permissions.manage_guild))
+        permission_embed.add_field(name="Manage Roles", value=str(my_permissions.manage_roles))
+        permission_embed.add_field(name="Manage Channels", value=str(my_permissions.manage_channels))
+        permission_embed.add_field(name="Manage Messages", value=str(my_permissions.manage_messages))
+        permission_embed.add_field(name="Top Role", value=str(my_top_role), inline=False)
+        await ctx.send(embed=permission_embed)
+
+        reddit_embed = embed_builder(title="Reddit Diagnosis", description="")
+        reddit_embed.add_field(name="Enabled", value=config.getReddit()["enableRedditAnnouncements"])
+        reddit_embed.add_field(name="Last Reddit Post", value=config.getLastRedditPost()['id'])
+        reddit_embed.add_field(name="Subreddit", value=config.getReddit()["subreddit"], inline=True)
+        reddit_embed.add_field(name="Discord Channel", value="#" + config.getReddit()["redditAnnouncementChannel"], inline=True)
+        reddit_embed.add_field(name="User Agent", value=config.getReddit()["userAgent"], inline=False)
+        await ctx.send(embed=reddit_embed)
+
+        twitch_embed = embed_builder(title="Twitch Diagnosis", description="")
+        twitch_embed.add_field(name="Enabled", value=config.getTwitch()["enableTwitchAnnouncements"])
+        twitch_embed.add_field(name="Twitch Channel", value=config.getTwitch()["twitchChannelName"])
+        twitch_embed.add_field(name="Discord Channel", value="#" + config.getTwitch()["twitchAnnouncementChannel"]
+                               , inline=False)
+        twitch_embed.add_field(name="Everyone Ping", value=str(config.getTwitch()["everyonePingOnAnnouncement"])
+                               , inline=False)
+        await ctx.send(embed=twitch_embed)
 
 
 def setup(bot):

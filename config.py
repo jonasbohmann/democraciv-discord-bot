@@ -47,6 +47,10 @@ def getTokenFile():
     return token
 
 
+def getConfigFile():
+    return config
+
+
 def getGuilds():
     return guilds['guilds']
 
@@ -89,6 +93,8 @@ def getLastRedditPost():
 
 # Guild dependant
 def checkIfGuildExists(guild_id):
+    guild_id = str(guild_id)
+
     for guild in getGuilds():
         if guild == guild_id:
             return True
