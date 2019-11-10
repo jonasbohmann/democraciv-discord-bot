@@ -21,7 +21,8 @@
                     "637051202827452464",
                     "637051294959403018",
                     "637051239284080651",
-                    "330162836095631360"
+                    "330162836095631360",
+                    "613812872677556234"
                 ],
                 "logChannel": "mod-logs"
             },
@@ -132,6 +133,22 @@
             },
             "roles": {
                 "Independent": "You're an Independent now! Parties are bad anyway."
+            }
+        },
+        "636354037683322893": {
+            "name": "The Arabian Guild",
+            "config": {
+                "enableWelcomeMessage": true,
+                "welcomeChannel": "general",
+                "enableLogging": true,
+                "excludedChannelsFromLogging": [],
+                "logChannel": "mod-logs"
+            },
+            "strings": {
+                "welcomeMessage": "Welcome to the Arabian guild server, please do -role Visitor"
+            },
+            "roles": {
+                "Visitor": "Welcome to the Arabian Guild server, please ping Angus or Retro for help."
             }
         }
     }
