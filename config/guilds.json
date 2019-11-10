@@ -20,7 +20,8 @@
                     "209432307730350080",
                     "637051202827452464",
                     "637051294959403018",
-                    "637051239284080651"
+                    "637051239284080651",
+                    "330162836095631360"
                 ],
                 "logChannel": "mod-logs"
             },
@@ -29,7 +30,10 @@
             },
             "roles": {
                 "Archives": ":white_check_mark: You've gained access to the archives of Democraciv.",
-                "Convention": ":white_check_mark: You're now part of the MK7 convention! Follow #organizer-announcements for more!"
+                "Invisible Pink Unicorn": "\u2705 You are now a follower of the Invisible Pink Unicorn!",
+                "Holy Mosque": "\u2705 You are now a member of the Holy Mosque!",
+                "Faith": "\u2705 You now have the Faith role!",
+                "United Pantheon of Arabia": "\u2705 You are now a follower of the United Pantheon of Arabia!"
             }
         },
         "232108753477042187": {
@@ -42,12 +46,14 @@
                     "571092204064342016",
                     "639549494693724170",
                     "547919385311051776",
+                    "585502938571604056",
+                    "585502938571604056",
                     "585502938571604056"
                 ],
                 "logChannel": "todo"
             },
             "strings": {
-                "welcomeMessage": "{member}"
+                "welcomeMessage": "{member} welcome burder xDDD joooooooooooooooooooooooooo"
             },
             "roles": {
                 "test": "test",
@@ -107,7 +113,8 @@
                 "Peaceful Growth Collective": "Just chill, man.",
                 "The Imperial Front": "Executive power ftw!",
                 "Defeatist": "Losing is fun too!",
-                "\u0627\u0644\u0645\u062a\u0646\u0648\u0631\u064a\u0646": "What even is this party?"
+                "\u0627\u0644\u0645\u062a\u0646\u0648\u0631\u064a\u0646": "What even is this party?",
+                "First Wing of Alilat": "So you\u2019re an independent party?"
             }
         },
         "636597058987622410": {
@@ -123,7 +130,9 @@
             "strings": {
                 "welcomeMessage": "Welcome to the IPOS Discord server, {member}! You can read more about our platform in {information}. If you're a member of another party, you can ask for a diplomacy role."
             },
-            "roles": {}
+            "roles": {
+                "Independent": "You're an Independent now! Parties are bad anyway."
+            }
         }
     }
 }
