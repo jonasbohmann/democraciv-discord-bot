@@ -53,11 +53,10 @@
                 "logChannel": "todo"
             },
             "strings": {
-                "welcomeMessage": "{member} welcome burder xDDD joooooooooooooooooooooooooo"
+                "welcomeMessage": "s"
             },
             "roles": {
-                "test": "test",
-                "ehren": "xD"
+                "Visitor": "Please ping Anugs!"
             }
         },
         "636347358283563058": {
@@ -132,6 +131,22 @@
             },
             "roles": {
                 "Independent": "You're an Independent now! Parties are bad anyway."
+            }
+        },
+        "586308477148856322": {
+            "name": "testdigga",
+            "config": {
+                "enableWelcomeMessage": false,
+                "welcomeChannel": "",
+                "enableLogging": false,
+                "excludedChannelsFromLogging": [],
+                "logChannel": ""
+            },
+            "strings": {
+                "welcomeMessage": ""
+            },
+            "roles": {
+                "Visitor": "Tester"
             }
         }
     }

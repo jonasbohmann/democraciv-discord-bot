@@ -1,3 +1,4 @@
+import asyncio
 import string
 import config
 import discord
@@ -63,16 +64,30 @@ class Roles(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def addRole(self, ctx):
         """Add a new role to the server"""
+
         def check(message):
             return message.author == ctx.message.author and message.channel == ctx.message.channel
 
-        await ctx.send(":information_source: Answer with the name of the role you want to add: \n\n:warning: The name "
-                       "should not contain *multiple* spaces between two words!\nExample: 'Test Role' works, but 'Test "
-                       "  Role' will not work.")
-        role_name = await self.bot.wait_for('message', check=check, timeout=240)
+        await ctx.send(":information_source: Answer with the name of the role you want to create:\n\n:warning: "
+                       "The name should not contain *multiple* spaces between two words!\nExample:"
+                       " 'Test Role' works, but 'Test    Role' will not work.")
+        try:
+            role_name = await self.bot.wait_for('message', check=check, timeout=240)
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Aborted.")
+
+        # Check if role already exists
+        discord_role = discord.utils.get(ctx.guild.roles, name=role_name.content)
+        if discord_role:
+            await ctx.send(f":x: This guild already has a role named {role_name.content}! Delete the old role before"
+                           f" you use `-addrole` to create a role named {role_name.content} again.")
+            return
 
         await ctx.send(":information_source: Answer with a short message the user should see when they get the role: ")
-        role_join_message = await self.bot.wait_for('message', check=check, timeout=240)
+        try:
+            role_join_message = await self.bot.wait_for('message', check=check, timeout=300)
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Aborted.")
 
         error = await config.addRole(ctx.guild, role_join_message.content, role_name.content)
 

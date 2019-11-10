@@ -112,13 +112,27 @@ class Guild(commands.Cog):
                     return
 
                 new_welcome_channel = channel.content
-                if new_welcome_channel.startswith("#"):
-                    new_welcome_channel.strip("#")
 
-                success = config.setWelcomeChannel(ctx.guild.id, new_welcome_channel)
+                if new_welcome_channel.startswith("<#"):
+                    new_welcome_channel = new_welcome_channel.replace("<#", "")
+                    new_welcome_channel = new_welcome_channel.rstrip('>')
+                    channel_object = self.bot.get_channel(int(new_welcome_channel))
+
+                elif new_welcome_channel.startswith("#"):
+                    new_welcome_channel = new_welcome_channel.replace("#", "")
+                    channel_object = discord.utils.get(ctx.guild.text_channels, name=new_welcome_channel)
+
+                else:
+                    channel_object = discord.utils.get(ctx.guild.text_channels, name=new_welcome_channel)
+
+                if not channel_object:
+                    await ctx.send(f":x: Couldn't find #{channel.content}!")
+                    return
+
+                success = config.setWelcomeChannel(ctx.guild.id, channel_object.name)
 
                 if success:
-                    await ctx.send(f":white_check_mark: Set the welcome channel to #{new_welcome_channel}")
+                    await ctx.send(f":white_check_mark: Set the welcome channel to #{channel_object.name}")
 
                 # Get new welcome message
                 await ctx.send(
@@ -218,13 +232,30 @@ class Guild(commands.Cog):
                     return
 
                 new_logging_channel = channel.content
+
+                if new_logging_channel.startswith("<#"):
+                    new_logging_channel = new_logging_channel.replace("<#", "")
+                    new_logging_channel = new_logging_channel.rstrip('>')
+                    channel_object = self.bot.get_channel(int(new_logging_channel))
+
+                elif new_logging_channel.startswith("#"):
+                    new_logging_channel = new_logging_channel.replace("#", "")
+                    channel_object = discord.utils.get(ctx.guild.text_channels, name=new_logging_channel)
+
+                else:
+                    channel_object = discord.utils.get(ctx.guild.text_channels, name=new_logging_channel)
+
+                if not channel_object:
+                    await ctx.send(f":x: Couldn't find #{channel.content}!")
+                    return
+
                 if new_logging_channel.startswith("#"):
                     new_logging_channel.strip("#")
 
-                success = config.setLoggingChannel(ctx.guild.id, new_logging_channel)
+                success = config.setLoggingChannel(ctx.guild.id, channel_object.name)
 
                 if success:
-                    await ctx.send(f":white_check_mark: Set the logging channel to #{new_logging_channel}")
+                    await ctx.send(f":white_check_mark: Set the logging channel to #{channel_object.name}")
 
             elif str(reaction.emoji) == "\U0000274c":
                 config.updateLoggingModule(ctx.guild.id, False)
