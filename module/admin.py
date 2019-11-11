@@ -144,6 +144,7 @@ class Admin(commands.Cog):
         discord_embed.add_field(name="Guilds", value=f"{len(self.bot.guilds)}")
         discord_embed.add_field(name="Users", value=f"{len(self.bot.users)}")
         discord_embed.add_field(name="Cache Ready", value=f"{str(self.bot.is_ready())}", inline=False)
+        discord_embed.add_field(name="Asyncio Tasks", value=f"{len(asyncio.all_tasks())}", inline=False)
         await ctx.send(embed=discord_embed)
 
         config_embed = embed_builder(title="Config Diagnosis", description="")
