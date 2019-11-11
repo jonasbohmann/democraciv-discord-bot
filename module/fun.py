@@ -27,7 +27,7 @@ class Fun(commands.Cog):
 
     @commands.command(name='whois')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def whois(self, ctx, member: str = None):
+    async def whois(self, ctx, *, member: str = None):
         """Get detailed information about a member of this guild
 
         Example:
@@ -55,7 +55,7 @@ class Fun(commands.Cog):
                     return None
                 for key, elem in enumerate(joins):
                     if elem == user:
-                        return key + 1, len(joins)
+                        return key + 1
                 return None
             except Exception:
                 return None
@@ -81,7 +81,7 @@ class Fun(commands.Cog):
                             value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
             embed.add_field(name='Joined this Guild on',
                             value=f'{member.joined_at.strftime("%B %d, %Y")}', inline=True)
-            embed.add_field(name='Join Position', value=member_join_position(member, ctx.guild)[0], inline=True)
+            embed.add_field(name='Join Position', value=member_join_position(member, ctx.guild), inline=True)
             embed.add_field(name='Roles', value=_get_roles(member.roles), inline=False)
             embed.set_thumbnail(url=member.avatar_url)
             await ctx.send(embed=embed)
