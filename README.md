@@ -4,11 +4,9 @@ Discord Bot for r/Democraciv written in Python 3. Provides useful information, p
 ## Requirements
 
 * [Python](https://www.python.org/downloads//) 3.6 or higher
-* [discord.py](https://github.com/Rapptz/discord.py) 1.2.3 or higher
-* [wikipedia](https://pypi.org/project/wikipedia/) 1.4.0 or higher
-* [praw](https://github.com/praw-dev/praw) 6.2.0 or higher
- 
-Check `requirements.txt` for details - or just use `pip install -r requirements.txt`.
+* [discord.py](https://github.com/Rapptz/discord.py) 1.0.0 or higher
+
+**Run `pip install -r requirements.txt` to install all required dependencies.**
 
 ## Installation
 After installing all the dependencies, create a `token.json` in the config folder.
@@ -63,7 +61,7 @@ Module | Description | Requires no permissions to use
 module.links | Collection of useful links for the game (Wiki, Constitution, political parties etc.) | ✅
 module.about | Commands regarding the bot itself | ✅
 module.admin | Re-, un- and load modules and the config | ❌
-module.fun | Just -say for now | ❌
+module.fun |  | ❌
 module.help | Scaling -help command | ✅
 module.guild | Configure various functions of this bot for your guild | ✅
 module.random | Common choice commands (Heads or Tails etc.) | ✅
