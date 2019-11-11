@@ -346,7 +346,11 @@ class Guild(commands.Cog):
         embed = embed_builder(title=f":partying_face: Default Role for {ctx.guild.name}",
                               description="React with the :gear: emoji to change the settings of this module.")
         embed.add_field(name="Enabled", value=f"{str(is_default_role_enabled)}")
-        embed.add_field(name="Role", value=f"{current_default_role_object.mention}")
+
+        if current_default_role_object is None:
+            embed.add_field(name="Role", value=f"{current_default_role}")
+        else:
+            embed.add_field(name="Role", value=f"{current_default_role_object.mention}")
 
         info_embed = await ctx.send(embed=embed)
         await info_embed.add_reaction("\U00002699")
