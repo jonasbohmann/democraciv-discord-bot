@@ -230,6 +230,15 @@ class Link(commands.Cog):
                               description=config.getLinks()['executive-worksheet'])
         await ctx.send(embed=embed)
 
+    @commands.command(name='addme', aliases=['inviteme'])
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def addme(self, ctx):
+        """Invite me to your Discord guild!"""
+        invite_url = config.getLinks()['invite-me'].format(clientid=self.bot.user.id)
+        embed = embed_builder(title='Add this bot to your own Discord server', description=invite_url)
+        await ctx.send(embed=embed)
+
+
 
 def setup(bot):
     bot.add_cog(Link(bot))
