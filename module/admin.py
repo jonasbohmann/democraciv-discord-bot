@@ -3,6 +3,7 @@ import asyncio
 import config
 import discord
 import psutil
+import platform
 import importlib
 import traceback
 import pkg_resources
@@ -135,7 +136,11 @@ class Admin(commands.Cog):
         system_embed = embed_builder(title="System Diagnosis", description="")
         system_embed.add_field(name="Library", value=f"discord.py "
                                                      f"{str(pkg_resources.get_distribution('discord.py').version)}"
-                               , inline=False)
+                               , inline=True)
+
+        system_embed.add_field(name='Python', value=platform.python_version(), inline=True)
+        system_embed.add_field(name='OS', value=f'{platform.system()} {platform.release()} {platform.version()}',
+                               inline=False)
         system_embed.add_field(name="CPU Usage", value=f"{str(psutil.cpu_percent())}%", inline=False)
         system_embed.add_field(name="RAM Usage", value=f"{str(psutil.virtual_memory()[2])}%", inline=False)
         await ctx.send(embed=system_embed)
