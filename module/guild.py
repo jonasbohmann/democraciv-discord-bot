@@ -26,7 +26,8 @@ class Guild(commands.Cog):
         configuration_list_message = "`-guild welcome` to enable/disable welcome messages for this guild\n" \
                                      "`-guild logs` to enable/disable logging for this guild\n" \
                                      "`-guild exclude [name]` to add a channel to be excluded from " \
-                                     "the logging channel\n"
+                                     "the logging channel\n" \
+                                     "`-guild defaultrole` to enable/disable a default role that every new member gets"
 
         embed = embed_builder(title=f"Guild Configuration for {ctx.guild.name}",
                               description=f"Here is a list of things you can configure:"
@@ -331,6 +332,113 @@ class Guild(commands.Cog):
             else:
                 await ctx.send(f":x: Unexpected error occurred.")
                 return
+
+    @guild.command(name='defaultrole')
+    @commands.has_permissions(administrator=True)
+    async def defaultrole(self, ctx):
+        is_default_role_enabled = config.getGuildConfig(ctx.guild.id)['enableDefaultRole']
+        current_default_role = config.getGuildConfig(ctx.guild.id)['defaultRole']
+        current_default_role_object = discord.utils.get(ctx.guild.roles, name=current_default_role)
+
+        if current_default_role == "":
+            current_default_role = "This guild currently has no default role."
+
+        embed = embed_builder(title=f":partying_face: Default Role for {ctx.guild.name}",
+                              description="React with the :gear: emoji to change the settings of this module.")
+        embed.add_field(name="Enabled", value=f"{str(is_default_role_enabled)}")
+        embed.add_field(name="Role", value=f"{current_default_role_object.mention}")
+
+        info_embed = await ctx.send(embed=embed)
+        await info_embed.add_reaction("\U00002699")
+
+        def check(r_, u_):
+            return u_ == ctx.author and r_.message.id == info_embed.id and str(r_.emoji) == "\U00002699"
+
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=check, timeout=240),
+                                            ctx.bot.wait_for('reaction_remove', check=check, timeout=240)],
+                                           return_when=asyncio.FIRST_COMPLETED)
+
+        try:
+            dump = done.pop().result()
+            await self.edit_default_role_settings(ctx)
+
+        except (asyncio.TimeoutError, TimeoutError):
+            pass
+
+        for future in pending:
+            future.cancel()
+
+    async def edit_default_role_settings(self, ctx):
+        def message_check(message):
+            return message.author == ctx.message.author and message.channel == ctx.message.channel
+
+        def reaction_check(r_, u_):
+            return u_ == ctx.author and r_.message.id == status_question.id
+
+        status_question = await ctx.send(
+            "React with :white_check_mark: to enable the default role, or with :x: to disable the default role.")
+        await status_question.add_reaction("\U00002705")
+        await status_question.add_reaction("\U0000274c")
+
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=reaction_check, timeout=240),
+                                            ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=240)],
+                                           return_when=asyncio.FIRST_COMPLETED)
+        try:
+            reaction, user = done.pop().result()
+
+            if str(reaction.emoji) == "\U00002705":
+                config.updateDefaultRole(ctx.guild.id, True)
+                await ctx.send(":white_check_mark: Enabled the default role.")
+
+                await ctx.send(
+                    ":information_source: What's the name of the role that every "
+                    "new member should get once they join?")
+                try:
+                    role = await self.bot.wait_for('message', check=message_check, timeout=120)
+                except (asyncio.TimeoutError, TimeoutError):
+                    await ctx.send(":x: Aborted.")
+                    pass
+
+                if not role:
+                    await ctx.send(":x: Aborted.")
+                    return
+
+                new_default_role = role.content
+
+                try:
+                    new_default_role_object = await commands.RoleConverter().convert(ctx, new_default_role)
+                except Exception:
+                    new_default_role_object = None
+
+                if new_default_role_object is None:
+                    await ctx.send(
+                        f":information_source: Couldn't find a role named '{new_default_role}', creating new role...")
+                    try:
+                        new_default_role_object = await ctx.guild.create_role(name=new_default_role)
+                    except discord.Forbidden:
+                        await ctx.send(":x: Missing permissions to create default role!")
+                        return
+
+                else:
+                    await ctx.send(
+                        f":white_check_mark: I'll use the pre-existing role named "
+                        f"'{new_default_role_object.name}' for the default role.")
+
+                success = config.setDefaultRole(ctx.guild.id, new_default_role_object.name)
+
+                if success:
+                    await ctx.send(f":white_check_mark: Set the default role to '{new_default_role_object.name}'.")
+
+            elif str(reaction.emoji) == "\U0000274c":
+                config.updateDefaultRole(ctx.guild.id, False)
+                await ctx.send(":white_check_mark: Disabled the default role.")
+
+        except (asyncio.TimeoutError, TimeoutError):
+            await ctx.send(":x: Aborted.")
+            pass
+
+        for future in pending:
+            future.cancel()
 
 
 def setup(bot):
