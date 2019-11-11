@@ -24,7 +24,9 @@
                     "330162836095631360",
                     "613812872677556234"
                 ],
-                "logChannel": "mod-logs"
+                "logChannel": "mod-logs",
+                "enableDefaultRole": false,
+                "defaultRole": ""
             },
             "strings": {
                 "welcomeMessage": "{member}, welcome to Democraciv! We are currently playing our sixth game as Arabia in Sid Meier's Civilization 5.\n\nIf you need help catching up, feel free to ask in <#466922441344548905> or check <#417452512207962112>.\n\nHere's our Wiki for more information about us: https://www.reddit.com/r/democraciv/wiki/"
@@ -52,7 +54,9 @@
                     "585502938571604056",
                     "585502938571604056"
                 ],
-                "logChannel": "welcome"
+                "logChannel": "welcome",
+                "enableDefaultRole": true,
+                "defaultRole": "Convention"
             },
             "strings": {
                 "welcomeMessage": "{member} test"
@@ -69,7 +73,9 @@
                 "welcomeChannel": "welcome",
                 "enableLogging": true,
                 "excludedChannelsFromLogging": [],
-                "logChannel": "mod-logs"
+                "logChannel": "mod-logs",
+                "enableDefaultRole": false,
+                "defaultRole": ""
             },
             "strings": {
                 "welcomeMessage": "Welcome {member} to the Defeatist Faction!\nWe stand for a worse Arabia and the complete loss of the game."
@@ -98,7 +104,9 @@
                     "636741533051387938",
                     "638894014950539264"
                 ],
-                "logChannel": "mod-logs"
+                "logChannel": "mod-logs",
+                "enableDefaultRole": false,
+                "defaultRole": ""
             },
             "strings": {
                 "welcomeMessage": "Welcome {member} to The Union of Steel!\n\nWe are a fascist party in Democraciv!\n\nCheck out our manifesto in <#636757504772145184>!"
@@ -124,7 +132,9 @@
                 "enableLogging": true,
                 "informationChannel": "platform",
                 "excludedChannelsFromLogging": [],
-                "logChannel": "logs"
+                "logChannel": "logs",
+                "enableDefaultRole": false,
+                "defaultRole": ""
             },
             "strings": {
                 "welcomeMessage": "Welcome to the IPOS Discord server, {member}! You can read more about our platform in <#636888242020417536>. If you're a member of another party, you can ask for a diplomacy role."
@@ -140,7 +150,9 @@
                 "welcomeChannel": "general",
                 "enableLogging": true,
                 "excludedChannelsFromLogging": [],
-                "logChannel": "mod-logs"
+                "logChannel": "mod-logs",
+                "enableDefaultRole": false,
+                "defaultRole": ""
             },
             "strings": {
                 "welcomeMessage": "Welcome to the Arabian Guild server! Please do `-role Visitor` to get the Visitor role."

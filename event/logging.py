@@ -95,6 +95,7 @@ class Log(commands.Cog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         guild = member.guild
+        log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
 
         if config.getGuildConfig(guild.id)['enableWelcomeMessage']:
             welcome_channel = discord.utils.get(guild.text_channels,
@@ -104,9 +105,18 @@ class Log(commands.Cog):
             welcome_message = config.getStrings(guild.id)['welcomeMessage'].format(member=member.mention)
             await welcome_channel.send(welcome_message)
 
+        if config.getGuildConfig(guild.id)['enableDefaultRole']:
+            default_role = discord.utils.get(guild.roles, name=config.getGuildConfig(guild.id)['defaultRole'])
+
+            try:
+                await member.add_roles(default_role)
+            except discord.Forbidden:
+                try:
+                    await log_channel.send(f":x: Missing permissions to add default role to {member}.")
+                except Exception:
+                    pass
+
         if config.getGuildConfig(guild.id)['enableLogging']:
-            guild = member.guild
-            log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = embed_builder(title=':tada: Member Joined', description="")
             embed.add_field(name='Member', value=member.mention)
             embed.add_field(name='Name', value=member.name + '#' + member.discriminator)

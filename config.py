@@ -261,6 +261,39 @@ def setWelcomeMessage(guild_id, message):
         return False
 
 
+def updateDefaultRole(guild_id, status: bool):
+    guild_id = str(guild_id)
+
+    if checkIfGuildExists(guild_id):
+        # Enable module
+        if status:
+            getGuildConfig(guild_id)["enableDefaultRole"] = True
+            with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/guilds.json'), 'w') as file:
+                json.dump(guilds, file, indent=4)
+
+        # Disable module
+        if not status:
+            getGuildConfig(guild_id)["enableDefaultRole"] = False
+            with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/guilds.json'), 'w') as file:
+                json.dump(guilds, file, indent=4)
+    else:
+        print(f'ERROR - In config.py could not find {guild_id}')
+        return None
+
+
+def setDefaultRole(guild_id, role):
+    guild_id = str(guild_id)
+
+    if checkIfGuildExists(guild_id):
+        getGuildConfig(guild_id)["defaultRole"] = role
+        with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/guilds.json'), 'w') as file:
+            json.dump(guilds, file, indent=4)
+        return True
+    else:
+        print(f'ERROR - In config.py could not find {guild_id}')
+        return False
+
+
 # Dump JSON functions
 def setLastRedditPost():
     with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/last_reddit_post.json'), 'w') as file:
