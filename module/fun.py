@@ -71,23 +71,17 @@ class Fun(commands.Cog):
             if type(member) is str:
                 member = await commands.MemberConverter().convert(ctx, member)
 
-            if member.name != member.display_name:
-                full_name = f'{member} ({member.display_name})'
-            else:
-                full_name = member
-
             embed = embed_builder(title="User Information", description="")
-            embed.add_field(name="User", value=f"{full_name} {member.mention}", inline=False)
+            embed.add_field(name="User", value=f"{member} {member.mention}", inline=False)
             embed.add_field(name="ID", value=str(member.id), inline=False)
             embed.add_field(name='Status', value=member.status, inline=True)
             embed.add_field(name='Administrator', value=str(member.guild_permissions.administrator), inline=True)
-            embed.add_field(name='Join Position', value=member_join_position(member, ctx.guild)[0], inline=True)
+            embed.add_field(name='Avatar', value=f"[Link]({member.avatar_url})", inline=True)
             embed.add_field(name='Discord Registration',
                             value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
             embed.add_field(name='Joined this Guild on',
                             value=f'{member.joined_at.strftime("%B %d, %Y")}', inline=True)
-
-            embed.add_field(name='Avatar', value=f"[Link]({member.avatar_url})", inline=True)
+            embed.add_field(name='Join Position', value=member_join_position(member, ctx.guild)[0], inline=True)
             embed.add_field(name='Roles', value=_get_roles(member.roles), inline=False)
             embed.set_thumbnail(url=member.avatar_url)
             await ctx.send(embed=embed)
