@@ -21,6 +21,15 @@ import discord
 #
 
 
+#    ATTENTION
+#
+#    config.py and the JSON configs will be deprecated in the near feature.
+#    The bot will use a SQLite database instead, with aiosqlite as API.
+#
+#    as such, these ugly functions will not be refactored
+#
+
+
 def parseJSONFromFile(file_path):
     try:
         file_dir = os.path.dirname(os.path.realpath('__file__'))
