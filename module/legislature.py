@@ -23,6 +23,7 @@ class Legislature(commands.Cog):
         -submit [Google Docs Link of Bil]
         """
         speaker_role = discord.utils.get(ctx.guild.roles, name="Speaker of the Legislature")
+        valid_google_docs_url_strings = ['docs.google.com/', 'drive.google.com/']
 
         if not isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You can only use this on the Democraciv Discord guild!")
@@ -32,7 +33,7 @@ class Legislature(commands.Cog):
             await ctx.send(":x: You have to give me a valid Google Docs URL of the bill you want to submit!")
             return
 
-        if ".google.com" not in google_docs_url:
+        if not any(string in google_docs_url for string in valid_google_docs_url_strings):
             await ctx.send(":x: That doesn't look like a Google Docs URL.")
             return
 
@@ -50,6 +51,8 @@ class Legislature(commands.Cog):
             browser = mechanize.Browser()
             browser.open(google_docs_url)
             bill_title = browser.title()
+            if bill_title.endswith(' - Google Docs'):
+                bill_title = bill_title[:-14]
         except Exception:
             await ctx.send(":x: Unexpected error occurred. Try again!")
             return
@@ -63,11 +66,11 @@ class Legislature(commands.Cog):
         try:
             await speaker_person.create_dm()
             await speaker_person.dm_channel.send(embed=embed)
+            await ctx.send(
+                f":white_check_mark: Successfully submitted '{bill_title}' to the Speaker of the Legislature!")
         except Exception:
-            await ctx.send(":x: Unexpected error occurred.")
+            await ctx.send(":x: Unexpected error occurred. Try again!")
             return
-
-        await ctx.send(f":white_check_mark: Successfully submitted '{bill_title}' to the Speaker of the Legislature!")
 
 
 def setup(bot):
