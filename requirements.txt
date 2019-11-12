@@ -1,3 +1,4 @@
+mechanize
 discord.py
 requests
 aiohttp

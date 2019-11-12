@@ -1,10 +1,8 @@
-import mechanize as mechanize
-
 import config
 import discord
 import datetime
-import lxml.html
 
+import mechanize as mechanize
 from discord.ext import commands
 from util.embed import embed_builder
 
