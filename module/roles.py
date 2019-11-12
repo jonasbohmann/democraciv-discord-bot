@@ -75,14 +75,11 @@ class Roles(commands.Cog):
     async def addRole(self, ctx):
         """Create a new role on this guild and add it to the bot's -roles list. Doesn't take any arguments."""
 
-        def check(message):
-            return message.author == ctx.message.author and message.channel == ctx.message.channel
-
         await ctx.send(":information_source: Answer with the name of the role you want to create:\n\n:warning: "
                        "The name should not contain *multiple* spaces between two words!\nExample:"
                        " 'Test Role' works, but 'Test    Role' will not work.")
         try:
-            role_name = await self.bot.wait_for('message', check=check, timeout=240)
+            role_name = await self.bot.wait_for('message', check=self.bot.wait_for_message_check(ctx), timeout=240)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
 
@@ -95,7 +92,8 @@ class Roles(commands.Cog):
 
         await ctx.send(":information_source: Answer with a short message the user should see when they get the role: ")
         try:
-            role_join_message = await self.bot.wait_for('message', check=check, timeout=300)
+            role_join_message = await self.bot.wait_for('message', check=self.bot.wait_for_message_check(ctx),
+                                                        timeout=300)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
 

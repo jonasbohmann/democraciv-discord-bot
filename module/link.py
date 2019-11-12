@@ -35,7 +35,7 @@ class Link(commands.Cog):
     async def constitution(self, ctx):
         """Get a link to our constitution"""
         embed = self.bot.embeds.embed_builder(title='The Constitution of Arabia',
-                                          description=config.getLinks()['constitution'])
+                                              description=config.getLinks()['constitution'])
         await ctx.send(embed=embed)
 
     @commands.command(name='government', aliases=['gov', 'g'])
@@ -44,7 +44,7 @@ class Link(commands.Cog):
         """Get a link to the wiki page of our government"""
         if not number:
             embed = self.bot.embeds.embed_builder(title='The Government of Arabia',
-                                              description=config.getLinks()['government'])
+                                                  description=config.getLinks()['government'])
             await ctx.send(embed=embed)
             return
 
@@ -54,13 +54,13 @@ class Link(commands.Cog):
             ordinal = "Second"
         if number == "3":
             ordinal = "Third"
-        if int(number) in range(4, 10):
-            ordinal = number + "th"
+        else:
+            ordinal = "th"
 
         link = 'government-' + number
         if link in config.getLinks():
             embed = self.bot.embeds.embed_builder(title=ordinal + ' Government of Arabia',
-                                              description=config.getLinks()[link])
+                                                  description=config.getLinks()[link])
             await ctx.send(embed=embed)
             return
 
@@ -170,14 +170,15 @@ class Link(commands.Cog):
     async def move(self, ctx):
         """Change your city of residence"""
         embed = self.bot.embeds.embed_builder(title='Change your City of Residency',
-                                          description=config.getLinks()['residencyForm'])
+                                              description=config.getLinks()['residencyForm'])
         await ctx.send(embed=embed)
 
     @commands.command(name='residency')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def residency(self, ctx):
         """See the current population of every city"""
-        embed = self.bot.embeds.embed_builder(title='Residency Spreadsheet', description=config.getLinks()['residencyList'])
+        embed = self.bot.embeds.embed_builder(title='Residency Spreadsheet',
+                                              description=config.getLinks()['residencyList'])
         await ctx.send(embed=embed)
 
     @commands.command(name='sue')
@@ -185,7 +186,7 @@ class Link(commands.Cog):
     async def sue(self, ctx):
         """Submit a Case to the Supreme Court"""
         embed = self.bot.embeds.embed_builder(title='Submit a Case to the Supreme Court of Arabia',
-                                          description=config.getLinks()['supremeCourtCaseSubmitter'])
+                                              description=config.getLinks()['supremeCourtCaseSubmitter'])
         await ctx.send(embed=embed)
 
     @commands.command(name='register')
@@ -214,7 +215,7 @@ class Link(commands.Cog):
     async def quire(self, ctx):
         """Quire Project Management"""
         embed = self.bot.embeds.embed_builder(title='Quire',
-                                          description=config.getLinks()['quire'])
+                                              description=config.getLinks()['quire'])
         await ctx.send(embed=embed)
 
     @commands.command(name='docket', aliases=['d'])
@@ -222,7 +223,7 @@ class Link(commands.Cog):
     async def docket(self, ctx):
         """Docket for the Arabian Legislature"""
         embed = self.bot.embeds.embed_builder(title='Docket for the Arabian Legislature',
-                                          description=config.getLinks()['legislative-docket'])
+                                              description=config.getLinks()['legislative-docket'])
         await ctx.send(embed=embed)
 
     @commands.command(name='ministry', aliases=['m'])
@@ -230,7 +231,7 @@ class Link(commands.Cog):
     async def ministry(self, ctx):
         """The Ministry's worksheet"""
         embed = self.bot.embeds.embed_builder(title='Worksheet of the Arabian Ministry',
-                                          description=config.getLinks()['executive-worksheet'])
+                                              description=config.getLinks()['executive-worksheet'])
         await ctx.send(embed=embed)
 
     @commands.command(name='addme', aliases=['inviteme'])

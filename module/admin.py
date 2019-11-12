@@ -24,7 +24,7 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def load(self, ctx, *, module):
         """Loads a module."""
-        if not self.bot.checks.isDemocracivGuild(ctx.guild.id):
+        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -39,7 +39,7 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def unload(self, ctx, *, module):
         """Unloads a module."""
-        if not self.bot.checks.isDemocracivGuild(ctx.guild.id):
+        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -54,7 +54,7 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def reload(self, ctx, *, module):
         """Reloads a module."""
-        if not self.bot.checks.isDemocracivGuild(ctx.guild.id):
+        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -69,7 +69,7 @@ class Admin(commands.Cog):
     @commands.command(name='stop', hidden=True)
     @commands.has_permissions(administrator=True)
     async def stop(self, ctx):
-        if not self.bot.checks.isDemocracivGuild(ctx.guild.id):
+        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -80,7 +80,7 @@ class Admin(commands.Cog):
     @commands.command(name='reloadconfig', aliases=['rlc', 'rc', 'rlcfg'], hidden=True)
     @commands.has_permissions(administrator=True)
     async def reloadConfig(self, ctx):
-        if not self.bot.checks.isDemocracivGuild(ctx.guild.id):
+        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -111,7 +111,7 @@ class Admin(commands.Cog):
     async def health(self, ctx):
         # Long & ugly function that spits out some debug information
 
-        if not self.bot.checks.isDerJonas(ctx.message.author.id):
+        if not self.bot.checks.is_DerJonas(ctx.message.author.id):
             return
 
         my_member_object = ctx.guild.me

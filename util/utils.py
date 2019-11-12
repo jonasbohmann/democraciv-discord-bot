@@ -26,8 +26,24 @@ class CheckUtils:
         self.democraciv_guild_id = int(config.getConfig()["democracivServerID"])
         self.der_jonas_id = int(config.getConfig()['authorID'])
 
-    def isDemocracivGuild(self, guild_id):
+    def is_democraciv_guild(self, guild_id):
         return self.democraciv_guild_id == int(guild_id)
 
-    def isDerJonas(self, member_id):
+    def is_DerJonas(self, member_id):
         return self.der_jonas_id == int(member_id)
+
+    def wait_for_message_check(self, ctx):
+        def check(message):
+            return message.author == ctx.message.author and message.channel == ctx.message.channel
+        return check
+
+    def wait_for_reaction_check(self, ctx, original_message):
+        def check(reaction, user):
+            return user == ctx.author and reaction.message.id == original_message.id
+        return check
+
+    def wait_for_gear_reaction_check(self, ctx, original_message):
+        def check(reaction, user):
+            return user == ctx.author and reaction.message.id == original_message.id \
+                   and str(reaction.emoji) == "\U00002699"
+        return check
