@@ -1,4 +1,3 @@
-mechanize
 discord.py
 requests
 aiohttp
@@ -7,4 +6,4 @@ wikipedia
 pytz
 praw
 psutil
-lxml
+mechanize

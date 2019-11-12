@@ -23,7 +23,7 @@ class Legislature(commands.Cog):
         -submit [Google Docs Link of Bil]
         """
         speaker_role = discord.utils.get(ctx.guild.roles, name="Speaker of the Legislature")
-        valid_google_docs_url_strings = ['docs.google.com/', 'drive.google.com/']
+        valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/']
 
         if not isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You can only use this on the Democraciv Discord guild!")

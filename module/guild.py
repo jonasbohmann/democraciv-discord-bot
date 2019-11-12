@@ -114,17 +114,7 @@ class Guild(commands.Cog):
 
                 new_welcome_channel = channel.content
 
-                if new_welcome_channel.startswith("<#"):
-                    new_welcome_channel = new_welcome_channel.replace("<#", "")
-                    new_welcome_channel = new_welcome_channel.rstrip('>')
-                    channel_object = self.bot.get_channel(int(new_welcome_channel))
-
-                elif new_welcome_channel.startswith("#"):
-                    new_welcome_channel = new_welcome_channel.replace("#", "")
-                    channel_object = discord.utils.get(ctx.guild.text_channels, name=new_welcome_channel)
-
-                else:
-                    channel_object = discord.utils.get(ctx.guild.text_channels, name=new_welcome_channel)
+                channel_object = await commands.TextChannelConverter().convert(ctx, new_welcome_channel)
 
                 if not channel_object:
                     await ctx.send(f":x: Couldn't find #{channel.content}!")
@@ -234,17 +224,7 @@ class Guild(commands.Cog):
 
                 new_logging_channel = channel.content
 
-                if new_logging_channel.startswith("<#"):
-                    new_logging_channel = new_logging_channel.replace("<#", "")
-                    new_logging_channel = new_logging_channel.rstrip('>')
-                    channel_object = self.bot.get_channel(int(new_logging_channel))
-
-                elif new_logging_channel.startswith("#"):
-                    new_logging_channel = new_logging_channel.replace("#", "")
-                    channel_object = discord.utils.get(ctx.guild.text_channels, name=new_logging_channel)
-
-                else:
-                    channel_object = discord.utils.get(ctx.guild.text_channels, name=new_logging_channel)
+                channel_object = await commands.TextChannelConverter().convert(ctx, new_logging_channel)
 
                 if not channel_object:
                     await ctx.send(f":x: Couldn't find #{channel.content}!")
@@ -304,13 +284,7 @@ class Guild(commands.Cog):
 
         else:
 
-            if channel.startswith("<#"):
-                channel = channel.replace("<#", "")
-                channel = channel.rstrip('>')
-                channel_object = self.bot.get_channel(int(channel))
-
-            else:
-                channel_object = discord.utils.get(ctx.guild.text_channels, name=channel)
+            channel_object = await commands.TextChannelConverter().convert(ctx, channel)
 
             if not channel_object:
                 await ctx.send(f":x: Couldn't find #{channel}!")
