@@ -15,6 +15,12 @@ class Legislature(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_any_role("Legislator", "Legislature")  # TODO - Have bot check what the exact leg role is named
     async def submit(self, ctx, google_docs_url: str):
+        """Submit a new bill directly to the current Speaker of the Legislature.
+
+        Usage:
+        -----
+        -submit [Google Docs Link of Bil]
+        """
         speaker_role = discord.utils.get(ctx.guild.roles, name="Speaker of the Legislature")
 
         if len(google_docs_url) <= 10 or not google_docs_url:
