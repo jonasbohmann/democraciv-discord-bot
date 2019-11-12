@@ -5,6 +5,7 @@ import datetime
 import mechanize as mechanize
 from discord.ext import commands
 from util.embed import embed_builder
+from util.checks import isDemocracivGuild
 
 
 class Legislature(commands.Cog):
@@ -23,7 +24,11 @@ class Legislature(commands.Cog):
         """
         speaker_role = discord.utils.get(ctx.guild.roles, name="Speaker of the Legislature")
 
-        if len(google_docs_url) <= 10 or not google_docs_url:
+        if not isDemocracivGuild(ctx.guild.id):
+            await ctx.send(":x: You can only use this on the Democraciv Discord guild!")
+            return
+
+        if len(google_docs_url) < 15 or not google_docs_url:
             await ctx.send(":x: You have to give me a valid Google Docs URL of the bill you want to submit!")
             return
 
