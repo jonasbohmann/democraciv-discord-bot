@@ -38,7 +38,7 @@ logging.basicConfig(level=logging.INFO)
 # -- Cogs --
 initial_extensions = ['module.link',
                       'module.about',
-                      'module.vote',
+                      'module.legislature',
                       'module.time',
                       'module.fun',
                       'module.admin',

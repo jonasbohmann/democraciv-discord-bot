@@ -6,3 +6,4 @@ wikipedia
 pytz
 praw
 psutil
+lxml
