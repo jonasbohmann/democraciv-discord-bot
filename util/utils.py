@@ -1,5 +1,6 @@
 import config
 import discord
+import datetime
 
 
 class EmbedUtils:
@@ -9,9 +10,13 @@ class EmbedUtils:
         self.footer_icon = config.getConfig()['botIconURL']
         self.embed_colour = 0x7f0000
 
-    def embed_builder(self, title: str, description: str, colour: int = None):
+    def embed_builder(self, title: str, description: str, colour: int = None, time_stamp: bool = None):
         embed = discord.Embed(title=title, description=description, colour=self.embed_colour)
         embed.set_footer(text=self.footer_text, icon_url=self.footer_icon)
+
+        if time_stamp:
+            embed.timestamp = datetime.datetime.utcnow()
+
         return embed
 
 

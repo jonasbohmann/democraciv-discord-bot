@@ -1,9 +1,10 @@
-import datetime
 import sys
+import time
 import config
 import discord
 import asyncio
 import logging
+import datetime
 import traceback
 import discord.utils
 import pkg_resources
@@ -54,7 +55,7 @@ class DemocracivBot(commands.Bot):
         self.description = config.getConfig()["botDescription"]
         self.version = config.getConfig()["botVersion"]
         self.icon = config.getConfig()["botIconURL"]
-        self.uptime = datetime.datetime.utcnow()
+        self.uptime = time.time()
         self.token = config.getToken()
         self.commands_cooldown = config.getCooldown()
         self.commands_prefix = config.getPrefix()
@@ -70,6 +71,10 @@ class DemocracivBot(commands.Bot):
             except Exception as e:
                 print(f'Failed to load module {extension}.', file=sys.stderr)
                 traceback.print_exc()
+
+    def getUptime(self):
+        difference = int(round(time.time() - self.uptime))
+        return str(datetime.timedelta(seconds=difference))
 
     async def on_ready(self):
         print('Logged in as ' + self.user.name + ' with discord.py ' + str(

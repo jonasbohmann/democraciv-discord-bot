@@ -4,14 +4,11 @@ import datetime
 import mechanize as mechanize
 
 from discord.ext import commands
-from util.utils import CheckUtils, EmbedUtils
 
 
 class Legislature(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.embeds = EmbedUtils()
-        self.checks = CheckUtils()
 
     @commands.command(name='submit')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -26,7 +23,7 @@ class Legislature(commands.Cog):
         speaker_role = discord.utils.get(ctx.guild.roles, name="Speaker of the Legislature")
         valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/']
 
-        if not self.checks.isDemocracivGuild(ctx.guild.id):
+        if not self.bot.checks.isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You can only use this on the Democraciv Discord guild!")
             return
 
@@ -58,7 +55,7 @@ class Legislature(commands.Cog):
             await ctx.send(":x: Unexpected error occurred. Try again!")
             return
 
-        embed = self.embeds.embed_builder(title="New Bill Submitted", description="")
+        embed = self.bot.embeds.embed_builder(title="New Bill Submitted", description="", time_stamp=True)
         embed.add_field(name="Title", value=bill_title, inline=False)
         embed.add_field(name="Author", value=ctx.message.author.name)
         embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow())

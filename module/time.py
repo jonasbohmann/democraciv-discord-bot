@@ -3,16 +3,11 @@ import config
 
 from datetime import datetime
 from discord.ext import commands
-from util.utils import CheckUtils, EmbedUtils
-
-
 
 
 class Time(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.embeds = EmbedUtils()
-        self.checks = CheckUtils()
 
     async def returnTime(self, ctx, us: str, time: datetime, name, aliases=None):
         """Displays the current time in based on the inputted values."""
@@ -20,13 +15,14 @@ class Time(commands.Cog):
             aliases = []
         aliases = '/'.join([name] + aliases).upper()  # Turns the list of aliases into a formatted string
         if us == 'us':
-            embed = self.embeds.embed_builder(title='Time - ' + aliases + ' - US Format',
-                                  description=datetime.strftime(time, "%m/%d/%Y, %I:%M:%S %p"))
+            embed = self.bot.embeds.embed_builder(title='Time - ' + aliases + ' - US Format',
+                                                  description=datetime.strftime(time, "%m/%d/%Y, %I:%M:%S %p"))
 
             await ctx.send(embed=embed)
             return
 
-        embed = self.embeds.embed_builder(title='Time - ' + aliases, description=datetime.strftime(time, "%d.%m.%Y, %H:%M:%S"))
+        embed = self.bot.embeds.embed_builder(title='Time - ' + aliases,
+                                              description=datetime.strftime(time, "%d.%m.%Y, %H:%M:%S"))
         await ctx.send(embed=embed)
 
     @commands.group(name='time', case_insensitive=True)

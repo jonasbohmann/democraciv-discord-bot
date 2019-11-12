@@ -4,8 +4,6 @@ import discord
 import datetime
 
 from discord.ext import commands
-from util.utils import CheckUtils, EmbedUtils
-
 
 
 # -- parties.py | module.parties --
@@ -22,8 +20,6 @@ def getPartyFromAlias(alias: str):
 class Party(commands.Cog, name='Political Parties'):
     def __init__(self, bot):
         self.bot = bot
-        self.embeds = EmbedUtils()
-        self.checks = CheckUtils()
 
     async def collectPartiesAndMembers(self, ctx):
         parties_and_members = []
@@ -46,7 +42,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def join(self, ctx, *party: str):
         """Join a Political Party"""
-        if not self.checks.isDemocracivGuild(ctx.guild.id):
+        if not self.bot.checks.isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You can only join political parties on the Democraciv Discord!")
             return
 
@@ -92,7 +88,7 @@ class Party(commands.Cog, name='Political Parties'):
             if config.getGuildConfig(guild.id)['enableLogging']:
                 guild = ctx.guild
                 logchannel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-                embed = self.embeds.embed_builder(title=':family_mwgb: Joined Political Party', description="")
+                embed = self.bot.embeds.embed_builder(title=':family_mwgb: Joined Political Party', description="")
                 embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,
                                 inline=False)
                 embed.add_field(name='Party', value=party)
@@ -119,7 +115,7 @@ class Party(commands.Cog, name='Political Parties'):
     async def leave(self, ctx, *party: str):
         """Leave a Political Party"""
 
-        if not self.checks.isDemocracivGuild(ctx.guild.id):
+        if not self.bot.checks.isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You can only leave political parties on the Democraciv Discord!")
             return
 
@@ -152,7 +148,7 @@ class Party(commands.Cog, name='Political Parties'):
             if config.getGuildConfig(guild.id)['enableLogging']:
                 guild = ctx.guild
                 logchannel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-                embed = self.embeds.embed_builder(title=':triumph: Left Political Party', description="")
+                embed = self.bot.embeds.embed_builder(title=':triumph: Left Political Party', description="")
                 embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,
                                 inline=False)
                 embed.add_field(name='Party', value=party)
@@ -199,8 +195,8 @@ class Party(commands.Cog, name='Political Parties'):
                 party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)} citizen' \
                                             f's\n\n'
 
-            embed = self.embeds.embed_builder(title=f'Ranking of Political Parties in Arabia',
-                                  description=f'{party_list_embed_content}', colour=0x7f0000)
+            embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in Arabia',
+                                                  description=f'{party_list_embed_content}', colour=0x7f0000)
 
             await ctx.send(embed=embed)
 
@@ -223,7 +219,7 @@ class Party(commands.Cog, name='Political Parties'):
                 else:
                     title = f'Members of {role}'
 
-                embed = self.embeds.embed_builder(title=title, description=f'{msg}', colour=0x7f0000)
+                embed = self.bot.embeds.embed_builder(title=title, description=f'{msg}', colour=0x7f0000)
                 await ctx.send(embed=embed)
 
     @commands.command(name='addparty')
@@ -232,7 +228,7 @@ class Party(commands.Cog, name='Political Parties'):
     async def addParty(self, ctx, invite: str, *party: str):
         """Add a new political party to the server. This will also create a role on this guild."""
 
-        if not self.checks.isDemocracivGuild(ctx.guild.id):
+        if not self.bot.checks.isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -253,7 +249,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.has_permissions(administrator=True)
     async def deleteParty(self, ctx, *party: str):
         """Delete a political party and its role from the server."""
-        if not self.checks.isDemocracivGuild(ctx.guild.id):
+        if not self.bot.checks.isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -274,7 +270,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.has_permissions(administrator=True)
     async def addAlias(self, ctx, *party_and_alias: str):
         """Adds a new alias to party"""
-        if not self.checks.isDemocracivGuild(ctx.guild.id):
+        if not self.bot.checks.isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -298,7 +294,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.has_permissions(administrator=True)
     async def deleteAlias(self, ctx, *alias: str):
         """Deletes pre-existing alias"""
-        if not self.checks.isDemocracivGuild(ctx.guild.id):
+        if not self.bot.checks.isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -335,7 +331,7 @@ class Party(commands.Cog, name='Political Parties'):
                 msg += f'{alias}\n'
 
         if msg:
-            embed = self.embeds.embed_builder(title=f'Aliases of {party}', description=f'{msg}', colour=0x7f0000)
+            embed = self.bot.embeds.embed_builder(title=f'Aliases of {party}', description=f'{msg}', colour=0x7f0000)
 
             await ctx.send(embed=embed)
         else:

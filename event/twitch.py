@@ -5,8 +5,6 @@ import discord
 import requests
 import datetime
 
-from util.utils import CheckUtils, EmbedUtils
-
 
 # -- Twitch  --
 # Background task that posts an alert if twitch.tv/democraciv is live
@@ -21,8 +19,6 @@ class Twitch:
         self.http_header = {'Client-ID': self.twitch_API_token}
         self.streamer = config.getTwitch()['twitchChannelName']
         self.activeStream = False
-        self.embeds = EmbedUtils()
-        self.checks = CheckUtils()
 
     def checkTwitchLivestream(self):
         try:
@@ -59,7 +55,8 @@ class Twitch:
             if twitch_data is not False:
                 if self.activeStream is False:
                     self.activeStream = True
-                    embed = self.embeds.embed_builder(title=f":satellite: {self.streamer} - Live on Twitch", description="")
+                    embed = self.bot.embeds.embed_builder(title=f":satellite: {self.streamer} - Live on Twitch",
+                                                          description="")
                     embed.add_field(name="Title", value=twitch_data[0], inline=False)
                     embed.add_field(name="Link", value=f"https://twitch.tv/{self.streamer}", inline=False)
                     embed.set_image(url=twitch_data[1])

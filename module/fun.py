@@ -2,7 +2,7 @@ import config
 import operator
 
 from discord.ext import commands
-from util.utils import CheckUtils, EmbedUtils
+
 
 
 # -- fun.py | module.fun --
@@ -14,8 +14,7 @@ from util.utils import CheckUtils, EmbedUtils
 class Fun(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.embeds = EmbedUtils()
-        self.checks = CheckUtils()
+
 
     @commands.command(name='say')
     @commands.has_permissions(administrator=True)
@@ -70,7 +69,7 @@ class Fun(commands.Cog):
             if type(member) is str:
                 member = await commands.MemberConverter().convert(ctx, member)
 
-            embed = self.embeds.embed_builder(title="User Information", description="")
+            embed = self.bot.embeds.embed_builder(title="User Information", description="")
             embed.add_field(name="User", value=f"{member} {member.mention}", inline=False)
             embed.add_field(name="ID", value=str(member.id), inline=False)
             embed.add_field(name='Status', value=member.status, inline=True)
