@@ -144,6 +144,8 @@ class Admin(commands.Cog):
         await ctx.send(embed=system_embed)
 
         discord_embed = self.bot.embeds.embed_builder(title="Discord Diagnosis", description="")
+        discord_embed.add_field(name="Ping", value=f"{self.bot.get_ping()}ms", inline=False)
+        discord_embed.add_field(name="Uptime", value=f"{self.bot.get_uptime()}", inline=False)
         discord_embed.add_field(name="Guilds", value=f"{len(self.bot.guilds)}")
         discord_embed.add_field(name="Users", value=f"{len(self.bot.users)}")
         discord_embed.add_field(name="Cache Ready", value=f"{str(self.bot.is_ready())}", inline=False)

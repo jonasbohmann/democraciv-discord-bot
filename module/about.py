@@ -1,4 +1,3 @@
-import math
 import config
 
 from discord.ext import commands
@@ -14,9 +13,6 @@ class About(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    def getPing(self):
-        return math.floor(self.bot.latency * 1000)
-
     @commands.command(name='about')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def about(self, ctx):
@@ -24,9 +20,9 @@ class About(commands.Cog):
         embed = self.bot.embeds.embed_builder(title='About', description="")
         embed.add_field(name='Author', value=config.getConfig()['author'], inline=True)
         embed.add_field(name='Version', value=config.getConfig()['botVersion'], inline=True)
-        embed.add_field(name='Uptime', value=self.bot.getUptime(), inline=True)
+        embed.add_field(name='Uptime', value=self.bot.get_uptime(), inline=True)
         embed.add_field(name='Prefix', value=config.getPrefix(), inline=True)
-        embed.add_field(name='Ping', value=(str(self.getPing()) + 'ms'), inline=True)
+        embed.add_field(name='Ping', value=(str(self.bot.get_ping()) + 'ms'), inline=True)
         embed.add_field(name='Commands', value='See ' + config.getPrefix() + 'help', inline=True)
         await ctx.send(embed=embed)
 
@@ -34,21 +30,21 @@ class About(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def uptime(self, ctx):
         """Check how long I've been working"""
-        embed = self.bot.embeds.embed_builder(title='Uptime', description=self.bot.getUptime())
+        embed = self.bot.embeds.embed_builder(title='Uptime', description=self.bot.get_uptime())
         await ctx.send(embed=embed)
 
     @commands.command(name='ping')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def ping(self, ctx):
         """Pong!"""
-        embed = self.bot.embeds.embed_builder(title='Ping', description=(str(self.getPing()) + 'ms'))
+        embed = self.bot.embeds.embed_builder(title='Ping', description=(str(self.bot.get_ping()) + 'ms'))
         await ctx.send(embed=embed)
 
     @commands.command(name='pong', hidden=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def pong(self, ctx):
         """Ping!"""
-        embed = self.bot.embeds.embed_builder(title='Ping', description=(str(self.getPing()) + 'ms'))
+        embed = self.bot.embeds.embed_builder(title='Ping', description=(str(self.bot.get_ping()) + 'ms'))
         await ctx.send(embed=embed)
 
     @commands.command(name='source')

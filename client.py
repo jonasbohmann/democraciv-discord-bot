@@ -1,5 +1,6 @@
 import sys
 import time
+import math
 import config
 import discord
 import asyncio
@@ -67,19 +68,22 @@ class DemocracivBot(commands.Bot):
         for extension in initial_extensions:
             try:
                 self.load_extension(extension)
-                print('Successfully loaded ' + extension)
-            except Exception as e:
-                print(f'Failed to load module {extension}.', file=sys.stderr)
+                print(f'Successfully loaded {extension}')
+            except Exception:
+                print(f'Failed to load module {extension}.')
                 traceback.print_exc()
 
-    def getUptime(self):
+    def get_uptime(self):
         difference = int(round(time.time() - self.uptime))
         return str(datetime.timedelta(seconds=difference))
 
+    def get_ping(self):
+        return math.floor(self.latency * 1000)
+
     async def on_ready(self):
-        print('Logged in as ' + self.user.name + ' with discord.py ' + str(
-            pkg_resources.get_distribution('discord.py').version))
-        print('-------------------------------------------------------')
+        print(f"Logged in as {self.user.name} with discord.py"
+              f" {str(pkg_resources.get_distribution('discord.py').version)}")
+        print("-------------------------------------------------------")
         if config.getTwitch()['enableTwitchAnnouncements']:
             twitch = Twitch(self)
             self.loop.create_task(twitch.twitch_task())
@@ -88,8 +92,7 @@ class DemocracivBot(commands.Bot):
             reddit = Reddit(self)
             self.loop.create_task(reddit.reddit_task())
 
-        await self.change_presence(
-            activity=discord.Game(name=config.getPrefix() + 'help | Watching over r/Democraciv'))
+        await self.change_presence(activity=discord.Game(name=config.getPrefix() + 'help | Watching over r/Democraciv'))
 
     async def on_message(self, message):
         if isinstance(message.channel, discord.DMChannel):
@@ -101,7 +104,5 @@ class DemocracivBot(commands.Bot):
 
 
 if __name__ == '__main__':
-    try:
-        DemocracivBot().run(config.getToken(), reconnect=True, bot=True)
-    except asyncio.TimeoutError as e:
-        print(f'ERROR - TimeoutError\n{e}')
+    DemocracivBot().run(config.getToken(), reconnect=True, bot=True)
+

@@ -16,7 +16,7 @@ import discord
 
 # -- config.py --
 #
-# Script that handles the loading of the global_config.json.
+# Script that handles the loading of the config.json.
 # Throws error if the file is not found.
 #
 
@@ -41,7 +41,7 @@ def parseJSONFromFile(file_path):
 
 
 # Load every config file into memory
-config = parseJSONFromFile('config/global_config.json')
+config = parseJSONFromFile('config/config.json')
 token = parseJSONFromFile('config/token.json')
 config_parties = parseJSONFromFile('config/parties.json')
 last_reddit_post = parseJSONFromFile('config/last_reddit_post.json')
