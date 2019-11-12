@@ -3,8 +3,7 @@ import discord
 import datetime
 
 from discord.ext import commands
-from util.embed import embed_builder
-from util.checks import isDemocracivGuild
+from util.utils import CheckUtils, EmbedUtils
 
 
 # -- logging.py | event.logging --
@@ -16,6 +15,8 @@ from util.checks import isDemocracivGuild
 class Log(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.embeds = EmbedUtils()
+        self.checks = CheckUtils()
 
     # -- Message Events --
 
@@ -32,7 +33,7 @@ class Log(commands.Cog):
                     return
                 elif before.clean_content and after.clean_content:
                     channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-                    embed = embed_builder(title=':pencil2: Message Edited', description="")
+                    embed = self.embeds.embed_builder(title=':pencil2: Message Edited', description="")
                     embed.add_field(name='Author',
                                     value=before.author.mention + ' ' + before.author.name + '#'
                                           + before.author.discriminator,
@@ -53,7 +54,7 @@ class Log(commands.Cog):
         if config.getGuildConfig(guild.id)['enableLogging']:
             if str(message.channel.id) not in config.getGuildConfig(guild.id)['excludedChannelsFromLogging']:
                 channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-                embed = embed_builder(title=':wastebasket: Message Deleted', description="")
+                embed = self.embeds.embed_builder(title=':wastebasket: Message Deleted', description="")
                 embed.add_field(name='Author',
                                 value=message.author.mention + ' ' + message.author.name + '#'
                                       + message.author.discriminator,
@@ -79,7 +80,8 @@ class Log(commands.Cog):
             if str(payload.channel_id) not in config.getGuildConfig(guild.id)['excludedChannelsFromLogging']:
                 channel = self.bot.get_channel(payload.channel_id)
                 log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-                embed = embed_builder(title=':wastebasket: :wastebasket: Bulk of Messages Deleted', description="")
+                embed = self.embeds.embed_builder(title=':wastebasket: :wastebasket: Bulk of Messages Deleted',
+                                                  description="")
                 embed.add_field(name='Amount',
                                 value=f'{len(payload.message_ids)}\n', inline=True)
                 embed.add_field(name='Channel',
@@ -117,7 +119,7 @@ class Log(commands.Cog):
                     pass
 
         if config.getGuildConfig(guild.id)['enableLogging']:
-            embed = embed_builder(title=':tada: Member Joined', description="")
+            embed = self.embeds.embed_builder(title=':tada: Member Joined', description="")
             embed.add_field(name='Member', value=member.mention)
             embed.add_field(name='Name', value=member.name + '#' + member.discriminator)
             embed.add_field(name='ID', value=member.id)
@@ -134,7 +136,7 @@ class Log(commands.Cog):
 
         if config.getGuildConfig(guild.id)['enableLogging']:
             channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-            embed = embed_builder(title=':no_pedestrians: Member Left', description="")
+            embed = self.embeds.embed_builder(title=':no_pedestrians: Member Left', description="")
             embed.add_field(name='Name', value=member.name + '#' + member.discriminator)
             embed.set_thumbnail(url=member.avatar_url)
             embed.timestamp = datetime.datetime.utcnow()
@@ -148,7 +150,7 @@ class Log(commands.Cog):
         if config.getGuildConfig(guild.id)['enableLogging']:
             if before.display_name != after.display_name:
                 log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-                embed = embed_builder(title=':arrows_counterclockwise: Nickname Changed', description="")
+                embed = self.embeds.embed_builder(title=':arrows_counterclockwise: Nickname Changed', description="")
                 embed.add_field(name='Member', value=before.mention + ' ' + before.name + '#' + before.discriminator,
                                 inline=False)
                 embed.add_field(name='Before', value=before.display_name)
@@ -166,7 +168,7 @@ class Log(commands.Cog):
                     guild = before.guild
                     log_channel = discord.utils.get(guild.text_channels,
                                                     name=config.getGuildConfig(guild.id)['logChannel'])
-                    embed = embed_builder(title=':sunglasses: Role given to Member', description="")
+                    embed = self.embeds.embed_builder(title=':sunglasses: Role given to Member', description="")
                     embed.add_field(name='Member',
                                     value=before.mention + ' ' + before.name + '#' + before.discriminator,
                                     inline=False)
@@ -182,7 +184,7 @@ class Log(commands.Cog):
                     guild = before.guild
                     log_channel = discord.utils.get(guild.text_channels,
                                                     name=config.getGuildConfig(guild.id)['logChannel'])
-                    embed = embed_builder(title=':zipper_mouth: Role removed from Member', description="")
+                    embed = self.embeds.embed_builder(title=':zipper_mouth: Role removed from Member', description="")
                     embed.add_field(name='Member',
                                     value=before.mention + ' ' + before.name + '#' + before.discriminator,
                                     inline=False)
@@ -198,7 +200,7 @@ class Log(commands.Cog):
     async def on_member_ban(self, guild, user):
         if config.getGuildConfig(guild.id)['enableLogging']:
             channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-            embed = embed_builder(title=':no_entry: Member Banned', description="")
+            embed = self.embeds.embed_builder(title=':no_entry: Member Banned', description="")
             embed.add_field(name='Member', value=user.mention)
             embed.add_field(name='Name', value=user.name + '#' + user.discriminator)
             embed.set_thumbnail(url=user.avatar_url)
@@ -210,7 +212,7 @@ class Log(commands.Cog):
     async def on_member_unban(self, guild, user):
         if config.getGuildConfig(guild.id)['enableLogging']:
             channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-            embed = embed_builder(title=':dove: Member Unbanned', description="")
+            embed = self.embeds.embed_builder(title=':dove: Member Unbanned', description="")
             embed.add_field(name='Member', value=user.mention)
             embed.add_field(name='Name', value=user.name + '#' + user.discriminator)
             embed.set_thumbnail(url=user.avatar_url)
@@ -239,12 +241,13 @@ class Log(commands.Cog):
             pass
 
         # Send introduction message to random guild channel
-        embed = embed_builder(title=':two_hearts: Hey there!', description=f"Thanks for inviting me!\n\nYou can check "
-                                                                           f"`-help` to get some more information "
-                                                                           f"about me.\n\nUse the `-guild` command to "
-                                                                           f"configure me for this guild.\n\nIf you "
-                                                                           f"have any questions or suggestions, "
-                                                                           f"send a DM to {owner_user.mention}!")
+        embed = self.embeds.embed_builder(title=':two_hearts: Hey there!',
+                                          description=f"Thanks for inviting me!\n\nYou can check "
+                                                      f"`-help` to get some more information "
+                                                      f"about me.\n\nUse the `-guild` command to "
+                                                      f"configure me for this guild.\n\nIf you "
+                                                      f"have any questions or suggestions, "
+                                                      f"send a DM to {owner_user.mention}!")
 
         # Add new guild to guilds.json
         success = config.initializeNewGuild(guild)
@@ -266,7 +269,7 @@ class Log(commands.Cog):
         try:
             if config.getGuildConfig(guild.id)['enableLogging']:
                 log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-                embed = embed_builder(title=':new: Role Created', description="")
+                embed = self.embeds.embed_builder(title=':new: Role Created', description="")
                 embed.add_field(name='Role', value=role.name)
                 embed.add_field(name='Colour', value=role.colour)
                 embed.add_field(name='ID', value=role.id, inline=False)
@@ -282,7 +285,7 @@ class Log(commands.Cog):
 
         if config.getGuildConfig(guild.id)['enableLogging']:
             log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-            embed = embed_builder(title=':exclamation: Role Deleted', description="")
+            embed = self.embeds.embed_builder(title=':exclamation: Role Deleted', description="")
             embed.add_field(name='Role', value=role.name)
             embed.add_field(name='Creation Date',
                             value=datetime.datetime.strftime(role.created_at, "%d.%m.%Y, %H:%M:%S"))
@@ -297,7 +300,7 @@ class Log(commands.Cog):
 
         if config.getGuildConfig(guild.id)['enableLogging']:
             log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-            embed = embed_builder(title=':new: Channel Created', description="")
+            embed = self.embeds.embed_builder(title=':new: Channel Created', description="")
             embed.add_field(name='Name', value=channel.mention)
             embed.add_field(name='Category', value=channel.category)
             embed.timestamp = datetime.datetime.utcnow()
@@ -310,7 +313,7 @@ class Log(commands.Cog):
 
         if config.getGuildConfig(guild.id)['enableLogging']:
             log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-            embed = embed_builder(title=':exclamation: Channel Deleted', description="")
+            embed = self.embeds.embed_builder(title=':exclamation: Channel Deleted', description="")
             embed.add_field(name='Name', value=channel.name)
             embed.add_field(name='Category', value=channel.category)
             embed.timestamp = datetime.datetime.utcnow()

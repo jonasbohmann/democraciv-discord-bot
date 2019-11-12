@@ -1,11 +1,11 @@
 import math
 import time
 import config
-import discord
 import datetime
 
 from discord.ext import commands
-from util.embed import embed_builder
+from util.utils import CheckUtils, EmbedUtils
+
 
 # -- about.py | module.about --
 #
@@ -24,6 +24,8 @@ def getUptime():
 class About(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.embeds = EmbedUtils()
+        self.checks = CheckUtils()
 
     def getPing(self):
         return math.floor(self.bot.latency * 1000)
@@ -32,7 +34,7 @@ class About(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def about(self, ctx):
         """About this bot"""
-        embed = embed_builder(title='About', description="")
+        embed = self.embeds.embed_builder(title='About', description="")
         embed.add_field(name='Author', value=config.getConfig()['author'], inline=True)
         embed.add_field(name='Version', value=config.getConfig()['botVersion'], inline=True)
         embed.add_field(name='Uptime', value=getUptime(), inline=True)
@@ -45,35 +47,35 @@ class About(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def uptime(self, ctx):
         """Check how long I've been working"""
-        embed = embed_builder(title='Uptime', description=getUptime())
+        embed = self.embeds.embed_builder(title='Uptime', description=getUptime())
         await ctx.send(embed=embed)
 
     @commands.command(name='ping')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def ping(self, ctx):
         """Pong!"""
-        embed = embed_builder(title='Ping', description=(str(self.getPing()) + 'ms'))
+        embed = self.embeds.embed_builder(title='Ping', description=(str(self.getPing()) + 'ms'))
         await ctx.send(embed=embed)
 
     @commands.command(name='pong', hidden=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def pong(self, ctx):
         """Ping!"""
-        embed = embed_builder(title='Ping', description=(str(self.getPing()) + 'ms'))
+        embed = self.embeds.embed_builder(title='Ping', description=(str(self.getPing()) + 'ms'))
         await ctx.send(embed=embed)
 
     @commands.command(name='source')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def source(self, ctx):
         """Check out the source code on GitHub"""
-        embed = embed_builder(title='Source', description="https://github.com/jonasbohmann/democraciv-discord-bot")
+        embed = self.embeds.embed_builder(title='Source', description="https://github.com/jonasbohmann/democraciv-discord-bot")
         await ctx.send(embed=embed)
 
     @commands.command(name='contributors')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def contributors(self, ctx):
         """See who helped with this project :heart:"""
-        embed = embed_builder(title='Contributors :heart:', description="https://github.com/jonasbohmann/democraciv"
+        embed = self.embeds.embed_builder(title='Contributors :heart:', description="https://github.com/jonasbohmann/democraciv"
                                                                         "-discord-bot/graphs/contributors")
         await ctx.send(embed=embed)
 

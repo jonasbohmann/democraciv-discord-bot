@@ -4,7 +4,9 @@ import asyncio
 import logging
 
 from discord.ext import commands
-from util.embed import embed_builder
+from util.utils import CheckUtils, EmbedUtils
+
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -18,6 +20,8 @@ logging.basicConfig(level=logging.INFO)
 class Guild(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.embeds = EmbedUtils()
+        self.checks = CheckUtils()
 
     @commands.group(name='guild', case_insensitive=True, invoke_without_command=True)
     async def guild(self, ctx):
@@ -29,7 +33,7 @@ class Guild(commands.Cog):
                                      "the logging channel\n" \
                                      "`-guild defaultrole` to enable/disable a default role that every new member gets"
 
-        embed = embed_builder(title=f"Guild Configuration for {ctx.guild.name}",
+        embed = self.embeds.embed_builder(title=f"Guild Configuration for {ctx.guild.name}",
                               description=f"Here is a list of things you can configure:"
                                           f"\n\n{configuration_list_message}")
         await ctx.send(embed=embed)
@@ -49,7 +53,7 @@ class Guild(commands.Cog):
         if current_welcome_message == "":
             current_welcome_message = "This guild currently has no welcome message."
 
-        embed = embed_builder(title=f":wave: Welcome Module for {ctx.guild.name}",
+        embed = self.embeds.embed_builder(title=f":wave: Welcome Module for {ctx.guild.name}",
                               description="React with the :gear: emoji to change the settings of this module.")
         embed.add_field(name="Enabled", value=f"{str(is_welcome_enabled)}")
         embed.add_field(name="Channel", value=f"{current_welcome_channel}")
@@ -161,7 +165,7 @@ class Guild(commands.Cog):
         else:
             current_logging_channel = "#" + current_logging_channel
 
-        embed = embed_builder(title=f":spy: Logging Module for {ctx.guild.name}",
+        embed = self.embeds.embed_builder(title=f":spy: Logging Module for {ctx.guild.name}",
                               description="React with the :gear: emoji to change the settings of this module.")
 
         embed.add_field(name="Enabled", value=f"{str(is_logging_enabled)}")
@@ -276,7 +280,7 @@ class Guild(commands.Cog):
             current_excluded_channels_by_name = "There are no from logging excluded channels on this guild."
 
         if not channel:
-            embed = embed_builder(title=f"Logging-Excluded Channels on {ctx.guild.name}",
+            embed = self.embeds.embed_builder(title=f"Logging-Excluded Channels on {ctx.guild.name}",
                                   description=help_description)
             embed.add_field(name="Currently Excluded Channels", value=current_excluded_channels_by_name)
             await ctx.send(embed=embed)
@@ -317,7 +321,7 @@ class Guild(commands.Cog):
         if current_default_role == "":
             current_default_role = "This guild currently has no default role."
 
-        embed = embed_builder(title=f":partying_face: Default Role for {ctx.guild.name}",
+        embed = self.embeds.embed_builder(title=f":partying_face: Default Role for {ctx.guild.name}",
                               description="React with the :gear: emoji to change the settings of this module.")
         embed.add_field(name="Enabled", value=f"{str(is_default_role_enabled)}")
 

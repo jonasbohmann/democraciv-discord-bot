@@ -4,7 +4,7 @@ import asyncio
 import discord
 import datetime
 
-from util.embed import embed_builder
+from util.utils import CheckUtils, EmbedUtils
 
 
 class Reddit:
@@ -15,6 +15,8 @@ class Reddit:
                                          client_secret=config.getTokenFile()['redditClientSecret'],
                                          user_agent=config.getReddit()['userAgent'])
         self.subreddit = self.reddit_client.subreddit(config.getReddit()['subreddit'])
+        self.embeds = EmbedUtils()
+        self.checks = CheckUtils()
 
     async def reddit_task(self):
         last_reddit_post = config.getLastRedditPost()
@@ -42,8 +44,9 @@ class Reddit:
                 config.getLastRedditPost()['id'] = submission.id
                 config.setLastRedditPost()
 
-                embed = embed_builder(title=f":mailbox_with_mail: New post on r/{config.getReddit()['subreddit']}",
-                                      description="")
+                embed = self.embeds.embed_builder(
+                    title=f":mailbox_with_mail: New post on r/{config.getReddit()['subreddit']}",
+                    description="")
                 embed.add_field(name="Thread", value=f"[{title}](https://reddit.com{comments_link})", inline=False)
                 embed.add_field(name="Author", value=f"u/{author}", inline=False)
 

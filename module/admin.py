@@ -9,8 +9,7 @@ import traceback
 import pkg_resources
 
 from discord.ext import commands
-from util.checks import isDemocracivGuild
-from util.embed import embed_builder
+from util.utils import CheckUtils, EmbedUtils
 
 
 # -- admin.py | module.admin --
@@ -22,12 +21,14 @@ from util.embed import embed_builder
 class Admin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.embeds = EmbedUtils()
+        self.checks = CheckUtils()
 
     @commands.command(name='load', hidden=True)
     @commands.has_permissions(administrator=True)
     async def load(self, ctx, *, module):
         """Loads a module."""
-        if not isDemocracivGuild(ctx.guild.id):
+        if not self.checks.isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -42,7 +43,7 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def unload(self, ctx, *, module):
         """Unloads a module."""
-        if not isDemocracivGuild(ctx.guild.id):
+        if not self.checks.isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -57,7 +58,7 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def reload(self, ctx, *, module):
         """Reloads a module."""
-        if not isDemocracivGuild(ctx.guild.id):
+        if not self.checks.isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -72,7 +73,7 @@ class Admin(commands.Cog):
     @commands.command(name='stop', hidden=True)
     @commands.has_permissions(administrator=True)
     async def stop(self, ctx):
-        if not isDemocracivGuild(ctx.guild.id):
+        if not self.checks.isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -83,7 +84,7 @@ class Admin(commands.Cog):
     @commands.command(name='reloadconfig', aliases=['rlc', 'rc', 'rlcfg'], hidden=True)
     @commands.has_permissions(administrator=True)
     async def reloadConfig(self, ctx):
-        if not isDemocracivGuild(ctx.guild.id):
+        if not self.checks.isDemocracivGuild(ctx.guild.id):
             await ctx.send(":x: You're not allowed to use this command on this server!")
             return
 
@@ -128,12 +129,12 @@ class Admin(commands.Cog):
         guild_roles = guild_payload['roles']
         dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
 
-        info = embed_builder(title=":drop_of_blood: Health Diagnosis", description="Running diagnosis...")
+        info = self.embeds.embed_builder(title=":drop_of_blood: Health Diagnosis", description="Running diagnosis...")
         await ctx.send(embed=info)
 
         await asyncio.sleep(2)
 
-        system_embed = embed_builder(title="System Diagnosis", description="")
+        system_embed = self.embeds.embed_builder(title="System Diagnosis", description="")
         system_embed.add_field(name="Library", value=f"discord.py "
                                                      f"{str(pkg_resources.get_distribution('discord.py').version)}"
                                , inline=True)
@@ -145,18 +146,18 @@ class Admin(commands.Cog):
         system_embed.add_field(name="RAM Usage", value=f"{str(psutil.virtual_memory()[2])}%", inline=False)
         await ctx.send(embed=system_embed)
 
-        discord_embed = embed_builder(title="Discord Diagnosis", description="")
+        discord_embed = self.embeds.embed_builder(title="Discord Diagnosis", description="")
         discord_embed.add_field(name="Guilds", value=f"{len(self.bot.guilds)}")
         discord_embed.add_field(name="Users", value=f"{len(self.bot.users)}")
         discord_embed.add_field(name="Cache Ready", value=f"{str(self.bot.is_ready())}", inline=False)
         discord_embed.add_field(name="Asyncio Tasks", value=f"{len(asyncio.all_tasks())}", inline=False)
         await ctx.send(embed=discord_embed)
 
-        config_embed = embed_builder(title="Config Diagnosis", description="")
+        config_embed = self.embeds.embed_builder(title="Config Diagnosis", description="")
         config_embed.add_field(name="Connected Democraciv Guild", value=f"{dciv_guild}")
         await ctx.send(embed=config_embed)
 
-        guild_embed = embed_builder(title="Guild Diagnosis", description="")
+        guild_embed = self.embeds.embed_builder(title="Guild Diagnosis", description="")
         guild_embed.add_field(name="Guild Initialized", value=str(is_guild_initialized))
         guild_embed.add_field(name="Name", value=f"{guild_name}")
         guild_embed.add_field(name="Config", value=f"```{guild_config}```", inline=False)
@@ -164,7 +165,7 @@ class Admin(commands.Cog):
         guild_embed.add_field(name="Roles", value=f"```{guild_roles}```", inline=False)
         await ctx.send(embed=guild_embed)
 
-        permission_embed = embed_builder(title="Permission Diagnosis", description="")
+        permission_embed = self.embeds.embed_builder(title="Permission Diagnosis", description="")
         permission_embed.add_field(name="Administrator", value=str(my_permissions.administrator))
         permission_embed.add_field(name="Manage Guild", value=str(my_permissions.manage_guild))
         permission_embed.add_field(name="Manage Roles", value=str(my_permissions.manage_roles))
@@ -173,7 +174,7 @@ class Admin(commands.Cog):
         permission_embed.add_field(name="Top Role", value=str(my_top_role), inline=False)
         await ctx.send(embed=permission_embed)
 
-        reddit_embed = embed_builder(title="Reddit Diagnosis", description="")
+        reddit_embed = self.embeds.embed_builder(title="Reddit Diagnosis", description="")
         reddit_embed.add_field(name="Enabled", value=config.getReddit()["enableRedditAnnouncements"])
         reddit_embed.add_field(name="Last Reddit Post", value=config.getLastRedditPost()['id'])
         reddit_embed.add_field(name="Subreddit", value=config.getReddit()["subreddit"], inline=True)
@@ -182,7 +183,7 @@ class Admin(commands.Cog):
         reddit_embed.add_field(name="User Agent", value=config.getReddit()["userAgent"], inline=False)
         await ctx.send(embed=reddit_embed)
 
-        twitch_embed = embed_builder(title="Twitch Diagnosis", description="")
+        twitch_embed = self.embeds.embed_builder(title="Twitch Diagnosis", description="")
         twitch_embed.add_field(name="Enabled", value=config.getTwitch()["enableTwitchAnnouncements"])
         twitch_embed.add_field(name="Twitch Channel", value=config.getTwitch()["twitchChannelName"])
         twitch_embed.add_field(name="Discord Channel", value="#" + config.getTwitch()["twitchAnnouncementChannel"]

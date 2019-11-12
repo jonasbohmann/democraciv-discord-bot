@@ -4,7 +4,9 @@ import config
 import discord
 
 from discord.ext import commands
-from util.embed import embed_builder
+from util.utils import CheckUtils, EmbedUtils
+
+
 
 
 # -- roles.py | module.role --
@@ -16,6 +18,8 @@ from util.embed import embed_builder
 class Roles(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.embeds = EmbedUtils()
+        self.checks = CheckUtils()
 
     @commands.command(name='roles')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -30,7 +34,7 @@ class Roles(commands.Cog):
         if embed_message == "":
             embed_message = "This server has no roles."
 
-        embed = embed_builder(title="Roles", description="In order to add or remove a role from you, use `-role Role`")
+        embed = self.embeds.embed_builder(title="Roles", description="In order to add or remove a role from you, use `-role Role`")
         embed.add_field(name="Available Roles", value=embed_message)
         await ctx.send(embed=embed)
 

@@ -1,11 +1,8 @@
-import datetime
+import config
 import operator
 
-import config
-import discord
-
 from discord.ext import commands
-from util.embed import embed_builder
+from util.utils import CheckUtils, EmbedUtils
 
 
 # -- fun.py | module.fun --
@@ -17,6 +14,8 @@ from util.embed import embed_builder
 class Fun(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.embeds = EmbedUtils()
+        self.checks = CheckUtils()
 
     @commands.command(name='say')
     @commands.has_permissions(administrator=True)
@@ -71,7 +70,7 @@ class Fun(commands.Cog):
             if type(member) is str:
                 member = await commands.MemberConverter().convert(ctx, member)
 
-            embed = embed_builder(title="User Information", description="")
+            embed = self.embeds.embed_builder(title="User Information", description="")
             embed.add_field(name="User", value=f"{member} {member.mention}", inline=False)
             embed.add_field(name="ID", value=str(member.id), inline=False)
             embed.add_field(name='Status', value=member.status, inline=True)

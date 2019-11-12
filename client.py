@@ -1,3 +1,4 @@
+import datetime
 import sys
 import config
 import discord
@@ -10,6 +11,7 @@ import pkg_resources
 from event.twitch import Twitch
 from event.reddit import Reddit
 from discord.ext import commands
+from util.utils import CheckUtils, EmbedUtils
 
 # -- Discord Bot for the r/Democraciv Server --
 #
@@ -27,15 +29,8 @@ from discord.ext import commands
 # "initial_extensions".
 #
 
-
-client = commands.Bot(command_prefix=config.getPrefix(), description=config.getConfig()['botDescription'],
-                      case_insensitive=True)
-author = discord.AppInfo.owner
-
 logging.basicConfig(level=logging.INFO)
 
-
-# -- Cogs --
 initial_extensions = ['module.link',
                       'module.about',
                       'module.legislature',
@@ -52,43 +47,56 @@ initial_extensions = ['module.link',
                       'event.error_handler']
 
 
-@client.event
-async def on_ready():
-    print('Logged in as ' + client.user.name + ' with discord.py ' + str(
-        pkg_resources.get_distribution('discord.py').version))
-    print('-------------------------------------------------------')
-    if config.getTwitch()['enableTwitchAnnouncements']:
-        twitch = Twitch(client)
-        client.loop.create_task(twitch.twitch_task())
+class DemocracivBot(commands.Bot):
 
-    if config.getReddit()['enableRedditAnnouncements']:
-        reddit = Reddit(client)
-        client.loop.create_task(reddit.reddit_task())
+    def __init__(self):
+        self.name = config.getConfig()["botName"]
+        self.description = config.getConfig()["botDescription"]
+        self.version = config.getConfig()["botVersion"]
+        self.icon = config.getConfig()["botIconURL"]
+        self.uptime = datetime.datetime.utcnow()
+        self.token = config.getToken()
+        self.commands_cooldown = config.getCooldown()
+        self.commands_prefix = config.getPrefix()
+        self.checks = CheckUtils()
+        self.embeds = EmbedUtils()
 
-    await client.change_presence(
-        activity=discord.Game(name=config.getPrefix() + 'help | Watching over r/Democraciv'))
+        super().__init__(command_prefix=self.commands_prefix, description=self.description, case_insensitive=True)
 
+        for extension in initial_extensions:
+            try:
+                self.load_extension(extension)
+                print('Successfully loaded ' + extension)
+            except Exception as e:
+                print(f'Failed to load module {extension}.', file=sys.stderr)
+                traceback.print_exc()
 
-@client.event
-async def on_message(message):
-    if isinstance(message.channel, discord.DMChannel):
-        return
-    if message.author.bot:
-        return
+    async def on_ready(self):
+        print('Logged in as ' + self.user.name + ' with discord.py ' + str(
+            pkg_resources.get_distribution('discord.py').version))
+        print('-------------------------------------------------------')
+        if config.getTwitch()['enableTwitchAnnouncements']:
+            twitch = Twitch(self)
+            self.loop.create_task(twitch.twitch_task())
 
-    await client.process_commands(message)
+        if config.getReddit()['enableRedditAnnouncements']:
+            reddit = Reddit(self)
+            self.loop.create_task(reddit.reddit_task())
+
+        await self.change_presence(
+            activity=discord.Game(name=config.getPrefix() + 'help | Watching over r/Democraciv'))
+
+    async def on_message(self, message):
+        if isinstance(message.channel, discord.DMChannel):
+            return
+        if message.author.bot:
+            return
+
+        await self.process_commands(message)
 
 
 if __name__ == '__main__':
-    for extension in initial_extensions:
-        try:
-            client.load_extension(extension)
-            print('Successfully loaded ' + extension)
-        except Exception as e:
-            print(f'Failed to load module {extension}.', file=sys.stderr)
-            traceback.print_exc()
-
-try:
-    client.run(config.getToken(), reconnect=True, bot=True)
-except asyncio.TimeoutError as e:
-    print(f'ERROR - TimeoutError\n{e}')
+    try:
+        DemocracivBot().run(config.getToken(), reconnect=True, bot=True)
+    except asyncio.TimeoutError as e:
+        print(f'ERROR - TimeoutError\n{e}')
