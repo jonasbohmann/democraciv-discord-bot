@@ -56,7 +56,7 @@ class Legislature(commands.Cog):
             await ctx.send(":x: Unexpected error occurred.")
             return
 
-        await ctx.send(f":white_check_mark: Successfully submitted {bill_title}!")
+        await ctx.send(f":white_check_mark: Successfully submitted '{bill_title}' to the Speaker of the Legislature!")
 
 
 def setup(bot):
