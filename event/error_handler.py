@@ -14,8 +14,11 @@ class ErrorHandler(commands.Cog):
         log_channel = discord.utils.get(ctx.guild.text_channels, name=config.getGuildConfig(ctx.guild.id)['logChannel'])
 
         embed = self.bot.embeds.embed_builder(title=':x: Command Error', description="", time_stamp=True)
+
+        # Get the name of the error
         embed.add_field(name='Error', value=error.__class__.__name__, inline=False)
 
+        # If the error has its own error message, add it to the embed
         try:
             embed.add_field(name='Error Message', value=error.message, inline=False)
         except AttributeError:
@@ -29,6 +32,7 @@ class ErrorHandler(commands.Cog):
 
         embed.add_field(name='Caused by', value=ctx.message.clean_content, inline=False)
 
+        # Send error embed to author DM
         if to_owner:
             embed.add_field(name='Guild', value=ctx.guild.name)
 
@@ -47,7 +51,7 @@ class ErrorHandler(commands.Cog):
     async def on_command_error(self, ctx, error):
         ignored = (commands.CommandNotFound, commands.UserInputError)
 
-        # Anything in ignored will return and prevent anything happening.
+        # Anything in ignored will return
         if isinstance(error, ignored):
             return
 
