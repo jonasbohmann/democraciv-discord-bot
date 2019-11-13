@@ -1,9 +1,5 @@
 discord.py
-requests
-aiohttp
-websockets
 wikipedia
 pytz
-praw
 psutil
 bs4
