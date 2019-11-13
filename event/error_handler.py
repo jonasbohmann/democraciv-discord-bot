@@ -10,17 +10,24 @@ class ErrorHandler(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    def log_error(self, ctx, error, severe: bool = False, to_log_channel: bool = True, to_owner: bool = False):
+    async def log_error(self, ctx, error, severe: bool = False, to_log_channel: bool = True, to_owner: bool = False):
         log_channel = discord.utils.get(ctx.guild.text_channels, name=config.getGuildConfig(ctx.guild.id)['logChannel'])
 
         embed = self.bot.embeds.embed_builder(title=':x: Command Error', description="", time_stamp=True)
-        embed.add_field(name='Error', value=error.__class__.__name__)
-        embed.add_field(name='Channel', value=ctx.channel.mention)
-        embed.add_field(name='User', value=ctx.author.name)
-        embed.add_field(name='Message', value=ctx.message.clean_content)
+        embed.add_field(name='Error', value=error.__class__.__name__, inline=False)
+
+        try:
+            embed.add_field(name='Error Message', value=error.message, inline=False)
+        except AttributeError:
+            pass
+
+        embed.add_field(name='Channel', value=ctx.channel.mention, inline=True)
+        embed.add_field(name='User', value=ctx.author.name, inline=True)
 
         if severe:
-            embed.add_field(name='Severe', value='Yes')
+            embed.add_field(name='Severe', value='Yes', inline=True)
+
+        embed.add_field(name='Caused by', value=ctx.message.clean_content, inline=False)
 
         if to_owner:
             embed.add_field(name='Guild', value=ctx.guild.name)
@@ -45,33 +52,32 @@ class ErrorHandler(commands.Cog):
             return
 
         if isinstance(error, commands.CommandOnCooldown):
-            self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
             await ctx.send(str(error))
             return
 
         if isinstance(error, commands.MissingPermissions):
             await ctx.send(str(error))
-            self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
             return
 
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(str(error))
-            self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
             return
 
         if isinstance(error, exceptions.RoleNotFoundError):
-            self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
-            await ctx.send(f":x: Couldn't find a role named '{error.role}' on this guild!")
-            return
+            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            await ctx.send(error.message)
 
         if isinstance(error, exceptions.MemberNotFoundError):
-            self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
-            await ctx.send(f":x: Couldn't find a member named {error.member} on this guild!")
+            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            await ctx.send(error.message)
             return
 
         if isinstance(error, exceptions.NoOneHasRoleError):
-            self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
-            await ctx.send(f":x: No one on this guild has the role named '{error.role}'!")
+            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            await ctx.send(error.message)
             return
 
         if isinstance(error, commands.NoPrivateMessage):
