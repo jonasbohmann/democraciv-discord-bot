@@ -7,6 +7,8 @@ import importlib
 import traceback
 import pkg_resources
 
+import util.utils as utils
+
 from discord.ext import commands
 
 
@@ -22,11 +24,9 @@ class Admin(commands.Cog):
 
     @commands.command(name='load', hidden=True)
     @commands.has_permissions(administrator=True)
+    @utils.is_democraciv_guild()
     async def load(self, ctx, *, module):
         """Loads a module."""
-        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         try:
             self.bot.load_extension(module)
@@ -37,11 +37,9 @@ class Admin(commands.Cog):
 
     @commands.command(name='unload', hidden=True)
     @commands.has_permissions(administrator=True)
+    @utils.is_democraciv_guild()
     async def unload(self, ctx, *, module):
         """Unloads a module."""
-        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         try:
             self.bot.unload_extension(module)
@@ -52,11 +50,9 @@ class Admin(commands.Cog):
 
     @commands.command(name='reload', hidden=True)
     @commands.has_permissions(administrator=True)
+    @utils.is_democraciv_guild()
     async def reload(self, ctx, *, module):
         """Reloads a module."""
-        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         try:
             self.bot.unload_extension(module)
@@ -68,10 +64,8 @@ class Admin(commands.Cog):
 
     @commands.command(name='stop', hidden=True)
     @commands.has_permissions(administrator=True)
+    @utils.is_democraciv_guild()
     async def stop(self, ctx):
-        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         await ctx.send(':wave: Goodbye! Shutting down...')
         await self.bot.close()
@@ -79,10 +73,8 @@ class Admin(commands.Cog):
 
     @commands.command(name='reloadconfig', aliases=['rlc', 'rc', 'rlcfg'], hidden=True)
     @commands.has_permissions(administrator=True)
+    @utils.is_democraciv_guild()
     async def reloadConfig(self, ctx):
-        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         await ctx.send(':white_check_mark: Reloaded config.')
         await importlib.reload(config)

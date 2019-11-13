@@ -115,10 +115,6 @@ class Party(commands.Cog, name='Political Parties'):
     async def leave(self, ctx, *party: str):
         """Leave a Political Party"""
 
-        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
-            await ctx.send(":x: You can only leave political parties on the Democraciv Discord!")
-            return
-
         if not party:
             await ctx.send(':x: You have to give me a party as argument!')
             return
@@ -225,12 +221,9 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='addparty')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
+    @utils.is_democraciv_guild()
     async def addParty(self, ctx, invite: str, *party: str):
         """Add a new political party to the server. This will also create a role on this guild."""
-
-        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         if not party or not invite:
             await ctx.send(':x: You have to give me both the name and server invite of a political party to add!')
@@ -247,11 +240,9 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='deleteparty')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
+    @utils.is_democraciv_guild()
     async def deleteParty(self, ctx, *party: str):
         """Delete a political party and its role from the server."""
-        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         if not party:
             await ctx.send(':x: You have to give me the name of a political party to delete!')
@@ -268,11 +259,9 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='addalias')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
+    @utils.is_democraciv_guild()
     async def addAlias(self, ctx, *party_and_alias: str):
         """Adds a new alias to party"""
-        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         party_and_alias: tuple = await self.getArguments(ctx, ' '.join(party_and_alias), 2)
         if party_and_alias is None:
@@ -292,11 +281,9 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='deletealias')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
+    @utils.is_democraciv_guild()
     async def deleteAlias(self, ctx, *alias: str):
         """Deletes pre-existing alias"""
-        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         alias = ' '.join(alias)
         error = await config.deletePartyAlias(alias)
