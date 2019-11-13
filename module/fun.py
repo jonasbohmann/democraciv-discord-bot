@@ -4,7 +4,6 @@ import operator
 from discord.ext import commands
 
 
-
 # -- fun.py | module.fun --
 #
 # Fun commands.
@@ -14,7 +13,6 @@ from discord.ext import commands
 class Fun(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
 
     @commands.command(name='say')
     @commands.has_permissions(administrator=True)
@@ -46,7 +44,7 @@ class Fun(commands.Cog):
             else:
                 return string[:-2]
 
-        def member_join_position(user, guild):
+        def get_member_join_position(user, guild):
             try:
                 joins = tuple(sorted(guild.members, key=operator.attrgetter("joined_at")))
                 if None in joins:
@@ -79,7 +77,7 @@ class Fun(commands.Cog):
                             value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
             embed.add_field(name='Joined this Guild on',
                             value=f'{member.joined_at.strftime("%B %d, %Y")}', inline=True)
-            embed.add_field(name='Join Position', value=member_join_position(member, ctx.guild), inline=True)
+            embed.add_field(name='Join Position', value=get_member_join_position(member, ctx.guild), inline=True)
             embed.add_field(name='Roles', value=_get_roles(member.roles), inline=False)
             embed.set_thumbnail(url=member.avatar_url)
             await ctx.send(embed=embed)

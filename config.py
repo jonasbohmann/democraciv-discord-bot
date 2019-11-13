@@ -24,7 +24,7 @@ import discord
 #    ATTENTION
 #
 #    config.py and the JSON configs will be deprecated in the near feature.
-#    The bot will use a SQLite database instead, with aiosqlite as API.
+#    The bot will use a PostgreSQL database instead
 #
 #    as such, these ugly functions will not be refactored
 #

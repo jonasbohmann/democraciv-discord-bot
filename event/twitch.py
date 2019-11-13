@@ -1,4 +1,5 @@
 import json
+import aiohttp
 import config
 import asyncio
 import discord
@@ -20,14 +21,14 @@ class Twitch:
         self.streamer = config.getTwitch()['twitchChannelName']
         self.activeStream = False
 
-    def checkTwitchLivestream(self):
+    async def checkTwitchLivestream(self):
         try:
-            twitch_request = requests.get(self.twitch_API_url, headers=self.http_header)
-        except ConnectionError as e:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(self.twitch_API_url, headers=self.http_header) as response:
+                    twitch = await response.json()
+        except aiohttp.ClientConnectionError as e:
             print("ERROR - ConnectionError in Twitch requests.get()!\n")
             print(e)
-
-        twitch = json.loads(twitch_request.content)
 
         try:
             twitch['data'][0]['id']
@@ -51,7 +52,7 @@ class Twitch:
             return
 
         while not self.bot.is_closed():
-            twitch_data = self.checkTwitchLivestream()
+            twitch_data = await self.checkTwitchLivestream()
             if twitch_data is not False:
                 if self.activeStream is False:
                     self.activeStream = True

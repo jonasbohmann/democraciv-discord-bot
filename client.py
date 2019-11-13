@@ -18,8 +18,7 @@ from util.utils import CheckUtils, EmbedUtils
 # -- Discord Bot for the r/Democraciv Server --
 #
 # Author: DerJonas
-# Interpreter: Python3.7
-# Library: discord.py
+# Library: discord.py 1.0.0+
 # License: MIT
 # Source: https://github.com/jonasbohmann/democraciv-discord-bot
 #
@@ -31,8 +30,11 @@ from util.utils import CheckUtils, EmbedUtils
 # "initial_extensions".
 #
 
+
+# Set up logging for discord.py
 logging.basicConfig(level=logging.INFO)
 
+# List of cogs that will be loaded on startup
 initial_extensions = ['module.link',
                       'module.about',
                       'module.legislature',
@@ -56,22 +58,30 @@ class DemocracivBot(commands.Bot):
         self.description = config.getConfig()["botDescription"]
         self.version = config.getConfig()["botVersion"]
         self.icon = config.getConfig()["botIconURL"]
-        self.uptime = time.time()
+
+        # Save the bot's start time for get_uptime()
+        self.start_time = time.time()
+
         self.token = config.getToken()
 
         self.commands_cooldown = config.getCooldown()
         self.commands_prefix = config.getPrefix()
 
+        # Create util objects from ./util/utils.py
         self.checks = CheckUtils()
         self.embeds = EmbedUtils()
 
+        # Attributes will be "initialized" in on_ready as they need a connection to Discord
         self.DerJonas_object = None
         self.DerJonas_dm_channel = None
 
+        # Attribute will be "initialized" in on_ready as they need a connection to Discord
         self.democraciv_guild_object = None
 
+        # Initialize commands.Bot with prefix, description and disable case_sensitivity
         super().__init__(command_prefix=self.commands_prefix, description=self.description, case_insensitive=True)
 
+        # Load the bot's cogs from ./event and ./module
         for extension in initial_extensions:
             try:
                 self.load_extension(extension)
@@ -81,7 +91,7 @@ class DemocracivBot(commands.Bot):
                 traceback.print_exc()
 
     def get_uptime(self):
-        difference = int(round(time.time() - self.uptime))
+        difference = int(round(time.time() - self.start_time))
         return str(datetime.timedelta(seconds=difference))
 
     def get_ping(self):
@@ -91,28 +101,39 @@ class DemocracivBot(commands.Bot):
         print(f"Logged in as {self.user.name} with discord.py"
               f" {str(pkg_resources.get_distribution('discord.py').version)}")
         print("-------------------------------------------------------")
+
+        # Create twitch live notification task if enabled in config
         if config.getTwitch()['enableTwitchAnnouncements']:
             twitch = Twitch(self)
             self.loop.create_task(twitch.twitch_task())
 
+        # Create reddit new post on subreddit notification task if enabled in config
         if config.getReddit()['enableRedditAnnouncements']:
             reddit = Reddit(self)
             self.loop.create_task(reddit.reddit_task())
 
-        await self.change_presence(activity=discord.Game(name=config.getPrefix() + 'help | Watching over r/Democraciv'))
+        # Set status on Discord
+        await self.change_presence(activity=discord.Game(name=config.getPrefix() + 'help | Watching over '
+                                                                                   'the Democraciv community'))
 
+        # Create DM_channel with author and save dm_channel object for further use
         self.DerJonas_object = self.get_user(int(config.getConfig()['authorID']))
         await self.DerJonas_object.create_dm()
         self.DerJonas_dm_channel = self.DerJonas_object.dm_channel
 
+        # Get Democraciv guild object
         self.democraciv_guild_object = self.get_guild(int(config.getConfig()["democracivServerID"]))
 
     async def on_message(self, message):
+        # Don't process message/command from DMs to prevent spamming
         if isinstance(message.channel, discord.DMChannel):
             return
+
+        # Don't process message/command from other bots
         if message.author.bot:
             return
 
+        # Relay message to discord.ext.commands cogs
         await self.process_commands(message)
 
 
