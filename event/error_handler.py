@@ -70,16 +70,8 @@ class ErrorHandler(commands.Cog):
             await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
             return
 
-        if isinstance(error, exceptions.RoleNotFoundError):
-            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
-            await ctx.send(error.message)
-
-        if isinstance(error, exceptions.MemberNotFoundError):
-            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
-            await ctx.send(error.message)
-            return
-
-        if isinstance(error, exceptions.NoOneHasRoleError):
+        # This includes most exceptions declared in util.exceptions.py
+        if isinstance(error, exceptions.GenericDiscordException):
             await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
             await ctx.send(error.message)
             return

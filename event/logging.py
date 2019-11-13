@@ -23,7 +23,8 @@ class Log(commands.Cog):
 
         if before.content == after.content:
             return
-        if config.getGuildConfig(guild.id)['enableLogging']:
+
+        if self.bot.checks.is_logging_enabled(guild.id):
             if str(before.channel.id) not in config.getGuildConfig(guild.id)['excludedChannelsFromLogging']:
                 if not before.clean_content or not after.clean_content:  # Removing this throws a http
                     # 400 bad request exception
@@ -47,7 +48,7 @@ class Log(commands.Cog):
     async def on_message_delete(self, message):
         guild = message.guild
 
-        if config.getGuildConfig(guild.id)['enableLogging']:
+        if self.bot.checks.is_logging_enabled(guild.id):
             if str(message.channel.id) not in config.getGuildConfig(guild.id)['excludedChannelsFromLogging']:
                 channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                 embed = self.bot.embeds.embed_builder(title=':wastebasket: Message Deleted', description="", time_stamp=True)
@@ -71,7 +72,7 @@ class Log(commands.Cog):
     async def on_raw_bulk_message_delete(self, payload):
         guild = self.bot.get_guild(payload.guild_id)
 
-        if config.getGuildConfig(guild.id)['enableLogging']:
+        if self.bot.checks.is_logging_enabled(guild.id):
             if str(payload.channel_id) not in config.getGuildConfig(guild.id)['excludedChannelsFromLogging']:
                 channel = self.bot.get_channel(payload.channel_id)
                 log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
@@ -113,7 +114,7 @@ class Log(commands.Cog):
                 except Exception:
                     pass
 
-        if config.getGuildConfig(guild.id)['enableLogging']:
+        if self.bot.checks.is_logging_enabled(guild.id):
             embed = self.bot.embeds.embed_builder(title=':tada: Member Joined', description="", time_stamp=True)
             embed.add_field(name='Member', value=member.mention)
             embed.add_field(name='Name', value=member.name + '#' + member.discriminator)
@@ -129,7 +130,7 @@ class Log(commands.Cog):
     async def on_member_remove(self, member):
         guild = member.guild
 
-        if config.getGuildConfig(guild.id)['enableLogging']:
+        if self.bot.checks.is_logging_enabled(guild.id):
             channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = self.bot.embeds.embed_builder(title=':no_pedestrians: Member Left', description="", time_stamp=True)
             embed.add_field(name='Name', value=member.name + '#' + member.discriminator)
@@ -142,7 +143,7 @@ class Log(commands.Cog):
     async def on_member_update(self, before, after):
         guild = before.guild
 
-        if config.getGuildConfig(guild.id)['enableLogging']:
+        if self.bot.checks.is_logging_enabled(guild.id):
             if before.display_name != after.display_name:
                 log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                 embed = self.bot.embeds.embed_builder(title=':arrows_counterclockwise: Nickname Changed',
@@ -154,6 +155,7 @@ class Log(commands.Cog):
                 embed.set_thumbnail(url=before.avatar_url)
                 
                 await log_channel.send(embed=embed)
+                return
 
             if before.roles != after.roles:
 
@@ -164,14 +166,16 @@ class Log(commands.Cog):
                     guild = before.guild
                     log_channel = discord.utils.get(guild.text_channels,
                                                     name=config.getGuildConfig(guild.id)['logChannel'])
+
                     embed = self.bot.embeds.embed_builder(title=':sunglasses: Role given to Member', description="", time_stamp=True)
                     embed.add_field(name='Member',
                                     value=before.mention + ' ' + before.name + '#' + before.discriminator,
                                     inline=False)
                     embed.add_field(name='Role', value=given_role)
                     embed.set_thumbnail(url=before.avatar_url)
-                    
+
                     await log_channel.send(embed=embed)
+                    return
 
                 if len(before.roles) > len(after.roles):
                     for x in before.roles:
@@ -180,6 +184,7 @@ class Log(commands.Cog):
                     guild = before.guild
                     log_channel = discord.utils.get(guild.text_channels,
                                                     name=config.getGuildConfig(guild.id)['logChannel'])
+
                     embed = self.bot.embeds.embed_builder(title=':zipper_mouth: Role removed from Member',
                                                           description="")
                     embed.add_field(name='Member',
@@ -189,13 +194,16 @@ class Log(commands.Cog):
                     embed.set_thumbnail(url=before.avatar_url)
                     
                     await log_channel.send(embed=embed)
+                    return
+                else:
+                    return
             else:
                 return
         return
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
-        if config.getGuildConfig(guild.id)['enableLogging']:
+        if self.bot.checks.is_logging_enabled(guild.id):
             channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = self.bot.embeds.embed_builder(title=':no_entry: Member Banned', description="", time_stamp=True)
             embed.add_field(name='Member', value=user.mention)
@@ -207,7 +215,7 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild, user):
-        if config.getGuildConfig(guild.id)['enableLogging']:
+        if self.bot.checks.is_logging_enabled(guild.id):
             channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = self.bot.embeds.embed_builder(title=':dove: Member Unbanned', description="", time_stamp=True)
             embed.add_field(name='Member', value=user.mention)
@@ -261,7 +269,7 @@ class Log(commands.Cog):
 
         # Handle exception if bot was just added to new guild
         try:
-            if config.getGuildConfig(guild.id)['enableLogging']:
+            if self.bot.checks.is_logging_enabled(guild.id):
                 log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                 embed = self.bot.embeds.embed_builder(title=':new: Role Created', description="", time_stamp=True)
                 embed.add_field(name='Role', value=role.name)
@@ -277,7 +285,7 @@ class Log(commands.Cog):
     async def on_guild_role_delete(self, role):
         guild = role.guild
 
-        if config.getGuildConfig(guild.id)['enableLogging']:
+        if self.bot.checks.is_logging_enabled(guild.id):
             log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = self.bot.embeds.embed_builder(title=':exclamation: Role Deleted', description="", time_stamp=True)
             embed.add_field(name='Role', value=role.name)
@@ -292,7 +300,7 @@ class Log(commands.Cog):
     async def on_guild_channel_create(self, channel):
         guild = channel.guild
 
-        if config.getGuildConfig(guild.id)['enableLogging']:
+        if self.bot.checks.is_logging_enabled(guild.id):
             log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = self.bot.embeds.embed_builder(title=':new: Channel Created', description="", time_stamp=True)
             embed.add_field(name='Name', value=channel.mention)
@@ -305,7 +313,7 @@ class Log(commands.Cog):
     async def on_guild_channel_delete(self, channel):
         guild = channel.guild
 
-        if config.getGuildConfig(guild.id)['enableLogging']:
+        if self.bot.checks.is_logging_enabled(guild.id):
             log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
             embed = self.bot.embeds.embed_builder(title=':exclamation: Channel Deleted', description="", time_stamp=True)
             embed.add_field(name='Name', value=channel.name)

@@ -3,6 +3,8 @@ import string
 import discord
 import datetime
 
+import util.utils as utils
+
 from discord.ext import commands
 
 
@@ -40,12 +42,9 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='join')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @utils.is_democraciv_guild()
     async def join(self, ctx, *party: str):
         """Join a Political Party"""
-        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
-            await ctx.send(":x: You can only join political parties on the Democraciv Discord!")
-            return
-
         if not party:
             await ctx.send(':x: You have to give me a party as argument!')
             return
@@ -85,7 +84,7 @@ class Party(commands.Cog, name='Political Parties'):
                 return
 
             # Logging
-            if config.getGuildConfig(guild.id)['enableLogging']:
+            if self.bot.checks.is_logging_enabled(guild.id):
                 guild = ctx.guild
                 logchannel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                 embed = self.bot.embeds.embed_builder(title=':family_mwgb: Joined Political Party', description="")
@@ -112,6 +111,7 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='leave')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @utils.is_democraciv_guild()
     async def leave(self, ctx, *party: str):
         """Leave a Political Party"""
 
@@ -145,7 +145,7 @@ class Party(commands.Cog, name='Political Parties'):
                 return
 
             # Logging
-            if config.getGuildConfig(guild.id)['enableLogging']:
+            if self.bot.checks.is_logging_enabled(guild.id):
                 guild = ctx.guild
                 logchannel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                 embed = self.bot.embeds.embed_builder(title=':triumph: Left Political Party', description="")

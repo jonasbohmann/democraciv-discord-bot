@@ -4,6 +4,8 @@ import datetime
 import util.exceptions as exceptions
 import mechanize as mechanize
 
+import util.utils as utils
+
 from discord.ext import commands
 
 
@@ -14,6 +16,7 @@ class Legislature(commands.Cog):
     @commands.command(name='submit')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_any_role("Legislator", "Legislature")  # TODO - Have bot check what the exact leg role is named
+    @utils.is_democraciv_guild()
     async def submit(self, ctx, google_docs_url: str):
         """Submit a new bill directly to the current Speaker of the Legislature.
 
@@ -23,10 +26,6 @@ class Legislature(commands.Cog):
         """
         speaker_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name="Speaker of the Legislature")
         valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/']
-
-        if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
-            await ctx.send(":x: You can only use this on the Democraciv Discord guild!")
-            return
 
         if len(google_docs_url) < 15 or not google_docs_url:
             await ctx.send(":x: You have to give me a valid Google Docs URL of the bill you want to submit!")
@@ -44,6 +43,7 @@ class Legislature(commands.Cog):
 
         speaker_person = speaker_role.members[0]  # Assuming there's only 1 speaker ever
 
+        # TODO - replace mechanize with aiohttp to prevent blocking
         try:
             browser = mechanize.Browser()
             browser.open(google_docs_url)

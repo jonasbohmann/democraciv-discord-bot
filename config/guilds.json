@@ -45,7 +45,7 @@
             "config": {
                 "enableWelcomeMessage": true,
                 "welcomeChannel": "off-topic",
-                "enableLogging": true,
+                "enableLogging": false,
                 "excludedChannelsFromLogging": [
                     "571092204064342016",
                     "639549494693724170",
