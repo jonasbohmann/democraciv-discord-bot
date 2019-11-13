@@ -241,7 +241,7 @@ class Log(commands.Cog):
                                                           f"about me.\n\nUse the `-guild` command to "
                                                           f"configure me for this guild.\n\nIf you "
                                                           f"have any questions or suggestions, "
-                                                          f"send a DM to {owner_user.mention}!")
+                                                          f"send a DM to {self.bot.DerJonas_object.mention}!")
 
         # Add new guild to guilds.json
         success = config.initializeNewGuild(guild)
@@ -251,7 +251,7 @@ class Log(commands.Cog):
 
         elif not success:
             await introduction_channel.send(f":x: Unexpected error occurred while initializing this guild.\n"
-                                            f"Help me {owner_user.mention} :worried:")
+                                            f"Help me {self.bot.DerJonas_object.mention} :worried:")
 
         return
 
