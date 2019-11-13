@@ -224,16 +224,13 @@ class Log(commands.Cog):
         introduction_channel = guild.text_channels[0]
 
         # Alert owner of this bot that the bot was invited to some place
-        owner_user = self.bot.get_user(int(config.getConfig()['authorID']))
-        await owner_user.create_dm()
-        owner_dm_channel = owner_user.dm_channel
-        await owner_dm_channel.send(f":warning: I was added to {guild.name} ({guild.id}). Here are some invites:")
+        await self.bot.DerJonas_dm_channel.send(f":warning: I was added to {guild.name} ({guild.id}). Here are some invites:")
 
         # Get invite for new guild to send to owner_dm_channel
         guild_invites = await guild.invites()
         try:
             guild_invite_1 = str(guild_invites[0])
-            await owner_dm_channel.send(guild_invite_1)
+            await self.bot.DerJonas_dm_channel.send(guild_invite_1)
         except IndexError as e:
             pass
 

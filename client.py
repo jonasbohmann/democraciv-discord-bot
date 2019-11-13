@@ -68,6 +68,8 @@ class DemocracivBot(commands.Bot):
         self.DerJonas_object = None
         self.DerJonas_dm_channel = None
 
+        self.democraciv_guild_object = None
+
         super().__init__(command_prefix=self.commands_prefix, description=self.description, case_insensitive=True)
 
         for extension in initial_extensions:
@@ -102,6 +104,8 @@ class DemocracivBot(commands.Bot):
         self.DerJonas_object = self.get_user(int(config.getConfig()['authorID']))
         await self.DerJonas_object.create_dm()
         self.DerJonas_dm_channel = self.DerJonas_object.dm_channel
+
+        self.democraciv_guild_object = self.get_guild(int(config.getConfig()["democracivServerID"]))
 
     async def on_message(self, message):
         if isinstance(message.channel, discord.DMChannel):

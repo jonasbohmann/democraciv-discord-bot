@@ -21,7 +21,7 @@ class Legislature(commands.Cog):
         -----
         -submit [Google Docs Link of Bil]
         """
-        speaker_role = discord.utils.get(ctx.guild.roles, name="Speaker of the Legislature")
+        speaker_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name="Speaker of the Legislature")
         valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/']
 
         if not self.bot.checks.is_democraciv_guild(ctx.guild.id):
@@ -51,7 +51,7 @@ class Legislature(commands.Cog):
             if bill_title.endswith(' - Google Docs'):
                 bill_title = bill_title[:-14]
         except Exception:
-            await ctx.send(":x: Unexpected error occurred. Try again!")
+            await ctx.send(":x: Could not connect to Google Docs.")
             return
 
         embed = self.bot.embeds.embed_builder(title="New Bill Submitted", description="", time_stamp=True)

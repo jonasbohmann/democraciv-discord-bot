@@ -2,6 +2,8 @@ import asyncio
 import config
 import discord
 
+import util.exceptions as exceptions
+
 from discord.ext import commands
 
 
@@ -47,8 +49,8 @@ class Roles(commands.Cog):
         discord_role = discord.utils.get(ctx.guild.roles, name=role)
 
         if not discord_role:
-            await ctx.send(f":x: The '{role}' role doesn't exist on this server!")
-            return
+            raise exceptions.RoleNotFoundError(role)
+
         else:
             if discord_role not in member.roles:
                 try:
@@ -58,7 +60,6 @@ class Roles(commands.Cog):
                                    f"don't have the Administrator permission to give you the role!")
                     return
                 await ctx.send(config.getRoles(ctx.guild.id)[role])
-
 
             elif discord_role in member.roles:
                 try:
