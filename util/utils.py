@@ -11,6 +11,7 @@ DEMOCRACIV_GUILD_ID = int(config.getConfig()["democracivServerID"])
 
 
 def is_democraciv_guild():
+    """Wrapper for a discord.ext.commands decorator to check if command is used on the Democraciv guild"""
     def check(ctx):
         if DEMOCRACIV_GUILD_ID != ctx.guild.id:
             raise exceptions.NotDemocracivGuildError()
@@ -36,21 +37,20 @@ class EmbedUtils:
         return embed
 
 
-def wait_for_message_check(ctx):
-    """Wrapper function for a client.wait_for('message') check"""
-
-    def check(message):
-        return message.author == ctx.message.author and message.channel == ctx.message.channel
-
-    return check
-
-
 class CheckUtils:
     """Utils to assist with discord.ext.commands checks"""
 
     def __init__(self):
         self.democraciv_guild_id = int(config.getConfig()["democracivServerID"])
         self.der_jonas_id = int(config.getConfig()['authorID'])
+
+    def wait_for_message_check(self, ctx):
+        """Wrapper function for a client.wait_for('message') check"""
+
+        def check(message):
+            return message.author == ctx.message.author and message.channel == ctx.message.channel
+
+        return check
 
     def wait_for_reaction_check(self, ctx, original_message):
         """Wrapper function for a client.wait_for('reaction_add') check"""

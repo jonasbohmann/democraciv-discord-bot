@@ -100,11 +100,9 @@ class Admin(commands.Cog):
         await ctx.send(f':white_check_mark: Deleted **{len(deleted)}** messages.', delete_after=5)
 
     @commands.command(name='health', aliases=['status', 'diagnosis'], hidden=True)
+    @commands.is_owner()
     async def health(self, ctx):
         # Long & ugly function that spits out some debug information
-
-        if not self.bot.checks.is_DerJonas(ctx.message.author.id):
-            return
 
         my_member_object = ctx.guild.me
         my_permissions = my_member_object.guild_permissions
