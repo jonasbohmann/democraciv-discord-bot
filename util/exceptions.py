@@ -25,6 +25,14 @@ class RoleNotFoundError(GenericDiscordException):
         self.message = f":x: Couldn't find a role named '{role}' on this guild!"
 
 
+class ChannelNotFoundError(GenericDiscordException):
+    """Raised when the bot tries to find a non-existing channel on a guild"""
+
+    def __init__(self, channel: str):
+        self.channel = channel
+        self.message = f":x: Couldn't find a channel named '{channel}' on this guild!"
+
+
 class MemberNotFoundError(GenericDiscordException):
     """Raised when the bot tries to find a non-existing member on a guild"""
 

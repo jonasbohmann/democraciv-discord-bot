@@ -102,16 +102,6 @@ class DemocracivBot(commands.Bot):
               f" {str(pkg_resources.get_distribution('discord.py').version)}")
         print("-------------------------------------------------------")
 
-        # Create twitch live notification task if enabled in config
-        if config.getTwitch()['enableTwitchAnnouncements']:
-            twitch = Twitch(self)
-            self.loop.create_task(twitch.twitch_task())
-
-        # Create reddit new post on subreddit notification task if enabled in config
-        if config.getReddit()['enableRedditAnnouncements']:
-            reddit = Reddit(self)
-            self.loop.create_task(reddit.reddit_task())
-
         # Set status on Discord
         await self.change_presence(activity=discord.Game(name=config.getPrefix() + 'help | Watching over '
                                                                                    'the Democraciv community'))
@@ -123,6 +113,16 @@ class DemocracivBot(commands.Bot):
 
         # Get Democraciv guild object
         self.democraciv_guild_object = self.get_guild(int(config.getConfig()["democracivServerID"]))
+
+        # Create twitch live notification task if enabled in config
+        if config.getTwitch()['enableTwitchAnnouncements']:
+            twitch = Twitch(self)
+            self.loop.create_task(twitch.twitch_task())
+
+        # Create reddit new post on subreddit notification task if enabled in config
+        if config.getReddit()['enableRedditAnnouncements']:
+            reddit = Reddit(self)
+            self.loop.create_task(reddit.reddit_task())
 
     async def on_message(self, message):
         # Don't process message/command from DMs to prevent spamming
