@@ -4,6 +4,7 @@ import datetime
 
 
 class EmbedUtils:
+    """Utils to assist with discord.Embed objects"""
 
     def __init__(self):
         self.footer_text = config.getConfig()['botName']
@@ -21,6 +22,7 @@ class EmbedUtils:
 
 
 class CheckUtils:
+    """Utils to assist with discord.ext.commands checks"""
 
     def __init__(self):
         self.democraciv_guild_id = int(config.getConfig()["democracivServerID"])
@@ -33,17 +35,27 @@ class CheckUtils:
         return self.der_jonas_id == int(member_id)
 
     def wait_for_message_check(self, ctx):
+        """Wrapper function for a client.wait_for('message') check"""
+
         def check(message):
             return message.author == ctx.message.author and message.channel == ctx.message.channel
+
         return check
 
     def wait_for_reaction_check(self, ctx, original_message):
+        """Wrapper function for a client.wait_for('reaction_add') check"""
+
         def check(reaction, user):
             return user == ctx.author and reaction.message.id == original_message.id
+
         return check
 
     def wait_for_gear_reaction_check(self, ctx, original_message):
+        """Wrapper function for a client.wait_for('reaction_add') check.
+            Also checks if reaction.emoji == ⚙"""
+
         def check(reaction, user):
             return user == ctx.author and reaction.message.id == original_message.id \
                    and str(reaction.emoji) == "\U00002699"
+
         return check
