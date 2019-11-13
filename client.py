@@ -1,18 +1,18 @@
-import sys
 import time
 import math
 import config
 import discord
-import asyncio
 import logging
 import datetime
 import traceback
 import discord.utils
 import pkg_resources
 
+from discord.ext import commands
+
+# Internal Imports
 from event.twitch import Twitch
 from event.reddit import Reddit
-from discord.ext import commands
 from util.utils import CheckUtils, EmbedUtils
 
 # -- Discord Bot for the r/Democraciv Server --
@@ -58,10 +58,15 @@ class DemocracivBot(commands.Bot):
         self.icon = config.getConfig()["botIconURL"]
         self.uptime = time.time()
         self.token = config.getToken()
+
         self.commands_cooldown = config.getCooldown()
         self.commands_prefix = config.getPrefix()
+
         self.checks = CheckUtils()
         self.embeds = EmbedUtils()
+
+        self.DerJonas_object = None
+        self.DerJonas_dm_channel = None
 
         super().__init__(command_prefix=self.commands_prefix, description=self.description, case_insensitive=True)
 
@@ -94,6 +99,10 @@ class DemocracivBot(commands.Bot):
 
         await self.change_presence(activity=discord.Game(name=config.getPrefix() + 'help | Watching over r/Democraciv'))
 
+        self.DerJonas_object = self.get_user(int(config.getConfig()['authorID']))
+        await self.DerJonas_object.create_dm()
+        self.DerJonas_dm_channel = self.DerJonas_object.dm_channel
+
     async def on_message(self, message):
         if isinstance(message.channel, discord.DMChannel):
             return
@@ -105,4 +114,3 @@ class DemocracivBot(commands.Bot):
 
 if __name__ == '__main__':
     DemocracivBot().run(config.getToken(), reconnect=True, bot=True)
-

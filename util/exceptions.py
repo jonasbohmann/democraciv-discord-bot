@@ -1,4 +1,4 @@
-import discord
+from discord.ext import commands
 
 
 class GenericException(Exception):
@@ -9,19 +9,26 @@ class GenericException(Exception):
         self.errors = errors
 
 
-class GenericDiscordException(GenericException):
+class GenericDiscordException(commands.CommandError):
 
-    def __init__(self, ctx):
-        self.ctx = ctx
+    def __init__(self):
+        pass
 
 
 class RoleNotFoundError(GenericDiscordException):
 
     def __init__(self, role: str):
-        super().ctx.send(f":x: Couldn't find a role named {role}!")
+        self.role = role
+
+
+class NoOneHasRoleError(GenericDiscordException):
+    def __init__(self, role: str):
+        self.role = role
 
 
 class MemberNotFoundError(GenericDiscordException):
 
     def __init__(self, member: str):
-        super().ctx.send(f":x: Couldn't find a member of this guild named {member}!")
+        self.member = member
+
+

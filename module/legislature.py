@@ -1,6 +1,7 @@
 import config
 import discord
 import datetime
+import util.exceptions as exceptions
 import mechanize as mechanize
 
 from discord.ext import commands
@@ -36,12 +37,10 @@ class Legislature(commands.Cog):
             return
 
         if speaker_role is None:
-            await ctx.send(":x: Couldn't find the Speaker role.")
-            return
+            raise exceptions.RoleNotFoundError("Speaker of the Legislature")
 
         if len(speaker_role.members) == 0:
-            await ctx.send(":x: No one has the Speaker role.")
-            return
+            raise exceptions.NoOneHasRoleError("Speaker of the Legislature")
 
         speaker_person = speaker_role.members[0]  # Assuming there's only 1 speaker ever
 
