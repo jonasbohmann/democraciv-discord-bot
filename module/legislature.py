@@ -1,11 +1,12 @@
 import config
 import discord
 import datetime
-import util.exceptions as exceptions
-import mechanize as mechanize
+import aiohttp
 
 import util.utils as utils
+import util.exceptions as exceptions
 
+from bs4 import BeautifulSoup
 from discord.ext import commands
 
 
@@ -43,13 +44,16 @@ class Legislature(commands.Cog):
 
         speaker_person = speaker_role.members[0]  # Assuming there's only 1 speaker ever
 
-        # TODO - replace mechanize with aiohttp to prevent blocking
         try:
-            browser = mechanize.Browser()
-            browser.open(google_docs_url)
-            bill_title = browser.title()
+            async with aiohttp.ClientSession() as session:
+                async with session.get(google_docs_url) as response:
+                    text = await response.read()
+
+            bill_title = BeautifulSoup(text).title.string
+
             if bill_title.endswith(' - Google Docs'):
                 bill_title = bill_title[:-14]
+
         except Exception:
             await ctx.send(":x: Could not connect to Google Docs.")
             return

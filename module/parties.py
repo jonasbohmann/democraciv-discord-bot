@@ -260,10 +260,10 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
-    async def addAlias(self, ctx, *party_and_alias: str):
+    async def add_alias(self, ctx, *party_and_alias: str):
         """Adds a new alias to party"""
 
-        party_and_alias: tuple = await self.getArguments(ctx, ' '.join(party_and_alias), 2)
+        party_and_alias: tuple = await self.get_arguments(ctx, ' '.join(party_and_alias), 2)
         if party_and_alias is None:
             return
         party, alias = party_and_alias
@@ -282,7 +282,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
-    async def deleteAlias(self, ctx, *alias: str):
+    async def delete_alias(self, ctx, *alias: str):
         """Deletes pre-existing alias"""
 
         alias = ' '.join(alias)
@@ -297,7 +297,7 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='listaliases')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def listAliases(self, ctx, *party: str):
+    async def list_aliases(self, ctx, *party: str):
         """Lists the given parties aliases, if any exist"""
         party = string.capwords(' '.join(party))
         caps_party = party
@@ -324,7 +324,7 @@ class Party(commands.Cog, name='Political Parties'):
         else:
             await ctx.send(f":x: No aliases found for {party}!")
 
-    async def getArguments(self, ctx, arguments: str, expected_arguments: int = -1):
+    async def get_arguments(self, ctx, arguments: str, expected_arguments: int = -1):
         """Returns arguments split upon commas as a tuple of strings.
         If arguments does not equal expected_arguments or there are blank arguments, posts a discord message and returns None.
         If expected_arguments is -1, does not check for argument count."""

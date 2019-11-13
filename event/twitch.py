@@ -19,9 +19,9 @@ class Twitch:
         self.twitch_API_token = config.getTokenFile()['twitchAPIKey']
         self.http_header = {'Client-ID': self.twitch_API_token}
         self.streamer = config.getTwitch()['twitchChannelName']
-        self.activeStream = False
+        self.active_stream = False
 
-    async def checkTwitchLivestream(self):
+    async def check_twitch_livestream(self):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(self.twitch_API_url, headers=self.http_header) as response:
@@ -33,7 +33,7 @@ class Twitch:
         try:
             twitch['data'][0]['id']
         except (IndexError, KeyError) as e:
-            self.activeStream = False
+            self.active_stream = False
             return False
 
         thumbnail = twitch['data'][0]['thumbnail_url'].replace('{width}', '720').replace('{height}', '380')
@@ -52,10 +52,10 @@ class Twitch:
             return
 
         while not self.bot.is_closed():
-            twitch_data = await self.checkTwitchLivestream()
+            twitch_data = await self.check_twitch_livestream()
             if twitch_data is not False:
-                if self.activeStream is False:
-                    self.activeStream = True
+                if self.active_stream is False:
+                    self.active_stream = True
                     embed = self.bot.embeds.embed_builder(title=f":satellite: {self.streamer} - Live on Twitch",
                                                           description="")
                     embed.add_field(name="Title", value=twitch_data[0], inline=False)
