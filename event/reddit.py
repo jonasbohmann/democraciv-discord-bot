@@ -1,7 +1,6 @@
 import html
 import config
 import asyncio
-import aiohttp
 import discord
 
 import util.exceptions as exceptions
@@ -14,11 +13,8 @@ class Reddit:
         self.subreddit = config.getReddit()['subreddit']
 
     async def get_newest_reddit_post(self):
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"https://www.reddit.com/r/{self.subreddit}/new.json?limit=1") as response:
-                reddit_post_json_dump = await response.json()
-
-        return reddit_post_json_dump
+        async with self.bot.session.get(f"https://www.reddit.com/r/{self.subreddit}/new.json?limit=1") as response:
+            return await response.json()
 
     async def reddit_task(self):
         last_reddit_post = config.getLastRedditPost()

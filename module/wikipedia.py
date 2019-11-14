@@ -1,6 +1,5 @@
 import re
 import config
-import aiohttp
 
 from discord.ext import commands
 
@@ -16,12 +15,11 @@ class Wikipedia(commands.Cog):
         #   disadvantages: doesn't work with typos in attr: query
         #   see: https://www.mediawiki.org/wiki/REST_API
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{query}") as response:
-                if response.status == 200:
-                    return await response.json()
-                else:
-                    return None
+        async with self.bot.session.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{query}") as response:
+            if response.status == 200:
+                return await response.json()
+            else:
+                return None
 
     async def get_wikipedia_suggested_articles(self, query):
 
@@ -32,14 +30,12 @@ class Wikipedia(commands.Cog):
         #
         #   see: https://en.wikipedia.org/w/api.php
 
-        async with aiohttp.ClientSession() as session:
-
-            async with session.get(f"https://en.wikipedia.org/w/api.php?format=json&action=query&list=search"
-                                   f"&srinfo=suggestion&srprop&srsearch={query}") as response:
-                if response.status == 200:
-                    return await response.json()
-                else:
-                    return None
+        async with self.bot.session.get(f"https://en.wikipedia.org/w/api.php?format=json&action=query&list=search"
+                                        f"&srinfo=suggestion&srprop&srsearch={query}") as response:
+            if response.status == 200:
+                return await response.json()
+            else:
+                return None
 
     @commands.command(name='wikipedia')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -48,6 +44,7 @@ class Wikipedia(commands.Cog):
         result = await self.get_wikipedia_result_with_rest_api(topic)
 
         if result is None or result['type'] == 'disambiguation':
+
             # Fall back to MediaWiki Action API and ask for article suggestions as there's probably a typo 'topic'
             suggested_pages = await self.get_wikipedia_suggested_articles(topic)
 
@@ -60,7 +57,7 @@ class Wikipedia(commands.Cog):
             # Retry with new suggested article title
             result = await self.get_wikipedia_result_with_rest_api(suggested_query_name)
 
-            if result is None:
+            if result is None or not result:
                 await ctx.send(":x: Unexpected error occurred.")
                 return
 

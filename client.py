@@ -2,6 +2,8 @@ import time
 import math
 import config
 import discord
+import aiohttp
+import asyncio
 import logging
 import datetime
 import traceback
@@ -66,6 +68,13 @@ class DemocracivBot(commands.Bot):
         self.commands_cooldown = config.getCooldown()
         self.commands_prefix = config.getPrefix()
 
+        # Initialize commands.Bot with prefix, description and disable case_sensitivity
+        super().__init__(command_prefix=self.commands_prefix, description=self.description, case_insensitive=True)
+
+        # Set up aiohttp.ClientSession() for usage in wikipedia, reddit & twitch API calls
+        self.session = None
+        self.task = self.loop.create_task(self.initialize_aiohttp_session())
+
         # Create util objects from ./util/utils.py
         self.checks = CheckUtils()
         self.embeds = EmbedUtils()
@@ -77,9 +86,6 @@ class DemocracivBot(commands.Bot):
         # Attribute will be "initialized" in on_ready as they need a connection to Discord
         self.democraciv_guild_object = None
 
-        # Initialize commands.Bot with prefix, description and disable case_sensitivity
-        super().__init__(command_prefix=self.commands_prefix, description=self.description, case_insensitive=True)
-
         # Load the bot's cogs from ./event and ./module
         for extension in initial_extensions:
             try:
@@ -88,6 +94,9 @@ class DemocracivBot(commands.Bot):
             except Exception:
                 print(f'Failed to load module {extension}.')
                 traceback.print_exc()
+
+    async def initialize_aiohttp_session(self):
+        self.session = aiohttp.ClientSession()
 
     def get_uptime(self):
         difference = int(round(time.time() - self.start_time))

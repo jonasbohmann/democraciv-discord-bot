@@ -1,9 +1,7 @@
-import json
-import aiohttp
 import config
+import aiohttp
 import asyncio
 import discord
-import requests
 import datetime
 
 
@@ -23,16 +21,15 @@ class Twitch:
 
     async def check_twitch_livestream(self):
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(self.twitch_API_url, headers=self.http_header) as response:
-                    twitch = await response.json()
+            async with self.bot.session.get(self.twitch_API_url, headers=self.http_header) as response:
+                twitch = await response.json()
         except aiohttp.ClientConnectionError as e:
-            print("ERROR - ConnectionError in Twitch requests.get()!\n")
+            print("ERROR - ConnectionError in Twitch session.get()!\n")
             print(e)
 
         try:
             twitch['data'][0]['id']
-        except (IndexError, KeyError) as e:
+        except (IndexError, KeyError):
             self.active_stream = False
             return False
 
