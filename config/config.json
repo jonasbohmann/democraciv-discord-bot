@@ -16,7 +16,7 @@
   {
     "enableRedditAnnouncements": true,
     "subreddit": "democraciv",
-    "redditAnnouncementChannel": "reddit",
+    "redditAnnouncementChannel": "reddit"
   },
 
   "twitch":
