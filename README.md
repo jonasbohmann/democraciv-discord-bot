@@ -14,7 +14,7 @@ After installing all the dependencies, create a `token.json` in the config folde
 The file should look like this:
 ```
  {
-  "token": "INSERT_TOKEN_HERE"
+  "token": "INSERT_TOKEN_HERE",
   "twitchAPIKey": "INSERT_TWITCH_API_KEY_HERE"
  }
 ```
