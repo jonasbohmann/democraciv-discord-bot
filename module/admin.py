@@ -5,7 +5,6 @@ import discord
 import platform
 import importlib
 import traceback
-import pkg_resources
 
 import util.utils as utils
 
