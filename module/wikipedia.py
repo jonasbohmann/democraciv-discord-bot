@@ -9,12 +9,35 @@ class Wikipedia(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def get_wikipedia_result(self, query):
+    async def get_wikipedia_result_with_rest_api(self, query):
+
+        # This uses the newer REST API that MediaWiki offers to query their site.
+        #   advantages: newer, cleaner, faster, gets thumbnail + URL
+        #   disadvantages: doesn't work with typos in attr: query
+        #   see: https://www.mediawiki.org/wiki/REST_API
+
         async with aiohttp.ClientSession() as session:
             async with session.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{query}") as response:
-                wikipedia_result_json_dump = await response.json()
                 if response.status == 200:
-                    return wikipedia_result_json_dump
+                    return await response.json()
+                else:
+                    return None
+
+    async def get_wikipedia_suggested_articles(self, query):
+
+        # This uses the older MediaWiki Action API to query their site.
+        #
+        #    Used as a fallback when self.get_wikipedia_result_with_rest_api() returns None, i.e. there's a typo in the
+        #    query string. Returns suggested articles from a 'disambiguation' article
+        #
+        #   see: https://en.wikipedia.org/w/api.php
+
+        async with aiohttp.ClientSession() as session:
+
+            async with session.get(f"https://en.wikipedia.org/w/api.php?format=json&action=query&list=search"
+                                   f"&srinfo=suggestion&srprop&srsearch={query}") as response:
+                if response.status == 200:
+                    return await response.json()
                 else:
                     return None
 
@@ -22,11 +45,24 @@ class Wikipedia(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def wikipedia(self, ctx, *, topic: str):
         """Search for a topic on Wikipedia\nUse quotes for topics that consist of multiple words!"""
-        result = await self.get_wikipedia_result(topic)
+        result = await self.get_wikipedia_result_with_rest_api(topic)
 
-        if result is None:
-            await ctx.send(f":x: Couldn't find a Wikipedia page named '{topic}'.")
-            return
+        if result is None or result['type'] == 'disambiguation':
+            # Fall back to MediaWiki Action API and ask for article suggestions as there's probably a typo 'topic'
+            suggested_pages = await self.get_wikipedia_suggested_articles(topic)
+
+            try:
+                suggested_query_name = suggested_pages['query']['search'][0]['title']
+            except Exception:
+                await ctx.send(":x: Unexpected error occurred.")
+                return
+
+            # Retry with new suggested article title
+            result = await self.get_wikipedia_result_with_rest_api(suggested_query_name)
+
+            if result is None:
+                await ctx.send(":x: Unexpected error occurred.")
+                return
 
         _title = result['displaytitle']
         _summary = result['extract']
@@ -38,10 +74,6 @@ class Wikipedia(commands.Cog):
             _thumbnail_url = result['thumbnail']['source']
         except KeyError:
             pass
-
-        if _summary_in_2_sentences == '' or not _summary_in_2_sentences:
-            await ctx.send(f':x: There are multiple pages named {topic}! Please try again with a more specifc query.')
-            return
 
         embed = self.bot.embeds.embed_builder(title=_title, description=_summary_in_2_sentences)
         embed.add_field(name='Link', value=_url)
