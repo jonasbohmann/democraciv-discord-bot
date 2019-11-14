@@ -61,7 +61,7 @@ class Wikipedia(commands.Cog):
                 await ctx.send(":x: Unexpected error occurred.")
                 return
 
-        _title = result['displaytitle']
+        _title = result['title']
         _summary = result['extract']
         _summary_in_2_sentences = ' '.join(re.split(r'(?<=[.?!])\s+', _summary, 2)[:-1])
         _url = result['content_urls']['desktop']['page']
