@@ -17,7 +17,6 @@
     "enableRedditAnnouncements": true,
     "subreddit": "democraciv",
     "redditAnnouncementChannel": "reddit",
-    "userAgent": "discord:democraciv-discord-bot:0.12.1 (by /u/Jovanos)"
   },
 
   "twitch":

@@ -159,7 +159,6 @@ class Admin(commands.Cog):
         reddit_embed.add_field(name="Subreddit", value=config.getReddit()["subreddit"], inline=True)
         reddit_embed.add_field(name="Discord Channel", value="#" + config.getReddit()["redditAnnouncementChannel"]
                                , inline=True)
-        reddit_embed.add_field(name="User Agent", value=config.getReddit()["userAgent"], inline=False)
         await ctx.send(embed=reddit_embed)
 
         twitch_embed = self.bot.embeds.embed_builder(title="Twitch Diagnosis", description="")
