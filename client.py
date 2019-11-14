@@ -6,7 +6,6 @@ import logging
 import datetime
 import traceback
 import discord.utils
-import pkg_resources
 
 from discord.ext import commands
 
@@ -98,8 +97,7 @@ class DemocracivBot(commands.Bot):
         return math.floor(self.latency * 1000)
 
     async def on_ready(self):
-        print(f"Logged in as {self.user.name} with discord.py"
-              f" {str(pkg_resources.get_distribution('discord.py').version)}")
+        print(f"Logged in as {self.user.name} with discord.py {discord.__version__}")
         print("-------------------------------------------------------")
 
         # Set status on Discord

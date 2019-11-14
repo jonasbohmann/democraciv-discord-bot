@@ -104,28 +104,16 @@ class Admin(commands.Cog):
     async def health(self, ctx):
         # Long & ugly function that spits out some debug information
 
-        my_member_object = ctx.guild.me
-        my_permissions = my_member_object.guild_permissions
-        my_top_role = my_member_object.top_role
-        is_guild_initialized = config.checkIfGuildExists(ctx.guild.id)
-        guild_payload = config.getGuilds()[str(ctx.guild.id)]
-        guild_config = guild_payload['config']
-        guild_name = guild_payload['name']
-        guild_strings = guild_payload['strings']
-        guild_roles = guild_payload['roles']
         dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
-
         info = self.bot.embeds.embed_builder(title=":drop_of_blood: Health Diagnosis",
                                              description="Running diagnosis...")
         await ctx.send(embed=info)
 
         await asyncio.sleep(2)
 
+        # Embed with debug information about host system
         system_embed = self.bot.embeds.embed_builder(title="System Diagnosis", description="")
-        system_embed.add_field(name="Library", value=f"discord.py "
-                                                     f"{str(pkg_resources.get_distribution('discord.py').version)}"
-                               , inline=True)
-
+        system_embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=True)
         system_embed.add_field(name='Python', value=platform.python_version(), inline=True)
         system_embed.add_field(name='OS', value=f'{platform.system()} {platform.release()} {platform.version()}',
                                inline=False)
@@ -146,21 +134,24 @@ class Admin(commands.Cog):
         config_embed.add_field(name="Connected Democraciv Guild", value=f"{dciv_guild}")
         await ctx.send(embed=config_embed)
 
+        # Sleep for 3 seconds to avoid being rate-limited
+        await asyncio.sleep(3)
+
         guild_embed = self.bot.embeds.embed_builder(title="Guild Diagnosis", description="")
-        guild_embed.add_field(name="Guild Initialized", value=str(is_guild_initialized))
-        guild_embed.add_field(name="Name", value=f"{guild_name}")
-        guild_embed.add_field(name="Config", value=f"```{guild_config}```", inline=False)
-        guild_embed.add_field(name="Strings", value=f"```{guild_strings}```", inline=False)
-        guild_embed.add_field(name="Roles", value=f"```{guild_roles}```", inline=False)
+        guild_embed.add_field(name="Guild Initialized", value=str(config.checkIfGuildExists(ctx.guild.id)))
+        guild_embed.add_field(name="Name", value=f"{config.getGuilds()[str(ctx.guild.id)]['name']}")
+        guild_embed.add_field(name="Config", value=f"```{config.getGuilds()[str(ctx.guild.id)]['config']}```", inline=False)
+        guild_embed.add_field(name="Strings", value=f"```{config.getGuilds()[str(ctx.guild.id)]['strings']}```", inline=False)
+        guild_embed.add_field(name="Roles", value=f"```{config.getGuilds()[str(ctx.guild.id)]['roles']}```", inline=False)
         await ctx.send(embed=guild_embed)
 
         permission_embed = self.bot.embeds.embed_builder(title="Permission Diagnosis", description="")
-        permission_embed.add_field(name="Administrator", value=str(my_permissions.administrator))
-        permission_embed.add_field(name="Manage Guild", value=str(my_permissions.manage_guild))
-        permission_embed.add_field(name="Manage Roles", value=str(my_permissions.manage_roles))
-        permission_embed.add_field(name="Manage Channels", value=str(my_permissions.manage_channels), inline=False)
-        permission_embed.add_field(name="Manage Messages", value=str(my_permissions.manage_messages), inline=False)
-        permission_embed.add_field(name="Top Role", value=str(my_top_role), inline=False)
+        permission_embed.add_field(name="Administrator", value=str(ctx.guild.me.guild_permissions.administrator))
+        permission_embed.add_field(name="Manage Guild", value=str(ctx.guild.me.guild_permissions.manage_guild))
+        permission_embed.add_field(name="Manage Roles", value=str(ctx.guild.me.guild_permissions.manage_roles))
+        permission_embed.add_field(name="Manage Channels", value=str(ctx.guild.me.guild_permissions.manage_channels), inline=False)
+        permission_embed.add_field(name="Manage Messages", value=str(ctx.guild.me.guild_permissions.manage_messages), inline=False)
+        permission_embed.add_field(name="Top Role", value=str(ctx.guild.me.top_role), inline=False)
         await ctx.send(embed=permission_embed)
 
         reddit_embed = self.bot.embeds.embed_builder(title="Reddit Diagnosis", description="")
