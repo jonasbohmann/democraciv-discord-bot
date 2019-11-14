@@ -52,6 +52,7 @@ If you do not want to use the Reddit announcements feature, you have to set `ena
 * Get summaries from Wikipedia
 * Event Logging 
 
+
 ## Modules
 You can add and remove modules by adding or removing them from `initial_extensions` in `client.py`.
 
@@ -74,39 +75,33 @@ event.error_handler | Handles internal erros
 event.reddit | Handles notifications when there's a new post on r/democraciv 
 event.twitch | Handles notifications when twitch.tv/democraciv is live 
 
+
 ## Roadmap
 
-#####Update 0.13.0 - The Performance & Stability Update
+#### Update 0.13.0 - The Performance & Stability Update
 
 * Refactor client.py
 * Introduce custom exceptions
 * Introduce utils to save time & code
 * Replace blocking libraries (praw, wikipedia) with aiohttp API calls
 
-
-#####Update 0.14.0 - The SQL Update
+#### Update 0.14.0 - The SQL Update
 
 * Add a PostgreSQL database
 * Migrate `guilds.json`, `partes.json` and `last_reddit_post.json` to new database
 
-
-#####Update 0.15.0 - The Unit Test Update
+#### Update 0.15.0 - The Unit Test Update
 
 * Add unittests most things, but especially for functions that are not reliant on a connection to Discord
  
-
-#####Update 0.16.0 - The Moderation Update
+#### Update 0.16.0 - The Moderation Update
 
 * Add a `module.moderation.py` module with `-kick`, `-ban` etc. commands
 
-#####Update 0.16.0 - The Suggestions Update
+#### Update 0.16.0 - The Suggestions Update
 
 * Add suggestions from the community
 * **Refactor & Cleanup to prepare for 1.0.0 release**
-
-
-
-
 
 
 ## Democraciv Discord Server
