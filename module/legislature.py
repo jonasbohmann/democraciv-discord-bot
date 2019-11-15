@@ -49,7 +49,7 @@ class Legislature(commands.Cog):
                 async with session.get(google_docs_url) as response:
                     text = await response.read()
 
-            bill_title = BeautifulSoup(text).title.string
+            bill_title = BeautifulSoup(text, "html5lib").title.string
 
             if bill_title.endswith(' - Google Docs'):
                 bill_title = bill_title[:-14]
