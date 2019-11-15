@@ -1,5 +1,7 @@
 ## democraciv-discord-bot
-Discord Bot for r/Democraciv written in Python 3. Provides useful information, political party management and more. 
+General-purpose Discord Bot with unique features specially designed for the r/Democraciv community. 
+
+Provides useful information, political party & role management and much more. 
 
 [![Discord](https://discordapp.com/api/guilds/208984105310879744/embed.png)](http://discord.gg/j7sZ3tD) ![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7-yellowgreen) ![Maintenance](https://img.shields.io/maintenance/yes/2019)  ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/jonasbohmann/democraciv-discord-bot) 
 
@@ -80,12 +82,12 @@ event.twitch | Handles notifications when twitch.tv/democraciv is live
 
 ## Roadmap
 
-#### Update 0.13.0 - The Performance & Stability Update
+#### Update 0.13.0 - The Performance & Stability Update ✅
 
-* Refactor client.py
-* Introduce custom exceptions
-* Introduce utils to save time & code
-* Replace blocking libraries (praw, wikipedia) with aiohttp API calls
+* ~~Refactor client.py~~
+* ~~Introduce custom exceptions~~
+* ~~Introduce utils to save time & code~~
+* ~~Replace blocking libraries (praw, wikipedia) with aiohttp API calls~~
 
 #### Update 0.14.0 - The SQL Update
 
@@ -94,7 +96,7 @@ event.twitch | Handles notifications when twitch.tv/democraciv is live
 
 #### Update 0.15.0 - The Unit Test Update
 
-* Add unittests most things, but especially for functions that are not reliant on a connection to Discord
+* Add unittests for most things, but especially for functions that are not reliant on a connection to Discord
  
 #### Update 0.16.0 - The Moderation Update
 
