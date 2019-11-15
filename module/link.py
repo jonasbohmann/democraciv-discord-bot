@@ -18,14 +18,14 @@ class Link(commands.Cog):
     async def links(self, ctx):
         """Get a list of important links"""
 
-        important_links_list = f"[Wiki]({config.getLinks()['wiki']})\n" \
-                               f"[Subreddit]({config.getLinks()['subreddit']})\n" \
-                               f"[Constitution]({config.getLinks()['constitution']})\n" \
-                               f"[Legal Code]({config.getLinks()['laws']})\n" \
-                               f"[Political Parties]({config.getLinks()['parties']})\n" \
-                               f"[Election Schedule]({config.getLinks()['schedule']})\n" \
-                               f"[Docket of the Arabian Legislature]({config.getLinks()['legislative-docket']})\n" \
-                               f"[Worksheet of the Arabian Ministry]({config.getLinks()['executive-worksheet']})\n"
+        important_links_list = f"- [Wiki]({config.getLinks()['wiki']})\n\n" \
+                               f"- [Subreddit]({config.getLinks()['subreddit']})\n\n" \
+                               f"- [Constitution]({config.getLinks()['constitution']})\n\n" \
+                               f"- [Legal Code]({config.getLinks()['laws']})\n\n" \
+                               f"- [Political Parties]({config.getLinks()['parties']})\n\n" \
+                               f"- [Election Schedule]({config.getLinks()['schedule']})\n\n" \
+                               f"- [Docket of the Arabian Legislature]({config.getLinks()['legislative-docket']})\n\n" \
+                               f"- [Worksheet of the Arabian Ministry]({config.getLinks()['executive-worksheet']})\n\n"
 
         embed = self.bot.embeds.embed_builder(title='Important Links', description=important_links_list)
         await ctx.send(embed=embed)
