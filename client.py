@@ -3,11 +3,12 @@ import math
 import config
 import discord
 import aiohttp
-import asyncio
 import logging
 import datetime
 import traceback
 import discord.utils
+
+import util.exceptions as exceptions
 
 from discord.ext import commands
 
@@ -111,6 +112,9 @@ class DemocracivBot(commands.Bot):
 
         # Get Democraciv guild object
         self.democraciv_guild_object = self.get_guild(int(config.getConfig()["democracivServerID"]))
+
+        if self.democraciv_guild_object is None:
+            raise exceptions.GuildNotFoundError(config.getConfig()["democracivServerID"])
 
         # Set status on Discord
         await self.change_presence(activity=discord.Game(name=config.getPrefix() + 'help | Watching over '

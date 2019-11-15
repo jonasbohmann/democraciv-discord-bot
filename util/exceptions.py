@@ -56,6 +56,13 @@ class NotDemocracivGuildError(DemocracivBotException):
         self.message = ":x: You can only use this command on the Democraciv guild!"
 
 
+class GuildNotFoundError(DemocracivBotException):
+    """Raised when the bot tries to use a bot.get(guild) or similar query with a non-existing guild"""
+
+    def __init__(self, name):
+        self.message = f":x: Couldn't find a guild named/with the ID '{name}' that I am in!"
+
+
 class ForbiddenError(DemocracivBotException):
     """Raised when a discord.Forbidden exception is raised"""
 
@@ -80,4 +87,3 @@ class ForbiddenError(DemocracivBotException):
 
         else:
             self.message = f":x: I'm missing the required permissions to perform this action."
-
