@@ -27,16 +27,19 @@ class Party(commands.Cog, name='Political Parties'):
         parties_and_members = []
         party_keys = config.getParties().keys()
         dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
+        error_string = ":x: The following parties were added as a party but have no role on this server:\n"
 
         for party in party_keys:
             role = discord.utils.get(dciv_guild.roles, name=party)
 
             if role is None:
-                await ctx.send(f':x: "{party}" was added as a party but has '
-                               f'no role on this server!')
+                error_string += f'    -  `{party}`\n'
                 continue
 
             parties_and_members.append((party, len(role.members)))
+
+        if len(error_string) > 85:
+            await ctx.send(error_string)
 
         return parties_and_members
 
