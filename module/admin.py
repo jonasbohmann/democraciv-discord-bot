@@ -98,6 +98,23 @@ class Admin(commands.Cog):
 
         await ctx.send(f':white_check_mark: Deleted **{len(deleted)}** messages.', delete_after=5)
 
+    @commands.command(name="tinyurl", aliases=["tiny"])
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def tinyurl(self, ctx, url: str):
+
+        if len(url) <= 3:
+            await ctx.send(":x: That doesn't look like a valid URL!")
+            return
+
+        async with self.bot.session.get(f"https://tinyurl.com/api-create.php?url={url}") as response:
+            tiny_url = await response.text()
+
+        if tiny_url == "Error":
+            await ctx.send(":x: tinyurl.com returned an error!")
+            return
+
+        await ctx.send(tiny_url)
+
     @commands.command(name='health', aliases=['status', 'diagnosis'], hidden=True)
     @commands.is_owner()
     async def health(self, ctx):
@@ -139,17 +156,22 @@ class Admin(commands.Cog):
         guild_embed = self.bot.embeds.embed_builder(title="Guild Diagnosis", description="")
         guild_embed.add_field(name="Guild Initialized", value=str(config.checkIfGuildExists(ctx.guild.id)))
         guild_embed.add_field(name="Name", value=f"{config.getGuilds()[str(ctx.guild.id)]['name']}")
-        guild_embed.add_field(name="Config", value=f"```{config.getGuilds()[str(ctx.guild.id)]['config']}```", inline=False)
-        guild_embed.add_field(name="Strings", value=f"```{config.getGuilds()[str(ctx.guild.id)]['strings']}```", inline=False)
-        guild_embed.add_field(name="Roles", value=f"```{config.getGuilds()[str(ctx.guild.id)]['roles']}```", inline=False)
+        guild_embed.add_field(name="Config", value=f"```{config.getGuilds()[str(ctx.guild.id)]['config']}```",
+                              inline=False)
+        guild_embed.add_field(name="Strings", value=f"```{config.getGuilds()[str(ctx.guild.id)]['strings']}```",
+                              inline=False)
+        guild_embed.add_field(name="Roles", value=f"```{config.getGuilds()[str(ctx.guild.id)]['roles']}```",
+                              inline=False)
         await ctx.send(embed=guild_embed)
 
         permission_embed = self.bot.embeds.embed_builder(title="Permission Diagnosis", description="")
         permission_embed.add_field(name="Administrator", value=str(ctx.guild.me.guild_permissions.administrator))
         permission_embed.add_field(name="Manage Guild", value=str(ctx.guild.me.guild_permissions.manage_guild))
         permission_embed.add_field(name="Manage Roles", value=str(ctx.guild.me.guild_permissions.manage_roles))
-        permission_embed.add_field(name="Manage Channels", value=str(ctx.guild.me.guild_permissions.manage_channels), inline=False)
-        permission_embed.add_field(name="Manage Messages", value=str(ctx.guild.me.guild_permissions.manage_messages), inline=False)
+        permission_embed.add_field(name="Manage Channels", value=str(ctx.guild.me.guild_permissions.manage_channels),
+                                   inline=False)
+        permission_embed.add_field(name="Manage Messages", value=str(ctx.guild.me.guild_permissions.manage_messages),
+                                   inline=False)
         permission_embed.add_field(name="Top Role", value=str(ctx.guild.me.top_role), inline=False)
         await ctx.send(embed=permission_embed)
 
