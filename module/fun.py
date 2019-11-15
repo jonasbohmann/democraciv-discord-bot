@@ -131,7 +131,7 @@ class Fun(commands.Cog):
         message = ""
 
         for veteran in sorted_first_15_members:
-            message += f"{veteran[1]}. {veteran[0].mention}\n"
+            message += f"{veteran[1]}. {veteran[0].name}\n"
 
         embed = self.bot.embeds.embed_builder(title=f"Veterans of {ctx.guild.name}", description=message)
         await ctx.send(embed=embed)
