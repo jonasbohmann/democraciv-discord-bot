@@ -112,12 +112,12 @@ class Log(commands.Cog):
         welcome_channel = discord.utils.get(member.guild.text_channels,
                                             name=config.getGuildConfig(member.guild.id)['welcomeChannel'])
 
-        if config.getGuildConfig(member.guild.id)['enableWelcomeMessage']:
+        if self.bot.checks.is_welcome_message_enabled(member.guild.id):
             # Apparently this doesn't raise an error if {member} is not in welcome_message
             welcome_message = config.getStrings(member.guild.id)['welcomeMessage'].format(member=member.mention)
             await welcome_channel.send(welcome_message)
 
-        if config.getGuildConfig(member.guild.id)['enableDefaultRole']:
+        if self.bot.checks.is_default_role_enabled(member.guild.id):
             default_role = discord.utils.get(member.guild.roles,
                                              name=config.getGuildConfig(member.guild.id)['defaultRole'])
 

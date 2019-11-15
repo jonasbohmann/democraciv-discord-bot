@@ -73,3 +73,11 @@ class CheckUtils:
     def is_logging_enabled(self, guild_id):
         """Returns true if logging is enabled for this guild."""
         return config.getGuildConfig(str(guild_id))['enableLogging']
+
+    def is_welcome_message_enabled(self, guild_id):
+        """Returns true if welcome messages are enabled for this guild."""
+        return config.getGuildConfig(str(guild_id))['enableWelcomeMessage']
+
+    def is_default_role_enabled(self, guild_id):
+        """Returns true if a default role is enabled for this guild."""
+        return config.getGuildConfig(str(guild_id))['enableDefaultRole']

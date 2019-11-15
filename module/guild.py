@@ -33,7 +33,7 @@ class Guild(commands.Cog):
     @guild.command(name='welcome')
     @commands.has_permissions(administrator=True)
     async def welcome(self, ctx):
-        is_welcome_enabled = config.getGuildConfig(ctx.guild.id)['enableWelcomeMessage']
+        is_welcome_enabled = self.bot.checks.is_welcome_message_enabled(ctx.guild.id)
         current_welcome_channel = config.getGuildConfig(ctx.guild.id)['welcomeChannel']
         current_welcome_message = config.getStrings(ctx.guild.id)['welcomeMessage']
 
@@ -151,7 +151,7 @@ class Guild(commands.Cog):
     @guild.command(name='logs')
     @commands.has_permissions(administrator=True)
     async def logs(self, ctx):
-        is_logging_enabled = config.getGuildConfig(ctx.guild.id)['enableLogging']
+        is_logging_enabled = self.bot.checks.is_logging_enabled(ctx.guild.id)
         current_logging_channel = config.getGuildConfig(ctx.guild.id)['logChannel']
 
         if current_logging_channel == "":
@@ -303,7 +303,7 @@ class Guild(commands.Cog):
     @guild.command(name='defaultrole')
     @commands.has_permissions(administrator=True)
     async def defaultrole(self, ctx):
-        is_default_role_enabled = config.getGuildConfig(ctx.guild.id)['enableDefaultRole']
+        is_default_role_enabled = self.bot.checks.is_default_role_enabled(ctx.guild.id)
         current_default_role = config.getGuildConfig(ctx.guild.id)['defaultRole']
         current_default_role_object = discord.utils.get(ctx.guild.roles, name=current_default_role)
 
