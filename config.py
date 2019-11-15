@@ -331,14 +331,14 @@ async def addRole(guild, join_message, role: str) -> str:
 
     # Otherwise, create the role
     else:
-        getRoles(guild.id)[role] = join_message
-
-        dumpConfigRoles(guild.id)
         try:
-            await guild.create_role(name=role) #TOTOTOOT
+            await guild.create_role(name=role)
         except discord.Forbidden:
             raise exceptions.ForbiddenError(task="create_role", detail=role)
-    return ''
+
+        getRoles(guild.id)[role] = join_message
+        dumpConfigRoles(guild.id)
+        return ''
 
 
 async def deleteRole(guild, role: str) -> str:
@@ -353,6 +353,7 @@ async def deleteRole(guild, role: str) -> str:
                 await discord_role.delete()
             except discord.Forbidden:
                 raise exceptions.ForbiddenError(task="delete_role", detail=role)
+
         del getRoles(guild.id)[role]
 
         dumpConfigRoles(guild.id)
@@ -376,6 +377,11 @@ async def addParty(guild, invite, party: str) -> str:
         return f'{caps_party} is already an alias!'
     # Otherwise, create the party
     else:
+        try:
+            await guild.create_role(name=party)
+        except discord.Forbidden:
+            raise exceptions.ForbiddenError(task="create_role", detail=party)
+
         if caps_party == party:
             config_parties['parties'][caps_party] = invite
         else:
@@ -383,13 +389,7 @@ async def addParty(guild, invite, party: str) -> str:
             config_parties['parties'][party] = invite
 
         dumpConfigParties()
-
-        try:
-            await guild.create_role(name=party)
-        except discord.Forbidden:
-            raise exceptions.ForbiddenError(task="create_role", detail=party)
-
-    return ''
+        return ''
 
 
 async def deleteParty(guild, party: str) -> str:

@@ -83,7 +83,8 @@ class Roles(commands.Cog):
                        "The name should not contain *multiple* spaces between two words!\nExample:"
                        " 'Test Role' works, but 'Test    Role' will not work.")
         try:
-            role_name = await self.bot.wait_for('message', check=self.bot.wait_for_message_check(ctx), timeout=240)
+            role_name = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
+                                                timeout=240)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
 
@@ -96,7 +97,7 @@ class Roles(commands.Cog):
 
         await ctx.send(":information_source: Answer with a short message the user should see when they get the role: ")
         try:
-            role_join_message = await self.bot.wait_for('message', check=self.bot.wait_for_message_check(ctx),
+            role_join_message = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
                                                         timeout=300)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
