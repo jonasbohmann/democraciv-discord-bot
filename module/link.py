@@ -242,6 +242,14 @@ class Link(commands.Cog):
         embed = self.bot.embeds.embed_builder(title='Add this bot to your own Discord server', description=invite_url)
         await ctx.send(embed=embed)
 
+    @commands.command(name='dgwiki', aliases=['rbwiki'])
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def dgwiki(self, ctx):
+        """Get a link to the (unofficial) dgwiki.tk"""
+        embed = self.bot.embeds.embed_builder(title='Unofficial Demogames Wiki',
+                                              description=config.getLinks()["dgwiki-tk"])
+        await ctx.send(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Link(bot))
