@@ -109,6 +109,9 @@ class DemocracivBot(commands.Bot):
         print(f"Logged in as {self.user.name} with discord.py {discord.__version__}")
         print("-------------------------------------------------------")
 
+        # Get Democraciv guild object
+        self.democraciv_guild_object = self.get_guild(int(config.getConfig()["democracivServerID"]))
+
         # Set status on Discord
         await self.change_presence(activity=discord.Game(name=config.getPrefix() + 'help | Watching over '
                                                                                    'the Democraciv community'))
@@ -117,9 +120,6 @@ class DemocracivBot(commands.Bot):
         self.DerJonas_object = self.get_user(int(config.getConfig()['authorID']))
         await self.DerJonas_object.create_dm()
         self.DerJonas_dm_channel = self.DerJonas_object.dm_channel
-
-        # Get Democraciv guild object
-        self.democraciv_guild_object = self.get_guild(int(config.getConfig()["democracivServerID"]))
 
         # Create twitch live notification task if enabled in config
         if config.getTwitch()['enableTwitchAnnouncements']:
