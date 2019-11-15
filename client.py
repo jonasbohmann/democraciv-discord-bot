@@ -3,6 +3,7 @@ import math
 import config
 import discord
 import aiohttp
+import asyncio
 import logging
 import datetime
 import traceback
@@ -99,6 +100,26 @@ class DemocracivBot(commands.Bot):
     async def initialize_aiohttp_session(self):
         self.session = aiohttp.ClientSession()
 
+    def initialize_democraciv_guild(self):
+        # Get Democraciv guild object
+        self.democraciv_guild_object = self.get_guild(int(config.getConfig()["democracivServerID"]))
+
+        if self.democraciv_guild_object is None:
+
+            logging.log(logging.WARNING, "Couldn't find guild with ID specified in config.json 'democracivServerID'.\n"
+                                         "I will use a random guild that I can see that will use my Democraciv-specific"
+                                         " features like: parties.py, reddit.py, twitch.py and admin.py")
+            for guild in self.guilds:
+                self.democraciv_guild_object = guild
+                break
+
+            if self.democraciv_guild_object is None:
+                raise exceptions.GuildNotFoundError(config.getConfig()["democracivServerID"])
+
+            logging.log(logging.WARNING, f"Using '{self.democraciv_guild_object.name}' as Democraciv guild.\n"
+                                         f"Note that some features will still not work unless you change "
+                                         f"'democracivServerID' in config.json to a guild ID that I am in.")
+
     def get_uptime(self):
         difference = int(round(time.time() - self.start_time))
         return str(datetime.timedelta(seconds=difference))
@@ -110,11 +131,9 @@ class DemocracivBot(commands.Bot):
         print(f"Logged in as {self.user.name} with discord.py {discord.__version__}")
         print("-------------------------------------------------------")
 
-        # Get Democraciv guild object
-        self.democraciv_guild_object = self.get_guild(int(config.getConfig()["democracivServerID"]))
+        await asyncio.sleep(1)
 
-        if self.democraciv_guild_object is None:
-            raise exceptions.GuildNotFoundError(config.getConfig()["democracivServerID"])
+        self.initialize_democraciv_guild()
 
         # Set status on Discord
         await self.change_presence(activity=discord.Game(name=config.getPrefix() + 'help | Watching over '
