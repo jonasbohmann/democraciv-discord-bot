@@ -14,7 +14,7 @@ from discord.ext import commands
 #
 
 
-def getPartyFromAlias(alias: str):
+def get_party_from_alias(alias: str):
     """Gets party name from related alias, returns alias if it is not found"""
     return config.getPartyAliases().get(alias, alias)
 
@@ -23,7 +23,7 @@ class Party(commands.Cog, name='Political Parties'):
     def __init__(self, bot):
         self.bot = bot
 
-    async def collectPartiesAndMembers(self, ctx):
+    async def collect_parties_and_members(self, ctx):
         parties_and_members = []
         party_keys = config.getParties().keys()
         dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
@@ -54,7 +54,7 @@ class Party(commands.Cog, name='Political Parties'):
 
         party_keys = (config.getParties().keys())
         party = string.capwords(' '.join(party))
-        party = getPartyFromAlias(party)
+        party = get_party_from_alias(party)
         member = ctx.message.author
         guild = ctx.message.guild
         role = discord.utils.get(ctx.guild.roles, name=party)
@@ -125,7 +125,7 @@ class Party(commands.Cog, name='Political Parties'):
         party = string.capwords(' '.join(party))
         party_keys = (config.getParties().keys())
 
-        party = getPartyFromAlias(party)
+        party = get_party_from_alias(party)
 
         member = ctx.message.author
         guild = ctx.message.guild
@@ -174,7 +174,7 @@ class Party(commands.Cog, name='Political Parties'):
         if not party:
             party_list_embed_content = ''
 
-            sorted_parties_and_members = sorted(await self.collectPartiesAndMembers(ctx), key=lambda x: x[1],
+            sorted_parties_and_members = sorted(await self.collect_parties_and_members(ctx), key=lambda x: x[1],
                                                 reverse=True)
 
             for party in sorted_parties_and_members:
@@ -188,11 +188,11 @@ class Party(commands.Cog, name='Political Parties'):
             # Append Independents to message
             independent_role = discord.utils.get(dciv_guild.roles, name='Independent')
             if len(independent_role.members) == 1:
-                party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)} citizen' \
-                                            f'\n\n '
+                party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
+                                            f' citizen\n\n'
             else:
-                party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)} citizen' \
-                                            f's\n\n'
+                party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
+                                            f' citizens\n\n'
 
             embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in Arabia',
                                                   description=f'{party_list_embed_content}', colour=0x7f0000)
@@ -202,7 +202,7 @@ class Party(commands.Cog, name='Political Parties'):
         elif party:
             party = string.capwords(' '.join(party))
 
-            party = getPartyFromAlias(party)
+            party = get_party_from_alias(party)
 
             role = discord.utils.get(dciv_guild.roles, name=party)
 
@@ -225,7 +225,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
-    async def addParty(self, ctx, invite: str, *party: str):
+    async def addparty(self, ctx, invite: str, *party: str):
         """Add a new political party to the server. This will also create a role on this guild."""
 
         if not party or not invite:
@@ -244,7 +244,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
-    async def deleteParty(self, ctx, *party: str):
+    async def deleteparty(self, ctx, *party: str):
         """Delete a political party and its role from the server."""
 
         if not party:
@@ -263,7 +263,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
-    async def add_alias(self, ctx, *party_and_alias: str):
+    async def addalias(self, ctx, *party_and_alias: str):
         """Adds a new alias to party"""
 
         party_and_alias: tuple = await self.get_arguments(ctx, ' '.join(party_and_alias), 2)
@@ -285,7 +285,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
-    async def delete_alias(self, ctx, *alias: str):
+    async def deletealias(self, ctx, *alias: str):
         """Deletes pre-existing alias"""
 
         alias = ' '.join(alias)
@@ -300,7 +300,7 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='listaliases')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def list_aliases(self, ctx, *party: str):
+    async def listaliases(self, ctx, *party: str):
         """Lists the given parties aliases, if any exist"""
         party = string.capwords(' '.join(party))
         caps_party = party

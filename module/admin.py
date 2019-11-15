@@ -73,7 +73,7 @@ class Admin(commands.Cog):
     @commands.command(name='reloadconfig', aliases=['rlc', 'rc', 'rlcfg'], hidden=True)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
-    async def reloadConfig(self, ctx):
+    async def reloadconfig(self, ctx):
 
         await ctx.send(':white_check_mark: Reloaded config.')
         await importlib.reload(config)

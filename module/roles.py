@@ -73,7 +73,7 @@ class Roles(commands.Cog):
     @commands.command(name='addrole')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
-    async def addRole(self, ctx):
+    async def addrole(self, ctx):
         """Create a new role on this guild and add it to the bot's -roles list. Doesn't take any arguments."""
 
         await ctx.send(":information_source: Answer with the name of the role you want to create:\n\n:warning: "
@@ -109,7 +109,7 @@ class Roles(commands.Cog):
     @commands.command(name='deleterole')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
-    async def deleteRole(self, ctx, *role: str):
+    async def deleterole(self, ctx, *role: str):
         """Delete a role from the guild and from the bot's -roles list."""
         if not role:
             await ctx.send(':x: You have to give me the name of a role to delete!')
