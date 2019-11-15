@@ -7,6 +7,7 @@ import importlib
 import traceback
 
 import util.utils as utils
+import util.exceptions as exceptions
 
 from discord.ext import commands
 
@@ -93,8 +94,7 @@ class Admin(commands.Cog):
         try:
             deleted = await ctx.channel.purge(limit=num, check=check)
         except discord.Forbidden:
-            await ctx.send(":x: I'm missing Administrator permissions to do this!")
-            return
+            raise exceptions.ForbiddenError(task="", detail=":x: I'm missing Administrator permissions to do this!")
 
         await ctx.send(f':white_check_mark: Deleted **{len(deleted)}** messages.', delete_after=5)
 

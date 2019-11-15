@@ -2,8 +2,9 @@ import config
 import discord
 import asyncio
 
-from discord.ext import commands
+import util.exceptions as exceptions
 
+from discord.ext import commands
 
 # -- guild.py | module.guild --
 #
@@ -113,8 +114,7 @@ class Guild(commands.Cog):
                 channel_object = await commands.TextChannelConverter().convert(ctx, new_welcome_channel)
 
                 if not channel_object:
-                    await ctx.send(f":x: Couldn't find #{channel.content}!")
-                    return
+                    raise exceptions.ChannelNotFoundError(new_welcome_channel)
 
                 success = config.setWelcomeChannel(ctx.guild.id, channel_object.name)
 
@@ -223,8 +223,7 @@ class Guild(commands.Cog):
                 channel_object = await commands.TextChannelConverter().convert(ctx, new_logging_channel)
 
                 if not channel_object:
-                    await ctx.send(f":x: Couldn't find #{channel.content}!")
-                    return
+                    raise exceptions.ChannelNotFoundError(new_logging_channel)
 
                 if new_logging_channel.startswith("#"):
                     new_logging_channel.strip("#")
@@ -280,8 +279,7 @@ class Guild(commands.Cog):
             channel_object = await commands.TextChannelConverter().convert(ctx, channel)
 
             if not channel_object:
-                await ctx.send(f":x: Couldn't find #{channel}!")
-                return
+                raise exceptions.ChannelNotFoundError(channel)
 
             # Remove channel
             if str(channel_object.id) in config.getGuildConfig(ctx.guild.id)['excludedChannelsFromLogging']:
@@ -386,8 +384,7 @@ class Guild(commands.Cog):
                     try:
                         new_default_role_object = await ctx.guild.create_role(name=new_default_role)
                     except discord.Forbidden:
-                        await ctx.send(":x: Missing permissions to create default role!")
-                        return
+                        raise exceptions.ForbiddenError("create_role", new_default_role)
 
                 else:
                     await ctx.send(

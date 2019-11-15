@@ -41,7 +41,11 @@ class ErrorHandler(commands.Cog):
             await self.bot.DerJonas_dm_channel.send(embed=embed)
 
         if to_log_channel:
-            await log_channel.send(embed=embed)
+            if self.bot.checks.is_logging_enabled(ctx.guild.id):
+                if log_channel is not None:
+                    await log_channel.send(embed=embed)
+                else:
+                    raise exceptions.ChannelNotFoundError(config.getGuildConfig(ctx.guild.id)['logChannel'])
 
     @commands.Cog.listener()
     async def on_error(self, ctx, error):
@@ -71,7 +75,7 @@ class ErrorHandler(commands.Cog):
             return
 
         # This includes most exceptions declared in util.exceptions.py
-        if isinstance(error, exceptions.GenericDiscordException):
+        if isinstance(error, exceptions.DemocracivBotException):
             await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
             await ctx.send(error.message)
             return

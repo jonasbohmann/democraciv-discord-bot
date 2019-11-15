@@ -4,6 +4,7 @@ import discord
 import datetime
 
 import util.utils as utils
+import util.exceptions as exceptions
 
 from discord.ext import commands
 
@@ -74,13 +75,17 @@ class Party(commands.Cog, name='Political Parties'):
                 if party == 'Independent':
                     msg = f':white_check_mark: You are now an {party}!'
                     await ctx.send(msg)
-                    await member.add_roles(role)
+
                 else:
                     msg = f':white_check_mark: You joined {party}! Now head to their Discord Server and introduce ' \
                           f'yourself: '
                     await ctx.send(msg)
                     await ctx.send(config.getParties()[party])
+
+                try:
                     await member.add_roles(role)
+                except discord.Forbidden:
+                    raise exceptions.ForbiddenError("add_roles", role.name)
 
             elif party in [y.name for y in member.roles]:
                 await ctx.send(f'You are already part of {party}!')
@@ -88,7 +93,6 @@ class Party(commands.Cog, name='Political Parties'):
 
             # Logging
             if self.bot.checks.is_logging_enabled(guild.id):
-                guild = ctx.guild
                 logchannel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                 embed = self.bot.embeds.embed_builder(title=':family_mwgb: Joined Political Party', description="")
                 embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,
@@ -138,22 +142,25 @@ class Party(commands.Cog, name='Political Parties'):
                 else:
                     msg = f':white_check_mark: You left {party}!'
                 await ctx.send(msg)
-                await member.remove_roles(role)
+                try:
+                    await member.remove_roles(role)
+                except discord.Forbidden:
+                    raise exceptions.ForbiddenError(task="remove_roles", detail=role.name)
+
             elif party not in [y.name for y in member.roles]:
                 await ctx.send(f'You are not part of {party}!')
                 return
 
             # Logging
             if self.bot.checks.is_logging_enabled(guild.id):
-                guild = ctx.guild
-                logchannel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
+                log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                 embed = self.bot.embeds.embed_builder(title=':triumph: Left Political Party', description="")
                 embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,
                                 inline=False)
                 embed.add_field(name='Party', value=party)
                 embed.timestamp = datetime.datetime.utcnow()
                 embed.set_thumbnail(url=member.avatar_url)
-                await logchannel.send(content=None, embed=embed)
+                await log_channel.send(content=None, embed=embed)
 
         elif party not in config.getParties():
             await ctx.send(':x: I could not find that party!\n\nTry one of these:')

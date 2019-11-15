@@ -3,6 +3,8 @@ import json
 import string
 import discord
 
+import util.exceptions as exceptions
+
 
 # -- Discord Bot for the r/Democraciv Server --
 #
@@ -332,7 +334,10 @@ async def addRole(guild, join_message, role: str) -> str:
         getRoles(guild.id)[role] = join_message
 
         dumpConfigRoles(guild.id)
-        await guild.create_role(name=role)
+        try:
+            await guild.create_role(name=role) #TOTOTOOT
+        except discord.Forbidden:
+            raise exceptions.ForbiddenError(task="create_role", detail=role)
     return ''
 
 
@@ -344,7 +349,10 @@ async def deleteRole(guild, role: str) -> str:
         discord_role = discord.utils.get(guild.roles, name=role)
         # If the role has a role, delete the role (lol)
         if role is not None:
-            await discord_role.delete()
+            try:
+                await discord_role.delete()
+            except discord.Forbidden:
+                raise exceptions.ForbiddenError(task="delete_role", detail=role)
         del getRoles(guild.id)[role]
 
         dumpConfigRoles(guild.id)
@@ -375,7 +383,12 @@ async def addParty(guild, invite, party: str) -> str:
             config_parties['parties'][party] = invite
 
         dumpConfigParties()
-        await guild.create_role(name=party)
+
+        try:
+            await guild.create_role(name=party)
+        except discord.Forbidden:
+            raise exceptions.ForbiddenError(task="create_role", detail=party)
+
     return ''
 
 
@@ -394,13 +407,19 @@ async def deleteParty(guild, party: str) -> str:
             role = discord.utils.get(guild.roles, name=party)
             # If the party has a role, delete the role
             if role is not None:
-                await role.delete()
+                try:
+                    await role.delete()
+                except discord.Forbidden:
+                    raise exceptions.ForbiddenError(task="delete_role", detail=party)
 
             del config_parties['parties'][caps_party]
         elif caps_party in config_parties['aliases']:
             role = discord.utils.get(guild.roles, name=config_parties['aliases'][caps_party])
             if role is not None:
-                await role.delete()
+                try:
+                    await role.delete()
+                except discord.Forbidden:
+                    raise exceptions.ForbiddenError(task="delete_role", detail=party)
 
             del config_parties['parties'][config_parties['aliases'][caps_party]]
             del config_parties['aliases'][caps_party]

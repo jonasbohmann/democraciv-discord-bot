@@ -70,7 +70,8 @@ class Legislature(commands.Cog):
             await ctx.send(
                 f":white_check_mark: Successfully submitted '{bill_title}' to the Speaker of the Legislature!")
         except Exception:
-            await ctx.send(":x: Unexpected error occurred. Try again!")
+            await ctx.send(":x: Unexpected error occurred during DMing the Speaker!"
+                           " Your bill was not submitted, please try again!")
             return
 
 

@@ -44,6 +44,8 @@ class Roles(commands.Cog):
             await ctx.send(":x: You have to tell me which role you want to join or leave!")
             return
 
+        available_roles = config.getRoles(ctx.guild.id)
+
         role = ' '.join(role)
         member = ctx.message.author
         discord_role = discord.utils.get(ctx.guild.roles, name=role)
@@ -52,23 +54,24 @@ class Roles(commands.Cog):
             raise exceptions.RoleNotFoundError(role)
 
         else:
-            if discord_role not in member.roles:
-                try:
-                    await member.add_roles(discord_role)
-                except discord.Forbidden:
-                    await ctx.send(f":x: Either the '{discord_role.name}' role is higher than my role, or I "
-                                   f"don't have the Administrator permission to give you the role!")
-                    return
-                await ctx.send(config.getRoles(ctx.guild.id)[role])
+            if discord_role.name in available_roles:
+                if discord_role not in member.roles:
+                    try:
+                        await member.add_roles(discord_role)
+                    except discord.Forbidden:
+                        raise exceptions.ForbiddenError("add_roles", discord_role.name)
 
-            elif discord_role in member.roles:
-                try:
-                    await member.remove_roles(discord_role)
-                except discord.Forbidden:
-                    await ctx.send(f":x: Either the '{discord_role.name}' role is higher than my role, or I "
-                                   f"don't have the Administrator permission to give you the role!")
-                    return
-                await ctx.send(f":white_check_mark: The '{role}' role was removed from you.")
+                    await ctx.send(config.getRoles(ctx.guild.id)[role])
+
+                elif discord_role in member.roles:
+                    try:
+                        await member.remove_roles(discord_role)
+                    except discord.Forbidden:
+                        raise exceptions.ForbiddenError("remove_roles", discord_role.name)
+
+                    await ctx.send(f":white_check_mark: The '{role}' role was removed from you.")
+            else:
+                await ctx.send(":x: You are not allowed to do this!")
 
     @commands.command(name='addrole')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)

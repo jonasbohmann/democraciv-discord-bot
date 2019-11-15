@@ -2,8 +2,9 @@ import config
 import discord
 import datetime
 
-from discord.ext import commands
+import util.exceptions as exceptions
 
+from discord.ext import commands
 
 # -- logging.py | event.logging --
 #
@@ -112,22 +113,20 @@ class Log(commands.Cog):
         welcome_channel = discord.utils.get(member.guild.text_channels,
                                             name=config.getGuildConfig(member.guild.id)['welcomeChannel'])
 
-        if self.bot.checks.is_welcome_message_enabled(member.guild.id):
-            # Apparently this doesn't raise an error if {member} is not in welcome_message
-            welcome_message = config.getStrings(member.guild.id)['welcomeMessage'].format(member=member.mention)
-            await welcome_channel.send(welcome_message)
+        if welcome_channel is not None:
+            if self.bot.checks.is_welcome_message_enabled(member.guild.id):
+                # Apparently this doesn't raise an error if {member} is not in welcome_message
+                welcome_message = config.getStrings(member.guild.id)['welcomeMessage'].format(member=member.mention)
+                await welcome_channel.send(welcome_message)
 
-        if self.bot.checks.is_default_role_enabled(member.guild.id):
-            default_role = discord.utils.get(member.guild.roles,
-                                             name=config.getGuildConfig(member.guild.id)['defaultRole'])
+            if self.bot.checks.is_default_role_enabled(member.guild.id):
+                default_role = discord.utils.get(member.guild.roles,
+                                                 name=config.getGuildConfig(member.guild.id)['defaultRole'])
 
-            try:
-                await member.add_roles(default_role)
-            except discord.Forbidden:
                 try:
+                    await member.add_roles(default_role)
+                except discord.Forbidden:
                     await welcome_channel.send(f":x: Missing permissions to add default role to {member}.")
-                except Exception:
-                    pass
 
         if not self.bot.checks.is_logging_enabled(member.guild.id):
             return

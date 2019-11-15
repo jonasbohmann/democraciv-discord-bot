@@ -1,5 +1,8 @@
 import config
+import discord
 import operator
+
+import util.exceptions as exceptions
 
 from discord.ext import commands
 
@@ -31,7 +34,11 @@ class Fun(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def say(self, ctx, *, content: str):
         """Basically just Mod Abuse."""
-        await ctx.message.delete()
+        try:
+            await ctx.message.delete()
+        except discord.Forbidden:
+            raise exceptions.ForbiddenError("message_delete", content)
+
         await ctx.send(content)
 
     @commands.command(name='whois')
