@@ -44,8 +44,8 @@
             "name": "Jonas Test Server",
             "config": {
                 "enableWelcomeMessage": true,
-                "welcomeChannel": "bruder",
-                "enableLogging": false,
+                "welcomeChannel": "welcome",
+                "enableLogging": true,
                 "excludedChannelsFromLogging": [
                     "571092204064342016",
                     "639549494693724170",
@@ -54,7 +54,7 @@
                     "585502938571604056",
                     "585502938571604056"
                 ],
-                "logChannel": "char",
+                "logChannel": "logs",
                 "enableDefaultRole": true,
                 "defaultRole": "Ehre"
             },
