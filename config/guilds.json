@@ -160,7 +160,8 @@
                 "welcomeMessage": "Welcome to the Arabian Guild server!"
             },
             "roles": {
-                "Visitor": "You're a Visitor now! Ping Angus or Retro if you need help."
+                "Visitor": "You're a Visitor now! Ping Angus or Retro if you need help.",
+                "Member Request": "Thanks for requesting party membership, this will be granted by moderators ASAP"
             }
         }
     }
