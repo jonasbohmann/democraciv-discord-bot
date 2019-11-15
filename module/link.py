@@ -48,16 +48,18 @@ class Link(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        if number == "1":
+        number = int(number)
+
+        if number == 1:
             ordinal = "First"
-        if number == "2":
+        elif number == 2:
             ordinal = "Second"
-        if number == "3":
+        elif number == 3:
             ordinal = "Third"
         else:
-            ordinal = "th"
+            ordinal = f"{str(number)}th"
 
-        link = 'government-' + number
+        link = 'government-' + str(number)
         if link in config.getLinks():
             embed = self.bot.embeds.embed_builder(title=ordinal + ' Government of Arabia',
                                                   description=config.getLinks()[link])
