@@ -1,6 +1,8 @@
 ## democraciv-discord-bot
 Discord Bot for r/Democraciv written in Python 3. Provides useful information, political party management and more. 
 
+![Discord](https://img.shields.io/discord/208984105310879744?label=Discord) ![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7-yellowgreen) ![GitHub issues](https://img.shields.io/github/issues/jonasbohmann/democraciv-discord-bot) ![Maintenance](https://img.shields.io/maintenance/yes/2019)  ![GitHub commit activity](https://img.shields.io/github/commit-activity/m/jonasbohmann/democraciv-discord-bot) 
+
 ## Requirements
 
 * [Python](https://www.python.org/downloads//) 3.6 or higher
