@@ -63,7 +63,9 @@
             },
             "roles": {
                 "testertester": "<#585831868667265024> is here to help <#547919385311051776> <@212972352890339328>",
-                "zuzu": "zuzu"
+                "zuzu": "zuzu",
+                "JaMoin": "JaMoin",
+                ".addrole": "666"
             }
         },
         "636347358283563058": {
@@ -109,7 +111,7 @@
                 "defaultRole": ""
             },
             "strings": {
-                "welcomeMessage": "Welcome {member} to The Union of Steel!\n\nWe are a fascist party in Democraciv!\n\nCheck out our manifesto in <#636757504772145184>!"
+                "welcomeMessage": "Welcome {member} to The Union of Steel!\n\nWe support the preservation and expansion of executive powers.\n\nCheck out our manifesto in <#636757504772145184>!"
             },
             "roles": {
                 "Industrious Scholar": "Production AND Science?",
@@ -151,11 +153,11 @@
                 "enableLogging": true,
                 "excludedChannelsFromLogging": [],
                 "logChannel": "mod-logs",
-                "enableDefaultRole": false,
-                "defaultRole": ""
+                "enableDefaultRole": true,
+                "defaultRole": "Visitor"
             },
             "strings": {
-                "welcomeMessage": "Welcome to the Arabian Guild server! Please do `-role Visitor` to get the Visitor role."
+                "welcomeMessage": "Welcome to the Arabian Guild server!"
             },
             "roles": {
                 "Visitor": "You're a Visitor now! Ping Angus or Retro if you need help."
