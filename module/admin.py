@@ -1,16 +1,15 @@
-import asyncio
-
 import config
-import discord
 import psutil
+import asyncio
+import discord
 import platform
 import importlib
 import traceback
-import pkg_resources
+
+import util.utils as utils
+import util.exceptions as exceptions
 
 from discord.ext import commands
-from util.checks import isDemocracivGuild
-from util.embed import embed_builder
 
 
 # -- admin.py | module.admin --
@@ -25,11 +24,9 @@ class Admin(commands.Cog):
 
     @commands.command(name='load', hidden=True)
     @commands.has_permissions(administrator=True)
+    @utils.is_democraciv_guild()
     async def load(self, ctx, *, module):
         """Loads a module."""
-        if not isDemocracivGuild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         try:
             self.bot.load_extension(module)
@@ -40,11 +37,9 @@ class Admin(commands.Cog):
 
     @commands.command(name='unload', hidden=True)
     @commands.has_permissions(administrator=True)
+    @utils.is_democraciv_guild()
     async def unload(self, ctx, *, module):
         """Unloads a module."""
-        if not isDemocracivGuild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         try:
             self.bot.unload_extension(module)
@@ -55,11 +50,9 @@ class Admin(commands.Cog):
 
     @commands.command(name='reload', hidden=True)
     @commands.has_permissions(administrator=True)
+    @utils.is_democraciv_guild()
     async def reload(self, ctx, *, module):
         """Reloads a module."""
-        if not isDemocracivGuild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         try:
             self.bot.unload_extension(module)
@@ -71,10 +64,8 @@ class Admin(commands.Cog):
 
     @commands.command(name='stop', hidden=True)
     @commands.has_permissions(administrator=True)
+    @utils.is_democraciv_guild()
     async def stop(self, ctx):
-        if not isDemocracivGuild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         await ctx.send(':wave: Goodbye! Shutting down...')
         await self.bot.close()
@@ -82,10 +73,8 @@ class Admin(commands.Cog):
 
     @commands.command(name='reloadconfig', aliases=['rlc', 'rc', 'rlcfg'], hidden=True)
     @commands.has_permissions(administrator=True)
-    async def reloadConfig(self, ctx):
-        if not isDemocracivGuild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
+    @utils.is_democraciv_guild()
+    async def reloadconfig(self, ctx):
 
         await ctx.send(':white_check_mark: Reloaded config.')
         await importlib.reload(config)
@@ -105,39 +94,42 @@ class Admin(commands.Cog):
         try:
             deleted = await ctx.channel.purge(limit=num, check=check)
         except discord.Forbidden:
-            await ctx.send(":x: I'm missing Administrator permissions to do this!")
-            return
+            raise exceptions.ForbiddenError(task="", detail=":x: I'm missing Administrator permissions to do this!")
 
         await ctx.send(f':white_check_mark: Deleted **{len(deleted)}** messages.', delete_after=5)
 
+    @commands.command(name="tinyurl", aliases=["tiny"])
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def tinyurl(self, ctx, url: str):
+
+        if len(url) <= 3:
+            await ctx.send(":x: That doesn't look like a valid URL!")
+            return
+
+        async with self.bot.session.get(f"https://tinyurl.com/api-create.php?url={url}") as response:
+            tiny_url = await response.text()
+
+        if tiny_url == "Error":
+            await ctx.send(":x: tinyurl.com returned an error!")
+            return
+
+        await ctx.send(tiny_url)
+
     @commands.command(name='health', aliases=['status', 'diagnosis'], hidden=True)
+    @commands.is_owner()
     async def health(self, ctx):
         # Long & ugly function that spits out some debug information
 
-        if ctx.message.author.id != int(config.getConfig()['authorID']):
-            return
-
-        my_member_object = ctx.guild.me
-        my_permissions = my_member_object.guild_permissions
-        my_top_role = my_member_object.top_role
-        is_guild_initialized = config.checkIfGuildExists(ctx.guild.id)
-        guild_payload = config.getGuilds()[str(ctx.guild.id)]
-        guild_config = guild_payload['config']
-        guild_name = guild_payload['name']
-        guild_strings = guild_payload['strings']
-        guild_roles = guild_payload['roles']
         dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
-
-        info = embed_builder(title=":drop_of_blood: Health Diagnosis", description="Running diagnosis...")
+        info = self.bot.embeds.embed_builder(title=":drop_of_blood: Health Diagnosis",
+                                             description="Running diagnosis...")
         await ctx.send(embed=info)
 
         await asyncio.sleep(2)
 
-        system_embed = embed_builder(title="System Diagnosis", description="")
-        system_embed.add_field(name="Library", value=f"discord.py "
-                                                     f"{str(pkg_resources.get_distribution('discord.py').version)}"
-                               , inline=True)
-
+        # Embed with debug information about host system
+        system_embed = self.bot.embeds.embed_builder(title="System Diagnosis", description="")
+        system_embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=True)
         system_embed.add_field(name='Python', value=platform.python_version(), inline=True)
         system_embed.add_field(name='OS', value=f'{platform.system()} {platform.release()} {platform.version()}',
                                inline=False)
@@ -145,44 +137,53 @@ class Admin(commands.Cog):
         system_embed.add_field(name="RAM Usage", value=f"{str(psutil.virtual_memory()[2])}%", inline=False)
         await ctx.send(embed=system_embed)
 
-        discord_embed = embed_builder(title="Discord Diagnosis", description="")
+        discord_embed = self.bot.embeds.embed_builder(title="Discord Diagnosis", description="")
+        discord_embed.add_field(name="Ping", value=f"{self.bot.get_ping()}ms", inline=False)
+        discord_embed.add_field(name="Uptime", value=f"{self.bot.get_uptime()}", inline=False)
         discord_embed.add_field(name="Guilds", value=f"{len(self.bot.guilds)}")
         discord_embed.add_field(name="Users", value=f"{len(self.bot.users)}")
         discord_embed.add_field(name="Cache Ready", value=f"{str(self.bot.is_ready())}", inline=False)
         discord_embed.add_field(name="Asyncio Tasks", value=f"{len(asyncio.all_tasks())}", inline=False)
         await ctx.send(embed=discord_embed)
 
-        config_embed = embed_builder(title="Config Diagnosis", description="")
+        config_embed = self.bot.embeds.embed_builder(title="Config Diagnosis", description="")
         config_embed.add_field(name="Connected Democraciv Guild", value=f"{dciv_guild}")
         await ctx.send(embed=config_embed)
 
-        guild_embed = embed_builder(title="Guild Diagnosis", description="")
-        guild_embed.add_field(name="Guild Initialized", value=str(is_guild_initialized))
-        guild_embed.add_field(name="Name", value=f"{guild_name}")
-        guild_embed.add_field(name="Config", value=f"```{guild_config}```", inline=False)
-        guild_embed.add_field(name="Strings", value=f"```{guild_strings}```", inline=False)
-        guild_embed.add_field(name="Roles", value=f"```{guild_roles}```", inline=False)
+        # Sleep for 3 seconds to avoid being rate-limited
+        await asyncio.sleep(3)
+
+        guild_embed = self.bot.embeds.embed_builder(title="Guild Diagnosis", description="")
+        guild_embed.add_field(name="Guild Initialized", value=str(config.checkIfGuildExists(ctx.guild.id)))
+        guild_embed.add_field(name="Name", value=f"{config.getGuilds()[str(ctx.guild.id)]['name']}")
+        guild_embed.add_field(name="Config", value=f"```{config.getGuilds()[str(ctx.guild.id)]['config']}```",
+                              inline=False)
+        guild_embed.add_field(name="Strings", value=f"```{config.getGuilds()[str(ctx.guild.id)]['strings']}```",
+                              inline=False)
+        guild_embed.add_field(name="Roles", value=f"```{config.getGuilds()[str(ctx.guild.id)]['roles']}```",
+                              inline=False)
         await ctx.send(embed=guild_embed)
 
-        permission_embed = embed_builder(title="Permission Diagnosis", description="")
-        permission_embed.add_field(name="Administrator", value=str(my_permissions.administrator))
-        permission_embed.add_field(name="Manage Guild", value=str(my_permissions.manage_guild))
-        permission_embed.add_field(name="Manage Roles", value=str(my_permissions.manage_roles))
-        permission_embed.add_field(name="Manage Channels", value=str(my_permissions.manage_channels), inline=False)
-        permission_embed.add_field(name="Manage Messages", value=str(my_permissions.manage_messages), inline=False)
-        permission_embed.add_field(name="Top Role", value=str(my_top_role), inline=False)
+        permission_embed = self.bot.embeds.embed_builder(title="Permission Diagnosis", description="")
+        permission_embed.add_field(name="Administrator", value=str(ctx.guild.me.guild_permissions.administrator))
+        permission_embed.add_field(name="Manage Guild", value=str(ctx.guild.me.guild_permissions.manage_guild))
+        permission_embed.add_field(name="Manage Roles", value=str(ctx.guild.me.guild_permissions.manage_roles))
+        permission_embed.add_field(name="Manage Channels", value=str(ctx.guild.me.guild_permissions.manage_channels),
+                                   inline=False)
+        permission_embed.add_field(name="Manage Messages", value=str(ctx.guild.me.guild_permissions.manage_messages),
+                                   inline=False)
+        permission_embed.add_field(name="Top Role", value=str(ctx.guild.me.top_role), inline=False)
         await ctx.send(embed=permission_embed)
 
-        reddit_embed = embed_builder(title="Reddit Diagnosis", description="")
+        reddit_embed = self.bot.embeds.embed_builder(title="Reddit Diagnosis", description="")
         reddit_embed.add_field(name="Enabled", value=config.getReddit()["enableRedditAnnouncements"])
         reddit_embed.add_field(name="Last Reddit Post", value=config.getLastRedditPost()['id'])
         reddit_embed.add_field(name="Subreddit", value=config.getReddit()["subreddit"], inline=True)
         reddit_embed.add_field(name="Discord Channel", value="#" + config.getReddit()["redditAnnouncementChannel"]
                                , inline=True)
-        reddit_embed.add_field(name="User Agent", value=config.getReddit()["userAgent"], inline=False)
         await ctx.send(embed=reddit_embed)
 
-        twitch_embed = embed_builder(title="Twitch Diagnosis", description="")
+        twitch_embed = self.bot.embeds.embed_builder(title="Twitch Diagnosis", description="")
         twitch_embed.add_field(name="Enabled", value=config.getTwitch()["enableTwitchAnnouncements"])
         twitch_embed.add_field(name="Twitch Channel", value=config.getTwitch()["twitchChannelName"])
         twitch_embed.add_field(name="Discord Channel", value="#" + config.getTwitch()["twitchAnnouncementChannel"]

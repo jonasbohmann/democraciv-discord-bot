@@ -1,10 +1,4 @@
-mechanize
 discord.py
-requests
-aiohttp
-websockets
-wikipedia
 pytz
-praw
 psutil
-lxml
+bs4

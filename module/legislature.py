@@ -1,11 +1,13 @@
 import config
 import discord
 import datetime
+import aiohttp
 
-import mechanize as mechanize
+import util.utils as utils
+import util.exceptions as exceptions
+
+from bs4 import BeautifulSoup
 from discord.ext import commands
-from util.embed import embed_builder
-from util.checks import isDemocracivGuild
 
 
 class Legislature(commands.Cog):
@@ -15,6 +17,7 @@ class Legislature(commands.Cog):
     @commands.command(name='submit')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_any_role("Legislator", "Legislature")  # TODO - Have bot check what the exact leg role is named
+    @utils.is_democraciv_guild()
     async def submit(self, ctx, google_docs_url: str):
         """Submit a new bill directly to the current Speaker of the Legislature.
 
@@ -22,12 +25,8 @@ class Legislature(commands.Cog):
         -----
         -submit [Google Docs Link of Bil]
         """
-        speaker_role = discord.utils.get(ctx.guild.roles, name="Speaker of the Legislature")
-        valid_google_docs_url_strings = ['docs.google.com/', 'drive.google.com/']
-
-        if not isDemocracivGuild(ctx.guild.id):
-            await ctx.send(":x: You can only use this on the Democraciv Discord guild!")
-            return
+        speaker_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name="Speaker of the Legislature")
+        valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/']
 
         if len(google_docs_url) < 15 or not google_docs_url:
             await ctx.send(":x: You have to give me a valid Google Docs URL of the bill you want to submit!")
@@ -38,26 +37,28 @@ class Legislature(commands.Cog):
             return
 
         if speaker_role is None:
-            await ctx.send(":x: Couldn't find the Speaker role.")
-            return
+            raise exceptions.RoleNotFoundError("Speaker of the Legislature")
 
         if len(speaker_role.members) == 0:
-            await ctx.send(":x: No one has the Speaker role.")
-            return
+            raise exceptions.NoOneHasRoleError("Speaker of the Legislature")
 
         speaker_person = speaker_role.members[0]  # Assuming there's only 1 speaker ever
 
         try:
-            browser = mechanize.Browser()
-            browser.open(google_docs_url)
-            bill_title = browser.title()
+            async with aiohttp.ClientSession() as session:
+                async with session.get(google_docs_url) as response:
+                    text = await response.read()
+
+            bill_title = BeautifulSoup(text).title.string
+
             if bill_title.endswith(' - Google Docs'):
                 bill_title = bill_title[:-14]
+
         except Exception:
-            await ctx.send(":x: Unexpected error occurred. Try again!")
+            await ctx.send(":x: Could not connect to Google Docs.")
             return
 
-        embed = embed_builder(title="New Bill Submitted", description="")
+        embed = self.bot.embeds.embed_builder(title="New Bill Submitted", description="", time_stamp=True)
         embed.add_field(name="Title", value=bill_title, inline=False)
         embed.add_field(name="Author", value=ctx.message.author.name)
         embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow())
@@ -69,7 +70,8 @@ class Legislature(commands.Cog):
             await ctx.send(
                 f":white_check_mark: Successfully submitted '{bill_title}' to the Speaker of the Legislature!")
         except Exception:
-            await ctx.send(":x: Unexpected error occurred. Try again!")
+            await ctx.send(":x: Unexpected error occurred during DMing the Speaker!"
+                           " Your bill was not submitted, please try again!")
             return
 
 

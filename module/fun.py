@@ -1,11 +1,10 @@
-import datetime
-import operator
-
 import config
 import discord
+import operator
+
+import util.exceptions as exceptions
 
 from discord.ext import commands
-from util.embed import embed_builder
 
 
 # -- fun.py | module.fun --
@@ -17,12 +16,29 @@ from util.embed import embed_builder
 class Fun(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.cached_sorted_veterans = []
+
+    def get_member_join_position(self, user, members: list):
+        try:
+            joins = tuple(sorted(members, key=operator.attrgetter("joined_at")))
+            if None in joins:
+                return None
+            for key, elem in enumerate(joins):
+                if elem == user:
+                    return key + 1
+            return None
+        except Exception:
+            return None
 
     @commands.command(name='say')
     @commands.has_permissions(administrator=True)
     async def say(self, ctx, *, content: str):
         """Basically just Mod Abuse."""
-        await ctx.message.delete()
+        try:
+            await ctx.message.delete()
+        except discord.Forbidden:
+            raise exceptions.ForbiddenError("message_delete", content)
+
         await ctx.send(content)
 
     @commands.command(name='whois')
@@ -48,18 +64,6 @@ class Fun(commands.Cog):
             else:
                 return string[:-2]
 
-        def member_join_position(user, guild):
-            try:
-                joins = tuple(sorted(guild.members, key=operator.attrgetter("joined_at")))
-                if None in joins:
-                    return None
-                for key, elem in enumerate(joins):
-                    if elem == user:
-                        return key + 1
-                return None
-            except Exception:
-                return None
-
         # Thanks to:
         #   https:/github.com/Der-Eddy/discord_bot
         #   https:/github.com/Rapptz/RoboDanny/
@@ -71,7 +75,7 @@ class Fun(commands.Cog):
             if type(member) is str:
                 member = await commands.MemberConverter().convert(ctx, member)
 
-            embed = embed_builder(title="User Information", description="")
+            embed = self.bot.embeds.embed_builder(title="User Information", description="")
             embed.add_field(name="User", value=f"{member} {member.mention}", inline=False)
             embed.add_field(name="ID", value=str(member.id), inline=False)
             embed.add_field(name='Status', value=member.status, inline=True)
@@ -81,13 +85,56 @@ class Fun(commands.Cog):
                             value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
             embed.add_field(name='Joined this Guild on',
                             value=f'{member.joined_at.strftime("%B %d, %Y")}', inline=True)
-            embed.add_field(name='Join Position', value=member_join_position(member, ctx.guild), inline=True)
+            embed.add_field(name='Join Position', value=self.get_member_join_position(member, ctx.guild.members)
+                            , inline=True)
             embed.add_field(name='Roles', value=_get_roles(member.roles), inline=False)
             embed.set_thumbnail(url=member.avatar_url)
             await ctx.send(embed=embed)
 
         else:
             await ctx.send(':x: You have to give me a user as argument')
+
+    @commands.command(name='veterans')
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def veterans(self, ctx):
+        """List the first 15 members who joined this server"""
+
+        # As veterans rarely change, use a cached version of sorted list if exists
+        if len(self.cached_sorted_veterans) >= 2:
+            sorted_first_15_members = self.cached_sorted_veterans
+
+        # If cache is empty, calculate & sort again
+        else:
+            guild_members_without_bots = []
+
+            for member in ctx.guild.members:
+                if not member.bot:
+                    guild_members_without_bots.append(member)
+
+            first_15_members = []
+
+            # Veterans can only be human, exclude bot accounts
+            for member in guild_members_without_bots:
+
+                join_position = self.get_member_join_position(member, guild_members_without_bots)
+
+                if join_position <= 15:
+                    first_15_members.append((member, join_position))
+
+            # Sort by join position
+            sorted_first_15_members = sorted(first_15_members, key=lambda x: x[1])
+
+            # Save to cache
+            self.cached_sorted_veterans = sorted_first_15_members
+
+        # Send veterans
+        message = ""
+
+        for veteran in sorted_first_15_members:
+            message += f"{veteran[1]}. {veteran[0].mention}\n"
+
+        embed = self.bot.embeds.embed_builder(title=f"Veterans of {ctx.guild.name}", description=message)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):

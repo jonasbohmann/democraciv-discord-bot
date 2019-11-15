@@ -3,8 +3,9 @@ import string
 import discord
 import datetime
 
-from util.embed import embed_builder
-from util.checks import isDemocracivGuild
+import util.utils as utils
+import util.exceptions as exceptions
+
 from discord.ext import commands
 
 
@@ -14,7 +15,7 @@ from discord.ext import commands
 #
 
 
-def getPartyFromAlias(alias: str):
+def get_party_from_alias(alias: str):
     """Gets party name from related alias, returns alias if it is not found"""
     return config.getPartyAliases().get(alias, alias)
 
@@ -23,38 +24,38 @@ class Party(commands.Cog, name='Political Parties'):
     def __init__(self, bot):
         self.bot = bot
 
-    async def collectPartiesAndMembers(self, ctx):
+    async def collect_parties_and_members(self, ctx):
         parties_and_members = []
         party_keys = config.getParties().keys()
         dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
+        error_string = ":x: The following parties were added as a party but have no role on this server:\n"
 
         for party in party_keys:
             role = discord.utils.get(dciv_guild.roles, name=party)
 
             if role is None:
-                await ctx.send(f':x: "{party}" was added as a party but has '
-                               f'no role on this server!')
+                error_string += f'    -  `{party}`\n'
                 continue
 
             parties_and_members.append((party, len(role.members)))
+
+        if len(error_string) > 85:
+            await ctx.send(error_string)
 
         return parties_and_members
 
     @commands.command(name='join')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @utils.is_democraciv_guild()
     async def join(self, ctx, *party: str):
         """Join a Political Party"""
-        if not isDemocracivGuild(ctx.guild.id):
-            await ctx.send(":x: You can only join political parties on the Democraciv Discord!")
-            return
-
         if not party:
             await ctx.send(':x: You have to give me a party as argument!')
             return
 
         party_keys = (config.getParties().keys())
         party = string.capwords(' '.join(party))
-        party = getPartyFromAlias(party)
+        party = get_party_from_alias(party)
         member = ctx.message.author
         guild = ctx.message.guild
         role = discord.utils.get(ctx.guild.roles, name=party)
@@ -67,30 +68,37 @@ class Party(commands.Cog, name='Political Parties'):
                 if party in invite_only_parties:
                     party_leader_mention = self.bot.get_user(invite_only_parties[party])
 
-                    msg = f':x: {party} is invite-only. Ask {party_leader_mention.mention} for an invitation. '
+                    if party_leader_mention is None:
+                        msg = f':x: {party} is invite-only. Ask the party leader for an invitation. '
+                    else:
+                        msg = f':x: {party} is invite-only. Ask {party_leader_mention.mention} for an invitation.'
+
                     await ctx.send(msg)
                     return
+
+                try:
+                    await member.add_roles(role)
+                except discord.Forbidden:
+                    raise exceptions.ForbiddenError("add_roles", role.name)
 
                 if party == 'Independent':
                     msg = f':white_check_mark: You are now an {party}!'
                     await ctx.send(msg)
-                    await member.add_roles(role)
+
                 else:
                     msg = f':white_check_mark: You joined {party}! Now head to their Discord Server and introduce ' \
                           f'yourself: '
                     await ctx.send(msg)
                     await ctx.send(config.getParties()[party])
-                    await member.add_roles(role)
 
             elif party in [y.name for y in member.roles]:
                 await ctx.send(f'You are already part of {party}!')
                 return
 
             # Logging
-            if config.getGuildConfig(guild.id)['enableLogging']:
-                guild = ctx.guild
+            if self.bot.checks.is_logging_enabled(guild.id):
                 logchannel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-                embed = embed_builder(title=':family_mwgb: Joined Political Party', description="")
+                embed = self.bot.embeds.embed_builder(title=':family_mwgb: Joined Political Party', description="")
                 embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,
                                 inline=False)
                 embed.add_field(name='Party', value=party)
@@ -114,12 +122,9 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='leave')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @utils.is_democraciv_guild()
     async def leave(self, ctx, *party: str):
         """Leave a Political Party"""
-
-        if not isDemocracivGuild(ctx.guild.id):
-            await ctx.send(":x: You can only leave political parties on the Democraciv Discord!")
-            return
 
         if not party:
             await ctx.send(':x: You have to give me a party as argument!')
@@ -128,7 +133,7 @@ class Party(commands.Cog, name='Political Parties'):
         party = string.capwords(' '.join(party))
         party_keys = (config.getParties().keys())
 
-        party = getPartyFromAlias(party)
+        party = get_party_from_alias(party)
 
         member = ctx.message.author
         guild = ctx.message.guild
@@ -141,22 +146,25 @@ class Party(commands.Cog, name='Political Parties'):
                 else:
                     msg = f':white_check_mark: You left {party}!'
                 await ctx.send(msg)
-                await member.remove_roles(role)
+                try:
+                    await member.remove_roles(role)
+                except discord.Forbidden:
+                    raise exceptions.ForbiddenError(task="remove_roles", detail=role.name)
+
             elif party not in [y.name for y in member.roles]:
                 await ctx.send(f'You are not part of {party}!')
                 return
 
             # Logging
-            if config.getGuildConfig(guild.id)['enableLogging']:
-                guild = ctx.guild
-                logchannel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-                embed = embed_builder(title=':triumph: Left Political Party', description="")
+            if self.bot.checks.is_logging_enabled(guild.id):
+                log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
+                embed = self.bot.embeds.embed_builder(title=':triumph: Left Political Party', description="")
                 embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,
                                 inline=False)
                 embed.add_field(name='Party', value=party)
                 embed.timestamp = datetime.datetime.utcnow()
                 embed.set_thumbnail(url=member.avatar_url)
-                await logchannel.send(content=None, embed=embed)
+                await log_channel.send(content=None, embed=embed)
 
         elif party not in config.getParties():
             await ctx.send(':x: I could not find that party!\n\nTry one of these:')
@@ -177,7 +185,7 @@ class Party(commands.Cog, name='Political Parties'):
         if not party:
             party_list_embed_content = ''
 
-            sorted_parties_and_members = sorted(await self.collectPartiesAndMembers(ctx), key=lambda x: x[1],
+            sorted_parties_and_members = sorted(await self.collect_parties_and_members(ctx), key=lambda x: x[1],
                                                 reverse=True)
 
             for party in sorted_parties_and_members:
@@ -191,21 +199,21 @@ class Party(commands.Cog, name='Political Parties'):
             # Append Independents to message
             independent_role = discord.utils.get(dciv_guild.roles, name='Independent')
             if len(independent_role.members) == 1:
-                party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)} citizen' \
-                                            f'\n\n '
+                party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
+                                            f' citizen\n\n'
             else:
-                party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)} citizen' \
-                                            f's\n\n'
+                party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
+                                            f' citizens\n\n'
 
-            embed = embed_builder(title=f'Ranking of Political Parties in Arabia',
-                                  description=f'{party_list_embed_content}', colour=0x7f0000)
+            embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in Arabia',
+                                                  description=f'{party_list_embed_content}', colour=0x7f0000)
 
             await ctx.send(embed=embed)
 
         elif party:
             party = string.capwords(' '.join(party))
 
-            party = getPartyFromAlias(party)
+            party = get_party_from_alias(party)
 
             role = discord.utils.get(dciv_guild.roles, name=party)
 
@@ -221,18 +229,15 @@ class Party(commands.Cog, name='Political Parties'):
                 else:
                     title = f'Members of {role}'
 
-                embed = embed_builder(title=title, description=f'{msg}', colour=0x7f0000)
+                embed = self.bot.embeds.embed_builder(title=title, description=f'{msg}', colour=0x7f0000)
                 await ctx.send(embed=embed)
 
     @commands.command(name='addparty')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
-    async def addParty(self, ctx, invite: str, *party: str):
+    @utils.is_democraciv_guild()
+    async def addparty(self, ctx, invite: str, *party: str):
         """Add a new political party to the server. This will also create a role on this guild."""
-
-        if not isDemocracivGuild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         if not party or not invite:
             await ctx.send(':x: You have to give me both the name and server invite of a political party to add!')
@@ -249,11 +254,9 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='deleteparty')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
-    async def deleteParty(self, ctx, *party: str):
+    @utils.is_democraciv_guild()
+    async def deleteparty(self, ctx, *party: str):
         """Delete a political party and its role from the server."""
-        if not isDemocracivGuild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         if not party:
             await ctx.send(':x: You have to give me the name of a political party to delete!')
@@ -270,13 +273,11 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='addalias')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
-    async def addAlias(self, ctx, *party_and_alias: str):
+    @utils.is_democraciv_guild()
+    async def addalias(self, ctx, *party_and_alias: str):
         """Adds a new alias to party"""
-        if not isDemocracivGuild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
-        party_and_alias: tuple = await self.getArguments(ctx, ' '.join(party_and_alias), 2)
+        party_and_alias: tuple = await self.get_arguments(ctx, ' '.join(party_and_alias), 2)
         if party_and_alias is None:
             return
         party, alias = party_and_alias
@@ -294,11 +295,9 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='deletealias')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
-    async def deleteAlias(self, ctx, *alias: str):
+    @utils.is_democraciv_guild()
+    async def deletealias(self, ctx, *alias: str):
         """Deletes pre-existing alias"""
-        if not isDemocracivGuild(ctx.guild.id):
-            await ctx.send(":x: You're not allowed to use this command on this server!")
-            return
 
         alias = ' '.join(alias)
         error = await config.deletePartyAlias(alias)
@@ -312,7 +311,7 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='listaliases')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def listAliases(self, ctx, *party: str):
+    async def listaliases(self, ctx, *party: str):
         """Lists the given parties aliases, if any exist"""
         party = string.capwords(' '.join(party))
         caps_party = party
@@ -333,13 +332,13 @@ class Party(commands.Cog, name='Political Parties'):
                 msg += f'{alias}\n'
 
         if msg:
-            embed = embed_builder(title=f'Aliases of {party}', description=f'{msg}', colour=0x7f0000)
+            embed = self.bot.embeds.embed_builder(title=f'Aliases of {party}', description=f'{msg}', colour=0x7f0000)
 
             await ctx.send(embed=embed)
         else:
             await ctx.send(f":x: No aliases found for {party}!")
 
-    async def getArguments(self, ctx, arguments: str, expected_arguments: int = -1):
+    async def get_arguments(self, ctx, arguments: str, expected_arguments: int = -1):
         """Returns arguments split upon commas as a tuple of strings.
         If arguments does not equal expected_arguments or there are blank arguments, posts a discord message and returns None.
         If expected_arguments is -1, does not check for argument count."""

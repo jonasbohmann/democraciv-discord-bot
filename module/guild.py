@@ -1,13 +1,10 @@
 import config
 import discord
 import asyncio
-import logging
+
+import util.exceptions as exceptions
 
 from discord.ext import commands
-from util.embed import embed_builder
-
-logging.basicConfig(level=logging.INFO)
-
 
 # -- guild.py | module.guild --
 #
@@ -29,15 +26,15 @@ class Guild(commands.Cog):
                                      "the logging channel\n" \
                                      "`-guild defaultrole` to enable/disable a default role that every new member gets"
 
-        embed = embed_builder(title=f"Guild Configuration for {ctx.guild.name}",
-                              description=f"Here is a list of things you can configure:"
-                                          f"\n\n{configuration_list_message}")
+        embed = self.bot.embeds.embed_builder(title=f"Guild Configuration for {ctx.guild.name}",
+                                              description=f"Here is a list of things you can configure:"
+                                                          f"\n\n{configuration_list_message}")
         await ctx.send(embed=embed)
 
     @guild.command(name='welcome')
     @commands.has_permissions(administrator=True)
     async def welcome(self, ctx):
-        is_welcome_enabled = config.getGuildConfig(ctx.guild.id)['enableWelcomeMessage']
+        is_welcome_enabled = self.bot.checks.is_welcome_message_enabled(ctx.guild.id)
         current_welcome_channel = config.getGuildConfig(ctx.guild.id)['welcomeChannel']
         current_welcome_message = config.getStrings(ctx.guild.id)['welcomeMessage']
 
@@ -49,8 +46,9 @@ class Guild(commands.Cog):
         if current_welcome_message == "":
             current_welcome_message = "This guild currently has no welcome message."
 
-        embed = embed_builder(title=f":wave: Welcome Module for {ctx.guild.name}",
-                              description="React with the :gear: emoji to change the settings of this module.")
+        embed = self.bot.embeds.embed_builder(title=f":wave: Welcome Module for {ctx.guild.name}",
+                                              description="React with the :gear: emoji to change "
+                                                          "the settings of this module.")
         embed.add_field(name="Enabled", value=f"{str(is_welcome_enabled)}")
         embed.add_field(name="Channel", value=f"{current_welcome_channel}")
         embed.add_field(name="Message", value=f"{current_welcome_message}", inline=False)
@@ -58,11 +56,11 @@ class Guild(commands.Cog):
         info_embed = await ctx.send(embed=embed)
         await info_embed.add_reaction("\U00002699")
 
-        def check(r_, u_):
-            return u_ == ctx.author and r_.message.id == info_embed.id and str(r_.emoji) == "\U00002699"
-
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=check, timeout=240),
-                                            ctx.bot.wait_for('reaction_remove', check=check, timeout=240)],
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
+                                                             check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed),
+                                                             timeout=240),
+                                            ctx.bot.wait_for('reaction_remove', check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed)
+                                                             , timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
 
         try:
@@ -77,19 +75,17 @@ class Guild(commands.Cog):
 
     async def edit_welcome_settings(self, ctx):
 
-        def message_check(message):
-            return message.author == ctx.message.author and message.channel == ctx.message.channel
-
-        def reaction_check(r_, u_):
-            return u_ == ctx.author and r_.message.id == status_question.id
-
         status_question = await ctx.send(
             "React with :white_check_mark: to enable the welcome module, or with :x: to disable the welcome module.")
         await status_question.add_reaction("\U00002705")
         await status_question.add_reaction("\U0000274c")
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=reaction_check, timeout=240),
-                                            ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=240)],
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
+                                                             check=self.bot.checks.wait_for_reaction_check(ctx, status_question),
+                                                             timeout=240),
+                                            ctx.bot.wait_for('reaction_remove',
+                                                             check=self.bot.checks.wait_for_reaction_check(ctx, status_question),
+                                                             timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
 
         try:
@@ -103,7 +99,8 @@ class Guild(commands.Cog):
                 await ctx.send(
                     ":information_source: Answer with the name of the channel the welcome module should use:")
                 try:
-                    channel = await self.bot.wait_for('message', check=message_check, timeout=120)
+                    channel = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx)
+                                                      , timeout=120)
                 except (asyncio.TimeoutError, TimeoutError):
                     await ctx.send(":x: Aborted.")
                     return
@@ -114,21 +111,10 @@ class Guild(commands.Cog):
 
                 new_welcome_channel = channel.content
 
-                if new_welcome_channel.startswith("<#"):
-                    new_welcome_channel = new_welcome_channel.replace("<#", "")
-                    new_welcome_channel = new_welcome_channel.rstrip('>')
-                    channel_object = self.bot.get_channel(int(new_welcome_channel))
-
-                elif new_welcome_channel.startswith("#"):
-                    new_welcome_channel = new_welcome_channel.replace("#", "")
-                    channel_object = discord.utils.get(ctx.guild.text_channels, name=new_welcome_channel)
-
-                else:
-                    channel_object = discord.utils.get(ctx.guild.text_channels, name=new_welcome_channel)
+                channel_object = await commands.TextChannelConverter().convert(ctx, new_welcome_channel)
 
                 if not channel_object:
-                    await ctx.send(f":x: Couldn't find #{channel.content}!")
-                    return
+                    raise exceptions.ChannelNotFoundError(new_welcome_channel)
 
                 success = config.setWelcomeChannel(ctx.guild.id, channel_object.name)
 
@@ -140,7 +126,9 @@ class Guild(commands.Cog):
                     f":information_source: Answer with the message that should be sent to #{new_welcome_channel} "
                     f"every time a new member joins.\n\n:warning: Write '{{member}}' to have the Bot mention the user!")
                 try:
-                    welcome_message = await self.bot.wait_for('message', check=message_check, timeout=300)
+                    welcome_message = await self.bot.wait_for('message',
+                                                              check=self.bot.checks.wait_for_message_check(ctx),
+                                                              timeout=300)
                 except (asyncio.TimeoutError, TimeoutError):
                     await ctx.send(":x: Aborted.")
                     return
@@ -163,7 +151,7 @@ class Guild(commands.Cog):
     @guild.command(name='logs')
     @commands.has_permissions(administrator=True)
     async def logs(self, ctx):
-        is_logging_enabled = config.getGuildConfig(ctx.guild.id)['enableLogging']
+        is_logging_enabled = self.bot.checks.is_logging_enabled(ctx.guild.id)
         current_logging_channel = config.getGuildConfig(ctx.guild.id)['logChannel']
 
         if current_logging_channel == "":
@@ -171,8 +159,8 @@ class Guild(commands.Cog):
         else:
             current_logging_channel = "#" + current_logging_channel
 
-        embed = embed_builder(title=f":spy: Logging Module for {ctx.guild.name}",
-                              description="React with the :gear: emoji to change the settings of this module.")
+        embed = self.bot.embeds.embed_builder(title=f":spy: Logging Module for {ctx.guild.name}",
+                                              description="React with the :gear: emoji to change the settings of this module.")
 
         embed.add_field(name="Enabled", value=f"{str(is_logging_enabled)}")
         embed.add_field(name="Channel", value=f"{current_logging_channel}")
@@ -180,11 +168,8 @@ class Guild(commands.Cog):
         info_embed = await ctx.send(embed=embed)
         await info_embed.add_reaction("\U00002699")
 
-        def check(r_, u_):
-            return u_ == ctx.author and r_.message.id == info_embed.id and str(r_.emoji) == "\U00002699"
-
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=check, timeout=240),
-                                            ctx.bot.wait_for('reaction_remove', check=check, timeout=240)],
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed), timeout=240),
+                                            ctx.bot.wait_for('reaction_remove', check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed), timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
 
         try:
@@ -199,19 +184,19 @@ class Guild(commands.Cog):
 
     async def edit_log_settings(self, ctx):
 
-        def message_check(message):
-            return message.author == ctx.message.author and message.channel == ctx.message.channel
-
-        def reaction_check(r_, u_):
-            return u_ == ctx.author and r_.message.id == status_question.id
-
         status_question = await ctx.send(
             "React with :white_check_mark: to enable the logging module, or with :x: to disable the logging module.")
         await status_question.add_reaction("\U00002705")
         await status_question.add_reaction("\U0000274c")
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=reaction_check, timeout=240),
-                                            ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=240)],
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
+                                                             check=self.bot.checks.wait_for_reaction_check(ctx,
+                                                                                                           status_question),
+                                                             timeout=240),
+                                            ctx.bot.wait_for('reaction_remove',
+                                                             check=self.bot.checks.wait_for_reaction_check(ctx,
+                                                                                                           status_question),
+                                                             timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
         try:
             reaction, user = done.pop().result()
@@ -223,7 +208,8 @@ class Guild(commands.Cog):
                 await ctx.send(
                     ":information_source: Answer with the name of the channel the logging module should use:")
                 try:
-                    channel = await self.bot.wait_for('message', check=message_check, timeout=120)
+                    channel = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
+                                                      timeout=120)
                 except (asyncio.TimeoutError, TimeoutError):
                     await ctx.send(":x: Aborted.")
                     pass
@@ -234,21 +220,10 @@ class Guild(commands.Cog):
 
                 new_logging_channel = channel.content
 
-                if new_logging_channel.startswith("<#"):
-                    new_logging_channel = new_logging_channel.replace("<#", "")
-                    new_logging_channel = new_logging_channel.rstrip('>')
-                    channel_object = self.bot.get_channel(int(new_logging_channel))
-
-                elif new_logging_channel.startswith("#"):
-                    new_logging_channel = new_logging_channel.replace("#", "")
-                    channel_object = discord.utils.get(ctx.guild.text_channels, name=new_logging_channel)
-
-                else:
-                    channel_object = discord.utils.get(ctx.guild.text_channels, name=new_logging_channel)
+                channel_object = await commands.TextChannelConverter().convert(ctx, new_logging_channel)
 
                 if not channel_object:
-                    await ctx.send(f":x: Couldn't find #{channel.content}!")
-                    return
+                    raise exceptions.ChannelNotFoundError(new_logging_channel)
 
                 if new_logging_channel.startswith("#"):
                     new_logging_channel.strip("#")
@@ -279,9 +254,6 @@ class Guild(commands.Cog):
         """
         current_logging_channel = config.getGuildConfig(ctx.guild.id)['logChannel']
 
-        def check(message):
-            return message.author == ctx.message.author and message.channel == ctx.message.channel
-
         help_description = "Add a channel to the excluded channels with:\n`-guild exclude " \
                            "[channel_name]`\nand remove a channel from the excluded channels " \
                            "with:\n`-guild exclude [excluded_channel_name]`.\n"
@@ -296,25 +268,18 @@ class Guild(commands.Cog):
             current_excluded_channels_by_name = "There are no from logging excluded channels on this guild."
 
         if not channel:
-            embed = embed_builder(title=f"Logging-Excluded Channels on {ctx.guild.name}",
-                                  description=help_description)
+            embed = self.bot.embeds.embed_builder(title=f"Logging-Excluded Channels on {ctx.guild.name}",
+                                                  description=help_description)
             embed.add_field(name="Currently Excluded Channels", value=current_excluded_channels_by_name)
             await ctx.send(embed=embed)
             return
 
         else:
 
-            if channel.startswith("<#"):
-                channel = channel.replace("<#", "")
-                channel = channel.rstrip('>')
-                channel_object = self.bot.get_channel(int(channel))
-
-            else:
-                channel_object = discord.utils.get(ctx.guild.text_channels, name=channel)
+            channel_object = await commands.TextChannelConverter().convert(ctx, channel)
 
             if not channel_object:
-                await ctx.send(f":x: Couldn't find #{channel}!")
-                return
+                raise exceptions.ChannelNotFoundError(channel)
 
             # Remove channel
             if str(channel_object.id) in config.getGuildConfig(ctx.guild.id)['excludedChannelsFromLogging']:
@@ -336,15 +301,15 @@ class Guild(commands.Cog):
     @guild.command(name='defaultrole')
     @commands.has_permissions(administrator=True)
     async def defaultrole(self, ctx):
-        is_default_role_enabled = config.getGuildConfig(ctx.guild.id)['enableDefaultRole']
+        is_default_role_enabled = self.bot.checks.is_default_role_enabled(ctx.guild.id)
         current_default_role = config.getGuildConfig(ctx.guild.id)['defaultRole']
         current_default_role_object = discord.utils.get(ctx.guild.roles, name=current_default_role)
 
         if current_default_role == "":
             current_default_role = "This guild currently has no default role."
 
-        embed = embed_builder(title=f":partying_face: Default Role for {ctx.guild.name}",
-                              description="React with the :gear: emoji to change the settings of this module.")
+        embed = self.bot.embeds.embed_builder(title=f":partying_face: Default Role for {ctx.guild.name}",
+                                              description="React with the :gear: emoji to change the settings of this module.")
         embed.add_field(name="Enabled", value=f"{str(is_default_role_enabled)}")
 
         if current_default_role_object is None:
@@ -355,11 +320,8 @@ class Guild(commands.Cog):
         info_embed = await ctx.send(embed=embed)
         await info_embed.add_reaction("\U00002699")
 
-        def check(r_, u_):
-            return u_ == ctx.author and r_.message.id == info_embed.id and str(r_.emoji) == "\U00002699"
-
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=check, timeout=240),
-                                            ctx.bot.wait_for('reaction_remove', check=check, timeout=240)],
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed), timeout=240),
+                                            ctx.bot.wait_for('reaction_remove', check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed), timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
 
         try:
@@ -373,19 +335,20 @@ class Guild(commands.Cog):
             future.cancel()
 
     async def edit_default_role_settings(self, ctx):
-        def message_check(message):
-            return message.author == ctx.message.author and message.channel == ctx.message.channel
-
-        def reaction_check(r_, u_):
-            return u_ == ctx.author and r_.message.id == status_question.id
 
         status_question = await ctx.send(
             "React with :white_check_mark: to enable the default role, or with :x: to disable the default role.")
         await status_question.add_reaction("\U00002705")
         await status_question.add_reaction("\U0000274c")
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=reaction_check, timeout=240),
-                                            ctx.bot.wait_for('reaction_remove', check=reaction_check, timeout=240)],
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
+                                                             check=self.bot.checks.wait_for_reaction_check(ctx,
+                                                                                                           status_question),
+                                                             timeout=240),
+                                            ctx.bot.wait_for('reaction_remove',
+                                                             check=self.bot.checks.wait_for_reaction_check(ctx,
+                                                                                                           status_question),
+                                                             timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
         try:
             reaction, user = done.pop().result()
@@ -398,7 +361,8 @@ class Guild(commands.Cog):
                     ":information_source: What's the name of the role that every "
                     "new member should get once they join?")
                 try:
-                    role = await self.bot.wait_for('message', check=message_check, timeout=120)
+                    role = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
+                                                   timeout=120)
                 except (asyncio.TimeoutError, TimeoutError):
                     await ctx.send(":x: Aborted.")
                     pass
@@ -420,8 +384,7 @@ class Guild(commands.Cog):
                     try:
                         new_default_role_object = await ctx.guild.create_role(name=new_default_role)
                     except discord.Forbidden:
-                        await ctx.send(":x: Missing permissions to create default role!")
-                        return
+                        raise exceptions.ForbiddenError("create_role", new_default_role)
 
                 else:
                     await ctx.send(

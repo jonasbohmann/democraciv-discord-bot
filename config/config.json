@@ -16,8 +16,7 @@
   {
     "enableRedditAnnouncements": true,
     "subreddit": "democraciv",
-    "redditAnnouncementChannel": "reddit",
-    "userAgent": "discord:democraciv-discord-bot:0.12.1 (by /u/Jovanos)"
+    "redditAnnouncementChannel": "reddit"
   },
 
   "twitch":
@@ -65,6 +64,7 @@
     "quire": "https://quire.io/c/democraciv-moderation",
     "legislative-docket": "https://docs.google.com/spreadsheets/d/1k3NkAbh-32ciHMqboZRQVXXkdjT1T21qhtdom0JSm-Q/edit?usp=sharing",
     "executive-worksheet": "https://docs.google.com/spreadsheets/d/1hrBA2yftAilQFhPwCDtm74YBVFWRce5l41wRsKf9qdI/edit?usp=sharing",
-    "invite-me": "https://discordapp.com/oauth2/authorize?client_id={clientid}&scope=bot&permissions=8"
+    "invite-me": "https://discordapp.com/oauth2/authorize?client_id={clientid}&scope=bot&permissions=8",
+    "dgwiki-tk": "https://dgwiki.tk/wiki/Democraciv"
   }
 }

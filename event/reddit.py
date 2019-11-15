@@ -1,66 +1,60 @@
-import praw
+import html
 import config
 import asyncio
 import discord
-import datetime
 
-from util.embed import embed_builder
+import util.exceptions as exceptions
 
 
 class Reddit:
 
     def __init__(self, bot):
         self.bot = bot
-        self.reddit_client = praw.Reddit(client_id=config.getTokenFile()['redditClientID'],
-                                         client_secret=config.getTokenFile()['redditClientSecret'],
-                                         user_agent=config.getReddit()['userAgent'])
-        self.subreddit = self.reddit_client.subreddit(config.getReddit()['subreddit'])
+        self.subreddit = config.getReddit()['subreddit']
+
+    async def get_newest_reddit_post(self):
+        async with self.bot.session.get(f"https://www.reddit.com/r/{self.subreddit}/new.json?limit=1") as response:
+            return await response.json()
 
     async def reddit_task(self):
         last_reddit_post = config.getLastRedditPost()
 
         await self.bot.wait_until_ready()
 
-        try:
-            dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
-            channel = discord.utils.get(dciv_guild.text_channels, name=config.getReddit()['redditAnnouncementChannel'])
-        except AttributeError:
-            print(
-                f'ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
-                f'in the config to a server I am in or disable Reddit announcements.')
-            return
+        channel = discord.utils.get(self.bot.democraciv_guild_object.text_channels,
+                                    name=config.getReddit()['redditAnnouncementChannel'])
+        if channel is None:
+            raise exceptions.ChannelNotFoundError(config.getReddit()['redditAnnouncementChannel'])
 
         while not self.bot.is_closed():
-            for submission in self.subreddit.new(limit=1):
-                reddit_post = submission
-                title = submission.title
-                author = submission.author
-                comments_link = submission.permalink
 
-            if not last_reddit_post['id'] == submission.id:
+            reddit_post_json = await self.get_newest_reddit_post()
+            reddit_post_json = reddit_post_json["data"]["children"][0]["data"]
+
+            _id = reddit_post_json["id"]
+            _title = reddit_post_json['title']
+            _author = f"u/{reddit_post_json['author']}"
+            _comments_link = f"https://old.reddit.com{reddit_post_json['permalink']}"
+
+            try:
+                _thumbnail_url = reddit_post_json['preview']['images'][0]['source']['url']
+            except KeyError:
+                _thumbnail_url = reddit_post_json['thumbnail']
+
+            if not last_reddit_post['id'] == _id:
                 # Set new last_reddit_post
-                config.getLastRedditPost()['id'] = submission.id
+                config.getLastRedditPost()['id'] = _id
                 config.setLastRedditPost()
 
-                embed = embed_builder(title=f":mailbox_with_mail: New post on r/{config.getReddit()['subreddit']}",
-                                      description="")
-                embed.add_field(name="Thread", value=f"[{title}](https://reddit.com{comments_link})", inline=False)
-                embed.add_field(name="Author", value=f"u/{author}", inline=False)
+                embed = self.bot.embeds.embed_builder(
+                    title=f":mailbox_with_mail: New post on r/{self.subreddit}",
+                    description="", time_stamp=True)
+                embed.add_field(name="Thread", value=f"[{_title}]({_comments_link})", inline=False)
+                embed.add_field(name="Author", value=f"{_author}", inline=False)
 
-                # Fetch image of post if it has one
-                index = 4
-                image_link = None
-                for x in range(3):
-                    if image_link is not None:
-                        embed.set_thumbnail(url=image_link)
-                        break
-                    try:
-                        image_link = reddit_post.preview['images'][0]['resolutions'][index]['url']
-                    except (AttributeError, UnboundLocalError, IndexError) as e:
-                        index = index - 1
-
-                embed.set_footer(text=config.getConfig()['botName'], icon_url=config.getConfig()['botIconURL'])
-                embed.timestamp = datetime.datetime.utcnow()
+                if _thumbnail_url.startswith("https://"):
+                    _thumbnail_url = html.unescape(_thumbnail_url)
+                    embed.set_thumbnail(url=_thumbnail_url)
 
                 await channel.send(embed=embed)
             await asyncio.sleep(60)
