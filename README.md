@@ -1,9 +1,9 @@
 ## democraciv-discord-bot
+[![Discord](https://discordapp.com/api/guilds/208984105310879744/embed.png)](http://discord.gg/j7sZ3tD) ![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7-yellowgreen) ![Maintenance](https://img.shields.io/maintenance/yes/2019)
+
 General-purpose Discord Bot with unique features specially designed for the r/Democraciv community. 
 
 Provides useful information, political party & role management and much more. 
-
-[![Discord](https://discordapp.com/api/guilds/208984105310879744/embed.png)](http://discord.gg/j7sZ3tD) ![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7-yellowgreen) ![Maintenance](https://img.shields.io/maintenance/yes/2019)
 
 ## Requirements
 
