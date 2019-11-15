@@ -1,12 +1,11 @@
 import config
 import discord
 import datetime
-import aiohttp
 
 import util.utils as utils
 import util.exceptions as exceptions
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, SoupStrainer
 from discord.ext import commands
 
 
@@ -16,7 +15,7 @@ class Legislature(commands.Cog):
 
     @commands.command(name='submit')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    @commands.has_any_role("Legislator", "Legislature")  # TODO - Have bot check what the exact leg role is named
+    @commands.has_any_role("Legislator", "Legislature")
     @utils.is_democraciv_guild()
     async def submit(self, ctx, google_docs_url: str):
         """Submit a new bill directly to the current Speaker of the Legislature.
@@ -45,13 +44,19 @@ class Legislature(commands.Cog):
         speaker_person = speaker_role.members[0]  # Assuming there's only 1 speaker ever
 
         try:
-            async with self.bot.session.get(google_docs_url) as response:
-                text = await response.read()
+            async with ctx.typing():
+                async with self.bot.session.get(google_docs_url) as response:
+                    text = await response.read()
 
-            bill_title = BeautifulSoup(text, "html5lib").title.string
+                strainer = SoupStrainer(property="og:title")  # Only parse the title property HTMl to save time
+                soup = BeautifulSoup(text, "lxml", parse_only=strainer)  # Use lxml parser to speed things up
 
-            if bill_title.endswith(' - Google Docs'):
-                bill_title = bill_title[:-14]
+                bill_title = soup.find("meta")['content']  # Get title of Google Docs website
+
+                if bill_title.endswith(' - Google Docs'):
+                    bill_title = bill_title[:-14]
+
+                soup.decompose()  # Garbage collection
 
         except Exception:
             await ctx.send(":x: Could not connect to Google Docs.")

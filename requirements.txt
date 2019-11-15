@@ -1,5 +1,5 @@
 discord.py
-html5lib
 psutil
+lxml
 pytz
 bs4
