@@ -105,27 +105,28 @@ class Fun(commands.Cog):
 
         # If cache is empty, calculate & sort again
         else:
-            guild_members_without_bots = []
+            async with ctx.typing():
+                guild_members_without_bots = []
 
-            for member in ctx.guild.members:
-                if not member.bot:
-                    guild_members_without_bots.append(member)
+                for member in ctx.guild.members:
+                    if not member.bot:
+                        guild_members_without_bots.append(member)
 
-            first_15_members = []
+                first_15_members = []
 
-            # Veterans can only be human, exclude bot accounts
-            for member in guild_members_without_bots:
+                # Veterans can only be human, exclude bot accounts
+                for member in guild_members_without_bots:
 
-                join_position = self.get_member_join_position(member, guild_members_without_bots)
+                    join_position = self.get_member_join_position(member, guild_members_without_bots)
 
-                if join_position <= 15:
-                    first_15_members.append((member, join_position))
+                    if join_position <= 15:
+                        first_15_members.append((member, join_position))
 
-            # Sort by join position
-            sorted_first_15_members = sorted(first_15_members, key=lambda x: x[1])
+                # Sort by join position
+                sorted_first_15_members = sorted(first_15_members, key=lambda x: x[1])
 
-            # Save to cache
-            self.cached_sorted_veterans = sorted_first_15_members
+                # Save to cache
+                self.cached_sorted_veterans = sorted_first_15_members
 
         # Send veterans
         message = ""

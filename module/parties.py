@@ -185,28 +185,29 @@ class Party(commands.Cog, name='Political Parties'):
         if not party:
             party_list_embed_content = ''
 
-            sorted_parties_and_members = sorted(await self.collect_parties_and_members(ctx), key=lambda x: x[1],
-                                                reverse=True)
+            async with ctx.typing():
+                sorted_parties_and_members = sorted(await self.collect_parties_and_members(ctx), key=lambda x: x[1],
+                                                    reverse=True)
 
-            for party in sorted_parties_and_members:
-                if party[0] == 'Independent':
-                    continue
-                if party[1] == 1:
-                    party_list_embed_content += f'**{party[0]}**\n{party[1]} member\n\n'
+                for party in sorted_parties_and_members:
+                    if party[0] == 'Independent':
+                        continue
+                    if party[1] == 1:
+                        party_list_embed_content += f'**{party[0]}**\n{party[1]} member\n\n'
+                    else:
+                        party_list_embed_content += f'**{party[0]}**\n{party[1]} members\n\n'
+
+                # Append Independents to message
+                independent_role = discord.utils.get(dciv_guild.roles, name='Independent')
+                if len(independent_role.members) == 1:
+                    party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
+                                                f' citizen\n\n'
                 else:
-                    party_list_embed_content += f'**{party[0]}**\n{party[1]} members\n\n'
+                    party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
+                                                f' citizens\n\n'
 
-            # Append Independents to message
-            independent_role = discord.utils.get(dciv_guild.roles, name='Independent')
-            if len(independent_role.members) == 1:
-                party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
-                                            f' citizen\n\n'
-            else:
-                party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
-                                            f' citizens\n\n'
-
-            embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in Arabia',
-                                                  description=f'{party_list_embed_content}', colour=0x7f0000)
+                embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in Arabia',
+                                                      description=f'{party_list_embed_content}', colour=0x7f0000)
 
             await ctx.send(embed=embed)
 

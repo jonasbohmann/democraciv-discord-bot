@@ -125,71 +125,72 @@ class Admin(commands.Cog):
                                              description="Running diagnosis...")
         await ctx.send(embed=info)
 
-        await asyncio.sleep(2)
+        async with ctx.typing():
+            await asyncio.sleep(2)
 
-        # Embed with debug information about host system
-        system_embed = self.bot.embeds.embed_builder(title="System Diagnosis", description="")
-        system_embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=True)
-        system_embed.add_field(name='Python', value=platform.python_version(), inline=True)
-        system_embed.add_field(name='OS', value=f'{platform.system()} {platform.release()} {platform.version()}',
-                               inline=False)
-        system_embed.add_field(name="CPU Usage", value=f"{str(psutil.cpu_percent())}%", inline=False)
-        system_embed.add_field(name="RAM Usage", value=f"{str(psutil.virtual_memory()[2])}%", inline=False)
-        await ctx.send(embed=system_embed)
-
-        discord_embed = self.bot.embeds.embed_builder(title="Discord Diagnosis", description="")
-        discord_embed.add_field(name="Ping", value=f"{self.bot.get_ping()}ms", inline=False)
-        discord_embed.add_field(name="Uptime", value=f"{self.bot.get_uptime()}", inline=False)
-        discord_embed.add_field(name="Guilds", value=f"{len(self.bot.guilds)}")
-        discord_embed.add_field(name="Users", value=f"{len(self.bot.users)}")
-        discord_embed.add_field(name="Cache Ready", value=f"{str(self.bot.is_ready())}", inline=False)
-        discord_embed.add_field(name="Asyncio Tasks", value=f"{len(asyncio.all_tasks())}", inline=False)
-        await ctx.send(embed=discord_embed)
-
-        config_embed = self.bot.embeds.embed_builder(title="Config Diagnosis", description="")
-        config_embed.add_field(name="Connected Democraciv Guild", value=f"{dciv_guild}")
-        await ctx.send(embed=config_embed)
-
-        # Sleep for 3 seconds to avoid being rate-limited
-        await asyncio.sleep(3)
-
-        guild_embed = self.bot.embeds.embed_builder(title="Guild Diagnosis", description="")
-        guild_embed.add_field(name="Guild Initialized", value=str(config.checkIfGuildExists(ctx.guild.id)))
-        guild_embed.add_field(name="Name", value=f"{config.getGuilds()[str(ctx.guild.id)]['name']}")
-        guild_embed.add_field(name="Config", value=f"```{config.getGuilds()[str(ctx.guild.id)]['config']}```",
-                              inline=False)
-        guild_embed.add_field(name="Strings", value=f"```{config.getGuilds()[str(ctx.guild.id)]['strings']}```",
-                              inline=False)
-        guild_embed.add_field(name="Roles", value=f"```{config.getGuilds()[str(ctx.guild.id)]['roles']}```",
-                              inline=False)
-        await ctx.send(embed=guild_embed)
-
-        permission_embed = self.bot.embeds.embed_builder(title="Permission Diagnosis", description="")
-        permission_embed.add_field(name="Administrator", value=str(ctx.guild.me.guild_permissions.administrator))
-        permission_embed.add_field(name="Manage Guild", value=str(ctx.guild.me.guild_permissions.manage_guild))
-        permission_embed.add_field(name="Manage Roles", value=str(ctx.guild.me.guild_permissions.manage_roles))
-        permission_embed.add_field(name="Manage Channels", value=str(ctx.guild.me.guild_permissions.manage_channels),
+            # Embed with debug information about host system
+            system_embed = self.bot.embeds.embed_builder(title="System Diagnosis", description="")
+            system_embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=True)
+            system_embed.add_field(name='Python', value=platform.python_version(), inline=True)
+            system_embed.add_field(name='OS', value=f'{platform.system()} {platform.release()} {platform.version()}',
                                    inline=False)
-        permission_embed.add_field(name="Manage Messages", value=str(ctx.guild.me.guild_permissions.manage_messages),
-                                   inline=False)
-        permission_embed.add_field(name="Top Role", value=str(ctx.guild.me.top_role), inline=False)
-        await ctx.send(embed=permission_embed)
+            system_embed.add_field(name="CPU Usage", value=f"{str(psutil.cpu_percent())}%", inline=False)
+            system_embed.add_field(name="RAM Usage", value=f"{str(psutil.virtual_memory()[2])}%", inline=False)
+            await ctx.send(embed=system_embed)
 
-        reddit_embed = self.bot.embeds.embed_builder(title="Reddit Diagnosis", description="")
-        reddit_embed.add_field(name="Enabled", value=config.getReddit()["enableRedditAnnouncements"])
-        reddit_embed.add_field(name="Last Reddit Post", value=config.getLastRedditPost()['id'])
-        reddit_embed.add_field(name="Subreddit", value=config.getReddit()["subreddit"], inline=True)
-        reddit_embed.add_field(name="Discord Channel", value="#" + config.getReddit()["redditAnnouncementChannel"]
-                               , inline=True)
-        await ctx.send(embed=reddit_embed)
+            discord_embed = self.bot.embeds.embed_builder(title="Discord Diagnosis", description="")
+            discord_embed.add_field(name="Ping", value=f"{self.bot.get_ping()}ms", inline=False)
+            discord_embed.add_field(name="Uptime", value=f"{self.bot.get_uptime()}", inline=False)
+            discord_embed.add_field(name="Guilds", value=f"{len(self.bot.guilds)}")
+            discord_embed.add_field(name="Users", value=f"{len(self.bot.users)}")
+            discord_embed.add_field(name="Cache Ready", value=f"{str(self.bot.is_ready())}", inline=False)
+            discord_embed.add_field(name="Asyncio Tasks", value=f"{len(asyncio.all_tasks())}", inline=False)
+            await ctx.send(embed=discord_embed)
 
-        twitch_embed = self.bot.embeds.embed_builder(title="Twitch Diagnosis", description="")
-        twitch_embed.add_field(name="Enabled", value=config.getTwitch()["enableTwitchAnnouncements"])
-        twitch_embed.add_field(name="Twitch Channel", value=config.getTwitch()["twitchChannelName"])
-        twitch_embed.add_field(name="Discord Channel", value="#" + config.getTwitch()["twitchAnnouncementChannel"]
-                               , inline=False)
-        twitch_embed.add_field(name="Everyone Ping", value=str(config.getTwitch()["everyonePingOnAnnouncement"])
-                               , inline=False)
+            config_embed = self.bot.embeds.embed_builder(title="Config Diagnosis", description="")
+            config_embed.add_field(name="Connected Democraciv Guild", value=f"{dciv_guild}")
+            await ctx.send(embed=config_embed)
+
+            # Sleep for 3 seconds to avoid being rate-limited
+            await asyncio.sleep(3)
+
+            guild_embed = self.bot.embeds.embed_builder(title="Guild Diagnosis", description="")
+            guild_embed.add_field(name="Guild Initialized", value=str(config.checkIfGuildExists(ctx.guild.id)))
+            guild_embed.add_field(name="Name", value=f"{config.getGuilds()[str(ctx.guild.id)]['name']}")
+            guild_embed.add_field(name="Config", value=f"```{config.getGuilds()[str(ctx.guild.id)]['config']}```",
+                                  inline=False)
+            guild_embed.add_field(name="Strings", value=f"```{config.getGuilds()[str(ctx.guild.id)]['strings']}```",
+                                  inline=False)
+            guild_embed.add_field(name="Roles", value=f"```{config.getGuilds()[str(ctx.guild.id)]['roles']}```",
+                                  inline=False)
+            await ctx.send(embed=guild_embed)
+
+            permission_embed = self.bot.embeds.embed_builder(title="Permission Diagnosis", description="")
+            permission_embed.add_field(name="Administrator", value=str(ctx.guild.me.guild_permissions.administrator))
+            permission_embed.add_field(name="Manage Guild", value=str(ctx.guild.me.guild_permissions.manage_guild))
+            permission_embed.add_field(name="Manage Roles", value=str(ctx.guild.me.guild_permissions.manage_roles))
+            permission_embed.add_field(name="Manage Channels", value=str(ctx.guild.me.guild_permissions.manage_channels),
+                                       inline=False)
+            permission_embed.add_field(name="Manage Messages", value=str(ctx.guild.me.guild_permissions.manage_messages),
+                                       inline=False)
+            permission_embed.add_field(name="Top Role", value=str(ctx.guild.me.top_role), inline=False)
+            await ctx.send(embed=permission_embed)
+
+            reddit_embed = self.bot.embeds.embed_builder(title="Reddit Diagnosis", description="")
+            reddit_embed.add_field(name="Enabled", value=config.getReddit()["enableRedditAnnouncements"])
+            reddit_embed.add_field(name="Last Reddit Post", value=config.getLastRedditPost()['id'])
+            reddit_embed.add_field(name="Subreddit", value=config.getReddit()["subreddit"], inline=True)
+            reddit_embed.add_field(name="Discord Channel", value="#" + config.getReddit()["redditAnnouncementChannel"]
+                                   , inline=True)
+            await ctx.send(embed=reddit_embed)
+
+            twitch_embed = self.bot.embeds.embed_builder(title="Twitch Diagnosis", description="")
+            twitch_embed.add_field(name="Enabled", value=config.getTwitch()["enableTwitchAnnouncements"])
+            twitch_embed.add_field(name="Twitch Channel", value=config.getTwitch()["twitchChannelName"])
+            twitch_embed.add_field(name="Discord Channel", value="#" + config.getTwitch()["twitchAnnouncementChannel"]
+                                   , inline=False)
+            twitch_embed.add_field(name="Everyone Ping", value=str(config.getTwitch()["everyonePingOnAnnouncement"])
+                                   , inline=False)
         await ctx.send(embed=twitch_embed)
 
 

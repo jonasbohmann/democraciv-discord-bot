@@ -41,42 +41,43 @@ class Wikipedia(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def wikipedia(self, ctx, *, topic: str):
         """Search for a topic on Wikipedia\nUse quotes for topics that consist of multiple words!"""
-        result = await self.get_wikipedia_result_with_rest_api(topic)
+        async with ctx.typing():  # Show typing status so that user knows that stuff is happening
+            result = await self.get_wikipedia_result_with_rest_api(topic)
 
-        if result is None or result['type'] == 'disambiguation':
+            if result is None or result['type'] == 'disambiguation':
 
-            # Fall back to MediaWiki Action API and ask for article suggestions as there's probably a typo 'topic'
-            suggested_pages = await self.get_wikipedia_suggested_articles(topic)
+                # Fall back to MediaWiki Action API and ask for article suggestions as there's probably a typo 'topic'
+                suggested_pages = await self.get_wikipedia_suggested_articles(topic)
+
+                try:
+                    suggested_query_name = suggested_pages['query']['search'][0]['title']
+                except Exception:
+                    await ctx.send(":x: Unexpected error occurred.")
+                    return
+
+                # Retry with new suggested article title
+                result = await self.get_wikipedia_result_with_rest_api(suggested_query_name)
+
+                if result is None or not result:
+                    await ctx.send(":x: Unexpected error occurred.")
+                    return
+
+            _title = result['title']
+            _summary = result['extract']
+            _summary_in_2_sentences = ' '.join(re.split(r'(?<=[.?!])\s+', _summary, 2)[:-1])
+            _url = result['content_urls']['desktop']['page']
+            _thumbnail_url = ''
 
             try:
-                suggested_query_name = suggested_pages['query']['search'][0]['title']
-            except Exception:
-                await ctx.send(":x: Unexpected error occurred.")
-                return
+                _thumbnail_url = result['thumbnail']['source']
+            except KeyError:
+                pass
 
-            # Retry with new suggested article title
-            result = await self.get_wikipedia_result_with_rest_api(suggested_query_name)
+            embed = self.bot.embeds.embed_builder(title=_title, description=_summary_in_2_sentences)
+            embed.add_field(name='Link', value=_url)
 
-            if result is None or not result:
-                await ctx.send(":x: Unexpected error occurred.")
-                return
-
-        _title = result['title']
-        _summary = result['extract']
-        _summary_in_2_sentences = ' '.join(re.split(r'(?<=[.?!])\s+', _summary, 2)[:-1])
-        _url = result['content_urls']['desktop']['page']
-        _thumbnail_url = ''
-
-        try:
-            _thumbnail_url = result['thumbnail']['source']
-        except KeyError:
-            pass
-
-        embed = self.bot.embeds.embed_builder(title=_title, description=_summary_in_2_sentences)
-        embed.add_field(name='Link', value=_url)
-
-        if _thumbnail_url.startswith('https://'):
-            embed.set_thumbnail(url=_thumbnail_url)
+            if _thumbnail_url.startswith('https://'):
+                embed.set_thumbnail(url=_thumbnail_url)
         await ctx.send(embed=embed)
 
 
