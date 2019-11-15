@@ -45,9 +45,8 @@ class Legislature(commands.Cog):
         speaker_person = speaker_role.members[0]  # Assuming there's only 1 speaker ever
 
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(google_docs_url) as response:
-                    text = await response.read()
+            async with self.bot.session.get(google_docs_url) as response:
+                text = await response.read()
 
             bill_title = BeautifulSoup(text, "html5lib").title.string
 

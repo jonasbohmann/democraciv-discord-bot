@@ -41,6 +41,9 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
+        if isinstance(before.channel, discord.DMChannel):
+            return
+
         if not self.bot.checks.is_logging_enabled(before.guild.id):
             return
 
@@ -66,6 +69,9 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
+        if isinstance(message.channel, discord.DMChannel):
+            return
+
         if not self.bot.checks.is_logging_enabled(message.guild.id):
             return
 
