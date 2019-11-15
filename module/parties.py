@@ -68,9 +68,18 @@ class Party(commands.Cog, name='Political Parties'):
                 if party in invite_only_parties:
                     party_leader_mention = self.bot.get_user(invite_only_parties[party])
 
-                    msg = f':x: {party} is invite-only. Ask {party_leader_mention.mention} for an invitation. '
+                    if party_leader_mention is None:
+                        msg = f':x: {party} is invite-only. Ask the party leader for an invitation. '
+                    else:
+                        msg = f':x: {party} is invite-only. Ask {party_leader_mention.mention} for an invitation.'
+
                     await ctx.send(msg)
                     return
+
+                try:
+                    await member.add_roles(role)
+                except discord.Forbidden:
+                    raise exceptions.ForbiddenError("add_roles", role.name)
 
                 if party == 'Independent':
                     msg = f':white_check_mark: You are now an {party}!'
@@ -81,11 +90,6 @@ class Party(commands.Cog, name='Political Parties'):
                           f'yourself: '
                     await ctx.send(msg)
                     await ctx.send(config.getParties()[party])
-
-                try:
-                    await member.add_roles(role)
-                except discord.Forbidden:
-                    raise exceptions.ForbiddenError("add_roles", role.name)
 
             elif party in [y.name for y in member.roles]:
                 await ctx.send(f'You are already part of {party}!')
