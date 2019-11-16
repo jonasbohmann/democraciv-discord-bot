@@ -167,21 +167,21 @@ class Link(commands.Cog):
         embed = self.bot.embeds.embed_builder(title='Schedule', description=config.getLinks()['schedule'])
         await ctx.send(embed=embed)
 
-    @commands.command(name='move')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def move(self, ctx):
-        """Change your city of residence"""
-        embed = self.bot.embeds.embed_builder(title='Change your City of Residency',
-                                              description=config.getLinks()['residencyForm'])
-        await ctx.send(embed=embed)
+    #@commands.command(name='move')
+    #@commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    #async def move(self, ctx):
+    #    """Change your city of residence"""
+    #    embed = self.bot.embeds.embed_builder(title='Change your City of Residency',
+    #                                          description=config.getLinks()['residencyForm'])
+    #    await ctx.send(embed=embed)
 
-    @commands.command(name='residency')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def residency(self, ctx):
-        """See the current population of every city"""
-        embed = self.bot.embeds.embed_builder(title='Residency Spreadsheet',
-                                              description=config.getLinks()['residencyList'])
-        await ctx.send(embed=embed)
+    #@commands.command(name='residency')
+    #@commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    #async def residency(self, ctx):
+    #    """See the current population of every city"""
+    #    embed = self.bot.embeds.embed_builder(title='Residency Spreadsheet',
+    #                                          description=config.getLinks()['residencyList'])
+    #    await ctx.send(embed=embed)
 
     @commands.command(name='sue')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)

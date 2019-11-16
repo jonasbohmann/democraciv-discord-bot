@@ -26,7 +26,7 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def load(self, ctx, *, module):
-        """Loads a module."""
+        """Loads a module"""
 
         try:
             self.bot.load_extension(module)
@@ -39,7 +39,7 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def unload(self, ctx, *, module):
-        """Unloads a module."""
+        """Unloads a module"""
 
         try:
             self.bot.unload_extension(module)
@@ -52,7 +52,7 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def reload(self, ctx, *, module):
-        """Reloads a module."""
+        """Reloads a module"""
 
         try:
             self.bot.unload_extension(module)
@@ -66,6 +66,7 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def stop(self, ctx):
+        """Stops the bot"""
 
         await ctx.send(':wave: Goodbye! Shutting down...')
         await self.bot.close()
@@ -75,6 +76,7 @@ class Admin(commands.Cog):
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def reloadconfig(self, ctx):
+        """Reload all .json config files"""
 
         await ctx.send(':white_check_mark: Reloaded config.')
         await importlib.reload(config)
@@ -82,6 +84,7 @@ class Admin(commands.Cog):
     @commands.has_permissions(manage_messages=True)
     @commands.command(name="clear")
     async def clear(self, ctx, num: int, target: discord.Member = None):
+        """Purge an amount of messages in the current channel"""
         if num > 500 or num < 0:
             await ctx.send(":x: Invalid amount, maximum is 500.")
             return
@@ -101,6 +104,7 @@ class Admin(commands.Cog):
     @commands.command(name="tinyurl", aliases=["tiny"])
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def tinyurl(self, ctx, url: str):
+        """Shorten a link with tinyurl"""
 
         if len(url) <= 3:
             await ctx.send(":x: That doesn't look like a valid URL!")
@@ -118,6 +122,7 @@ class Admin(commands.Cog):
     @commands.command(name='health', aliases=['status', 'diagnosis'], hidden=True)
     @commands.is_owner()
     async def health(self, ctx):
+        """Run a diagnosis for this bot"""
         # Long & ugly function that spits out some debug information
 
         dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))

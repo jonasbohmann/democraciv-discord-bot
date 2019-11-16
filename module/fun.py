@@ -46,8 +46,7 @@ class Fun(commands.Cog):
     async def whois(self, ctx, *, member: str = None):
         """Get detailed information about a member of this guild
 
-        Example:
-        -------
+        Usage:
         -whois
         -whois @DerJonas
         -whois DerJonas

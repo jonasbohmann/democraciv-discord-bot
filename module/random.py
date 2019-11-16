@@ -13,7 +13,7 @@ class Random(commands.Cog):
     async def random(self, ctx, *arg):
         """Returns a random number or choice.
 
-            **Usage:**
+            Usage:
             -random
                 Random number between 1-100
             -random coin

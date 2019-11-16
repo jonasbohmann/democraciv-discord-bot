@@ -18,12 +18,8 @@ class Legislature(commands.Cog):
     @commands.has_any_role("Legislator", "Legislature")
     @utils.is_democraciv_guild()
     async def submit(self, ctx, google_docs_url: str):
-        """Submit a new bill directly to the current Speaker of the Legislature.
+        """Submit a new bill directly to the current Speaker of the Legislature"""
 
-        Usage:
-        -----
-        -submit [Google Docs Link of Bil]
-        """
         speaker_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name="Speaker of the Legislature")
         valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/']
 
