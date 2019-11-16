@@ -124,8 +124,9 @@ class Fun(commands.Cog):
                 # Sort by join position
                 sorted_first_15_members = sorted(first_15_members, key=lambda x: x[1])
 
-                # Save to cache
-                self.cached_sorted_veterans = sorted_first_15_members
+                # Save to cache if democraciv guild. This should only be done once in the bot's life cycle.
+                if ctx.guild.id == self.bot.democraciv_guild_object.id:
+                    self.cached_sorted_veterans_on_democraciv = sorted_first_15_members
 
         # Send veterans
         message = "These are the first 15 people who joined this guild.\nNote that Bot accounts are not counted.\n\n"
