@@ -4,7 +4,7 @@
     "prefix": "-",
     "botName": "Democraciv Bot",
     "botDescription": "Discord Bot for the r/Democraciv community.",
-    "botVersion": "0.13.1",
+    "botVersion": "0.13.2",
     "botIconURL": "https://cdn.discordapp.com/attachments/585502938571604056/586310405618532362/final_pride2.png",
     "author": "DerJonas#8109",
     "authorID": "212972352890339328",
@@ -64,7 +64,6 @@
     "quire": "https://quire.io/c/democraciv-moderation",
     "legislative-docket": "https://docs.google.com/spreadsheets/d/1k3NkAbh-32ciHMqboZRQVXXkdjT1T21qhtdom0JSm-Q/edit?usp=sharing",
     "executive-worksheet": "https://docs.google.com/spreadsheets/d/1hrBA2yftAilQFhPwCDtm74YBVFWRce5l41wRsKf9qdI/edit?usp=sharing",
-    "invite-me": "https://discordapp.com/oauth2/authorize?client_id={clientid}&scope=bot&permissions=8",
     "dgwiki-tk": "https://dgwiki.tk/wiki/Democraciv"
   }
 }

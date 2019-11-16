@@ -24,6 +24,9 @@ The file should look like this:
 ```
 Add the token of your Discord App like above. Then, run `client.py`.
 
+To use all of the bot's features, set the `democracivServerID` in `config.json` to a guild ID that the bot is in.
+
+
 #### Twitch 
 
 If you want to use the Twitch announcements feature, you have to get an API key from [here](https://dev.twitch.tv/console/apps)
