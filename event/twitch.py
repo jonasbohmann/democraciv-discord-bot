@@ -22,7 +22,6 @@ class Twitch:
         self.active_stream = False
 
     async def streaming_rules_reminder(self):
-
         executive_channel = self.bot.get_channel(637051136955777049)  # #executive channel
         minister_role = self.bot.democraciv_guild_object.get_role(639438027852087297)  # 'Minister' role
         governor_role = self.bot.democraciv_guild_object.get_role(639438794239639573)  # 'Governor of Mecca' role
@@ -57,6 +56,54 @@ class Twitch:
                                          f"{executive_proxy_role.mention}")
 
         await executive_channel.send(embed=embed)
+
+    async def export_twitch_reminder(self):
+        moderation_channel = self.bot.get_channel(209410498804973569)  # #moderation-team channel
+
+        if moderation_channel is None:
+            raise exceptions.ChannelNotFoundError("moderation-team")
+
+        embed = self.bot.embeds.embed_builder(title="Export the Game Session to YouTube",
+                                              description="Looks like another game session is starting."
+                                                          " Remember to export the Twitch "
+                                                          "VOD to YouTube when the stream is done!")
+
+        embed.add_field(name="Export to YouTube", value="Go to our [channel](https://www.twitch.tv/democraciv/manager),"
+                                                        " select the last stream and hit 'Export'.", inline=False)
+
+        embed.add_field(name="Set the title", value="Use this formatting for the title `Democraciv MK6 - "
+                                                    "Game Session X`.", inline=False)
+
+        embed.add_field(name="Set the description",
+                        value="Use this formatting for the description: ```This is the Xth game session of the of "
+                              "Democraciv MK6, where we play as Arabia in Sid Meier's Civilization 5.\n\nDemocraciv"
+                              " is a community on Reddit dedicated to play a singleplayer game of Sid Meier's"
+                              " Civilization 5 with a simulated, model government. We have a Legislature, a Supreme "
+                              "Court and an executive branch, those wo can be seen playing the game here."
+                              "\n\nDemocraciv: https://old.reddit.com/r/democraciv/```", inline=False)
+
+        embed.add_field(name="Add some tags", value="Add some variations of `Democraciv`, `Civ 5`, `Game Politics`, "
+                                                    "`Game Roleplay`, `Civ Politics`, `Civ Roleplay`,"
+                                                    " `Reddit roleplay`, `Discord roleplay`, `parliament` "
+                                                    "or whatever comes to your mind.", inline=False)
+
+        embed.add_field(name="Set the visibility", value="Set the visibility of the VOD to 'Public' and hit"
+                                                         " 'Start export'.", inline=False)
+
+        embed.add_field(name="Add the new video to the playlist",
+                        value="Don't forget this last part! After the Twitch VOD was exported to YouTube, head over "
+                              "[here](https://studio.youtube.com/channel/UC-NukxPakwQIvx73VjtIPnw/videos/) "
+                              "and add the new video to the playlist named 'MK6 Game Sessions'.")
+
+        embed.add_field(name="Upload the savegame to Google Drive", value="Once a ministers sends you the savegame, "
+                                                                          "upload it to our Google Drive under "
+                                                                          "'Drive/Game/Savegames'.", inline=False)
+
+        embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/423938725525979146/"
+                                "645394491133394966/01-twitch-logo.jpg")
+
+        await moderation_channel.send(f"@here")
+        await moderation_channel.send(embed=embed)
 
     async def check_twitch_livestream(self):
         try:
@@ -108,5 +155,8 @@ class Twitch:
 
                     # Send reminder about streaming rules to executive channel
                     await self.streaming_rules_reminder()
+
+                    # Send reminder to moderation to export Twitch VOD
+                    await self.export_twitch_reminder()
 
             await asyncio.sleep(180)
