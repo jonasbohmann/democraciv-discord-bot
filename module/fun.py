@@ -16,7 +16,7 @@ from discord.ext import commands
 class Fun(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.cached_sorted_veterans = []
+        self.cached_sorted_veterans_on_democraciv = []
 
     def get_member_join_position(self, user, members: list):
         try:
@@ -99,10 +99,10 @@ class Fun(commands.Cog):
         """List the first 15 members who joined this server"""
 
         # As veterans rarely change, use a cached version of sorted list if exists
-        if len(self.cached_sorted_veterans) >= 2:
-            sorted_first_15_members = self.cached_sorted_veterans
+        if len(self.cached_sorted_veterans_on_democraciv) >= 2 and ctx.guild.id == self.bot.democraciv_guild_object.id:
+            sorted_first_15_members = self.cached_sorted_veterans_on_democraciv
 
-        # If cache is empty, calculate & sort again
+        # If cache is empty OR ctx not on democraciv guild, calculate & sort again
         else:
             async with ctx.typing():
                 guild_members_without_bots = []
