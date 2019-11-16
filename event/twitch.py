@@ -21,6 +21,43 @@ class Twitch:
         self.streamer = config.getTwitch()['twitchChannelName']
         self.active_stream = False
 
+    async def streaming_rules_reminder(self):
+
+        executive_channel = self.bot.get_channel(637051136955777049)  # #executive channel
+        minister_role = self.bot.democraciv_guild_object.get_role(639438027852087297)  # 'Minister' role
+        governor_role = self.bot.democraciv_guild_object.get_role(639438794239639573)  # 'Governor of Mecca' role
+        executive_proxy_role = self.bot.democraciv_guild_object.get_role(643190277494013962)  # 'Executive Proxy' role
+
+        if executive_channel is None:
+            raise exceptions.ChannelNotFoundError("executive")
+
+        embed = self.bot.embeds.embed_builder(title="Streaming Guidelines",
+                                              description="Looks like you're starting another game session."
+                                                          " Remember these guidelines!")
+
+        embed.add_field(name="Don't show the stream key", value="Never show the stream key or the DMs with the "
+                                                                "moderator that sent you the key on stream!",
+                        inline=False)
+
+        embed.add_field(name="Introduce yourself", value="No one knows which voice belongs to whom!"
+                                                         " Introduce yourself with your name and position.",
+                        inline=False)
+        embed.add_field(name="Keep it short", value="In the past, streams often were too long. Keep the stream "
+                                                    "short and don't waste time by starting the stream when not every "
+                                                    "minister is ready or the game is not even started yet!",
+                        inline=False)
+        embed.add_field(name="Hand over the savegame", value="Remember to send the savegame to one of"
+                                                             " the moderators after the stream!", inline=False)
+
+        embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/423938725525979146/"
+                                "645394491133394966/01-twitch-logo.jpg")
+
+        if minister_role is not None and governor_role is not None and executive_proxy_role is not None:
+            await executive_channel.send(f"{minister_role.mention} {governor_role.mention} "
+                                         f"{executive_proxy_role.mention}")
+
+        await executive_channel.send(embed=embed)
+
     async def check_twitch_livestream(self):
         try:
             async with self.bot.session.get(self.twitch_API_url, headers=self.http_header) as response:
@@ -57,6 +94,7 @@ class Twitch:
             if twitch_data is not False:
                 if self.active_stream is False:
                     self.active_stream = True
+
                     embed = self.bot.embeds.embed_builder(title=f":satellite: {self.streamer} - Live on Twitch",
                                                           description="", time_stamp=True)
                     embed.add_field(name="Title", value=twitch_data[0], inline=False)
@@ -67,4 +105,8 @@ class Twitch:
                         await channel.send(f'@everyone {self.streamer} is live on Twitch!')
 
                     await channel.send(embed=embed)
+
+                    # Send reminder about streaming rules to executive channel
+                    await self.streaming_rules_reminder()
+
             await asyncio.sleep(180)
