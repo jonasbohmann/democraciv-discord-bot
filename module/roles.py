@@ -63,7 +63,7 @@ class Roles(commands.Cog):
 
                     await ctx.send(config.getRoles(ctx.guild.id)[role])
                 else:
-                    await ctx.send(f":x: You are not allowed to give yourself this role!"
+                    await ctx.send(f":x: You are not allowed to give yourself this role! "
                                    f"If you're trying to join a political party, use `-join {discord_role.name}`")
             elif discord_role in member.roles:
                 if discord_role.name in available_roles:

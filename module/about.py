@@ -1,3 +1,5 @@
+import discord
+
 import config
 
 from discord.ext import commands
@@ -62,6 +64,14 @@ class About(commands.Cog):
         embed = self.bot.embeds.embed_builder(title='Contributors :heart:',
                                               description="https://github.com/jonasbohmann/democraciv"
                                                           "-discord-bot/graphs/contributors")
+        await ctx.send(embed=embed)
+
+    @commands.command(name='addme')
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def addme(self, ctx):
+        """Invite this bot to your Discord server"""
+        invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
+        embed = self.bot.embeds.embed_builder(title='Add this bot to your own Discord server', description=invite_url)
         await ctx.send(embed=embed)
 
 
