@@ -1,4 +1,5 @@
 discord.py
+jishaku
 psutil
 lxml
 pytz

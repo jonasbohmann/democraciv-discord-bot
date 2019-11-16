@@ -97,6 +97,9 @@ class DemocracivBot(commands.Bot):
                 print(f'Failed to load module {extension}.')
                 traceback.print_exc()
 
+        # Load jishaku
+        self.load_extension("jishaku")
+
     async def initialize_aiohttp_session(self):
         self.session = aiohttp.ClientSession()
 
