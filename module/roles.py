@@ -54,24 +54,28 @@ class Roles(commands.Cog):
             raise exceptions.RoleNotFoundError(role)
 
         else:
-            if discord_role.name in available_roles:
-                if discord_role not in member.roles:
+            if discord_role not in member.roles:
+                if discord_role.name in available_roles:
                     try:
                         await member.add_roles(discord_role)
                     except discord.Forbidden:
                         raise exceptions.ForbiddenError("add_roles", discord_role.name)
 
                     await ctx.send(config.getRoles(ctx.guild.id)[role])
-
-                elif discord_role in member.roles:
+                else:
+                    await ctx.send(f":x: You are not allowed to give yourself this role!"
+                                   f"If you're trying to join a political party, use `-join {discord_role.name}`")
+            elif discord_role in member.roles:
+                if discord_role.name in available_roles:
                     try:
                         await member.remove_roles(discord_role)
                     except discord.Forbidden:
                         raise exceptions.ForbiddenError("remove_roles", discord_role.name)
 
                     await ctx.send(f":white_check_mark: The '{role}' role was removed from you.")
-            else:
-                await ctx.send(":x: You are not allowed to do this!")
+                else:
+                    await ctx.send(f":x: You are not allowed remove this role from you! "
+                                   f"If you're trying to leave a political party, use `-leave {discord_role.name}`")
 
     @commands.command(name='addrole')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
