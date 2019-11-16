@@ -129,7 +129,7 @@ class Fun(commands.Cog):
                 self.cached_sorted_veterans = sorted_first_15_members
 
         # Send veterans
-        message = ""
+        message = "These are the first 15 people who joined this guild.\nNote that Bot accounts are not counted.\n\n"
 
         for veteran in sorted_first_15_members:
             message += f"{veteran[1]}. {veteran[0].name}\n"
