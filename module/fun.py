@@ -71,7 +71,7 @@ class Fun(commands.Cog):
             member = ctx.author
 
         if member is not None:
-            if type(member) is str:
+            if isinstance(member, str):
                 member = await commands.MemberConverter().convert(ctx, member)
 
             embed = self.bot.embeds.embed_builder(title="User Information", description="")

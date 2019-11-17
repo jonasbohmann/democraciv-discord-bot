@@ -341,8 +341,8 @@ class Party(commands.Cog, name='Political Parties'):
 
     async def get_arguments(self, ctx, arguments: str, expected_arguments: int = -1):
         """Returns arguments split upon commas as a tuple of strings.
-        If arguments does not equal expected_arguments or there are blank arguments, posts a discord message and returns None.
-        If expected_arguments is -1, does not check for argument count."""
+        If arguments does not equal expected_arguments or there are blank arguments, posts a discord message and returns
+        None. If expected_arguments is -1, does not check for argument count."""
         argument_count = arguments.count(',') + 1
         if expected_arguments != -1 and argument_count != expected_arguments:
             await ctx.send(f':x: Was given {argument_count} arguments but expected {expected_arguments}!')

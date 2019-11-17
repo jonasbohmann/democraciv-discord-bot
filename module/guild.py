@@ -57,9 +57,11 @@ class Guild(commands.Cog):
         await info_embed.add_reaction("\U00002699")
 
         done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
-                                                             check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed),
+                                                             check=self.bot.checks.
+                                                             wait_for_gear_reaction_check(ctx, info_embed),
                                                              timeout=240),
-                                            ctx.bot.wait_for('reaction_remove', check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed)
+                                            ctx.bot.wait_for('reaction_remove', check=self.bot.checks.
+                                                             wait_for_gear_reaction_check(ctx, info_embed)
                                                              , timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
 
@@ -81,10 +83,12 @@ class Guild(commands.Cog):
         await status_question.add_reaction("\U0000274c")
 
         done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
-                                                             check=self.bot.checks.wait_for_reaction_check(ctx, status_question),
+                                                             check=self.bot.checks.
+                                                             wait_for_reaction_check(ctx, status_question),
                                                              timeout=240),
                                             ctx.bot.wait_for('reaction_remove',
-                                                             check=self.bot.checks.wait_for_reaction_check(ctx, status_question),
+                                                             check=self.bot.checks.
+                                                             wait_for_reaction_check(ctx, status_question),
                                                              timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
 
@@ -160,7 +164,8 @@ class Guild(commands.Cog):
             current_logging_channel = "#" + current_logging_channel
 
         embed = self.bot.embeds.embed_builder(title=f":spy: Logging Module for {ctx.guild.name}",
-                                              description="React with the :gear: emoji to change the settings of this module.")
+                                              description="React with the :gear: emoji to change the "
+                                                          "settings of this module.")
 
         embed.add_field(name="Enabled", value=f"{str(is_logging_enabled)}")
         embed.add_field(name="Channel", value=f"{current_logging_channel}")
@@ -168,8 +173,12 @@ class Guild(commands.Cog):
         info_embed = await ctx.send(embed=embed)
         await info_embed.add_reaction("\U00002699")
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed), timeout=240),
-                                            ctx.bot.wait_for('reaction_remove', check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed), timeout=240)],
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
+                                                             check=self.bot.checks.wait_for_gear_reaction_check
+                                                             (ctx, info_embed), timeout=240),
+                                            ctx.bot.wait_for('reaction_remove', check=self.bot.checks.
+                                                             wait_for_gear_reaction_check(ctx, info_embed),
+                                                             timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
 
         try:
@@ -190,12 +199,12 @@ class Guild(commands.Cog):
         await status_question.add_reaction("\U0000274c")
 
         done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
-                                                             check=self.bot.checks.wait_for_reaction_check(ctx,
-                                                                                                           status_question),
+                                                             check=self.bot.
+                                                             checks.wait_for_reaction_check(ctx, status_question),
                                                              timeout=240),
                                             ctx.bot.wait_for('reaction_remove',
-                                                             check=self.bot.checks.wait_for_reaction_check(ctx,
-                                                                                                           status_question),
+                                                             check=self.bot.
+                                                             checks.wait_for_reaction_check(ctx, status_question),
                                                              timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
         try:
@@ -309,7 +318,8 @@ class Guild(commands.Cog):
             current_default_role = "This guild currently has no default role."
 
         embed = self.bot.embeds.embed_builder(title=f":partying_face: Default Role for {ctx.guild.name}",
-                                              description="React with the :gear: emoji to change the settings of this module.")
+                                              description="React with the :gear: emoji to change the settings"
+                                                          " of this module.")
         embed.add_field(name="Enabled", value=f"{str(is_default_role_enabled)}")
 
         if current_default_role_object is None:
@@ -320,8 +330,14 @@ class Guild(commands.Cog):
         info_embed = await ctx.send(embed=embed)
         await info_embed.add_reaction("\U00002699")
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add', check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed), timeout=240),
-                                            ctx.bot.wait_for('reaction_remove', check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed), timeout=240)],
+        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
+                                                             check=self.bot.checks.
+                                                             wait_for_gear_reaction_check(ctx, info_embed),
+                                                             timeout=240),
+                                            ctx.bot.wait_for('reaction_remove',
+                                                             check=self.bot.checks.
+                                                             wait_for_gear_reaction_check(ctx, info_embed),
+                                                             timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
 
         try:
@@ -342,12 +358,12 @@ class Guild(commands.Cog):
         await status_question.add_reaction("\U0000274c")
 
         done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
-                                                             check=self.bot.checks.wait_for_reaction_check(ctx,
-                                                                                                           status_question),
+                                                             check=self.bot.
+                                                             checks.wait_for_reaction_check(ctx, status_question),
                                                              timeout=240),
                                             ctx.bot.wait_for('reaction_remove',
-                                                             check=self.bot.checks.wait_for_reaction_check(ctx,
-                                                                                                           status_question),
+                                                             check=self.bot.
+                                                             checks.wait_for_reaction_check(ctx, status_question),
                                                              timeout=240)],
                                            return_when=asyncio.FIRST_COMPLETED)
         try:
@@ -402,7 +418,6 @@ class Guild(commands.Cog):
 
         except (asyncio.TimeoutError, TimeoutError):
             await ctx.send(":x: Aborted.")
-            pass
 
         for future in pending:
             future.cancel()

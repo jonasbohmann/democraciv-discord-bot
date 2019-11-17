@@ -21,6 +21,8 @@ class Legislature(commands.Cog):
         """Submit a new bill directly to the current Speaker of the Legislature"""
 
         speaker_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name="Speaker of the Legislature")
+        vice_speaker_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name="Vice-Speaker "
+                                                                                           "of the Legislature")
         valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/']
 
         if len(google_docs_url) < 15 or not google_docs_url:
@@ -34,10 +36,18 @@ class Legislature(commands.Cog):
         if speaker_role is None:
             raise exceptions.RoleNotFoundError("Speaker of the Legislature")
 
+        if vice_speaker_role is None:
+            raise exceptions.RoleNotFoundError("Vice-Speaker of the Legislature")
+
         if len(speaker_role.members) == 0:
             raise exceptions.NoOneHasRoleError("Speaker of the Legislature")
 
+        if len(vice_speaker_role.members) == 0:
+            raise exceptions.NoOneHasRoleError("Vice-Speaker of the Legislature")
+
         speaker_person = speaker_role.members[0]  # Assuming there's only 1 speaker ever
+        vice_speaker_person = vice_speaker_role.members[0]  # Assuming there's only 1 vice-speaker ever
+
 
         try:
             async with ctx.typing():
@@ -67,10 +77,14 @@ class Legislature(commands.Cog):
         try:
             await speaker_person.create_dm()
             await speaker_person.dm_channel.send(embed=embed)
+
+            await vice_speaker_person.create_dm()
+            await vice_speaker_person.dm_channel.send(embed=embed)
+
             await ctx.send(
-                f":white_check_mark: Successfully submitted '{bill_title}' to the Speaker of the Legislature!")
+                f":white_check_mark: Successfully submitted '{bill_title}' to the Legislative Cabinet!")
         except Exception:
-            await ctx.send(":x: Unexpected error occurred during DMing the Speaker!"
+            await ctx.send(":x: Unexpected error occurred during DMing the Speaker or Vice-Speaker!"
                            " Your bill was not submitted, please try again!")
             return
 

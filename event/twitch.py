@@ -2,7 +2,6 @@ import config
 import aiohttp
 import asyncio
 import discord
-import datetime
 
 import util.exceptions as exceptions
 
