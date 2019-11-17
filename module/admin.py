@@ -30,7 +30,7 @@ class Admin(commands.Cog):
 
         try:
             self.bot.load_extension(module)
-        except Exception as e:
+        except Exception:
             await ctx.send(f'```py\n{traceback.format_exc()}\n```')
         else:
             await ctx.send(':white_check_mark: Loaded ' + module)
@@ -43,7 +43,7 @@ class Admin(commands.Cog):
 
         try:
             self.bot.unload_extension(module)
-        except Exception as e:
+        except Exception:
             await ctx.send(f'```py\n{traceback.format_exc()}\n```')
         else:
             await ctx.send(':white_check_mark: Unloaded ' + module)
@@ -57,7 +57,7 @@ class Admin(commands.Cog):
         try:
             self.bot.unload_extension(module)
             self.bot.load_extension(module)
-        except Exception as e:
+        except Exception:
             await ctx.send(f'```py\n{traceback.format_exc()}\n```')
         else:
             await ctx.send(':white_check_mark: Reloaded ' + module)
@@ -174,10 +174,10 @@ class Admin(commands.Cog):
             permission_embed.add_field(name="Administrator", value=str(ctx.guild.me.guild_permissions.administrator))
             permission_embed.add_field(name="Manage Guild", value=str(ctx.guild.me.guild_permissions.manage_guild))
             permission_embed.add_field(name="Manage Roles", value=str(ctx.guild.me.guild_permissions.manage_roles))
-            permission_embed.add_field(name="Manage Channels", value=str(ctx.guild.me.guild_permissions.manage_channels),
-                                       inline=False)
-            permission_embed.add_field(name="Manage Messages", value=str(ctx.guild.me.guild_permissions.manage_messages),
-                                       inline=False)
+            permission_embed.add_field(name="Manage Channels", value=str(ctx.guild.me.guild_permissions.
+                                                                         manage_channels), inline=False)
+            permission_embed.add_field(name="Manage Messages", value=str(ctx.guild.me.guild_permissions.
+                                                                         manage_messages), inline=False)
             permission_embed.add_field(name="Top Role", value=str(ctx.guild.me.top_role), inline=False)
             await ctx.send(embed=permission_embed)
 

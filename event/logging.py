@@ -2,8 +2,6 @@ import config
 import discord
 import datetime
 
-import util.exceptions as exceptions
-
 from discord.ext import commands
 
 # -- logging.py | event.logging --
