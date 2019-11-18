@@ -167,17 +167,17 @@ class Link(commands.Cog):
         embed = self.bot.embeds.embed_builder(title='Schedule', description=config.getLinks()['schedule'])
         await ctx.send(embed=embed)
 
-    #@commands.command(name='move')
-    #@commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    #async def move(self, ctx):
+    # @commands.command(name='move')
+    # @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    # async def move(self, ctx):
     #    """Change your city of residence"""
     #    embed = self.bot.embeds.embed_builder(title='Change your City of Residency',
     #                                          description=config.getLinks()['residencyForm'])
     #    await ctx.send(embed=embed)
 
-    #@commands.command(name='residency')
-    #@commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    #async def residency(self, ctx):
+    # @commands.command(name='residency')
+    # @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    # async def residency(self, ctx):
     #    """See the current population of every city"""
     #    embed = self.bot.embeds.embed_builder(title='Residency Spreadsheet',
     #                                          description=config.getLinks()['residencyList'])
@@ -242,6 +242,14 @@ class Link(commands.Cog):
         """Get a link to the (unofficial) dgwiki.tk"""
         embed = self.bot.embeds.embed_builder(title='Unofficial Demogames Wiki',
                                               description=config.getLinks()["dgwiki-tk"])
+        await ctx.send(embed=embed)
+
+    @commands.command(name='cases')
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def cases(self, ctx):
+        """See all Supreme Court cases"""
+        embed = self.bot.embeds.embed_builder(title='Cases of the Supreme Court of Arabia',
+                                              description=config.getLinks()["sc-cases"])
         await ctx.send(embed=embed)
 
 
