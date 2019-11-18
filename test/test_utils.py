@@ -1,7 +1,6 @@
 import config
 import discord
 import unittest
-import datetime
 
 from util.utils import EmbedUtils
 

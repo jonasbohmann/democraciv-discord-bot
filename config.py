@@ -34,7 +34,7 @@ import util.exceptions as exceptions
 
 def parseJSONFromFile(file_path):
     try:
-        file_dir = os.path.dirname(os.path.realpath('__file__'))
+        file_dir = os.path.dirname(os.path.realpath(__file__))
         file_name = os.path.join(file_dir, file_path)
         return json.loads(open(file_name).read())
     except FileNotFoundError:
