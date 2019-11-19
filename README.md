@@ -7,8 +7,8 @@ Provides useful information, political party & role management and much more.
 
 ##  Requirements
 
-*  [Python](https://www.python.org/downloads//) 3.6 or higher
-*  [discord.py](https://github.com/Rapptz/discord.py) 1.0.0 or higher
+*  [Python](https://www.python.org/downloads//) 3.6 or newer
+*  [discord.py](https://github.com/Rapptz/discord.py) 1.2.5 or newer
 
 **Run `pip install -r requirements.txt` to install all required dependencies.**
 
@@ -98,18 +98,20 @@ event.twitch | Handles notifications when twitch.tv/democraciv is live |
 *  ~~Introduce utils to save time & code~~
 *  ~~Replace blocking libraries (praw, wikipedia) with aiohttp API calls~~
 
-####  Update 0.14.0 - The Unit Test Update
-
-*  Add unittests for most things, but especially for functions that are not reliant on a connection to Discord
- 
-####  Update 0.15.0 - The SQL Update
+####  Update 0.14.0 - The SQL Update
 
 *  Add a PostgreSQL database
 *  Migrate `guilds.json`, `parties.json` and `last_reddit_post.json` to new database
 
+####  Update 0.15.0 - The Government Update
+
+*  Add Legislature session management
+*  Add webhook for notifications on new SC cases 
+
+
 ####  Update 0.16.0 - The Moderation Update
 
-*  Add a `module.moderation.py` module with `-kick`, `-ban` etc. commands
+*  Add a Moderation module with `-kick`, `-ban` etc. commands
 
 ####  Update 0.16.0 - The Suggestions Update
 
