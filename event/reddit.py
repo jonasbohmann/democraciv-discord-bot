@@ -40,7 +40,7 @@ class Reddit:
             _id = reddit_post_json["id"]
             _title = reddit_post_json['title']
             _author = f"u/{reddit_post_json['author']}"
-            _comments_link = f"https://old.reddit.com{reddit_post_json['permalink']}"
+            _comments_link = f"https://reddit.com{reddit_post_json['permalink']}"
 
             try:
                 _thumbnail_url = reddit_post_json['preview']['images'][0]['source']['url']
