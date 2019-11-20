@@ -155,9 +155,11 @@ class Link(commands.Cog):
 
     @commands.command(name='gamesessions', aliases=['gs'])
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def gameSessions(self, ctx):
+    async def gamesessions(self, ctx):
         """Game Sessions on YouTube"""
-        embed = self.bot.embeds.embed_builder(title='Game Sessions', description=config.getLinks()['gameSessions'])
+        embed = self.bot.embeds.embed_builder(title='Game Sessions', description="")
+        embed.add_field(name="List of Game Sessions on the Wiki", value=config.getLinks()['gs-wiki'], inline=False)
+        embed.add_field(name="YouTube Playlist", value=config.getLinks()['gameSessions'], inline=False)
         await ctx.send(embed=embed)
 
     @commands.command(name='schedule')
