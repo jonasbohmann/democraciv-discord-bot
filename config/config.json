@@ -57,7 +57,7 @@
     "government-6": "https://www.reddit.com/r/democraciv/wiki/government/6",
     "residencyList": "",
     "residencyForm": "",
-    "supremeCourtCaseSubmitter": "https://forms.gle/E16hME3Uf4Vps8TP9",
+    "sue": "https://forms.gle/E16hME3Uf4Vps8TP9",
     "register": "https://goo.gl/forms/b4aVtsGCs7ZFvSAx2",
     "states": "https://www.reddit.com/r/democraciv/wiki/states",
     "turnout": "https://docs.google.com/spreadsheets/u/1/d/e/2PACX-1vQfAP2cXrWC1Iu53F6vJZDPg5hxSDRZXd3mIf25VjyB9-6-bQvjktOBaedC2obUF1tIjqqMYCOFM_3F/pubhtml?gid=983409241&single=true",
@@ -66,6 +66,7 @@
     "executive-worksheet": "https://docs.google.com/spreadsheets/d/1hrBA2yftAilQFhPwCDtm74YBVFWRce5l41wRsKf9qdI/edit?usp=sharing",
     "dgwiki-tk": "https://dgwiki.tk/wiki/Democraciv",
     "sc-cases": "https://docs.google.com/spreadsheets/d/1m9kzarc64zyy3OmukP-_WTONISLnVc2IYoJ4g8tYMl0/edit?usp=sharing",
-    "gs-wiki": "https://www.reddit.com/r/democraciv/wiki/game-sessions"
+    "gs-wiki": "https://www.reddit.com/r/democraciv/wiki/game-sessions",
+    "sc-worksheet": ""
   }
 }

@@ -18,14 +18,17 @@ class Link(commands.Cog):
     async def links(self, ctx):
         """Get a list of important links"""
 
-        important_links_list = f"- [Wiki]({config.getLinks()['wiki']})\n\n" \
-                               f"- [Subreddit]({config.getLinks()['subreddit']})\n\n" \
-                               f"- [Constitution]({config.getLinks()['constitution']})\n\n" \
-                               f"- [Legal Code]({config.getLinks()['laws']})\n\n" \
-                               f"- [Political Parties]({config.getLinks()['parties']})\n\n" \
-                               f"- [Election Schedule]({config.getLinks()['schedule']})\n\n" \
-                               f"- [Docket of the Arabian Legislature]({config.getLinks()['legislative-docket']})\n\n" \
-                               f"- [Worksheet of the Arabian Ministry]({config.getLinks()['executive-worksheet']})\n\n"
+        important_links_list = f"[Wiki]({config.getLinks()['wiki']})\n\n" \
+                               f"[Subreddit]({config.getLinks()['subreddit']})\n\n" \
+                               f"[Constitution]({config.getLinks()['constitution']})\n\n" \
+                               f"[Legal Code]({config.getLinks()['laws']})\n\n" \
+                               f"[Political Parties]({config.getLinks()['parties']})\n\n" \
+                               f"[Election Schedule]({config.getLinks()['schedule']})\n\n" \
+                               f"[Game Sessions]({config.getLinks()['gs-wiki']})\n\n" \
+                               f"[Docket of the Arabian Legislature]({config.getLinks()['legislative-docket']})\n\n" \
+                               f"[Worksheet of the Arabian Ministry]({config.getLinks()['executive-worksheet']})\n\n" \
+                               f"[File a Case to the Supreme Court]({config.getLinks()['sue']})\n\n" \
+                               f"[All Supreme Court Cases]({config.getLinks()['sc-cases']})\n\n"
 
         embed = self.bot.embeds.embed_builder(title='Important Links', description=important_links_list)
         await ctx.send(embed=embed)
@@ -190,7 +193,7 @@ class Link(commands.Cog):
     async def sue(self, ctx):
         """Submit a Case to the Supreme Court"""
         embed = self.bot.embeds.embed_builder(title='Submit a Case to the Supreme Court of Arabia',
-                                              description=config.getLinks()['supremeCourtCaseSubmitter'])
+                                              description=config.getLinks()['sue'])
         await ctx.send(embed=embed)
 
     @commands.command(name='register')
