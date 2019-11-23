@@ -149,13 +149,11 @@ class DemocracivBot(commands.Bot):
 
         # Create twitch live notification task if enabled in config
         if config.getTwitch()['enableTwitchAnnouncements']:
-            twitch = Twitch(self)
-            self.loop.create_task(twitch.twitch_task())
+            Twitch(self)
 
         # Create reddit new post on subreddit notification task if enabled in config
         if config.getReddit()['enableRedditAnnouncements']:
-            reddit = Reddit(self)
-            self.loop.create_task(reddit.reddit_task())
+            Reddit(self)
 
     async def on_message(self, message):
         # Don't process message/command from DMs to prevent spamming
