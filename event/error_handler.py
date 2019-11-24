@@ -1,5 +1,3 @@
-import config
-import discord
 import datetime
 import util.exceptions as exceptions
 
@@ -11,7 +9,9 @@ class ErrorHandler(commands.Cog):
         self.bot = bot
 
     async def log_error(self, ctx, error, severe: bool = False, to_log_channel: bool = True, to_owner: bool = False):
-        log_channel = discord.utils.get(ctx.guild.text_channels, name=config.getGuildConfig(ctx.guild.id)['logChannel'])
+        log_channel = (await self.bot.db.fetchrow("SELECT logging_channel FROM guilds WHERE id = $1",
+                                                  ctx.guild.id))['logging_channel']
+        log_channel_object = ctx.guild.get_channel(log_channel)
 
         embed = self.bot.embeds.embed_builder(title=':x: Command Error', description="", time_stamp=True)
 
@@ -42,10 +42,10 @@ class ErrorHandler(commands.Cog):
 
         if to_log_channel:
             if self.bot.checks.is_logging_enabled(ctx.guild.id):
-                if log_channel is not None:
-                    await log_channel.send(embed=embed)
+                if log_channel_object is not None:
+                    await log_channel_object.send(embed=embed)
                 else:
-                    raise exceptions.ChannelNotFoundError(config.getGuildConfig(ctx.guild.id)['logChannel'])
+                    raise exceptions.ChannelNotFoundError(log_channel)
 
     @commands.Cog.listener()
     async def on_error(self, ctx, error):

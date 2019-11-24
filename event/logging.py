@@ -52,7 +52,7 @@ class Log(commands.Cog):
         if not self.bot.checks.is_logging_enabled(before.guild.id):
             return
 
-        if not self.is_channel_excluded(before.guild.id, before.channel.id):
+        if not await self.is_channel_excluded(before.guild.id, before.channel.id):
             if not before.clean_content or not after.clean_content:  # Removing this throws a http
                 # 400 bad request exception
                 return
@@ -80,7 +80,7 @@ class Log(commands.Cog):
         if not self.bot.checks.is_logging_enabled(message.guild.id):
             return
 
-        if not self.is_channel_excluded(message.guild.id, message.channel.id):
+        if not await self.is_channel_excluded(message.guild.id, message.channel.id):
             embed_fields = {
                 "Author": [f"{message.author.mention} {message.author.name}#{message.author.discriminator}", True],
                 "Channel": [f"{message.channel.mention}", False]
@@ -103,7 +103,7 @@ class Log(commands.Cog):
         if not self.bot.checks.is_logging_enabled(guild.id):
             return
 
-        if not self.is_channel_excluded(guild.id, payload.channel_id):
+        if not await self.is_channel_excluded(guild.id, payload.channel_id):
             channel = self.bot.get_channel(payload.channel_id)
 
             embed_fields = {
