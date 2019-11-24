@@ -1,5 +1,8 @@
 import time
 import math
+
+import asyncpg
+
 import config
 import discord
 import aiohttp
@@ -77,6 +80,9 @@ class DemocracivBot(commands.Bot):
         self.session = None
         self.task = self.loop.create_task(self.initialize_aiohttp_session())
 
+        # PostgreSQL database connection
+        self.db = self.loop.create_task(self.connect_to_db())
+
         # Create util objects from ./util/utils.py
         self.checks = CheckUtils()
         self.embeds = EmbedUtils()
@@ -92,9 +98,9 @@ class DemocracivBot(commands.Bot):
         for extension in initial_extensions:
             try:
                 self.load_extension(extension)
-                print(f'Successfully loaded {extension}')
+                print(f'[BOT] Successfully loaded {extension}')
             except Exception:
-                print(f'Failed to load module {extension}.')
+                print(f'[BOT] Failed to load module {extension}.')
                 traceback.print_exc()
 
         # Load jishaku
@@ -102,6 +108,13 @@ class DemocracivBot(commands.Bot):
 
     async def initialize_aiohttp_session(self):
         self.session = aiohttp.ClientSession()
+
+    async def connect_to_db(self):
+        self.db = await asyncpg.create_pool(user="jonas", password="ehre", database="democraciv", host="127.0.0.1")
+
+        with open('db/setup.sql') as sql:
+            await self.db.execute(sql.read())
+            print("[DATABASE] Successfully created tables from 'setup.sql'!")
 
     def initialize_democraciv_guild(self):
         # Get Democraciv guild object
@@ -131,7 +144,7 @@ class DemocracivBot(commands.Bot):
         return math.floor(self.latency * 1000)
 
     async def on_ready(self):
-        print(f"Logged in as {self.user.name} with discord.py {discord.__version__}")
+        print(f"[BOT] Logged in as {self.user.name} with discord.py {discord.__version__}")
         print("-------------------------------------------------------")
 
         await asyncio.sleep(1)
