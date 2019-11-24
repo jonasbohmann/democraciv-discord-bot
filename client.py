@@ -79,6 +79,7 @@ class DemocracivBot(commands.Bot):
         self.task = self.loop.create_task(self.initialize_aiohttp_session())
 
         # PostgreSQL database connection
+        self.db_ready = False
         self.db = self.loop.create_task(self.connect_to_db())
 
         # Create util objects from ./util/utils.py
@@ -112,14 +113,18 @@ class DemocracivBot(commands.Bot):
             self.db = await asyncpg.create_pool(user="jonas", password="ehre", database="democraciv", host="127.0.0.1")
         except ConnectionRefusedError:
             print("[DATABASE] Connection to database was denied")
+            self.db_ready = False
             return
         except Exception:
             print("[DATABASE] Unexpected error occurred while connecting to PostgreSQL database")
+            self.db_ready = False
             return
 
         with open('db/schema.sql') as sql:
             await self.db.execute(sql.read())
             print("[DATABASE] Successfully initialised database")
+
+        self.db_ready = True
 
         self.checks = CheckUtils(self.db)
 
@@ -155,6 +160,12 @@ class DemocracivBot(commands.Bot):
         print("------------------------------------------------------------")
 
         await asyncio.sleep(1)
+
+        if not self.db_ready:
+            print("[DATABASE] Fatal error while connecting to database. Exiting...")
+            await self.close()
+            await self.logout()
+            return
 
         self.initialize_democraciv_guild()
 
