@@ -46,7 +46,6 @@ def parseJSONFromFile(file_path):
 config = parseJSONFromFile('config/config.json')
 token = parseJSONFromFile('config/token.json')
 config_parties = parseJSONFromFile('config/parties.json')
-last_reddit_post = parseJSONFromFile('config/last_reddit_post.json')
 guilds = parseJSONFromFile('config/guilds.json')
 
 
@@ -96,10 +95,6 @@ def getReddit():
 
 def getTwitch():
     return config['twitch']
-
-
-def getLastRedditPost():
-    return last_reddit_post
 
 
 # Guild dependant
@@ -303,12 +298,6 @@ def setDefaultRole(guild_id, role):
     else:
         print(f'ERROR - In config.py could not find {guild_id}')
         return False
-
-
-# Dump JSON functions
-def setLastRedditPost():
-    with open(os.path.join(os.path.dirname(os.path.realpath('__file__')), 'config/last_reddit_post.json'), 'w') as file:
-        json.dump(last_reddit_post, file, indent=1)
 
 
 def dumpConfigParties():

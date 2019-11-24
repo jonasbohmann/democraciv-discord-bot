@@ -181,22 +181,22 @@ class Admin(commands.Cog):
             permission_embed.add_field(name="Top Role", value=str(ctx.guild.me.top_role), inline=False)
             await ctx.send(embed=permission_embed)
 
-            reddit_embed = self.bot.embeds.embed_builder(title="Reddit Diagnosis", description="")
-            reddit_embed.add_field(name="Enabled", value=config.getReddit()["enableRedditAnnouncements"])
-            reddit_embed.add_field(name="Last Reddit Post", value=config.getLastRedditPost()['id'])
-            reddit_embed.add_field(name="Subreddit", value=config.getReddit()["subreddit"], inline=True)
-            reddit_embed.add_field(name="Discord Channel", value="#" + config.getReddit()["redditAnnouncementChannel"]
-                                   , inline=True)
-            await ctx.send(embed=reddit_embed)
+            # reddit_embed = self.bot.embeds.embed_builder(title="Reddit Diagnosis", description="")
+            # reddit_embed.add_field(name="Enabled", value=config.getReddit()["enableRedditAnnouncements"])
+            # reddit_embed.add_field(name="Last Reddit Post", value=config.getLastRedditPost()['id'])
+            # reddit_embed.add_field(name="Subreddit", value=config.getReddit()["subreddit"], inline=True)
+            # reddit_embed.add_field(name="Discord Channel", value="#" + config.getReddit()["redditAnnouncementChannel"]
+            #                       , inline=True)
+            # await ctx.send(embed=reddit_embed)
 
-            twitch_embed = self.bot.embeds.embed_builder(title="Twitch Diagnosis", description="")
-            twitch_embed.add_field(name="Enabled", value=config.getTwitch()["enableTwitchAnnouncements"])
-            twitch_embed.add_field(name="Twitch Channel", value=config.getTwitch()["twitchChannelName"])
-            twitch_embed.add_field(name="Discord Channel", value="#" + config.getTwitch()["twitchAnnouncementChannel"]
-                                   , inline=False)
-            twitch_embed.add_field(name="Everyone Ping", value=str(config.getTwitch()["everyonePingOnAnnouncement"])
-                                   , inline=False)
-        await ctx.send(embed=twitch_embed)
+            # twitch_embed = self.bot.embeds.embed_builder(title="Twitch Diagnosis", description="")
+            # twitch_embed.add_field(name="Enabled", value=config.getTwitch()["enableTwitchAnnouncements"])
+            # twitch_embed.add_field(name="Twitch Channel", value=config.getTwitch()["twitchChannelName"])
+            # twitch_embed.add_field(name="Discord Channel", value="#" + config.getTwitch()["twitchAnnouncementChannel"]
+            #                       , inline=False)
+            # twitch_embed.add_field(name="Everyone Ping", value=str(config.getTwitch()["everyonePingOnAnnouncement"])
+            #                      , inline=False)
+            # await ctx.send(embed=twitch_embed)
 
 
 def setup(bot):
