@@ -110,7 +110,14 @@ class DemocracivBot(commands.Bot):
         self.session = aiohttp.ClientSession()
 
     async def connect_to_db(self):
-        self.db = await asyncpg.create_pool(user="jonas", password="ehre", database="democraciv", host="127.0.0.1")
+        try:
+            self.db = await asyncpg.create_pool(user="jonas", password="ehre", database="democraciv", host="127.0.0.1")
+        except ConnectionRefusedError:
+            print("[DATABASE] Connection to database was denied!")
+            return
+        except Exception:
+            print("[DATABASE] Unexpected error occurred while connecting to PostgreSQL database!")
+            return
 
         with open('db/setup.sql') as sql:
             await self.db.execute(sql.read())
@@ -145,7 +152,7 @@ class DemocracivBot(commands.Bot):
 
     async def on_ready(self):
         print(f"[BOT] Logged in as {self.user.name} with discord.py {discord.__version__}")
-        print("-------------------------------------------------------")
+        print("------------------------------------------------------------")
 
         await asyncio.sleep(1)
 

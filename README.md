@@ -32,6 +32,13 @@ Add the token of your Discord App like above. Then, run `client.py`.
 To use all of the bot's features, set the `democracivServerID` in `config.json` to a guild ID that the bot is in.
 
 
+####  Database
+
+This bot needs a PostgreSQL database to run. To install and configure PostgreSQL, head [here](https://www.postgresql.org/).
+
+I'm using PostgreSQL 12 and thus can't guarantee that older version work as well.
+
+
 ####  Twitch 
 
 If you want to use the Twitch announcements feature, you have to get an API key from [here](https://dev.twitch.tv/console/apps)
