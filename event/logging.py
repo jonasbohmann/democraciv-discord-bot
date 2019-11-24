@@ -1,4 +1,3 @@
-import config
 import discord
 import datetime
 
@@ -31,9 +30,17 @@ class Log(commands.Cog):
             await self.bot.DerJonas_dm_channel.send(embed=embed)
 
         # Send event embed to log channel
-        log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
+        log_channel = (await self.bot.db.fetchrow("SELECT logging_channel FROM guilds WHERE id = $1",
+                                                  guild.id))['logging_channel']
+        log_channel = guild.get_channel(log_channel)
         if log_channel is not None:
             await log_channel.send(embed=embed)
+
+    async def is_channel_excluded(self, guild_id, channel_id):
+        excluded_channels = (await self.bot.db.fetchrow("SELECT logging_excluded FROM guilds WHERE id = $1"
+                                                        , guild_id))['logging_excluded']
+
+        return channel_id in excluded_channels
 
     # -- Message Events --
 
@@ -45,7 +52,7 @@ class Log(commands.Cog):
         if not self.bot.checks.is_logging_enabled(before.guild.id):
             return
 
-        if str(before.channel.id) not in config.getGuildConfig(before.guild.id)['excludedChannelsFromLogging']:
+        if not self.is_channel_excluded(before.guild.id, before.channel.id):
             if not before.clean_content or not after.clean_content:  # Removing this throws a http
                 # 400 bad request exception
                 return
@@ -73,7 +80,7 @@ class Log(commands.Cog):
         if not self.bot.checks.is_logging_enabled(message.guild.id):
             return
 
-        if str(message.channel.id) not in config.getGuildConfig(message.guild.id)['excludedChannelsFromLogging']:
+        if not self.is_channel_excluded(message.guild.id, message.channel.id):
             embed_fields = {
                 "Author": [f"{message.author.mention} {message.author.name}#{message.author.discriminator}", True],
                 "Channel": [f"{message.channel.mention}", False]
@@ -96,7 +103,7 @@ class Log(commands.Cog):
         if not self.bot.checks.is_logging_enabled(guild.id):
             return
 
-        if str(payload.channel_id) not in config.getGuildConfig(guild.id)['excludedChannelsFromLogging']:
+        if not self.is_channel_excluded(guild.id, payload.channel_id):
             channel = self.bot.get_channel(payload.channel_id)
 
             embed_fields = {
@@ -114,23 +121,29 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        welcome_channel = discord.utils.get(member.guild.text_channels,
-                                            name=config.getGuildConfig(member.guild.id)['welcomeChannel'])
+        welcome_channel = (await self.bot.db.fetchrow("SELECT welcome_channel FROM guilds WHERE id = $1",
+                                                      member.guild.id))['welcome_channel']
+        welcome_channel = member.guild.get_channel(welcome_channel)
 
         if welcome_channel is not None:
             if self.bot.checks.is_welcome_message_enabled(member.guild.id):
                 # Apparently this doesn't raise an error if {member} is not in welcome_message
-                welcome_message = config.getStrings(member.guild.id)['welcomeMessage'].format(member=member.mention)
+                welcome_message = (await self.bot.db.fetchrow("SELECT welcome_message FROM guilds WHERE id = $1",
+                                                              member.guild.id))['welcome_message'].\
+                                                                                        format(member=member.mention)
                 await welcome_channel.send(welcome_message)
 
             if self.bot.checks.is_default_role_enabled(member.guild.id):
-                default_role = discord.utils.get(member.guild.roles,
-                                                 name=config.getGuildConfig(member.guild.id)['defaultRole'])
 
-                try:
-                    await member.add_roles(default_role)
-                except discord.Forbidden:
-                    await welcome_channel.send(f":x: Missing permissions to add default role to {member}.")
+                default_role = (await self.bot.db.fetchrow("SELECT defaultrole_role FROM guilds WHERE id = $1",
+                                                           member.guild.id))['defaultrole_role']
+                default_role = member.guild.get_role(default_role)
+
+                if default_role is not None:
+                    try:
+                        await member.add_roles(default_role)
+                    except discord.Forbidden:
+                        await welcome_channel.send(f":x: Missing permissions to add default role to {member}.")
 
         if not self.bot.checks.is_logging_enabled(member.guild.id):
             return
@@ -256,12 +269,13 @@ class Log(commands.Cog):
                                                           f"send a DM to {self.bot.DerJonas_object.mention}!")
 
         # Add new guild to guilds.json
-        success = config.initializeNewGuild(guild)
+        status = self.bot.db.execute("INSERT INTO guilds (id, welcome, logging, defaultrole) "
+                                     "VALUES ($1, false, false, false)", guild.id)
 
-        if success:
+        if status == "INSERT 0 1":
             await introduction_channel.send(embed=embed)
 
-        elif not success:
+        elif not status:
             await introduction_channel.send(f":x: Unexpected error occurred while initializing this guild.\n\n"
                                             f"Help me {self.bot.DerJonas_object.mention} :worried:")
 

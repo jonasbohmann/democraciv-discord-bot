@@ -1,4 +1,3 @@
-import config
 import discord
 import asyncio
 
@@ -127,7 +126,8 @@ class Guild(commands.Cog):
                 if not channel_object:
                     raise exceptions.ChannelNotFoundError(new_welcome_channel)
 
-                status = await self.bot.db.execute("UPDATE guilds SET welcome_channel = $2 WHERE id = $1", ctx.guild.id, channel_object.id)
+                status = await self.bot.db.execute("UPDATE guilds SET welcome_channel = $2 WHERE id = $1",
+                                                   ctx.guild.id, channel_object.id)
 
                 if status == "UPDATE 1":
                     await ctx.send(f":white_check_mark: Set the welcome channel to #{channel_object.name}")
@@ -328,7 +328,8 @@ class Guild(commands.Cog):
                     await ctx.send(f":x: Unexpected error occurred.")
                     return
 
-            add_status = await self.bot.db.execute("UPDATE guilds SET logging_excluded = array_append(logging_excluded, $2) WHERE id = $1"
+            add_status = await self.bot.db.execute("UPDATE guilds SET logging_excluded = array_append(logging_excluded,"
+                                                   " $2) WHERE id = $1"
                                                    , ctx.guild.id, channel_object.id)
 
             if add_status == "UPDATE 1":
@@ -439,8 +440,8 @@ class Guild(commands.Cog):
                         f":white_check_mark: I'll use the pre-existing role named "
                         f"'{new_default_role_object.name}' for the default role.")
 
-                status = await self.bot.db.execute("UPDATE guilds SET defaultrole_role = $2 WHERE id = $1", ctx.guild.id,
-                                                   new_default_role_object.id)
+                status = await self.bot.db.execute("UPDATE guilds SET defaultrole_role = $2 WHERE id = $1",
+                                                   ctx.guild.id, new_default_role_object.id)
 
                 if status == "UPDATE 1":
                     await ctx.send(f":white_check_mark: Set the default role to '{new_default_role_object.name}'.")
