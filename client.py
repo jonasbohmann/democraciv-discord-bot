@@ -117,9 +117,9 @@ class DemocracivBot(commands.Bot):
             print("[DATABASE] Unexpected error occurred while connecting to PostgreSQL database!")
             return
 
-        with open('db/setup.sql') as sql:
+        with open('db/schema.sql') as sql:
             await self.db.execute(sql.read())
-            print("[DATABASE] Successfully created tables from 'setup.sql'!")
+            print("[DATABASE] Successfully created tables from 'schema.sql'!")
 
     def initialize_democraciv_guild(self):
         # Get Democraciv guild object

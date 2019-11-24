@@ -103,7 +103,7 @@ class Guild(commands.Cog):
             reaction, user = done.pop().result()
 
             if str(reaction.emoji) == "\U00002705":
-                config.updateWelcomeModule(ctx.guild.id, True)
+                await self.bot.db.execute("UPDATE guilds SET welcome = true WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Enabled the welcome module.")
 
                 # Get new welcome channel
@@ -127,9 +127,9 @@ class Guild(commands.Cog):
                 if not channel_object:
                     raise exceptions.ChannelNotFoundError(new_welcome_channel)
 
-                success = config.setWelcomeChannel(ctx.guild.id, channel_object.name)
+                status = await self.bot.db.execute("UPDATE guilds SET welcome_channel = $2 WHERE id = $1", ctx.guild.id, channel_object.id)
 
-                if success:
+                if status == "UPDATE 1":
                     await ctx.send(f":white_check_mark: Set the welcome channel to #{channel_object.name}")
 
                 # Get new welcome message
@@ -145,11 +145,14 @@ class Guild(commands.Cog):
                     return
 
                 if welcome_message:
-                    config.setWelcomeMessage(ctx.guild.id, welcome_message.content)
-                    await ctx.send(f":white_check_mark: Set welcome message to '{welcome_message.content}'.")
+                    status = await self.bot.db.execute("UPDATE guilds SET welcome_message = $2 WHERE id = $1",
+                                                       ctx.guild.id, welcome_message.content)
+
+                    if status == "UPDATE 1":
+                        await ctx.send(f":white_check_mark: Set welcome message to '{welcome_message.content}'.")
 
             elif str(reaction.emoji) == "\U0000274c":
-                config.updateWelcomeModule(ctx.guild.id, False)
+                await self.bot.db.execute("UPDATE guilds SET welcome = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Disabled the welcome module.")
 
         except (asyncio.TimeoutError, TimeoutError):
@@ -222,7 +225,7 @@ class Guild(commands.Cog):
             reaction, user = done.pop().result()
 
             if str(reaction.emoji) == "\U00002705":
-                config.updateLoggingModule(ctx.guild.id, True)
+                await self.bot.db.execute("UPDATE guilds SET logging = true WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Enabled the logging module.")
 
                 await ctx.send(
@@ -248,18 +251,18 @@ class Guild(commands.Cog):
                 if new_logging_channel.startswith("#"):
                     new_logging_channel.strip("#")
 
-                success = config.setLoggingChannel(ctx.guild.id, channel_object.name)
+                status = await self.bot.db.execute("UPDATE guilds SET logging_channel = $2 WHERE id = $1", ctx.guild.id,
+                                                   channel_object.id)
 
-                if success:
+                if status == "UPDATE 1":
                     await ctx.send(f":white_check_mark: Set the logging channel to #{channel_object.name}")
 
             elif str(reaction.emoji) == "\U0000274c":
-                config.updateLoggingModule(ctx.guild.id, False)
+                await self.bot.db.execute("UPDATE guilds SET logging = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Disabled the logging module.")
 
         except (asyncio.TimeoutError, TimeoutError):
             await ctx.send(":x: Aborted.")
-            pass
 
         for future in pending:
             future.cancel()
@@ -280,15 +283,12 @@ class Guild(commands.Cog):
             await ctx.send("This guild currently has no logging channel. Please set one with `-guild logs`.")
             return
 
-        help_description = "Add a channel to the excluded channels with:\n`-guild exclude " \
-                           "[channel_name]`\nand remove a channel from the excluded channels " \
-                           "with:\n`-guild exclude [excluded_channel_name]`.\n"
+        help_description = "Add/Remove a channel to the excluded channels with:\n`-guild exclude [channel_name]`\n"
 
+        excluded_channels = (await self.bot.db.fetchrow("SELECT logging_excluded FROM guilds WHERE id = $1"
+                                                        , ctx.guild.id))['logging_excluded']
         if not channel:
             current_excluded_channels_by_name = ""
-
-            excluded_channels = (await self.bot.db.fetchrow("SELECT logging_excluded FROM guilds WHERE id = $1"
-                                                            , ctx.guild.id))['logging_excluded']
 
             if excluded_channels is None:
                 await ctx.send("There are no from logging excluded channels on this guild.")
@@ -309,24 +309,30 @@ class Guild(commands.Cog):
             return
 
         else:
-
             channel_object = await commands.TextChannelConverter().convert(ctx, channel)
 
             if not channel_object:
                 raise exceptions.ChannelNotFoundError(channel)
 
             # Remove channel
-            if str(channel_object.id) in config.getGuildConfig(ctx.guild.id)['excludedChannelsFromLogging']:
-                if config.removeExcludedLogChannel(ctx.guild.id, str(channel_object.id)):
-                    await ctx.send(f":white_check_mark: #{channel_object.name} is no longer excluded from"
-                                   f" showing up in #{current_logging_channel.mention}!")
+            if channel_object.id in excluded_channels:
+                remove_status = await self.bot.db.execute(
+                    "UPDATE guilds SET logging_excluded = array_remove(logging_excluded, $2 ) WHERE id = $1",
+                    ctx.guild.id, channel_object.id)
+
+                if remove_status == "UPDATE 1":
+                    await ctx.send(f":white_check_mark: {channel_object.mention} is no longer excluded from"
+                                   f" showing up in {current_logging_channel.mention}!")
                     return
                 else:
                     await ctx.send(f":x: Unexpected error occurred.")
                     return
 
-            if config.addExcludedLogChannel(ctx.guild.id, str(channel_object.id)):
-                await ctx.send(f":white_check_mark: Excluded channel #{channel_object.name} from showing up in "
+            add_status = await self.bot.db.execute("UPDATE guilds SET logging_excluded = array_append(logging_excluded, $2) WHERE id = $1"
+                                                   , ctx.guild.id, channel_object.id)
+
+            if add_status == "UPDATE 1":
+                await ctx.send(f":white_check_mark: Excluded channel {channel_object.mention} from showing up in "
                                f"{current_logging_channel.mention}!")
             else:
                 await ctx.send(f":x: Unexpected error occurred.")
@@ -396,7 +402,7 @@ class Guild(commands.Cog):
             reaction, user = done.pop().result()
 
             if str(reaction.emoji) == "\U00002705":
-                config.updateDefaultRole(ctx.guild.id, True)
+                await self.bot.db.execute("UPDATE guilds SET defaultrole = true WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Enabled the default role.")
 
                 await ctx.send(
@@ -433,13 +439,14 @@ class Guild(commands.Cog):
                         f":white_check_mark: I'll use the pre-existing role named "
                         f"'{new_default_role_object.name}' for the default role.")
 
-                success = config.setDefaultRole(ctx.guild.id, new_default_role_object.name)
+                status = await self.bot.db.execute("UPDATE guilds SET defaultrole_role = $2 WHERE id = $1", ctx.guild.id,
+                                                   new_default_role_object.id)
 
-                if success:
+                if status == "UPDATE 1":
                     await ctx.send(f":white_check_mark: Set the default role to '{new_default_role_object.name}'.")
 
             elif str(reaction.emoji) == "\U0000274c":
-                config.updateDefaultRole(ctx.guild.id, False)
+                await self.bot.db.execute("UPDATE guilds SET defaultrole = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Disabled the default role.")
 
         except (asyncio.TimeoutError, TimeoutError):
