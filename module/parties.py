@@ -96,7 +96,7 @@ class Party(commands.Cog, name='Political Parties'):
                 return
 
             # Logging
-            if self.bot.checks.is_logging_enabled(guild.id):
+            if await self.bot.checks.is_logging_enabled(guild.id):
                 logchannel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                 embed = self.bot.embeds.embed_builder(title=':family_mwgb: Joined Political Party', description="")
                 embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,
@@ -156,7 +156,7 @@ class Party(commands.Cog, name='Political Parties'):
                 return
 
             # Logging
-            if self.bot.checks.is_logging_enabled(guild.id):
+            if await self.bot.checks.is_logging_enabled(guild.id):
                 log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
                 embed = self.bot.embeds.embed_builder(title=':triumph: Left Political Party', description="")
                 embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,

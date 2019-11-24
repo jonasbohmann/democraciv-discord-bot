@@ -41,7 +41,7 @@ class ErrorHandler(commands.Cog):
             await self.bot.DerJonas_dm_channel.send(embed=embed)
 
         if to_log_channel:
-            if self.bot.checks.is_logging_enabled(ctx.guild.id):
+            if await self.bot.checks.is_logging_enabled(ctx.guild.id):
                 if log_channel_object is not None:
                     await log_channel_object.send(embed=embed)
                 else:

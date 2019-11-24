@@ -82,8 +82,8 @@ class DemocracivBot(commands.Bot):
         self.db = self.loop.create_task(self.connect_to_db())
 
         # Create util objects from ./util/utils.py
-        self.checks = CheckUtils()
         self.embeds = EmbedUtils()
+        self.checks = None
 
         # Attributes will be "initialized" in on_ready as they need a connection to Discord
         self.DerJonas_object = None
@@ -119,7 +119,9 @@ class DemocracivBot(commands.Bot):
 
         with open('db/schema.sql') as sql:
             await self.db.execute(sql.read())
-            print("[DATABASE] Successfully created tables from 'schema.sql'!")
+            print("[DATABASE] Successfully created tables from 'db/schema.sql'!")
+
+        self.checks = CheckUtils(self.db)
 
     def initialize_democraciv_guild(self):
         # Get Democraciv guild object

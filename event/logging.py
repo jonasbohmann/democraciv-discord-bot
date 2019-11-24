@@ -49,7 +49,7 @@ class Log(commands.Cog):
         if isinstance(before.channel, discord.DMChannel):
             return
 
-        if not self.bot.checks.is_logging_enabled(before.guild.id):
+        if not await self.bot.checks.is_logging_enabled(before.guild.id):
             return
 
         if not await self.is_channel_excluded(before.guild.id, before.channel.id):
@@ -77,7 +77,7 @@ class Log(commands.Cog):
         if isinstance(message.channel, discord.DMChannel):
             return
 
-        if not self.bot.checks.is_logging_enabled(message.guild.id):
+        if not await self.bot.checks.is_logging_enabled(message.guild.id):
             return
 
         if not await self.is_channel_excluded(message.guild.id, message.channel.id):
@@ -100,7 +100,7 @@ class Log(commands.Cog):
     async def on_raw_bulk_message_delete(self, payload):
         guild = self.bot.get_guild(payload.guild_id)
 
-        if not self.bot.checks.is_logging_enabled(guild.id):
+        if not await self.bot.checks.is_logging_enabled(guild.id):
             return
 
         if not await self.is_channel_excluded(guild.id, payload.channel_id):
@@ -145,7 +145,7 @@ class Log(commands.Cog):
                     except discord.Forbidden:
                         await welcome_channel.send(f":x: Missing permissions to add default role to {member}.")
 
-        if not self.bot.checks.is_logging_enabled(member.guild.id):
+        if not await self.bot.checks.is_logging_enabled(member.guild.id):
             return
 
         embed_fields = {
@@ -160,7 +160,7 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        if not self.bot.checks.is_logging_enabled(member.guild.id):
+        if not await self.bot.checks.is_logging_enabled(member.guild.id):
             return
 
         embed_fields = {
@@ -172,7 +172,7 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
-        if not self.bot.checks.is_logging_enabled(before.guild.id):
+        if not await self.bot.checks.is_logging_enabled(before.guild.id):
             return
 
         if before.display_name != after.display_name:
@@ -219,7 +219,7 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
-        if not self.bot.checks.is_logging_enabled(guild.id):
+        if not await self.bot.checks.is_logging_enabled(guild.id):
             return
 
         embed_fields = {
@@ -231,7 +231,7 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild, user):
-        if not self.bot.checks.is_logging_enabled(guild.id):
+        if not await self.bot.checks.is_logging_enabled(guild.id):
             return
 
         embed_fields = {
@@ -283,7 +283,7 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role):
-        if not self.bot.checks.is_logging_enabled(role.guild.id):
+        if not await self.bot.checks.is_logging_enabled(role.guild.id):
             return
 
         # Handle exception if bot was just added to new guild
@@ -301,7 +301,7 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role):
-        if not self.bot.checks.is_logging_enabled(role.guild.id):
+        if not await self.bot.checks.is_logging_enabled(role.guild.id):
             return
 
         embed_fields = {
@@ -314,7 +314,7 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
-        if not self.bot.checks.is_logging_enabled(channel.guild.id):
+        if not await self.bot.checks.is_logging_enabled(channel.guild.id):
             return
 
         embed_fields = {
@@ -326,7 +326,7 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
-        if not self.bot.checks.is_logging_enabled(channel.guild.id):
+        if not await self.bot.checks.is_logging_enabled(channel.guild.id):
             return
 
         embed_fields = {
