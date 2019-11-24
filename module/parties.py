@@ -95,17 +95,6 @@ class Party(commands.Cog, name='Political Parties'):
                 await ctx.send(f'You are already part of {party}!')
                 return
 
-            # Logging
-            if await self.bot.checks.is_logging_enabled(guild.id):
-                logchannel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-                embed = self.bot.embeds.embed_builder(title=':family_mwgb: Joined Political Party', description="")
-                embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,
-                                inline=False)
-                embed.add_field(name='Party', value=party)
-                embed.timestamp = datetime.datetime.utcnow()
-                embed.set_thumbnail(url=member.avatar_url)
-                await logchannel.send(content=None, embed=embed)
-
         elif party not in config.getParties():
             await ctx.send(':x: I could not find that party!\n\nTry one of these:')
             msg = ''
@@ -154,17 +143,6 @@ class Party(commands.Cog, name='Political Parties'):
             elif party not in [y.name for y in member.roles]:
                 await ctx.send(f'You are not part of {party}!')
                 return
-
-            # Logging
-            if await self.bot.checks.is_logging_enabled(guild.id):
-                log_channel = discord.utils.get(guild.text_channels, name=config.getGuildConfig(guild.id)['logChannel'])
-                embed = self.bot.embeds.embed_builder(title=':triumph: Left Political Party', description="")
-                embed.add_field(name='Member', value=member.mention + ' ' + member.name + '#' + member.discriminator,
-                                inline=False)
-                embed.add_field(name='Party', value=party)
-                embed.timestamp = datetime.datetime.utcnow()
-                embed.set_thumbnail(url=member.avatar_url)
-                await log_channel.send(content=None, embed=embed)
 
         elif party not in config.getParties():
             await ctx.send(':x: I could not find that party!\n\nTry one of these:')

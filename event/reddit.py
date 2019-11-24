@@ -18,16 +18,15 @@ class Reddit:
         self.reddit_task.cancel()
 
     async def get_newest_reddit_post(self):
-        async with self.bot.session.get(f"https://www.reddit.com/r/{self.subreddit}/new.json?limit=1") as response:
+        async with self.bot.session.get(f"https://www.reddit.com/r/{self.subreddit}/new.json?limit=3") as response:
             return await response.json()
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(seconds=30)
     async def reddit_task(self):
-        last_reddit_post = config.getLastRedditPost()
 
         try:
             channel = discord.utils.get(self.bot.democraciv_guild_object.text_channels,
-                                    name=config.getReddit()['redditAnnouncementChannel'])
+                                        name=config.getReddit()['redditAnnouncementChannel'])
         except AttributeError:
             print(f'ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
                   f'in the config to a server I am in or disable Twitch announcements.')
@@ -37,22 +36,30 @@ class Reddit:
             raise exceptions.ChannelNotFoundError(config.getReddit()['redditAnnouncementChannel'])
 
         reddit_post_json = await self.get_newest_reddit_post()
-        reddit_post_json = reddit_post_json["data"]["children"][0]["data"]
 
-        _id = reddit_post_json['id']
-        _title = reddit_post_json['title']
-        _author = f"u/{reddit_post_json['author']}"
-        _comments_link = f"https://reddit.com{reddit_post_json['permalink']}"
+        # Each check last 3 reddit posts in case we missed some in between
+        for i in range(3):
+            reddit_post = reddit_post_json["data"]["children"][i]["data"]
 
-        try:
-            _thumbnail_url = reddit_post_json['preview']['images'][0]['source']['url']
-        except KeyError:
-            _thumbnail_url = reddit_post_json['thumbnail']
+            _id = reddit_post['id']
 
-        if not last_reddit_post['id'] == _id:
+            status = await self.bot.db.execute("INSERT INTO reddit_posts (id) VALUES ($1) ON CONFLICT DO NOTHING", _id)
+
+            # ID already in database -> post already seen
+            if status == "INSERT 0 0":
+                continue
+
+            _title = reddit_post['title']
+            _author = f"u/{reddit_post['author']}"
+            _comments_link = f"https://reddit.com{reddit_post['permalink']}"
+
+            try:
+                _thumbnail_url = reddit_post['preview']['images'][0]['source']['url']
+            except KeyError:
+                _thumbnail_url = reddit_post['thumbnail']
+
             # Set new last_reddit_post
-            config.getLastRedditPost()['id'] = _id
-            config.setLastRedditPost()
+            await self.bot.db.execute("INSERT INTO reddit_posts (id) VALUES ($1) ON CONFLICT DO NOTHING", _id)
 
             embed = self.bot.embeds.embed_builder(
                 title=f":mailbox_with_mail: New post on r/{self.subreddit}",

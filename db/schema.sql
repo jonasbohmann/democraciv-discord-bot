@@ -16,3 +16,7 @@ CREATE TABLE IF NOT EXISTS roles(
     role bigint,
     join_message text
 );
+
+CREATE TABLE IF NOT EXISTS reddit_posts(
+    id text UNIQUE
+);

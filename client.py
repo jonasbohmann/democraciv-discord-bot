@@ -111,15 +111,15 @@ class DemocracivBot(commands.Bot):
         try:
             self.db = await asyncpg.create_pool(user="jonas", password="ehre", database="democraciv", host="127.0.0.1")
         except ConnectionRefusedError:
-            print("[DATABASE] Connection to database was denied!")
+            print("[DATABASE] Connection to database was denied")
             return
         except Exception:
-            print("[DATABASE] Unexpected error occurred while connecting to PostgreSQL database!")
+            print("[DATABASE] Unexpected error occurred while connecting to PostgreSQL database")
             return
 
         with open('db/schema.sql') as sql:
             await self.db.execute(sql.read())
-            print("[DATABASE] Successfully created tables from 'db/schema.sql'!")
+            print("[DATABASE] Successfully initialised database")
 
         self.checks = CheckUtils(self.db)
 
