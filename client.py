@@ -1,8 +1,6 @@
 import time
 import math
-
 import asyncpg
-
 import config
 import discord
 import aiohttp

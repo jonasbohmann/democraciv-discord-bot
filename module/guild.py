@@ -6,6 +6,7 @@ import util.exceptions as exceptions
 
 from discord.ext import commands
 
+
 # -- guild.py | module.guild --
 #
 # Commands that manage a guild's settings. Requires administrator permissions.
@@ -34,16 +35,22 @@ class Guild(commands.Cog):
     @guild.command(name='welcome')
     @commands.has_permissions(administrator=True)
     async def welcome(self, ctx):
-        is_welcome_enabled = self.bot.checks.is_welcome_message_enabled(ctx.guild.id)
-        current_welcome_channel = config.getGuildConfig(ctx.guild.id)['welcomeChannel']
-        current_welcome_message = config.getStrings(ctx.guild.id)['welcomeMessage']
+        is_welcome_enabled = (await self.bot.db.fetchrow("SELECT welcome FROM guilds WHERE id = $1", ctx.guild.id))[
+            'welcome']
 
-        if current_welcome_channel == "":
+        current_welcome_channel = (await self.bot.db.fetchrow("SELECT welcome_channel FROM guilds WHERE id = $1",
+                                                              ctx.guild.id))['welcome_channel']
+        current_welcome_channel = self.bot.get_channel(current_welcome_channel)
+
+        current_welcome_message = (await self.bot.db.fetchrow("SELECT welcome_message FROM guilds WHERE id = $1",
+                                                              ctx.guild.id))['welcome_message']
+
+        if current_welcome_channel is None:
             current_welcome_channel = "This guild currently has no welcome channel."
         else:
-            current_welcome_channel = "#" + current_welcome_channel
+            current_welcome_channel = current_welcome_channel.mention
 
-        if current_welcome_message == "":
+        if current_welcome_message is None or current_welcome_message == "":
             current_welcome_message = "This guild currently has no welcome message."
 
         embed = self.bot.embeds.embed_builder(title=f":wave: Welcome Module for {ctx.guild.name}",
@@ -155,13 +162,17 @@ class Guild(commands.Cog):
     @guild.command(name='logs')
     @commands.has_permissions(administrator=True)
     async def logs(self, ctx):
-        is_logging_enabled = self.bot.checks.is_logging_enabled(ctx.guild.id)
-        current_logging_channel = config.getGuildConfig(ctx.guild.id)['logChannel']
+        is_logging_enabled = (await self.bot.db.fetchrow("SELECT logging FROM guilds WHERE id = $1", ctx.guild.id))[
+            'logging']
 
-        if current_logging_channel == "":
+        current_logging_channel = (await self.bot.db.fetchrow("SELECT logging_channel FROM guilds WHERE id = $1",
+                                                              ctx.guild.id))['logging_channel']
+        current_logging_channel = self.bot.get_channel(current_logging_channel)
+
+        if current_logging_channel is None:
             current_logging_channel = "This guild currently has no welcome channel."
         else:
-            current_logging_channel = "#" + current_logging_channel
+            current_logging_channel = current_logging_channel.mention
 
         embed = self.bot.embeds.embed_builder(title=f":spy: Logging Module for {ctx.guild.name}",
                                               description="React with the :gear: emoji to change the "
@@ -261,22 +272,36 @@ class Guild(commands.Cog):
         Add a channel to the excluded channels with `-guild exclude [channel_name].
         Remove a channel from the excluded channels with `-guild exclude [excluded_channel_name]`.
         """
-        current_logging_channel = config.getGuildConfig(ctx.guild.id)['logChannel']
+        current_logging_channel = (await self.bot.db.fetchrow("SELECT logging_channel FROM guilds WHERE id = $1"
+                                                              , ctx.guild.id))['logging_channel']
+        current_logging_channel = self.bot.get_channel(current_logging_channel)
+
+        if current_logging_channel is None:
+            await ctx.send("This guild currently has no logging channel. Please set one with `-guild logs`.")
+            return
 
         help_description = "Add a channel to the excluded channels with:\n`-guild exclude " \
                            "[channel_name]`\nand remove a channel from the excluded channels " \
                            "with:\n`-guild exclude [excluded_channel_name]`.\n"
 
-        current_excluded_channels_by_name = ""
-
-        for channels in config.getGuildConfig(ctx.guild.id)['excludedChannelsFromLogging']:
-            channels = self.bot.get_channel(int(channels))
-            current_excluded_channels_by_name += f"#{channels.name}\n"
-
-        if current_excluded_channels_by_name == "":
-            current_excluded_channels_by_name = "There are no from logging excluded channels on this guild."
-
         if not channel:
+            current_excluded_channels_by_name = ""
+
+            excluded_channels = (await self.bot.db.fetchrow("SELECT logging_excluded FROM guilds WHERE id = $1"
+                                                            , ctx.guild.id))['logging_excluded']
+
+            if excluded_channels is None:
+                await ctx.send("There are no from logging excluded channels on this guild.")
+                return
+
+            for channel in excluded_channels:
+                channel = self.bot.get_channel(channel)
+                if channel is not None:
+                    current_excluded_channels_by_name += f"{channel.mention}\n"
+
+            if current_excluded_channels_by_name == "":
+                current_excluded_channels_by_name = "There are no from logging excluded channels on this guild."
+
             embed = self.bot.embeds.embed_builder(title=f"Logging-Excluded Channels on {ctx.guild.name}",
                                                   description=help_description)
             embed.add_field(name="Currently Excluded Channels", value=current_excluded_channels_by_name)
@@ -294,7 +319,7 @@ class Guild(commands.Cog):
             if str(channel_object.id) in config.getGuildConfig(ctx.guild.id)['excludedChannelsFromLogging']:
                 if config.removeExcludedLogChannel(ctx.guild.id, str(channel_object.id)):
                     await ctx.send(f":white_check_mark: #{channel_object.name} is no longer excluded from"
-                                   f" showing up in #{current_logging_channel}!")
+                                   f" showing up in #{current_logging_channel.mention}!")
                     return
                 else:
                     await ctx.send(f":x: Unexpected error occurred.")
@@ -302,7 +327,7 @@ class Guild(commands.Cog):
 
             if config.addExcludedLogChannel(ctx.guild.id, str(channel_object.id)):
                 await ctx.send(f":white_check_mark: Excluded channel #{channel_object.name} from showing up in "
-                               f"#{current_logging_channel}!")
+                               f"{current_logging_channel.mention}!")
             else:
                 await ctx.send(f":x: Unexpected error occurred.")
                 return
@@ -310,22 +335,23 @@ class Guild(commands.Cog):
     @guild.command(name='defaultrole')
     @commands.has_permissions(administrator=True)
     async def defaultrole(self, ctx):
-        is_default_role_enabled = self.bot.checks.is_default_role_enabled(ctx.guild.id)
-        current_default_role = config.getGuildConfig(ctx.guild.id)['defaultRole']
-        current_default_role_object = discord.utils.get(ctx.guild.roles, name=current_default_role)
+        is_default_role_enabled = (await self.bot.db.fetchrow("SELECT defaultrole FROM guilds WHERE id = $1",
+                                                              ctx.guild.id))['defaultrole']
 
-        if current_default_role == "":
+        current_default_role = (await self.bot.db.fetchrow("SELECT defaultrole_role FROM guilds WHERE id = $1",
+                                                           ctx.guild.id))['defaultrole_role']
+        current_default_role = ctx.guild.get_role(current_default_role)
+
+        if current_default_role is None:
             current_default_role = "This guild currently has no default role."
+        else:
+            current_default_role = current_default_role.mention
 
         embed = self.bot.embeds.embed_builder(title=f":partying_face: Default Role for {ctx.guild.name}",
                                               description="React with the :gear: emoji to change the settings"
                                                           " of this module.")
         embed.add_field(name="Enabled", value=f"{str(is_default_role_enabled)}")
-
-        if current_default_role_object is None:
-            embed.add_field(name="Role", value=f"{current_default_role}")
-        else:
-            embed.add_field(name="Role", value=f"{current_default_role_object.mention}")
+        embed.add_field(name="Role", value=f"{current_default_role}")
 
         info_embed = await ctx.send(embed=embed)
         await info_embed.add_reaction("\U00002699")

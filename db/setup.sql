@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS guilds(
-    id bigint PRIMARY KEY,
+    id bigint UNIQUE PRIMARY KEY,
     welcome bool,
     welcome_message text,
     welcome_channel bigint,
@@ -16,7 +16,3 @@ CREATE TABLE IF NOT EXISTS roles(
     role text,
     join_message text
 );
-
-
-
-

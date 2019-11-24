@@ -56,7 +56,7 @@
                 ],
                 "logChannel": "team",
                 "enableDefaultRole": true,
-                "defaultRole": "Ehre"
+                "defaultRole": "a"
             },
             "strings": {
                 "welcomeMessage": "yas"
