@@ -137,7 +137,7 @@ class Twitch:
             raise exceptions.GuildNotFoundError(config.getConfig()["democracivServerID"])
 
         if channel is None:
-            raise exceptions.ChannelNotFoundError(config.getReddit()['redditAnnouncementChannel'])
+            raise exceptions.ChannelNotFoundError(config.getTwitch()['twitchAnnouncementChannel'])
 
         twitch_data = await self.check_twitch_livestream()
         if twitch_data is not False:

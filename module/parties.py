@@ -123,7 +123,7 @@ class Party(commands.Cog, name='Political Parties'):
                 return
 
         else:
-            await ctx.send(f":x: That is not a political party! If you're trying give yourself a role from `-roles`, "
+            await ctx.send(f":x: That is not a political party! If you're trying to give yourself a role from `-roles`, "
                            f"use `-role {role.name}`.")
     @join.error
     async def joinerror(self, ctx, error):
@@ -178,8 +178,8 @@ class Party(commands.Cog, name='Political Parties'):
                 return
 
         else:
-            await ctx.send(f":x: That is not a political party! If you're trying remove a role from `-roles` from you, "
-                           f"use `-role {role.name}`.")
+            await ctx.send(f":x: That is not a political party! If you're trying to remove a role from `-roles` from "
+                           f"you, use `-role {role.name}`.")
 
     @leave.error
     async def leaveerror(self, ctx, error):
@@ -249,7 +249,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def addparty(self, ctx):
-        """Add a new political party to the server. This will also create a role on this guild."""
+        """Add a new political party to the server. Takes no arguments."""
 
         await ctx.send(":information_source: Answer with the name of the party you want to create:")
         try:
