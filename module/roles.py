@@ -175,17 +175,17 @@ class Roles(commands.Cog):
             if error.param.name == 'hard':
                 await ctx.send(':x: You have to specify if I should hard-delete or not!\n\n**Usage**:\n'
                                '`-deleterole true <role>` will remove the role **and** delete its Discord role\n'
-                               '`-deleterole false <role>` will remove the role but not delete its Discord role:')
+                               '`-deleterole false <role>` will remove the role but not delete its Discord role')
 
             if error.param.name == 'role':
                 await ctx.send(':x: You have to give me the name of a role to delete!\n\n**Usage**:\n'
                                '`-deleterole true <role>` will remove the role **and** delete its Discord role\n'
-                               '`-deleterole false <role>` will remove the role but not delete its Discord role:')
+                               '`-deleterole false <role>` will remove the role but not delete its Discord role')
 
         elif isinstance(error, commands.BadArgument):
             await ctx.send(':x: Error!\n\n**Usage**:\n'
                            '`-deleterole true <role>` will remove the role **and** delete its Discord role\n'
-                           '`-deleterole false <role>` will remove the role but not delete its Discord role:')
+                           '`-deleterole false <role>` will remove the role but not delete its Discord role')
 
 
 def setup(bot):

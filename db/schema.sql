@@ -20,3 +20,15 @@ CREATE TABLE IF NOT EXISTS roles(
 CREATE TABLE IF NOT EXISTS reddit_posts(
     id text UNIQUE
 );
+
+CREATE TABLE IF NOT EXISTS parties(
+    id bigint UNIQUE PRIMARY KEY,
+    discord text,
+    private bool,
+    leader bigint
+);
+
+CREATE TABLE IF NOT EXISTS party_alias(
+    alias text,
+    party_id bigint references parties(id)
+)

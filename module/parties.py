@@ -1,7 +1,6 @@
 import config
 import string
 import discord
-import datetime
 
 import util.utils as utils
 import util.exceptions as exceptions
@@ -15,29 +14,51 @@ from discord.ext import commands
 #
 
 
-def get_party_from_alias(alias: str):
-    """Gets party name from related alias, returns alias if it is not found"""
-    return config.getPartyAliases().get(alias, alias)
-
-
 class Party(commands.Cog, name='Political Parties'):
     def __init__(self, bot):
         self.bot = bot
 
+    async def get_parties_from_db(self):
+        party_list = await self.bot.db.fetch("SELECT (id, discord) FROM parties")
+        party_dict = {}
+
+        for record in party_list:
+            party_dict[record[0][0]] = record[0][1]
+
+        return party_dict
+
+    async def get_party_role(self, ctx, party):
+        party_id = await self.resolve_party_from_alias(string.capwords(party))
+
+        if isinstance(party_id, str):
+            return discord.utils.get(ctx.guild.roles, name=party_id)
+        elif isinstance(party_id, int):
+            return ctx.guild.get_role(party_id)
+        else:
+            raise exceptions.RoleNotFoundError(party)
+
+    async def resolve_party_from_alias(self, party):
+        """Gets party name from related alias, returns alias if it is not found"""
+        party_id = await self.bot.db.fetchrow("SELECT party_id FROM party_alias WHERE alias = $1", party)
+
+        if party_id is None:
+            return party
+        else:
+            return party_id['party_id']
+
     async def collect_parties_and_members(self, ctx):
         parties_and_members = []
-        party_keys = config.getParties().keys()
-        dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
+        party_keys = (await self.get_parties_from_db()).keys()
         error_string = ":x: The following parties were added as a party but have no role on this server:\n"
 
         for party in party_keys:
-            role = discord.utils.get(dciv_guild.roles, name=party)
+            role = ctx.guild.get_role(party)
 
             if role is None:
-                error_string += f'    -  `{party}`\n'
+                error_string += f'    -  `{str(party)}`\n'
                 continue
 
-            parties_and_members.append((party, len(role.members)))
+            parties_and_members.append((role.name, len(role.members)))
 
         if len(error_string) > 85:
             await ctx.send(error_string)
@@ -47,60 +68,63 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='join')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @utils.is_democraciv_guild()
-    async def join(self, ctx, *party: str):
+    async def join(self, ctx, *, party):
         """Join a Political Party"""
-        if not party:
-            await ctx.send(':x: You have to give me a party as argument!')
-            return
 
-        party_keys = (config.getParties().keys())
-        party = string.capwords(' '.join(party))
-        party = get_party_from_alias(party)
-        member = ctx.message.author
-        guild = ctx.message.guild
-        role = discord.utils.get(ctx.guild.roles, name=party)
+        available_parties = await self.get_parties_from_db()
+        available_parties_by_id = available_parties.keys()
 
-        # Dict with party: partyLeader
-        invite_only_parties = {'المتنورين': 466851004290170902}
+        role = await self.get_party_role(ctx, party)
 
-        if party in config.getParties():
-            if party not in [y.name for y in member.roles]:
-                if party in invite_only_parties:
-                    party_leader_mention = self.bot.get_user(invite_only_parties[party])
+        if role.id in available_parties_by_id:
+            if role not in ctx.message.author.roles:
+                is_private = (await self.bot.db.fetchrow("SELECT private FROM parties WHERE id = $1", role.id))[
+                    'private']
+                if is_private:
+                    party_leader_mention = self.bot.get_user(
+                        (await self.bot.db.fetchrow("SELECT leader FROM parties WHERE id = $1", role.id))['leader'])
 
                     if party_leader_mention is None:
-                        msg = f':x: {party} is invite-only. Ask the party leader for an invitation. '
+                        msg = f':x: {role.name} is invite-only. Ask the party leader for an invitation.'
                     else:
-                        msg = f':x: {party} is invite-only. Ask {party_leader_mention.mention} for an invitation.'
+                        msg = f':x: {role.name} is invite-only. Ask {party_leader_mention.mention} for an invitation.'
 
                     await ctx.send(msg)
                     return
 
                 try:
-                    await member.add_roles(role)
+                    await ctx.message.author.add_roles(role)
                 except discord.Forbidden:
                     raise exceptions.ForbiddenError("add_roles", role.name)
 
-                if party == 'Independent':
-                    msg = f':white_check_mark: You are now an {party}!'
-                    await ctx.send(msg)
+                if role.name == 'Independent':
+                    await ctx.send(f':white_check_mark: You are now an {role.name}!')
 
                 else:
-                    msg = f':white_check_mark: You joined {party}! Now head to their Discord Server and introduce ' \
-                          f'yourself: '
-                    await ctx.send(msg)
-                    await ctx.send(config.getParties()[party])
+                    await ctx.send(
+                        f':white_check_mark: You joined {role.name}! Now head to their Discord Server and '
+                        f'introduce yourself: ')
+                    await ctx.send(available_parties[role.id])
 
-            elif party in [y.name for y in member.roles]:
-                await ctx.send(f'You are already part of {party}!')
+            else:
+                await ctx.send(f':x: You are already part of {role.name}!')
                 return
 
-        elif party not in config.getParties():
-            await ctx.send(':x: I could not find that party!\n\nTry one of these:')
+        else:
+            await ctx.send(f":x: That role is not a party!\n\nTry one of these:")
             msg = ''
-            for key in party_keys:
-                msg += f'{key}\n'
+            for key in available_parties_by_id:
+                role = ctx.guild.get_role(key)
+                if role is not None:
+                    msg += f'{role.name}\n'
             await ctx.send(msg)
+
+    @join.error
+    async def joinerror(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'party':
+                await ctx.send(':x: You have to specify the party you want to join!\n\n**Usage**:\n'
+                               '`-join <party>`')
 
     @commands.command(name='form')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -112,54 +136,51 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='leave')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @utils.is_democraciv_guild()
-    async def leave(self, ctx, *party: str):
+    async def leave(self, ctx, *, party):
         """Leave a Political Party"""
 
-        if not party:
-            await ctx.send(':x: You have to give me a party as argument!')
-            return
+        available_parties = await self.get_parties_from_db()
+        available_parties_by_id = available_parties.keys()
 
-        party = string.capwords(' '.join(party))
-        party_keys = (config.getParties().keys())
+        role = await self.get_party_role(ctx, party)
 
-        party = get_party_from_alias(party)
-
-        member = ctx.message.author
-        guild = ctx.message.guild
-        role = discord.utils.get(ctx.guild.roles, name=party)
-
-        if party in config.getParties():
-            if party in [y.name for y in member.roles]:
-                if party == 'Independent':
-                    msg = f':white_check_mark: You are no longer an {party}!'
+        if role.id in available_parties_by_id:
+            if role in ctx.message.author.roles:
+                if role.name == 'Independent':
+                    msg = f':white_check_mark: You are no longer an {role.name}!'
                 else:
-                    msg = f':white_check_mark: You left {party}!'
+                    msg = f':white_check_mark: You left {role.name}!'
                 await ctx.send(msg)
+
                 try:
-                    await member.remove_roles(role)
+                    await ctx.message.author.remove_roles(role)
                 except discord.Forbidden:
                     raise exceptions.ForbiddenError(task="remove_roles", detail=role.name)
 
-            elif party not in [y.name for y in member.roles]:
-                await ctx.send(f'You are not part of {party}!')
+            else:
+                await ctx.send(f':x: You are not part of {role.name}!')
                 return
 
-        elif party not in config.getParties():
-            await ctx.send(':x: I could not find that party!\n\nTry one of these:')
+        else:
+            await ctx.send(f":x: That role is not a party!\n\nTry one of these:")
             msg = ''
-            for key in party_keys:
-                msg += f'{key}\n'
+            for key in available_parties_by_id:
+                role = ctx.guild.get_role(key)
+                if role is not None:
+                    msg += f'{role.name}\n'
             await ctx.send(msg)
+
+    @leave.error
+    async def leaveerror(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'party':
+                await ctx.send(':x: You have to specify the party you want to leave!\n\n**Usage**:\n'
+                               '`-leave <party>`')
 
     @commands.command(name='members')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def members(self, ctx, *party: str):
+    async def members(self, ctx, *, party=''):
         """Lists all party members"""
-        dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
-
-        if dciv_guild is None:
-            await ctx.send(':x: You have to invite me to the Democraciv server first!')
-
         if not party:
             party_list_embed_content = ''
 
@@ -176,7 +197,7 @@ class Party(commands.Cog, name='Political Parties'):
                         party_list_embed_content += f'**{party[0]}**\n{party[1]} members\n\n'
 
                 # Append Independents to message
-                independent_role = discord.utils.get(dciv_guild.roles, name='Independent')
+                independent_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name='Independent')
                 if len(independent_role.members) == 1:
                     party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
                                                 f' citizen\n\n'
@@ -190,23 +211,21 @@ class Party(commands.Cog, name='Political Parties'):
             await ctx.send(embed=embed)
 
         elif party:
-            party = string.capwords(' '.join(party))
-
-            party = get_party_from_alias(party)
-
-            role = discord.utils.get(dciv_guild.roles, name=party)
+            role = await self.get_party_role(ctx, party)
 
             msg = ''
-            for member in dciv_guild.members:
+            for member in self.bot.democraciv_guild_object.members:
                 if role in member.roles:
                     msg += f'{member.name}\n'
+
             if msg == '':
-                await ctx.send(f":x: '{party}' either doesn't exist or it has 0 members!")
+                msg = 'No members.'
+
             else:
                 if party == 'Independent':
                     title = 'Independent Citizens'
                 else:
-                    title = f'Members of {role}'
+                    title = f'Members of {role.name}'
 
                 embed = self.bot.embeds.embed_builder(title=title, description=f'{msg}', colour=0x7f0000)
                 await ctx.send(embed=embed)
