@@ -30,10 +30,11 @@ class Party(commands.Cog, name='Political Parties'):
         return party_dict
 
     async def get_party_role(self, ctx, party):
-        party_id = await self.resolve_party_from_alias(string.capwords(party))
+        lowercase_party = party.lower()
+        party_id = await self.resolve_party_from_alias(lowercase_party)
 
         if isinstance(party_id, str):
-            return discord.utils.get(ctx.guild.roles, name=party_id)
+            return discord.utils.get(ctx.guild.roles, name=party)
         elif isinstance(party_id, int):
             return ctx.guild.get_role(party_id)
         else:
@@ -51,7 +52,8 @@ class Party(commands.Cog, name='Political Parties'):
     async def collect_parties_and_members(self, ctx):
         parties_and_members = []
         party_keys = (await self.get_parties_from_db()).keys()
-        error_string = "The following parties were added as a party but have no role on the Democraciv guild:\n"
+        error_string = "[DATABASE] The following parties were added as a party but have no role" \
+                       " on the Democraciv guild:\n"
 
         for party in party_keys:
             role = ctx.guild.get_role(party)
@@ -79,7 +81,7 @@ class Party(commands.Cog, name='Political Parties'):
         role = await self.get_party_role(ctx, party)
 
         if role is None:
-            await ctx.send(f":x: Couldn't find a party named '{party}'!\n\nTry one of these:")
+            await ctx.send(f":x: Couldn't find a party named '{party}'!\n\n**Try one of these:**")
             msg = ''
             for key in available_parties_by_id:
                 role = ctx.guild.get_role(key)
@@ -123,8 +125,10 @@ class Party(commands.Cog, name='Political Parties'):
                 return
 
         else:
-            await ctx.send(f":x: That is not a political party! If you're trying to give yourself a role from `-roles`, "
-                           f"use `-role {role.name}`.")
+            await ctx.send(
+                f":x: That is not a political party! If you're trying to give yourself a role from `-roles`, "
+                f"use `-role {role.name}`.")
+
     @join.error
     async def joinerror(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
@@ -151,7 +155,7 @@ class Party(commands.Cog, name='Political Parties'):
         role = await self.get_party_role(ctx, party)
 
         if role is None:
-            await ctx.send(f":x: Couldn't find a party named '{party}'!\n\nTry one of these:")
+            await ctx.send(f":x: Couldn't find a party named '{party}'!\n\n**Try one of these:**")
             msg = ''
             for key in available_parties_by_id:
                 role = ctx.guild.get_role(key)
@@ -285,10 +289,12 @@ class Party(commands.Cog, name='Political Parties'):
                 await self.bot.db.execute("INSERT INTO parties (id, discord) VALUES ($1, $2)", discord_role.id,
                                           party_invite.content)
 
+                # Add both the lowercase name of the new discord role and the lowercase original name that the user
+                # entered in case Discord alters the name string in any way for role creation
                 await self.bot.db.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
-                                          role_name.content, discord_role.id)
+                                          discord_role.name.lower(), discord_role.id)
                 status = await self.bot.db.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
-                                                   string.capwords(role_name.content), discord_role.id)
+                                                   role_name.content.lower(), discord_role.id)
 
         if status == "INSERT 0 1":
             await ctx.send(f':white_check_mark: Added the party "{discord_role.name}" with the invite '
@@ -352,85 +358,78 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
-    async def addalias(self, ctx, *party_and_alias: str):
+    async def addalias(self, ctx):
         """Adds a new alias to party"""
 
-        party_and_alias: tuple = await self.get_arguments(ctx, ' '.join(party_and_alias), 2)
-        if party_and_alias is None:
-            return
-        party, alias = party_and_alias
-        error = await config.addPartyAlias(party, alias)
+        await ctx.send(":information_source: Answer with the name of the party that the new alias should belong to:")
 
-        if error:
-            await ctx.send(f':x: {error}')
+        try:
+            party = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
+                                            timeout=240)
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Aborted.")
+
+        # Check if party role already exists
+        discord_role = await self.get_party_role(ctx, party.content)
+
+        if discord_role is None:
+            raise exceptions.RoleNotFoundError(party.content)
+
+        await ctx.send(f":information_source: Answer with the alias for '{discord_role.name}':")
+
+        try:
+            alias = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
+                                            timeout=300)
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Aborted.")
+
+        async with self.bot.db.acquire() as connection:
+            async with connection.transaction():
+                status = await self.bot.db.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
+                                                   alias.content.lower(), discord_role.id)
+
+        if status == "INSERT 0 1":
+            await ctx.send(f':white_check_mark: Added the alias "{alias.content}" for party '
+                           f'"{discord_role.name}"!')
         else:
-            # Get proper names
-            alias = string.capwords(alias)
-            party = config.getPartyAliases()[alias]
-
-            await ctx.send(f':white_check_mark: Added {alias} as an alias for {party}!')
+            await ctx.send(":x: Unexpected database error occurred.")
 
     @commands.command(name='deletealias')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
-    async def deletealias(self, ctx, *alias: str):
+    async def deletealias(self, ctx, *, alias: str):
         """Deletes pre-existing alias"""
 
-        alias = ' '.join(alias)
-        error = await config.deletePartyAlias(alias)
-
-        if error:
-            await ctx.send(f':x: {error}')
-        else:
-            # Get proper name
-            alias = string.capwords(alias)
-            await ctx.send(f':white_check_mark: Deleted {alias}!')
+        try:
+            await self.bot.db.execute("DELETE FROM party_alias WHERE alias = $1", alias.lower())
+            await ctx.send(f':white_check_mark: Deleted the alias "{alias}".')
+        except Exception:
+            await ctx.send(":x: Unexpected database error occurred.")
 
     @commands.command(name='listaliases')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def listaliases(self, ctx, *party: str):
+    async def listaliases(self, ctx, *, party: str):
         """Lists the given parties aliases, if any exist"""
-        party = string.capwords(' '.join(party))
-        caps_party = party
 
-        parties, aliases = config.getParties(), config.getPartyAliases()
-        if party in parties:
-            pass
-        elif party in aliases:
-            party = aliases[party]
-            caps_party = string.capwords(party)
-        else:
-            await ctx.send(f':x: {party} not found!')
-            return
+        discord_role = await self.get_party_role(ctx, party)
 
-        msg = ''
-        for alias in aliases:
-            if aliases[alias] == party and alias != caps_party:
-                msg += f'{alias}\n'
+        if discord_role is None:
+            raise exceptions.RoleNotFoundError(party)
 
-        if msg:
-            embed = self.bot.embeds.embed_builder(title=f'Aliases of {party}', description=f'{msg}', colour=0x7f0000)
+        aliases = await self.bot.db.fetch("SELECT alias FROM party_alias WHERE party_id = $1", discord_role.id)
+        message = ''
 
+        for record in aliases:
+            message += f"{record['alias']}\n"
+
+        if message == '':
+            await ctx.send(f":x: No aliases found for {discord_role.name}!")
+
+        if message:
+            embed = self.bot.embeds.embed_builder(title=f'Aliases of {discord_role.name}', description=f'{message}',
+                                                  colour=0x7f0000)
             await ctx.send(embed=embed)
-        else:
-            await ctx.send(f":x: No aliases found for {party}!")
-
-    async def get_arguments(self, ctx, arguments: str, expected_arguments: int = -1):
-        """Returns arguments split upon commas as a tuple of strings.
-        If arguments does not equal expected_arguments or there are blank arguments, posts a discord message and returns
-        None. If expected_arguments is -1, does not check for argument count."""
-        argument_count = arguments.count(',') + 1
-        if expected_arguments != -1 and argument_count != expected_arguments:
-            await ctx.send(f':x: Was given {argument_count} arguments but expected {expected_arguments}!')
-            return None
-
-        arguments = tuple(argument.strip() for argument in arguments.split(','))
-        if '' in arguments:
-            await ctx.send(f':x: Cannot accept blank arguments!')
-            return None
-
-        return arguments
 
 
 def setup(bot):
