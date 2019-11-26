@@ -48,7 +48,6 @@ class Legislature(commands.Cog):
         speaker_person = speaker_role.members[0]  # Assuming there's only 1 speaker ever
         vice_speaker_person = vice_speaker_role.members[0]  # Assuming there's only 1 vice-speaker ever
 
-
         try:
             async with ctx.typing():
                 async with self.bot.session.get(google_docs_url) as response:

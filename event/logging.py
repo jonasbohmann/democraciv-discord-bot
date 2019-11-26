@@ -53,8 +53,8 @@ class Log(commands.Cog):
             return
 
         if not await self.is_channel_excluded(before.guild.id, before.channel.id):
-            if not before.clean_content or not after.clean_content:  # Removing this throws a http
-                # 400 bad request exception
+            if not before.clean_content or not after.clean_content:
+                # Removing this throws a http 400 bad request exception
                 return
 
             if before.content == after.content:
@@ -126,14 +126,14 @@ class Log(commands.Cog):
         welcome_channel = member.guild.get_channel(welcome_channel)
 
         if welcome_channel is not None:
-            if self.bot.checks.is_welcome_message_enabled(member.guild.id):
+            if await self.bot.checks.is_welcome_message_enabled(member.guild.id):
                 # Apparently this doesn't raise an error if {member} is not in welcome_message
                 welcome_message = (await self.bot.db.fetchrow("SELECT welcome_message FROM guilds WHERE id = $1",
                                                               member.guild.id))['welcome_message'].\
                                                                                         format(member=member.mention)
                 await welcome_channel.send(welcome_message)
 
-            if self.bot.checks.is_default_role_enabled(member.guild.id):
+            if await self.bot.checks.is_default_role_enabled(member.guild.id):
 
                 default_role = (await self.bot.db.fetchrow("SELECT defaultrole_role FROM guilds WHERE id = $1",
                                                            member.guild.id))['defaultrole_role']
@@ -143,7 +143,7 @@ class Log(commands.Cog):
                     try:
                         await member.add_roles(default_role)
                     except discord.Forbidden:
-                        await welcome_channel.send(f":x: Missing permissions to add default role to {member}.")
+                        await welcome_channel.send(f":x: Missing permissions to add default role to {member.name}.")
 
         if not await self.bot.checks.is_logging_enabled(member.guild.id):
             return

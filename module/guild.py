@@ -111,7 +111,7 @@ class Guild(commands.Cog):
                 try:
                     channel = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx)
                                                       , timeout=120)
-                except (asyncio.TimeoutError, TimeoutError):
+                except asyncio.TimeoutError:
                     await ctx.send(":x: Aborted.")
                     return
 
@@ -121,7 +121,10 @@ class Guild(commands.Cog):
 
                 new_welcome_channel = channel.content
 
-                channel_object = await commands.TextChannelConverter().convert(ctx, new_welcome_channel)
+                try:
+                    channel_object = await commands.TextChannelConverter().convert(ctx, new_welcome_channel)
+                except commands.BadArgument:
+                    raise exceptions.ChannelNotFoundError(new_welcome_channel)
 
                 if not channel_object:
                     raise exceptions.ChannelNotFoundError(new_welcome_channel)
@@ -243,7 +246,10 @@ class Guild(commands.Cog):
 
                 new_logging_channel = channel.content
 
-                channel_object = await commands.TextChannelConverter().convert(ctx, new_logging_channel)
+                try:
+                    channel_object = await commands.TextChannelConverter().convert(ctx, new_logging_channel)
+                except commands.BadArgument:
+                    raise exceptions.ChannelNotFoundError(new_logging_channel)
 
                 if not channel_object:
                     raise exceptions.ChannelNotFoundError(new_logging_channel)
@@ -309,7 +315,10 @@ class Guild(commands.Cog):
             return
 
         else:
-            channel_object = await commands.TextChannelConverter().convert(ctx, channel)
+            try:
+                channel_object = await commands.TextChannelConverter().convert(ctx, channel)
+            except commands.BadArgument:
+                raise exceptions.ChannelNotFoundError(channel)
 
             if not channel_object:
                 raise exceptions.ChannelNotFoundError(channel)
@@ -424,7 +433,7 @@ class Guild(commands.Cog):
 
                 try:
                     new_default_role_object = await commands.RoleConverter().convert(ctx, new_default_role)
-                except Exception:
+                except commands.BadArgument:
                     new_default_role_object = None
 
                 if new_default_role_object is None:

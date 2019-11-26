@@ -28,7 +28,7 @@ class Reddit:
             channel = discord.utils.get(self.bot.democraciv_guild_object.text_channels,
                                         name=config.getReddit()['redditAnnouncementChannel'])
         except AttributeError:
-            print(f'ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
+            print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
                   f'in the config to a server I am in or disable Twitch announcements.')
             raise exceptions.GuildNotFoundError(config.getConfig()["democracivServerID"])
 

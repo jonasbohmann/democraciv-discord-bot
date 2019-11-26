@@ -311,7 +311,11 @@ class Party(commands.Cog, name='Political Parties'):
                 except asyncio.TimeoutError:
                     await ctx.send(":x: Aborted.")
 
-                leader_role = await commands.MemberConverter().convert(ctx, leader.content)
+                try:
+                    leader_role = await commands.MemberConverter().convert(ctx, leader.content)
+                except commands.BadArgument:
+                    raise exceptions.MemberNotFoundError(leader.content)
+
 
             elif str(reaction.emoji) == "\U0000274c":
                 is_private = False

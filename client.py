@@ -110,10 +110,10 @@ class DemocracivBot(commands.Bot):
 
     async def connect_to_db(self):
         try:
-            self.db = await asyncpg.create_pool(user=config.getConfig()['postgresql-user'],
-                                                password=config.getConfig()['postgresql-password'],
-                                                database=config.getConfig()['postgresql-database'],
-                                                host=config.getConfig()['postgresql-host'])
+            self.db = await asyncpg.create_pool(user=config.getTokenFile()['postgresql-user'],
+                                                password=config.getTokenFile()['postgresql-password'],
+                                                database=config.getTokenFile()['postgresql-database'],
+                                                host=config.getTokenFile()['postgresql-host'])
         except ConnectionRefusedError:
             print("[DATABASE] Connection to database was denied")
             self.db_ready = False
