@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS guilds(
 
 CREATE TABLE IF NOT EXISTS roles(
     guild_id bigint references guilds(id),
-    role bigint,
+    role_id bigint,
+    role_name text,
     join_message text
 );
 

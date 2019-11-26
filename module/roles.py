@@ -18,13 +18,23 @@ class Roles(commands.Cog):
         self.bot = bot
 
     async def get_roles(self, ctx):
-        role_list = await self.bot.db.fetch("SELECT * FROM roles WHERE guild_id = $1", ctx.guild.id)
+        role_list = await self.bot.db.fetch("SELECT (role_id, join_message) FROM roles WHERE guild_id = $1", ctx.guild.id)
         role_dict = {}
 
         for record in role_list:
-            role_dict[record['role']] = record['join_message']
+            role_dict[record[0][0]] = record[0][1]
 
         return role_dict
+
+    async def get_role_from_db(self, ctx, role: str):
+        lowercase_role = role.lower()
+        role_id = await self.bot.db.fetchrow("SELECT role_id FROM roles WHERE guild_id = $1 AND role_name = $2",
+                                             ctx.guild.id, lowercase_role)
+
+        if role_id is None:
+            return discord.utils.get(ctx.guild.roles, name=role)
+        else:
+            return ctx.guild.get_role(role_id['role_id'])
 
     @commands.command(name='roles')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -51,23 +61,17 @@ class Roles(commands.Cog):
     async def role(self, ctx, *, role: str):
         """Add or remove yourself to/from a role"""
 
-        if not role:
-            await ctx.send(":x: You have to tell me which role you want to join or leave!")
-            return
-
         available_roles = await self.get_roles(ctx)
-
-        member = ctx.message.author
-        discord_role = discord.utils.get(ctx.guild.roles, name=role)
+        discord_role = await self.get_role_from_db(ctx, role)
 
         if not discord_role:
             raise exceptions.RoleNotFoundError(role)
 
         else:
-            if discord_role not in member.roles:
+            if discord_role not in ctx.message.author.roles:
                 if discord_role.id in available_roles:
                     try:
-                        await member.add_roles(discord_role)
+                        await ctx.message.author.add_roles(discord_role)
                     except discord.Forbidden:
                         raise exceptions.ForbiddenError("add_roles", discord_role.name)
 
@@ -75,10 +79,10 @@ class Roles(commands.Cog):
                 else:
                     await ctx.send(f":x: You are not allowed to give yourself this role! "
                                    f"If you're trying to join a political party, use `-join {discord_role.name}`")
-            elif discord_role in member.roles:
+            elif discord_role in ctx.message.author.roles:
                 if discord_role.id in available_roles:
                     try:
-                        await member.remove_roles(discord_role)
+                        await ctx.message.author.remove_roles(discord_role)
                     except discord.Forbidden:
                         raise exceptions.ForbiddenError("remove_roles", discord_role.name)
 
@@ -86,6 +90,13 @@ class Roles(commands.Cog):
                 else:
                     await ctx.send(f":x: You are not allowed remove this role from you! "
                                    f"If you're trying to leave a political party, use `-leave {discord_role.name}`")
+
+    @role.error
+    async def rolerror(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'role':
+                await ctx.send(':x: You have to tell me which role you want to join or leave!\n\n**Usage**:\n'
+                               '`-role <role>`')
 
     @commands.command(name='addrole')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
@@ -122,8 +133,9 @@ class Roles(commands.Cog):
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
 
-        status = await self.bot.db.execute("INSERT INTO roles (guild_id, role, join_message) VALUES ($1, $2, $3)",
-                                           ctx.guild.id, discord_role.id, role_join_message.content)
+        status = await self.bot.db.execute("INSERT INTO roles (guild_id, role_id, role_name, join_message) "
+                                           "VALUES ($1, $2, $3, $4)", ctx.guild.id, discord_role.id,
+                                           discord_role.name.lower(), role_join_message.content)
 
         if status == "INSERT 0 1":
             await ctx.send(f':white_check_mark: Added the role "{role_name.content}" with the join message '
@@ -155,7 +167,7 @@ class Roles(commands.Cog):
                     except discord.Forbidden:
                         raise exceptions.ForbiddenError(task="delete_role", detail=role)
 
-                status = await self.bot.db.execute("DELETE FROM roles WHERE guild_id = $2 AND role = $1",
+                status = await self.bot.db.execute("DELETE FROM roles WHERE guild_id = $2 AND role_id = $1",
                                                    discord_role.id, ctx.guild.id)
 
                 if status == "DELETE 1":
