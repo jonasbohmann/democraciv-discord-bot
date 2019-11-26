@@ -1,8 +1,7 @@
-import asyncio
-
 import config
-import string
 import discord
+import asyncio
+import asyncpg
 
 import util.utils as utils
 import util.exceptions as exceptions
@@ -52,14 +51,14 @@ class Party(commands.Cog, name='Political Parties'):
     async def collect_parties_and_members(self, ctx):
         parties_and_members = []
         party_keys = (await self.get_parties_from_db()).keys()
-        error_string = "[DATABASE] The following parties were added as a party but have no role" \
-                       " on the Democraciv guild:\n"
+        error_string = "[DATABASE] The following ids were added as a party but have no role" \
+                       " on the Democraciv guild: "
 
         for party in party_keys:
             role = ctx.guild.get_role(party)
 
             if role is None:
-                error_string += f'    -  `{str(party)}`\n'
+                error_string += f'{str(party)}, '
                 continue
 
             parties_and_members.append((role.name, len(role.members)))
@@ -284,10 +283,64 @@ class Party(commands.Cog, name='Political Parties'):
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
 
+        private_question = await ctx.send(
+            "Should this new party be private? React with :white_check_mark: if yes, or with :x: if not.")
+
+        await private_question.add_reaction("\U00002705")
+        await private_question.add_reaction("\U0000274c")
+
+        done, pending = await asyncio.wait([self.bot.wait_for('reaction_add',
+                                                              check=self.bot.
+                                                              checks.wait_for_reaction_check(ctx, private_question),
+                                                              timeout=240),
+                                            self.bot.wait_for('reaction_remove',
+                                                              check=self.bot.
+                                                              checks.wait_for_reaction_check(ctx, private_question),
+                                                              timeout=240)],
+                                           return_when=asyncio.FIRST_COMPLETED)
+        try:
+            reaction, user = done.pop().result()
+
+            if str(reaction.emoji) == "\U00002705":
+                is_private = True
+
+                await ctx.send(":information_source: Answer with the name of the party's leader:")
+                try:
+                    leader = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
+                                                     timeout=240)
+                except asyncio.TimeoutError:
+                    await ctx.send(":x: Aborted.")
+
+                leader_role = await commands.MemberConverter().convert(ctx, leader.content)
+
+            elif str(reaction.emoji) == "\U0000274c":
+                is_private = False
+
+        except (asyncio.TimeoutError, TimeoutError):
+            await ctx.send(":x: Aborted.")
+
+        for future in pending:
+            future.cancel()
+
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
-                await self.bot.db.execute("INSERT INTO parties (id, discord) VALUES ($1, $2)", discord_role.id,
-                                          party_invite.content)
+                if is_private:
+                    try:
+                        await self.bot.db.execute(
+                            "INSERT INTO parties (id, discord, private, leader) VALUES ($1, $2, $3, $4)",
+                            discord_role.id,
+                            party_invite.content, True, leader_role.id)
+                    except asyncpg.UniqueViolationError:
+                        await ctx.send(f":x: A party named '{discord_role.name}' already exists!")
+                        return
+                else:
+                    try:
+                        await self.bot.db.execute(
+                            "INSERT INTO parties (id, discord, private) VALUES ($1, $2, $3)", discord_role.id,
+                            party_invite.content, False)
+                    except asyncpg.UniqueViolationError:
+                        await ctx.send(f":x: A party named '{discord_role.name}' already exists!")
+                        return
 
                 # Add both the lowercase name of the new discord role and the lowercase original name that the user
                 # entered in case Discord alters the name string in any way for role creation
