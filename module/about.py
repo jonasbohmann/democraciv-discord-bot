@@ -19,12 +19,18 @@ class About(commands.Cog):
     async def about(self, ctx):
         """About this bot"""
         embed = self.bot.embeds.embed_builder(title='About', description="")
-        embed.add_field(name='Author', value=config.getConfig()['author'], inline=True)
-        embed.add_field(name='Version', value=config.getConfig()['botVersion'], inline=True)
+        embed.add_field(name='Author', value=self.bot.DerJonas_object.name, inline=True)
+        embed.add_field(name='Version', value=config.getConfig()['botVersion'], inline=False)
+        embed.add_field(name='Guilds', value=str(len(self.bot.guilds)), inline=True)
+        embed.add_field(name='Users', value=str(len(self.bot.users)), inline=True)
+        embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=False)
         embed.add_field(name='Uptime', value=self.bot.get_uptime(), inline=True)
-        embed.add_field(name='Prefix', value=config.getPrefix(), inline=True)
         embed.add_field(name='Ping', value=(str(self.bot.get_ping()) + 'ms'), inline=True)
+        embed.add_field(name="Source Code", value="[Link](https://github.com/jonasbohmann/democraciv-discord-bot)",
+                        inline=False)
+        embed.add_field(name='Prefix', value=config.getPrefix(), inline=True)
         embed.add_field(name='Commands', value='See ' + config.getPrefix() + 'help', inline=True)
+        embed.set_thumbnail(url=self.bot.DerJonas_object.avatar_url)
         await ctx.send(embed=embed)
 
     @commands.command(name='uptime')

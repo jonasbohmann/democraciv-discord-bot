@@ -18,7 +18,7 @@ class Reddit:
         self.reddit_task.cancel()
 
     async def get_newest_reddit_post(self):
-        async with self.bot.session.get(f"https://www.reddit.com/r/{self.subreddit}/new.json?limit=3") as response:
+        async with self.bot.session.get(f"https://www.reddit.com/r/{self.subreddit}/new.json?limit=5") as response:
             return await response.json()
 
     @tasks.loop(seconds=30)
@@ -37,8 +37,8 @@ class Reddit:
 
         reddit_post_json = await self.get_newest_reddit_post()
 
-        # Each check last 3 reddit posts in case we missed some in between
-        for i in range(3):
+        # Each check last 5 reddit posts in case we missed some in between
+        for i in range(5):
             reddit_post = reddit_post_json["data"]["children"][i]["data"]
 
             _id = reddit_post['id']

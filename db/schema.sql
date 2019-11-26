@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS guilds(
     logging_excluded bigint[],
     defaultrole bool,
     defaultrole_role bigint
-
 );
 
 CREATE TABLE IF NOT EXISTS roles(

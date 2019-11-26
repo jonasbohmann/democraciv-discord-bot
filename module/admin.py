@@ -125,7 +125,6 @@ class Admin(commands.Cog):
         """Run a diagnosis for this bot"""
         # Long & ugly function that spits out some debug information
 
-        dciv_guild = self.bot.get_guild(int(config.getConfig()["democracivServerID"]))
         info = self.bot.embeds.embed_builder(title=":drop_of_blood: Health Diagnosis",
                                              description="Running diagnosis...")
         await ctx.send(embed=info)
@@ -153,22 +152,11 @@ class Admin(commands.Cog):
             await ctx.send(embed=discord_embed)
 
             config_embed = self.bot.embeds.embed_builder(title="Config Diagnosis", description="")
-            config_embed.add_field(name="Connected Democraciv Guild", value=f"{dciv_guild}")
+            config_embed.add_field(name="Connected Democraciv Guild", value=f"{self.bot.democraciv_guild_object.name}")
             await ctx.send(embed=config_embed)
 
             # Sleep for 3 seconds to avoid being rate-limited
             await asyncio.sleep(3)
-
-            guild_embed = self.bot.embeds.embed_builder(title="Guild Diagnosis", description="")
-            guild_embed.add_field(name="Guild Initialized", value=str(config.checkIfGuildExists(ctx.guild.id)))
-            guild_embed.add_field(name="Name", value=f"{config.getGuilds()[str(ctx.guild.id)]['name']}")
-            guild_embed.add_field(name="Config", value=f"```{config.getGuilds()[str(ctx.guild.id)]['config']}```",
-                                  inline=False)
-            guild_embed.add_field(name="Strings", value=f"```{config.getGuilds()[str(ctx.guild.id)]['strings']}```",
-                                  inline=False)
-            guild_embed.add_field(name="Roles", value=f"```{config.getGuilds()[str(ctx.guild.id)]['roles']}```",
-                                  inline=False)
-            await ctx.send(embed=guild_embed)
 
             permission_embed = self.bot.embeds.embed_builder(title="Permission Diagnosis", description="")
             permission_embed.add_field(name="Administrator", value=str(ctx.guild.me.guild_permissions.administrator))
