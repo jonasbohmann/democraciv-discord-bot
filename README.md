@@ -1,5 +1,5 @@
 ##  democraciv-discord-bot
- [![Discord](https://discordapp.com/api/guilds/208984105310879744/embed.png)](http://discord.gg/j7sZ3tD) ![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7-blue) [![Build Status](https://travis-ci.com/jonasbohmann/democraciv-discord-bot.svg?branch=master)](https://travis-ci.com/jonasbohmann/democraciv-discord-bot) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/c6f2dc5d8f434756b5b0017845732715)](https://www.codacy.com/manual/jonasbohmann/democraciv-discord-bot?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jonasbohmann/democraciv-discord-bot&amp;utm_campaign=Badge_Grade)
+ [![Discord](https://discordapp.com/api/guilds/208984105310879744/embed.png)](http://discord.gg/j7sZ3tD) ![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue) [![Build Status](https://travis-ci.com/jonasbohmann/democraciv-discord-bot.svg?branch=master)](https://travis-ci.com/jonasbohmann/democraciv-discord-bot) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/c6f2dc5d8f434756b5b0017845732715)](https://www.codacy.com/manual/jonasbohmann/democraciv-discord-bot?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jonasbohmann/democraciv-discord-bot&amp;utm_campaign=Badge_Grade)
 
 General-purpose Discord Bot with unique features designed for the r/Democraciv Discord. 
 
@@ -9,6 +9,7 @@ Provides useful information, political party & role management and much more.
 
 *  [Python](https://www.python.org/downloads//) 3.6 or newer
 *  [discord.py](https://github.com/Rapptz/discord.py) 1.2.5 or newer
+*  [PostgreSQL](https://www.postgresql.org/) 9.6 or newer 
 
 **Run `pip install -r requirements.txt` to install all required dependencies.**
 
@@ -24,12 +25,27 @@ The file should look like this:
 ```
  {
   "token": "INSERT_TOKEN_HERE",
-  "twitchAPIKey": "INSERT_TWITCH_API_KEY_HERE"
+  "twitchAPIKey": "INSERT_TWITCH_API_KEY_HERE",
+  "postgresql-user": "INSERT_NAME_OF_YOUR_POSTGRES_USER_HERE",
+  "postgresql-password": "INSERT_PASSWORD_OF_YOUR_POSTGRES_USER_HERE",
+  "postgresql-database": "INSERT_NAME_OF_YOUR_DATABASE_HERE",
+  "postgresql-host": "INSERT_ADRESS_OF_YOUR_DATABASE_HERE"
  }
 ```
-Add the token of your Discord App like above. Then, run `client.py`.
+Add the token of your Discord App, your Twitch Helix API key if you enabled the Twitch module, and your
+ PostgreSQL configuration like above. 
 
 To use all of the bot's features, set the `democracivServerID` in `config.json` to a guild ID that the bot is in.
+
+After you've done all that, run `client.py`.
+
+####  Database
+
+This bot needs a PostgreSQL database to run. To install and configure PostgreSQL, head [here](https://www.postgresql.org/).
+ The bot was tested with PostgreSQL 9.6 and 12.1, everything else in between should work.
+
+
+You only need to create an empty database, the bot will then fill that with tables on startup.
 
 
 ####  Twitch 
@@ -100,18 +116,24 @@ event.twitch | Handles notifications when twitch.tv/democraciv is live |
 
 ####  Update 0.14.0 - The SQL Update
 
-*  Add a PostgreSQL database
-*  Migrate `guilds.json`, `parties.json` and `last_reddit_post.json` to new database
+*  ~~Add a PostgreSQL database~~
+*  ~~Migrate `guilds.json`, `parties.json` and `last_reddit_post.json` to new database~~
+*  ~~Make roles case-insensitive~~
+*  ~~Rewrite -addparty, -addrole, -deleteparty, -deleterole, -addalias, -deletealias to be safer and cover all needed values
+for database~~
+*  ~~Refactor asyncio.wait_for() tasks in guild.py~~
 
 ####  Update 0.15.0 - The Government Update
 
 *  Add Legislature session management
 *  Add webhook for notifications on new SC cases 
+*  Refactor help.py
 
 
 ####  Update 0.16.0 - The Moderation Update
 
 *  Add a Moderation module with `-kick`, `-ban` etc. commands
+*  Add webhook for notifications on new Quire tasks
 
 ####  Update 0.16.0 - The Suggestions Update
 

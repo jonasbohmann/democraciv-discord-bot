@@ -48,7 +48,6 @@ class Legislature(commands.Cog):
         speaker_person = speaker_role.members[0]  # Assuming there's only 1 speaker ever
         vice_speaker_person = vice_speaker_role.members[0]  # Assuming there's only 1 vice-speaker ever
 
-
         try:
             async with ctx.typing():
                 async with self.bot.session.get(google_docs_url) as response:
@@ -87,6 +86,15 @@ class Legislature(commands.Cog):
             await ctx.send(":x: Unexpected error occurred during DMing the Speaker or Vice-Speaker!"
                            " Your bill was not submitted, please try again!")
             return
+
+    @submit.error
+    async def submiterror(self, ctx, error):
+        if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
+            await ctx.send(":x: Only Legislators are allowed to use this command!")
+
+        elif isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'google_docs_url':
+                await ctx.send(":x: You have to give me a valid Google Docs URL of the bill you want to submit!")
 
 
 def setup(bot):

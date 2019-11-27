@@ -1,4 +1,5 @@
 discord.py==1.2.5
+asyncpg
 jishaku
 psutil
 lxml

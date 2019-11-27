@@ -1,7 +1,6 @@
 import config
 import discord
 import datetime
-
 import util.exceptions as exceptions
 
 from discord.ext import commands
@@ -40,7 +39,8 @@ class EmbedUtils:
 class CheckUtils:
     """Utils to assist with discord.ext.commands checks"""
 
-    def __init__(self):
+    def __init__(self, db):
+        self.db = db
         self.democraciv_guild_id = int(config.getConfig()["democracivServerID"])
         self.der_jonas_id = int(config.getConfig()['authorID'])
 
@@ -70,14 +70,52 @@ class CheckUtils:
 
         return check
 
-    def is_logging_enabled(self, guild_id):
+    async def is_logging_enabled(self, guild_id):
         """Returns true if logging is enabled for this guild."""
-        return config.getGuildConfig(str(guild_id))['enableLogging']
+        try:
+            return_bool = (await self.db.fetchrow("SELECT logging FROM guilds WHERE id = $1", guild_id))['logging']
+        except TypeError:
+            return False
 
-    def is_welcome_message_enabled(self, guild_id):
+        if return_bool is None:
+            return False
+        else:
+            return return_bool
+
+    async def is_welcome_message_enabled(self, guild_id):
         """Returns true if welcome messages are enabled for this guild."""
-        return config.getGuildConfig(str(guild_id))['enableWelcomeMessage']
+        try:
+            return_bool = (await self.db.fetchrow("SELECT welcome FROM guilds WHERE id = $1", guild_id))['welcome']
+        except TypeError:
+            return False
 
-    def is_default_role_enabled(self, guild_id):
+        if return_bool is None:
+            return False
+        else:
+            return return_bool
+
+    async def is_default_role_enabled(self, guild_id):
         """Returns true if a default role is enabled for this guild."""
-        return config.getGuildConfig(str(guild_id))['enableDefaultRole']
+        try:
+            return_bool = (await self.db.fetchrow("SELECT defaultrole FROM guilds WHERE id = $1", guild_id))[
+                'defaultrole']
+        except TypeError:
+            return False
+
+        if return_bool is None:
+            return False
+        else:
+            return return_bool
+
+    async def is_guild_initialized(self, guild_id):
+        """Returns true if the guild has an entry in the bot's database."""
+        try:
+            return_bool = (await self.db.fetchrow("SELECT id FROM guilds WHERE id = $1", guild_id))[
+                'id']
+        except TypeError:
+            return False
+
+        if return_bool is None:
+            return False
+        else:
+            return True

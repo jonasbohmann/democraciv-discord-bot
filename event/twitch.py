@@ -1,9 +1,10 @@
 import config
 import aiohttp
-import asyncio
 import discord
 
 import util.exceptions as exceptions
+
+from discord.ext import tasks
 
 
 # -- Twitch  --
@@ -19,6 +20,10 @@ class Twitch:
         self.http_header = {'Client-ID': self.twitch_API_token}
         self.streamer = config.getTwitch()['twitchChannelName']
         self.active_stream = False
+        self.twitch_task.start()
+
+    def __del__(self):
+        self.twitch_task.cancel()
 
     async def streaming_rules_reminder(self):
         executive_channel = self.bot.get_channel(637051136955777049)  # #executive channel
@@ -121,41 +126,41 @@ class Twitch:
         thumbnail = twitch['data'][0]['thumbnail_url'].replace('{width}', '720').replace('{height}', '380')
         return [twitch['data'][0]['title'], thumbnail]
 
+    @tasks.loop(minutes=5)
     async def twitch_task(self):
-        await self.bot.wait_until_ready()
-
         try:
             channel = discord.utils.get(self.bot.democraciv_guild_object.text_channels,
                                         name=config.getTwitch()['twitchAnnouncementChannel'])
         except AttributeError:
-            print(f'ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
+            print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
                   f'in the config to a server I am in or disable Twitch announcements.')
             raise exceptions.GuildNotFoundError(config.getConfig()["democracivServerID"])
 
         if channel is None:
-            raise exceptions.ChannelNotFoundError(config.getReddit()['redditAnnouncementChannel'])
+            raise exceptions.ChannelNotFoundError(config.getTwitch()['twitchAnnouncementChannel'])
 
-        while not self.bot.is_closed():
-            twitch_data = await self.check_twitch_livestream()
-            if twitch_data is not False:
-                if self.active_stream is False:
-                    self.active_stream = True
+        twitch_data = await self.check_twitch_livestream()
+        if twitch_data is not False:
+            if self.active_stream is False:
+                self.active_stream = True
 
-                    embed = self.bot.embeds.embed_builder(title=f":satellite: {self.streamer} - Live on Twitch",
-                                                          description="", time_stamp=True)
-                    embed.add_field(name="Title", value=twitch_data[0], inline=False)
-                    embed.add_field(name="Link", value=f"https://twitch.tv/{self.streamer}", inline=False)
-                    embed.set_image(url=twitch_data[1])
+                embed = self.bot.embeds.embed_builder(title=f":satellite: {self.streamer} - Live on Twitch",
+                                                      description="", time_stamp=True)
+                embed.add_field(name="Title", value=twitch_data[0], inline=False)
+                embed.add_field(name="Link", value=f"https://twitch.tv/{self.streamer}", inline=False)
+                embed.set_image(url=twitch_data[1])
 
-                    if config.getTwitch()['everyonePingOnAnnouncement']:
-                        await channel.send(f'@everyone {self.streamer} is live on Twitch!')
+                if config.getTwitch()['everyonePingOnAnnouncement']:
+                    await channel.send(f'@everyone {self.streamer} is live on Twitch!')
 
-                    await channel.send(embed=embed)
+                await channel.send(embed=embed)
 
-                    # Send reminder about streaming rules to executive channel
-                    await self.streaming_rules_reminder()
+                # Send reminder about streaming rules to executive channel
+                await self.streaming_rules_reminder()
 
-                    # Send reminder to moderation to export Twitch VOD
-                    await self.export_twitch_reminder()
+                # Send reminder to moderation to export Twitch VOD
+                await self.export_twitch_reminder()
 
-            await asyncio.sleep(180)
+    @twitch_task.before_loop
+    async def before_twitch_task(self):
+        await self.bot.wait_until_ready()
