@@ -1,10 +1,10 @@
 import time
 import math
-import asyncpg
 import config
 import discord
 import aiohttp
 import asyncio
+import asyncpg
 import logging
 import datetime
 import traceback
@@ -22,7 +22,7 @@ from util.utils import CheckUtils, EmbedUtils
 # -- Discord Bot for the r/Democraciv Server --
 #
 # Author: DerJonas
-# Library: discord.py 1.0.0+
+# Library: discord.py 1.2.5
 # License: MIT
 # Source: https://github.com/jonasbohmann/democraciv-discord-bot
 #
@@ -30,8 +30,8 @@ from util.utils import CheckUtils, EmbedUtils
 
 # -- client.py --
 #
-# Main part of the bot. Loads all modules on startup. Remove or add new modules by adding or removing them to/from
-# "initial_extensions".
+# Main part of the bot. Loads all modules on startup and initializes PostgreSQL database.
+# Remove or add new modules by adding or removing them to/from "initial_extensions".
 #
 
 
@@ -66,8 +66,6 @@ class DemocracivBot(commands.Bot):
         # Save the bot's start time for get_uptime()
         self.start_time = time.time()
 
-        self.token = config.getToken()
-
         self.commands_cooldown = config.getCooldown()
         self.commands_prefix = config.getPrefix()
 
@@ -76,7 +74,7 @@ class DemocracivBot(commands.Bot):
 
         # Set up aiohttp.ClientSession() for usage in wikipedia, reddit & twitch API calls
         self.session = None
-        self.task = self.loop.create_task(self.initialize_aiohttp_session())
+        self.loop.create_task(self.initialize_aiohttp_session())
 
         # PostgreSQL database connection
         self.db_ready = False
@@ -102,13 +100,18 @@ class DemocracivBot(commands.Bot):
                 print(f'[BOT] Failed to load module {extension}.')
                 traceback.print_exc()
 
-        # Load jishaku
+        # Load the debug cog jishaku
         self.load_extension("jishaku")
 
     async def initialize_aiohttp_session(self):
+        # Initialize a shared aiohttp ClientSession to be used for -wikipedia, -submit and reddit & twitch requests
+        # aiohttp needs to have this in an async function, that's why it's seperated from __init__()
         self.session = aiohttp.ClientSession()
 
     async def connect_to_db(self):
+        # Attempt to connect to PostgreSQL database with specified credentials from token.json
+        # This will also fill an empty database with tables needed by the bot
+
         try:
             self.db = await asyncpg.create_pool(user=config.getTokenFile()['postgresql-user'],
                                                 password=config.getTokenFile()['postgresql-password'],
@@ -127,12 +130,14 @@ class DemocracivBot(commands.Bot):
             await self.db.execute(sql.read())
             print("[DATABASE] Successfully initialised database")
 
+        self.checks = CheckUtils(self.db)
         self.db_ready = True
 
-        self.checks = CheckUtils(self.db)
-
     def initialize_democraciv_guild(self):
-        # Get Democraciv guild object
+        # The bot needs a "main" guild object that will be used for reddit & twitch notifications, political parties and
+        # admin commands. The bot will automatically pick a random guild that it can see if 'democracivServerID' from
+        # config.json is invalid
+
         self.democraciv_guild_object = self.get_guild(int(config.getConfig()["democracivServerID"]))
 
         if self.democraciv_guild_object is None:
@@ -162,14 +167,16 @@ class DemocracivBot(commands.Bot):
         print(f"[BOT] Logged in as {self.user.name} with discord.py {discord.__version__}")
         print("------------------------------------------------------------")
 
-        await asyncio.sleep(1)
-
         if not self.db_ready:
+            # If the connection to the database fails, stop the bot
             print("[DATABASE] Fatal error while connecting to database. Exiting...")
             await self.close()
             await self.logout()
             return
 
+        # The bot needs a "main" guild object that will be used for reddit & twitch notifications, political parties and
+        # admin commands. The bot will automatically pick a random guild that it can see if 'democracivServerID' from
+        # config.json is invalid
         self.initialize_democraciv_guild()
 
         # Set status on Discord
@@ -198,6 +205,8 @@ class DemocracivBot(commands.Bot):
         if message.author.bot:
             return
 
+        # If, for whatever reason, the current guild does not have an entry in the bot's database, attempt to initialize
+        # the default config
         if not await self.checks.is_guild_initialized(message.guild.id):
             print(f"[DATABASE] Guild {message.guild.name} ({message.guild.id}) was not initialized. "
                   f"Adding default entry to database... ")
@@ -217,5 +226,6 @@ class DemocracivBot(commands.Bot):
         await self.process_commands(message)
 
 
+# This will start the bot when you run this file.
 if __name__ == '__main__':
     DemocracivBot().run(config.getToken(), reconnect=True, bot=True)

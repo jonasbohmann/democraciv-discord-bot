@@ -9,7 +9,7 @@ Provides useful information, political party & role management and much more.
 
 *  [Python](https://www.python.org/downloads//) 3.6 or newer
 *  [discord.py](https://github.com/Rapptz/discord.py) 1.2.5 or newer
-*  A database with PostgreSQL 9.6 or newer
+*  A PostgreSQL 9.6 or newer database 
 
 **Run `pip install -r requirements.txt` to install all required dependencies.**
 

@@ -34,6 +34,8 @@ class Guild(commands.Cog):
     @guild.command(name='welcome')
     @commands.has_permissions(administrator=True)
     async def welcome(self, ctx):
+        """Configure a welcome message that every new member should see once they join this guild."""
+
         is_welcome_enabled = (await self.bot.db.fetchrow("SELECT welcome FROM guilds WHERE id = $1", ctx.guild.id))[
             'welcome']
 
@@ -152,6 +154,8 @@ class Guild(commands.Cog):
     @guild.command(name='logs')
     @commands.has_permissions(administrator=True)
     async def logs(self, ctx):
+        """Configure the logging module that logs every guild event to a specified channel."""
+
         is_logging_enabled = (await self.bot.db.fetchrow("SELECT logging FROM guilds WHERE id = $1", ctx.guild.id))[
             'logging']
 
@@ -318,6 +322,8 @@ class Guild(commands.Cog):
     @guild.command(name='defaultrole')
     @commands.has_permissions(administrator=True)
     async def defaultrole(self, ctx):
+        """Configure a default role that every new member should get once they join this guild."""
+
         is_default_role_enabled = (await self.bot.db.fetchrow("SELECT defaultrole FROM guilds WHERE id = $1",
                                                               ctx.guild.id))['defaultrole']
 
@@ -367,7 +373,6 @@ class Guild(commands.Cog):
             return
 
         else:
-            # TODO done, pending not relevant anymore
             if str(reaction.emoji) == "\U00002705":
                 await self.bot.db.execute("UPDATE guilds SET defaultrole = true WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Enabled the default role.")

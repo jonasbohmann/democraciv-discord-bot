@@ -104,14 +104,13 @@ class Roles(commands.Cog):
     async def addrole(self, ctx):
         """Create a new role on this guild and add it to the bot's -roles list. Doesn't take any arguments."""
 
-        await ctx.send(":information_source: Answer with the name of the role you want to create:\n\n:warning: "
-                       "The name should not contain *multiple* spaces between two words!\nExample:"
-                       " 'Test Role' works, but 'Test    Role' will not work.")
+        await ctx.send(":information_source: Answer with the name of the role you want to create:")
         try:
             role_name = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
                                                 timeout=240)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
+            return
 
         # Check if role already exists
         discord_role = discord.utils.get(ctx.guild.roles, name=role_name.content)
@@ -132,6 +131,7 @@ class Roles(commands.Cog):
                                                         timeout=300)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
+            return
 
         status = await self.bot.db.execute("INSERT INTO roles (guild_id, role_id, role_name, join_message) "
                                            "VALUES ($1, $2, $3, $4)", ctx.guild.id, discord_role.id,

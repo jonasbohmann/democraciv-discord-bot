@@ -20,6 +20,7 @@ class Party(commands.Cog, name='Political Parties'):
         self.bot = bot
 
     async def get_parties_from_db(self):
+        """Gets all parties from database and converts asyncpg.Record objects into Python dicts"""
         party_list = await self.bot.db.fetch("SELECT (id, discord) FROM parties")
         party_dict = {}
 
@@ -29,6 +30,11 @@ class Party(commands.Cog, name='Political Parties'):
         return party_dict
 
     async def get_party_role(self, ctx, party: str):
+        """Returns role object that belongs to a political party.
+        Gets aliases from party name first, if any exists get role object from party ID
+        If no matching aliases were found in the database, try if discord.utils.get(name=...) can find the role.
+        Returns None if every search/query failed."""
+
         lowercase_party = party.lower()
         party_id = await self.resolve_party_from_alias(lowercase_party)
 
@@ -40,7 +46,7 @@ class Party(commands.Cog, name='Political Parties'):
             return None
 
     async def resolve_party_from_alias(self, party: str):
-        """Gets party name from related alias, returns alias if it is not found"""
+        """Gets party name from related alias, returns input argument if no aliases are found"""
         party_id = await self.bot.db.fetchrow("SELECT party_id FROM party_alias WHERE alias = $1", party)
 
         if party_id is None:
@@ -49,6 +55,7 @@ class Party(commands.Cog, name='Political Parties'):
             return party_id['party_id']
 
     async def collect_parties_and_members(self, ctx):
+        """Returns all parties with a role on the Democraciv guild and their amount of members for -members."""
         parties_and_members = []
         party_keys = (await self.get_parties_from_db()).keys()
         error_string = "[DATABASE] The following ids were added as a party but have no role" \
@@ -72,7 +79,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @utils.is_democraciv_guild()
     async def join(self, ctx, *, party: str):
-        """Join a Political Party"""
+        """Join a political party"""
 
         available_parties = await self.get_parties_from_db()
         available_parties_by_id = available_parties.keys()
@@ -138,7 +145,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='form')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def form(self, ctx):
-        """Form a Political Party"""
+        """Form a political party"""
         link = "https://forms.gle/ETyFrr6qucr95MMA9"
         await ctx.send(f"You can fill out this form with all the details to form a political party:\n{link}")
 
@@ -146,7 +153,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @utils.is_democraciv_guild()
     async def leave(self, ctx, *, party: str):
-        """Leave a Political Party"""
+        """Leave a political party"""
 
         available_parties = await self.get_parties_from_db()
         available_parties_by_id = available_parties.keys()
@@ -194,7 +201,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='members')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def members(self, ctx, *, party: str = None):
-        """Lists all party members"""
+        """Get the current political party ranking or a list of all party members."""
         if party is not None or not party:
             party_list_embed_content = ''
 
@@ -252,7 +259,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def addparty(self, ctx):
-        """Add a new political party to the server. Takes no arguments."""
+        """Add a new political party to the guild."""
 
         await ctx.send(":information_source: Answer with the name of the party you want to create:")
 
@@ -284,6 +291,7 @@ class Party(commands.Cog, name='Political Parties'):
                                                    timeout=300)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
+            return
 
         private_question = await ctx.send(
             "Should this new party be private? React with :white_check_mark: if yes, or with :x: if not.")
@@ -310,6 +318,7 @@ class Party(commands.Cog, name='Political Parties'):
                                                      timeout=240)
                 except asyncio.TimeoutError:
                     await ctx.send(":x: Aborted.")
+                    return
 
                 try:
                     leader_role = await commands.MemberConverter().convert(ctx, leader.content)
@@ -409,7 +418,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def addalias(self, ctx):
-        """Adds a new alias to party"""
+        """Add a new alias to a party"""
 
         await ctx.send(":information_source: Answer with the name of the party that the new alias should belong to:")
 
@@ -451,8 +460,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def deletealias(self, ctx, *, alias: str):
-        """Deletes pre-existing alias"""
-
+        """Delete a pre-existing alias"""
         try:
             await self.bot.db.execute("DELETE FROM party_alias WHERE alias = $1", alias.lower())
             await ctx.send(f':white_check_mark: Deleted the alias "{alias}".')
@@ -462,7 +470,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='listaliases')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def listaliases(self, ctx, *, party: str):
-        """Lists the given parties aliases, if any exist"""
+        """List the given parties aliases"""
 
         discord_role = await self.get_party_role(ctx, party)
 

@@ -87,6 +87,15 @@ class Legislature(commands.Cog):
                            " Your bill was not submitted, please try again!")
             return
 
+    @submit.error
+    async def submiterror(self, ctx, error):
+        if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
+            await ctx.send(":x: Only Legislators are allowed to use this command!")
+
+        elif isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'google_docs_url':
+                await ctx.send(":x: You have to give me a valid Google Docs URL of the bill you want to submit!")
+
 
 def setup(bot):
     bot.add_cog(Legislature(bot))

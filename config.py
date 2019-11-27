@@ -1,22 +1,6 @@
 import os
 import json
 
-# -- Discord Bot for the r/Democraciv Server --
-#
-# Author: DerJonas
-# Interpreter: Python3.7
-# Library: discord.py
-# License: MIT
-# Source: https://github.com/jonasbohmann/democraciv-discord-bot
-#
-
-
-# -- config.py --
-#
-# Script that handles the loading of the config.json.
-# Throws error if the file is not found.
-#
-
 
 #    ATTENTION
 #
