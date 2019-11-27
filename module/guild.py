@@ -82,15 +82,13 @@ class Guild(commands.Cog):
         await status_question.add_reaction("\U0000274c")
 
         try:
-            done, pending = await ctx.bot.wait_for('reaction_add',
-                                                   check=self.bot.checks. wait_for_reaction_check(ctx, status_question),
-                                                   timeout=240)
+            reaction, user = await ctx.bot.wait_for('reaction_add',
+                                                    check=self.bot.checks.wait_for_reaction_check(ctx, status_question),
+                                                    timeout=240)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
 
         else:
-            reaction, user = done.pop().result()
-
             if str(reaction.emoji) == "\U00002705":
                 await self.bot.db.execute("UPDATE guilds SET welcome = true WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Enabled the welcome module.")
@@ -174,7 +172,7 @@ class Guild(commands.Cog):
         await info_embed.add_reaction("\U00002699")
 
         try:
-            await ctx.bot.wait_for('reaction_add',check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed),
+            await ctx.bot.wait_for('reaction_add', check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed),
                                    timeout=300)
         except asyncio.TimeoutError:
             return
@@ -190,15 +188,13 @@ class Guild(commands.Cog):
         await status_question.add_reaction("\U0000274c")
 
         try:
-            done, pending = await ctx.bot.wait_for('reaction_add',
-                                                   check=self.bot.checks.wait_for_reaction_check(ctx, status_question),
-                                                   timeout=240)
+            reaction, user = await ctx.bot.wait_for('reaction_add',
+                                                    check=self.bot.checks.wait_for_reaction_check(ctx, status_question),
+                                                    timeout=240)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
 
         else:
-            reaction, user = done.pop().result()
-
             if str(reaction.emoji) == "\U00002705":
                 await self.bot.db.execute("UPDATE guilds SET logging = true WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Enabled the logging module.")
@@ -310,7 +306,8 @@ class Guild(commands.Cog):
                                f"{current_logging_channel.mention}!")
             else:
                 await ctx.send(f":x: Unexpected error occurred.")
-                return
+
+            return
 
     @guild.command(name='defaultrole')
     @commands.has_permissions(administrator=True)
@@ -354,10 +351,10 @@ class Guild(commands.Cog):
         await status_question.add_reaction("\U0000274c")
 
         try:
-            done, pending = await ctx.bot.wait_for('reaction_add',
-                                                   check=self.bot.
-                                                   checks.wait_for_reaction_check(ctx, status_question),
-                                                   timeout=240)
+            reaction, user = await ctx.bot.wait_for('reaction_add',
+                                                    check=self.bot.
+                                                    checks.wait_for_reaction_check(ctx, status_question),
+                                                    timeout=240)
 
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
@@ -365,8 +362,6 @@ class Guild(commands.Cog):
 
         else:
             # TODO done, pending not relevant anymore
-            reaction, user = done.pop().result()
-
             if str(reaction.emoji) == "\U00002705":
                 await self.bot.db.execute("UPDATE guilds SET defaultrole = true WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Enabled the default role.")
