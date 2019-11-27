@@ -202,7 +202,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def members(self, ctx, *, party: str = None):
         """Get the current political party ranking or a list of all party members."""
-        if party is not None or not party:
+        if party is None or not party:
             party_list_embed_content = ''
 
             async with ctx.typing():
