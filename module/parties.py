@@ -28,7 +28,7 @@ class Party(commands.Cog, name='Political Parties'):
 
         return party_dict
 
-    async def get_party_role(self, ctx, party):
+    async def get_party_role(self, ctx, party: str):
         lowercase_party = party.lower()
         party_id = await self.resolve_party_from_alias(lowercase_party)
 
@@ -39,7 +39,7 @@ class Party(commands.Cog, name='Political Parties'):
         else:
             return None
 
-    async def resolve_party_from_alias(self, party):
+    async def resolve_party_from_alias(self, party: str):
         """Gets party name from related alias, returns alias if it is not found"""
         party_id = await self.bot.db.fetchrow("SELECT party_id FROM party_alias WHERE alias = $1", party)
 
@@ -71,7 +71,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='join')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @utils.is_democraciv_guild()
-    async def join(self, ctx, *, party):
+    async def join(self, ctx, *, party: str):
         """Join a Political Party"""
 
         available_parties = await self.get_parties_from_db()
@@ -145,7 +145,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='leave')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @utils.is_democraciv_guild()
-    async def leave(self, ctx, *, party):
+    async def leave(self, ctx, *, party: str):
         """Leave a Political Party"""
 
         available_parties = await self.get_parties_from_db()
@@ -193,9 +193,9 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='members')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def members(self, ctx, *, party=''):
+    async def members(self, ctx, *, party: str = None):
         """Lists all party members"""
-        if not party:
+        if party is not None or not party:
             party_list_embed_content = ''
 
             async with ctx.typing():
@@ -255,11 +255,13 @@ class Party(commands.Cog, name='Political Parties'):
         """Add a new political party to the server. Takes no arguments."""
 
         await ctx.send(":information_source: Answer with the name of the party you want to create:")
+
         try:
             role_name = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
                                                 timeout=240)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
+            return
 
         # Check if party role already exists
         discord_role = discord.utils.get(ctx.guild.roles, name=role_name.content)
@@ -289,18 +291,16 @@ class Party(commands.Cog, name='Political Parties'):
         await private_question.add_reaction("\U00002705")
         await private_question.add_reaction("\U0000274c")
 
-        done, pending = await asyncio.wait([self.bot.wait_for('reaction_add',
-                                                              check=self.bot.
-                                                              checks.wait_for_reaction_check(ctx, private_question),
-                                                              timeout=240),
-                                            self.bot.wait_for('reaction_remove',
-                                                              check=self.bot.
-                                                              checks.wait_for_reaction_check(ctx, private_question),
-                                                              timeout=240)],
-                                           return_when=asyncio.FIRST_COMPLETED)
         try:
-            reaction, user = done.pop().result()
+            reaction, user = await self.bot.wait_for('reaction_add',
+                                                     check=self.bot.checks.wait_for_reaction_check(ctx,
+                                                                                                   private_question),
+                                                     timeout=240)
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Aborted.")
+            return
 
+        else:
             if str(reaction.emoji) == "\U00002705":
                 is_private = True
 
@@ -316,15 +316,8 @@ class Party(commands.Cog, name='Political Parties'):
                 except commands.BadArgument:
                     raise exceptions.MemberNotFoundError(leader.content)
 
-
             elif str(reaction.emoji) == "\U0000274c":
                 is_private = False
-
-        except (asyncio.TimeoutError, TimeoutError):
-            await ctx.send(":x: Aborted.")
-
-        for future in pending:
-            future.cancel()
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
@@ -363,7 +356,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
-    async def deleteparty(self, ctx, hard: bool, *, party):
+    async def deleteparty(self, ctx, hard: bool, *, party: str):
         """Remove a party.
 
                 Usage:
@@ -425,6 +418,7 @@ class Party(commands.Cog, name='Political Parties'):
                                             timeout=240)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
+            return
 
         # Check if party role already exists
         discord_role = await self.get_party_role(ctx, party.content)
@@ -439,6 +433,7 @@ class Party(commands.Cog, name='Political Parties'):
                                             timeout=300)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
+            return
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
