@@ -87,6 +87,7 @@ class Guild(commands.Cog):
                                                     timeout=240)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
+            return
 
         else:
             if str(reaction.emoji) == "\U00002705":
@@ -112,16 +113,18 @@ class Guild(commands.Cog):
                 try:
                     channel_object = await commands.TextChannelConverter().convert(ctx, new_welcome_channel)
                 except commands.BadArgument:
-                    raise exceptions.ChannelNotFoundError(new_welcome_channel)
+                    await ctx.send(f":x: Couldn't find a channel named '{new_welcome_channel}' on this guild!")
+                    return
 
                 if not channel_object:
-                    raise exceptions.ChannelNotFoundError(new_welcome_channel)
+                    await ctx.send(f":x: Couldn't find a channel named '{new_welcome_channel}' on this guild!")
+                    return
 
                 status = await self.bot.db.execute("UPDATE guilds SET welcome_channel = $2 WHERE id = $1",
                                                    ctx.guild.id, channel_object.id)
 
                 if status == "UPDATE 1":
-                    await ctx.send(f":white_check_mark: Set the welcome channel to #{channel_object.name}")
+                    await ctx.send(f":white_check_mark: Set the welcome channel to #{channel_object.name}.")
 
                 # Get new welcome message
                 await ctx.send(
@@ -157,7 +160,7 @@ class Guild(commands.Cog):
         current_logging_channel = self.bot.get_channel(current_logging_channel)
 
         if current_logging_channel is None:
-            current_logging_channel = "This guild currently has no welcome channel."
+            current_logging_channel = "This guild currently has no logging channel."
         else:
             current_logging_channel = current_logging_channel.mention
 
@@ -193,6 +196,7 @@ class Guild(commands.Cog):
                                                     timeout=240)
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
+            return
 
         else:
             if str(reaction.emoji) == "\U00002705":
@@ -217,16 +221,18 @@ class Guild(commands.Cog):
                 try:
                     channel_object = await commands.TextChannelConverter().convert(ctx, new_logging_channel)
                 except commands.BadArgument:
-                    raise exceptions.ChannelNotFoundError(new_logging_channel)
+                    await ctx.send(f":x: Couldn't find a channel named '{new_logging_channel}' on this guild!")
+                    return
 
                 if not channel_object:
-                    raise exceptions.ChannelNotFoundError(new_logging_channel)
+                    await ctx.send(f":x: Couldn't find a channel named '{new_logging_channel}' on this guild!")
+                    return
 
                 status = await self.bot.db.execute("UPDATE guilds SET logging_channel = $2 WHERE id = $1", ctx.guild.id,
                                                    channel_object.id)
 
                 if status == "UPDATE 1":
-                    await ctx.send(f":white_check_mark: Set the logging channel to #{channel_object.name}")
+                    await ctx.send(f":white_check_mark: Set the logging channel to #{channel_object.name}.")
 
             elif str(reaction.emoji) == "\U0000274c":
                 await self.bot.db.execute("UPDATE guilds SET logging = false WHERE id = $1", ctx.guild.id)
@@ -245,7 +251,7 @@ class Guild(commands.Cog):
         current_logging_channel = self.bot.get_channel(current_logging_channel)
 
         if current_logging_channel is None:
-            await ctx.send("This guild currently has no logging channel. Please set one with `-guild logs`.")
+            await ctx.send(":x: This guild currently has no logging channel. Please set one with `-guild logs`.")
             return
 
         help_description = "Add/Remove a channel to the excluded channels with:\n`-guild exclude [channel_name]`\n"
@@ -358,7 +364,7 @@ class Guild(commands.Cog):
 
         except asyncio.TimeoutError:
             await ctx.send(":x: Aborted.")
-            # TODO check if this returns
+            return
 
         else:
             # TODO done, pending not relevant anymore
@@ -389,7 +395,7 @@ class Guild(commands.Cog):
 
                 if new_default_role_object is None:
                     await ctx.send(
-                        f":information_source: Couldn't find a role named '{new_default_role}', creating new role...")
+                        f":information_source: Couldn't find a role named '{new_default_role}', **creating new role...")
                     try:
                         new_default_role_object = await ctx.guild.create_role(name=new_default_role)
                     except discord.Forbidden:
@@ -397,7 +403,7 @@ class Guild(commands.Cog):
 
                 else:
                     await ctx.send(
-                        f":white_check_mark: I'll use the pre-existing role named "
+                        f":white_check_mark: I'll use the **pre-existing role** named "
                         f"'{new_default_role_object.name}' for the default role.")
 
                 status = await self.bot.db.execute("UPDATE guilds SET defaultrole_role = $2 WHERE id = $1",

@@ -14,14 +14,14 @@
 
   "reddit":
   {
-    "enableRedditAnnouncements": true,
+    "enableRedditAnnouncements": false,
     "subreddit": "democraciv",
     "redditAnnouncementChannel": "reddit"
   },
 
   "twitch":
   {
-    "enableTwitchAnnouncements": true,
+    "enableTwitchAnnouncements": false,
     "twitchAnnouncementChannel": "announcements",
     "twitchChannelName": "democraciv",
     "everyonePingOnAnnouncement": true

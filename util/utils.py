@@ -72,12 +72,50 @@ class CheckUtils:
 
     async def is_logging_enabled(self, guild_id):
         """Returns true if logging is enabled for this guild."""
-        return (await self.db.fetchrow("SELECT logging FROM guilds WHERE id = $1", guild_id))['logging']
+        try:
+            return_bool = (await self.db.fetchrow("SELECT logging FROM guilds WHERE id = $1", guild_id))['logging']
+        except TypeError:
+            return False
+
+        if return_bool is None:
+            return False
+        else:
+            return return_bool
 
     async def is_welcome_message_enabled(self, guild_id):
         """Returns true if welcome messages are enabled for this guild."""
-        return (await self.db.fetchrow("SELECT welcome FROM guilds WHERE id = $1", guild_id))['welcome']
+        try:
+            return_bool = (await self.db.fetchrow("SELECT welcome FROM guilds WHERE id = $1", guild_id))['welcome']
+        except TypeError:
+            return False
+
+        if return_bool is None:
+            return False
+        else:
+            return return_bool
 
     async def is_default_role_enabled(self, guild_id):
         """Returns true if a default role is enabled for this guild."""
-        return (await self.db.fetchrow("SELECT defaultrole FROM guilds WHERE id = $1", guild_id))['defaultrole']
+        try:
+            return_bool = (await self.db.fetchrow("SELECT defaultrole FROM guilds WHERE id = $1", guild_id))[
+                'defaultrole']
+        except TypeError:
+            return False
+
+        if return_bool is None:
+            return False
+        else:
+            return return_bool
+
+    async def is_guild_initialized(self, guild_id):
+        """Returns true if the guild has an entry in the bot's database."""
+        try:
+            return_bool = (await self.db.fetchrow("SELECT id FROM guilds WHERE id = $1", guild_id))[
+                'id']
+        except TypeError:
+            return False
+
+        if return_bool is None:
+            return False
+        else:
+            return True

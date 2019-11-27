@@ -3,6 +3,7 @@ import datetime
 
 from discord.ext import commands
 
+
 # -- logging.py | event.logging --
 #
 # Logging module.
@@ -24,23 +25,27 @@ class Log(commands.Cog):
         if thumbnail is not None:
             embed.set_thumbnail(url=thumbnail)
 
-        # Send event embed to author DM
-        if to_owner:
-            embed.add_field(name='Guild', value=guild.name, inline=False)
-            await self.bot.DerJonas_dm_channel.send(embed=embed)
-
         # Send event embed to log channel
         log_channel = (await self.bot.db.fetchrow("SELECT logging_channel FROM guilds WHERE id = $1",
                                                   guild.id))['logging_channel']
         log_channel = guild.get_channel(log_channel)
+
         if log_channel is not None:
             await log_channel.send(embed=embed)
+
+        # Send event embed to author DM
+        if to_owner:
+            embed.add_field(name='Guild', value=f"{guild.name} ({guild.id})", inline=False)
+            await self.bot.DerJonas_dm_channel.send(embed=embed)
 
     async def is_channel_excluded(self, guild_id, channel_id):
         excluded_channels = (await self.bot.db.fetchrow("SELECT logging_excluded FROM guilds WHERE id = $1"
                                                         , guild_id))['logging_excluded']
 
-        return channel_id in excluded_channels
+        if excluded_channels is not None:
+            return channel_id in excluded_channels
+        else:
+            return False
 
     # -- Message Events --
 
@@ -129,8 +134,8 @@ class Log(commands.Cog):
             if await self.bot.checks.is_welcome_message_enabled(member.guild.id):
                 # Apparently this doesn't raise an error if {member} is not in welcome_message
                 welcome_message = (await self.bot.db.fetchrow("SELECT welcome_message FROM guilds WHERE id = $1",
-                                                              member.guild.id))['welcome_message'].\
-                                                                                        format(member=member.mention)
+                                                              member.guild.id))['welcome_message']. \
+                    format(member=member.mention)
                 await welcome_channel.send(welcome_message)
 
             if await self.bot.checks.is_default_role_enabled(member.guild.id):
@@ -252,11 +257,11 @@ class Log(commands.Cog):
             f":warning: I was added to {guild.name} ({guild.id}). Here are some invites:")
 
         # Get invite for new guild to send to owner_dm_channel
-        guild_invites = await guild.invites()
         try:
+            guild_invites = await guild.invites()
             guild_invite_1 = str(guild_invites[0])
             await self.bot.DerJonas_dm_channel.send(guild_invite_1)
-        except IndexError:
+        except (IndexError, discord.Forbidden):
             pass
 
         # Send introduction message to random guild channel
@@ -268,16 +273,22 @@ class Log(commands.Cog):
                                                           f"have any questions or suggestions, "
                                                           f"send a DM to {self.bot.DerJonas_object.mention}!")
 
-        # Add new guild to guilds.json
-        status = self.bot.db.execute("INSERT INTO guilds (id, welcome, logging, defaultrole) "
-                                     "VALUES ($1, false, false, false)", guild.id)
+        # Add new guild to database
+        status = await self.bot.db.execute("INSERT INTO guilds (id, welcome, logging, defaultrole) "
+                                           "VALUES ($1, false, false, false)", guild.id)
 
         if status == "INSERT 0 1":
-            await introduction_channel.send(embed=embed)
+            try:
+                await introduction_channel.send(embed=embed)
+            except discord.Forbidden:
+                print(f"[BOT] Got Forbidden while sending my introduction message on {guild.name} ({guild.id})")
 
         elif not status:
-            await introduction_channel.send(f":x: Unexpected error occurred while initializing this guild.\n\n"
-                                            f"Help me {self.bot.DerJonas_object.mention} :worried:")
+            try:
+                await introduction_channel.send(f":x: Unexpected error occurred while initializing this guild.\n\n"
+                                                f"Help me {self.bot.DerJonas_object.mention} :worried:")
+            except discord.Forbidden:
+                print(f"[BOT] Got Forbidden while sending my introduction message on {guild.name} ({guild.id})")
 
         return
 
