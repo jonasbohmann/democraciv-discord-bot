@@ -62,24 +62,17 @@ class Guild(commands.Cog):
         info_embed = await ctx.send(embed=embed)
         await info_embed.add_reaction("\U00002699")
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
-                                                             check=self.bot.checks.
-                                                             wait_for_gear_reaction_check(ctx, info_embed),
-                                                             timeout=240),
-                                            ctx.bot.wait_for('reaction_remove', check=self.bot.checks.
-                                                             wait_for_gear_reaction_check(ctx, info_embed)
-                                                             , timeout=240)],
-                                           return_when=asyncio.FIRST_COMPLETED)
-
         try:
-            dump = done.pop().result()
+            await ctx.bot.wait_for('reaction_add',
+                                   check=self.bot.checks.
+                                   wait_for_gear_reaction_check(ctx, info_embed),
+                                   timeout=300)
+
+        except asyncio.TimeoutError:
+            return
+
+        else:
             await self.edit_welcome_settings(ctx)
-
-        except (asyncio.TimeoutError, TimeoutError):
-            pass
-
-        for future in pending:
-            future.cancel()
 
     async def edit_welcome_settings(self, ctx):
 
@@ -88,17 +81,14 @@ class Guild(commands.Cog):
         await status_question.add_reaction("\U00002705")
         await status_question.add_reaction("\U0000274c")
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
-                                                             check=self.bot.checks.
-                                                             wait_for_reaction_check(ctx, status_question),
-                                                             timeout=240),
-                                            ctx.bot.wait_for('reaction_remove',
-                                                             check=self.bot.checks.
-                                                             wait_for_reaction_check(ctx, status_question),
-                                                             timeout=240)],
-                                           return_when=asyncio.FIRST_COMPLETED)
-
         try:
+            done, pending = await ctx.bot.wait_for('reaction_add',
+                                                   check=self.bot.checks. wait_for_reaction_check(ctx, status_question),
+                                                   timeout=240)
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Aborted.")
+
+        else:
             reaction, user = done.pop().result()
 
             if str(reaction.emoji) == "\U00002705":
@@ -109,13 +99,13 @@ class Guild(commands.Cog):
                 await ctx.send(
                     ":information_source: Answer with the name of the channel the welcome module should use:")
                 try:
-                    channel = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx)
-                                                      , timeout=120)
+                    channel = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
+                                                      timeout=120)
                 except asyncio.TimeoutError:
                     await ctx.send(":x: Aborted.")
                     return
 
-                if not channel:
+                if not channel.content:
                     await ctx.send(":x: Aborted.")
                     return
 
@@ -143,7 +133,7 @@ class Guild(commands.Cog):
                     welcome_message = await self.bot.wait_for('message',
                                                               check=self.bot.checks.wait_for_message_check(ctx),
                                                               timeout=300)
-                except (asyncio.TimeoutError, TimeoutError):
+                except asyncio.TimeoutError:
                     await ctx.send(":x: Aborted.")
                     return
 
@@ -157,13 +147,6 @@ class Guild(commands.Cog):
             elif str(reaction.emoji) == "\U0000274c":
                 await self.bot.db.execute("UPDATE guilds SET welcome = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Disabled the welcome module.")
-
-        except (asyncio.TimeoutError, TimeoutError):
-            await ctx.send(":x: Aborted.")
-            pass
-
-        for future in pending:
-            future.cancel()
 
     @guild.command(name='logs')
     @commands.has_permissions(administrator=True)
@@ -190,23 +173,14 @@ class Guild(commands.Cog):
         info_embed = await ctx.send(embed=embed)
         await info_embed.add_reaction("\U00002699")
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
-                                                             check=self.bot.checks.wait_for_gear_reaction_check
-                                                             (ctx, info_embed), timeout=240),
-                                            ctx.bot.wait_for('reaction_remove', check=self.bot.checks.
-                                                             wait_for_gear_reaction_check(ctx, info_embed),
-                                                             timeout=240)],
-                                           return_when=asyncio.FIRST_COMPLETED)
-
         try:
-            dump = done.pop().result()
+            await ctx.bot.wait_for('reaction_add',check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed),
+                                   timeout=300)
+        except asyncio.TimeoutError:
+            return
+
+        else:
             await self.edit_log_settings(ctx)
-
-        except (asyncio.TimeoutError, TimeoutError):
-            pass
-
-        for future in pending:
-            future.cancel()
 
     async def edit_log_settings(self, ctx):
 
@@ -215,16 +189,14 @@ class Guild(commands.Cog):
         await status_question.add_reaction("\U00002705")
         await status_question.add_reaction("\U0000274c")
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
-                                                             check=self.bot.
-                                                             checks.wait_for_reaction_check(ctx, status_question),
-                                                             timeout=240),
-                                            ctx.bot.wait_for('reaction_remove',
-                                                             check=self.bot.
-                                                             checks.wait_for_reaction_check(ctx, status_question),
-                                                             timeout=240)],
-                                           return_when=asyncio.FIRST_COMPLETED)
         try:
+            done, pending = await ctx.bot.wait_for('reaction_add',
+                                                   check=self.bot.checks.wait_for_reaction_check(ctx, status_question),
+                                                   timeout=240)
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Aborted.")
+
+        else:
             reaction, user = done.pop().result()
 
             if str(reaction.emoji) == "\U00002705":
@@ -236,11 +208,11 @@ class Guild(commands.Cog):
                 try:
                     channel = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
                                                       timeout=120)
-                except (asyncio.TimeoutError, TimeoutError):
+                except asyncio.TimeoutError:
                     await ctx.send(":x: Aborted.")
-                    pass
+                    return
 
-                if not channel:
+                if not channel.content:
                     await ctx.send(":x: Aborted.")
                     return
 
@@ -254,9 +226,6 @@ class Guild(commands.Cog):
                 if not channel_object:
                     raise exceptions.ChannelNotFoundError(new_logging_channel)
 
-                if new_logging_channel.startswith("#"):
-                    new_logging_channel.strip("#")
-
                 status = await self.bot.db.execute("UPDATE guilds SET logging_channel = $2 WHERE id = $1", ctx.guild.id,
                                                    channel_object.id)
 
@@ -266,12 +235,6 @@ class Guild(commands.Cog):
             elif str(reaction.emoji) == "\U0000274c":
                 await self.bot.db.execute("UPDATE guilds SET logging = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Disabled the logging module.")
-
-        except (asyncio.TimeoutError, TimeoutError):
-            await ctx.send(":x: Aborted.")
-
-        for future in pending:
-            future.cancel()
 
     @guild.command(name='exclude')
     @commands.has_permissions(administrator=True)
@@ -337,6 +300,7 @@ class Guild(commands.Cog):
                     await ctx.send(f":x: Unexpected error occurred.")
                     return
 
+            # Add channel
             add_status = await self.bot.db.execute("UPDATE guilds SET logging_excluded = array_append(logging_excluded,"
                                                    " $2) WHERE id = $1"
                                                    , ctx.guild.id, channel_object.id)
@@ -372,25 +336,15 @@ class Guild(commands.Cog):
         info_embed = await ctx.send(embed=embed)
         await info_embed.add_reaction("\U00002699")
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
-                                                             check=self.bot.checks.
-                                                             wait_for_gear_reaction_check(ctx, info_embed),
-                                                             timeout=240),
-                                            ctx.bot.wait_for('reaction_remove',
-                                                             check=self.bot.checks.
-                                                             wait_for_gear_reaction_check(ctx, info_embed),
-                                                             timeout=240)],
-                                           return_when=asyncio.FIRST_COMPLETED)
-
         try:
-            dump = done.pop().result()
+            await ctx.bot.wait_for('reaction_add', check=self.bot.checks.wait_for_gear_reaction_check(ctx, info_embed),
+                                   timeout=300)
+
+        except asyncio.TimeoutError:
+            return
+
+        else:
             await self.edit_default_role_settings(ctx)
-
-        except (asyncio.TimeoutError, TimeoutError):
-            pass
-
-        for future in pending:
-            future.cancel()
 
     async def edit_default_role_settings(self, ctx):
 
@@ -399,16 +353,18 @@ class Guild(commands.Cog):
         await status_question.add_reaction("\U00002705")
         await status_question.add_reaction("\U0000274c")
 
-        done, pending = await asyncio.wait([ctx.bot.wait_for('reaction_add',
-                                                             check=self.bot.
-                                                             checks.wait_for_reaction_check(ctx, status_question),
-                                                             timeout=240),
-                                            ctx.bot.wait_for('reaction_remove',
-                                                             check=self.bot.
-                                                             checks.wait_for_reaction_check(ctx, status_question),
-                                                             timeout=240)],
-                                           return_when=asyncio.FIRST_COMPLETED)
         try:
+            done, pending = await ctx.bot.wait_for('reaction_add',
+                                                   check=self.bot.
+                                                   checks.wait_for_reaction_check(ctx, status_question),
+                                                   timeout=240)
+
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Aborted.")
+            # TODO check if this returns
+
+        else:
+            # TODO done, pending not relevant anymore
             reaction, user = done.pop().result()
 
             if str(reaction.emoji) == "\U00002705":
@@ -421,11 +377,11 @@ class Guild(commands.Cog):
                 try:
                     role = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
                                                    timeout=120)
-                except (asyncio.TimeoutError, TimeoutError):
+                except asyncio.TimeoutError:
                     await ctx.send(":x: Aborted.")
-                    pass
+                    return
 
-                if not role:
+                if not role.content:
                     await ctx.send(":x: Aborted.")
                     return
 
@@ -458,12 +414,6 @@ class Guild(commands.Cog):
             elif str(reaction.emoji) == "\U0000274c":
                 await self.bot.db.execute("UPDATE guilds SET defaultrole = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Disabled the default role.")
-
-        except (asyncio.TimeoutError, TimeoutError):
-            await ctx.send(":x: Aborted.")
-
-        for future in pending:
-            future.cancel()
 
 
 def setup(bot):
