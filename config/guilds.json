@@ -34,10 +34,11 @@
             "roles": {
                 "Archives": ":white_check_mark: You've gained access to the archives of Democraciv.",
                 "Invisible Pink Unicorn": "\u2705 You are now a follower of the Invisible Pink Unicorn!",
-                "Holy Mosque": "\u2705 You are now a member of the Holy Mosque!",
                 "Faith": "\u2705 You now have the Faith role!",
                 "United Pantheon of Arabia": "\u2705 You are now a follower of the United Pantheon of Arabia!",
-                "Zoroastrian": "\u2705 You're a Zoroastrian now!"
+                "Zoroastrian": "\u2705 You're a Zoroastrian now!",
+                "Prophet of the Invisible One": "\u2705 You are now a Prophet of the Invisible One!",
+                "The Cult of the Liquid of Heaven": "\u2705 You\u2018ve joined the The Cult of the Liquid of Heaven!"
             }
         },
         "232108753477042187": {
@@ -93,19 +94,7 @@
                 "welcomeChannel": "welcome",
                 "informationChannel": "information",
                 "enableLogging": true,
-                "excludedChannelsFromLogging": [
-                    "637778292639924235",
-                    "637092231613775905",
-                    "637100039566524427",
-                    "637091970254372886",
-                    "637473133594411018",
-                    "637754502262423582",
-                    "637856337929306142",
-                    "639306404338860052",
-                    "637809544398897157",
-                    "636741533051387938",
-                    "638894014950539264"
-                ],
+                "excludedChannelsFromLogging": [],
                 "logChannel": "mod-logs",
                 "enableDefaultRole": false,
                 "defaultRole": ""
@@ -123,7 +112,8 @@
                 "\u0627\u0644\u0645\u062a\u0646\u0648\u0631\u064a\u0646": "What even is this party?",
                 "First Wing of Alilat": "So you\u2019re an independent party?",
                 "Independent": "Ask <@351107161952354306>  for a diplomacy channel!",
-                "Arabian Guild": "Nice merger, eh?"
+                "Arabian Guild": "Nice merger, eh?",
+                "Royal Anarchist Party": "You want royalty but no government?"
             }
         },
         "636597058987622410": {
@@ -162,6 +152,23 @@
             "roles": {
                 "Visitor": "You're a Visitor now! Ping Angus or Retro if you need help.",
                 "Member Request": "Thanks for requesting party membership, this will be granted by moderators ASAP"
+            }
+        },
+        "646832111013330944": {
+            "name": "Royal Anarchist Party",
+            "config": {
+                "enableWelcomeMessage": false,
+                "welcomeChannel": "",
+                "enableLogging": false,
+                "excludedChannelsFromLogging": [],
+                "logChannel": ""
+            },
+            "strings": {
+                "welcomeMessage": ""
+            },
+            "roles": {
+                "Imperial Front": "Greetings, fellow monarchist!",
+                "Union of Steel": "Hey there, dirty fascist!"
             }
         }
     }
