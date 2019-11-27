@@ -124,7 +124,7 @@ class Guild(commands.Cog):
                                                    ctx.guild.id, channel_object.id)
 
                 if status == "UPDATE 1":
-                    await ctx.send(f":white_check_mark: Set the welcome channel to #{channel_object.name}.")
+                    await ctx.send(f":white_check_mark: Set the welcome channel to {channel_object.mention}.")
 
                 # Get new welcome message
                 await ctx.send(
@@ -232,7 +232,7 @@ class Guild(commands.Cog):
                                                    channel_object.id)
 
                 if status == "UPDATE 1":
-                    await ctx.send(f":white_check_mark: Set the logging channel to #{channel_object.name}.")
+                    await ctx.send(f":white_check_mark: Set the logging channel to {channel_object.mention}.")
 
             elif str(reaction.emoji) == "\U0000274c":
                 await self.bot.db.execute("UPDATE guilds SET logging = false WHERE id = $1", ctx.guild.id)

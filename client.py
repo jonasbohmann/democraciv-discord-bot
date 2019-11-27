@@ -202,13 +202,16 @@ class DemocracivBot(commands.Bot):
             print(f"[DATABASE] Guild {message.guild.name} ({message.guild.id}) was not initialized. "
                   f"Adding default entry to database... ")
             try:
-                await self.db.execute("INSERT INTO guilds (id, welcome, logging, defaultrole) "
-                                      "VALUES ($1, false, false, false)", message.guild.id)
-                print(f"[DATABASE] Successfully initialized guild {message.guild.name} ({message.guild.id})")
-
+                await self.db.execute("INSERT INTO guilds (id, welcome, logging, logging_excluded, defaultrole) "
+                                      "VALUES ($1, false, false, ARRAY[0], false)",
+                                      message.guild.id)
             except Exception:
+                await self.DerJonas_dm_channel.send(f":x: Fatal database error occurred while initializing new guild "
+                                                    f"{message.guild.name} ({message.guild.id})")
                 print(f"[DATABASE] Fatal error while initializing new guild {message.guild.name} ({message.guild.id})")
                 return
+
+            print(f"[DATABASE] Successfully initialized guild {message.guild.name} ({message.guild.id})")
 
         # Relay message to discord.ext.commands cogs
         await self.process_commands(message)

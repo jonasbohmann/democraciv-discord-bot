@@ -274,8 +274,8 @@ class Log(commands.Cog):
                                                           f"send a DM to {self.bot.DerJonas_object.mention}!")
 
         # Add new guild to database
-        status = await self.bot.db.execute("INSERT INTO guilds (id, welcome, logging, defaultrole) "
-                                           "VALUES ($1, false, false, false)", guild.id)
+        status = await self.bot.db.execute("INSERT INTO guilds (id, welcome, logging, logging_excluded, defaultrole) "
+                                           "VALUES ($1, false, false, ARRAY[0], false)", guild.id)
 
         if status == "INSERT 0 1":
             try:
