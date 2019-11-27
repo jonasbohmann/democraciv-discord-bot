@@ -9,6 +9,7 @@ Provides useful information, political party & role management and much more.
 
 *  [Python](https://www.python.org/downloads//) 3.6 or newer
 *  [discord.py](https://github.com/Rapptz/discord.py) 1.2.5 or newer
+*  A database with PostgreSQL 9.6 or newer
 
 **Run `pip install -r requirements.txt` to install all required dependencies.**
 
@@ -24,10 +25,16 @@ The file should look like this:
 ```
  {
   "token": "INSERT_TOKEN_HERE",
-  "twitchAPIKey": "INSERT_TWITCH_API_KEY_HERE"
+  "twitchAPIKey": "INSERT_TWITCH_API_KEY_HERE",
+  "postgresql-user": "INSERT_NAME_OF_YOUR_POSTGRES_USER_HERE",
+  "postgresql-password": "INSERT_PASSWORD_OF_YOUR_POSTGRES_USER_HERE",
+  "postgresql-database": "INSERT_NAME_OF_YOUR_DATABASE_HERE",
+  "postgresql-host": "INSERT_ADRESS_OF_YOUR_DATABASE_HERE"
+    
  }
 ```
-Add the token of your Discord App like above. Then, run `client.py`.
+Add the token of your Discord App, your Twitch Helix API key if you enabled the Twitch module, and your
+ PostgresSQL configuration like above. Then, run `client.py`.
 
 To use all of the bot's features, set the `democracivServerID` in `config.json` to a guild ID that the bot is in.
 
@@ -36,8 +43,7 @@ To use all of the bot's features, set the `democracivServerID` in `config.json` 
 
 This bot needs a PostgreSQL database to run. To install and configure PostgreSQL, head [here](https://www.postgresql.org/).
 
-I'm using PostgreSQL 12 and thus can't guarantee that older version work as well.
-
+The bot was tested with PostgreSQL 9.6 and 12.1, thus everything else in between should work.
 
 ####  Twitch 
 
@@ -107,8 +113,12 @@ event.twitch | Handles notifications when twitch.tv/democraciv is live |
 
 ####  Update 0.14.0 - The SQL Update
 
-*  Add a PostgreSQL database
-*  Migrate `guilds.json`, `parties.json` and `last_reddit_post.json` to new database
+*  ~~Add a PostgreSQL database~~
+*  ~~Migrate `guilds.json`, `parties.json` and `last_reddit_post.json` to new database~~
+*  ~~Make roles case-insensitive~~
+*  ~~Rewrite -addparty, -addrole, -deleteparty, -deleterole, -addalias, -deletealias to be safer and cover all needed values
+for database~~
+*  ~~Refactor asyncio.wait_for() tasks in guild.py~~
 
 ####  Update 0.15.0 - The Government Update
 
