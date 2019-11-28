@@ -70,7 +70,7 @@ class Party(commands.Cog, name='Political Parties'):
 
             parties_and_members.append((role.name, len(role.members)))
 
-        if len(error_string) > 85:
+        if len(error_string) > 95:
             print(error_string)
 
         return parties_and_members
