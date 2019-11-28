@@ -400,7 +400,8 @@ class Guild(commands.Cog):
 
                 if new_default_role_object is None:
                     await ctx.send(
-                        f":information_source: Couldn't find a role named '{new_default_role}', **creating new role...")
+                        f":white_check_mark: I will **create a new role** on this guild named '{new_default_role}'"
+                        f" for the default role.")
                     try:
                         new_default_role_object = await ctx.guild.create_role(name=new_default_role)
                     except discord.Forbidden:

@@ -43,6 +43,7 @@ class Reddit:
 
             _id = reddit_post['id']
 
+            # Try to add post id to database
             status = await self.bot.db.execute("INSERT INTO reddit_posts (id) VALUES ($1) ON CONFLICT DO NOTHING", _id)
 
             # ID already in database -> post already seen
@@ -57,9 +58,6 @@ class Reddit:
                 _thumbnail_url = reddit_post['preview']['images'][0]['source']['url']
             except KeyError:
                 _thumbnail_url = reddit_post['thumbnail']
-
-            # Set new last_reddit_post
-            await self.bot.db.execute("INSERT INTO reddit_posts (id) VALUES ($1) ON CONFLICT DO NOTHING", _id)
 
             embed = self.bot.embeds.embed_builder(
                 title=f":mailbox_with_mail: New post on r/{self.subreddit}",

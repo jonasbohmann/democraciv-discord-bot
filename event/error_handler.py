@@ -32,6 +32,13 @@ class ErrorHandler(commands.Cog):
 
         embed.add_field(name='Caused by', value=ctx.message.clean_content, inline=False)
 
+        if to_log_channel:
+            if await self.bot.checks.is_logging_enabled(ctx.guild.id):
+                if log_channel_object is not None:
+                    await log_channel_object.send(embed=embed)
+                else:
+                    raise exceptions.ChannelNotFoundError(log_channel)
+
         # Send error embed to author DM
         if to_owner:
             embed.add_field(name='Guild', value=ctx.guild.name)
@@ -39,13 +46,6 @@ class ErrorHandler(commands.Cog):
             await self.bot.DerJonas_dm_channel.send(
                 f":x: An error occurred on {ctx.guild.name} at {datetime.datetime.now()}!\n\n{error}")
             await self.bot.DerJonas_dm_channel.send(embed=embed)
-
-        if to_log_channel:
-            if await self.bot.checks.is_logging_enabled(ctx.guild.id):
-                if log_channel_object is not None:
-                    await log_channel_object.send(embed=embed)
-                else:
-                    raise exceptions.ChannelNotFoundError(log_channel)
 
     @commands.Cog.listener()
     async def on_error(self, ctx, error):
@@ -76,7 +76,7 @@ class ErrorHandler(commands.Cog):
 
         # This includes most exceptions declared in util.exceptions.py
         if isinstance(error, exceptions.DemocracivBotException):
-            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=True)
             await ctx.send(error.message)
             return
 
