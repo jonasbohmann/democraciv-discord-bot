@@ -124,35 +124,35 @@ class Link(commands.Cog):
     @commands.command(name='mk5')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def mk5(self, ctx):
-        """MK5-Archives"""
+        """Archives of Democraciv MK5"""
         embed = self.bot.embeds.embed_builder(title='Democraciv Archive - MK5', description=config.getLinks()['mk5'])
         await ctx.send(embed=embed)
 
     @commands.command(name='mk4')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def mk4(self, ctx):
-        """MK4-Archives"""
+        """Archives of Democraciv MK4"""
         embed = self.bot.embeds.embed_builder(title='Democraciv Archive - MK4', description=config.getLinks()['mk4'])
         await ctx.send(embed=embed)
 
     @commands.command(name='mk3')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def mk3(self, ctx):
-        """MK3-Archives"""
+        """Archives of Democraciv MK3"""
         embed = self.bot.embeds.embed_builder(title='Democraciv Archive - MK3', description=config.getLinks()['mk3'])
         await ctx.send(embed=embed)
 
     @commands.command(name='mk2')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def mk2(self, ctx):
-        """MK2-Archives"""
+        """Archives of Democraciv MK2"""
         embed = self.bot.embeds.embed_builder(title='Democraciv Archive - MK2', description=config.getLinks()['mk2'])
         await ctx.send(embed=embed)
 
     @commands.command(name='mk1')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def mk1(self, ctx):
-        """MK1-Archives"""
+        """Archives of Democraciv MK1"""
         embed = self.bot.embeds.embed_builder(title='Democraciv Archive - MK1', description=config.getLinks()['mk1'])
         await ctx.send(embed=embed)
 

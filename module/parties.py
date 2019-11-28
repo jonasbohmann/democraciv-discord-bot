@@ -201,7 +201,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='members')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def members(self, ctx, *, party: str = None):
-        """Get the current political party ranking or a list of all party members on the Democraciv guild."""
+        """Get the current political party ranking or a list of all party members on the Democraciv guild"""
         if party is None or not party:
             party_list_embed_content = ''
 
@@ -262,7 +262,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def addparty(self, ctx):
-        """Add a new political party to the guild."""
+        """Add a new political party to the guild"""
 
         await ctx.send(":information_source: Answer with the name of the party you want to create:")
 
@@ -369,7 +369,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def deleteparty(self, ctx, hard: bool, *, party: str):
-        """Remove a party.
+        """Remove a political party
 
                 Usage:
                  `-deleteparty true <party>` will remove the party **and** delete its Discord role
@@ -421,7 +421,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def addalias(self, ctx):
-        """Add a new alias to a party"""
+        """Add a new alias to a political party"""
 
         await ctx.send(":information_source: Answer with the name of the party that the new alias should belong to:")
 
@@ -472,6 +472,7 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='listaliases')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @utils.is_democraciv_guild()
     async def listaliases(self, ctx, *, party: str):
         """List the given parties aliases"""
 

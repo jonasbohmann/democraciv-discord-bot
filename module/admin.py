@@ -62,11 +62,11 @@ class Admin(commands.Cog):
         else:
             await ctx.send(':white_check_mark: Reloaded ' + module)
 
-    @commands.command(name='stop', hidden=True)
+    @commands.command(name='stop')
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def stop(self, ctx):
-        """Stops the bot"""
+        """Restarts the bot"""
 
         await ctx.send(':wave: Goodbye! Shutting down...')
         await self.bot.close()
@@ -83,9 +83,9 @@ class Admin(commands.Cog):
 
     @commands.has_permissions(manage_messages=True)
     @commands.command(name="clear")
-    async def clear(self, ctx, num: int, target: discord.Member = None):
+    async def clear(self, ctx, amount: int, target: discord.Member = None):
         """Purge an amount of messages in the current channel"""
-        if num > 500 or num < 0:
+        if amount > 500 or amount < 0:
             await ctx.send(":x: Invalid amount, maximum is 500.")
             return
 
@@ -95,7 +95,7 @@ class Admin(commands.Cog):
             return True
 
         try:
-            deleted = await ctx.channel.purge(limit=num, check=check)
+            deleted = await ctx.channel.purge(limit=amount, check=check)
         except discord.Forbidden:
             raise exceptions.ForbiddenError(task="", detail=":x: I'm missing Administrator permissions to do this!")
 
@@ -119,7 +119,7 @@ class Admin(commands.Cog):
 
         await ctx.send(tiny_url)
 
-    @commands.command(name='health', aliases=['status', 'diagnosis'], hidden=True)
+    @commands.command(name='health', aliases=['status', 'diagnosis'])
     @commands.is_owner()
     async def health(self, ctx):
         """Run a diagnosis for this bot"""

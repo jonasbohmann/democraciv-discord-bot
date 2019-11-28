@@ -51,6 +51,7 @@ initial_extensions = ['module.link',
                       'module.random',
                       'module.roles',
                       'module.guild',
+                      'module.debug',
                       'event.logging',
                       'event.error_handler']
 
@@ -101,7 +102,7 @@ class DemocracivBot(commands.Bot):
                 traceback.print_exc()
 
         # Load the debug cog jishaku
-        self.load_extension("jishaku")
+        # self.load_extension("jishaku")
 
     async def initialize_aiohttp_session(self):
         # Initialize a shared aiohttp ClientSession to be used for -wikipedia, -submit and reddit & twitch requests

@@ -33,7 +33,7 @@ class Fun(commands.Cog):
     @commands.command(name='say')
     @commands.has_permissions(administrator=True)
     async def say(self, ctx, *, content: str):
-        """Basically just Mod Abuse."""
+        """Have the bot say something"""
         try:
             await ctx.message.delete()
         except discord.Forbidden:
@@ -46,11 +46,11 @@ class Fun(commands.Cog):
     async def whois(self, ctx, *, member: discord.Member = None):
         """Get detailed information about a member of this guild
 
-        Usage:
-        -whois
-        -whois @DerJonas
-        -whois DerJonas
-        -whois DerJonas#8109
+            Usage:
+             `-whois`
+             `-whois @DerJonas`
+             `-whois DerJonas`
+             `-whois DerJonas#8109`
         """
 
         def _get_roles(roles):

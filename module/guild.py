@@ -18,7 +18,7 @@ class Guild(commands.Cog):
 
     @commands.group(name='guild', case_insensitive=True, invoke_without_command=True)
     async def guild(self, ctx):
-        """Configure me for this guild."""
+        """Configure various features of this bot for this guild"""
 
         configuration_list_message = "`-guild welcome` to enable/disable welcome messages for this guild\n" \
                                      "`-guild logs` to enable/disable logging for this guild\n" \
