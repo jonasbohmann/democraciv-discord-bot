@@ -235,6 +235,10 @@ class Party(commands.Cog, name='Political Parties'):
             role = await self.get_party_role(party)
 
             if role is None:
+                if ctx.guild.id != self.bot.democraciv_guild_object.id:
+                    await ctx.send(":x: This command uses the roles and members from the Democraciv guild,"
+                                   " not the ones from this guild!")
+                    return
                 raise exceptions.RoleNotFoundError(party)
 
             amount_of_members = ''
