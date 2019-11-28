@@ -43,9 +43,9 @@ class ErrorHandler(commands.Cog):
         if to_owner:
             embed.add_field(name='Guild', value=ctx.guild.name)
 
-            await self.bot.DerJonas_dm_channel.send(
+            await self.bot.DerJonas_object.dm_channel.send(
                 f":x: An error occurred on {ctx.guild.name} at {datetime.datetime.now()}!\n\n{error}")
-            await self.bot.DerJonas_dm_channel.send(embed=embed)
+            await self.bot.DerJonas_object.dm_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_error(self, ctx, error):

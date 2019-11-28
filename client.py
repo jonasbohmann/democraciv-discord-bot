@@ -87,9 +87,6 @@ class DemocracivBot(commands.Bot):
 
         # Attributes will be "initialized" in on_ready as they need a connection to Discord
         self.DerJonas_object = None
-        self.DerJonas_dm_channel = None
-
-        # Attribute will be "initialized" in on_ready as they need a connection to Discord
         self.democraciv_guild_object = None
 
         # Load the bot's cogs from ./event and ./module
@@ -100,9 +97,6 @@ class DemocracivBot(commands.Bot):
             except Exception:
                 print(f'[BOT] Failed to load module {extension}.')
                 traceback.print_exc()
-
-        # Load the debug cog jishaku
-        # self.load_extension("jishaku")
 
     async def initialize_aiohttp_session(self):
         # Initialize a shared aiohttp ClientSession to be used for -wikipedia, -submit and reddit & twitch requests
@@ -143,19 +137,17 @@ class DemocracivBot(commands.Bot):
 
         if self.democraciv_guild_object is None:
 
-            logging.log(logging.WARNING, "Couldn't find guild with ID specified in config.json 'democracivServerID'.\n"
-                                         "I will use a random guild that I can see that will use my Democraciv-specific"
-                                         " features like: parties.py, reddit.py, twitch.py and admin.py")
-            for guild in self.guilds:
-                self.democraciv_guild_object = guild
-                break
+            print("[BOT] Couldn't find guild with ID specified in config.json 'democracivServerID'.\n"
+                  "      I will use a random guild that I can see to be used for my Democraciv-specific features.")
+
+            self.democraciv_guild_object = self.guilds[0]
 
             if self.democraciv_guild_object is None:
                 raise exceptions.GuildNotFoundError(config.getConfig()["democracivServerID"])
 
-            logging.log(logging.WARNING, f"Using '{self.democraciv_guild_object.name}' as Democraciv guild.\n"
-                                         f"Note that some features will still not work unless you change "
-                                         f"'democracivServerID' in config.json to a guild ID that I am in.")
+            print(f"[BOT] Using '{self.democraciv_guild_object.name}' as Democraciv guild.\n"
+                  f"      Note that some features will still not work unless you change "
+                  f"'democracivServerID' in config.json to a guild ID that I am in.")
 
     def get_uptime(self):
         difference = int(round(time.time() - self.start_time))
@@ -165,15 +157,17 @@ class DemocracivBot(commands.Bot):
         return math.floor(self.latency * 1000)
 
     async def on_ready(self):
-        print(f"[BOT] Logged in as {self.user.name} with discord.py {discord.__version__}")
-        print("------------------------------------------------------------")
-
         if not self.db_ready:
             # If the connection to the database fails, stop the bot
-            print("[DATABASE] Fatal error while connecting to database. Exiting...")
+            print("[DATABASE] Fatal error while connecting to database. Closing bot...")
             await self.close()
             await self.logout()
             return
+
+        print(f"[BOT] Logged in as {self.user.name} with discord.py {discord.__version__}")
+        print("------------------------------------------------------------")
+
+        await asyncio.sleep(1)
 
         # The bot needs a "main" guild object that will be used for reddit & twitch notifications, political parties and
         # admin commands. The bot will automatically pick a random guild that it can see if 'democracivServerID' from
@@ -187,7 +181,6 @@ class DemocracivBot(commands.Bot):
         # Create DM_channel with author and save dm_channel object for further use
         self.DerJonas_object = self.get_user(int(config.getConfig()['authorID']))
         await self.DerJonas_object.create_dm()
-        self.DerJonas_dm_channel = self.DerJonas_object.dm_channel
 
         # Create twitch live notification task if enabled in config
         if config.getTwitch()['enableTwitchAnnouncements']:
@@ -216,8 +209,9 @@ class DemocracivBot(commands.Bot):
                                       "VALUES ($1, false, false, ARRAY[0], false)",
                                       message.guild.id)
             except Exception:
-                await self.DerJonas_dm_channel.send(f":x: Fatal database error occurred while initializing new guild "
-                                                    f"{message.guild.name} ({message.guild.id})")
+                await self.DerJonas_object.dm_channel.send(
+                    f":x: Fatal database error occurred while initializing new guild "
+                    f"{message.guild.name} ({message.guild.id})")
                 print(f"[DATABASE] Fatal error while initializing new guild {message.guild.name} ({message.guild.id})")
                 return
 
