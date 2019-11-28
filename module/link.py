@@ -257,6 +257,14 @@ class Link(commands.Cog):
                                               description=config.getLinks()["sc-cases"])
         await ctx.send(embed=embed)
 
+    @commands.command(name='procedures', aliases=['procedure'])
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def legislativeprocedures(self, ctx):
+        """The Legislative Procedures"""
+        embed = self.bot.embeds.embed_builder(title='Procedures for the Arabian Legislature',
+                                              description=config.getLinks()["legislative-procedures"])
+        await ctx.send(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Link(bot))
