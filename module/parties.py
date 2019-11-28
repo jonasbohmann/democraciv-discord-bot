@@ -39,9 +39,9 @@ class Party(commands.Cog, name='Political Parties'):
         party_id = await self.resolve_party_from_alias(lowercase_party)
 
         if isinstance(party_id, str):
-            return discord.utils.get(self.bot.democraciv_guild_object.guild.roles, name=party)
+            return discord.utils.get(self.bot.democraciv_guild_object.roles, name=party)
         elif isinstance(party_id, int):
-            return self.bot.democraciv_guild_object.guild.get_role(party_id)
+            return self.bot.democraciv_guild_object.get_role(party_id)
         else:
             return None
 
@@ -54,7 +54,7 @@ class Party(commands.Cog, name='Political Parties'):
         else:
             return party_id['party_id']
 
-    async def collect_parties_and_members(self, ctx):
+    async def collect_parties_and_members(self):
         """Returns all parties with a role on the Democraciv guild and their amount of members for -members."""
         parties_and_members = []
         party_keys = (await self.get_parties_from_db()).keys()
@@ -62,11 +62,7 @@ class Party(commands.Cog, name='Political Parties'):
                        " on the Democraciv guild: "
 
         for party in party_keys:
-            try:
-                role = self.bot.democraciv_guild_object.guild.get_role(party)
-            except AttributeError:
-                await ctx.send(":x: You have to invite me to the Democraciv guild to get political party statistics!")
-                return
+            role = self.bot.democraciv_guild_object.get_role(party)
 
             if role is None:
                 error_string += f'{str(party)}, '
@@ -210,7 +206,7 @@ class Party(commands.Cog, name='Political Parties'):
             party_list_embed_content = ''
 
             async with ctx.typing():
-                sorted_parties_and_members = sorted(await self.collect_parties_and_members(ctx), key=lambda x: x[1],
+                sorted_parties_and_members = sorted(await self.collect_parties_and_members(), key=lambda x: x[1],
                                                     reverse=True)
 
                 for party in sorted_parties_and_members:
@@ -236,11 +232,7 @@ class Party(commands.Cog, name='Political Parties'):
             await ctx.send(embed=embed)
 
         elif party:
-            try:
-                role = await self.get_party_role(party)
-            except AttributeError:
-                await ctx.send(":x: You have to invite me to the Democraciv guild to get political party statistics!")
-                return
+            role = await self.get_party_role(party)
 
             if role is None:
                 raise exceptions.RoleNotFoundError(party)
