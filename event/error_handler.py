@@ -76,7 +76,7 @@ class ErrorHandler(commands.Cog):
 
         # This includes most exceptions declared in util.exceptions.py
         if isinstance(error, exceptions.DemocracivBotException):
-            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=True)
+            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
             await ctx.send(error.message)
             return
 

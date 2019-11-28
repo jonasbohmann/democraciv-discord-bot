@@ -29,7 +29,7 @@ class Party(commands.Cog, name='Political Parties'):
 
         return party_dict
 
-    async def get_party_role(self, ctx, party: str):
+    async def get_party_role(self, party: str):
         """Returns role object that belongs to a political party.
         Gets aliases from party name first, if any exists get role object from party ID
         If no matching aliases were found in the database, try if discord.utils.get(name=...) can find the role.
@@ -39,9 +39,9 @@ class Party(commands.Cog, name='Political Parties'):
         party_id = await self.resolve_party_from_alias(lowercase_party)
 
         if isinstance(party_id, str):
-            return discord.utils.get(ctx.guild.roles, name=party)
+            return discord.utils.get(self.bot.democraciv_guild_object.guild.roles, name=party)
         elif isinstance(party_id, int):
-            return ctx.guild.get_role(party_id)
+            return self.bot.democraciv_guild_object.guild.get_role(party_id)
         else:
             return None
 
@@ -62,7 +62,11 @@ class Party(commands.Cog, name='Political Parties'):
                        " on the Democraciv guild: "
 
         for party in party_keys:
-            role = ctx.guild.get_role(party)
+            try:
+                role = self.bot.democraciv_guild_object.guild.get_role(party)
+            except AttributeError:
+                await ctx.send(":x: You have to invite me to the Democraciv guild to get political party statistics!")
+                return
 
             if role is None:
                 error_string += f'{str(party)}, '
@@ -84,7 +88,7 @@ class Party(commands.Cog, name='Political Parties'):
         available_parties = await self.get_parties_from_db()
         available_parties_by_id = available_parties.keys()
 
-        role = await self.get_party_role(ctx, party)
+        role = await self.get_party_role(party)
 
         if role is None:
             await ctx.send(f":x: Couldn't find a party named '{party}'!\n\n**Try one of these:**")
@@ -158,7 +162,7 @@ class Party(commands.Cog, name='Political Parties'):
         available_parties = await self.get_parties_from_db()
         available_parties_by_id = available_parties.keys()
 
-        role = await self.get_party_role(ctx, party)
+        role = await self.get_party_role(party)
 
         if role is None:
             await ctx.send(f":x: Couldn't find a party named '{party}'!\n\n**Try one of these:**")
@@ -201,7 +205,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='members')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def members(self, ctx, *, party: str = None):
-        """Get the current political party ranking or a list of all party members."""
+        """Get the current political party ranking or a list of all party members on the Democraciv guild."""
         if party is None or not party:
             party_list_embed_content = ''
 
@@ -232,7 +236,11 @@ class Party(commands.Cog, name='Political Parties'):
             await ctx.send(embed=embed)
 
         elif party:
-            role = await self.get_party_role(ctx, party)
+            try:
+                role = await self.get_party_role(party)
+            except AttributeError:
+                await ctx.send(":x: You have to invite me to the Democraciv guild to get political party statistics!")
+                return
 
             if role is None:
                 raise exceptions.RoleNotFoundError(party)
@@ -375,7 +383,7 @@ class Party(commands.Cog, name='Political Parties'):
         available_parties = await self.get_parties_from_db()
         available_parties_by_id = available_parties.keys()
 
-        discord_role = await self.get_party_role(ctx, party)
+        discord_role = await self.get_party_role(party)
 
         if discord_role is None:
             raise exceptions.RoleNotFoundError(party)
@@ -429,7 +437,7 @@ class Party(commands.Cog, name='Political Parties'):
             return
 
         # Check if party role already exists
-        discord_role = await self.get_party_role(ctx, party.content)
+        discord_role = await self.get_party_role(party.content)
 
         if discord_role is None:
             raise exceptions.RoleNotFoundError(party.content)
@@ -471,7 +479,7 @@ class Party(commands.Cog, name='Political Parties'):
     async def listaliases(self, ctx, *, party: str):
         """List the given parties aliases"""
 
-        discord_role = await self.get_party_role(ctx, party)
+        discord_role = await self.get_party_role(party)
 
         if discord_role is None:
             raise exceptions.RoleNotFoundError(party)
