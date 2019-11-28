@@ -237,22 +237,21 @@ class Party(commands.Cog, name='Political Parties'):
             if role is None:
                 raise exceptions.RoleNotFoundError(party)
 
-            msg = ''
+            amount_of_members = ''
             for member in self.bot.democraciv_guild_object.members:
                 if role in member.roles:
-                    msg += f'{member.name}\n'
+                    amount_of_members += f'{member.name}\n'
 
-            if msg == '':
-                msg = 'No members.'
+            if amount_of_members == '':
+                amount_of_members = 'No members.'
 
+            if party == 'Independent':
+                title = 'Independent Citizens'
             else:
-                if party == 'Independent':
-                    title = 'Independent Citizens'
-                else:
-                    title = f'Members of {role.name}'
+                title = f'Members of {role.name}'
 
-                embed = self.bot.embeds.embed_builder(title=title, description=f'{msg}', colour=0x7f0000)
-                await ctx.send(embed=embed)
+            embed = self.bot.embeds.embed_builder(title=title, description=f'{amount_of_members}', colour=0x7f0000)
+            await ctx.send(embed=embed)
 
     @commands.command(name='addparty')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
