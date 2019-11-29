@@ -122,12 +122,15 @@ event.twitch | Handles notifications when twitch.tv/democraciv is live |
 *  ~~Rewrite -addparty, -addrole, -deleteparty, -deleterole, -addalias, -deletealias to be safer and cover all needed values
 for database~~
 *  ~~Refactor asyncio.wait_for() tasks in guild.py~~
+*  ~~Refactor help.py~~ (Update 0.14.2)
+
 
 ####  Update 0.15.0 - The Government Update
 
-*  Add Legislature session management
+*  Add Legislature dashboard with session management
+*  Add Ministry dashboard
 *  Add webhook for notifications on new SC cases 
-*  Refactor help.py
+*  Rewrite the `time.py` module and allow converting between timezones
 
 
 ####  Update 0.16.0 - The Moderation Update
@@ -135,7 +138,7 @@ for database~~
 *  Add a Moderation module with `-kick`, `-ban` etc. commands
 *  Add webhook for notifications on new Quire tasks
 
-####  Update 0.16.0 - The Suggestions Update
+####  Update 0.17.0 - The Suggestions Update
 
 *  Add suggestions from the community
 *  **Refactor & Cleanup to prepare for 1.0.0 release**
