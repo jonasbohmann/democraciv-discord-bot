@@ -20,6 +20,7 @@ class Twitch:
         self.http_header = {'Client-ID': self.twitch_API_token}
         self.streamer = config.getTwitch()['twitchChannelName']
         self.active_stream = False
+        self.first_run = True
         self.twitch_task.start()
 
     def __del__(self):
@@ -128,6 +129,11 @@ class Twitch:
 
     @tasks.loop(minutes=5)
     async def twitch_task(self):
+
+        if self.first_run:
+            self.first_run = False
+            return
+
         try:
             channel = discord.utils.get(self.bot.democraciv_guild_object.text_channels,
                                         name=config.getTwitch()['twitchAnnouncementChannel'])

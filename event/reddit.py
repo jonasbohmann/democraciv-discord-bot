@@ -1,10 +1,7 @@
-import asyncio
 import html
-
-import aiohttp
-
 import config
 import discord
+import aiohttp
 
 import util.exceptions as exceptions
 
@@ -16,6 +13,7 @@ class Reddit:
     def __init__(self, bot):
         self.bot = bot
         self.subreddit = config.getReddit()['subreddit']
+        self.first_run = True
         self.reddit_task.start()
 
     def __del__(self):
@@ -31,6 +29,10 @@ class Reddit:
 
     @tasks.loop(seconds=30)
     async def reddit_task(self):
+
+        if self.first_run:
+            self.first_run = False
+            return
 
         try:
             channel = discord.utils.get(self.bot.democraciv_guild_object.text_channels,

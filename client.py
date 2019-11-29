@@ -98,6 +98,14 @@ class DemocracivBot(commands.Bot):
                 print(f'[BOT] Failed to load module {extension}.')
                 traceback.print_exc()
 
+        # Create twitch live notification task if enabled in config
+        if config.getTwitch()['enableTwitchAnnouncements']:
+            Twitch(self)
+
+        # Create reddit new post on subreddit notification task if enabled in config
+        if config.getReddit()['enableRedditAnnouncements']:
+            Reddit(self)
+
     async def initialize_aiohttp_session(self):
         # Initialize a shared aiohttp ClientSession to be used for -wikipedia, -submit and reddit & twitch requests
         # aiohttp needs to have this in an async function, that's why it's seperated from __init__()
@@ -181,14 +189,6 @@ class DemocracivBot(commands.Bot):
         # Create DM_channel with author and save dm_channel object for further use
         self.DerJonas_object = self.get_user(int(config.getConfig()['authorID']))
         await self.DerJonas_object.create_dm()
-
-        # Create twitch live notification task if enabled in config
-        if config.getTwitch()['enableTwitchAnnouncements']:
-            Twitch(self)
-
-        # Create reddit new post on subreddit notification task if enabled in config
-        if config.getReddit()['enableRedditAnnouncements']:
-            Reddit(self)
 
     async def on_message(self, message):
         # Don't process message/command from DMs to prevent spamming
