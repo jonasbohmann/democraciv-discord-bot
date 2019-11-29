@@ -107,13 +107,6 @@ class Link(commands.Cog):
         """Get an active invite link to the Democraciv Discord guild"""
         await ctx.send(config.getLinks()['discord'])
 
-    @commands.command(name='invite')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
-    async def invite(self, ctx):
-        """Get an active invite link to this guild"""
-        invite = await ctx.channel.create_invite(max_age=0, unique=False)
-        await ctx.send(invite.url)
-
     @commands.command(name='archive')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def archive(self, ctx):

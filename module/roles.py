@@ -59,7 +59,7 @@ class Roles(commands.Cog):
     @commands.command(name='role')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def role(self, ctx, *, role: str):
-        """Add or remove yourself to/from a role"""
+        """Assign/remove a role to/from yourself"""
 
         available_roles = await self.get_roles(ctx)
         discord_role = await self.get_role_from_db(ctx, role)
@@ -102,7 +102,7 @@ class Roles(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     async def addrole(self, ctx):
-        """Create a new role on this guild and add it to the bot's -roles list"""
+        """Add a role to this guild's `-roles` list"""
 
         await ctx.send(":information_source: Answer with the name of the role you want to create:")
         try:
@@ -147,7 +147,7 @@ class Roles(commands.Cog):
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     async def deleterole(self, ctx, hard: bool, *, role: str):
-        """Remove a role from the bot's `-roles` list
+        """Remove a role from this guild's `-roles` list
 
         Usage:
          `-deleterole true <role>` will remove the role **and** delete its Discord role

@@ -11,7 +11,7 @@ class Random(commands.Cog):
     @commands.command(name='random')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def random(self, ctx, *arg):
-        """Returns a random number or choice.
+        """Returns a random number or choice
 
             Usage:
             -random

@@ -1,4 +1,8 @@
+import asyncio
 import html
+
+import aiohttp
+
 import config
 import discord
 
@@ -18,8 +22,12 @@ class Reddit:
         self.reddit_task.cancel()
 
     async def get_newest_reddit_post(self):
-        async with self.bot.session.get(f"https://www.reddit.com/r/{self.subreddit}/new.json?limit=5") as response:
-            return await response.json()
+        try:
+            async with self.bot.session.get(f"https://www.reddit.com/r/{self.subreddit}/new.json?limit=5") as response:
+                return await response.json()
+        except aiohttp.ClientConnectionError:
+            print("[BOT] ERROR - ConnectionError in Reddit session.get()!\n")
+            return None
 
     @tasks.loop(seconds=30)
     async def reddit_task(self):
@@ -36,6 +44,9 @@ class Reddit:
             raise exceptions.ChannelNotFoundError(config.getReddit()['redditAnnouncementChannel'])
 
         reddit_post_json = await self.get_newest_reddit_post()
+
+        if reddit_post_json is None:
+            return
 
         # Each check last 5 reddit posts in case we missed some in between
         for i in range(5):

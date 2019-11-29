@@ -1,3 +1,4 @@
+import config
 import discord
 import asyncio
 
@@ -34,7 +35,7 @@ class Guild(commands.Cog):
     @guild.command(name='welcome')
     @commands.has_permissions(administrator=True)
     async def welcome(self, ctx):
-        """Configure a welcome message that every new member should see once they join this guild."""
+        """Configure a welcome message that every new member will see once they join this guild"""
 
         is_welcome_enabled = (await self.bot.db.fetchrow("SELECT welcome FROM guilds WHERE id = $1", ctx.guild.id))[
             'welcome']
@@ -154,7 +155,7 @@ class Guild(commands.Cog):
     @guild.command(name='logs')
     @commands.has_permissions(administrator=True)
     async def logs(self, ctx):
-        """Configure the logging module that logs every guild event to a specified channel."""
+        """Configure the logging module that logs every guild event to a specified channel"""
 
         is_logging_enabled = (await self.bot.db.fetchrow("SELECT logging FROM guilds WHERE id = $1", ctx.guild.id))[
             'logging']
@@ -246,9 +247,11 @@ class Guild(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def exclude(self, ctx, channel: str = None):
         """
-        See all excluded channels with `-guild exclude`-
-        Add a channel to the excluded channels with `-guild exclude [channel_name].
-        Remove a channel from the excluded channels with `-guild exclude [excluded_channel_name]`.
+        Configure the channels that should be excluded from the logging module on this guild
+
+            Usage:
+                `-guild exclude` to see all excluded channels
+                `-guild exclude <channel>` too add/remove a channel to/from the excluded channels list
         """
         current_logging_channel = (await self.bot.db.fetchrow("SELECT logging_channel FROM guilds WHERE id = $1"
                                                               , ctx.guild.id))['logging_channel']
@@ -322,7 +325,7 @@ class Guild(commands.Cog):
     @guild.command(name='defaultrole')
     @commands.has_permissions(administrator=True)
     async def defaultrole(self, ctx):
-        """Configure a default role that every new member should get once they join this guild."""
+        """Configure a default role that every new member will get once they join this guild"""
 
         is_default_role_enabled = (await self.bot.db.fetchrow("SELECT defaultrole FROM guilds WHERE id = $1",
                                                               ctx.guild.id))['defaultrole']
@@ -421,6 +424,13 @@ class Guild(commands.Cog):
             elif str(reaction.emoji) == "\U0000274c":
                 await self.bot.db.execute("UPDATE guilds SET defaultrole = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Disabled the default role.")
+
+    @commands.command(name='invite')
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def invite(self, ctx):
+        """Get an active invite link to this guild"""
+        invite = await ctx.channel.create_invite(max_age=0, unique=False)
+        await ctx.send(invite.url)
 
 
 def setup(bot):

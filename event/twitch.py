@@ -113,9 +113,9 @@ class Twitch:
         try:
             async with self.bot.session.get(self.twitch_API_url, headers=self.http_header) as response:
                 twitch = await response.json()
-        except aiohttp.ClientConnectionError as e:
-            print("ERROR - ConnectionError in Twitch session.get()!\n")
-            print(e)
+        except aiohttp.ClientConnectionError:
+            print("[BOT] ERROR - ConnectionError in Twitch session.get()!\n")
+            return False
 
         try:
             twitch['data'][0]['id']

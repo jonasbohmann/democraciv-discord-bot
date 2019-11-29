@@ -65,7 +65,7 @@ class About(commands.Cog):
     @commands.command(name='contributors')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def contributors(self, ctx):
-        """See who helped with this project :heart:"""
+        """See who helped with this project"""
         embed = self.bot.embeds.embed_builder(title='Contributors :heart:',
                                               description="https://github.com/jonasbohmann/democraciv"
                                                           "-discord-bot/graphs/contributors")

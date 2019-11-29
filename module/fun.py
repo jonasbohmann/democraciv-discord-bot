@@ -33,7 +33,7 @@ class Fun(commands.Cog):
     @commands.command(name='say')
     @commands.has_permissions(administrator=True)
     async def say(self, ctx, *, content: str):
-        """Have the bot say something"""
+        """Make the bot say something"""
         try:
             await ctx.message.delete()
         except discord.Forbidden:
@@ -93,7 +93,7 @@ class Fun(commands.Cog):
     @commands.command(name='veterans')
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def veterans(self, ctx):
-        """List the first 15 members who joined this server"""
+        """List the first 15 members who joined this guild"""
 
         # As veterans rarely change, use a cached version of sorted list if exists
         if len(self.cached_sorted_veterans_on_democraciv) >= 2 and ctx.guild.id == self.bot.democraciv_guild_object.id:

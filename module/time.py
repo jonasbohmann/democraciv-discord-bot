@@ -28,12 +28,7 @@ class Time(commands.Cog):
     @commands.group(name='time', case_insensitive=True)
     @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
     async def time(self, ctx):
-        """Displays the current time of a specified timezone\n
-
-            Usage:
-                `-time utc` for the current UTC time in 24 hour formatting
-                `-time utc us` for the current UTC time in 12 hour (am/pm) formatting
-        """
+        """Displays the current time of a specified timezone"""
 
     @time.command(name='est', aliases=['edt'])
     async def est(self, ctx, us: str = None):
