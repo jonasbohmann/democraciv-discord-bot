@@ -22,9 +22,8 @@ class Admin(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='load', hidden=True)
-    @commands.has_permissions(administrator=True)
-    @utils.is_democraciv_guild()
+    @commands.command(name='load')
+    @commands.is_owner()
     async def load(self, ctx, *, module):
         """Loads a module"""
 
@@ -35,9 +34,8 @@ class Admin(commands.Cog):
         else:
             await ctx.send(':white_check_mark: Loaded ' + module)
 
-    @commands.command(name='unload', hidden=True)
-    @commands.has_permissions(administrator=True)
-    @utils.is_democraciv_guild()
+    @commands.command(name='unload')
+    @commands.is_owner()
     async def unload(self, ctx, *, module):
         """Unloads a module"""
 
@@ -48,9 +46,8 @@ class Admin(commands.Cog):
         else:
             await ctx.send(':white_check_mark: Unloaded ' + module)
 
-    @commands.command(name='reload', hidden=True)
-    @commands.has_permissions(administrator=True)
-    @utils.is_democraciv_guild()
+    @commands.command(name='reload')
+    @commands.is_owner()
     async def reload(self, ctx, *, module):
         """Reloads a module"""
 
@@ -72,9 +69,8 @@ class Admin(commands.Cog):
         await self.bot.close()
         await self.bot.logout()
 
-    @commands.command(name='reloadconfig', aliases=['rlc', 'rc', 'rlcfg'], hidden=True)
-    @commands.has_permissions(administrator=True)
-    @utils.is_democraciv_guild()
+    @commands.command(name='reloadconfig', aliases=['rlc', 'rc', 'rlcfg'])
+    @commands.is_owner()
     async def reloadconfig(self, ctx):
         """Reload all .json config files"""
 

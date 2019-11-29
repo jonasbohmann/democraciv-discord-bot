@@ -217,7 +217,7 @@ class Link(commands.Cog):
         embed = self.bot.embeds.embed_builder(title='Live Election Turnout', description=config.getLinks()['turnout'])
         await ctx.send(embed=embed)
 
-    @commands.command(name='quire', aliases=['q'], hidden=True)
+    @commands.command(name='quire', aliases=['q'])
     @commands.has_permissions(administrator=True)
     async def quire(self, ctx):
         """Quire Project Management"""
