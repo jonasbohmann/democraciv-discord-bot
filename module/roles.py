@@ -14,6 +14,8 @@ from discord.ext import commands
 
 
 class Roles(commands.Cog):
+    """Self-assignable roles for this guild"""
+
     def __init__(self, bot):
         self.bot = bot
 

@@ -10,6 +10,8 @@ from discord.ext import commands
 
 
 class Link(commands.Cog):
+    """Collection of links to all aspects of Democraciv"""
+
     def __init__(self, bot):
         self.bot = bot
 

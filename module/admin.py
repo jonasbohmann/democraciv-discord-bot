@@ -19,6 +19,8 @@ from discord.ext import commands
 
 
 class Admin(commands.Cog):
+    """Administrative commands to manage this bot"""
+
     def __init__(self, bot):
         self.bot = bot
 
@@ -126,7 +128,7 @@ class Admin(commands.Cog):
         await ctx.send(embed=info)
 
         async with ctx.typing():
-            await asyncio.sleep(2)
+            await asyncio.sleep(1)
 
             # Embed with debug information about host system
             system_embed = self.bot.embeds.embed_builder(title="System Diagnosis", description="")
@@ -149,10 +151,11 @@ class Admin(commands.Cog):
 
             config_embed = self.bot.embeds.embed_builder(title="Config Diagnosis", description="")
             config_embed.add_field(name="Connected Democraciv Guild", value=f"{self.bot.democraciv_guild_object.name}")
-            await ctx.send(embed=config_embed)
+            config_embed.add_field(name="Democraciv Guild specified in config",
+                                   value=f"{self.bot.get_guild(int(config.getConfig()['democracivServerID']))}",
+                                   inline=False)
 
-            # Sleep for 3 seconds to avoid being rate-limited
-            await asyncio.sleep(3)
+            await ctx.send(embed=config_embed)
 
             permission_embed = self.bot.embeds.embed_builder(title="Permission Diagnosis", description="")
             permission_embed.add_field(name="Administrator", value=str(ctx.guild.me.guild_permissions.administrator))

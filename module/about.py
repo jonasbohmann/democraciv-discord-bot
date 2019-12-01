@@ -11,6 +11,8 @@ from discord.ext import commands
 
 
 class About(commands.Cog):
+    """Information about this bot"""
+
     def __init__(self, bot):
         self.bot = bot
 

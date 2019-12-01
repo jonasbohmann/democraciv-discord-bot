@@ -16,6 +16,8 @@ from discord.ext import commands
 
 
 class Party(commands.Cog, name='Political Parties'):
+    """Interact with the political parties of Democraciv"""
+
     def __init__(self, bot):
         self.bot = bot
 

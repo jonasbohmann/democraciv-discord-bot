@@ -10,6 +10,8 @@ from discord.ext import commands
 
 
 class Legislature(commands.Cog):
+    """Useful commands for Legislators"""
+
     def __init__(self, bot):
         self.bot = bot
 

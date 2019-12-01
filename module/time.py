@@ -6,6 +6,8 @@ from discord.ext import commands
 
 
 class Time(commands.Cog):
+    """Get the current time in various timezones"""
+
     def __init__(self, bot):
         self.bot = bot
 

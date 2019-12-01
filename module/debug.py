@@ -5,6 +5,8 @@ from jishaku.metacog import GroupCogMeta
 # Add Jishaku as a cog in order to hide it from the HelpCommand
 
 class Debug(JishakuBase, metaclass=GroupCogMeta, command_parent=jsk, command_attrs=dict(hidden=True)):
+    """Jishaku debug and monitoring commands"""
+
     pass
 
 
