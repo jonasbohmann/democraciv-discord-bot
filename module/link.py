@@ -260,6 +260,14 @@ class Link(commands.Cog):
                                               description=config.getLinks()["legislative-procedures"])
         await ctx.send(embed=embed)
 
+    @commands.command(name='stvcalculator', aliases=['stv'])
+    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    async def stvcalculator(self, ctx):
+        """Source Code of our STV calculator"""
+        embed = self.bot.embeds.embed_builder(title='Source Code of our STV calculator',
+                                              description=config.getLinks()["stv-calc-source"])
+        await ctx.send(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Link(bot))
