@@ -74,11 +74,8 @@ class Legislature(commands.Cog):
         embed.add_field(name="URL", value=google_docs_url, inline=False)
 
         try:
-            await speaker_person.create_dm()
-            await speaker_person.dm_channel.send(embed=embed)
-
-            await vice_speaker_person.create_dm()
-            await vice_speaker_person.dm_channel.send(embed=embed)
+            await speaker_person.send(embed=embed)
+            await vice_speaker_person.send(embed=embed)
 
             await ctx.send(
                 f":white_check_mark: Successfully submitted '{bill_title}' to the Legislative Cabinet!")

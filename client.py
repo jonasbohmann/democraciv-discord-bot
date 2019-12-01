@@ -186,9 +186,7 @@ class DemocracivBot(commands.Bot):
         await self.change_presence(activity=discord.Game(name=config.getPrefix() + 'help | Watching over '
                                                                                    'the Democraciv community'))
 
-        # Create DM_channel with author and save dm_channel object for further use
         self.DerJonas_object = self.get_user(int(config.getConfig()['authorID']))
-        await self.DerJonas_object.create_dm()
 
     async def on_message(self, message):
         # Don't process message/command from DMs to prevent spamming
@@ -209,7 +207,7 @@ class DemocracivBot(commands.Bot):
                                       "VALUES ($1, false, false, ARRAY[0], false)",
                                       message.guild.id)
             except Exception:
-                await self.DerJonas_object.dm_channel.send(
+                await self.DerJonas_object.send(
                     f":x: Fatal database error occurred while initializing new guild "
                     f"{message.guild.name} ({message.guild.id})")
                 print(f"[DATABASE] Fatal error while initializing new guild {message.guild.name} ({message.guild.id})")

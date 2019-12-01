@@ -36,7 +36,7 @@ class Log(commands.Cog):
         # Send event embed to author DM
         if to_owner:
             embed.add_field(name='Guild', value=f"{guild.name} ({guild.id})", inline=False)
-            await self.bot.DerJonas_object.dm_channel.send(embed=embed)
+            await self.bot.DerJonas_object.send(embed=embed)
 
     async def is_channel_excluded(self, guild_id, channel_id):
         excluded_channels = (await self.bot.db.fetchrow("SELECT logging_excluded FROM guilds WHERE id = $1"
@@ -253,14 +253,14 @@ class Log(commands.Cog):
         introduction_channel = guild.text_channels[0]
 
         # Alert owner of this bot that the bot was invited to some place
-        await self.bot.DerJonas_object.dm_channel.send(
+        await self.bot.DerJonas_object.send(
             f":warning: I was added to {guild.name} ({guild.id}). Here are some invites:")
 
         # Get invite for new guild to send to owner_dm_channel
         try:
             guild_invites = await guild.invites()
             guild_invite_1 = str(guild_invites[0])
-            await self.bot.DerJonas_object.dm_channel.send(guild_invite_1)
+            await self.bot.DerJonas_object.send(guild_invite_1)
         except (IndexError, discord.Forbidden):
             pass
 
