@@ -1,6 +1,7 @@
 import config
 import aiohttp
 import discord
+import asyncio
 
 import util.exceptions as exceptions
 
@@ -50,8 +51,8 @@ class Twitch:
                                                     "short and don't waste time by starting the stream when not every "
                                                     "minister is ready or the game is not even started yet!",
                         inline=False)
-        embed.add_field(name="Hand over the savegame", value="Remember to send the savegame to one of"
-                                                             " the moderators after the stream!", inline=False)
+        embed.add_field(name="Hand over the save-game", value="Remember to send the save-game to one of"
+                                                              " the moderators after the stream!", inline=False)
 
         embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/423938725525979146/"
                                 "645394491133394966/01-twitch-logo.jpg")
@@ -68,10 +69,12 @@ class Twitch:
         if moderation_channel is None:
             raise exceptions.ChannelNotFoundError("moderation-team")
 
+        await asyncio.sleep(3600)  # Wait 1 hour, i.e. after the game session, before sending reminder to Mods
+
         embed = self.bot.embeds.embed_builder(title="Export the Game Session to YouTube",
-                                              description="Looks like another game session is starting."
+                                              description="Looks like another game session was played!"
                                                           " Remember to export the Twitch "
-                                                          "VOD to YouTube when the stream is done!")
+                                                          "VOD to YouTube.")
 
         embed.add_field(name="Export to YouTube", value="Go to our [channel](https://www.twitch.tv/democraciv/manager),"
                                                         " select the last stream and hit 'Export'.", inline=False)
@@ -82,7 +85,7 @@ class Twitch:
         embed.add_field(name="Set the description",
                         value="Use this formatting for the description: ```This is the Xth game session of the of "
                               "Democraciv MK6, where we play as Arabia in Sid Meier's Civilization 5.\n\nDemocraciv"
-                              " is a community on Reddit dedicated to play a singleplayer game of Sid Meier's"
+                              " is a community on Reddit dedicated to play a single-player game of Sid Meier's"
                               " Civilization 5 with a simulated, model government. We have a Legislature, a Supreme "
                               "Court and an executive branch, those wo can be seen playing the game here."
                               "\n\nDemocraciv: https://old.reddit.com/r/democraciv/```", inline=False)
@@ -96,18 +99,22 @@ class Twitch:
                                                          " 'Start export'.", inline=False)
 
         embed.add_field(name="Add the new video to the playlist",
-                        value="Don't forget this last part! After the Twitch VOD was exported to YouTube, head over "
+                        value="Don't forget this part! After the Twitch VOD was exported to YouTube, head over "
                               "[here](https://studio.youtube.com/channel/UC-NukxPakwQIvx73VjtIPnw/videos/) "
                               "and add the new video to the playlist named 'MK6 Game Sessions'.")
 
-        embed.add_field(name="Upload the savegame to Google Drive", value="Once a ministers sends you the savegame, "
-                                                                          "upload it to our Google Drive under "
-                                                                          "'Drive/Game/Savegames'.", inline=False)
+        embed.add_field(name="Adjust description & tags on YouTube",
+                        value="Twitch automatically adds a paragraph about Twitch to the end of the exported video's "
+                              "description and the two tags 'twitch' & 'games'. Make sure to remove both things.")
+
+        embed.add_field(name="Upload the save-game to Google Drive", value="Once a ministers sends you the save-game, "
+                                                                           "upload it to our Google Drive under "
+                                                                           "'Drive/Game/Savegames'.", inline=False)
 
         embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/423938725525979146/"
                                 "645394491133394966/01-twitch-logo.jpg")
 
-        await moderation_channel.send(f"@here")
+        await moderation_channel.send("@here")
         await moderation_channel.send(embed=embed)
 
     async def check_twitch_livestream(self):
@@ -115,7 +122,7 @@ class Twitch:
             async with self.bot.session.get(self.twitch_API_url, headers=self.http_header) as response:
                 twitch = await response.json()
         except aiohttp.ClientConnectionError:
-            print("[BOT] ERROR - ConnectionError in Twitch session.get()!\n")
+            print("[BOT] ERROR - ConnectionError in Twitch session.get()!")
             return False
 
         try:
