@@ -24,8 +24,6 @@ def parseJSONFromFile(file_path):
 # Load every config file into memory
 config = parseJSONFromFile('config/config.json')
 token = parseJSONFromFile('config/token.json')
-config_parties = parseJSONFromFile('config/parties.json')
-guilds = parseJSONFromFile('config/guilds.json')
 
 
 def getToken():
@@ -38,10 +36,6 @@ def getTokenFile():
 
 def getConfigFile():
     return config
-
-
-def getGuilds():
-    return guilds['guilds']
 
 
 def getConfig():
