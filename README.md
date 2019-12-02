@@ -24,15 +24,15 @@ After installing all the dependencies, create a `token.py` in the config folder.
 The file should look like this:
 ```
 # Token
-ATOKEN = "NDg2OTcxMDg5MjIyNjMxNDU1.XL9_gw.JPB4ZFWnbfxIU6EsY1XT-iN-O3o"
-TOKEN = "NDg3MzQ1OTAwMjM5MzIzMTQ3.D1CNEQ.l8G817yPN3wLdelMpvn88xSMR4M"
-TWITCH_API_KEY = "r4lnx70cewwd1gbaeg1vur55w4o1uq"
+ATOKEN = ""
+TOKEN = ""
+TWITCH_API_KEY = ""
 
 # PostgreSQL config
-POSTGRESQL_USER = "jonas"
-POSTGRESQL_PASSWORD = "ehre"
-POSTGRESQL_HOST = "127.0.0.1"
-POSTGRESQL_DATABASE = "democraciv"
+POSTGRESQL_USER = ""
+POSTGRESQL_PASSWORD = ""
+POSTGRESQL_HOST = ""
+POSTGRESQL_DATABASE = ""
 ```
 Add the token of your Discord App, your Twitch Helix API key if you enabled the Twitch module, and your
  PostgreSQL configuration like above. 
