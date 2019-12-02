@@ -69,7 +69,7 @@ class Twitch:
         if moderation_channel is None:
             raise exceptions.ChannelNotFoundError("moderation-team")
 
-        await asyncio.sleep(3600)  # Wait 1 hour, i.e. after the game session, before sending reminder to Mods
+        await asyncio.sleep(7200)  # Wait 2 hours, i.e. after the game session is done, before sending reminder to Mods
 
         embed = self.bot.embeds.embed_builder(title="Export the Game Session to YouTube",
                                               description="Looks like another game session was played!"
@@ -101,11 +101,17 @@ class Twitch:
         embed.add_field(name="Add the new video to the playlist",
                         value="Don't forget this part! After the Twitch VOD was exported to YouTube, head over "
                               "[here](https://studio.youtube.com/channel/UC-NukxPakwQIvx73VjtIPnw/videos/) "
-                              "and add the new video to the playlist named 'MK6 Game Sessions'.")
+                              "and add the new video to the playlist named 'MK6 Game Sessions'.", inline=False)
 
         embed.add_field(name="Adjust description & tags on YouTube",
                         value="Twitch automatically adds a paragraph about Twitch to the end of the exported video's "
-                              "description and the two tags 'twitch' & 'games'. Make sure to remove both things.")
+                              "description and the two tags 'twitch' & 'games'. Make sure to remove both things.",
+                        inline=False)
+
+        embed.add_field(name="Add Game Session to Wiki",
+                        value="Add an entry for this new game session"
+                              " [here](https://reddit.com/r/democraciv/wiki/game-sessions).",
+                        inline=False)
 
         embed.add_field(name="Upload the save-game to Google Drive", value="Once a ministers sends you the save-game, "
                                                                            "upload it to our Google Drive under "
