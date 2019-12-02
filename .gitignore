@@ -6,4 +6,4 @@
 /event/__pycache__/
 /util/__pycache__/
 /test/__pycache__/
-/config/token.json
+/config/token.py

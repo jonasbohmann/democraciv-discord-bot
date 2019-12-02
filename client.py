@@ -1,6 +1,6 @@
 import time
 import math
-import config
+from config import config, token
 import discord
 import aiohttp
 import asyncio
@@ -58,16 +58,16 @@ initial_extensions = ['module.link',
 class DemocracivBot(commands.Bot):
 
     def __init__(self):
-        self.name = config.getConfig()["botName"]
-        self.description = config.getConfig()["botDescription"]
-        self.version = config.getConfig()["botVersion"]
-        self.icon = config.getConfig()["botIconURL"]
+        self.name = config.BOT_NAME
+        self.description = config.BOT_DESCRIPTION
+        self.version = config.BOT_VERSION
+        self.icon = config.BOT_ICON_URL
 
         # Save the bot's start time for get_uptime()
         self.start_time = time.time()
 
-        self.commands_cooldown = config.getCooldown()
-        self.commands_prefix = config.getPrefix()
+        self.commands_cooldown = config.BOT_COMMAND_COOLDOWN
+        self.commands_prefix = config.BOT_PREFIX
 
         # Initialize commands.Bot with prefix, description and disable case_sensitivity
         super().__init__(command_prefix=self.commands_prefix, description=self.description, case_insensitive=True)
@@ -82,7 +82,7 @@ class DemocracivBot(commands.Bot):
 
         # Create util objects from ./util/utils.py
         self.embeds = EmbedUtils()
-        self.checks = None
+        self.checks = CheckUtils(self)
 
         # Attributes will be "initialized" in on_ready as they need a connection to Discord
         self.DerJonas_object = None
@@ -98,11 +98,11 @@ class DemocracivBot(commands.Bot):
                 traceback.print_exc()
 
         # Create twitch live notification task if enabled in config
-        if config.getTwitch()['enableTwitchAnnouncements']:
+        if config.TWITCH_ENABLED:
             Twitch(self)
 
         # Create reddit new post on subreddit notification task if enabled in config
-        if config.getReddit()['enableRedditAnnouncements']:
+        if config.REDDIT_ENABLED:
             Reddit(self)
 
     async def initialize_aiohttp_session(self):
@@ -111,14 +111,14 @@ class DemocracivBot(commands.Bot):
         self.session = aiohttp.ClientSession()
 
     async def connect_to_db(self):
-        # Attempt to connect to PostgreSQL database with specified credentials from token.json
+        # Attempt to connect to PostgreSQL database with specified credentials from token.py
         # This will also fill an empty database with tables needed by the bot
 
         try:
-            self.db = await asyncpg.create_pool(user=config.getTokenFile()['postgresql-user'],
-                                                password=config.getTokenFile()['postgresql-password'],
-                                                database=config.getTokenFile()['postgresql-database'],
-                                                host=config.getTokenFile()['postgresql-host'])
+            self.db = await asyncpg.create_pool(user=token.POSTGRESQL_USER,
+                                                password=token.POSTGRESQL_PASSWORD,
+                                                database=token.POSTGRESQL_DATABASE,
+                                                host=token.POSTGRESQL_HOST)
         except ConnectionRefusedError:
             print("[DATABASE] Connection to database was denied")
             self.db_ready = False
@@ -132,7 +132,6 @@ class DemocracivBot(commands.Bot):
             await self.db.execute(sql.read())
             print("[DATABASE] Successfully initialised database")
 
-        self.checks = CheckUtils(self.db)
         self.db_ready = True
 
     def initialize_democraciv_guild(self):
@@ -140,21 +139,20 @@ class DemocracivBot(commands.Bot):
         # admin commands. The bot will automatically pick a random guild that it can see if 'democracivServerID' from
         # config.json is invalid
 
-        self.democraciv_guild_object = self.get_guild(int(config.getConfig()["democracivServerID"]))
+        self.democraciv_guild_object = self.get_guild(config.DEMOCRACIV_SERVER_ID)
 
         if self.democraciv_guild_object is None:
 
-            print("[BOT] Couldn't find guild with ID specified in config.json 'democracivServerID'.\n"
+            print("[BOT] Couldn't find guild with ID specified in config.py 'DEMOCRACIV_SERVER_ID'.\n"
                   "      I will use a random guild that I can see to be used for my Democraciv-specific features.")
 
             self.democraciv_guild_object = self.guilds[0]
+            config.DEMOCRACIV_SERVER_ID = self.democraciv_guild_object.id
 
             if self.democraciv_guild_object is None:
-                raise exceptions.GuildNotFoundError(config.getConfig()["democracivServerID"])
+                raise exceptions.GuildNotFoundError(config.DEMOCRACIV_SERVER_ID)
 
-            print(f"[BOT] Using '{self.democraciv_guild_object.name}' as Democraciv guild.\n"
-                  f"      Note that some features will still not work unless you change "
-                  f"'democracivServerID' in config.json to a guild ID that I am in.")
+            print(f"[BOT] Using '{self.democraciv_guild_object.name}' as Democraciv guild.")
 
     def get_uptime(self):
         difference = int(round(time.time() - self.start_time))
@@ -182,10 +180,10 @@ class DemocracivBot(commands.Bot):
         self.initialize_democraciv_guild()
 
         # Set status on Discord
-        await self.change_presence(activity=discord.Game(name=config.getPrefix() + 'help | Watching over '
-                                                                                   'the Democraciv community'))
+        await self.change_presence(activity=discord.Game(name=config.BOT_PREFIX + 'help | Watching over '
+                                                                                  'the Democraciv community'))
 
-        self.DerJonas_object = self.get_user(int(config.getConfig()['authorID']))
+        self.DerJonas_object = self.get_user(config.BOT_AUTHOR_ID)
 
     async def on_message(self, message):
         # Don't process message/command from DMs to prevent spamming
@@ -220,4 +218,4 @@ class DemocracivBot(commands.Bot):
 
 # This will start the bot when you run this file.
 if __name__ == '__main__':
-    DemocracivBot().run(config.getToken(), reconnect=True, bot=True)
+    DemocracivBot().run(token.TOKEN, reconnect=True, bot=True)

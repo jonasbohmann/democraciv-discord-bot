@@ -1,8 +1,8 @@
-import config
 import discord
 import unittest
 
 from util.utils import EmbedUtils
+from config import config
 
 
 class TestEmbedUtils(unittest.TestCase):
@@ -24,13 +24,13 @@ class TestEmbedUtils(unittest.TestCase):
                          self.embed.color, "Colours not matching")
 
     def test_embed_builder_footer(self):
-        self.embed.set_footer(text=config.getConfig()['botName'])
+        self.embed.set_footer(text=config.BOT_NAME)
 
         self.assertEqual(self.embed_utils.embed_builder(title="Test Embed", description="Test Description").footer.text,
                          self.embed.footer.text, "Footer Text not matching")
 
     def test_embed_builder_footer_icon(self):
-        self.embed.set_footer(icon_url=config.getConfig()['botIconURL'])
+        self.embed.set_footer(icon_url=config.BOT_ICON_URL)
 
         self.assertEqual(self.embed_utils.embed_builder(title="Test Embed", description="Test Description").
                          footer.icon_url, self.embed.footer.icon_url, "Footer Icon URL not matching")

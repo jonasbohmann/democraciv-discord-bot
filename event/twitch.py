@@ -1,4 +1,4 @@
-import config
+from config import config, token
 import aiohttp
 import discord
 import asyncio
@@ -15,11 +15,10 @@ class Twitch:
 
     def __init__(self, bot):
         self.bot = bot
-        self.twitch_API_url = "https://api.twitch.tv/helix/streams?user_login=" + config.getTwitch()[
-            'twitchChannelName']
-        self.twitch_API_token = config.getTokenFile()['twitchAPIKey']
+        self.streamer = config.TWITCH_CHANNEL
+        self.twitch_API_url = "https://api.twitch.tv/helix/streams?user_login=" + self.streamer
+        self.twitch_API_token = token.TWITCH_API_KEY
         self.http_header = {'Client-ID': self.twitch_API_token}
-        self.streamer = config.getTwitch()['twitchChannelName']
         self.active_stream = False
         self.first_run = True
         self.twitch_task.start()
@@ -148,15 +147,14 @@ class Twitch:
             return
 
         try:
-            channel = discord.utils.get(self.bot.democraciv_guild_object.text_channels,
-                                        name=config.getTwitch()['twitchAnnouncementChannel'])
+            channel = self.bot.democraciv_guild_object.get_channel(config.TWITCH_ANNOUCEMENT_CHANNEL)
         except AttributeError:
             print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
                   f'in the config to a server I am in or disable Twitch announcements.')
-            raise exceptions.GuildNotFoundError(config.getConfig()["democracivServerID"])
+            raise exceptions.GuildNotFoundError(config.DEMOCRACIV_SERVER_ID)
 
         if channel is None:
-            raise exceptions.ChannelNotFoundError(config.getTwitch()['twitchAnnouncementChannel'])
+            raise exceptions.ChannelNotFoundError(config.TWITCH_ANNOUCEMENT_CHANNEL)
 
         twitch_data = await self.check_twitch_livestream()
         if twitch_data is not False:
@@ -169,7 +167,7 @@ class Twitch:
                 embed.add_field(name="Link", value=f"https://twitch.tv/{self.streamer}", inline=False)
                 embed.set_image(url=twitch_data[1])
 
-                if config.getTwitch()['everyonePingOnAnnouncement']:
+                if config.TWITCH_EVERYONE_PING_ON_ANNOUNCEMENT:
                     await channel.send(f'@everyone {self.streamer} is live on Twitch!')
 
                 await channel.send(embed=embed)

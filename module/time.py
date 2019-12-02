@@ -1,5 +1,5 @@
 import pytz
-import config
+from config import config
 
 from datetime import datetime
 from discord.ext import commands
@@ -28,7 +28,7 @@ class Time(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.group(name='time', case_insensitive=True)
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def time(self, ctx):
         """Displays the current time of a specified timezone"""
 

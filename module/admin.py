@@ -1,4 +1,4 @@
-import config
+from config import config
 import psutil
 import asyncio
 import discord
@@ -100,7 +100,7 @@ class Admin(commands.Cog):
         await ctx.send(f':white_check_mark: Deleted **{len(deleted)}** messages.', delete_after=5)
 
     @commands.command(name="tinyurl", aliases=["tiny"])
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def tinyurl(self, ctx, url: str):
         """Shorten a link with tinyurl"""
 
@@ -152,7 +152,7 @@ class Admin(commands.Cog):
             config_embed = self.bot.embeds.embed_builder(title="Config Diagnosis", description="")
             config_embed.add_field(name="Connected Democraciv Guild", value=f"{self.bot.democraciv_guild_object.name}")
             config_embed.add_field(name="Democraciv Guild specified in config",
-                                   value=f"{self.bot.get_guild(int(config.getConfig()['democracivServerID']))}",
+                                   value=f"{self.bot.get_guild(config.DEMOCRACIV_SERVER_ID)}",
                                    inline=False)
 
             await ctx.send(embed=config_embed)
@@ -168,22 +168,22 @@ class Admin(commands.Cog):
             permission_embed.add_field(name="Top Role", value=str(ctx.guild.me.top_role), inline=False)
             await ctx.send(embed=permission_embed)
 
-            # reddit_embed = self.bot.embeds.embed_builder(title="Reddit Diagnosis", description="")
-            # reddit_embed.add_field(name="Enabled", value=config.getReddit()["enableRedditAnnouncements"])
-            # reddit_embed.add_field(name="Last Reddit Post", value=config.getLastRedditPost()['id'])
-            # reddit_embed.add_field(name="Subreddit", value=config.getReddit()["subreddit"], inline=True)
-            # reddit_embed.add_field(name="Discord Channel", value="#" + config.getReddit()["redditAnnouncementChannel"]
-            #                       , inline=True)
-            # await ctx.send(embed=reddit_embed)
+            await asyncio.sleep(4)
 
-            # twitch_embed = self.bot.embeds.embed_builder(title="Twitch Diagnosis", description="")
-            # twitch_embed.add_field(name="Enabled", value=config.getTwitch()["enableTwitchAnnouncements"])
-            # twitch_embed.add_field(name="Twitch Channel", value=config.getTwitch()["twitchChannelName"])
-            # twitch_embed.add_field(name="Discord Channel", value="#" + config.getTwitch()["twitchAnnouncementChannel"]
-            #                       , inline=False)
-            # twitch_embed.add_field(name="Everyone Ping", value=str(config.getTwitch()["everyonePingOnAnnouncement"])
-            #                      , inline=False)
-            # await ctx.send(embed=twitch_embed)
+            reddit_embed = self.bot.embeds.embed_builder(title="Reddit Diagnosis", description="")
+            reddit_embed.add_field(name="Enabled", value=config.REDDIT_ENABLED)
+            reddit_embed.add_field(name="Subreddit", value=config.REDDIT_SUBREDDIT, inline=True)
+            reddit_embed.add_field(name="Discord Channel", value=self.bot.get_channel
+                        (config.REDDIT_ANNOUNCEMENT_CHANNEL).mention, inline=True)
+            await ctx.send(embed=reddit_embed)
+
+            twitch_embed = self.bot.embeds.embed_builder(title="Twitch Diagnosis", description="")
+            twitch_embed.add_field(name="Enabled", value=config.TWITCH_ENABLED)
+            twitch_embed.add_field(name="Twitch Channel", value=config.TWITCH_CHANNEL)
+            reddit_embed.add_field(name="Discord Channel", value=self.bot.get_channel
+            (config.TWITCH_ANNOUCEMENT_CHANNEL).mention, inline=True)
+            twitch_embed.add_field(name="Everyone Ping", value=config.TWITCH_ENABLED, inline=False)
+            await ctx.send(embed=twitch_embed)
 
 
 def setup(bot):

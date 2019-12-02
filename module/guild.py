@@ -1,4 +1,4 @@
-import config
+from config import config
 import discord
 
 import util.exceptions as exceptions
@@ -325,7 +325,7 @@ class Guild(commands.Cog):
                 await ctx.send(":white_check_mark: Disabled the default role.")
 
     @commands.command(name='invite')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def invite(self, ctx):
         """Get an active invite link to this guild"""
         invite = await ctx.channel.create_invite(max_age=0, unique=False)

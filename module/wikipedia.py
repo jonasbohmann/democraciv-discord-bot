@@ -1,5 +1,5 @@
 import re
-import config
+from config import config
 
 from discord.ext import commands
 
@@ -39,7 +39,7 @@ class Wikipedia(commands.Cog):
                 return None
 
     @commands.command(name='wikipedia')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def wikipedia(self, ctx, *, topic: str):
         """Search for a topic on Wikipedia\nUse quotes for topics that consist of multiple words!"""
         async with ctx.typing():  # Show typing status so that user knows that stuff is happening

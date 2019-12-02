@@ -22,7 +22,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-import config
+from config import config
 import asyncio
 import discord
 
@@ -124,7 +124,7 @@ class Pages:
             else:
                 text = f'Page {page}/{self.maximum_pages}'
 
-            self.embed.set_footer(text=text, icon_url=config.getConfig()['botIconURL'])
+            self.embed.set_footer(text=text, icon_url=config.BOT_ICON_URL)
 
         if self.paginating and first:
             p.append('')
@@ -221,7 +221,7 @@ class Pages:
         embed.clear_fields()
         embed.description = '\n'.join(messages)
         embed.set_footer(text=f'We were on page {self.current_page} before this message.',
-                         icon_url=config.getConfig()['botIconURL'])
+                         icon_url=config.BOT_ICON_URL)
         await self.message.edit(content=None, embed=embed)
 
         async def go_back_to_current_page():
@@ -296,7 +296,7 @@ class FieldPages(Pages):
             else:
                 text = f'Page {page}/{self.maximum_pages}'
 
-            self.embed.set_footer(text=text, icon_url=config.getConfig()['botIconURL'])
+            self.embed.set_footer(text=text, icon_url=config.BOT_ICON_URL)
 
 
 class TextPages(Pages):

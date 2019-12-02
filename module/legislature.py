@@ -1,4 +1,4 @@
-import config
+from config import config
 import discord
 import datetime
 
@@ -16,7 +16,7 @@ class Legislature(commands.Cog):
         self.bot = bot
 
     @commands.command(name='submit')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_any_role("Legislator", "Legislature")
     @utils.is_democraciv_guild()
     async def submit(self, ctx, google_docs_url: str):

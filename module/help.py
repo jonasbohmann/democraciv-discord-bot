@@ -22,7 +22,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-import config
+from config import config
 import asyncio
 import itertools
 import discord
@@ -52,7 +52,7 @@ class HelpPaginator(Pages):
         self.embed.title = self.title
 
         self.embed.set_footer(text=f'Use "{self.prefix}help command" for more info on a command.',
-                              icon_url=config.getConfig()['botIconURL'])
+                              icon_url=config.BOT_ICON_URL)
 
         for entry in entries:
             signature = f'{entry.qualified_name} {entry.signature}'
@@ -72,7 +72,7 @@ class HelpPaginator(Pages):
         self.embed.add_field(name='What are these reactions for?', value='\n'.join(messages), inline=False)
 
         self.embed.set_footer(text=f'We were on page {self.current_page} before this message.',
-                              icon_url=config.getConfig()['botIconURL'])
+                              icon_url=config.BOT_ICON_URL)
         await self.message.edit(embed=self.embed)
 
         async def go_back_to_current_page():
@@ -103,7 +103,7 @@ class HelpPaginator(Pages):
             self.embed.add_field(name=name, value=value, inline=False)
 
         self.embed.set_footer(text=f'We were on page {self.current_page} before this message.',
-                              icon_url=config.getConfig()['botIconURL'])
+                              icon_url=config.BOT_ICON_URL)
         await self.message.edit(embed=self.embed)
 
         async def go_back_to_current_page():
@@ -116,7 +116,7 @@ class HelpPaginator(Pages):
 class PaginatedHelpCommand(commands.HelpCommand):
     def __init__(self):
         super().__init__(command_attrs={
-            'cooldown': commands.Cooldown(1, config.getCooldown(), commands.BucketType.member),
+            'cooldown': commands.Cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.member),
             'help': 'Shows help about the bot, a command, or a category',
             'hidden': True
         })

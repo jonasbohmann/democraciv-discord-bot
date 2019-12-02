@@ -19,23 +19,23 @@ Provides useful information, political party & role management and much more.
 to run the bot yourself as you might run into unexpected errors. Instead, invite the bot to your server with this
  [link](https://discordapp.com/oauth2/authorize?client_id=486971089222631455&scope=bot&permissions=8).*
 
-After installing all the dependencies, create a `token.json` in the config folder.
+After installing all the dependencies, create a `token.py` in the config folder.
 
 The file should look like this:
 ```
- {
-  "token": "INSERT_TOKEN_HERE",
-  "twitchAPIKey": "INSERT_TWITCH_API_KEY_HERE",
-  "postgresql-user": "INSERT_NAME_OF_YOUR_POSTGRES_USER_HERE",
-  "postgresql-password": "INSERT_PASSWORD_OF_YOUR_POSTGRES_USER_HERE",
-  "postgresql-database": "INSERT_NAME_OF_YOUR_DATABASE_HERE",
-  "postgresql-host": "INSERT_ADRESS_OF_YOUR_DATABASE_HERE"
- }
+# Token
+ATOKEN = "NDg2OTcxMDg5MjIyNjMxNDU1.XL9_gw.JPB4ZFWnbfxIU6EsY1XT-iN-O3o"
+TOKEN = "NDg3MzQ1OTAwMjM5MzIzMTQ3.D1CNEQ.l8G817yPN3wLdelMpvn88xSMR4M"
+TWITCH_API_KEY = "r4lnx70cewwd1gbaeg1vur55w4o1uq"
+
+# PostgreSQL config
+POSTGRESQL_USER = "jonas"
+POSTGRESQL_PASSWORD = "ehre"
+POSTGRESQL_HOST = "127.0.0.1"
+POSTGRESQL_DATABASE = "democraciv"
 ```
 Add the token of your Discord App, your Twitch Helix API key if you enabled the Twitch module, and your
  PostgreSQL configuration like above. 
-
-To use all of the bot's features, set the `democracivServerID` in `config.json` to a guild ID that the bot is in.
 
 After you've done all that, run `client.py`.
 
@@ -51,22 +51,22 @@ You only need to create an empty database, the bot will then fill that with tabl
 ####  Twitch 
 
 If you want to use the Twitch announcements feature, you have to get an API key from [here](https://dev.twitch.tv/console/apps)
-and add it to the `token.json` in the config folder.
+and add it to the `token.py` in the config folder.
 
-You can configure everything else that is Twitch related in the `config.json`.
+You can configure everything else that is Twitch related in the `config.py`.
 
-If you do not want to use the Twitch announcements feature, you have to set `enableTwitchAnnouncements` in the
-`config.json` to `false`.
+If you do not want to use the Twitch announcements feature, you have to set `TWITCH_ENABLED` in the
+`config.py` to `False`.
 
 ####  Reddit 
 
-Notifications for new posts from a subreddit are enabled by default, but can be disabled in the `config.json`. Unlike the
+Notifications for new posts from a subreddit are enabled by default, but can be disabled in the `config.py`. Unlike the
 Twitch Notification module, we don't need to register an API key for Reddit.
 
-You can configure everything else that is Reddit related in the `config.json`.
+You can configure everything else that is Reddit related in the `config.py`.
 
-If you do not want to use the Reddit announcements feature, you have to set `enableRedditAnnouncements` in the
-`config.json` to `false`.
+If you do not want to use the Reddit announcements feature, you have to set `REDDIT_ENABLED` in the
+`config.py` to `False`.
 
 
 ##  Features

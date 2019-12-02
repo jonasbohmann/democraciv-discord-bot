@@ -1,18 +1,18 @@
 import html
-import config
 import discord
 import aiohttp
 
 import util.exceptions as exceptions
 
 from discord.ext import tasks
+from config import config
 
 
 class Reddit:
 
     def __init__(self, bot):
         self.bot = bot
-        self.subreddit = config.getReddit()['subreddit']
+        self.subreddit = config.REDDIT_SUBREDDIT
         self.first_run = True
         self.reddit_task.start()
 
@@ -35,15 +35,15 @@ class Reddit:
             return
 
         try:
-            channel = discord.utils.get(self.bot.democraciv_guild_object.text_channels,
-                                        name=config.getReddit()['redditAnnouncementChannel'])
+            channel = self.bot.democraciv_guild_object.get_channel(config.REDDIT_ANNOUNCEMENT_CHANNEL)
+
         except AttributeError:
             print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
                   f'in the config to a server I am in or disable Twitch announcements.')
-            raise exceptions.GuildNotFoundError(config.getConfig()["democracivServerID"])
+            raise exceptions.GuildNotFoundError(config.DEMOCRACIV_SERVER_ID)
 
         if channel is None:
-            raise exceptions.ChannelNotFoundError(config.getReddit()['redditAnnouncementChannel'])
+            raise exceptions.ChannelNotFoundError(config.REDDIT_ANNOUNCEMENT_CHANNEL)
 
         reddit_post_json = await self.get_newest_reddit_post()
 

@@ -1,5 +1,5 @@
 import random
-import config
+from config import config
 import discord
 import operator
 
@@ -44,7 +44,7 @@ class Fun(commands.Cog):
         await ctx.send(content)
 
     @commands.command(name='whois')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def whois(self, ctx, *, member: discord.Member = None):
         """Get detailed information about a member of this guild
 
@@ -93,7 +93,7 @@ class Fun(commands.Cog):
             await ctx.send(':x: You have to give me a user as argument')
 
     @commands.command(name='veterans')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def veterans(self, ctx):
         """List the first 15 members who joined this guild"""
 
@@ -137,7 +137,7 @@ class Fun(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name='random')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def random(self, ctx, *arg):
         """Returns a random number or choice
 

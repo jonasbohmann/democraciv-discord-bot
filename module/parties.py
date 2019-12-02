@@ -1,4 +1,4 @@
-import config
+from config import config
 import discord
 import asyncio
 import asyncpg
@@ -78,7 +78,7 @@ class Party(commands.Cog, name='Political Parties'):
         return parties_and_members
 
     @commands.command(name='join')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
     async def join(self, ctx, *, party: str):
         """Join a political party"""
@@ -145,14 +145,14 @@ class Party(commands.Cog, name='Political Parties'):
                                '`-join <party>`')
 
     @commands.command(name='form')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def form(self, ctx):
         """Form a political party"""
         link = "https://forms.gle/ETyFrr6qucr95MMA9"
         await ctx.send(f"You can fill out this form with all the details to form a political party:\n{link}")
 
     @commands.command(name='leave')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
     async def leave(self, ctx, *, party: str):
         """Leave a political party"""
@@ -201,7 +201,7 @@ class Party(commands.Cog, name='Political Parties'):
                                '`-leave <party>`')
 
     @commands.command(name='members')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def members(self, ctx, *, party: str = None):
         """Get the current political party ranking or a list of all party members on the Democraciv guild"""
         if party is None or not party:
@@ -260,7 +260,7 @@ class Party(commands.Cog, name='Political Parties'):
             await ctx.send(embed=embed)
 
     @commands.command(name='addparty')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def addparty(self, ctx):
@@ -348,7 +348,7 @@ class Party(commands.Cog, name='Political Parties'):
             await ctx.send(":x: Unexpected database error occurred.")
 
     @commands.command(name='deleteparty')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def deleteparty(self, ctx, hard: bool, *, party: str):
@@ -400,7 +400,7 @@ class Party(commands.Cog, name='Political Parties'):
                            '`-deleteparty false <party>` will remove the party but not delete its Discord role')
 
     @commands.command(name='addalias')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def addalias(self, ctx):
@@ -441,7 +441,7 @@ class Party(commands.Cog, name='Political Parties'):
             await ctx.send(":x: Unexpected database error occurred.")
 
     @commands.command(name='deletealias')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def deletealias(self, ctx, *, alias: str):
@@ -453,7 +453,7 @@ class Party(commands.Cog, name='Political Parties'):
             await ctx.send(":x: Unexpected database error occurred.")
 
     @commands.command(name='listaliases')
-    @commands.cooldown(1, config.getCooldown(), commands.BucketType.user)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
     async def listaliases(self, ctx, *, party: str):
         """List the given parties aliases"""

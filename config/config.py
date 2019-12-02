@@ -1,0 +1,25 @@
+# Configuration for the Democraciv Bot
+
+
+# Bot Configuration
+BOT_NAME = 'Democraciv Bot'
+BOT_PREFIX = '.'
+BOT_COMMAND_COOLDOWN = 2.5
+BOT_DESCRIPTION = 'Discord Bot for the r/Democraciv community.'
+BOT_VERSION = '0.14.3'
+BOT_ICON_URL = 'https://cdn.discordapp.com/attachments/585502938571604056/586310405618532362/final_pride2.png'
+BOT_AUTHOR = 'DerJonas#8109'
+BOT_AUTHOR_ID = 212972352890339328
+DEMOCRACIV_SERVER_ID = 208984105310879744
+
+
+# Reddit Notifications
+REDDIT_ENABLED = True
+REDDIT_SUBREDDIT = 'dankmemes'
+REDDIT_ANNOUNCEMENT_CHANNEL = 330162836095631360
+
+# Twitch Notifications
+TWITCH_ENABLED = True
+TWITCH_CHANNEL = 'pietsmiettv'
+TWITCH_ANNOUCEMENT_CHANNEL = 209432307730350080
+TWITCH_EVERYONE_PING_ON_ANNOUNCEMENT = True
