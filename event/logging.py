@@ -1,6 +1,8 @@
 import discord
 import datetime
 
+import util.utils as utils
+
 from discord.ext import commands
 
 
@@ -26,9 +28,7 @@ class Log(commands.Cog):
             embed.set_thumbnail(url=thumbnail)
 
         # Send event embed to log channel
-        log_channel = (await self.bot.db.fetchrow("SELECT logging_channel FROM guilds WHERE id = $1",
-                                                  guild.id))['logging_channel']
-        log_channel = guild.get_channel(log_channel)
+        log_channel = await utils.get_logging_channel(self.bot, guild.id)
 
         if log_channel is not None:
             await log_channel.send(embed=embed)
@@ -126,9 +126,7 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        welcome_channel = (await self.bot.db.fetchrow("SELECT welcome_channel FROM guilds WHERE id = $1",
-                                                      member.guild.id))['welcome_channel']
-        welcome_channel = member.guild.get_channel(welcome_channel)
+        welcome_channel = await utils.get_welcome_channel(self.bot, member.guild.id)
 
         if welcome_channel is not None:
             if await self.bot.checks.is_welcome_message_enabled(member.guild.id):

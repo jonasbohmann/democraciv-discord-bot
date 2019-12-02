@@ -2,6 +2,7 @@ import config
 import discord
 
 import util.exceptions as exceptions
+import util.utils as utils
 
 from discord.ext import commands
 from util.flow import Flow
@@ -123,9 +124,7 @@ class Guild(commands.Cog):
         is_logging_enabled = (await self.bot.db.fetchrow("SELECT logging FROM guilds WHERE id = $1", ctx.guild.id))[
             'logging']
 
-        current_logging_channel = (await self.bot.db.fetchrow("SELECT logging_channel FROM guilds WHERE id = $1",
-                                                              ctx.guild.id))['logging_channel']
-        current_logging_channel = self.bot.get_channel(current_logging_channel)
+        current_logging_channel = await utils.get_logging_channel(self.bot, ctx.guild.id)
 
         if current_logging_channel is None:
             current_logging_channel = "This guild currently has no logging channel."
@@ -185,9 +184,7 @@ class Guild(commands.Cog):
                 `-guild exclude` to see all excluded channels
                 `-guild exclude <channel>` too add/remove a channel to/from the excluded channels list
         """
-        current_logging_channel = (await self.bot.db.fetchrow("SELECT logging_channel FROM guilds WHERE id = $1"
-                                                              , ctx.guild.id))['logging_channel']
-        current_logging_channel = self.bot.get_channel(current_logging_channel)
+        current_logging_channel = await utils.get_logging_channel(self.bot, ctx.guild.id)
 
         if current_logging_channel is None:
             await ctx.send(":x: This guild currently has no logging channel. Please set one with `-guild logs`.")

@@ -6,11 +6,11 @@ import util.exceptions as exceptions
 
 from discord.ext import commands
 
-
 # -- roles.py | module.role --
 #
 # User role management.
 #
+from util.flow import Flow
 
 
 class Roles(commands.Cog):
@@ -20,7 +20,8 @@ class Roles(commands.Cog):
         self.bot = bot
 
     async def get_roles(self, ctx):
-        role_list = await self.bot.db.fetch("SELECT (role_id, join_message) FROM roles WHERE guild_id = $1", ctx.guild.id)
+        role_list = await self.bot.db.fetch("SELECT (role_id, join_message) FROM roles WHERE guild_id = $1",
+                                            ctx.guild.id)
         role_dict = {}
 
         for record in role_list:
@@ -107,41 +108,40 @@ class Roles(commands.Cog):
         """Add a role to this guild's `-roles` list"""
 
         await ctx.send(":information_source: Answer with the name of the role you want to create:")
-        try:
-            role_name = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
-                                                timeout=240)
-        except asyncio.TimeoutError:
-            await ctx.send(":x: Aborted.")
-            return
 
-        # Check if role already exists
-        discord_role = discord.utils.get(ctx.guild.roles, name=role_name.content)
-        if discord_role:
-            await ctx.send(f":white_check_mark: I will use the **already existing role** named '{discord_role.name}'"
-                           f" for this.")
-        else:
-            await ctx.send(f":white_check_mark: I will **create a new role** on this guild named '{role_name.content}'"
-                           f" for this.")
+        flow = Flow(self.bot, ctx)
+        role_name = await flow.get_new_role(240)
+
+        if isinstance(role_name, str):
+            await ctx.send(
+                f":white_check_mark: I will **create a new role** on this guild named '{role_name}'"
+                f" for this.")
             try:
-                discord_role = await ctx.guild.create_role(name=role_name.content)
+                discord_role = await ctx.guild.create_role(name=role_name)
             except discord.Forbidden:
-                raise exceptions.ForbiddenError(task="create_role", detail=role_name.content)
+                raise exceptions.ForbiddenError("create_role", role_name)
+
+        else:
+            discord_role = role_name
+
+            await ctx.send(
+                f":white_check_mark: I'll use the **pre-existing role** named "
+                f"'{discord_role.name}' for this.")
 
         await ctx.send(":information_source: Answer with a short message the user should see when they get the role: ")
-        try:
-            role_join_message = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
-                                                        timeout=300)
-        except asyncio.TimeoutError:
-            await ctx.send(":x: Aborted.")
+
+        role_join_message = await flow.get_text_input(300)
+
+        if not role_join_message:
             return
 
         status = await self.bot.db.execute("INSERT INTO roles (guild_id, role_id, role_name, join_message) "
                                            "VALUES ($1, $2, $3, $4)", ctx.guild.id, discord_role.id,
-                                           discord_role.name.lower(), role_join_message.content)
+                                           discord_role.name.lower(), role_join_message)
 
         if status == "INSERT 0 1":
-            await ctx.send(f':white_check_mark: Added the role "{role_name.content}" with the join message '
-                           f'"{role_join_message.content}"!')
+            await ctx.send(f':white_check_mark: Added the role "{discord_role.name}" with the join message '
+                           f'"{role_join_message}"!')
         else:
             await ctx.send(":x: Unexpected database error occurred.")
 

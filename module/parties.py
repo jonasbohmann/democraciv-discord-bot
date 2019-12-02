@@ -8,11 +8,11 @@ import util.exceptions as exceptions
 
 from discord.ext import commands
 
-
 # -- parties.py | module.parties --
 #
 # Management of Political Parties
 #
+from util.flow import Flow
 
 
 class Party(commands.Cog, name='Political Parties'):
@@ -268,70 +268,55 @@ class Party(commands.Cog, name='Political Parties'):
 
         await ctx.send(":information_source: Answer with the name of the party you want to create:")
 
-        try:
-            role_name = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
-                                                timeout=240)
-        except asyncio.TimeoutError:
-            await ctx.send(":x: Aborted.")
-            return
+        flow = Flow(self.bot, ctx)
+        role_name = await flow.get_new_role(240)
 
-        # Check if party role already exists
-        discord_role = discord.utils.get(ctx.guild.roles, name=role_name.content)
-
-        if discord_role:
-            await ctx.send(f":white_check_mark: I will use the **already existing role** named '{discord_role.name}'"
-                           f" for the new party.")
-        else:
-            await ctx.send(f":white_check_mark: I will **create a new role** on this guild named '{role_name.content}'"
-                           f" for the new party.")
+        if isinstance(role_name, str):
+            await ctx.send(
+                f":white_check_mark: I will **create a new role** on this guild named '{role_name}'"
+                f" for the new party.")
             try:
-                discord_role = await ctx.guild.create_role(name=role_name.content)
+                discord_role = await ctx.guild.create_role(name=role_name)
             except discord.Forbidden:
-                raise exceptions.ForbiddenError(task="create_role", detail=role_name.content)
+                raise exceptions.ForbiddenError("create_role", role_name)
+
+        else:
+            discord_role = role_name
+
+            await ctx.send(
+                f":white_check_mark: I'll use the **pre-existing role** named "
+                f"'{discord_role.name}' for the new party.")
 
         await ctx.send(":information_source: Answer with the invite link to the party's Discord guild:")
 
-        try:
-            party_invite = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
-                                                   timeout=300)
-        except asyncio.TimeoutError:
-            await ctx.send(":x: Aborted.")
+        party_invite = await flow.get_text_input(300)
+
+        if not party_invite:
             return
 
         private_question = await ctx.send(
             "Should this new party be private? React with :white_check_mark: if yes, or with :x: if not.")
 
-        await private_question.add_reaction("\U00002705")
-        await private_question.add_reaction("\U0000274c")
+        reaction, user = await flow.yes_no_reaction_confirm(private_question, 240)
 
-        try:
-            reaction, user = await self.bot.wait_for('reaction_add',
-                                                     check=self.bot.checks.wait_for_reaction_check(ctx,
-                                                                                                   private_question),
-                                                     timeout=240)
-        except asyncio.TimeoutError:
-            await ctx.send(":x: Aborted.")
+        if reaction is None:
             return
 
-        else:
-            if str(reaction.emoji) == "\U00002705":
-                is_private = True
+        if str(reaction.emoji) == "\U00002705":
+            is_private = True
 
-                await ctx.send(":information_source: Answer with the name of the party's leader:")
-                try:
-                    leader = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
-                                                     timeout=240)
-                except asyncio.TimeoutError:
-                    await ctx.send(":x: Aborted.")
-                    return
+            await ctx.send(":information_source: Answer with the name of the party's leader:")
 
+            leader = await flow.get_text_input(240)
+
+            if leader:
                 try:
-                    leader_role = await commands.MemberConverter().convert(ctx, leader.content)
+                    leader_role = await commands.MemberConverter().convert(ctx, leader)
                 except commands.BadArgument:
-                    raise exceptions.MemberNotFoundError(leader.content)
+                    raise exceptions.MemberNotFoundError(leader)
 
-            elif str(reaction.emoji) == "\U0000274c":
-                is_private = False
+        elif str(reaction.emoji) == "\U0000274c":
+            is_private = False
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
@@ -340,7 +325,7 @@ class Party(commands.Cog, name='Political Parties'):
                         await self.bot.db.execute(
                             "INSERT INTO parties (id, discord, private, leader) VALUES ($1, $2, $3, $4)",
                             discord_role.id,
-                            party_invite.content, True, leader_role.id)
+                            party_invite, True, leader_role.id)
                     except asyncpg.UniqueViolationError:
                         await ctx.send(f":x: A party named '{discord_role.name}' already exists!")
                         return
@@ -348,21 +333,17 @@ class Party(commands.Cog, name='Political Parties'):
                     try:
                         await self.bot.db.execute(
                             "INSERT INTO parties (id, discord, private) VALUES ($1, $2, $3)", discord_role.id,
-                            party_invite.content, False)
+                            party_invite, False)
                     except asyncpg.UniqueViolationError:
                         await ctx.send(f":x: A party named '{discord_role.name}' already exists!")
                         return
 
-                # Add both the lowercase name of the new discord role and the lowercase original name that the user
-                # entered in case Discord alters the name string in any way for role creation
-                await self.bot.db.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
-                                          discord_role.name.lower(), discord_role.id)
                 status = await self.bot.db.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
-                                                   role_name.content.lower(), discord_role.id)
+                                                   discord_role.name.lower(), discord_role.id)
 
         if status == "INSERT 0 1":
             await ctx.send(f':white_check_mark: Added the party "{discord_role.name}" with the invite '
-                           f'"{party_invite.content}"!')
+                           f'"{party_invite}"!')
         else:
             await ctx.send(":x: Unexpected database error occurred.")
 
@@ -442,20 +423,19 @@ class Party(commands.Cog, name='Political Parties'):
 
         await ctx.send(f":information_source: Answer with the alias for '{discord_role.name}':")
 
-        try:
-            alias = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
-                                            timeout=300)
-        except asyncio.TimeoutError:
-            await ctx.send(":x: Aborted.")
+        flow = Flow(self.bot, ctx)
+        alias = await flow.get_text_input(240)
+
+        if not alias:
             return
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
                 status = await self.bot.db.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
-                                                   alias.content.lower(), discord_role.id)
+                                                   alias.lower(), discord_role.id)
 
         if status == "INSERT 0 1":
-            await ctx.send(f':white_check_mark: Added the alias "{alias.content}" for party '
+            await ctx.send(f':white_check_mark: Added the alias "{alias}" for party '
                            f'"{discord_role.name}"!')
         else:
             await ctx.send(":x: Unexpected database error occurred.")

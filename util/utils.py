@@ -5,17 +5,30 @@ import util.exceptions as exceptions
 
 from discord.ext import commands
 
-
 DEMOCRACIV_GUILD_ID = int(config.getConfig()["democracivServerID"])
 
 
 def is_democraciv_guild():
     """Wrapper for a discord.ext.commands decorator to check if command is used on the Democraciv guild"""
+
     def check(ctx):
         if DEMOCRACIV_GUILD_ID != ctx.guild.id:
             raise exceptions.NotDemocracivGuildError()
         return True
+
     return commands.check(check)
+
+
+async def get_logging_channel(bot, guild_id):
+    logging_channel = (await bot.db.fetchrow("SELECT logging_channel FROM guilds WHERE id = $1",
+                                             guild_id))['logging_channel']
+    return bot.get_channel(logging_channel)
+
+
+async def get_welcome_channel(bot, guild_id):
+    welcome_channel = (await bot.db.fetchrow("SELECT welcome_channel FROM guilds WHERE id = $1",
+                                             guild_id))['welcome_channel']
+    return bot.get_channel(welcome_channel)
 
 
 class EmbedUtils:

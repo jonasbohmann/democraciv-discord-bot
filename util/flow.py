@@ -73,6 +73,7 @@ class Flow:
             return
 
         if not text.content:
+            await self.ctx.send(":x: Aborted.")
             return
 
         else:
