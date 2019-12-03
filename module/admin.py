@@ -1,4 +1,3 @@
-from config import config
 import psutil
 import asyncio
 import discord
@@ -9,6 +8,7 @@ import traceback
 import util.utils as utils
 import util.exceptions as exceptions
 
+from config import config
 from discord.ext import commands
 
 

@@ -1,11 +1,10 @@
-from config import config, token
 import aiohttp
-import discord
 import asyncio
 
 import util.exceptions as exceptions
 
 from discord.ext import tasks
+from config import config, token
 
 
 # -- Twitch  --

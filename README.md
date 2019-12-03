@@ -24,7 +24,6 @@ After installing all the dependencies, create a `token.py` in the config folder.
 The file should look like this:
 ```
 # Token
-ATOKEN = ""
 TOKEN = ""
 TWITCH_API_KEY = ""
 

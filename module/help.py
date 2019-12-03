@@ -22,11 +22,11 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-from config import config
 import asyncio
 import itertools
 import discord
 
+from config import config
 from util.paginator import Pages
 from discord.ext import commands
 

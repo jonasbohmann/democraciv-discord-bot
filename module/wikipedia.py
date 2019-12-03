@@ -1,6 +1,6 @@
 import re
-from config import config
 
+from config import config
 from discord.ext import commands
 
 

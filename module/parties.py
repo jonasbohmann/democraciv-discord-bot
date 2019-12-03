@@ -1,4 +1,3 @@
-from config import config
 import discord
 import asyncio
 import asyncpg
@@ -6,6 +5,7 @@ import asyncpg
 import util.utils as utils
 import util.exceptions as exceptions
 
+from config import config
 from discord.ext import commands
 
 # -- parties.py | module.parties --

@@ -1,11 +1,11 @@
-from config import config
 import discord
 
 import util.exceptions as exceptions
 import util.utils as utils
 
-from discord.ext import commands
+from config import config
 from util.flow import Flow
+from discord.ext import commands
 
 
 # -- guild.py | module.guild --

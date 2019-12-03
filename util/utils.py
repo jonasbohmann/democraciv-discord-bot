@@ -1,8 +1,8 @@
-from config import config
 import discord
 import datetime
 import util.exceptions as exceptions
 
+from config import config
 from discord.ext import commands
 
 

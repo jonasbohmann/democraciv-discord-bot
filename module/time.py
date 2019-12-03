@@ -1,6 +1,6 @@
 import pytz
-from config import config
 
+from config import config
 from datetime import datetime
 from discord.ext import commands
 

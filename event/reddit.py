@@ -1,11 +1,10 @@
 import html
-import discord
 import aiohttp
 
 import util.exceptions as exceptions
 
-from discord.ext import tasks
 from config import config
+from discord.ext import tasks
 
 
 class Reddit:

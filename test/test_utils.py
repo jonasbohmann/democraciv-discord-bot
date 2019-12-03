@@ -1,8 +1,8 @@
 import discord
 import unittest
 
-from util.utils import EmbedUtils
 from config import config
+from util.utils import EmbedUtils
 
 
 class TestEmbedUtils(unittest.TestCase):
