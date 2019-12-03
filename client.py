@@ -1,6 +1,5 @@
 import time
 import math
-from config import config, token
 import discord
 import aiohttp
 import asyncio
@@ -17,7 +16,9 @@ from discord.ext import commands
 # Internal Imports
 from event.twitch import Twitch
 from event.reddit import Reddit
+from config import config, token
 from util.utils import CheckUtils, EmbedUtils
+
 
 # -- Discord Bot for the r/Democraciv Server --
 #

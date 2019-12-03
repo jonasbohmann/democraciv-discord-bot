@@ -1,12 +1,12 @@
-from config import config
 import discord
 import datetime
 
 import util.utils as utils
 import util.exceptions as exceptions
 
-from bs4 import BeautifulSoup, SoupStrainer
+from config import config
 from discord.ext import commands
+from bs4 import BeautifulSoup, SoupStrainer
 
 
 class Legislature(commands.Cog):
