@@ -1,8 +1,6 @@
-import pytz
-
-from config import config
 from datetime import datetime
 from discord.ext import commands
+from config import config, token
 
 
 class Time(commands.Cog):
@@ -11,71 +9,41 @@ class Time(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def return_time(self, ctx, us: str, time: datetime, name, aliases=None):
-        """Displays the current time in based on the inputted values."""
-        if aliases is None:
-            aliases = []
-        aliases = '/'.join([name] + aliases).upper()  # Turns the list of aliases into a formatted string
-        if us == 'us':
-            embed = self.bot.embeds.embed_builder(title='Time - ' + aliases + ' - US Format',
-                                                  description=datetime.strftime(time, "%m/%d/%Y, %I:%M:%S %p"))
-
-            await ctx.send(embed=embed)
-            return
-
-        embed = self.bot.embeds.embed_builder(title='Time - ' + aliases,
-                                              description=datetime.strftime(time, "%d.%m.%Y, %H:%M:%S"))
-        await ctx.send(embed=embed)
-
-    @commands.group(name='time', case_insensitive=True)
+    @commands.command(name='time')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def time(self, ctx):
+    async def time(self, ctx, zone: str):
         """Displays the current time of a specified timezone"""
 
-    @time.command(name='est', aliases=['edt'])
-    async def est(self, ctx, us: str = None):
-        """Displays the current time in EST"""
-        await self.return_time(ctx, us, datetime.now(tz=pytz.timezone('EST5EDT')), 'est', ['edt'])
+        # If input is an abbreviation (UTC, EST etc.), make it uppercase for the TimeZoneDB request to work
+        if len(zone) <= 5:
+            zone = zone.upper()
 
-    @time.command(name='cet', aliases=['cest'])
-    async def cet(self, ctx, us: str = None):
-        """Displays the current time in CET"""
-        await self.return_time(ctx, us, datetime.now(tz=pytz.timezone('CET')), 'cet', ['cest'])
+        if token.TIMEZONEDB_API_KEY == "":
+            await ctx.send(":x: Invalid TimeZoneDB API key.")
+            return
 
-    @time.command(name='gmt')
-    async def gmt(self, ctx, us: str = None):
-        """Displays the current time in GMT"""
-        await self.return_time(ctx, us, datetime.now(tz=pytz.timezone('GMT')), 'gmt')
+        query_base = f"https://api.timezonedb.com/v2.1/get-time-zone?key={token.TIMEZONEDB_API_KEY}&format=json&" \
+                     f"by=zone&zone={zone}"
 
-    @time.command(name='mst', aliases=['mdt'])
-    async def mst(self, ctx, us: str = None):
-        """Displays the current time in MST"""
-        await self.return_time(ctx, us, datetime.now(tz=pytz.timezone('MST7MDT')), 'mst', ['mdt'])
+        async with ctx.typing():
+            async with self.bot.session.get(query_base) as response:
+                time_response = await response.json()
 
-    @time.command(name='pst', aliases=['pdt'])
-    async def pst(self, ctx, us: str = None):
-        """Displays the current time in PST"""
-        await self.return_time(ctx, us, datetime.now(tz=pytz.timezone('PST8PDT')), 'pst', ['pdt'])
+            if time_response['status'] != "OK":
+                return await ctx.send(f":x: '{zone}' is not a valid time zone!")
 
-    @time.command(name='utc')
-    async def utc(self, ctx, us: str = None):
-        """Displays the current time in UTC"""
-        await self.return_time(ctx, us, datetime.utcnow(), 'utc')
+            us_time = datetime.utcfromtimestamp(time_response['timestamp']).strftime("%A, %B %d %Y "
+                                                                                     " %I:%M:%S %p")
+            eu_time = datetime.utcfromtimestamp(time_response['timestamp']).strftime("%A, %B %d %Y"
+                                                                                     " %H:%M:%S")
 
-    @time.command(name='cst', aliases=['cdt'])
-    async def cst(self, ctx, us: str = None):
-        """Displays the current time in CST"""
-        await self.return_time(ctx, us, datetime.now(tz=pytz.timezone('CST6CDT')), 'cst', ['cdt'])
+            embed = self.bot.embeds.embed_builder(title=f"Current Time in {time_response['abbreviation']}",
+                                                  description="[See this list for available time zones.]"
+                                                              "(https://timezonedb.com/time-zones)")
+            embed.add_field(name="24-Hour Clock", value=eu_time, inline=False)
+            embed.add_field(name="12-Hour Clock", value=us_time, inline=False)
 
-    @time.command(name='eet', aliases=['eest'])
-    async def eet(self, ctx, us: str = None):
-        """Displays the current time in EET"""
-        await self.return_time(ctx, us, datetime.now(tz=pytz.timezone('EET')), 'eet', ['eest'])
-
-    @time.command(name='ast', aliases=['adt'])
-    async def ast(self, ctx, us: str = None):
-        """Displays the current time in AST"""
-        await self.return_time(ctx, us, datetime.now(tz=pytz.timezone('Canada/Atlantic')), 'ast', ['adt'])
+            await ctx.send(embed=embed)
 
 
 def setup(bot):

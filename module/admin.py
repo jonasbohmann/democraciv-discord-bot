@@ -129,35 +129,35 @@ class Admin(commands.Cog):
             `-stv <seats> <quota>`, with the quota parameter being "0" for Hare and "1" for Droop
         """
 
-        try:
-            csv = ctx.message.attachments[0]
-        except IndexError:
-            await ctx.send(f":x: You have to upload a .csv file to use this command!")
-            return
+        async with ctx.typing():
+            try:
+                csv = ctx.message.attachments[0]
+            except IndexError:
+                await ctx.send(f":x: You have to upload a .csv file to use this command!")
+                return
 
-        if not csv.filename.endswith('.csv'):
-            await ctx.send(f":x: You have to upload a valid .csv file to use this command!")
-            return
+            if not csv.filename.endswith('.csv'):
+                await ctx.send(f":x: You have to upload a valid .csv file to use this command!")
+                return
 
-        _filename = f"{uuid.uuid4()}.csv"
+            _filename = f"{uuid.uuid4()}.csv"
 
-        await csv.save(f'db/{_filename}')
+            await csv.save(f'db/{_filename}')
 
-        try:
-            output = await stv.main(seats, _filename, quota)
-        except Exception:
-            output = None
+            try:
+                output = await stv.main(seats, _filename, quota)
+            except Exception:
+                output = None
 
-        if output is None or output == "":
-            description = "There was an error while calculating the results."
-        else:
-            description = output
+            if output is None or output == "":
+                description = "There was an error while calculating the results."
+            else:
+                description = output
 
-        embed = self.bot.embeds.embed_builder(title=f"STV Results for {csv.filename}",
-                                              description=f"```{description}```", time_stamp=True)
+            embed = self.bot.embeds.embed_builder(title=f"STV Results for {csv.filename}",
+                                                  description=f"```{description}```", time_stamp=True)
 
-        await ctx.send(embed=embed)
-
+            await ctx.send(embed=embed)
 
     @stv.error
     async def stverror(self, ctx, error):
