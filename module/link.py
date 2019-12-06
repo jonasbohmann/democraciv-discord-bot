@@ -253,7 +253,7 @@ class Link(commands.Cog):
                                               description=links.legislativeprocedures)
         await ctx.send(embed=embed)
 
-    @commands.command(name='stvcalculator', aliases=['stv'])
+    @commands.command(name='stvcalculator')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def stvcalculator(self, ctx):
         """Source Code of our STV calculator"""

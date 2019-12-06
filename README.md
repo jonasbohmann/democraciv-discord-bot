@@ -126,6 +126,7 @@ for database~~
 
 ####  Update 0.15.0 - The Government Update
 
+*  ~~Add STV calculation~~
 *  Add Legislature dashboard with session management
 *  Add Ministry dashboard
 *  Add webhook for notifications on new SC cases 

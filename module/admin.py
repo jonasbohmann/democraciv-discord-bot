@@ -1,3 +1,4 @@
+import uuid
 import psutil
 import asyncio
 import discord
@@ -8,6 +9,7 @@ import traceback
 import util.utils as utils
 import util.exceptions as exceptions
 
+from util import stv
 from config import config
 from discord.ext import commands
 
@@ -117,6 +119,64 @@ class Admin(commands.Cog):
 
         await ctx.send(tiny_url)
 
+    @commands.command(name="stv")
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def stv(self, ctx, seats: int, quota: int):
+        """Calculate election results of a given .csv file with STV
+
+        Usage:
+            Upload a .csv file and add the command as a comment to it like this:
+            `-stv <seats> <quota>`, with the quota parameter being "0" for Hare and "1" for Droop
+        """
+
+        try:
+            csv = ctx.message.attachments[0]
+        except IndexError:
+            await ctx.send(f":x: You have to upload a .csv file to use this command!")
+            return
+
+        if not csv.filename.endswith('.csv'):
+            await ctx.send(f":x: You have to upload a valid .csv file to use this command!")
+            return
+
+        _filename = f"{uuid.uuid4()}.csv"
+
+        await csv.save(f'db/{_filename}')
+
+        try:
+            output = await stv.main(seats, _filename, quota)
+        except Exception:
+            output = None
+
+        if output is None or output == "":
+            description = "There was an error while calculating the results."
+        else:
+            description = output
+
+        embed = self.bot.embeds.embed_builder(title=f"STV Results for {csv.filename}",
+                                              description=f"```{description}```", time_stamp=True)
+
+        await ctx.send(embed=embed)
+
+
+    @stv.error
+    async def stverror(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'seats':
+                await ctx.send(':x: You have to specify the amount of available seats!\n\n**Usage**:\n'
+                               'Upload a .csv file and add the command as a comment to it like this:'
+                               ' `-stv <seats> <quota>`, with the quota parameter being "0" for Hare and "1" for Droop')
+
+            if error.param.name == 'quota':
+                await ctx.send(':x: You have to specify the quota!\n\n**Usage**:\n'
+                               'Upload a .csv file and add the command as a comment to it like this:'
+                               ' `-stv <seats> <quota>`, with the quota parameter being "0" for Hare and "1" for Droop')
+
+        elif isinstance(error, commands.BadArgument):
+            await ctx.send(':x: Error!\n\n**Usage**:\n'
+                           'Upload a .csv file and add the command as a comment to it like this:'
+                           ' `-stv <seats> <quota>`, with the quota parameter being "0" for Hare and "1" for Droop')
+
     @commands.command(name='health', aliases=['status', 'diagnosis'])
     @commands.is_owner()
     async def health(self, ctx):
@@ -174,7 +234,7 @@ class Admin(commands.Cog):
             reddit_embed.add_field(name="Enabled", value=config.REDDIT_ENABLED)
             reddit_embed.add_field(name="Subreddit", value=config.REDDIT_SUBREDDIT, inline=True)
             reddit_embed.add_field(name="Discord Channel", value=self.bot.get_channel
-                        (config.REDDIT_ANNOUNCEMENT_CHANNEL).mention, inline=True)
+            (config.REDDIT_ANNOUNCEMENT_CHANNEL).mention, inline=True)
             await ctx.send(embed=reddit_embed)
 
             twitch_embed = self.bot.embeds.embed_builder(title="Twitch Diagnosis", description="")
