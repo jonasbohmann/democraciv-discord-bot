@@ -18,9 +18,6 @@ class Time(commands.Cog):
         if len(zone) <= 5:
             zone = zone.upper()
 
-        if zone.lower() == "utc":
-            title = f"Current Time in UTC"
-
         if token.TIMEZONEDB_API_KEY == "":
             await ctx.send(":x: Invalid TimeZoneDB API key.")
             return
