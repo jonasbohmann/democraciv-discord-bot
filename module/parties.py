@@ -6,13 +6,13 @@ import util.utils as utils
 import util.exceptions as exceptions
 
 from config import config
+from util.flow import Flow
 from discord.ext import commands
 
 # -- parties.py | module.parties --
 #
 # Management of Political Parties
 #
-from util.flow import Flow
 
 
 class Party(commands.Cog, name='Political Parties'):

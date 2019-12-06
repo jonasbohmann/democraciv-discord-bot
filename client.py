@@ -138,7 +138,7 @@ class DemocracivBot(commands.Bot):
     def initialize_democraciv_guild(self):
         # The bot needs a "main" guild object that will be used for reddit & twitch notifications, political parties and
         # admin commands. The bot will automatically pick a random guild that it can see if 'democracivServerID' from
-        # config.json is invalid
+        # config.py is invalid
 
         self.democraciv_guild_object = self.get_guild(config.DEMOCRACIV_SERVER_ID)
 
@@ -177,7 +177,7 @@ class DemocracivBot(commands.Bot):
 
         # The bot needs a "main" guild object that will be used for reddit & twitch notifications, political parties and
         # admin commands. The bot will automatically pick a random guild that it can see if 'democracivServerID' from
-        # config.json is invalid
+        # config.py is invalid
         self.initialize_democraciv_guild()
 
         # Set status on Discord

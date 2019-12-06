@@ -30,7 +30,6 @@ class Admin(commands.Cog):
     @commands.is_owner()
     async def load(self, ctx, *, module):
         """Loads a module"""
-
         try:
             self.bot.load_extension(module)
         except Exception:
@@ -42,7 +41,6 @@ class Admin(commands.Cog):
     @commands.is_owner()
     async def unload(self, ctx, *, module):
         """Unloads a module"""
-
         try:
             self.bot.unload_extension(module)
         except Exception:
@@ -54,7 +52,6 @@ class Admin(commands.Cog):
     @commands.is_owner()
     async def reload(self, ctx, *, module):
         """Reloads a module"""
-
         try:
             self.bot.unload_extension(module)
             self.bot.load_extension(module)
@@ -76,7 +73,7 @@ class Admin(commands.Cog):
     @commands.command(name='reloadconfig', aliases=['rlc', 'rc', 'rlcfg'])
     @commands.is_owner()
     async def reloadconfig(self, ctx):
-        """Reload all .json config files"""
+        """Reload all config files"""
 
         await ctx.send(':white_check_mark: Reloaded config.')
         await importlib.reload(config)
@@ -105,7 +102,6 @@ class Admin(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def tinyurl(self, ctx, url: str):
         """Shorten a link with tinyurl"""
-
         if len(url) <= 3:
             await ctx.send(":x: That doesn't look like a valid URL!")
             return
