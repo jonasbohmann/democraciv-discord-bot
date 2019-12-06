@@ -20,7 +20,8 @@ class Fun(commands.Cog):
         self.bot = bot
         self.cached_sorted_veterans_on_democraciv = []
 
-    def get_member_join_position(self, user, members: list):
+    @staticmethod
+    def get_member_join_position(user, members: list):
         try:
             joins = tuple(sorted(members, key=operator.attrgetter("joined_at")))
             if None in joins:
