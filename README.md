@@ -26,6 +26,8 @@ The file should look like this:
 # Token
 TOKEN = ""
 TWITCH_API_KEY = ""
+TIMEZONEDB_API_KEY = ""
+
 
 # PostgreSQL config
 POSTGRESQL_USER = ""
@@ -33,8 +35,8 @@ POSTGRESQL_PASSWORD = ""
 POSTGRESQL_HOST = ""
 POSTGRESQL_DATABASE = ""
 ```
-Add the token of your Discord App, your Twitch Helix API key if you enabled the Twitch module, and your
- PostgreSQL configuration like above. 
+Add the token of your Discord App, your Twitch Helix API key if you enabled the Twitch module, your TimeZoneDB API Key, 
+and your PostgreSQL configuration like above. 
 
 After you've done all that, run `client.py`.
 

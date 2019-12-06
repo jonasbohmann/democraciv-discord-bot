@@ -3,5 +3,4 @@ asyncpg
 jishaku
 psutil
 lxml
-pytz
 bs4
