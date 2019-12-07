@@ -1,15 +1,6 @@
 from discord.ext import commands
 
 
-class GenericException(Exception):
-    """Generic Exception. Unused for now."""
-
-    def __init__(self, message, errors):
-        super().__init__(message)
-        self.message = message
-        self.errors = errors
-
-
 class DemocracivBotException(commands.CommandError):
     """Generic CommandError exception that gets send to event.error_handler.on_command_error()"""
 

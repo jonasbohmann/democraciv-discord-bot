@@ -6,6 +6,9 @@ from config import config
 from discord.ext import commands
 
 
+"""Various utility classes and functions that the bot regular uses."""
+
+
 def is_democraciv_guild():
     """Wrapper for a discord.ext.commands decorator to check if command is used on the Democraciv guild"""
 
@@ -38,6 +41,9 @@ class EmbedUtils:
         self.embed_colour = 0x7f0000
 
     def embed_builder(self, title: str, description: str, colour: int = None, time_stamp: bool = None):
+        """Creates discord.Embed object and adds the bot's signature footer to it as well as a UTC timestamp if
+         required."""
+
         embed = discord.Embed(title=title, description=description, colour=self.embed_colour)
         embed.set_footer(text=self.footer_text, icon_url=self.footer_icon)
 

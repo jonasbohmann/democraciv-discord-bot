@@ -1,10 +1,16 @@
 import csv
 
+
+"""STV Calculator by Chemiczny_Bogdan.
+    
+    See this for details: https://gist.github.com/jonasbohmann/adadbe6c2c77a748b8e89d9d10ead074"""
+
+
 elimset = set()
 output = ""
 
 
-async def count(v, w, n):
+def count(v, w, n):
     c = [0] * len(n)
     for j in range(len(v)):
         e = v[j]
@@ -14,7 +20,7 @@ async def count(v, w, n):
     return c
 
 
-async def winupdate(i, v, w, c, q):
+def winupdate(i, v, w, c, q):
     global output
     factor = 1 - q / c[i]
     output += "\n\nWinning ballots go to next round reweighed by a factor of " + str(factor)
@@ -34,7 +40,7 @@ async def winupdate(i, v, w, c, q):
     return
 
 
-async def lossupdate(i, v):
+def lossupdate(i, v):
     for c in range(len(v)):
         e = v[c]
         if e[i] == '1':
@@ -50,7 +56,7 @@ async def lossupdate(i, v):
     return
 
 
-async def main(_seats, csvfile, quota):
+def main(_seats, csvfile, quota):
     global output
     seats = _seats
     seatsleft = seats
@@ -84,12 +90,13 @@ async def main(_seats, csvfile, quota):
                 voteweights.append(1)
         if quota == 0:
             quota = len(votes) / seats
-            output += "\n\nThe Hare quota is equal " + str(quota)
+            output += "\n\nThe Hare quota equals " + str(quota)
         elif quota == 1:
             quota = int(len(votes) / (seats + 1)) + 1
-            output += "\n\nThe Droop quota is equal " + str(quota)
+            output += "\n\nThe Droop quota equals " + str(quota)
         else:
-            output += "\n\n:x: Invalid quota."
+            output += "\n\n#Invalid quota."
+            return output
 
     candidatesleft = len(names)
 
@@ -97,17 +104,17 @@ async def main(_seats, csvfile, quota):
 
     n = 1
     while seatsleft > 0:
-        output += f"\n\nRound {str(n)}\n"
+        output += f"\n\n#Round {str(n)}\n"
         foundwinner = 0
-        actcount = await count(votes, voteweights, names)
+        actcount = count(votes, voteweights, names)
         output += nameline
         output += ' '.join(['{:^7.3f}'.format(i) for i in actcount])
         w = 0
         leastvotes = len(votes)
         for cand in actcount:
             if cand >= quota:
-                output += "\n" + names[w] + " won a seat!\n"
-                await winupdate(w, votes, voteweights, actcount, quota)
+                output += "\n#" + names[w] + " won a seat!\n"
+                winupdate(w, votes, voteweights, actcount, quota)
                 seatsleft -= 1
                 candidatesleft -= 1
                 foundwinner = 1
@@ -117,12 +124,12 @@ async def main(_seats, csvfile, quota):
                     loser = int(w)
             w += 1
         if foundwinner == 0:
-            output += "\n" + names[loser] + " lost!\n"
-            await lossupdate(loser, votes)
+            output += "\n#" + names[loser] + " lost!\n"
+            lossupdate(loser, votes)
             candidatesleft -= 1
         if seatsleft == candidatesleft:
             winset = set(range(len(names))) - elimset
-            output += "and ".join([names[i] for i in list(winset)]) + " win the remaining seats!"
+            output += "#" + "and ".join([names[i] for i in list(winset)]) + " win the remaining seats!"
             break
         n += 1
 

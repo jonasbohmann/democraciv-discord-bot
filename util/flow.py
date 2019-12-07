@@ -4,12 +4,16 @@ from discord.ext import commands
 
 
 class Flow:
+    """The Flow class helps with user input that require the bot to wait for replies or reactions."""
 
     def __init__(self, bot, ctx):
         self.bot = bot
         self.ctx = ctx
 
     async def gear_reaction_confirm(self, message, timeout):
+        """Adds the :gear: emoji to the message and returns whether it has been clicked by the
+           original user in the specified time"""
+
         await message.add_reaction("\U00002699")
 
         try:
@@ -25,6 +29,11 @@ class Flow:
             return True
 
     async def yes_no_reaction_confirm(self, message, timeout):
+        """Adds the :white_check_mark: and :x: emojies to the message and returns the reaction and user if either
+           reaction has been added by the original user.
+
+           Returns None if the user did nothing."""
+
         await message.add_reaction("\U00002705")
         await message.add_reaction("\U0000274c")
 
@@ -41,6 +50,13 @@ class Flow:
             return reaction, user
 
     async def get_new_channel(self, timeout):
+        """Waits for a reply by the original user in the original channel and coverts reply to a channel object
+           reaction has been added by the original user.
+
+           Returns None if the user did nothing.
+
+           Returns user reply as string if conversion to channel object failed."""
+
         try:
             channel = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(self.ctx),
                                               timeout=timeout)
@@ -63,6 +79,10 @@ class Flow:
         return channel_object
 
     async def get_text_input(self, timeout):
+        """Waits for a reply by the original user in the original channel and returns reply as string.
+
+           Returns None if the user did nothing."""
+
         try:
             text = await self.bot.wait_for('message',
                                            check=self.bot.checks.wait_for_message_check(self.ctx),
@@ -79,6 +99,13 @@ class Flow:
             return text.content
 
     async def get_new_role(self, timeout):
+        """Waits for a reply by the original user in the original channel and coverts reply to a role object
+           reaction has been added by the original user.
+
+           Returns None if the user did nothing.
+
+           Returns user reply as string if conversion to role object failed."""
+
         try:
             role = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(self.ctx),
                                            timeout=timeout)
