@@ -19,7 +19,6 @@ from event.reddit import Reddit
 from config import config, token
 from util.utils import CheckUtils, EmbedUtils
 
-
 # -- Discord Bot for the r/Democraciv Server --
 #
 # Author: DerJonas
@@ -89,6 +88,9 @@ class DemocracivBot(commands.Bot):
         self.DerJonas_object = None
         self.democraciv_guild_object = None
 
+        # Cache initialized guilds to limit database queries
+        self.cached_initialized_guilds = []
+
         # Load the bot's cogs from ./event and ./module
         for extension in initial_extensions:
             try:
@@ -108,7 +110,7 @@ class DemocracivBot(commands.Bot):
 
     async def initialize_aiohttp_session(self):
         # Initialize a shared aiohttp ClientSession to be used for -wikipedia, -submit and reddit & twitch requests
-        # aiohttp needs to have this in an async function, that's why it's seperated from __init__()
+        # aiohttp needs to have this in an async function, that's why it's separated from __init__()
         self.session = aiohttp.ClientSession()
 
     async def connect_to_db(self):
@@ -148,10 +150,11 @@ class DemocracivBot(commands.Bot):
                   "      I will use a random guild that I can see to be used for my Democraciv-specific features.")
 
             self.democraciv_guild_object = self.guilds[0]
-            config.DEMOCRACIV_SERVER_ID = self.democraciv_guild_object.id
 
             if self.democraciv_guild_object is None:
                 raise exceptions.GuildNotFoundError(config.DEMOCRACIV_SERVER_ID)
+
+            config.DEMOCRACIV_SERVER_ID = self.democraciv_guild_object.id
 
             print(f"[BOT] Using '{self.democraciv_guild_object.name}' as Democraciv guild.")
 
@@ -197,26 +200,30 @@ class DemocracivBot(commands.Bot):
 
         # If, for whatever reason, the current guild does not have an entry in the bot's database, attempt to initialize
         # the default config
-        if not await self.checks.is_guild_initialized(message.guild.id):
-            print(f"[DATABASE] Guild {message.guild.name} ({message.guild.id}) was not initialized. "
-                  f"Adding default entry to database... ")
-            try:
-                await self.db.execute("INSERT INTO guilds (id, welcome, logging, logging_excluded, defaultrole) "
-                                      "VALUES ($1, false, false, ARRAY[0], false)",
-                                      message.guild.id)
-            except Exception:
-                await self.DerJonas_object.send(
-                    f":x: Fatal database error occurred while initializing new guild "
-                    f"{message.guild.name} ({message.guild.id})")
-                print(f"[DATABASE] Fatal error while initializing new guild {message.guild.name} ({message.guild.id})")
-                return
+        if message.guild.id not in self.cached_initialized_guilds:
+            if not await self.checks.is_guild_initialized(message.guild.id):
+                print(f"[DATABASE] Guild {message.guild.name} ({message.guild.id}) was not initialized. "
+                      f"Adding default entry to database... ")
+                try:
+                    await self.db.execute("INSERT INTO guilds (id, welcome, logging, logging_excluded, defaultrole) "
+                                          "VALUES ($1, false, false, ARRAY[0], false)",
+                                          message.guild.id)
+                except Exception:
+                    await self.DerJonas_object.send(
+                        f":x: Fatal database error occurred while initializing new guild "
+                        f"{message.guild.name} ({message.guild.id})")
+                    print(
+                        f"[DATABASE] Fatal error while initializing new guild {message.guild.name} ({message.guild.id})")
+                    return
 
-            print(f"[DATABASE] Successfully initialized guild {message.guild.name} ({message.guild.id})")
+                print(f"[DATABASE] Successfully initialized guild {message.guild.name} ({message.guild.id})")
+
+            self.cached_initialized_guilds.append(message.guild.id)
 
         # Relay message to discord.ext.commands cogs
         await self.process_commands(message)
 
 
-# This will start the bot when you run this file.
+# This will start the bot when you run this file
 if __name__ == '__main__':
     DemocracivBot().run(token.TOKEN, reconnect=True, bot=True)

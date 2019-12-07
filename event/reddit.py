@@ -23,7 +23,7 @@ class Reddit:
             async with self.bot.session.get(f"https://www.reddit.com/r/{self.subreddit}/new.json?limit=5") as response:
                 return await response.json()
         except aiohttp.ClientConnectionError:
-            print("[BOT] ERROR - ConnectionError in Reddit session.get()!\n")
+            print("[BOT] ERROR - ConnectionError in Reddit session.get()!")
             return None
 
     @tasks.loop(seconds=30)
