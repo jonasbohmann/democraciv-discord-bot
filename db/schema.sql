@@ -31,4 +31,25 @@ CREATE TABLE IF NOT EXISTS parties(
 CREATE TABLE IF NOT EXISTS party_alias(
     alias text,
     party_id bigint references parties(id)
-)
+);
+
+CREATE TABLE IF NOT EXISTS legislature_sessions(
+    id int UNIQUE PRIMARY KEY,
+    speaker bigint,
+    is_active bool,
+    status text,
+    vote_form text,
+    start_unixtime bigint,
+    voting_start_unixtime bigint,
+    end_unixtime bigint
+);
+
+CREATE TABLE IF NOT EXISTS legislature_bills(
+    leg_session int references legislature_sessions(id),
+    link text UNIQUE,
+    bill_name text,
+    submitter bigint,
+    has_passed_leg bool,
+    has_passed_ministry bool,
+    is_law bool
+);
