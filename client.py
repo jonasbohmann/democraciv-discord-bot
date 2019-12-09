@@ -213,7 +213,7 @@ class DemocracivBot(commands.Bot):
                         f":x: Fatal database error occurred while initializing new guild "
                         f"{message.guild.name} ({message.guild.id})")
                     print(
-                        f"[DATABASE] Fatal error while initializing new guild {message.guild.name} ({message.guild.id})")
+                       f"[DATABASE] Fatal error while initializing new guild {message.guild.name} ({message.guild.id})")
                     return
 
                 print(f"[DATABASE] Successfully initialized guild {message.guild.name} ({message.guild.id})")

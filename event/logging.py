@@ -65,7 +65,13 @@ class Log(commands.Cog):
             if before.content == after.content:
                 return
 
-            elif before.clean_content and after.clean_content:
+            if before.embeds or after.embeds:
+                return
+
+            if len(before.content) > 1024 or len(after.content) > 1024:
+                return
+
+            if before.clean_content and after.clean_content:
                 embed_fields = {
                     "Author": [f"{before.author.mention} {before.author.name}#{before.author.discriminator}", False],
                     "Channel": [f"{before.channel.mention}", True],
@@ -94,7 +100,8 @@ class Log(commands.Cog):
             if not message.embeds:
                 # If the deleted message is an embed, sending this new embed will raise an error as
                 # message.clean_content does not work with embeds
-                embed_fields['Message'] = [message.clean_content, False]
+                if len(message.content) <= 1024:
+                    embed_fields['Message'] = [message.clean_content, False]
 
             await self.log_event(message.guild, ':wastebasket: Message Deleted', embed_fields, to_owner=False)
 
