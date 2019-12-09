@@ -21,6 +21,12 @@ CREATE TABLE IF NOT EXISTS reddit_posts(
     id text UNIQUE
 );
 
+CREATE TABLE IF NOT EXISTS twitch_streams(
+    id text UNIQUE,
+    has_sent_mod_reminder bool,
+    has_sent_exec_reminder bool
+);
+
 CREATE TABLE IF NOT EXISTS parties(
     id bigint UNIQUE PRIMARY KEY,
     discord text,
