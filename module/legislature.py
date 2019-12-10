@@ -2,7 +2,9 @@ import time
 import asyncpg
 import datetime
 
-from util import utils, mk
+import discord
+
+from util import utils, mk, exceptions
 from config import config, links
 from discord.ext import commands
 from bs4 import BeautifulSoup, SoupStrainer
@@ -17,8 +19,15 @@ class Legislature(commands.Cog):
         self.vice_speaker = None
 
     def refresh_leg_discord_objects(self):
-        self.speaker = mk.get_speaker_role(self.bot).members[0]
-        self.vice_speaker = mk.get_vice_speaker_role(self.bot).members[0]
+        try:
+            self.speaker = mk.get_speaker_role(self.bot).members[0]
+        except IndexError:
+            raise exceptions.NoOneHasRoleError("Speaker of the Legislature")
+
+        try:
+            self.vice_speaker = mk.get_vice_speaker_role(self.bot).members[0]
+        except IndexError:
+            raise exceptions.NoOneHasRoleError("Vice-Speaker of the Legislature")
 
     @staticmethod
     def is_google_doc_link(link: str):
@@ -37,6 +46,15 @@ class Legislature(commands.Cog):
             return None
         else:
             return active_leg_session_id['id']
+
+    async def get_status_of_active_leg_session(self):
+        active_leg_session_status = await self.bot.db.fetchrow("SELECT status FROM legislature_sessions WHERE"
+                                                               " is_active = true")
+
+        if active_leg_session_status is None:
+            return None
+        else:
+            return active_leg_session_status['status']
 
     async def get_last_leg_session(self):
         last_session = await self.bot.db.fetchrow("SELECT id FROM legislature_sessions WHERE id = "
@@ -72,12 +90,17 @@ class Legislature(commands.Cog):
     async def legislature(self, ctx):
         """Dashboard for Legislators"""
 
-        self.refresh_leg_discord_objects()
+        try:
+            self.refresh_leg_discord_objects()
+        except exceptions.DemocracivBotException as e:
+            # We're raising the same exception again because discord.ext.commands.Exceptions only "work" (i.e. get sent
+            # to events/error_handler.py) if they get raised in an actual command
+            raise e
 
         active_leg_session_id = await self.get_active_leg_session()
 
         if active_leg_session_id is None:
-            active_leg_session = "There currently is no on-going session."
+            active_leg_session = "There currently is no open session."
         else:
             status_record = await self.bot.db.fetchrow("SELECT status FROM legislature_sessions WHERE id = $1",
                                                        active_leg_session_id)
@@ -90,8 +113,15 @@ class Legislature(commands.Cog):
         embed = self.bot.embeds.embed_builder(title=f"The Legislature of {mk.NATION_NAME}",
                                               description=f"Use `{config.BOT_PREFIX}help legislature` to get a list of "
                                                           f"commands for the Legislature")
-        embed.add_field(name="Current Legislative Cabinet", value=f"Speaker: {self.speaker.mention}\n"
-                                                                  f"Vice-Speaker: {self.vice_speaker.mention}")
+        speaker_value = f""
+
+        if isinstance(self.speaker, discord.Member):
+            speaker_value += f"Speaker: {self.speaker.mention}\n"
+
+        if isinstance(self.vice_speaker, discord.Member):
+            speaker_value += f"Vice-Speaker: {self.vice_speaker.mention}"
+
+        embed.add_field(name="Current Legislative Cabinet", value=speaker_value)
 
         embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
                                             f"[Docket]({links.legislativedocket})\n"
@@ -131,12 +161,21 @@ class Legislature(commands.Cog):
         except Exception:
             return await ctx.send(":x: Fatal database error.")
 
+        await ctx.send(f":white_check_mark: Successfully opened the submission period for Session #{new_session}!")
+
         await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_legislator_role(self.bot).mention}, the "
                                                               f"submission period for Legislative Session "
                                                               f"#{new_session} has started!\nSubmit your "
                                                               f"bills with `-legislature submit <link>`.")
 
-        await ctx.send(f":white_check_mark: Successfully opened the submission period for session #{new_session}!")
+        for legislator in mk.get_legislator_role(self.bot).members:
+            try:
+                await legislator.send(f":envelope_with_arrow: The **submission period for Legislative Session"
+                                      f" #{new_session}** has started!"
+                                      f"\nSubmit your bills with `-legislature submit <link>` on the"
+                                      f" Democraciv guild.")
+            except Exception:
+                pass
 
     @opensession.error
     async def opensessionerror(self, ctx, error):
@@ -165,12 +204,20 @@ class Legislature(commands.Cog):
         except Exception:
             return await ctx.send(":x: Fatal database error.")
 
+        await ctx.send(f":white_check_mark: Successfully opened session #{active_leg_session_id} up for voting!")
+
         await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_legislator_role(self.bot).mention},"
                                                               f" the voting period for Legislative Session "
                                                               f"#{active_leg_session_id} has started!\n:ballot_box:"
                                                               f" Vote here: {voting_form}")
 
-        await ctx.send(f":white_check_mark: Successfully opened session #{active_leg_session_id} up for voting!")
+        for legislator in mk.get_legislator_role(self.bot).members:
+            try:
+                await legislator.send(f":ballot_box: The **voting period for Legislative Session "
+                                      f"#{active_leg_session_id}** has "
+                                      f"started!\nVote here: {voting_form}")
+            except Exception:
+                pass
 
     @updatesession.error
     async def updatesessionerror(self, ctx, error):
@@ -217,13 +264,18 @@ class Legislature(commands.Cog):
         `-legislature session <number>` to see details about a specific session
         `-legislature session all` to see a list of all previous sessions."""
 
-        self.refresh_leg_discord_objects()
+        try:
+            self.refresh_leg_discord_objects()
+        except exceptions.DemocracivBotException as e:
+            # We're raising the same exception again because discord.ext.commands.Exceptions only "work" (i.e. get sent
+            # to events/error_handler.py) if they get raised in an actual command
+            raise e
 
         if not session or session is None:
             active_leg_session_id = await self.get_active_leg_session()
 
             if active_leg_session_id is None:
-                msg = f":x: There currently is no on-going session.\n" \
+                msg = f":x: There currently is no open session.\n" \
                       f"**Usage**:\n  `{config.BOT_PREFIX}legislature session` to see details about the session that is" \
                       f" currently open,\n  " \
                       f"`{config.BOT_PREFIX}legislature session <number>` to see details about a specific " \
@@ -302,9 +354,9 @@ class Legislature(commands.Cog):
         await ctx.send(embed=embed)
 
     @legislature.command(name='submit')
+    @utils.is_democraciv_guild()
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_any_role("Legislator", "Legislature")
-    @utils.is_democraciv_guild()
     async def submit(self, ctx, google_docs_url: str):
         """Submit a new bill directly to the current Cabinet"""
 
@@ -313,12 +365,23 @@ class Legislature(commands.Cog):
 
         async with ctx.typing():
 
-            self.refresh_leg_discord_objects()
+            try:
+                self.refresh_leg_discord_objects()
+            except exceptions.DemocracivBotException as e:
+                # We're raising the same exception again because discord.ext.commands.Exceptions only "work"
+                # (i.e. get sent to events/error_handler.py) if they get raised in an actual command
+                raise e
 
             current_leg_session = await self.get_active_leg_session()
 
             if current_leg_session is None:
                 await ctx.send(":x: There is no active session!")
+                return
+
+            current_leg_session_status = await self.get_status_of_active_leg_session()
+
+            if current_leg_session_status is None or current_leg_session_status != "Submission Period":
+                await ctx.send(f":x: The submission period for session #{current_leg_session} is already over!")
                 return
 
             bill_title = await self.get_google_docs_title(google_docs_url)
@@ -331,7 +394,7 @@ class Legislature(commands.Cog):
             embed.add_field(name="Title", value=bill_title, inline=False)
             embed.add_field(name="Author", value=ctx.message.author.name)
             embed.add_field(name="Session", value=current_leg_session)
-            embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow())
+            embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow(), inline=False)
             embed.add_field(name="URL", value=google_docs_url, inline=False)
 
             try:
@@ -350,13 +413,13 @@ class Legislature(commands.Cog):
             try:
                 await self.speaker.send(embed=embed)
                 await self.vice_speaker.send(embed=embed)
-
-                await ctx.send(
-                    f":white_check_mark: Successfully submitted '{bill_title}' for Session #{current_leg_session}!")
             except Exception:
-                await ctx.send(":x: Unexpected error occurred during DMing the Speaker or Vice-Speaker!"
-                               " Your bill was not submitted, please try again!")
+                await ctx.send(":x: Unexpected error occurred during DMing the Speaker or Vice-Speaker."
+                               " Your bill was still submitted to the session, though!")
                 return
+
+            await ctx.send(
+                f":white_check_mark: Successfully submitted '{bill_title}' for Session #{current_leg_session}!")
 
     @submit.error
     async def submiterror(self, ctx, error):
