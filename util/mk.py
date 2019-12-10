@@ -22,6 +22,8 @@ EXECUTIVE_CHANNEL = 423938668710068224
 MINISTER_ROLE = 549696492177195019
 GOVERNOR_ROLE = 549696492177195019
 EXECUTIVE_PROXY_ROLE = 549696492177195019
+PRIME_MINISTER_ROLE = 643602222810398740
+LT_PRIME_MINISTER_ROLE = 643602222810398740
 
 # Legislature
 SPEAKER_ROLE = 643602222810398740
@@ -106,5 +108,23 @@ def get_gov_announcements_channel(bot):
 
     if to_return is None:
         raise exceptions.ChannelNotFoundError("gov-announcements")
+
+    return to_return
+
+
+def get_prime_minister_role(bot):
+    to_return = bot.democraciv_guild_object.get_role(PRIME_MINISTER_ROLE)
+
+    if to_return is None:
+        raise exceptions.RoleNotFoundError("Prime Minister")
+
+    return to_return
+
+
+def get_lt_prime_minister_role(bot):
+    to_return = bot.democraciv_guild_object.get_role(LT_PRIME_MINISTER_ROLE)
+
+    if to_return is None:
+        raise exceptions.RoleNotFoundError("Lieutenant Prime Minister")
 
     return to_return

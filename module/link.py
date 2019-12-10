@@ -220,7 +220,7 @@ class Link(commands.Cog):
                                               description=links.legislativedocket)
         await ctx.send(embed=embed)
 
-    @commands.command(name='ministry', aliases=['m'])
+    @commands.command(name='worksheet')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def ministry(self, ctx):
         """The Ministry's worksheet"""

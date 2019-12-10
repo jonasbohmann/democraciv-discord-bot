@@ -64,6 +64,15 @@ class Legislature(commands.Cog):
         else:
             return None
 
+    async def get_highest_bill_id(self):
+        last_bill = await self.bot.db.fetchrow("SELECT id FROM legislature_bills WHERE id = "
+                                                  "(SELECT MAX(id) FROM legislature_bills)")
+
+        if last_bill is not None:
+            return last_bill['id']
+        else:
+            return None
+
     async def get_google_docs_title(self, link: str):
         try:
             async with self.bot.session.get(link) as response:
@@ -315,7 +324,7 @@ class Legislature(commands.Cog):
             return
 
         bills = await self.bot.db.fetch(
-            "SELECT (link, bill_name, submitter, is_law) FROM legislature_bills"
+            "SELECT (id, link, bill_name, submitter, is_law) FROM legislature_bills"
             " WHERE leg_session = $1", active_leg_session_id)
 
         pretty_bills = f""
@@ -323,7 +332,8 @@ class Legislature(commands.Cog):
                                                                                             " %H:%M:%S")
         if len(bills) > 0:
             for record in bills:
-                pretty_bills += f"[{record[0][1]}]({record[0][0]}) by {self.bot.get_user(record[0][2]).mention}\n"
+                pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by " \
+                                f"{self.bot.get_user(record[0][3]).mention}\n"
 
         else:
             pretty_bills = "No one submitted any bills during this session."
@@ -360,7 +370,8 @@ class Legislature(commands.Cog):
         """Submit a new bill directly to the current Cabinet"""
 
         if not self.is_google_doc_link(google_docs_url):
-            return await ctx.send(":x: That doesn't look like a Google Docs URL.")
+            return await ctx.send(":x: That doesn't look like a Google Docs URL.\n\nIf you want to submit a motion or s"
+                                  "omething that is not a bill, just put that into a Google Docs document.")
 
         async with ctx.typing():
 
@@ -396,11 +407,18 @@ class Legislature(commands.Cog):
             embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow(), inline=False)
             embed.add_field(name="URL", value=google_docs_url, inline=False)
 
+            last_id = await self.get_highest_bill_id()
+
+            if last_id is None:
+                last_id = 0
+
+            new_id = last_id + 1
+
             try:
                 await self.bot.db.execute(
-                    "INSERT INTO legislature_bills (leg_session, link, bill_name, submitter, is_law) "
-                    "VALUES ($1, $2, $3, $4, false)", current_leg_session, google_docs_url,
-                    bill_title, ctx.author.id)
+                    "INSERT INTO legislature_bills (leg_session, link, bill_name, submitter, is_law, id) "
+                    "VALUES ($1, $2, $3, $4, false, $5)", current_leg_session, google_docs_url,
+                    bill_title, ctx.author.id, new_id)
 
             except asyncpg.UniqueViolationError:
                 await ctx.send(":x: This bill was already submitted!")
