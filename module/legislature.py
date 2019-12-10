@@ -1,11 +1,8 @@
-import datetime
 import time
-
 import asyncpg
+import datetime
 
-import util.utils as utils
-import util.exceptions as exceptions
-
+from util import utils, mk
 from config import config, links
 from discord.ext import commands
 from bs4 import BeautifulSoup, SoupStrainer
@@ -16,22 +13,15 @@ class Legislature(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.speaker_role = None
         self.speaker = None
-        self.vice_speaker_role = None
         self.vice_speaker = None
-        self.legislator_role = None
-        self.gov_announcements_channel = None
 
-    def initialize_leg_roles(self):
-        self.speaker_role = self.bot.democraciv_guild_object.get_role(643602222810398740)
-        self.speaker = self.speaker_role.members[0]
-        self.vice_speaker_role = self.bot.democraciv_guild_object.get_role(645760825931464705)
-        self.vice_speaker = self.vice_speaker_role.members[0]
-        self.legislator_role = self.bot.democraciv_guild_object.get_role(577244431892348960)
-        self.gov_announcements_channel = self.bot.democraciv_guild_object.get_channel(423942916776525825)
+    def refresh_leg_discord_objects(self):
+        self.speaker = mk.get_speaker_role(self.bot).members[0]
+        self.vice_speaker = mk.get_vice_speaker_role(self.bot).members[0]
 
-    def is_google_doc_link(self, link: str):
+    @staticmethod
+    def is_google_doc_link(link: str):
 
         valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/', 'https://forms.gle/']
 
@@ -82,7 +72,7 @@ class Legislature(commands.Cog):
     async def legislature(self, ctx):
         """Dashboard for Legislators"""
 
-        self.initialize_leg_roles()
+        self.refresh_leg_discord_objects()
 
         active_leg_session_id = await self.get_active_leg_session()
 
@@ -97,13 +87,14 @@ class Legislature(commands.Cog):
             else:
                 active_leg_session = f"Session #{active_leg_session_id}"
 
-        embed = self.bot.embeds.embed_builder(title="The Legislature of Arabia",
+        embed = self.bot.embeds.embed_builder(title=f"The Legislature of {mk.NATION_NAME}",
                                               description=f"Use `{config.BOT_PREFIX}help legislature` to get a list of "
                                                           f"commands for the Legislature")
         embed.add_field(name="Current Legislative Cabinet", value=f"Speaker: {self.speaker.mention}\n"
                                                                   f"Vice-Speaker: {self.vice_speaker.mention}")
 
-        embed.add_field(name="Links", value=f"[Docket]({links.legislativedocket})\n"
+        embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
+                                            f"[Docket]({links.legislativedocket})\n"
                                             f"[Legal Code]({links.laws})\n"
                                             f"[Legislative Procedures]({links.legislativeprocedures})", inline=True)
 
@@ -140,11 +131,12 @@ class Legislature(commands.Cog):
         except Exception:
             return await ctx.send(":x: Fatal database error.")
 
-        await self.gov_announcements_channel.send(f"{self.legislator_role.mention}, the submission period for "
-                                                  f"Legislative Session #{active_leg_session_id} has started!"
-                                                  f"\nSubmit your bills with `-legislature submit <link>`.")
+        await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_legislator_role(self.bot).mention}, the "
+                                                              f"submission period for Legislative Session "
+                                                              f"#{new_session} has started!\nSubmit your "
+                                                              f"bills with `-legislature submit <link>`.")
 
-        await ctx.send(f":white_check_mark: Successfully opened the submission period for Session #{new_session}!")
+        await ctx.send(f":white_check_mark: Successfully opened the submission period for session #{new_session}!")
 
     @opensession.error
     async def opensessionerror(self, ctx, error):
@@ -173,11 +165,12 @@ class Legislature(commands.Cog):
         except Exception:
             return await ctx.send(":x: Fatal database error.")
 
-        await self.gov_announcements_channel.send(f"{self.legislator_role.mention}, the voting period for Legislative"
-                                                  f"Session #{active_leg_session_id} has started!"
-                                                  f"\n:ballot_box: Vote here: {voting_form}")
+        await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_legislator_role(self.bot).mention},"
+                                                              f" the voting period for Legislative Session "
+                                                              f"#{active_leg_session_id} has started!\n:ballot_box:"
+                                                              f" Vote here: {voting_form}")
 
-        await ctx.send(f":white_check_mark: Successfully opened Session #{active_leg_session_id} up for voting!")
+        await ctx.send(f":white_check_mark: Successfully opened session #{active_leg_session_id} up for voting!")
 
     @updatesession.error
     async def updatesessionerror(self, ctx, error):
@@ -224,7 +217,7 @@ class Legislature(commands.Cog):
         `-legislature session <number>` to see details about a specific session
         `-legislature session all` to see a list of all previous sessions."""
 
-        self.initialize_leg_roles()
+        self.refresh_leg_discord_objects()
 
         if not session or session is None:
             active_leg_session_id = await self.get_active_leg_session()
@@ -249,7 +242,7 @@ class Legislature(commands.Cog):
                 for record in all_session_ids:
                     pretty_sessions += f"**Session #{record[0][0]}**   - {record[0][1]}\n"
 
-                embed = self.bot.embeds.embed_builder(title="All Sessions of the Arabian Legislature",
+                embed = self.bot.embeds.embed_builder(title=f"All Sessions of the {mk.NATION_ADJECTIVE} Legislature",
                                                       description=pretty_sessions)
                 await ctx.send(embed=embed)
 
@@ -318,21 +311,9 @@ class Legislature(commands.Cog):
         if not self.is_google_doc_link(google_docs_url):
             return await ctx.send(":x: That doesn't look like a Google Docs URL.")
 
-        self.initialize_leg_roles()
-
-        if self.speaker_role is None:
-            raise exceptions.RoleNotFoundError("Speaker of the Legislature")
-
-        if self.vice_speaker_role is None:
-            raise exceptions.RoleNotFoundError("Vice-Speaker of the Legislature")
-
-        if len(self.speaker_role.members) == 0:
-            raise exceptions.NoOneHasRoleError("Speaker of the Legislature")
-
-        if len(self.vice_speaker_role.members) == 0:
-            raise exceptions.NoOneHasRoleError("Vice-Speaker of the Legislature")
-
         async with ctx.typing():
+
+            self.refresh_leg_discord_objects()
 
             current_leg_session = await self.get_active_leg_session()
 
@@ -349,6 +330,7 @@ class Legislature(commands.Cog):
             embed = self.bot.embeds.embed_builder(title="New Bill Submitted", description="", time_stamp=True)
             embed.add_field(name="Title", value=bill_title, inline=False)
             embed.add_field(name="Author", value=ctx.message.author.name)
+            embed.add_field(name="Session", value=current_leg_session)
             embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow())
             embed.add_field(name="URL", value=google_docs_url, inline=False)
 

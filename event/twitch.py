@@ -4,7 +4,7 @@ import asyncio
 import util.exceptions as exceptions
 
 from discord.ext import tasks
-from config import config, token
+from config import config, token, links
 from util import mk
 
 
@@ -124,10 +124,10 @@ class Twitch:
         await self.bot.wait_until_ready()
 
     async def streaming_rules_reminder(self, stream_id):
-        executive_channel = self.bot.get_channel(423938668710068224)  # #executive channel
-        minister_role = self.bot.democraciv_guild_object.get_role(549696492177195019)  # 'Minister' role
-        governor_role = self.bot.democraciv_guild_object.get_role(549696492177195019)  # 'Governor' role
-        executive_proxy_role = self.bot.democraciv_guild_object.get_role(549696492177195019)  # 'Executive Proxy' role
+        executive_channel = mk.get_executive_channel(self.bot)
+        minister_role = mk.get_minister_role(self.bot)
+        governor_role = mk.get_governor_role(self.bot)
+        executive_proxy_role = mk.get_executive_proxy_role(self.bot)
 
         if executive_channel is None:
             raise exceptions.ChannelNotFoundError("executive")
@@ -163,7 +163,7 @@ class Twitch:
                                   stream_id)
 
     async def export_twitch_reminder(self, stream_id):
-        moderation_channel = self.bot.get_channel(mk.MODERATION_TEAM_CHANNEL)
+        moderation_channel = mk.get_moderation_team_channel(self.bot)
 
         if moderation_channel is None:
             raise exceptions.ChannelNotFoundError("moderation-team")
@@ -178,16 +178,16 @@ class Twitch:
         embed.add_field(name="Export to YouTube", value="Go to our [channel](https://www.twitch.tv/democraciv/manager),"
                                                         " select the last stream and hit 'Export'.", inline=False)
 
-        embed.add_field(name="Set the title", value="Use this formatting for the title `Democraciv MK6 - "
-                                                    "Game Session X: Turns A-B`.", inline=False)
+        embed.add_field(name="Set the title", value=f"Use this formatting for the title `Democraciv MK{mk.MARK} - "
+                                                    f"Game Session X: Turns A-B`.", inline=False)
 
         embed.add_field(name="Set the description",
-                        value="Use this formatting for the description: ```This is the Xth game session of the of "
-                              "Democraciv MK6, where we play as Arabia in Sid Meier's Civilization 5.\n\nDemocraciv"
-                              " is a community on Reddit dedicated to play a single-player game of Sid Meier's"
-                              " Civilization 5 with a simulated, model government. We have a Legislature, a Supreme "
-                              "Court and an executive branch, those wo can be seen playing the game here."
-                              "\n\nDemocraciv: https://old.reddit.com/r/democraciv/```", inline=False)
+                        value=f"Use this formatting for the description: ```This is the Xth game session of the of "
+                              f"Democraciv MK{mk.MARK}, where we play as {mk.NATION_NAME} in {mk.CIV_GAME}.\n\n"
+                              f"Democraciv is a community on Reddit dedicated to play a single-player game of"
+                              f" {mk.CIV_GAME} with a simulated, model government. We have a Legislature, a Supreme "
+                              f"Court and an executive branch, those wo can be seen playing the game here."
+                              f"\n\nDemocraciv: https://old.reddit.com/r/democraciv/```", inline=False)
 
         embed.add_field(name="Add some tags", value="Add some variations of `Democraciv`, `Civ 5`, `Game Politics`, "
                                                     "`Game Roleplay`, `Civ Politics`, `Civ Roleplay`,"
@@ -198,9 +198,9 @@ class Twitch:
                                                          " 'Start export'.", inline=False)
 
         embed.add_field(name="Add the new video to the playlist",
-                        value="Don't forget this part! After the Twitch VOD was exported to YouTube, head over "
-                              "[here](https://studio.youtube.com/channel/UC-NukxPakwQIvx73VjtIPnw/videos/) "
-                              "and add the new video to the playlist named 'MK6 Game Sessions'.", inline=False)
+                        value=f"Don't forget this part! After the Twitch VOD was exported to YouTube, head over "
+                              f"[here](https://studio.youtube.com/channel/UC-NukxPakwQIvx73VjtIPnw/videos/) "
+                              f"and add the new video to the playlist named 'MK{mk.MARK} Game Sessions'.", inline=False)
 
         embed.add_field(name="Adjust description & tags on YouTube",
                         value="Twitch automatically adds a paragraph about Twitch to the end of the exported video's "
@@ -208,8 +208,8 @@ class Twitch:
                         inline=False)
 
         embed.add_field(name="Add Game Session to Wiki",
-                        value="Add an entry for this new game session"
-                              " [here](https://reddit.com/r/democraciv/wiki/game-sessions).",
+                        value=f"Add an entry for this new game session"
+                              f" [here]({links.gswiki}).",
                         inline=False)
 
         embed.add_field(name="Upload the save-game to Google Drive", value="Once a ministers sends you the save-game, "
