@@ -39,20 +39,23 @@ from util.utils import CheckUtils, EmbedUtils
 logging.basicConfig(level=logging.INFO)
 
 # List of cogs that will be loaded on startup
-initial_extensions = ['module.link',
+initial_extensions = ['event.logging',
+                      'event.error_handler',
+                      'module.link',
                       'module.about',
-                      'module.legislature',
                       'module.time',
                       'module.fun',
                       'module.admin',
-                      'module.parties',
                       'module.help',
-                      'module.wikipedia',
                       'module.roles',
                       'module.guild',
                       'module.debug',
-                      'event.logging',
-                      'event.error_handler']
+                      'module.wikipedia',
+                      'module.democraciv.parties',
+                      'module.democraciv.legislature',
+                      'module.democraciv.ministry',
+                      'module.democraciv.supremecourt'
+                      ]
 
 
 class DemocracivBot(commands.Bot):
@@ -213,7 +216,7 @@ class DemocracivBot(commands.Bot):
                         f":x: Fatal database error occurred while initializing new guild "
                         f"{message.guild.name} ({message.guild.id})")
                     print(
-                       f"[DATABASE] Fatal error while initializing new guild {message.guild.name} ({message.guild.id})")
+                        f"[DATABASE] Fatal error while initializing new guild {message.guild.name} ({message.guild.id})")
                     return
 
                 print(f"[DATABASE] Successfully initialized guild {message.guild.name} ({message.guild.id})")
