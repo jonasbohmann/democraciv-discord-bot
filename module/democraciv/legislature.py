@@ -416,8 +416,9 @@ class Legislature(commands.Cog):
 
             try:
                 await self.bot.db.execute(
-                    "INSERT INTO legislature_bills (leg_session, link, bill_name, submitter, is_law, id) "
-                    "VALUES ($1, $2, $3, $4, false, $5)", current_leg_session, google_docs_url,
+                    "INSERT INTO legislature_bills (leg_session, link, bill_name, submitter, is_law, id,"
+                    " has_passed_leg, has_passed_ministry) "
+                    "VALUES ($1, $2, $3, $4, false, $5, false, false)", current_leg_session, google_docs_url,
                     bill_title, ctx.author.id, new_id)
 
             except asyncpg.UniqueViolationError:
@@ -431,8 +432,8 @@ class Legislature(commands.Cog):
                 await self.speaker.send(embed=embed)
                 await self.vice_speaker.send(embed=embed)
             except Exception:
-                await ctx.send(":x: Unexpected error occurred during DMing the Speaker or Vice-Speaker."
-                               " Your bill was still submitted to the session, though!")
+                await ctx.send(f":x: Unexpected error occurred while DMing the Speaker or Vice-Speaker."
+                               f" Your bill was still submitted for session #{current_leg_session}, though!")
                 return
 
             await ctx.send(
