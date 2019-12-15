@@ -17,7 +17,6 @@ class Legislature(commands.Cog):
 
     @commands.command(name='submit')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.has_any_role("Legislator", "Legislature")
     @utils.is_democraciv_guild()
     async def submit(self, ctx, google_docs_url: str):
         """Submit a new bill directly to the current Speaker of the Legislature"""
