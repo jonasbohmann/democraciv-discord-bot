@@ -395,20 +395,19 @@ class Legislature(commands.Cog):
         embed.add_field(name="Open", value=str(session_info[0][1]))
         embed.add_field(name="Opened on (UTC)", value=pretty_start_date, inline=False)
 
+        if session_info[0][5] != "Submission Period":
+            pretty_voting_date = datetime.datetime.utcfromtimestamp(session_info[0][6]).strftime("%A, %B %d %Y"
+                                                                                                 " %H:%M:%S")
+
+            embed.add_field(name="Voting Started on (UTC)", value=pretty_voting_date, inline=False)
+            embed.add_field(name="Vote Form", value=f"[Link]({session_info[0][2]})", inline=False)
+
         if not session_info[0][1]:
             pretty_end_date = datetime.datetime.utcfromtimestamp(session_info[0][4]).strftime("%A, %B %d %Y"
                                                                                               " %H:%M:%S")
             embed.add_field(name="Ended on (UTC)", value=pretty_end_date, inline=False)
 
         embed.add_field(name="Status", value=session_info[0][5], inline=True)
-
-        if session_info[0][5] != "Submission Period":
-            pretty_voting_date = datetime.datetime.utcfromtimestamp(session_info[0][6]).strftime("%A, %B %d %Y"
-                                                                                                 " %H:%M:%S")
-
-            embed.add_field(name="Voting Started on (UTC)", value=pretty_voting_date, inline=True)
-            embed.add_field(name="Vote Form", value=f"[Link]({session_info[0][2]})", inline=False)
-
         embed.add_field(name="Submitted Motions", value=pretty_motions, inline=False)
         embed.add_field(name="Submitted Bills", value=pretty_bills, inline=False)
 
