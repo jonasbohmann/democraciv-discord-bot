@@ -8,6 +8,8 @@ from config import config, links
 from discord.ext import commands
 from bs4 import BeautifulSoup, SoupStrainer
 
+from util.flow import Flow
+
 
 class Legislature(commands.Cog):
     """Useful commands for Legislators"""
@@ -66,12 +68,37 @@ class Legislature(commands.Cog):
 
     async def get_highest_bill_id(self):
         last_bill = await self.bot.db.fetchrow("SELECT id FROM legislature_bills WHERE id = "
-                                                  "(SELECT MAX(id) FROM legislature_bills)")
+                                               "(SELECT MAX(id) FROM legislature_bills)")
 
         if last_bill is not None:
             return last_bill['id']
         else:
             return None
+
+    async def generate_new_bill_id(self):
+        last_id = await self.get_highest_bill_id()
+
+        if last_id is None:
+            last_id = 0
+
+        return last_id + 1
+
+    async def get_highest_motion_id(self):
+        last_motion = await self.bot.db.fetchrow("SELECT id FROM legislature_motions WHERE id = "
+                                                 "(SELECT MAX(id) FROM legislature_motions)")
+
+        if last_motion is not None:
+            return last_motion['id']
+        else:
+            return None
+
+    async def generate_new_motion_id(self):
+        last_id = await self.get_highest_motion_id()
+
+        if last_id is None:
+            last_id = 0
+
+        return last_id + 1
 
     async def get_google_docs_title(self, link: str):
         try:
@@ -365,61 +392,90 @@ class Legislature(commands.Cog):
     @legislature.command(name='submit')
     @utils.is_democraciv_guild()
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.has_any_role("Legislator", "Legislature")
-    async def submit(self, ctx, google_docs_url: str):
+    async def submit(self, ctx):
         """Submit a new bill directly to the current Cabinet"""
 
-        if not self.is_google_doc_link(google_docs_url):
-            return await ctx.send(":x: That doesn't look like a Google Docs URL.\n\nIf you want to submit a motion or s"
-                                  "omething that is not a bill, just put that into a Google Docs document.")
+        try:
+            self.refresh_leg_discord_objects()
+        except exceptions.DemocracivBotException as e:
+            # We're raising the same exception again because discord.ext.commands.Exceptions only "work"
+            # (i.e. get sent to events/error_handler.py) if they get raised in an actual command
+            raise e
 
-        async with ctx.typing():
+        current_leg_session = await self.get_active_leg_session()
 
-            try:
-                self.refresh_leg_discord_objects()
-            except exceptions.DemocracivBotException as e:
-                # We're raising the same exception again because discord.ext.commands.Exceptions only "work"
-                # (i.e. get sent to events/error_handler.py) if they get raised in an actual command
-                raise e
+        if current_leg_session is None:
+            await ctx.send(":x: There is no active session!")
+            return
 
-            current_leg_session = await self.get_active_leg_session()
+        current_leg_session_status = await self.get_status_of_active_leg_session()
 
-            if current_leg_session is None:
-                await ctx.send(":x: There is no active session!")
+        if current_leg_session_status is None or current_leg_session_status != "Submission Period":
+            await ctx.send(f":x: The submission period for session #{current_leg_session} is already over!")
+            return
+
+        # -- Interactive Flow Session --
+        flow = Flow(self.bot, ctx)
+
+        bill_motion_question = await ctx.send(":information_source: Do you want to submit a motion or a bill?"
+                                              " React with :regional_indicator_b: for bill, and with "
+                                              ":regional_indicator_m: for a motion.")
+
+        reaction, user = await flow.get_emoji_choice("\U0001f1e7", "\U0001f1f2", bill_motion_question, 200)
+
+        if not reaction:
+            return
+
+        if str(reaction.emoji) == "\U0001f1e7":
+            # -- Bill --
+
+            await ctx.send(":white_check_mark: You will submit a **bill**.")
+
+            # Vetoable?
+            veto_question = await ctx.send(":information_source: Is the Ministry legally allowed to veto (or vote on) "
+                                           "this bill?")
+
+            reaction, user = await flow.yes_no_reaction_confirm(veto_question, 200)
+
+            if not reaction:
                 return
 
-            current_leg_session_status = await self.get_status_of_active_leg_session()
+            if str(reaction.emoji) == "\U00002705":
+                is_vetoable = True
 
-            if current_leg_session_status is None or current_leg_session_status != "Submission Period":
-                await ctx.send(f":x: The submission period for session #{current_leg_session} is already over!")
+            else:
+                is_vetoable = False
+
+            # Link?
+            await ctx.send(":information_source: Reply with the Google Docs link to the bill"
+                           " you want to submit.")
+
+            google_docs_url = await flow.get_text_input(300)
+
+            if not google_docs_url:
                 return
 
-            bill_title = await self.get_google_docs_title(google_docs_url)
+            if not self.is_google_doc_link(google_docs_url):
+                return await ctx.send(
+                    ":x: That doesn't look like a Google Docs URL.\n\nIf you want to submit a motion or s"
+                    "omething that is not a bill, just put that into a Google Docs document.")
+
+            async with ctx.typing():
+                bill_title = await self.get_google_docs_title(google_docs_url)
 
             if bill_title is None:
                 await ctx.send(":x: Could not connect to Google Docs!")
                 return
 
-            embed = self.bot.embeds.embed_builder(title="New Bill Submitted", description="", time_stamp=True)
-            embed.add_field(name="Title", value=bill_title, inline=False)
-            embed.add_field(name="Author", value=ctx.message.author.name)
-            embed.add_field(name="Session", value=current_leg_session)
-            embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow(), inline=False)
-            embed.add_field(name="URL", value=google_docs_url, inline=False)
-
-            last_id = await self.get_highest_bill_id()
-
-            if last_id is None:
-                last_id = 0
-
-            new_id = last_id + 1
+            # -- Submit Bill --
+            new_id = self.generate_new_bill_id()
 
             try:
                 await self.bot.db.execute(
-                    "INSERT INTO legislature_bills (leg_session, link, bill_name, submitter, is_law, id,"
+                    "INSERT INTO legislature_bills (id, leg_session, link, bill_name, submitter, is_vetoable, is_law, "
                     " has_passed_leg, has_passed_ministry) "
-                    "VALUES ($1, $2, $3, $4, false, $5, false, false)", current_leg_session, google_docs_url,
-                    bill_title, ctx.author.id, new_id)
+                    "VALUES ($1, $2, $3, $4, $5, $6, false, false, false)", new_id, current_leg_session, google_docs_url
+                    , bill_title, ctx.author.id, is_vetoable)
 
             except asyncpg.UniqueViolationError:
                 await ctx.send(":x: This bill was already submitted!")
@@ -428,16 +484,69 @@ class Legislature(commands.Cog):
                 await ctx.send(":x: Database error!")
                 return
 
-            try:
-                await self.speaker.send(embed=embed)
-                await self.vice_speaker.send(embed=embed)
-            except Exception:
-                await ctx.send(f":x: Unexpected error occurred while DMing the Speaker or Vice-Speaker."
-                               f" Your bill was still submitted for session #{current_leg_session}, though!")
-                return
+            message = "Hey! A new **bill** was just submitted."
+            embed = self.bot.embeds.embed_builder(title="Bill Submitted", description="", time_stamp=True)
+            embed.add_field(name="Title", value=bill_title, inline=False)
+            embed.add_field(name="Author", value=ctx.message.author.name)
+            embed.add_field(name="Session", value=current_leg_session)
+            embed.add_field(name="Ministry Veto Allowed", value=is_vetoable)
+            embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow(), inline=False)
+            embed.add_field(name="URL", value=google_docs_url, inline=False)
 
             await ctx.send(
-                f":white_check_mark: Successfully submitted '{bill_title}' for Session #{current_leg_session}!")
+                f":white_check_mark: Successfully submitted bill '{bill_title}' for session #{current_leg_session}!")
+
+        elif str(reaction.emoji) == "\U0001f1f2":  # Motion
+            await ctx.send(":white_check_mark: You will submit a **motion**.")
+
+            await ctx.send(":information_source: Reply with the title of your motion.")
+
+            title = await flow.get_text_input(300)
+
+            if not title:
+                return
+
+            await ctx.send(":information_source: Reply with a short description or the content of your motion.")
+
+            description = await flow.get_text_input(600)
+
+            if not description:
+                return
+
+            _new_id = self.generate_new_motion_id()
+
+            try:
+                await self.bot.db.execute(
+                    "INSERT INTO legislature_motions (id, leg_session, title, description, submitter) "
+                    "VALUES ($1, $2, $3, $4, $5)", _new_id, current_leg_session, title, description, ctx.author.id)
+
+            except asyncpg.UniqueViolationError:
+                await ctx.send(":x: This motion was already submitted!")
+                return
+            except Exception:
+                await ctx.send(":x: Database error!")
+                return
+
+            message = "Hey! A new **motion** was just submitted."
+            embed = self.bot.embeds.embed_builder(title="Motion Submitted", description="", time_stamp=True)
+            embed.add_field(name="Title", value=title, inline=False)
+            embed.add_field(name="Content", value=description, inline=False)
+            embed.add_field(name="Author", value=ctx.message.author.name)
+            embed.add_field(name="Session", value=current_leg_session)
+            embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow(), inline=False)
+
+            await ctx.send(
+                f":white_check_mark: Successfully submitted motion titled '{title}'"
+                f" for session #{current_leg_session}!")
+        try:
+            await self.speaker.send(message)
+            await self.speaker.send(embed=embed)
+            await self.vice_speaker.send(message)
+            await self.vice_speaker.send(embed=embed)
+        except Exception:
+            await ctx.send(f":x: Unexpected error occurred while DMing the Speaker or Vice-Speaker."
+                           f" Your bill was still submitted for session #{current_leg_session}, though!")
+            return
 
     @submit.error
     async def submiterror(self, ctx, error):

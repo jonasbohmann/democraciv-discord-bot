@@ -10,6 +10,25 @@ class Flow:
         self.bot = bot
         self.ctx = ctx
 
+    async def get_emoji_choice(self, yes_emoji, no_emoji, message, timeout):
+        """Adds the two specified emojis to the message and returns which one has been clicked by the
+           original user in the specified time"""
+
+        await message.add_reaction(yes_emoji)
+        await message.add_reaction(no_emoji)
+
+        try:
+            reaction, user = await self.ctx.bot.wait_for('reaction_add',
+                                                         check=self.bot.checks.wait_for_reaction_check(self.ctx,
+                                                                                                       message),
+                                                         timeout=timeout)
+        except asyncio.TimeoutError:
+            await self.ctx.send(":x: Aborted.")
+            return None
+
+        else:
+            return reaction, user
+
     async def gear_reaction_confirm(self, message, timeout):
         """Adds the :gear: emoji to the message and returns whether it has been clicked by the
            original user in the specified time"""
