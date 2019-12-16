@@ -274,10 +274,16 @@ class Legislature(commands.Cog):
     async def closesession(self, ctx):
         """Closes the current session"""
 
+        status = await self.get_status_of_active_leg_session()
+
+        if status == "Submission Period":
+            return await ctx.send(f":x: You can only close sessions that are in Voting Period!")
+
         active_leg_session_id = await self.get_active_leg_session()
 
         if active_leg_session_id is None:
             return await ctx.send(f":x: There is no open session!")
+
 
         try:
             await self.bot.db.execute("UPDATE legislature_sessions SET is_active = false, end_unixtime = $2,"
