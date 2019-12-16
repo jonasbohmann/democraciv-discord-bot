@@ -146,8 +146,7 @@ class Legislature(commands.Cog):
                 active_leg_session = f"Session #{active_leg_session_id}"
 
         embed = self.bot.embeds.embed_builder(title=f"The Legislature of {mk.NATION_NAME}",
-                                              description=f"Use `{config.BOT_PREFIX}help legislature` to get a list of "
-                                                          f"commands for the Legislature")
+                                              description=f"")
         speaker_value = f""
 
         if isinstance(self.speaker, discord.Member):
@@ -289,7 +288,7 @@ class Legislature(commands.Cog):
         if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
             await ctx.send(":x: Only the cabinet is allowed to use this command!")
 
-    @legislature.command(name='session')
+    @legislature.command(name='session', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def session(self, ctx, session: str = None):
         """Get details about a legislative session

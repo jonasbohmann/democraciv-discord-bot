@@ -60,8 +60,7 @@ class Ministry(commands.Cog):
             raise e
 
         embed = self.bot.embeds.embed_builder(title=f"The Ministry of {mk.NATION_NAME}",
-                                              description=f"Use `{config.BOT_PREFIX}help ministry` to get a list of "
-                                                          f"commands for the Ministry.")
+                                              description=f"")
         minister_value = f""
 
         pretty_bills = await self.get_pretty_vetos()
