@@ -130,7 +130,7 @@ class Legislature(commands.Cog):
         except exceptions.DemocracivBotException as e:
             # We're raising the same exception again because discord.ext.commands.Exceptions only "work" (i.e. get sent
             # to events/error_handler.py) if they get raised in an actual command
-            raise e
+            await ctx.send(e.message)
 
         active_leg_session_id = await self.get_active_leg_session()
 
@@ -151,9 +151,14 @@ class Legislature(commands.Cog):
 
         if isinstance(self.speaker, discord.Member):
             speaker_value += f"Speaker: {self.speaker.mention}\n"
+        else:
+            speaker_value += f"Speaker: -\n"
 
         if isinstance(self.vice_speaker, discord.Member):
             speaker_value += f"Vice-Speaker: {self.vice_speaker.mention}"
+        else:
+            speaker_value += f"Vice-Speaker: -"
+
 
         embed.add_field(name="Current Legislative Cabinet", value=speaker_value)
 

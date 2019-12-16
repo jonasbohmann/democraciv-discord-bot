@@ -57,7 +57,7 @@ class Ministry(commands.Cog):
         except exceptions.DemocracivBotException as e:
             # We're raising the same exception again because discord.ext.commands.Exceptions only "work" (i.e. get sent
             # to events/error_handler.py) if they get raised in an actual command
-            raise e
+            await ctx.send(e.message)
 
         embed = self.bot.embeds.embed_builder(title=f"The Ministry of {mk.NATION_NAME}",
                                               description=f"")
@@ -68,8 +68,15 @@ class Ministry(commands.Cog):
         if isinstance(self.prime_minister, discord.Member):
             minister_value += f"Prime Minister: {self.prime_minister.mention}\n"
 
+        else:
+            minister_value += f"Prime Minister: -\n"
+
         if isinstance(self.lt_prime_minister, discord.Member):
             minister_value += f"Lt. Prime Minister: {self.lt_prime_minister.mention}"
+        else:
+            minister_value += f"Lt. Prime Minister: -"
+
+
 
         embed.add_field(name="Head of State", value=minister_value)
 
