@@ -350,6 +350,20 @@ class Legislature(commands.Cog):
             await ctx.send(msg)
             return
 
+        motions = await self.bot.db.fetch(
+            "SELECT (id, title, description, submitter) FROM legislature_motions"
+            " WHERE leg_session = $1", active_leg_session_id)
+
+        pretty_motions = f""
+
+        if len(motions) > 0:
+            for record in motions:
+                pretty_motions += f"Motion #{record[0][0]} - {record[0][1]} by " \
+                                f"{self.bot.get_user(record[0][3]).mention}\n"
+
+        else:
+            pretty_motions = "No one submitted any motions during this session."
+
         bills = await self.bot.db.fetch(
             "SELECT (id, link, bill_name, submitter, is_law) FROM legislature_bills"
             " WHERE leg_session = $1", active_leg_session_id)
@@ -385,6 +399,7 @@ class Legislature(commands.Cog):
             embed.add_field(name="Voting Started on (UTC)", value=pretty_voting_date, inline=True)
             embed.add_field(name="Vote Form", value=f"[Link]({session_info[0][2]})", inline=False)
 
+        embed.add_field(name="Submitted Motions", value=pretty_motions, inline=False)
         embed.add_field(name="Submitted Bills", value=pretty_bills, inline=False)
 
         await ctx.send(embed=embed)
@@ -457,8 +472,7 @@ class Legislature(commands.Cog):
 
             if not self.is_google_doc_link(google_docs_url):
                 return await ctx.send(
-                    ":x: That doesn't look like a Google Docs URL.\n\nIf you want to submit a motion or s"
-                    "omething that is not a bill, just put that into a Google Docs document.")
+                    ":x: That doesn't look like a Google Docs URL.")
 
             async with ctx.typing():
                 bill_title = await self.get_google_docs_title(google_docs_url)
@@ -468,7 +482,7 @@ class Legislature(commands.Cog):
                 return
 
             # -- Submit Bill --
-            new_id = self.generate_new_bill_id()
+            new_id = await self.generate_new_bill_id()
 
             try:
                 await self.bot.db.execute(
@@ -513,7 +527,7 @@ class Legislature(commands.Cog):
             if not description:
                 return
 
-            _new_id = self.generate_new_motion_id()
+            _new_id = await self.generate_new_motion_id()
 
             try:
                 await self.bot.db.execute(
@@ -547,16 +561,6 @@ class Legislature(commands.Cog):
             await ctx.send(f":x: Unexpected error occurred while DMing the Speaker or Vice-Speaker."
                            f" Your bill was still submitted for session #{current_leg_session}, though!")
             return
-
-    @submit.error
-    async def submiterror(self, ctx, error):
-        if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
-            await ctx.send(":x: Only Legislators are allowed to use this command!")
-
-        elif isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'google_docs_url':
-                await ctx.send(":x: You have to give me a valid Google Docs URL of the bill you want to submit!")
-
 
 def setup(bot):
     bot.add_cog(Legislature(bot))
