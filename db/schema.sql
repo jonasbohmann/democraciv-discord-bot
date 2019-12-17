@@ -55,11 +55,22 @@ CREATE TABLE IF NOT EXISTS legislature_bills(
     leg_session int references legislature_sessions(id),
     link text UNIQUE,
     bill_name text,
+    description text,
     submitter bigint,
     is_vetoable bool,
     has_passed_leg bool,
-    has_passed_ministry bool,
-    is_law bool
+    has_passed_ministry bool
+);
+
+CREATE TABLE IF NOT EXISTS legislature_laws(
+    bill_id int references legislature_bills(id),
+    law_id int UNIQUE PRIMARY KEY,
+    description text
+);
+
+CREATE TABLE IF NOT EXISTS legislature_tags(
+    id int references legislature_laws(law_id),
+    tag text
 );
 
 CREATE TABLE IF NOT EXISTS legislature_motions(

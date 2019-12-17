@@ -83,6 +83,23 @@ class Legislature(commands.Cog):
 
         return last_id + 1
 
+    async def get_highest_law_id(self):
+        last_law = await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE law_id = "
+                                              "(SELECT MAX(law_id) FROM legislature_laws)")
+
+        if last_law is not None:
+            return last_law['law_jd']
+        else:
+            return None
+
+    async def generate_new_law_id(self):
+        last_law = await self.get_highest_law_id()
+
+        if last_law is None:
+            last_law = 0
+
+        return last_law + 1
+
     async def get_highest_motion_id(self):
         last_motion = await self.bot.db.fetchrow("SELECT id FROM legislature_motions WHERE id = "
                                                  "(SELECT MAX(id) FROM legislature_motions)")
@@ -158,7 +175,6 @@ class Legislature(commands.Cog):
             speaker_value += f"Vice-Speaker: {self.vice_speaker.mention}"
         else:
             speaker_value += f"Vice-Speaker: -"
-
 
         embed.add_field(name="Current Legislative Cabinet", value=speaker_value)
 
@@ -284,7 +300,6 @@ class Legislature(commands.Cog):
         if active_leg_session_id is None:
             return await ctx.send(f":x: There is no open session!")
 
-
         try:
             await self.bot.db.execute("UPDATE legislature_sessions SET is_active = false, end_unixtime = $2,"
                                       " status = 'Closed'"
@@ -367,9 +382,11 @@ class Legislature(commands.Cog):
         pretty_motions = f""
 
         if len(motions) > 0:
+            i = 0
             for record in motions:
-                pretty_motions += f"Motion #{record[0][0]} - {record[0][1]} by " \
-                                f"{self.bot.get_user(record[0][3]).mention}\n"
+                i += 1
+                pretty_motions += f"Motion #{i} - {record[0][1]} by " \
+                                  f"{self.bot.get_user(record[0][3]).mention}\n"
 
         else:
             pretty_motions = "No one submitted any motions during this session."
@@ -382,8 +399,10 @@ class Legislature(commands.Cog):
         pretty_start_date = datetime.datetime.utcfromtimestamp(session_info[0][3]).strftime("%A, %B %d %Y"
                                                                                             " %H:%M:%S")
         if len(bills) > 0:
+            i = 0
             for record in bills:
-                pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by " \
+                i += 1
+                pretty_bills += f"Bill #{i} - [{record[0][2]}]({record[0][1]}) by " \
                                 f"{self.bot.get_user(record[0][3]).mention}\n"
 
         else:
@@ -570,6 +589,61 @@ class Legislature(commands.Cog):
             await ctx.send(f":x: Unexpected error occurred while DMing the Speaker or Vice-Speaker."
                            f" Your bill was still submitted for session #{current_leg_session}, though!")
             return
+
+    @legislature.command(name='addlaw', aliases=['al'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.has_any_role("Speaker of the Legislature", "Vice-Speaker of the Legislature")
+    @utils.is_democraciv_guild()
+    async def passbill(self, ctx, bill_id: int):
+        """Mark a bill as passed from the Legislature"""
+
+        if bill_id <= 0:
+            return await ctx.send(":x: The bill ID has to be greater than 0!")
+
+        bill_details = await self.bot.db.fetchrow("SELECT (leg_session, link, bill_name, submitter, is_vetoable,"
+                                                  " has_passed_leg, has_passed_ministry, description) FROM legislature_bills"
+                                                  " WHERE id = $1", bill_id)
+
+        if bill_details is None:
+            return await ctx.send(f":x: There is no submitted bill with ID '{bill_id}'")
+
+        last_leg_session = await self.get_last_leg_session()
+
+        if last_leg_session != bill_details[0][0]:
+            return await ctx.send(f":x: This bill was not submitted in the last session of the Legislature!")
+
+        if bill_details[0][7]:
+            return await ctx.send(f":x: This bill is already law!")
+
+        await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true WHERE id = $1", bill_id)
+
+        flow = Flow(self.bot, ctx)
+        # todo put into -leg submit
+
+        await ctx.send(f":information_source: Reply with a short description of this law.")
+        description = flow.get_text_input(600)
+
+        if not description:
+            return
+
+        # Bill is vetoable
+        if bill_details[0][4]:
+            await ctx.send(f":white_check_mark: The bill titled '{bill_details[0][2]}' was sent to the Ministry for"
+                           f" them to vote whether to veto it.")
+
+            await mk.get_executive_channel(self.bot).send(f"The Legislature has just passed a bill that you need to"
+                                                          f" vote on. Check `-ministry veto` to get the details.")
+
+        # Bill is not vetoable
+        else:
+
+            _law_id = await self.generate_new_law_id()
+
+            await self.bot.db.execute("INSERT INTO legislature_laws (bill_id, law_id, description) VALUES"
+                                      "($1, $2, $3)", bill_id, _law_id, bill_details[0][7])
+
+            await self.bot.db.execute("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2)", _law_id, 'Test')
+
 
 def setup(bot):
     bot.add_cog(Legislature(bot))
