@@ -294,7 +294,7 @@ class Legislature(commands.Cog):
             i = 0
             for record in bills:
                 i += 1
-                pretty_bills += f"Bill #{i} - [{record[0][2]}]({record[0][1]}) by " \
+                pretty_bills += f"#{i} - [{record[0][2]}]({record[0][1]}) by " \
                                 f"{self.bot.get_user(record[0][3]).mention}\n"
 
         else:
@@ -496,7 +496,7 @@ class Legislature(commands.Cog):
                            f" Your bill was still submitted for session #{current_leg_session}, though!")
             return
 
-    @legislature.command(name='addlaw', aliases=['al'])
+    @legislature.command(name='passbill', aliases=['pb'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_any_role("Speaker of the Legislature", "Vice-Speaker of the Legislature")
     @utils.is_democraciv_guild()
@@ -523,11 +523,11 @@ class Legislature(commands.Cog):
         # Bill is vetoable
         if bill_details[0][4]:
             await ctx.send(f":white_check_mark: The bill titled '{bill_details[0][2]}' was sent to the Ministry for"
-                           f" them to vote whether to veto it.")
+                           f" them to vote on it.")
 
-            await mk.get_executive_channel(self.bot).send(f"The Legislature has just passed bill #{bill_id}"
-                                                          f" that you need to vote on. Check `-ministry veto` to "
-                                                          f"get the details.")
+            await mk.get_executive_channel(self.bot).send(f"{mk.get_minister_role(self.bot).mention}, The Legislature"
+                                                          f" has just passed a new bill that you need to vote on. "
+                                                          f"Check `-ministry veto` to get the details.")
 
         # Bill is not vetoable
         else:
