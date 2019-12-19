@@ -3,12 +3,10 @@ import asyncpg
 import discord
 import datetime
 
-from util import utils, mk, exceptions
+from util.flow import Flow
 from config import config, links
 from discord.ext import commands
-from bs4 import BeautifulSoup, SoupStrainer
-
-from util.flow import Flow
+from util import utils, mk, exceptions
 
 
 class Legislature(commands.Cog):
@@ -30,113 +28,6 @@ class Legislature(commands.Cog):
         except IndexError:
             raise exceptions.NoOneHasRoleError("Vice-Speaker of the Legislature")
 
-    @staticmethod
-    def is_google_doc_link(link: str):
-
-        valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/', 'https://forms.gle/']
-
-        if len(link) < 15 or not link.startswith(tuple(valid_google_docs_url_strings)):
-            return False
-        else:
-            return True
-
-    async def get_active_leg_session(self):
-        active_leg_session_id = await self.bot.db.fetchrow("SELECT id FROM legislature_sessions WHERE is_active = true")
-
-        if active_leg_session_id is None:
-            return None
-        else:
-            return active_leg_session_id['id']
-
-    async def get_status_of_active_leg_session(self):
-        active_leg_session_status = await self.bot.db.fetchrow("SELECT status FROM legislature_sessions WHERE"
-                                                               " is_active = true")
-
-        if active_leg_session_status is None:
-            return None
-        else:
-            return active_leg_session_status['status']
-
-    async def get_last_leg_session(self):
-        last_session = await self.bot.db.fetchrow("SELECT id FROM legislature_sessions WHERE id = "
-                                                  "(SELECT MAX(id) FROM legislature_sessions)")
-
-        if last_session is not None:
-            return last_session['id']
-        else:
-            return None
-
-    async def get_highest_bill_id(self):
-        last_bill = await self.bot.db.fetchrow("SELECT id FROM legislature_bills WHERE id = "
-                                               "(SELECT MAX(id) FROM legislature_bills)")
-
-        if last_bill is not None:
-            return last_bill['id']
-        else:
-            return None
-
-    async def generate_new_bill_id(self):
-        last_id = await self.get_highest_bill_id()
-
-        if last_id is None:
-            last_id = 0
-
-        return last_id + 1
-
-    async def get_highest_law_id(self):
-        last_law = await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE law_id = "
-                                              "(SELECT MAX(law_id) FROM legislature_laws)")
-
-        if last_law is not None:
-            return last_law['law_jd']
-        else:
-            return None
-
-    async def generate_new_law_id(self):
-        last_law = await self.get_highest_law_id()
-
-        if last_law is None:
-            last_law = 0
-
-        return last_law + 1
-
-    async def get_highest_motion_id(self):
-        last_motion = await self.bot.db.fetchrow("SELECT id FROM legislature_motions WHERE id = "
-                                                 "(SELECT MAX(id) FROM legislature_motions)")
-
-        if last_motion is not None:
-            return last_motion['id']
-        else:
-            return None
-
-    async def generate_new_motion_id(self):
-        last_id = await self.get_highest_motion_id()
-
-        if last_id is None:
-            last_id = 0
-
-        return last_id + 1
-
-    async def get_google_docs_title(self, link: str):
-        try:
-            async with self.bot.session.get(link) as response:
-                text = await response.read()
-
-            strainer = SoupStrainer(property="og:title")  # Only parse the title property HTMl to save time
-            soup = BeautifulSoup(text, "lxml", parse_only=strainer)  # Use lxml parser to speed things up
-
-            bill_title = soup.find("meta")['content']  # Get title of Google Docs website
-
-            if bill_title.endswith(' - Google Docs'):
-                bill_title = bill_title[:-14]
-
-            soup.decompose()  # Garbage collection
-
-            return bill_title
-
-        except Exception:
-            return None
-
     @commands.group(name='legislature', aliases=['leg'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def legislature(self, ctx):
@@ -149,7 +40,7 @@ class Legislature(commands.Cog):
             # to events/error_handler.py) if they get raised in an actual command
             await ctx.send(e.message)
 
-        active_leg_session_id = await self.get_active_leg_session()
+        active_leg_session_id = await self.bot.laws.get_active_leg_session()
 
         if active_leg_session_id is None:
             active_leg_session = "There currently is no open session."
@@ -194,12 +85,12 @@ class Legislature(commands.Cog):
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
 
-        active_leg_session_id = await self.get_active_leg_session()
+        active_leg_session_id = await self.bot.laws.get_active_leg_session()
 
         if active_leg_session_id is not None:
             return await ctx.send(f":x: There is still an open session, close Session #{active_leg_session_id} first!")
 
-        last_session = await self.get_last_leg_session()
+        last_session = await self.bot.laws.get_last_leg_session()
 
         if last_session is None:
             last_session = 0
@@ -211,6 +102,7 @@ class Legislature(commands.Cog):
                                       'start_unixtime)'
                                       'VALUES ($1, $2, true, $3, $4)', int(new_session), ctx.author.id,
                                       'Submission Period', time.time())
+
         except asyncpg.UniqueViolationError:
             return await ctx.send(":x: This session already exists!")
         except Exception:
@@ -229,7 +121,7 @@ class Legislature(commands.Cog):
                                       f" #{new_session}** has started!"
                                       f"\nSubmit your bills with `-legislature submit <link>` on the"
                                       f" Democraciv guild.")
-            except Exception:
+            except discord.Forbidden:
                 pass
 
     @opensession.error
@@ -244,10 +136,10 @@ class Legislature(commands.Cog):
     async def updatesession(self, ctx, voting_form: str):
         """Changes the current session's status to be open for voting"""
 
-        if not self.is_google_doc_link(voting_form):
+        if not self.bot.laws.is_google_doc_link(voting_form):
             return await ctx.send(":x: That doesn't look like a Google Docs URL.")
 
-        active_leg_session_id = await self.get_active_leg_session()
+        active_leg_session_id = await self.bot.laws.get_active_leg_session()
 
         if active_leg_session_id is None:
             return await ctx.send(f":x: There is no open session!")
@@ -290,12 +182,12 @@ class Legislature(commands.Cog):
     async def closesession(self, ctx):
         """Closes the current session"""
 
-        status = await self.get_status_of_active_leg_session()
+        status = await self.bot.laws.get_status_of_active_leg_session()
 
         if status == "Submission Period":
             return await ctx.send(f":x: You can only close sessions that are in Voting Period!")
 
-        active_leg_session_id = await self.get_active_leg_session()
+        active_leg_session_id = await self.bot.laws.get_active_leg_session()
 
         if active_leg_session_id is None:
             return await ctx.send(f":x: There is no open session!")
@@ -332,7 +224,7 @@ class Legislature(commands.Cog):
             raise e
 
         if not session or session is None:
-            active_leg_session_id = await self.get_active_leg_session()
+            active_leg_session_id = await self.bot.laws.get_active_leg_session()
 
             if active_leg_session_id is None:
                 msg = f":x: There currently is no open session.\n" \
@@ -392,7 +284,7 @@ class Legislature(commands.Cog):
             pretty_motions = "No one submitted any motions during this session."
 
         bills = await self.bot.db.fetch(
-            "SELECT (id, link, bill_name, submitter, is_law) FROM legislature_bills"
+            "SELECT (id, link, bill_name, submitter) FROM legislature_bills"
             " WHERE leg_session = $1", active_leg_session_id)
 
         pretty_bills = f""
@@ -445,13 +337,13 @@ class Legislature(commands.Cog):
             # (i.e. get sent to events/error_handler.py) if they get raised in an actual command
             raise e
 
-        current_leg_session = await self.get_active_leg_session()
+        current_leg_session = await self.bot.laws.get_active_leg_session()
 
         if current_leg_session is None:
             await ctx.send(":x: There is no active session!")
             return
 
-        current_leg_session_status = await self.get_status_of_active_leg_session()
+        current_leg_session_status = await self.bot.laws.get_status_of_active_leg_session()
 
         if current_leg_session_status is None or current_leg_session_status != "Submission Period":
             await ctx.send(f":x: The submission period for session #{current_leg_session} is already over!")
@@ -493,31 +385,40 @@ class Legislature(commands.Cog):
             await ctx.send(":information_source: Reply with the Google Docs link to the bill"
                            " you want to submit.")
 
-            google_docs_url = await flow.get_text_input(300)
+            google_docs_url = await flow.get_text_input(150)
 
             if not google_docs_url:
                 return
 
-            if not self.is_google_doc_link(google_docs_url):
+            if not self.bot.laws.is_google_doc_link(google_docs_url):
                 return await ctx.send(
                     ":x: That doesn't look like a Google Docs URL.")
 
             async with ctx.typing():
-                bill_title = await self.get_google_docs_title(google_docs_url)
+                bill_title = await self.bot.laws.get_google_docs_title(google_docs_url)
 
             if bill_title is None:
                 await ctx.send(":x: Could not connect to Google Docs!")
                 return
 
+            # Description?
+            await ctx.send(":information_source: Reply with a **short** (max. 2 sentences) description of what your "
+                           "bill does.")
+
+            bill_description = await flow.get_text_input(620)
+
+            if not bill_description:
+                bill_description = "-"
+
             # -- Submit Bill --
-            new_id = await self.generate_new_bill_id()
+            new_id = await self.bot.laws.generate_new_bill_id()
 
             try:
                 await self.bot.db.execute(
-                    "INSERT INTO legislature_bills (id, leg_session, link, bill_name, submitter, is_vetoable, is_law, "
-                    " has_passed_leg, has_passed_ministry) "
-                    "VALUES ($1, $2, $3, $4, $5, $6, false, false, false)", new_id, current_leg_session, google_docs_url
-                    , bill_title, ctx.author.id, is_vetoable)
+                    "INSERT INTO legislature_bills (id, leg_session, link, bill_name, submitter, is_vetoable, "
+                    " has_passed_leg, has_passed_ministry, description) "
+                    "VALUES ($1, $2, $3, $4, $5, $6, false, false, $7)", new_id, current_leg_session, google_docs_url
+                    , bill_title, ctx.author.id, is_vetoable, bill_description)
 
             except asyncpg.UniqueViolationError:
                 await ctx.send(":x: This bill was already submitted!")
@@ -538,7 +439,12 @@ class Legislature(commands.Cog):
             await ctx.send(
                 f":white_check_mark: Successfully submitted bill '{bill_title}' for session #{current_leg_session}!")
 
-        elif str(reaction.emoji) == "\U0001f1f2":  # Motion
+        elif str(reaction.emoji) == "\U0001f1f2":
+            # -- Motion --
+
+            if mk.get_legislator_role(self.bot) not in ctx.author.roles:
+                return await ctx.send(":x: Only Legislators are allowed to submit motions!")
+
             await ctx.send(":white_check_mark: You will submit a **motion**.")
 
             await ctx.send(":information_source: Reply with the title of your motion.")
@@ -555,7 +461,7 @@ class Legislature(commands.Cog):
             if not description:
                 return
 
-            _new_id = await self.generate_new_motion_id()
+            _new_id = await self.bot.laws.generate_new_motion_id()
 
             try:
                 await self.bot.db.execute(
@@ -607,7 +513,7 @@ class Legislature(commands.Cog):
         if bill_details is None:
             return await ctx.send(f":x: There is no submitted bill with ID '{bill_id}'")
 
-        last_leg_session = await self.get_last_leg_session()
+        last_leg_session = await self.bot.laws.get_last_leg_session()
 
         if last_leg_session != bill_details[0][0]:
             return await ctx.send(f":x: This bill was not submitted in the last session of the Legislature!")
@@ -637,7 +543,7 @@ class Legislature(commands.Cog):
         # Bill is not vetoable
         else:
 
-            _law_id = await self.generate_new_law_id()
+            _law_id = await self.bot.laws.generate_new_law_id()
 
             await self.bot.db.execute("INSERT INTO legislature_laws (bill_id, law_id, description) VALUES"
                                       "($1, $2, $3)", bill_id, _law_id, bill_details[0][7])

@@ -76,8 +76,6 @@ class Ministry(commands.Cog):
         else:
             minister_value += f"Lt. Prime Minister: -"
 
-
-
         embed.add_field(name="Head of State", value=minister_value)
 
         embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"

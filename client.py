@@ -17,6 +17,7 @@ from discord.ext import commands
 from event.twitch import Twitch
 from event.reddit import Reddit
 from config import config, token
+from util.law_helper import LawUtils
 from util.utils import CheckUtils, EmbedUtils
 
 # -- Discord Bot for the r/Democraciv Server --
@@ -86,6 +87,7 @@ class DemocracivBot(commands.Bot):
         # Create util objects from ./util/utils.py
         self.embeds = EmbedUtils()
         self.checks = CheckUtils(self)
+        self.laws = LawUtils(self)
 
         # Attributes will be "initialized" in on_ready as they need a connection to Discord
         self.DerJonas_object = None
