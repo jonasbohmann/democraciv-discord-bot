@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS legislature_bills(
 );
 
 CREATE TABLE IF NOT EXISTS legislature_laws(
-    bill_id int references legislature_bills(id),
+    bill_id int UNIQUE references legislature_bills(id),
     law_id int UNIQUE PRIMARY KEY,
     description text
 );

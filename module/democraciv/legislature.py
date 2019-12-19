@@ -507,8 +507,8 @@ class Legislature(commands.Cog):
             return await ctx.send(":x: The bill ID has to be greater than 0!")
 
         bill_details = await self.bot.db.fetchrow("SELECT (leg_session, link, bill_name, submitter, is_vetoable,"
-                                                  " has_passed_leg, has_passed_ministry, description) FROM legislature_bills"
-                                                  " WHERE id = $1", bill_id)
+                                                  " has_passed_leg, has_passed_ministry, description)"
+                                                  " FROM legislature_bills WHERE id = $1", bill_id)
 
         if bill_details is None:
             return await ctx.send(f":x: There is no submitted bill with ID '{bill_id}'")
@@ -518,37 +518,37 @@ class Legislature(commands.Cog):
         if last_leg_session != bill_details[0][0]:
             return await ctx.send(f":x: This bill was not submitted in the last session of the Legislature!")
 
-        if bill_details[0][7]:
-            return await ctx.send(f":x: This bill is already law!")
-
         await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true WHERE id = $1", bill_id)
-
-        flow = Flow(self.bot, ctx)
-        # todo put into -leg submit
-
-        await ctx.send(f":information_source: Reply with a short description of this law.")
-        description = flow.get_text_input(600)
-
-        if not description:
-            return
 
         # Bill is vetoable
         if bill_details[0][4]:
             await ctx.send(f":white_check_mark: The bill titled '{bill_details[0][2]}' was sent to the Ministry for"
                            f" them to vote whether to veto it.")
 
-            await mk.get_executive_channel(self.bot).send(f"The Legislature has just passed a bill that you need to"
-                                                          f" vote on. Check `-ministry veto` to get the details.")
+            await mk.get_executive_channel(self.bot).send(f"The Legislature has just passed bill #{bill_id}"
+                                                          f" that you need to vote on. Check `-ministry veto` to "
+                                                          f"get the details.")
 
         # Bill is not vetoable
         else:
 
             _law_id = await self.bot.laws.generate_new_law_id()
 
-            await self.bot.db.execute("INSERT INTO legislature_laws (bill_id, law_id, description) VALUES"
-                                      "($1, $2, $3)", bill_id, _law_id, bill_details[0][7])
+            try:
+                await self.bot.db.execute("INSERT INTO legislature_laws (bill_id, law_id, description) VALUES"
+                                          "($1, $2, $3)", bill_id, _law_id, bill_details[0][7])
+            except asyncpg.UniqueViolationError:
+                return await ctx.send(f":x: This bill is already law!")
 
-            await self.bot.db.execute("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2)", _law_id, 'Test')
+            _google_docs_description = await self.bot.laws.get_google_docs_description()
+            _tags = await self.bot.loop.run_in_executor(None, self.bot.laws.generate_law_tags, _google_docs_description,
+                                                        bill_details[0][7])
+
+            for tag in _tags:
+                try:
+                    await self.bot.db.execute("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2)", _law_id, tag)
+                except asyncpg.UniqueViolationError:
+                    continue
 
 
 def setup(bot):
