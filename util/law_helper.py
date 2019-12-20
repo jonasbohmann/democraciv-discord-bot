@@ -69,7 +69,7 @@ class LawUtils:
                                               "(SELECT MAX(law_id) FROM legislature_laws)")
 
         if last_law is not None:
-            return last_law['law_jd']
+            return last_law['law_id']
         else:
             return None
 

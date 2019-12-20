@@ -540,7 +540,7 @@ class Legislature(commands.Cog):
             except asyncpg.UniqueViolationError:
                 return await ctx.send(f":x: This bill is already law!")
 
-            _google_docs_description = await self.bot.laws.get_google_docs_description()
+            _google_docs_description = await self.bot.laws.get_google_docs_description(bill_details[0][1])
             _tags = await self.bot.loop.run_in_executor(None, self.bot.laws.generate_law_tags, _google_docs_description,
                                                         bill_details[0][7])
 
