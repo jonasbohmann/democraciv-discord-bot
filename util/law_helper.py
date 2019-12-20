@@ -12,6 +12,8 @@ class LawUtils:
 
     def __init__(self, bot):
         self.bot = bot
+        nltk.download('punkt')
+        nltk.download('averaged_perceptron_tagger')
 
     def is_google_doc_link(self, link: str):
         valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/', 'https://forms.gle/']
