@@ -274,10 +274,8 @@ class Legislature(commands.Cog):
         pretty_motions = f""
 
         if len(motions) > 0:
-            i = 0
             for record in motions:
-                i += 1
-                pretty_motions += f"Motion #{i} - {record[0][1]} by " \
+                pretty_motions += f"Motion #{record[0][0]} - {record[0][1]} by " \
                                   f"{self.bot.get_user(record[0][3]).mention}\n"
 
         else:
