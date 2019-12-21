@@ -150,8 +150,10 @@ class LawUtils:
 
         tokenized_author_description = nltk.word_tokenize(author_description)
 
-        tags = [word for (word, pos) in nltk.pos_tag(tokenized_docs_description) and
+        tags = [word for (word, pos) in nltk.pos_tag(tokenized_docs_description) +
                 nltk.pos_tag(tokenized_author_description) if is_noun(pos)]
+
+        tags = list(set(tags))
 
         return tags
 
