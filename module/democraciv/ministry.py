@@ -1,8 +1,10 @@
+import asyncpg
 import discord
 
 from util import mk, exceptions, utils
 from discord.ext import commands
 from config import config, links
+from util.flow import Flow
 
 
 class Ministry(commands.Cog):
@@ -26,7 +28,7 @@ class Ministry(commands.Cog):
     async def get_open_vetos(self):
         open_bills = await self.bot.db.fetch(
             "SELECT (id, link, bill_name, submitter, leg_session) FROM legislature_bills"
-            " WHERE has_passed_leg = true AND has_passed_ministry = false AND is_law = false")
+            " WHERE has_passed_leg = true AND has_passed_ministry = false")
 
         if open_bills is not None:
             return open_bills
@@ -87,25 +89,113 @@ class Ministry(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    @ministry.group(name='bills', aliases=['b'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.is_democraciv_guild()
+    async def bills(self, ctx):
+        """See all open bills to veto"""
+
+        pretty_bills = await self.get_pretty_vetos()
+
+        pretty_bills = f"Use `{config.BOT_PREFIX}ministry veto <law_id>` to veto a bill.\n\n{pretty_bills}"
+
+        embed = self.bot.embeds.embed_builder(title=f"Open Bills to Veto",
+                                              description=pretty_bills)
+
+        await ctx.send(embed=embed)
+
     @ministry.group(name='veto', aliases=['v'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_any_role("Prime Minister", "Lieutenant Prime Minister")
     @utils.is_democraciv_guild()
-    async def veto(self, ctx, law: int = None):
-        """Veto a bill"""
+    async def veto(self, ctx, bill_id: int):
 
-        if not law or law is None:
-            pretty_bills = await self.get_pretty_vetos()
+        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
-            pretty_bills = f"Use `{config.BOT_PREFIX}ministry veto <law_id>` to veto a bill.\n\n{pretty_bills}"
+        if bill_details is None:
+            return await ctx.send(f":x: Could not find any bill with id {bill_id}")
 
-            embed = self.bot.embeds.embed_builder(title=f"Open Bills to Veto",
-                                                  description=pretty_bills)
+        if not bill_details['is_vetoable']:
+            return await ctx.send(f":x: The Ministry cannot veto this!")
 
-            await ctx.send(embed=embed)
+        if not bill_details['has_passed_leg']:
+            return await ctx.send(f":x: This bill hasn't passed the Legislature yet!")
 
-        elif law:
-            pass
+        if bill_details['voted_on_by_ministry'] or bill_details['has_passed_ministry']:
+            return await ctx.send(f":x: You already voted on this bill!")
+
+        flow = Flow(self.bot, ctx)
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to veto "
+                                      f"'{bill_details['bill_name']}"
+                                      f"' (#{bill_details['id']})?")
+
+        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+
+        if not reaction or reaction is None:
+            return
+
+        if str(reaction.emoji) == "\U00002705":
+            # yes
+
+            await self.bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
+                                      "false WHERE id = $1", bill_id)
+
+            await ctx.send(f":white_check_mark: Successfully vetoed {bill_details['bill_name']} "
+                           f"(#{bill_details['id']})!")
+
+            await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_speaker_role(self.bot).mention},"
+                                                                  f" {bill_details['bill_name']} was vetoed "
+                                                                  f"by the Ministry.")
+
+        else:
+            await ctx.send(f"Aborted.")
+
+    @ministry.group(name='pass', aliases=['p'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.has_any_role("Prime Minister", "Lieutenant Prime Minister")
+    @utils.is_democraciv_guild()
+    async def passbill(self, ctx, bill_id: int):
+
+        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
+
+        if bill_details is None:
+            return await ctx.send(f":x: Could not find any bill with id {bill_id}")
+
+        if not bill_details['is_vetoable']:
+            return await ctx.send(f":x: The Ministry cannot vote on this!")
+
+        if not bill_details['has_passed_leg']:
+            return await ctx.send(f":x: This bill hasn't passed the Legislature yet!")
+
+        if bill_details['voted_on_by_ministry'] or bill_details['has_passed_ministry']:
+            return await ctx.send(f":x: You already voted on this bill!")
+
+        flow = Flow(self.bot, ctx)
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to pass "
+                                      f"'{bill_details['bill_name']}"
+                                      f"' (#{bill_details['id']}) into law?")
+
+        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+
+        if not reaction or reaction is None:
+            return
+
+        if str(reaction.emoji) == "\U00002705":
+            # yes
+
+            if self.bot.laws.pass_into_law(bill_id, bill_details):
+                await ctx.send(":white_check_mark: Successfully passed this bill into law!")
+                await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_speaker_role(self.bot).mention}, "
+                                                                      f"'{bill_details['bill_name']}' was passed "
+                                                                      f"into law by"
+                                                                      f" the Ministry.")
+            else:
+                await ctx.send(":x: Unexpected error occured.")
+
+        else:
+            await ctx.send(f"Aborted.")
 
 
 def setup(bot):

@@ -58,7 +58,9 @@ CREATE TABLE IF NOT EXISTS legislature_bills(
     description text,
     submitter bigint,
     is_vetoable bool,
+    voted_on_by_leg bool,
     has_passed_leg bool,
+    voted_on_by_ministry bool,
     has_passed_ministry bool
 );
 

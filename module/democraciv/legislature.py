@@ -291,10 +291,8 @@ class Legislature(commands.Cog):
         pretty_start_date = datetime.datetime.utcfromtimestamp(session_info[0][3]).strftime("%A, %B %d %Y"
                                                                                             " %H:%M:%S")
         if len(bills) > 0:
-            i = 0
             for record in bills:
-                i += 1
-                pretty_bills += f"#{i} - [{record[0][2]}]({record[0][1]}) by " \
+                pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by " \
                                 f"{self.bot.get_user(record[0][3]).mention}\n"
 
         else:
@@ -496,7 +494,7 @@ class Legislature(commands.Cog):
                            f" Your bill was still submitted for session #{current_leg_session}, though!")
             return
 
-    @legislature.command(name='passbill', aliases=['pb'])
+    @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_any_role("Speaker of the Legislature", "Vice-Speaker of the Legislature")
     @utils.is_democraciv_guild()
@@ -506,23 +504,25 @@ class Legislature(commands.Cog):
         if bill_id <= 0:
             return await ctx.send(":x: The bill ID has to be greater than 0!")
 
-        bill_details = await self.bot.db.fetchrow("SELECT (leg_session, link, bill_name, submitter, is_vetoable,"
-                                                  " has_passed_leg, has_passed_ministry, description)"
-                                                  " FROM legislature_bills WHERE id = $1", bill_id)
+        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
         if bill_details is None:
             return await ctx.send(f":x: There is no submitted bill with ID '{bill_id}'")
 
         last_leg_session = await self.bot.laws.get_last_leg_session()
 
-        if last_leg_session != bill_details[0][0]:
+        if last_leg_session != bill_details['leg_session']:
             return await ctx.send(f":x: This bill was not submitted in the last session of the Legislature!")
 
-        await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true WHERE id = $1", bill_id)
+        if bill_details['voted_on_by_leg']:
+            return await ctx.send(f":x: You already passed this bill!")
+
+        await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true, voted_on_by_leg = true "
+                                  "WHERE id = $1", bill_id)
 
         # Bill is vetoable
-        if bill_details[0][4]:
-            await ctx.send(f":white_check_mark: The bill titled '{bill_details[0][2]}' was sent to the Ministry for"
+        if bill_details['is_vetoable']:
+            await ctx.send(f":white_check_mark: The bill titled '{bill_details['bill_name']}' was sent to the Ministry for"
                            f" them to vote on it.")
 
             await mk.get_executive_channel(self.bot).send(f"{mk.get_minister_role(self.bot).mention}, The Legislature"
@@ -532,24 +532,13 @@ class Legislature(commands.Cog):
         # Bill is not vetoable
         else:
 
-            _law_id = await self.bot.laws.generate_new_law_id()
-
-            try:
-                await self.bot.db.execute("INSERT INTO legislature_laws (bill_id, law_id, description) VALUES"
-                                          "($1, $2, $3)", bill_id, _law_id, bill_details[0][7])
-            except asyncpg.UniqueViolationError:
-                return await ctx.send(f":x: This bill is already law!")
-
-            _google_docs_description = await self.bot.laws.get_google_docs_description(bill_details[0][1])
-            _tags = await self.bot.loop.run_in_executor(None, self.bot.laws.generate_law_tags, _google_docs_description,
-                                                        bill_details[0][7])
-
-            for tag in _tags:
-                try:
-                    await self.bot.db.execute("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2)", _law_id, tag)
-                except asyncpg.UniqueViolationError:
-                    continue
+            if self.bot.laws.pass_into_law(bill_id, bill_details):
+                await ctx.send(":white_check_mark: Successfully passed this bill into law! Remember to also add it to "
+                               "the Legal Code!")
+            else:
+                await ctx.send(":x: Unexpected error occured.")
 
 
 def setup(bot):
     bot.add_cog(Legislature(bot))
+

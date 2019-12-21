@@ -1,3 +1,4 @@
+import asyncpg
 import nltk
 
 from bs4 import BeautifulSoup, SoupStrainer
@@ -153,3 +154,26 @@ class LawUtils:
                 nltk.pos_tag(tokenized_author_description) if is_noun(pos)]
 
         return tags
+
+    def pass_into_law(self, ctx, bill_id: int, bill_details: asyncpg.Record):
+        await self.bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
+                                  "true WHERE id = $1", bill_id)
+
+        _law_id = await self.bot.laws.generate_new_law_id()
+
+        try:
+            await self.bot.db.execute("INSERT INTO legislature_laws (bill_id, law_id, description) VALUES"
+                                      "($1, $2, $3)", bill_id, _law_id, bill_details['description'])
+        except asyncpg.UniqueViolationError:
+            await ctx.send(f":x: This bill is already law!")
+            return False
+
+        _google_docs_description = await self.bot.laws.get_google_docs_description(bill_details['link'])
+        _tags = await self.bot.loop.run_in_executor(None, self.bot.laws.generate_law_tags, _google_docs_description,
+                                                    bill_details['description'])
+
+        for tag in _tags:
+            await self.bot.db.execute("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2)", _law_id,
+                                      tag.lower())
+
+        return True
