@@ -579,6 +579,11 @@ class Legislature(commands.Cog):
         if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
             await ctx.send(":x: Only the cabinet is allowed to use this command!")
 
+        if isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'bill_id':
+                await ctx.send(':x: You have to give me the ID of the bill you want to pass!\n\n**Usage**:\n'
+                               '`-legislature pass <bill_id>`')
+
 
 def setup(bot):
     bot.add_cog(Legislature(bot))
