@@ -113,13 +113,13 @@ class Legislature(commands.Cog):
         await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_legislator_role(self.bot).mention}, the "
                                                               f"submission period for Legislative Session "
                                                               f"#{new_session} has started!\nSubmit your "
-                                                              f"bills with `-legislature submit <link>`.")
+                                                              f"bills with `-legislature submit`.")
 
         for legislator in mk.get_legislator_role(self.bot).members:
             try:
                 await legislator.send(f":envelope_with_arrow: The **submission period for Legislative Session"
                                       f" #{new_session}** has started!"
-                                      f"\nSubmit your bills with `-legislature submit <link>` on the"
+                                      f"\nSubmit your bills with `-legislature submit` on the"
                                       f" Democraciv guild.")
             except discord.Forbidden:
                 pass
@@ -386,15 +386,15 @@ class Legislature(commands.Cog):
             else:
                 is_vetoable = False
 
-                # Description?
-                await ctx.send(
-                    ":information_source: Reply with a **short** (max. 2 sentences) description of what your "
-                    "bill does.")
+            # Description?
+            await ctx.send(
+                ":information_source: Reply with a **short** (max. 2 sentences) description of what your "
+                "bill does.")
 
-                bill_description = await flow.get_text_input(620)
+            bill_description = await flow.get_text_input(620)
 
-                if not bill_description:
-                    bill_description = "-"
+            if not bill_description:
+                bill_description = "-"
 
             # Link?
             await ctx.send(":information_source: Reply with the Google Docs link to the bill"
@@ -426,8 +426,9 @@ class Legislature(commands.Cog):
                 try:
                     await self.bot.db.execute(
                         "INSERT INTO legislature_bills (id, leg_session, link, bill_name, submitter, is_vetoable, "
-                        " has_passed_leg, has_passed_ministry, description, tiny_link) "
-                        "VALUES ($1, $2, $3, $4, $5, $6, false, false, $7, $8)", new_id, current_leg_session,
+                        " has_passed_leg, has_passed_ministry, description, tiny_link, voted_on_by_leg, "
+                        "voted_on_by_ministry) "
+                        "VALUES ($1, $2, $3, $4, $5, $6, false, false, $7, $8, false, false)", new_id, current_leg_session,
                         google_docs_url
                         , bill_title, ctx.author.id, is_vetoable, bill_description, tiny_url)
 
@@ -518,44 +519,60 @@ class Legislature(commands.Cog):
         if bill_id <= 0:
             return await ctx.send(":x: The bill ID has to be greater than 0!")
 
-        async with ctx.typing():
+        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
-            bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
+        if bill_details is None:
+            return await ctx.send(f":x: There is no submitted bill with ID '{bill_id}'")
 
-            if bill_details is None:
-                return await ctx.send(f":x: There is no submitted bill with ID '{bill_id}'")
+        last_leg_session = await self.bot.laws.get_last_leg_session()
 
-            last_leg_session = await self.bot.laws.get_last_leg_session()
+        if last_leg_session != bill_details['leg_session']:
+            return await ctx.send(f":x: This bill was not submitted in the last session of the Legislature!")
 
-            if last_leg_session != bill_details['leg_session']:
-                return await ctx.send(f":x: This bill was not submitted in the last session of the Legislature!")
+        if bill_details['voted_on_by_leg']:
+            return await ctx.send(f":x: You already passed this bill!")
 
-            if bill_details['voted_on_by_leg']:
-                return await ctx.send(f":x: You already passed this bill!")
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to mark "
+                                      f"'{bill_details['bill_name']}"
+                                      f"' (#{bill_details['id']}) as passed from the Legislature?")
 
-            await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true, voted_on_by_leg = true "
-                                      "WHERE id = $1", bill_id)
+        flow = Flow(self.bot, ctx)
 
-            # Bill is vetoable
-            if bill_details['is_vetoable']:
-                await ctx.send(f":white_check_mark: The bill titled '{bill_details['bill_name']}' was sent to the "
-                               f"Ministry for"
-                               f" them to vote on it.")
+        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
 
-                await mk.get_executive_channel(self.bot).send(
-                    f"{mk.get_minister_role(self.bot).mention}, the Legislature"
-                    f" has just passed bill #{bill_id} that you need to vote on. "
-                    f"Check `-ministry bills` to get the details.")
+        if not reaction or reaction is None:
+            return
 
-            # Bill is not vetoable
-            else:
+        if str(reaction.emoji) == "\U0000274c":
+            return await ctx.send("Aborted.")
 
-                if await self.bot.laws.pass_into_law(ctx, bill_id, bill_details):
-                    await ctx.send(":white_check_mark: Successfully passed this bill into law!"
-                                   " Remember to also add it to "
-                                   "the Legal Code!")
+        if str(reaction.emoji) == "\U00002705":  # yes
+
+            async with ctx.typing():
+
+                await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true, voted_on_by_leg = true "
+                                          "WHERE id = $1", bill_id)
+
+                # Bill is vetoable
+                if bill_details['is_vetoable']:
+                    await ctx.send(f":white_check_mark: The bill titled '{bill_details['bill_name']}' was sent to the "
+                                   f"Ministry for"
+                                   f" them to vote on it.")
+
+                    await mk.get_executive_channel(self.bot).send(
+                        f"{mk.get_minister_role(self.bot).mention}, the Legislature"
+                        f" has just passed bill #{bill_id} that you need to vote on. "
+                        f"Check `-ministry bills` to get the details.")
+
+                # Bill is not vetoable
                 else:
-                    await ctx.send(":x: Unexpected error occurred.")
+
+                    if await self.bot.laws.pass_into_law(ctx, bill_id, bill_details):
+                        await ctx.send(":white_check_mark: Successfully passed this bill into law!"
+                                       " Remember to also add it to "
+                                       "the Legal Code!")
+                    else:
+                        await ctx.send(":x: Unexpected error occurred.")
 
     @passbill.error
     async def passbillerror(self, ctx, error):

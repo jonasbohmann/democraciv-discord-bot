@@ -154,9 +154,14 @@ class Ministry(commands.Cog):
             await ctx.send(f"Aborted.")
 
     @veto.error
-    async def vetoer(self, ctx, error):
+    async def vetoerr(self, ctx, error):
         if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
             await ctx.send(":x: Only the Prime Minister and Lt. Prime Minister are allowed to use this command!")
+
+        if isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'bill_id':
+                await ctx.send(':x: You have to give me the ID of the bill you want to veto!\n\n**Usage**:\n'
+                               '`-ministry veto <bill_id>`')
 
     @ministry.group(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -209,6 +214,11 @@ class Ministry(commands.Cog):
     async def passbillerr(self, ctx, error):
         if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
             await ctx.send(":x: Only the Prime Minister and Lt. Prime Minister are allowed to use this command!")
+
+        if isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'bill_id':
+                await ctx.send(':x: You have to give me the ID of the bill you want to pass!\n\n**Usage**:\n'
+                               '`-ministry pass <bill_id>`')
 
 
 def setup(bot):

@@ -54,6 +54,7 @@ class Laws(commands.Cog):
     @commands.group(name='law', aliases=['laws'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def law(self, ctx, law_id: str = None):
+        """List all laws or get details about a specific law"""
 
         if not law_id or law_id.lower() == 'all':
             async with ctx.typing():
@@ -65,6 +66,9 @@ class Laws(commands.Cog):
                     details = await self.bot.db.fetchrow("SELECT link, bill_name FROM legislature_bills WHERE id = $1",
                                                          law['bill_id'])
                     pretty_laws.append(f"Law #{law['law_id']} - [{details['bill_name']}]({details['link']})\n")
+
+                if not pretty_laws or len(pretty_laws) == 0:
+                    pretty_laws = ['There are no laws yet.']
 
             pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}"
                           , show_index=False, footer_text=f"Use {self.bot.commands_prefix}law <id> to get more "
@@ -90,6 +94,7 @@ class Laws(commands.Cog):
     @law.group(name='search', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def search(self, ctx, *query: str):
+        """Search for laws by their name or description"""
 
         async with ctx.typing():
             # First, search by name
@@ -111,6 +116,13 @@ class Laws(commands.Cog):
                       , show_index=False, footer_text=f"Use {self.bot.commands_prefix}law <id> to get more "
                                                       f"details about a law.")
         await pages.paginate()
+
+    @search.error
+    async def searcherror(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'query':
+                await ctx.send(':x: You have to give me something to search for!\n\n**Usage**:\n'
+                               '`-law search <query>`')
 
 
 def setup(bot):
