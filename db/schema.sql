@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS legislature_bills(
     id int UNIQUE PRIMARY KEY,
     leg_session int references legislature_sessions(id),
     link text UNIQUE,
+    tiny_link text UNIQUE,
     bill_name text,
     description text,
     submitter bigint,

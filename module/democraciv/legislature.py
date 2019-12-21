@@ -241,14 +241,18 @@ class Legislature(commands.Cog):
 
                 all_session_ids = await self.bot.db.fetch("SELECT (id, status) FROM legislature_sessions")
 
-                pretty_sessions = "Use `-legislature session <number>` to get more details about a session.\n\n"
+                pretty_sessions = ""
 
                 for record in all_session_ids:
                     pretty_sessions += f"**Session #{record[0][0]}**   - {record[0][1]}\n"
 
                 embed = self.bot.embeds.embed_builder(title=f"All Sessions of the {mk.NATION_ADJECTIVE} Legislature",
-                                                      description=pretty_sessions)
-                await ctx.send(embed=embed)
+                                                      description=pretty_sessions, footer=f"Use "
+                                                                                          f"{self.bot.commands_prefix}l"
+                                                                                          f"egislature session <number>"
+                                                                                          f" to get more details about"
+                                                                                          f" a session.")
+                return await ctx.send(embed=embed)
 
             else:
                 active_leg_session_id = int(session)
@@ -282,7 +286,7 @@ class Legislature(commands.Cog):
             pretty_motions = "No one submitted any motions during this session."
 
         bills = await self.bot.db.fetch(
-            "SELECT (id, link, bill_name, submitter) FROM legislature_bills"
+            "SELECT (id, tiny_link, bill_name, submitter) FROM legislature_bills"
             " WHERE leg_session = $1", active_leg_session_id)
 
         pretty_bills = f""
@@ -318,7 +322,11 @@ class Legislature(commands.Cog):
         embed.add_field(name="Submitted Motions", value=pretty_motions, inline=False)
         embed.add_field(name="Submitted Bills", value=pretty_bills, inline=False)
 
-        await ctx.send(embed=embed)
+        try:
+            await ctx.send(embed=embed)
+        except discord.HTTPException:
+            await ctx.send(f":x: {self.bot.DerJonas_object.mention}, the embed value is > 1024 as there were too many"
+                           f"bills submitted. Did you figure out a solution for this yet?")
 
     @legislature.command(name='submit')
     @utils.is_democraciv_guild()
@@ -409,12 +417,15 @@ class Legislature(commands.Cog):
             # -- Submit Bill --
             new_id = await self.bot.laws.generate_new_bill_id()
 
+            async with self.bot.session.get(f"https://tinyurl.com/api-create.php?url={google_docs_url}") as response:
+                tiny_url = await response.text()
+
             try:
                 await self.bot.db.execute(
                     "INSERT INTO legislature_bills (id, leg_session, link, bill_name, submitter, is_vetoable, "
-                    " has_passed_leg, has_passed_ministry, description) "
-                    "VALUES ($1, $2, $3, $4, $5, $6, false, false, $7)", new_id, current_leg_session, google_docs_url
-                    , bill_title, ctx.author.id, is_vetoable, bill_description)
+                    " has_passed_leg, has_passed_ministry, description, tiny_link) "
+                    "VALUES ($1, $2, $3, $4, $5, $6, false, false, $7, $8)", new_id, current_leg_session, google_docs_url
+                    , bill_title, ctx.author.id, is_vetoable, bill_description, tiny_url)
 
             except asyncpg.UniqueViolationError:
                 await ctx.send(":x: This bill was already submitted!")
@@ -539,4 +550,3 @@ class Legislature(commands.Cog):
 
 def setup(bot):
     bot.add_cog(Legislature(bot))
-
