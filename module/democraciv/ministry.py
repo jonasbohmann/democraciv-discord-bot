@@ -1,4 +1,3 @@
-import asyncpg
 import discord
 
 from util import mk, exceptions, utils
@@ -140,18 +139,24 @@ class Ministry(commands.Cog):
         if str(reaction.emoji) == "\U00002705":
             # yes
 
-            await self.bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
-                                      "false WHERE id = $1", bill_id)
+            async with ctx.typing():
+                await self.bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
+                                          "false WHERE id = $1", bill_id)
 
-            await ctx.send(f":white_check_mark: Successfully vetoed {bill_details['bill_name']} "
-                           f"(#{bill_details['id']})!")
+                await ctx.send(f":white_check_mark: Successfully vetoed {bill_details['bill_name']} "
+                               f"(#{bill_details['id']})!")
 
-            await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_speaker_role(self.bot).mention},"
-                                                                  f" {bill_details['bill_name']} was vetoed "
-                                                                  f"by the Ministry.")
+                await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_speaker_role(self.bot).mention},"
+                                                                      f" {bill_details['bill_name']} was vetoed "
+                                                                      f"by the Ministry.")
 
         else:
             await ctx.send(f"Aborted.")
+
+    @veto.error
+    async def vetoer(self, ctx, error):
+        if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
+            await ctx.send(":x: Only the Prime Minister and Lt. Prime Minister are allowed to use this command!")
 
     @ministry.group(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -188,18 +193,22 @@ class Ministry(commands.Cog):
         if str(reaction.emoji) == "\U00002705":
             # yes
 
-            if await self.bot.laws.pass_into_law(ctx, bill_id, bill_details):
-                await ctx.send(":white_check_mark: Successfully passed this bill into law!")
-                await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_speaker_role(self.bot).mention}, "
-                                                                      f"'{bill_details['bill_name']}' was passed "
-                                                                      f"into law by"
-                                                                      f" the Ministry.")
-            else:
-                await ctx.send(":x: Unexpected error occured.")
-
-
+            async with ctx.typing():
+                if await self.bot.laws.pass_into_law(ctx, bill_id, bill_details):
+                    await ctx.send(":white_check_mark: Successfully passed this bill into law!")
+                    await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_speaker_role(self.bot).mention}, "
+                                                                          f"'{bill_details['bill_name']}' was passed "
+                                                                          f"into law by"
+                                                                              f" the Ministry.")
+                else:
+                    await ctx.send(":x: Unexpected error occured.")
         else:
             await ctx.send(f"Aborted.")
+
+    @passbill.error
+    async def passbillerr(self, ctx, error):
+        if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
+            await ctx.send(":x: Only the Prime Minister and Lt. Prime Minister are allowed to use this command!")
 
 
 def setup(bot):

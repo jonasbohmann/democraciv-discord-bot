@@ -56,14 +56,15 @@ class Laws(commands.Cog):
     async def law(self, ctx, law_id: str = None):
 
         if not law_id or law_id.lower() == 'all':
-            all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws")
+            async with ctx.typing():
+                all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws")
 
-            pretty_laws = []
+                pretty_laws = []
 
-            for law in all_laws:
-                details = await self.bot.db.fetchrow("SELECT link, bill_name FROM legislature_bills WHERE id = $1",
-                                                     law['bill_id'])
-                pretty_laws.append(f"Law #{law['law_id']} - [{details['bill_name']}]({details['link']})\n")
+                for law in all_laws:
+                    details = await self.bot.db.fetchrow("SELECT link, bill_name FROM legislature_bills WHERE id = $1",
+                                                         law['bill_id'])
+                    pretty_laws.append(f"Law #{law['law_id']} - [{details['bill_name']}]({details['link']})\n")
 
             pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}"
                           , show_index=False, footer_text=f"Use {self.bot.commands_prefix}law <id> to get more "
@@ -90,20 +91,21 @@ class Laws(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def search(self, ctx, *query: str):
 
-        # First, search by name
-        results = await self.search_by_name(' '.join(query))
+        async with ctx.typing():
+            # First, search by name
+            results = await self.search_by_name(' '.join(query))
 
-        if not results:
-            results = []
-            for substring in query:
-                result = await self.search_by_tag(substring)
-                if result:
-                    results.append(result)
+            if not results:
+                results = []
+                for substring in query:
+                    result = await self.search_by_tag(substring)
+                    if result:
+                        results.append(result)
 
-            results = [item for sublist in results for item in sublist]
+                results = [item for sublist in results for item in sublist]
 
-        if not results or len(results) == 0 or results[0] == []:
-            results = ['Nothing found.']
+            if not results or len(results) == 0 or results[0] == []:
+                results = ['Nothing found.']
 
         pages = Pages(ctx=ctx, entries=results, show_entry_count=False, title=f"Search Results for '{' '.join(query)}'"
                       , show_index=False, footer_text=f"Use {self.bot.commands_prefix}law <id> to get more "
