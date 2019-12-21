@@ -18,15 +18,19 @@ class Laws(commands.Cog):
         for bill in bills:
             if bill['has_passed_leg']:
                 if bill['is_vetoable'] and bill['has_passed_ministry']:
-                    id = await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
-                                                    bill['id'])
+                    id = (await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
+                                                    bill['id']))['law_id']
                     found_bills.append(f"Law #{id} - [{bill['bill_name']}]({bill['link']})")
                 elif not bill['is_vetoable']:
+                    id = (await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
+                                                    bill['id']))['law_id']
                     found_bills.append(f"Law #{id} - [{bill['bill_name']}]({bill['link']})")
                 else:
                     continue
             else:
                 continue
+
+        return found_bills
 
     async def search_by_tag(self, tag: str):
         found_bills = await self.bot.db.fetch("SELECT id FROM legislature_tags WHERE tag % $1", tag.lower())
@@ -41,8 +45,9 @@ class Laws(commands.Cog):
         pretty_laws = []
 
         for bill in bills:
+            bill_id = (await self.bot.db.fetchrow("SELECT bill_id FROM legislature_laws WHERE law_id = $1", bill))['bill_id']
             details = await self.bot.db.fetchrow("SELECT link, bill_name FROM legislature_bills WHERE id = $1",
-                                                 bill)
+                                                 bill_id)
             pretty_laws.append(f"Law #{bill} - [{details['bill_name']}]({details['link']})")
 
         return pretty_laws
@@ -72,19 +77,19 @@ class Laws(commands.Cog):
         # First, search by name
         results = await self.search_by_name(' '.join(query))
 
-        if results is None:
+        if not results:
             results = []
             for substring in query:
                 result = await self.search_by_tag(substring)
                 if result:
                     results.append(result)
 
-        pages_results = [item for sublist in results for item in sublist]
+            results = [item for sublist in results for item in sublist]
 
-        if not pages_results or len(pages_results) == 0 or pages_results[0] == []:
-            pages_results = ['Nothing found.']
+        if not results or len(results) == 0 or results[0] == []:
+            results = ['Nothing found.']
 
-        pages = Pages(ctx=ctx, entries=pages_results, show_entry_count=False, title=f"Search Results for '{' '.join(query)}'"
+        pages = Pages(ctx=ctx, entries=results, show_entry_count=False, title=f"Search Results for '{' '.join(query)}'"
                       , show_index=False, footer_text=f"Use {self.bot.commands_prefix}laws <id> to get more "
                                                       f"details about a law.")
         await pages.paginate()
