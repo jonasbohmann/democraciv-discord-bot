@@ -1,7 +1,6 @@
+from util import mk
 from config import config
-from util import utils, mk
 from util.paginator import Pages
-
 from discord.ext import commands
 
 
@@ -52,25 +51,42 @@ class Laws(commands.Cog):
 
         return pretty_laws
 
-    @commands.group(name='laws', case_insensitive=True, invoke_without_command=True)
+    @commands.group(name='law', aliases=['laws'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def laws(self, ctx):
+    async def law(self, ctx, law_id: str = None):
 
-        all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws")
+        if not law_id or law_id.lower() == 'all':
+            all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws")
 
-        pretty_laws = []
+            pretty_laws = []
 
-        for law in all_laws:
-            details = await self.bot.db.fetchrow("SELECT link, bill_name FROM legislature_bills WHERE id = $1",
-                                                 law['bill_id'])
-            pretty_laws.append(f"Law #{law['law_id']} - [{details['bill_name']}]({details['link']})\n")
+            for law in all_laws:
+                details = await self.bot.db.fetchrow("SELECT link, bill_name FROM legislature_bills WHERE id = $1",
+                                                     law['bill_id'])
+                pretty_laws.append(f"Law #{law['law_id']} - [{details['bill_name']}]({details['link']})\n")
 
-        pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}"
-                      , show_index=False, footer_text=f"Use {self.bot.commands_prefix}laws <id> to get more "
-                                                      f"details about a law.")
-        await pages.paginate()
+            pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}"
+                          , show_index=False, footer_text=f"Use {self.bot.commands_prefix}law <id> to get more "
+                                                          f"details about a law.")
+            await pages.paginate()
 
-    @laws.group(name='search', aliases=['s'])
+        else:
+            law_id = int(law_id)
+            bill_id = (await self.bot.db.fetchrow("SELECT bill_id FROM legislature_laws WHERE law_id = $1", law_id))['bill_id']
+
+            if bill_id is None:
+                return await ctx.send(f":x: Couldn't find any law with ID #{law_id}!")
+
+            law_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
+
+            embed = self.bot.embeds.embed_builder(title=f"{law_details['bill_name']}", description="")
+            embed.add_field(name="Link", value=law_details['link'])
+            embed.add_field(name="Description", value=law_details['description'], inline=False)
+            embed.add_field(name="Submitted By", value=self.bot.get_user(law_details['submitter']).mention)
+            embed.add_field(name="Submitted During Legislative Session", value=law_details['leg_session'])
+            await ctx.send(embed=embed)
+
+    @law.group(name='search', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def search(self, ctx, *query: str):
 
@@ -90,7 +106,7 @@ class Laws(commands.Cog):
             results = ['Nothing found.']
 
         pages = Pages(ctx=ctx, entries=results, show_entry_count=False, title=f"Search Results for '{' '.join(query)}'"
-                      , show_index=False, footer_text=f"Use {self.bot.commands_prefix}laws <id> to get more "
+                      , show_index=False, footer_text=f"Use {self.bot.commands_prefix}law <id> to get more "
                                                       f"details about a law.")
         await pages.paginate()
 
