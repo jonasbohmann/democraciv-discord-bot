@@ -185,7 +185,7 @@ class Ministry(commands.Cog):
         if str(reaction.emoji) == "\U00002705":
             # yes
 
-            if self.bot.laws.pass_into_law(bill_id, bill_details):
+            if await self.bot.laws.pass_into_law(ctx, bill_id, bill_details):
                 await ctx.send(":white_check_mark: Successfully passed this bill into law!")
                 await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_speaker_role(self.bot).mention}, "
                                                                       f"'{bill_details['bill_name']}' was passed "
@@ -193,6 +193,7 @@ class Ministry(commands.Cog):
                                                                       f" the Ministry.")
             else:
                 await ctx.send(":x: Unexpected error occured.")
+
 
         else:
             await ctx.send(f"Aborted.")

@@ -155,7 +155,8 @@ class LawUtils:
 
         return tags
 
-    def pass_into_law(self, ctx, bill_id: int, bill_details: asyncpg.Record):
+    async def pass_into_law(self, ctx, bill_id: int, bill_details: asyncpg.Record) -> bool:
+
         await self.bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
                                   "true WHERE id = $1", bill_id)
 

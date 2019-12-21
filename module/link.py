@@ -74,9 +74,9 @@ class Link(commands.Cog):
         embed = self.bot.embeds.embed_builder(title=f'Political Parties in {mk.NATION_NAME}', description=links.parties)
         await ctx.send(embed=embed)
 
-    @commands.command(name='laws')
+    @commands.command(name='legalcode', aliases=['lc'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def laws(self, ctx):
+    async def legalcode(self, ctx):
         """Get a link to the Code of Law"""
         embed = self.bot.embeds.embed_builder(title=f'Legal Code of {mk.NATION_NAME}', description=links.laws)
         await ctx.send(embed=embed)

@@ -54,6 +54,7 @@ initial_extensions = ['event.logging',
                       'module.wikipedia',
                       'module.democraciv.parties',
                       'module.democraciv.legislature',
+                      'module.democraciv.laws',
                       'module.democraciv.ministry',
                       'module.democraciv.supremecourt'
                       ]

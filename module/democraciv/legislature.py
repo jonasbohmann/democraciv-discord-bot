@@ -532,7 +532,7 @@ class Legislature(commands.Cog):
         # Bill is not vetoable
         else:
 
-            if self.bot.laws.pass_into_law(bill_id, bill_details):
+            if await self.bot.laws.pass_into_law(ctx, bill_id, bill_details):
                 await ctx.send(":white_check_mark: Successfully passed this bill into law! Remember to also add it to "
                                "the Legal Code!")
             else:
