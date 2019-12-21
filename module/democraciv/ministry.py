@@ -28,7 +28,7 @@ class Ministry(commands.Cog):
     async def get_open_vetos(self):
         open_bills = await self.bot.db.fetch(
             "SELECT (id, link, bill_name, submitter, leg_session) FROM legislature_bills"
-            " WHERE has_passed_leg = true AND has_passed_ministry = false")
+            " WHERE has_passed_leg = true AND voted_on_by_ministry = false AND has_passed_ministry = false")
 
         if open_bills is not None:
             return open_bills
@@ -42,10 +42,10 @@ class Ministry(commands.Cog):
             for record in open_bills:
                 pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by " \
                                 f"{self.bot.get_user(record[0][3]).mention}" \
-                                f" from Legislative Session #{record[0][4]}\n"
+                                f" from Legislative Session #{record[0][4]}\n\n"
 
         if pretty_bills == "":
-            pretty_bills = "There are no new bills to veto."
+            pretty_bills = "There are no new bills to vote on."
 
         return pretty_bills
 
@@ -85,7 +85,7 @@ class Ministry(commands.Cog):
                                             f"[Ministry Worksheet]({links.executiveworksheet})\n"
                                             f"[Ministry Procedures]({links.execprocedures})", inline=True)
 
-        embed.add_field(name="Open Vetos", value=f"{pretty_bills}", inline=False)
+        embed.add_field(name="Open Bills", value=f"{pretty_bills}", inline=False)
 
         await ctx.send(embed=embed)
 
@@ -97,10 +97,11 @@ class Ministry(commands.Cog):
 
         pretty_bills = await self.get_pretty_vetos()
 
-        pretty_bills = f"Use `{config.BOT_PREFIX}ministry veto <law_id>` to veto a bill.\n\n{pretty_bills}"
+        help_description = f"Use {self.bot.commands_prefix}ministry veto <law_id> to veto a bill, or " \
+                           f"{self.bot.commands_prefix}ministry pass <law_id> to pass a bill into law."
 
         embed = self.bot.embeds.embed_builder(title=f"Open Bills to Veto",
-                                              description=pretty_bills)
+                                              description=pretty_bills, footer=help_description)
 
         await ctx.send(embed=embed)
 
@@ -109,6 +110,7 @@ class Ministry(commands.Cog):
     @commands.has_any_role("Prime Minister", "Lieutenant Prime Minister")
     @utils.is_democraciv_guild()
     async def veto(self, ctx, bill_id: int):
+        """Veto a bill"""
 
         bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
@@ -156,6 +158,7 @@ class Ministry(commands.Cog):
     @commands.has_any_role("Prime Minister", "Lieutenant Prime Minister")
     @utils.is_democraciv_guild()
     async def passbill(self, ctx, bill_id: int):
+        """Pass a bill into law"""
 
         bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
