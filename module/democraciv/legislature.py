@@ -7,6 +7,7 @@ from util.flow import Flow
 from config import config, links
 from discord.ext import commands
 from util import utils, mk, exceptions
+from util.paginator import Pages
 
 
 class Legislature(commands.Cog):
@@ -241,18 +242,19 @@ class Legislature(commands.Cog):
 
                 all_session_ids = await self.bot.db.fetch("SELECT (id, status) FROM legislature_sessions")
 
-                pretty_sessions = ""
+                pretty_sessions = []
 
                 for record in all_session_ids:
-                    pretty_sessions += f"**Session #{record[0][0]}**   - {record[0][1]}\n"
+                    pretty_sessions.append(f"**Session #{record[0][0]}**   - {record[0][1]}")
 
-                embed = self.bot.embeds.embed_builder(title=f"All Sessions of the {mk.NATION_ADJECTIVE} Legislature",
-                                                      description=pretty_sessions, footer=f"Use "
-                                                                                          f"{self.bot.commands_prefix}l"
-                                                                                          f"egislature session <number>"
-                                                                                          f" to get more details about"
-                                                                                          f" a session.")
-                return await ctx.send(embed=embed)
+                footer = f"Use {self.bot.commands_prefix}legislature session <number> to get more details about" \
+                         f" a session."
+
+                pages = Pages(ctx=ctx, entries=pretty_sessions, show_entry_count=False,
+                              title=f"All Sessions of the {mk.NATION_ADJECTIVE} Legislature"
+                              , show_index=False, footer_text=footer)
+                await pages.paginate()
+                return
 
             else:
                 active_leg_session_id = int(session)
