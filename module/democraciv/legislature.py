@@ -146,8 +146,8 @@ class Legislature(commands.Cog):
 
         try:
             await self.bot.db.execute("UPDATE legislature_sessions SET status = 'Voting Period',"
-                                      " voting_start_unixtime = $2"
-                                      " WHERE id = $1", active_leg_session_id, time.time())
+                                      " voting_start_unixtime = $2, vote_form = $3"
+                                      " WHERE id = $1", active_leg_session_id, time.time(), voting_form)
         except Exception:
             return await ctx.send(":x: Fatal database error.")
 

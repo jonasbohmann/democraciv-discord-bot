@@ -17,7 +17,8 @@ class LawUtils:
         nltk.download('averaged_perceptron_tagger')
 
     def is_google_doc_link(self, link: str):
-        valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/', 'https://forms.gle/']
+        valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/',
+                                         'https://forms.gle/', 'https://goo.gl/forms']
 
         if len(link) < 15 or not link.startswith(tuple(valid_google_docs_url_strings)):
             return False
