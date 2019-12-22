@@ -4,6 +4,7 @@ from util import mk, exceptions, utils
 from discord.ext import commands
 from config import config, links
 from util.flow import Flow
+from util.paginator import Pages
 
 
 class Ministry(commands.Cog):
@@ -35,16 +36,16 @@ class Ministry(commands.Cog):
     async def get_pretty_vetos(self):
         open_bills = await self.get_open_vetos()
 
-        pretty_bills = f""
+        pretty_bills = []
 
         if len(open_bills) > 0:
             for record in open_bills:
-                pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by " \
-                                f"{self.bot.get_user(record[0][3]).mention}" \
-                                f" from Legislative Session #{record[0][4]}\n\n"
+                pretty_bills.append(f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by "
+                                    f"{self.bot.get_user(record[0][3]).mention}"
+                                    f" from Legislative Session #{record[0][4]}")
 
-        if pretty_bills == "":
-            pretty_bills = "There are no new bills to vote on."
+        if len(pretty_bills) == 0:
+            pretty_bills = ["There are no new bills to vote on."]
 
         return pretty_bills
 
@@ -65,6 +66,12 @@ class Ministry(commands.Cog):
         minister_value = f""
 
         pretty_bills = await self.get_pretty_vetos()
+
+        if len(pretty_bills) == 1 and pretty_bills[0] == "There are no new bills to vote on.":
+            pretty_bills = pretty_bills[0]
+
+        elif len(pretty_bills) >= 1 and pretty_bills[0] != "There are no new bills to vote on.":
+            pretty_bills = f"You can vote on new bills, check `{self.bot.commands_prefix}ministry bills`."
 
         if isinstance(self.prime_minister, discord.Member):
             minister_value += f"Prime Minister: {self.prime_minister.mention}\n"
@@ -99,10 +106,10 @@ class Ministry(commands.Cog):
         help_description = f"Use {self.bot.commands_prefix}ministry veto <law_id> to veto a bill, or " \
                            f"{self.bot.commands_prefix}ministry pass <law_id> to pass a bill into law."
 
-        embed = self.bot.embeds.embed_builder(title=f"Open Bills to Veto",
-                                              description=pretty_bills, footer=help_description)
+        pages = Pages(ctx=ctx, entries=pretty_bills, show_entry_count=False, title="Open Bills to Veto"
+                      , show_index=False, footer_text=help_description)
 
-        await ctx.send(embed=embed)
+        await pages.paginate()
 
     @ministry.group(name='veto', aliases=['v'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -140,8 +147,9 @@ class Ministry(commands.Cog):
             # yes
 
             async with ctx.typing():
-                await self.bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
-                                          "false WHERE id = $1", bill_id)
+                await self.bot.db.execute(
+                    "UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
+                    "false WHERE id = $1", bill_id)
 
                 await ctx.send(f":white_check_mark: Successfully vetoed {bill_details['bill_name']} "
                                f"(#{bill_details['id']})!")
@@ -204,7 +212,7 @@ class Ministry(commands.Cog):
                     await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_speaker_role(self.bot).mention}, "
                                                                           f"'{bill_details['bill_name']}' was passed "
                                                                           f"into law by"
-                                                                              f" the Ministry.")
+                                                                          f" the Ministry.")
                 else:
                     await ctx.send(":x: Unexpected error occured.")
         else:
