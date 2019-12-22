@@ -30,6 +30,10 @@ SPEAKER_ROLE = 653962504099201035
 VICE_SPEAKER_ROLE = 653962544628629545
 LEGISLATOR_ROLE = 653962396330754058
 
+# Courts
+CHIEF_JUSTICE_ROLE = 639442447721562122
+JUSTICE_ROLE = 639438578304417792
+
 
 def get_moderation_team_channel(bot):
     to_return = bot.democraciv_guild_object.get_channel(MODERATION_TEAM_CHANNEL)
@@ -126,5 +130,23 @@ def get_lt_prime_minister_role(bot):
 
     if to_return is None:
         raise exceptions.RoleNotFoundError("Lieutenant Prime Minister")
+
+    return to_return
+
+
+def get_chief_justice_role(bot):
+    to_return = bot.democraciv_guild_object.get_role(CHIEF_JUSTICE_ROLE)
+
+    if to_return is None:
+        raise exceptions.RoleNotFoundError("Chief Justice")
+
+    return to_return
+
+
+def get_justice_role(bot):
+    to_return = bot.democraciv_guild_object.get_role(JUSTICE_ROLE)
+
+    if to_return is None:
+        raise exceptions.RoleNotFoundError("Justice")
 
     return to_return

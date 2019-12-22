@@ -62,7 +62,7 @@ class Ministry(commands.Cog):
             await ctx.send(e.message)
 
         embed = self.bot.embeds.embed_builder(title=f"The Ministry of {mk.NATION_NAME}",
-                                              description=f"")
+                                              description="")
         minister_value = f""
 
         pretty_bills = await self.get_pretty_vetos()
