@@ -522,7 +522,7 @@ class Legislature(commands.Cog):
         bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
         if bill_details is None:
-            return await ctx.send(f":x: There is no submitted bill with ID '{bill_id}'")
+            return await ctx.send(f":x: There is no submitted bill with ID #{bill_id}")
 
         last_leg_session = await self.bot.laws.get_last_leg_session()
 
@@ -583,6 +583,57 @@ class Legislature(commands.Cog):
             if error.param.name == 'bill_id':
                 await ctx.send(':x: You have to give me the ID of the bill you want to pass!\n\n**Usage**:\n'
                                '`-legislature pass <bill_id>`')
+
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.is_democraciv_guild()
+    @legislature.command(name='withdraw', aliases=['w'])
+    async def withdrawbill(self, ctx, bill_id: int):
+
+        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
+
+        if bill_details is None:
+            return await ctx.send(f":x: There is no submitted bill with ID #{bill_id}")
+
+        last_leg_session = await self.bot.laws.get_last_leg_session()
+
+        if last_leg_session != bill_details['leg_session']:
+            return await ctx.send(f":x: This bill was not submitted in the last session of the Legislature!")
+
+        last_leg_session_status = await self.bot.laws.get_status_of_active_leg_session()
+
+        if mk.get_speaker_role(self.bot) not in ctx.author.roles or mk.get_vice_speaker_role(self.bot) not in ctx.author.roles:
+            if ctx.author.id == bill_details['submitter']:
+                if last_leg_session_status != "Submission Period":
+                    return await ctx.send(f":x: The original submitter can only withdraw bills during "
+                                          f"the Submission Period!")
+                else:
+                    allowed = True
+            else:
+                allowed = False
+        else:
+            allowed = True
+
+        if not allowed:
+            return await ctx.send(":x: Only the Cabinet and the original submitter of this bill can withdraw it!")
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to withdraw "
+                                      f"'{bill_details['bill_name']}"
+                                      f"' (#{bill_details['id']}) from session #{last_leg_session}?")
+
+        flow = Flow(self.bot, ctx)
+
+        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+
+        if not reaction or reaction is None:
+            return
+
+        if str(reaction.emoji) == "\U0000274c":
+            return await ctx.send("Aborted.")
+
+        else:
+            await self.bot.db.execte("DELETE FROM legislature_bills WHERE id = $1", bill_id)
+            return await ctx.send(f":white_check_mark: Successfully withdrew '{bill_details['bill_name']}"
+                                  f"' (#{bill_details['id']}) from session #{last_leg_session}!")
 
 
 def setup(bot):
