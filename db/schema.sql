@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS legislature_laws(
 );
 
 CREATE TABLE IF NOT EXISTS legislature_tags(
-    id int references legislature_laws(law_id),
+    id int references legislature_laws(law_id) ON DELETE CASCADE,
     tag text
 );
 

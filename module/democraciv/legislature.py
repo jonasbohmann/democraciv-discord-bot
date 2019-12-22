@@ -631,7 +631,11 @@ class Legislature(commands.Cog):
             return await ctx.send("Aborted.")
 
         else:
-            await self.bot.db.execte("DELETE FROM legislature_bills WHERE id = $1", bill_id)
+            try:
+                await self.bot.db.execute("DELETE FROM legislature_bills WHERE id = $1", bill_id)
+            except asyncpg.ForeignKeyViolationError:
+                return await ctx.send(":x: This bill is already a law and cannot be withdrawn.")
+
             return await ctx.send(f":white_check_mark: Successfully withdrew '{bill_details['bill_name']}"
                                   f"' (#{bill_details['id']}) from session #{last_leg_session}!")
 

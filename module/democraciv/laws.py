@@ -1,5 +1,6 @@
-from util import mk
+from util import mk, utils
 from config import config
+from util.flow import Flow
 from util.paginator import Pages
 from discord.ext import commands
 
@@ -91,7 +92,7 @@ class Laws(commands.Cog):
             embed.add_field(name="Submitted During Legislative Session", value=law_details['leg_session'])
             await ctx.send(embed=embed)
 
-    @law.group(name='search', aliases=['s'])
+    @law.command(name='search', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def search(self, ctx, *query: str):
         """Search for laws by their name or description"""
@@ -123,6 +124,38 @@ class Laws(commands.Cog):
             if error.param.name == 'query':
                 await ctx.send(':x: You have to give me something to search for!\n\n**Usage**:\n'
                                '`-law search <query>`')
+
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.is_democraciv_guild()
+    @law.command(name='remove', aliases=['r'])
+    @commands.has_any_role("Speaker of the Legislature", "Vice-Speaker of the Legislature")
+    async def removebill(self, ctx, law_id: int):
+
+        law_details = await self.bot.db.fetchrow("SELECT * FROM legislature_laws WHERE law_id = $1", law_id)
+
+        if law_details is None:
+            return await ctx.send(f":x: There is no law with ID #{law_id}")
+
+        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", law_details['bill_id'])
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove "
+                                      f"'{bill_details['bill_name']}"
+                                      f"' (#{law_details['law_id']}) from the laws of {mk.NATION_NAME}?")
+
+        flow = Flow(self.bot, ctx)
+
+        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+
+        if not reaction or reaction is None:
+            return
+
+        if str(reaction.emoji) == "\U0000274c":
+            return await ctx.send("Aborted.")
+
+        elif str(reaction.emoji) == "\U00002705":
+            await self.bot.db.execute("DELETE FROM legislature_laws WHERE law_id = $1", law_id)
+            return await ctx.send(f":white_check_mark: Successfully removed '{bill_details['bill_name']}"
+                                  f"' (#{bill_details['id']}) from the laws of {mk.NATION_NAME}!")
 
 
 def setup(bot):
