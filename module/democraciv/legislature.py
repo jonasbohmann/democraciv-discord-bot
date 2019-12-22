@@ -221,7 +221,7 @@ class Legislature(commands.Cog):
         except exceptions.DemocracivBotException as e:
             # We're raising the same exception again because discord.ext.commands.Exceptions only "work" (i.e. get sent
             # to events/error_handler.py) if they get raised in an actual command
-            raise e
+            await ctx.send(e.message)
 
         if not session or session is None:
             active_leg_session_id = await self.bot.laws.get_active_leg_session()
@@ -588,6 +588,7 @@ class Legislature(commands.Cog):
     @utils.is_democraciv_guild()
     @legislature.command(name='withdraw', aliases=['w'])
     async def withdrawbill(self, ctx, bill_id: int):
+        """Withdraw a bill from the current session"""
 
         bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
@@ -638,6 +639,13 @@ class Legislature(commands.Cog):
 
             return await ctx.send(f":white_check_mark: Successfully withdrew '{bill_details['bill_name']}"
                                   f"' (#{bill_details['id']}) from session #{last_leg_session}!")
+
+    @withdrawbill.error
+    async def wberror(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'bill_id':
+                await ctx.send(':x: You have to give me the ID of the bill to withdraw!\n\n**Usage**:\n'
+                               '`-legislature withdraw <bill_id>`')
 
 
 def setup(bot):

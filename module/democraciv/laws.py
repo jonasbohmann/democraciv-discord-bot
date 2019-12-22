@@ -130,6 +130,7 @@ class Laws(commands.Cog):
     @law.command(name='remove', aliases=['r'])
     @commands.has_any_role("Speaker of the Legislature", "Vice-Speaker of the Legislature")
     async def removebill(self, ctx, law_id: int):
+        """Remove a law from the laws of this nation"""
 
         law_details = await self.bot.db.fetchrow("SELECT * FROM legislature_laws WHERE law_id = $1", law_id)
 
@@ -156,6 +157,16 @@ class Laws(commands.Cog):
             await self.bot.db.execute("DELETE FROM legislature_laws WHERE law_id = $1", law_id)
             return await ctx.send(f":white_check_mark: Successfully removed '{bill_details['bill_name']}"
                                   f"' (#{bill_details['id']}) from the laws of {mk.NATION_NAME}!")
+
+    @removebill.error
+    async def rberror(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            if error.param.name == 'law_id':
+                await ctx.send(':x: You have to give me the ID of the law to remove!\n\n**Usage**:\n'
+                               '`-law remove <law_id>`')
+
+            if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
+                await ctx.send(":x: Only the cabinet is allowed to use this command!")
 
 
 def setup(bot):
