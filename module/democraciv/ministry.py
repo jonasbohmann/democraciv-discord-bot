@@ -42,7 +42,7 @@ class Ministry(commands.Cog):
             for record in open_bills:
                 pretty_bills.append(f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by "
                                     f"{self.bot.get_user(record[0][3]).mention}"
-                                    f" from Legislative Session #{record[0][4]}")
+                                    f" from Leg. Session #{record[0][4]}")
 
         if len(pretty_bills) == 0:
             pretty_bills = ["There are no new bills to vote on."]
@@ -121,7 +121,7 @@ class Ministry(commands.Cog):
         bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
         if bill_details is None:
-            return await ctx.send(f":x: Could not find any bill with id {bill_id}")
+            return await ctx.send(f":x: Could not find any bill with ID #{bill_id}")
 
         if not bill_details['is_vetoable']:
             return await ctx.send(f":x: The Ministry cannot veto this!")
@@ -181,7 +181,7 @@ class Ministry(commands.Cog):
         bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
         if bill_details is None:
-            return await ctx.send(f":x: Could not find any bill with id {bill_id}")
+            return await ctx.send(f":x: Could not find any bill with ID #{bill_id}")
 
         if not bill_details['is_vetoable']:
             return await ctx.send(f":x: The Ministry cannot vote on this!")
