@@ -602,7 +602,7 @@ class Legislature(commands.Cog):
 
         last_leg_session_status = await self.bot.laws.get_status_of_active_leg_session()
 
-        if mk.get_speaker_role(self.bot) not in ctx.author.roles or mk.get_vice_speaker_role(self.bot) not in ctx.author.roles:
+        if mk.get_speaker_role(self.bot) not in ctx.author.roles and mk.get_vice_speaker_role(self.bot) not in ctx.author.roles:
             if ctx.author.id == bill_details['submitter']:
                 if last_leg_session_status != "Submission Period":
                     return await ctx.send(f":x: The original submitter can only withdraw bills during "

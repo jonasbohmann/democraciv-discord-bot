@@ -159,14 +159,14 @@ class Laws(commands.Cog):
                                   f"' (#{bill_details['id']}) from the laws of {mk.NATION_NAME}!")
 
     @removebill.error
-    async def rberror(self, ctx, error):
+    async def removebillerror(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'law_id':
                 await ctx.send(':x: You have to give me the ID of the law to remove!\n\n**Usage**:\n'
                                '`-law remove <law_id>`')
 
-            if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
-                await ctx.send(":x: Only the cabinet is allowed to use this command!")
+        elif isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
+            await ctx.send(":x: Only the cabinet is allowed to use this command!")
 
 
 def setup(bot):
