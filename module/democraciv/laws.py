@@ -77,11 +77,17 @@ class Laws(commands.Cog):
             await pages.paginate()
 
         else:
-            law_id = int(law_id)
-            bill_id = (await self.bot.db.fetchrow("SELECT bill_id FROM legislature_laws WHERE law_id = $1", law_id))['bill_id']
+            try:
+                law_id = int(law_id)
+            except ValueError:
+                return await ctx.send(f":x: Couldn't find any law with ID #{law_id}!")
+
+            bill_id = await self.bot.db.fetchrow("SELECT bill_id FROM legislature_laws WHERE law_id = $1", law_id)
 
             if bill_id is None:
                 return await ctx.send(f":x: Couldn't find any law with ID #{law_id}!")
+
+            bill_id = bill_id['bill_id']
 
             law_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
