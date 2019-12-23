@@ -68,7 +68,7 @@ class Legislature(commands.Cog):
         else:
             speaker_value += f"Vice-Speaker: -"
 
-        embed.add_field(name="Current Legislative Cabinet", value=speaker_value)
+        embed.add_field(name="Legislative Cabinet", value=speaker_value)
 
         embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
                                             f"[Docket]({links.legislativedocket})\n"
@@ -201,6 +201,9 @@ class Legislature(commands.Cog):
             return await ctx.send(":x: Fatal database error.")
 
         await ctx.send(f":white_check_mark: Successfully closed Session #{active_leg_session_id}!")
+        await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_legislator_role(self.bot).mention},"
+                                                              f" Legislative Session "
+                                                              f"#{active_leg_session_id} was closed by the Cabinet.")
 
     @closesession.error
     async def closesessionerror(self, ctx, error):
@@ -665,20 +668,22 @@ class Legislature(commands.Cog):
     async def stats(self, ctx):
         """Statistics about the Legislature"""
 
-        stats = await self.bot.laws.generate_leg_statistics()
+        async with ctx.typing():
+            stats = await self.bot.laws.generate_leg_statistics()
 
-        embed = self.bot.embeds.embed_builder(title=f"Statistics for the {mk.NATION_ADJECTIVE} Legislature",
-                                              description="")
+            embed = self.bot.embeds.embed_builder(title=f"Statistics for the {mk.NATION_ADJECTIVE} Legislature",
+                                                  description="")
 
-        general_value = f"Total Amount of Legislative Sessions: {stats[0]}\n" \
-                        f"Total Amount of Submitted Bills: {stats[1]}\n" \
-                        f"Total Amount of Submitted Motions: {stats[3]}\n" \
-                        f"Total Amount of Laws: {stats[2]}"
+            general_value = f"Total Amount of Legislative Sessions: {stats[0]}\n" \
+                            f"Total Amount of Submitted Bills: {stats[1]}\n" \
+                            f"Total Amount of Submitted Motions: {stats[3]}\n" \
+                            f"Total Amount of Laws: {stats[2]}"
 
-        embed.add_field(name="General Statistics", value=general_value)
-        embed.add_field(name="Top Speakers or Vice-Speakers of the Legislature ", value=stats[5], inline=False)
-        embed.add_field(name="Top Bill Submitters", value=stats[4], inline=False)
-        embed.add_field(name="Top Lawmakers", value=stats[6], inline=False)
+            embed.add_field(name="General Statistics", value=general_value)
+            embed.add_field(name="Top Speakers or Vice-Speakers of the Legislature ", value=stats[5], inline=False)
+            embed.add_field(name="Top Bill Submitters", value=stats[4], inline=False)
+            embed.add_field(name="Top Lawmakers", value=stats[6], inline=False)
+
         await ctx.send(embed=embed)
 
 

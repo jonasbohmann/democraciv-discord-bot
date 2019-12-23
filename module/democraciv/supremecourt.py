@@ -1,8 +1,8 @@
 import discord
-from discord.ext import commands
 
-from config import config
 from util import mk, exceptions
+from discord.ext import commands
+from config import config, links
 
 
 class SupremeCourt(commands.Cog, name="Supreme Court"):
@@ -17,9 +17,9 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
         except IndexError:
             raise exceptions.NoOneHasRoleError("Chief Justice")
 
-    @commands.group(name='court', aliases=['sc'], case_insensitive=True, invoke_without_command=True)
+    @commands.group(name='court', aliases=['sc', 'supremecourt'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def court(self, ctx, links=None):
+    async def court(self, ctx):
         """Dashboard for Supreme Court Justices"""
         
         try:
@@ -32,17 +32,21 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
         chief_justice_value = f""
 
         if isinstance(self.chief_justice, discord.Member):
-            chief_justice_value += f"Chief Justice: {self.chief_justice.mention}\n"
+            chief_justice_value += f"{self.chief_justice.mention}"
 
         else:
-            chief_justice_value += f"Chief Justice: -\n"
+            chief_justice_value += f"-"
 
         embed.add_field(name="Chief Justice", value=chief_justice_value)
 
         embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
                                             f"[Legal Code]({links.laws})\n"
+                                            f"[Submit a new Case]({links.sue})\n"
                                             f"[Court Cases]({links.sccases})\n"
-                                            f"[Court Worksheet]({links.scworksheet})", inline=True)
+                                            f"[Court Worksheet]({links.scworksheet})\n"
+                                            f"[Court Policies]({links.scpolicy})", inline=True)
+
+        await ctx.send(embed=embed)
 
 
 def setup(bot):

@@ -18,13 +18,13 @@ class Laws(commands.Cog):
         for bill in bills:
             if bill['has_passed_leg']:
                 if bill['is_vetoable'] and bill['has_passed_ministry']:
-                    id = (await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
-                                                    bill['id']))['law_id']
-                    found_bills.append(f"Law #{id} - [{bill['bill_name']}]({bill['link']})")
+                    _id = (await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
+                                                      bill['id']))['law_id']
+                    found_bills.append(f"Law #{_id} - [{bill['bill_name']}]({bill['link']})")
                 elif not bill['is_vetoable']:
-                    id = (await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
-                                                    bill['id']))['law_id']
-                    found_bills.append(f"Law #{id} - [{bill['bill_name']}]({bill['link']})")
+                    _id = (await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
+                                                      bill['id']))['law_id']
+                    found_bills.append(f"Law #{_id} - [{bill['bill_name']}]({bill['link']})")
                 else:
                     continue
             else:
@@ -45,7 +45,8 @@ class Laws(commands.Cog):
         pretty_laws = []
 
         for bill in bills:
-            bill_id = (await self.bot.db.fetchrow("SELECT bill_id FROM legislature_laws WHERE law_id = $1", bill))['bill_id']
+            bill_id = (await self.bot.db.fetchrow("SELECT bill_id FROM legislature_laws WHERE law_id = $1", bill))[
+                'bill_id']
             details = await self.bot.db.fetchrow("SELECT link, bill_name FROM legislature_bills WHERE id = $1",
                                                  bill_id)
             pretty_laws.append(f"Law #{bill} - [{details['bill_name']}]({details['link']})")
@@ -147,7 +148,8 @@ class Laws(commands.Cog):
         if law_details is None:
             return await ctx.send(f":x: There is no law with ID #{law_id}")
 
-        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", law_details['bill_id'])
+        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1",
+                                                  law_details['bill_id'])
 
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove "
                                       f"'{bill_details['bill_name']}"

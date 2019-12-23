@@ -99,7 +99,7 @@ class Ministry(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
     async def bills(self, ctx):
-        """See all open bills to veto"""
+        """See all open bills from the Legislature to vote on"""
 
         pretty_bills = await self.get_pretty_vetos()
 
