@@ -4,7 +4,7 @@
 # Bot Configuration
 BOT_NAME = 'Democraciv Bot'
 BOT_PREFIX = '-'
-BOT_COMMAND_COOLDOWN = 2.5
+BOT_COMMAND_COOLDOWN = 2.0
 BOT_DESCRIPTION = 'Discord Bot for the r/Democraciv community.'
 BOT_VERSION = '0.15.0'
 BOT_ICON_URL = 'https://cdn.discordapp.com/attachments/585502938571604056/586310405618532362/final_pride2.png'
