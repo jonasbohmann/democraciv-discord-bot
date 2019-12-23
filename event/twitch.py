@@ -15,7 +15,7 @@ class Twitch:
 
     def __init__(self, bot):
         self.bot = bot
-        self.streamer = 'DrDisrespect'
+        self.streamer = config.TWITCH_CHANNEL
         self.twitch_API_url = "https://api.twitch.tv/helix/streams?user_login=" + self.streamer
         self.twitch_API_token = token.TWITCH_API_KEY
         self.http_header = {'Client-ID': self.twitch_API_token}
