@@ -385,7 +385,7 @@ class Legislature(commands.Cog):
             if str(reaction.emoji) == "\U00002705":
                 is_vetoable = True
 
-            else:
+            elif str(reaction.emoji) == "\U0000274c":
                 is_vetoable = False
 
             # Description?
@@ -518,9 +518,6 @@ class Legislature(commands.Cog):
     async def passbill(self, ctx, bill_id: int):
         """Mark a bill as passed from the Legislature"""
 
-        if bill_id <= 0:
-            return await ctx.send(":x: The bill ID has to be greater than 0!")
-
         bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
         if bill_details is None:
@@ -530,6 +527,11 @@ class Legislature(commands.Cog):
 
         if last_leg_session != bill_details['leg_session']:
             return await ctx.send(f":x: This bill was not submitted in the last session of the Legislature!")
+
+        last_leg_session_status = await self.bot.laws.get_status_of_active_leg_session()
+
+        if last_leg_session_status == "Submission Period":
+            return await ctx.send(f":x: You cannot mark bills as passed in the Submission Period!")
 
         if bill_details['voted_on_by_leg']:
             return await ctx.send(f":x: You already passed this bill!")
@@ -548,7 +550,7 @@ class Legislature(commands.Cog):
         if str(reaction.emoji) == "\U0000274c":
             return await ctx.send("Aborted.")
 
-        if str(reaction.emoji) == "\U00002705":  # yes
+        elif str(reaction.emoji) == "\U00002705":  # yes
 
             async with ctx.typing():
 
@@ -562,17 +564,21 @@ class Legislature(commands.Cog):
                                    f" them to vote on it.")
 
                     await mk.get_executive_channel(self.bot).send(
-                        f"{mk.get_minister_role(self.bot).mention}, the Legislature"
-                        f" has just passed bill #{bill_id} that you need to vote on. "
+                        f"{mk.get_prime_minister_role(self.bot).mention}, the Legislature"
+                        f" has just passed '{bill_details['bill_name']}' (#{bill_id}) that you need to vote on. "
                         f"Check `-ministry bills` to get the details.")
 
                 # Bill is not vetoable
                 else:
 
                     if await self.bot.laws.pass_into_law(ctx, bill_id, bill_details):
-                        await ctx.send(":white_check_mark: Successfully passed this bill into law!"
-                                       " Remember to also add it to "
-                                       "the Legal Code!")
+                        await ctx.send(f":white_check_mark: Successfully passed '{bill_details['bill_name']}' into law!"
+                                       f" Remember to also add it to the Legal Code!")
+
+                        await mk.get_gov_announcements_channel(self.bot).send(
+                            f"'{bill_details['bill_name']}' was passed "
+                            f"into law by the Legislature without requiring a prior vote on it by the Ministry.")
+
                     else:
                         await ctx.send(":x: Unexpected error occurred.")
 
@@ -604,13 +610,16 @@ class Legislature(commands.Cog):
 
         last_leg_session_status = await self.bot.laws.get_status_of_active_leg_session()
 
+        if last_leg_session_status is None:
+            return await ctx.send(":x: The session is already closed!")
+
         if mk.get_speaker_role(self.bot) not in ctx.author.roles and mk.get_vice_speaker_role(self.bot) not in ctx.author.roles:
             if ctx.author.id == bill_details['submitter']:
-                if last_leg_session_status != "Submission Period":
+                if last_leg_session_status == "Submission Period":
+                    allowed = True
+                else:
                     return await ctx.send(f":x: The original submitter can only withdraw bills during "
                                           f"the Submission Period!")
-                else:
-                    allowed = True
             else:
                 allowed = False
         else:
@@ -633,7 +642,7 @@ class Legislature(commands.Cog):
         if str(reaction.emoji) == "\U0000274c":
             return await ctx.send("Aborted.")
 
-        else:
+        elif str(reaction.emoji) == "\U00002705":
             try:
                 await self.bot.db.execute("DELETE FROM legislature_bills WHERE id = $1", bill_id)
             except asyncpg.ForeignKeyViolationError:
