@@ -56,7 +56,6 @@ class EmbedUtils:
 
         return embed
 
-
 class CheckUtils:
     """Utils to assist with discord.ext.commands checks"""
 

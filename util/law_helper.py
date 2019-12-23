@@ -237,3 +237,10 @@ class LawUtils:
 
         return [amount_of_sessions, amount_of_bills, amount_of_laws, amount_of_motions,
                 pretty_top3_submitter, pretty_top_speaker, pretty_top_lawmaker]
+
+    async def post_to_hastebin(self, text: str):
+        async with self.bot.session.post("https://hastebin.com/documents", data=text) as response:
+            data = await response.json()
+            key = data['key']
+
+        return f"https://hastebin.com/{key}"

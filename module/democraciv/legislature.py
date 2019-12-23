@@ -325,14 +325,20 @@ class Legislature(commands.Cog):
                 embed.add_field(name="Ended on (UTC)", value=pretty_end_date, inline=False)
 
             embed.add_field(name="Submitted Motions", value=pretty_motions, inline=False)
-            embed.add_field(name="Submitted Bills", value=pretty_bills, inline=False)
+
+            if len(pretty_bills) < 1024:
+               embed.add_field(name="Submitted Bills", value=pretty_bills, inline=False)
+            elif len(pretty_bills) > 1024:
+                haste_bin_url = await self.bot.laws.post_to_hastebin(pretty_bills)
+                too_long_bills = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
+                embed.add_field(name="Submitted Bills", value=too_long_bills, inline=False)
 
             try:
                 await ctx.send(embed=embed)
             except discord.HTTPException:
                 await ctx.send(
-                    f":x: {self.bot.DerJonas_object.mention}, the embed value is > 1024 as there were too many"
-                    f"bills submitted. Did you figure out a solution for this yet?")
+                    f":x: The embed value is > 1024 as there were too many "
+                    f"bills or motions submitted. Jonas is working on this.")
 
     @legislature.command(name='submit')
     @utils.is_democraciv_guild()
