@@ -676,8 +676,8 @@ class Legislature(commands.Cog):
                         f"Total Amount of Laws: {stats[2]}"
 
         embed.add_field(name="General Statistics", value=general_value)
-        embed.add_field(name="Top Speakers or Vice-Speakers of the Legislature ", value=stats[4], inline=False)
-        embed.add_field(name="Top Bill Submitters", value=stats[5], inline=False)
+        embed.add_field(name="Top Speakers or Vice-Speakers of the Legislature ", value=stats[5], inline=False)
+        embed.add_field(name="Top Bill Submitters", value=stats[4], inline=False)
         embed.add_field(name="Top Lawmakers", value=stats[6], inline=False)
         await ctx.send(embed=embed)
 
