@@ -430,7 +430,8 @@ class Legislature(commands.Cog):
                         "INSERT INTO legislature_bills (id, leg_session, link, bill_name, submitter, is_vetoable, "
                         " has_passed_leg, has_passed_ministry, description, tiny_link, voted_on_by_leg, "
                         "voted_on_by_ministry) "
-                        "VALUES ($1, $2, $3, $4, $5, $6, false, false, $7, $8, false, false)", new_id, current_leg_session,
+                        "VALUES ($1, $2, $3, $4, $5, $6, false, false, $7, $8, false, false)", new_id,
+                        current_leg_session,
                         google_docs_url
                         , bill_title, ctx.author.id, is_vetoable, bill_description, tiny_url)
 
@@ -613,7 +614,8 @@ class Legislature(commands.Cog):
         if last_leg_session_status is None:
             return await ctx.send(":x: The session is already closed!")
 
-        if mk.get_speaker_role(self.bot) not in ctx.author.roles and mk.get_vice_speaker_role(self.bot) not in ctx.author.roles:
+        if mk.get_speaker_role(self.bot) not in ctx.author.roles and mk.get_vice_speaker_role(
+                self.bot) not in ctx.author.roles:
             if ctx.author.id == bill_details['submitter']:
                 if last_leg_session_status == "Submission Period":
                     allowed = True
@@ -657,6 +659,27 @@ class Legislature(commands.Cog):
             if error.param.name == 'bill_id':
                 await ctx.send(':x: You have to give me the ID of the bill to withdraw!\n\n**Usage**:\n'
                                '`-legislature withdraw <bill_id>`')
+
+    @legislature.command(name='stats')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def stats(self, ctx):
+        """Statistics about the Legislature"""
+
+        stats = await self.bot.laws.generate_leg_statistics()
+
+        embed = self.bot.embeds.embed_builder(title=f"Statistics for the {mk.NATION_ADJECTIVE} Legislature",
+                                              description="")
+
+        general_value = f"Total Amount of Legislative Sessions: {stats[0]}\n" \
+                        f"Total Amount of Submitted Bills: {stats[1]}\n" \
+                        f"Total Amount of Submitted Motions: {stats[3]}\n" \
+                        f"Total Amount of Laws: {stats[2]}"
+
+        embed.add_field(name="General Statistics", value=general_value)
+        embed.add_field(name="Top Speakers or Vice-Speakers of the Legislature ", value=stats[4], inline=False)
+        embed.add_field(name="Top Bill Submitters", value=stats[5], inline=False)
+        embed.add_field(name="Top Lawmakers", value=stats[6], inline=False)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):

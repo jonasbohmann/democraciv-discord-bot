@@ -1,3 +1,4 @@
+import collections
 import asyncpg
 import nltk
 
@@ -181,3 +182,58 @@ class LawUtils:
                                       tag.lower())
 
         return True
+
+    @staticmethod
+    def sort_dict_by_value(to_be_sorted: dict) -> dict:
+
+        to_be_sorted = {k: v for k, v in sorted(to_be_sorted.items(),
+                                                key=lambda item: item[1])}
+
+        return to_be_sorted
+
+    @staticmethod
+    def count_rows_from_db_record(record: asyncpg.Record, record_key: str) -> dict:
+        record_as_list = []
+        for r in record:
+            record_as_list.append(r[record_key])
+        counter = collections.Counter(record_as_list)
+        return dict(counter)
+
+    async def generate_leg_statistics(self) -> list:
+        amount_of_sessions = (await self.bot.db.fetchrow("SELECT COUNT(id) FROM legislature_sessions"))['count']
+        amount_of_bills = (await self.bot.db.fetchrow("SELECT COUNT(id) FROM legislature_bills"))['count']
+        amount_of_laws = (await self.bot.db.fetchrow("SELECT COUNT(law_id) FROM legislature_laws"))['count']
+        amount_of_motions = (await self.bot.db.fetchrow("SELECT COUNT(id) FROM legislature_motions"))['count']
+
+        amount_of_bills_by_submitter = self.count_rows_from_db_record(await self.bot.db.fetch("SELECT submitter FROM "
+                                                                                              "legislature_bills"),
+                                                                      'submitter')
+        amount_of_sessions_by_speaker = self.count_rows_from_db_record(await self.bot.db.fetch("SELECT speaker FROM "
+                                                                                               "legislature_sessions"),
+                                                                       'speaker')
+        amount_of_laws_by_submitter = self.count_rows_from_db_record(await self.bot.db.fetch("SELECT submitter FROM "
+                                                                                             "legislature_bills WHERE"
+                                                                                             " has_passed_leg = true "
+                                                                                             "AND has_passed_ministry "
+                                                                                             "= true"), 'submitter')
+
+        pretty_top3_submitter = f""
+        i = 1
+        for key, value in self.sort_dict_by_value(amount_of_bills_by_submitter).items():
+            pretty_top3_submitter += f"{i}. {self.bot.get_user(key).mention} with {value} bills\n"
+            i += 1
+
+        pretty_top_speaker = f""
+        i = 1
+        for key, value in self.sort_dict_by_value(amount_of_sessions_by_speaker).items():
+            pretty_top_speaker += f"{i}. {self.bot.get_user(key).mention} with {value} sessions\n"
+            i += 1
+
+        pretty_top_lawmaker = f""
+        i = 1
+        for key, value in self.sort_dict_by_value(amount_of_laws_by_submitter).items():
+            pretty_top_lawmaker += f"{i}. {self.bot.get_user(key).mention} with {value} laws\n"
+            i += 1
+
+        return [amount_of_sessions, amount_of_bills, amount_of_laws, amount_of_motions,
+                pretty_top3_submitter, pretty_top_speaker, pretty_top_lawmaker]
