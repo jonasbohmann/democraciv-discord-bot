@@ -5,7 +5,7 @@ from config import config
 from discord.ext import commands
 
 
-class Elections(commands.Cog):
+class Elections(commands.Cog, name="Election"):
 
     def __init__(self, bot):
         self.bot = bot

@@ -116,6 +116,7 @@ class Admin(commands.Cog):
     @commands.command(name='sql')
     @commands.is_owner()
     async def sql(self, ctx, sqltype: int, *, query: str):
+        """Interact with the bot's database"""
 
         # Just to make absolutely sure
         if not ctx.author == self.bot.DerJonas_object:
