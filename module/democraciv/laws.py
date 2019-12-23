@@ -91,11 +91,13 @@ class Laws(commands.Cog):
 
             law_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
+            submitted_by_value = f"{self.bot.get_user(law_details['submitter']).mention} (during Session #" \
+                                 f"{law_details['leg_session']})"
+
             embed = self.bot.embeds.embed_builder(title=f"{law_details['bill_name']}", description="")
             embed.add_field(name="Link", value=law_details['link'])
             embed.add_field(name="Description", value=law_details['description'], inline=False)
-            embed.add_field(name="Submitted By", value=self.bot.get_user(law_details['submitter']).mention)
-            embed.add_field(name="Submitted During Legislative Session", value=law_details['leg_session'])
+            embed.add_field(name="Submitter", value=submitted_by_value)
             await ctx.send(embed=embed)
 
     @law.command(name='search', aliases=['s'])
