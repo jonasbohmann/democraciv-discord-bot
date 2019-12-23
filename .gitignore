@@ -9,3 +9,4 @@
 /config/token.py
 /config/__pycache__/
 /module/democraciv/__pycache__/
+migrate.sql

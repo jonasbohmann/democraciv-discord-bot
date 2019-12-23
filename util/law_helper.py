@@ -187,7 +187,7 @@ class LawUtils:
     def sort_dict_by_value(to_be_sorted: dict) -> dict:
 
         to_be_sorted = {k: v for k, v in sorted(to_be_sorted.items(),
-                                                key=lambda item: item[1])}
+                                                key=lambda item: item[1], reverse=True)}
 
         return to_be_sorted
 
