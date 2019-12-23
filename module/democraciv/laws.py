@@ -116,6 +116,8 @@ class Laws(commands.Cog):
 
                 results = [item for sublist in results for item in sublist]
 
+                results = list(set(results))
+
             if not results or len(results) == 0 or results[0] == []:
                 results = ['Nothing found.']
 
