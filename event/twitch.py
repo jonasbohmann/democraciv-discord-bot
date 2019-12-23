@@ -4,7 +4,8 @@ import asyncio
 import util.exceptions as exceptions
 
 from discord.ext import tasks
-from config import config, token
+from config import config, token, links
+from util import mk
 
 
 # -- Twitch  --
@@ -14,22 +15,119 @@ class Twitch:
 
     def __init__(self, bot):
         self.bot = bot
-        self.streamer = config.TWITCH_CHANNEL
+        self.streamer = 'DrDisrespect'
         self.twitch_API_url = "https://api.twitch.tv/helix/streams?user_login=" + self.streamer
         self.twitch_API_token = token.TWITCH_API_KEY
         self.http_header = {'Client-ID': self.twitch_API_token}
-        self.active_stream = False
         self.first_run = True
         self.twitch_task.start()
 
     def __del__(self):
         self.twitch_task.cancel()
 
-    async def streaming_rules_reminder(self):
-        executive_channel = self.bot.get_channel(637051136955777049)  # #executive channel
-        minister_role = self.bot.democraciv_guild_object.get_role(639438027852087297)  # 'Minister' role
-        governor_role = self.bot.democraciv_guild_object.get_role(639438794239639573)  # 'Governor of Mecca' role
-        executive_proxy_role = self.bot.democraciv_guild_object.get_role(643190277494013962)  # 'Executive Proxy' role
+    async def check_twitch_livestream(self):
+        try:
+            async with self.bot.session.get(self.twitch_API_url, headers=self.http_header) as response:
+                twitch = await response.json()
+        except aiohttp.ClientConnectionError:
+            print("[BOT] ERROR - aiohttp.ClientConnectionError in Twitch session.get()!")
+            return 0
+
+        try:
+            _stream_id = twitch['data'][0]['id']
+        except (IndexError, KeyError):
+            # Streamer is not live
+            return 0
+        else:
+            # Streamer is currently live
+            status = await self.bot.db.execute("INSERT INTO twitch_streams (id) VALUES ($1) ON CONFLICT DO NOTHING",
+                                               _stream_id)
+
+            # ID already in database -> stream already announced
+            if status == "INSERT 0 0":
+                return [1, _stream_id]
+
+            # Get thumbnail in right size
+            thumbnail = twitch['data'][0]['thumbnail_url'].replace('{width}', '720').replace('{height}', '380')
+            return [2, _stream_id, twitch['data'][0]['title'], thumbnail]
+
+    @tasks.loop(minutes=3)
+    async def twitch_task(self):
+
+        if self.first_run:
+            self.first_run = False
+            return
+
+        try:
+            channel = self.bot.democraciv_guild_object.get_channel(config.TWITCH_ANNOUCEMENT_CHANNEL)
+        except AttributeError:
+            print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
+                  f'in the config to a server I am in or disable Twitch announcements.')
+            raise exceptions.GuildNotFoundError(config.DEMOCRACIV_SERVER_ID)
+
+        if channel is None:
+            raise exceptions.ChannelNotFoundError(config.TWITCH_ANNOUCEMENT_CHANNEL)
+
+        twitch_data = await self.check_twitch_livestream()
+
+        # 0 represents no active stream
+        if twitch_data == 0:
+            return
+
+        # 1 represents active stream that we already announced
+        elif twitch_data[0] == 1:
+
+            # Check if we sent the streaming rules reminder
+            sent_exec_reminder = await self.bot.db.fetchrow("SELECT has_sent_exec_reminder FROM twitch_streams"
+                                                            " WHERE id = $1", twitch_data[1])
+
+            if sent_exec_reminder is not None:
+                sent_exec_reminder = sent_exec_reminder['has_sent_exec_reminder']
+
+            if not sent_exec_reminder:
+                await self.streaming_rules_reminder(twitch_data[1])
+
+            # Check if we sent the mod reminder
+            sent_mod_reminder = await self.bot.db.fetchrow("SELECT has_sent_mod_reminder FROM twitch_streams"
+                                                           " WHERE id = $1", twitch_data[1])
+
+            if sent_mod_reminder is not None:
+                sent_mod_reminder = sent_mod_reminder['has_sent_mod_reminder']
+
+            if not sent_mod_reminder:
+                await self.export_twitch_reminder(twitch_data[1])
+
+        # 2 represents active stream that we did not yet announce
+        elif twitch_data[0] == 2:
+            embed = self.bot.embeds.embed_builder(title=f"{twitch_data[2]}",
+                                                  description=f"[**Watch the stream live on "
+                                                              f"twitch.tv/{self.streamer}**]"
+                                                              f"(https://twitch.tv/{self.streamer})",
+                                                  time_stamp=True)
+            embed.set_image(url=twitch_data[3])
+
+            if config.TWITCH_EVERYONE_PING_ON_ANNOUNCEMENT:
+                await channel.send(f'@everyone {self.streamer} is live on Twitch!')
+            else:
+                await channel.send(f'{self.streamer} is live on Twitch!')
+
+            await channel.send(embed=embed)
+
+            # Send reminder about streaming rules to executive channel
+            await self.streaming_rules_reminder(twitch_data[1])
+
+            # Send reminder to moderation to export Twitch VOD
+            await self.export_twitch_reminder(twitch_data[1])
+
+    @twitch_task.before_loop
+    async def before_twitch_task(self):
+        await self.bot.wait_until_ready()
+
+    async def streaming_rules_reminder(self, stream_id):
+        executive_channel = mk.get_executive_channel(self.bot)
+        minister_role = mk.get_minister_role(self.bot)
+        governor_role = mk.get_governor_role(self.bot)
+        executive_proxy_role = mk.get_executive_proxy_role(self.bot)
 
         if executive_channel is None:
             raise exceptions.ChannelNotFoundError("executive")
@@ -61,8 +159,11 @@ class Twitch:
 
         await executive_channel.send(embed=embed)
 
-    async def export_twitch_reminder(self):
-        moderation_channel = self.bot.get_channel(209410498804973569)  # #moderation-team channel
+        await self.bot.db.execute("UPDATE twitch_streams SET has_sent_exec_reminder = true WHERE id = $1",
+                                  stream_id)
+
+    async def export_twitch_reminder(self, stream_id):
+        moderation_channel = mk.get_moderation_team_channel(self.bot)
 
         if moderation_channel is None:
             raise exceptions.ChannelNotFoundError("moderation-team")
@@ -77,16 +178,16 @@ class Twitch:
         embed.add_field(name="Export to YouTube", value="Go to our [channel](https://www.twitch.tv/democraciv/manager),"
                                                         " select the last stream and hit 'Export'.", inline=False)
 
-        embed.add_field(name="Set the title", value="Use this formatting for the title `Democraciv MK6 - "
-                                                    "Game Session X`.", inline=False)
+        embed.add_field(name="Set the title", value=f"Use this formatting for the title `Democraciv MK{mk.MARK} - "
+                                                    f"Game Session X: Turns A-B`.", inline=False)
 
         embed.add_field(name="Set the description",
-                        value="Use this formatting for the description: ```This is the Xth game session of the of "
-                              "Democraciv MK6, where we play as Arabia in Sid Meier's Civilization 5.\n\nDemocraciv"
-                              " is a community on Reddit dedicated to play a single-player game of Sid Meier's"
-                              " Civilization 5 with a simulated, model government. We have a Legislature, a Supreme "
-                              "Court and an executive branch, those wo can be seen playing the game here."
-                              "\n\nDemocraciv: https://old.reddit.com/r/democraciv/```", inline=False)
+                        value=f"Use this formatting for the description: ```This is the Xth game session of the of "
+                              f"Democraciv MK{mk.MARK}, where we play as {mk.NATION_NAME} in {mk.CIV_GAME}.\n\n"
+                              f"Democraciv is a community on Reddit dedicated to play a single-player game of"
+                              f" {mk.CIV_GAME} with a simulated, model government. We have a Legislature, a Supreme "
+                              f"Court and an executive branch, those wo can be seen playing the game here."
+                              f"\n\nDemocraciv: https://old.reddit.com/r/democraciv/```", inline=False)
 
         embed.add_field(name="Add some tags", value="Add some variations of `Democraciv`, `Civ 5`, `Game Politics`, "
                                                     "`Game Roleplay`, `Civ Politics`, `Civ Roleplay`,"
@@ -97,9 +198,9 @@ class Twitch:
                                                          " 'Start export'.", inline=False)
 
         embed.add_field(name="Add the new video to the playlist",
-                        value="Don't forget this part! After the Twitch VOD was exported to YouTube, head over "
-                              "[here](https://studio.youtube.com/channel/UC-NukxPakwQIvx73VjtIPnw/videos/) "
-                              "and add the new video to the playlist named 'MK6 Game Sessions'.", inline=False)
+                        value=f"Don't forget this part! After the Twitch VOD was exported to YouTube, head over "
+                              f"[here](https://studio.youtube.com/channel/UC-NukxPakwQIvx73VjtIPnw/videos/) "
+                              f"and add the new video to the playlist named 'MK{mk.MARK} Game Sessions'.", inline=False)
 
         embed.add_field(name="Adjust description & tags on YouTube",
                         value="Twitch automatically adds a paragraph about Twitch to the end of the exported video's "
@@ -107,8 +208,8 @@ class Twitch:
                         inline=False)
 
         embed.add_field(name="Add Game Session to Wiki",
-                        value="Add an entry for this new game session"
-                              " [here](https://reddit.com/r/democraciv/wiki/game-sessions).",
+                        value=f"Add an entry for this new game session"
+                              f" [here]({links.gswiki}).",
                         inline=False)
 
         embed.add_field(name="Upload the save-game to Google Drive", value="Once a ministers sends you the save-game, "
@@ -121,62 +222,5 @@ class Twitch:
         await moderation_channel.send("@here")
         await moderation_channel.send(embed=embed)
 
-    async def check_twitch_livestream(self):
-        try:
-            async with self.bot.session.get(self.twitch_API_url, headers=self.http_header) as response:
-                twitch = await response.json()
-        except aiohttp.ClientConnectionError:
-            print("[BOT] ERROR - ConnectionError in Twitch session.get()!")
-            return False
-
-        try:
-            twitch['data'][0]['id']
-        except (IndexError, KeyError):
-            self.active_stream = False
-            return False
-
-        thumbnail = twitch['data'][0]['thumbnail_url'].replace('{width}', '720').replace('{height}', '380')
-        return [twitch['data'][0]['title'], thumbnail]
-
-    @tasks.loop(minutes=5)
-    async def twitch_task(self):
-
-        if self.first_run:
-            self.first_run = False
-            return
-
-        try:
-            channel = self.bot.democraciv_guild_object.get_channel(config.TWITCH_ANNOUCEMENT_CHANNEL)
-        except AttributeError:
-            print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
-                  f'in the config to a server I am in or disable Twitch announcements.')
-            raise exceptions.GuildNotFoundError(config.DEMOCRACIV_SERVER_ID)
-
-        if channel is None:
-            raise exceptions.ChannelNotFoundError(config.TWITCH_ANNOUCEMENT_CHANNEL)
-
-        twitch_data = await self.check_twitch_livestream()
-        if twitch_data is not False:
-            if self.active_stream is False:
-                self.active_stream = True
-
-                embed = self.bot.embeds.embed_builder(title=f":satellite: {self.streamer} - Live on Twitch",
-                                                      description="", time_stamp=True)
-                embed.add_field(name="Title", value=twitch_data[0], inline=False)
-                embed.add_field(name="Link", value=f"https://twitch.tv/{self.streamer}", inline=False)
-                embed.set_image(url=twitch_data[1])
-
-                if config.TWITCH_EVERYONE_PING_ON_ANNOUNCEMENT:
-                    await channel.send(f'@everyone {self.streamer} is live on Twitch!')
-
-                await channel.send(embed=embed)
-
-                # Send reminder about streaming rules to executive channel
-                await self.streaming_rules_reminder()
-
-                # Send reminder to moderation to export Twitch VOD
-                await self.export_twitch_reminder()
-
-    @twitch_task.before_loop
-    async def before_twitch_task(self):
-        await self.bot.wait_until_ready()
+        await self.bot.db.execute("UPDATE twitch_streams SET has_sent_mod_reminder = true WHERE id = $1",
+                                  stream_id)

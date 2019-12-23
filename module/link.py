@@ -1,5 +1,5 @@
-from config import links
-from config import config
+from config import links, config
+from util import mk
 from discord.ext import commands
 
 
@@ -27,8 +27,8 @@ class Link(commands.Cog):
                                f"[Political Parties]({links.parties})\n\n" \
                                f"[Election Schedule]({links.schedule})\n\n" \
                                f"[Game Sessions]({links.gswiki})\n\n" \
-                               f"[Docket of the Arabian Legislature]({links.legislativedocket})\n\n" \
-                               f"[Worksheet of the Arabian Ministry]({links.executiveworksheet})\n\n" \
+                               f"[Docket of the {mk.NATION_ADJECTIVE} Legislature]({links.legislativedocket})\n\n" \
+                               f"[Worksheet of the {mk.NATION_ADJECTIVE} Ministry]({links.executiveworksheet})\n\n" \
                                f"[File a Case to the Supreme Court]({links.sue})\n\n" \
                                f"[All Supreme Court Cases]({links.sccases})\n\n"
 
@@ -39,7 +39,7 @@ class Link(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def constitution(self, ctx):
         """Get a link to our constitution"""
-        embed = self.bot.embeds.embed_builder(title='The Constitution of Arabia',
+        embed = self.bot.embeds.embed_builder(title=f'The Constitution of {mk.NATION_NAME}',
                                               description=links.constitution)
         await ctx.send(embed=embed)
 
@@ -48,7 +48,7 @@ class Link(commands.Cog):
     async def government(self, ctx, number: int = None):
         """Get a link to the wiki page of our government"""
         if not number:
-            embed = self.bot.embeds.embed_builder(title='The Government of Arabia',
+            embed = self.bot.embeds.embed_builder(title=f'The Government of {mk.NATION_NAME}',
                                                   description=links.government)
             await ctx.send(embed=embed)
             return
@@ -62,24 +62,23 @@ class Link(commands.Cog):
         else:
             ordinal = f"{str(number)}th"
 
-        embed = self.bot.embeds.embed_builder(title=ordinal + ' Government of Arabia',
-                                                  description=f'{links.government}/{str(number)}')
+        embed = self.bot.embeds.embed_builder(title=f'{ordinal} Government of {mk.NATION_NAME}',
+                                              description=f'{links.government}/{str(number)}')
         await ctx.send(embed=embed)
         return
-
 
     @commands.command(name='parties', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def parties(self, ctx):
         """Get a link to our Political Parties"""
-        embed = self.bot.embeds.embed_builder(title='Political Parties', description=links.parties)
+        embed = self.bot.embeds.embed_builder(title=f'Political Parties in {mk.NATION_NAME}', description=links.parties)
         await ctx.send(embed=embed)
 
-    @commands.command(name='laws')
+    @commands.command(name='legalcode', aliases=['lc'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def laws(self, ctx):
+    async def legalcode(self, ctx):
         """Get a link to the Code of Law"""
-        embed = self.bot.embeds.embed_builder(title='Legal Code of Arabia', description=links.laws)
+        embed = self.bot.embeds.embed_builder(title=f'Legal Code of {mk.NATION_NAME}', description=links.laws)
         await ctx.send(embed=embed)
 
     @commands.command(name='wiki', aliases=['w', 'info'])
@@ -148,7 +147,7 @@ class Link(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def gamesessions(self, ctx):
         """Game Sessions on YouTube"""
-        embed = self.bot.embeds.embed_builder(title='Game Sessions', description="")
+        embed = self.bot.embeds.embed_builder(title=f'Game Sessions with {mk.NATION_NAME}', description="")
         embed.add_field(name="List of Game Sessions on the Wiki", value=links.gswiki, inline=False)
         embed.add_field(name="YouTube Playlist", value=links.gameSessions, inline=False)
         await ctx.send(embed=embed)
@@ -180,7 +179,7 @@ class Link(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def sue(self, ctx):
         """Submit a Case to the Supreme Court"""
-        embed = self.bot.embeds.embed_builder(title='Submit a Case to the Supreme Court of Arabia',
+        embed = self.bot.embeds.embed_builder(title=f'Submit a Case to the Supreme Court of {mk.NATION_NAME}',
                                               description=links.sue)
         await ctx.send(embed=embed)
 
@@ -195,7 +194,7 @@ class Link(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def states(self, ctx):
         """Overview of our States"""
-        embed = self.bot.embeds.embed_builder(title='The States of Arabia', description=links.states)
+        embed = self.bot.embeds.embed_builder(title=f'The States of {mk.NATION_NAME}', description=links.states)
         await ctx.send(embed=embed)
 
     @commands.command(name='turnout')
@@ -216,16 +215,16 @@ class Link(commands.Cog):
     @commands.command(name='docket', aliases=['d'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def docket(self, ctx):
-        """Docket for the Arabian Legislature"""
-        embed = self.bot.embeds.embed_builder(title='Docket for the Arabian Legislature',
+        """Docket for the Legislature"""
+        embed = self.bot.embeds.embed_builder(title=f'Docket for the {mk.NATION_ADJECTIVE} Legislature',
                                               description=links.legislativedocket)
         await ctx.send(embed=embed)
 
-    @commands.command(name='ministry', aliases=['m'])
+    @commands.command(name='worksheet')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def ministry(self, ctx):
         """The Ministry's worksheet"""
-        embed = self.bot.embeds.embed_builder(title='Worksheet of the Arabian Ministry',
+        embed = self.bot.embeds.embed_builder(title=f'Worksheet of the {mk.NATION_ADJECTIVE} Ministry',
                                               description=links.executiveworksheet)
         await ctx.send(embed=embed)
 
@@ -241,7 +240,7 @@ class Link(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def cases(self, ctx):
         """See all Supreme Court cases"""
-        embed = self.bot.embeds.embed_builder(title='Cases of the Supreme Court of Arabia',
+        embed = self.bot.embeds.embed_builder(title=f'Cases of the Supreme Court of {mk.NATION_NAME}',
                                               description=links.sccases)
         await ctx.send(embed=embed)
 
@@ -249,11 +248,11 @@ class Link(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def legislativeprocedures(self, ctx):
         """The Legislative Procedures"""
-        embed = self.bot.embeds.embed_builder(title='Procedures for the Arabian Legislature',
+        embed = self.bot.embeds.embed_builder(title=f'Procedures for the {mk.NATION_ADJECTIVE} Legislature',
                                               description=links.legislativeprocedures)
         await ctx.send(embed=embed)
 
-    @commands.command(name='stvcalculator', aliases=['stv'])
+    @commands.command(name='stvcalculator')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def stvcalculator(self, ctx):
         """Source Code of our STV calculator"""

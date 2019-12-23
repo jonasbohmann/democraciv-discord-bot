@@ -2,6 +2,6 @@ discord.py==1.2.5
 asyncpg
 jishaku
 psutil
+nltk
 lxml
-pytz
 bs4

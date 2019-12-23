@@ -1,5 +1,5 @@
 ##  democraciv-discord-bot
- [![Discord](https://discordapp.com/api/guilds/208984105310879744/embed.png)](http://discord.gg/j7sZ3tD) ![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue) [![Build Status](https://travis-ci.com/jonasbohmann/democraciv-discord-bot.svg?branch=master)](https://travis-ci.com/jonasbohmann/democraciv-discord-bot) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/c6f2dc5d8f434756b5b0017845732715)](https://www.codacy.com/manual/jonasbohmann/democraciv-discord-bot?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jonasbohmann/democraciv-discord-bot&amp;utm_campaign=Badge_Grade)
+ [![Discord](https://discordapp.com/api/guilds/208984105310879744/embed.png)](http://discord.gg/j7sZ3tD) ![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue) [![Build Status](https://travis-ci.com/jonasbohmann/democraciv-discord-bot.svg?branch=master)](https://travis-ci.com/jonasbohmann/democraciv-discord-bot)
 
 General-purpose Discord Bot with unique features designed for the r/Democraciv Discord. 
 
@@ -26,6 +26,8 @@ The file should look like this:
 # Token
 TOKEN = ""
 TWITCH_API_KEY = ""
+TIMEZONEDB_API_KEY = ""
+
 
 # PostgreSQL config
 POSTGRESQL_USER = ""
@@ -33,8 +35,8 @@ POSTGRESQL_PASSWORD = ""
 POSTGRESQL_HOST = ""
 POSTGRESQL_DATABASE = ""
 ```
-Add the token of your Discord App, your Twitch Helix API key if you enabled the Twitch module, and your
- PostgreSQL configuration like above. 
+Add the token of your Discord App, your Twitch Helix API key if you enabled the Twitch module, your TimeZoneDB API Key, 
+and your PostgreSQL configuration like above. 
 
 After you've done all that, run `client.py`.
 
@@ -126,6 +128,7 @@ for database~~
 
 ####  Update 0.15.0 - The Government Update
 
+*  ~~Add STV calculation~~
 *  Add Legislature dashboard with session management
 *  Add Ministry dashboard
 *  Add webhook for notifications on new SC cases 

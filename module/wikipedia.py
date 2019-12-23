@@ -47,7 +47,8 @@ class Wikipedia(commands.Cog):
 
             if result is None or result['type'] == 'disambiguation':
 
-                # Fall back to MediaWiki Action API and ask for article suggestions as there's probably a typo 'topic'
+                # Fall back to MediaWiki Action API and ask for article suggestions as there's probably a typo in
+                # 'topic'
                 suggested_pages = await self.get_wikipedia_suggested_articles(topic)
 
                 try:

@@ -3,13 +3,13 @@ import discord
 import util.exceptions as exceptions
 
 from config import config
+from util.flow import Flow
 from discord.ext import commands
 
 # -- roles.py | module.role --
 #
 # User role management.
 #
-from util.flow import Flow
 
 
 class Roles(commands.Cog):

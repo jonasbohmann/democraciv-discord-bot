@@ -59,17 +59,21 @@ class Pages:
         Our permissions for the channel.
     """
 
-    def __init__(self, ctx, *, entries, per_page=12, show_entry_count=True):
+    def __init__(self, ctx, *, entries, per_page=12, show_entry_count=True, title=None, show_index=True,
+                 footer_text=None):
         self.bot = ctx.bot
         self.entries = entries
         self.message = ctx.message
         self.channel = ctx.channel
         self.author = ctx.author
         self.per_page = per_page
+        self.show_index = show_index
+        self.footer = footer_text
         pages, left_over = divmod(len(self.entries), self.per_page)
         if left_over:
             pages += 1
         self.maximum_pages = pages
+        self.title = title
         self.embed = discord.Embed(colour=0x7f0000)
         self.paginating = len(entries) > per_page
         self.show_entry_count = show_entry_count
@@ -115,8 +119,12 @@ class Pages:
 
     def prepare_embed(self, entries, page, *, first=False):
         p = []
-        for index, entry in enumerate(entries, 1 + ((page - 1) * self.per_page)):
-            p.append(f'{index}. {entry}')
+        if self.show_index:
+            for index, entry in enumerate(entries, 1 + ((page - 1) * self.per_page)):
+                p.append(f'{index}. {entry}')
+        else:
+            for index, entry in enumerate(entries, 1 + ((page - 1) * self.per_page)):
+                p.append(f'{entry}')
 
         if self.maximum_pages > 1:
             if self.show_entry_count:
@@ -130,7 +138,10 @@ class Pages:
             p.append('')
             p.append('Confused? React with \N{INFORMATION SOURCE} for more info.')
 
+        self.embed.title = self.title
+
         self.embed.description = '\n'.join(p)
+        self.embed.set_footer(text=self.footer, icon_url=config.BOT_ICON_URL)
 
     async def show_page(self, page, *, first=False):
         self.current_page = page

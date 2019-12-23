@@ -40,8 +40,7 @@ class Guild(commands.Cog):
     async def welcome(self, ctx):
         """Configure a welcome message that every new member will see once they join this guild"""
 
-        is_welcome_enabled = (await self.bot.db.fetchrow("SELECT welcome FROM guilds WHERE id = $1", ctx.guild.id))[
-            'welcome']
+        is_welcome_enabled = await self.bot.checks.is_welcome_message_enabled(ctx.guild.id)
 
         current_welcome_channel = (await self.bot.db.fetchrow("SELECT welcome_channel FROM guilds WHERE id = $1",
                                                               ctx.guild.id))['welcome_channel']
@@ -256,8 +255,7 @@ class Guild(commands.Cog):
     async def defaultrole(self, ctx):
         """Configure a default role that every new member will get once they join this guild"""
 
-        is_default_role_enabled = (await self.bot.db.fetchrow("SELECT defaultrole FROM guilds WHERE id = $1",
-                                                              ctx.guild.id))['defaultrole']
+        is_default_role_enabled = await self.bot.checks.is_default_role_enabled(ctx.guild.id)
 
         current_default_role = (await self.bot.db.fetchrow("SELECT defaultrole_role FROM guilds WHERE id = $1",
                                                            ctx.guild.id))['defaultrole_role']

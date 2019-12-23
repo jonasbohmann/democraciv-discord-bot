@@ -28,7 +28,6 @@ class Admin(commands.Cog):
     @commands.is_owner()
     async def load(self, ctx, *, module):
         """Loads a module"""
-
         try:
             self.bot.load_extension(module)
         except Exception:
@@ -40,7 +39,6 @@ class Admin(commands.Cog):
     @commands.is_owner()
     async def unload(self, ctx, *, module):
         """Unloads a module"""
-
         try:
             self.bot.unload_extension(module)
         except Exception:
@@ -52,7 +50,6 @@ class Admin(commands.Cog):
     @commands.is_owner()
     async def reload(self, ctx, *, module):
         """Reloads a module"""
-
         try:
             self.bot.unload_extension(module)
             self.bot.load_extension(module)
@@ -74,7 +71,7 @@ class Admin(commands.Cog):
     @commands.command(name='reloadconfig', aliases=['rlc', 'rc', 'rlcfg'])
     @commands.is_owner()
     async def reloadconfig(self, ctx):
-        """Reload all .json config files"""
+        """Reload all config files"""
 
         await ctx.send(':white_check_mark: Reloaded config.')
         await importlib.reload(config)
@@ -103,7 +100,6 @@ class Admin(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def tinyurl(self, ctx, url: str):
         """Shorten a link with tinyurl"""
-
         if len(url) <= 3:
             await ctx.send(":x: That doesn't look like a valid URL!")
             return
@@ -116,6 +112,31 @@ class Admin(commands.Cog):
             return
 
         await ctx.send(tiny_url)
+
+    @commands.command(name='sql')
+    @commands.is_owner()
+    async def sql(self, ctx, sqltype: int, *, query: str):
+
+        # Just to make absolutely sure
+        if not ctx.author == self.bot.DerJonas_object:
+            return await ctx.send(":x: Nope.")
+
+        # Just to make absolutely double sure
+        if not ctx.author.id == self.bot.DerJonas_object.id and not ctx.author.id == config.BOT_AUTHOR_ID:
+            return await ctx.send(":x: Nope.")
+
+        if sqltype == 1:
+            status = await self.bot.db.execute(query)
+
+        elif sqltype == 2:
+            status = await self.bot.db.fetch(query)
+
+        elif sqltype == 3:
+            status = await self.bot.db.fetchrow(query)
+        else:
+            status = "Invalid type."
+
+        await ctx.send(f"```{status}```")
 
     @commands.command(name='health', aliases=['status', 'diagnosis'])
     @commands.is_owner()
@@ -174,7 +195,7 @@ class Admin(commands.Cog):
             reddit_embed.add_field(name="Enabled", value=config.REDDIT_ENABLED)
             reddit_embed.add_field(name="Subreddit", value=config.REDDIT_SUBREDDIT, inline=True)
             reddit_embed.add_field(name="Discord Channel", value=self.bot.get_channel
-                        (config.REDDIT_ANNOUNCEMENT_CHANNEL).mention, inline=True)
+            (config.REDDIT_ANNOUNCEMENT_CHANNEL).mention, inline=True)
             await ctx.send(embed=reddit_embed)
 
             twitch_embed = self.bot.embeds.embed_builder(title="Twitch Diagnosis", description="")

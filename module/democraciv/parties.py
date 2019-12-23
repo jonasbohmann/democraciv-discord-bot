@@ -2,17 +2,15 @@ import discord
 import asyncio
 import asyncpg
 
-import util.utils as utils
-import util.exceptions as exceptions
-
 from config import config
+from util.flow import Flow
 from discord.ext import commands
+from util import utils, exceptions, mk
 
 # -- parties.py | module.parties --
 #
 # Management of Political Parties
 #
-from util.flow import Flow
 
 
 class Party(commands.Cog, name='Political Parties'):
@@ -228,7 +226,7 @@ class Party(commands.Cog, name='Political Parties'):
                     party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
                                                 f' citizens\n\n'
 
-                embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in Arabia',
+                embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in {mk.NATION_NAME}',
                                                       description=f'{party_list_embed_content}', colour=0x7f0000)
 
             await ctx.send(embed=embed)
