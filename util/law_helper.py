@@ -199,6 +199,21 @@ class LawUtils:
         counter = collections.Counter(record_as_list)
         return dict(counter)
 
+    def get_pretty_stats(self, to_be_pretty: dict, stats_name: str) -> str:
+        pretty = f""
+        i = 1
+
+        for key, value in to_be_pretty.items():
+
+            if value == 1:
+                pretty += f"{i}. {self.bot.get_user(key).mention} with {value} {stats_name[:-1]}\n"
+            else:
+                pretty += f"{i}. {self.bot.get_user(key).mention} with {value} {stats_name}\n"
+
+            i += 1
+
+        return pretty
+
     async def generate_leg_statistics(self) -> list:
         amount_of_sessions = (await self.bot.db.fetchrow("SELECT COUNT(id) FROM legislature_sessions"))['count']
         amount_of_bills = (await self.bot.db.fetchrow("SELECT COUNT(id) FROM legislature_bills"))['count']
@@ -217,23 +232,11 @@ class LawUtils:
                                                                                              "AND has_passed_ministry "
                                                                                              "= true"), 'submitter')
 
-        pretty_top3_submitter = f""
-        i = 1
-        for key, value in self.sort_dict_by_value(amount_of_bills_by_submitter).items():
-            pretty_top3_submitter += f"{i}. {self.bot.get_user(key).mention} with {value} bills\n"
-            i += 1
+        pretty_top3_submitter = self.get_pretty_stats(self.sort_dict_by_value(amount_of_bills_by_submitter), 'bills')
 
-        pretty_top_speaker = f""
-        i = 1
-        for key, value in self.sort_dict_by_value(amount_of_sessions_by_speaker).items():
-            pretty_top_speaker += f"{i}. {self.bot.get_user(key).mention} with {value} sessions\n"
-            i += 1
+        pretty_top_speaker = self.get_pretty_stats(self.sort_dict_by_value(amount_of_sessions_by_speaker), 'sessions')
 
-        pretty_top_lawmaker = f""
-        i = 1
-        for key, value in self.sort_dict_by_value(amount_of_laws_by_submitter).items():
-            pretty_top_lawmaker += f"{i}. {self.bot.get_user(key).mention} with {value} laws\n"
-            i += 1
+        pretty_top_lawmaker = self.get_pretty_stats(self.sort_dict_by_value(amount_of_laws_by_submitter), 'laws')
 
         return [amount_of_sessions, amount_of_bills, amount_of_laws, amount_of_motions,
                 pretty_top3_submitter, pretty_top_speaker, pretty_top_lawmaker]
