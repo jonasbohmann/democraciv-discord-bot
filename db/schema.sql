@@ -1,4 +1,4 @@
---CREATE EXTENSION pg_trgm;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TABLE IF NOT EXISTS guilds(
     id bigint UNIQUE PRIMARY KEY,
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS legislature_tags(
     tag text
 );
 
---CREATE INDEX ON legislature_tags USING gin (tag gin_trgm_ops)
+CREATE INDEX ON legislature_tags USING gin (tag gin_trgm_ops);
 
 CREATE TABLE IF NOT EXISTS legislature_motions(
     id int UNIQUE PRIMARY KEY,
