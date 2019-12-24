@@ -250,6 +250,9 @@ class DemocracivBot(commands.Bot):
 
         # Run the command and save the backup files in db/backup/
         await asyncio.create_subprocess_shell(command)
+        
+        # Make sure that pg_dump is finished before loading the backup
+        await asyncio.sleep(20)
 
         # Upload the file to the #backup channel in the Moderation category on the Democraciv server
         file = discord.File(f'db/backup/{file_name}')
