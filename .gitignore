@@ -12,3 +12,4 @@
 migrate.sql
 /db/backup/*
 /db/stv/*
+core
