@@ -11,7 +11,7 @@ import discord.utils
 
 import util.exceptions as exceptions
 
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 # Internal Imports
 from event.twitch import Twitch
@@ -196,6 +196,8 @@ class DemocracivBot(commands.Bot):
 
         self.DerJonas_object = self.get_user(config.BOT_AUTHOR_ID)
 
+        self.daily_db_backup.start()
+
     async def on_message(self, message):
         # Don't process message/command from DMs to prevent spamming
         if isinstance(message.channel, discord.DMChannel):
@@ -229,6 +231,31 @@ class DemocracivBot(commands.Bot):
 
         # Relay message to discord.ext.commands cogs
         await self.process_commands(message)
+
+    @tasks.loop(hours=24)
+    async def daily_db_backup(self):
+        # This task makes a backup of the bot's PostgreSQL database every 24hours and uploads
+        # that backup to the #backup channel to the Democraciv Discord guild
+
+        # Unique filenames with current UNIX timestamp
+        now = time.time()
+        pretty_time = datetime.datetime.utcfromtimestamp(now).strftime("%A, %B %d %Y %H:%M:%S")
+        file_name = f'democraciv-bot-db-backup-{now}'
+
+        # Use pg_dump to dumb the database as raw SQL
+        # Login with credentials provided in token.py
+        command = f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump {token.POSTGRESQL_DATABASE} > ' \
+                  f'db/backup/{file_name} -U {token.POSTGRESQL_USER} ' \
+                  f'-h {token.POSTGRESQL_HOST} -w'
+
+        # Run the command and save the backup files in db/backup/
+        await asyncio.create_subprocess_shell(command)
+
+        # Upload the file to the #backup channel in the Moderation category on the Democraciv server
+        file = discord.File(f'db/backup/{file_name}')
+        backup_channel = self.get_channel(656214962854821928)
+        await backup_channel.send(f"---- Database Backup from {pretty_time} ----")
+        await backup_channel.send(file=file)
 
 
 # This will start the bot when you run this file
