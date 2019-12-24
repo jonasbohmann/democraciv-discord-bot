@@ -10,3 +10,5 @@
 /config/__pycache__/
 /module/democraciv/__pycache__/
 migrate.sql
+/db/backup/*
+/db/stv/*
