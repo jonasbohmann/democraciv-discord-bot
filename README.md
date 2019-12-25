@@ -5,6 +5,20 @@ General-purpose Discord Bot with unique features designed for the r/Democraciv D
 
 Provides useful information, political party & role management and much more. 
 
+##  Features
+*  Announcements for live streams on twitch.tv/democraciv
+*  Announcements for new posts from reddit.com/r/democraciv
+*  Helps the Speaker of the Legislature with legislative sessions and submissions (bills & motions)
+*  Supports the Prime Minister with vetoes by keeping them up-to-date with passed bills from the Legislature
+*  Keeps track of all legislative sessions, ministry vetos and laws that passed both Legislature & Executive
+*  Search for active laws by name or by automatically generated tags
+*  Join and leave political parties and see their members and ranking
+*  Smart Wikipedia queries
+*  Welcome messages & default roles
+*  Self-assignable role management
+*  Help command that automatically scales
+*  Event logging 
+
 ##  Requirements
 
 *  [Python](https://www.python.org/downloads//) 3.6 or newer
@@ -43,7 +57,7 @@ After you've done all that, run `client.py`.
 ####  Database
 
 This bot needs a PostgreSQL database to run. To install and configure PostgreSQL, head [here](https://www.postgresql.org/).
- The bot was tested with PostgreSQL 9.6 and 12.1, everything else in between should work.
+ The bot was tested with PostgreSQL 9.6, 11.5 and 12.1, everything in between should work.
 
 
 You only need to create an empty database, the bot will then fill that with tables on startup.
@@ -70,18 +84,6 @@ If you do not want to use the Reddit announcements feature, you have to set `RED
 `config.py` to `False`.
 
 
-##  Features
-*  Modular system for commands
-*  Help command that automatically scales
-*  Welcome messages & default roles
-*  Announcements for live streams on twitch.tv/democraciv
-*  Announcements for new posts from reddit.com/r/democraciv
-*  Political party management
-*  Self-assignable role management
-*  Wikipedia queries
-*  Event logging 
-
-
 ##  Modules
 You can add and remove modules by adding or removing them from `initial_extensions` in `client.py`.
 
@@ -90,16 +92,19 @@ Module | Description
 module.links | Collection of useful links for the game (Wiki, Constitution, political parties etc.) |
 module.about | Commands regarding the bot itself |
 module.admin | Re-, un- and load modules and the config |
-module.fun | `-whois`, `-veterans` and `-say` commands | 
+module.fun | `-whois`, `-veterans`, `-random` and `-say` commands | 
 module.help | Scaling `-help` command |
 module.guild | Configure various functions of this bot for your guild |
 module.roles | Add or remove roles from you |
 module.parties | Join and leave political parties |
 module.time | Get the current time in a number of different timezones |
-module.legislature | Useful commands for Legislators on the Democraciv guild, such as `-submit` for submitting new bills |
 module.wikipedia | Search for a topic on wikipedia |
-module.random | Common choice commands (Heads or Tails etc.) |
-event.logging | Logs events (member joins/leaves etc.) to a specified channel |
+module.democraciv.legislature | Helps the Speaker of the Legislature with keeping track of submitted bills, motions and legislative sessions in general |
+module.democraciv.ministry | Helps the Prime Minister with keeping track of passed bills that need to be voted on (vetoed) |
+module.democraciv.supremecourt | Collection of links for Supreme Court Justices |
+module.democraciv.laws | Lists all laws passed by the Legislature & Ministry and allows to search for laws by automatically generated tags |
+module.democraciv.elections | Calculate results for STV elections |
+event.logging | Logs events (member joins/leaves, message deleted/edited etc.) to a specified channel |
 event.error_handler | Handles internal errors |
 event.reddit | Handles notifications when there's a new post on r/democraciv |
 event.twitch | Handles notifications when twitch.tv/democraciv is live |
@@ -115,7 +120,7 @@ event.twitch | Handles notifications when twitch.tv/democraciv is live |
 *  ~~Introduce utils to save time & code~~
 *  ~~Replace blocking libraries (praw, wikipedia) with aiohttp API calls~~
 
-####  Update 0.14.0 - The SQL Update
+####  Update 0.14.0 - The SQL Update ✅
 
 *  ~~Add a PostgreSQL database~~
 *  ~~Migrate `guilds.json`, `parties.json` and `last_reddit_post.json` to new database~~
@@ -126,13 +131,13 @@ for database~~
 *  ~~Refactor help.py~~ (Update 0.14.2)
 
 
-####  Update 0.15.0 - The Government Update
+####  Update 0.15.0 - The Government Update ✅
 
 *  ~~Add STV calculation~~
-*  Add Legislature dashboard with session management
-*  Add Ministry dashboard
-*  Add webhook for notifications on new SC cases 
-*  Rewrite the `time.py` module and allow converting between timezones
+*  ~~Add Legislature dashboard~~
+*  ~~Add Ministry dashboard~~
+*  ~~Introduce system to keep track of legislative sessions, ministry vetoes and active laws~~
+*  ~~Rewrite the `time.py` module~~
 
 
 ####  Update 0.16.0 - The Moderation Update
