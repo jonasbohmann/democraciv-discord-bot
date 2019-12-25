@@ -46,6 +46,7 @@ class EmbedUtils:
          required."""
 
         embed = discord.Embed(title=title, description=description, colour=self.embed_colour)
+
         if footer:
             embed.set_footer(text=footer, icon_url=self.footer_icon)
         else:

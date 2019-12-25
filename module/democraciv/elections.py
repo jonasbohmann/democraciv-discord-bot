@@ -12,17 +12,22 @@ class Elections(commands.Cog, name="Election"):
 
     @commands.command(name="stv")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def stv(self, ctx, seats: int, quota: int):
+    async def stv(self, ctx, seats: int, quota: str):
         """Calculate election results of a given .csv file with STV
 
         Usage:
             Upload a .csv file and add the command as a comment to it like this:
-            `-stv <seats> <quota>`, with the quota parameter being "0" for Hare and "1" for Droop
+            `-stv <seats> <quota>`, with the quota parameter being "hare" for Hare and "droop" for Droop
         """
 
-        if quota not in range(0, 2):
-            await ctx.send(f":x: Invalid quota, type '0' for Hare and '1' for Droop!")
-            return
+        if quota.lower() == "hare":
+            quota = 0
+
+        elif quota.lower() == "droop":
+            quota = 1
+
+        else:
+            return await ctx.send(f":x: Invalid quota, type 'hare' for Hare and 'droop' for Droop!")
 
         try:
             csv = ctx.message.attachments[0]
@@ -50,7 +55,7 @@ class Elections(commands.Cog, name="Election"):
                 results = output
 
             embed = self.bot.embeds.embed_builder(title=f"STV Results for {csv.filename}",
-                                                  description=f"```glsl\n{results}```", time_stamp=True)
+                                                  description=f"```glsl\n{results}```", footer=f"ID: {_filename}")
             await ctx.send(embed=embed)
 
     @stv.error
@@ -59,17 +64,20 @@ class Elections(commands.Cog, name="Election"):
             if error.param.name == 'seats':
                 await ctx.send(':x: You have to specify the amount of available seats!\n\n**Usage**:\n'
                                'Upload a .csv file and add the command as a comment to it like this:'
-                               ' `-stv <seats> <quota>`, with the quota parameter being "0" for Hare and "1" for Droop')
+                               ' `-stv <seats> <quota>`, with the quota parameter being "hare" for Hare'
+                               ' and "droop" for Droop')
 
             if error.param.name == 'quota':
                 await ctx.send(':x: You have to specify the quota!\n\n**Usage**:\n'
                                'Upload a .csv file and add the command as a comment to it like this:'
-                               ' `-stv <seats> <quota>`, with the quota parameter being "0" for Hare and "1" for Droop')
+                               ' `-stv <seats> <quota>`, with the quota parameter being "hare" for Hare '
+                               'and "droop" for Droop')
 
         elif isinstance(error, commands.BadArgument):
             await ctx.send(':x: Error!\n\n**Usage**:\n'
                            'Upload a .csv file and add the command as a comment to it like this:'
-                           ' `-stv <seats> <quota>`, with the quota parameter being "0" for Hare and "1" for Droop')
+                           ' `-stv <seats> <quota>`, with the quota parameter being "hare" for Hare and '
+                           '"droop" for Droop')
 
 
 def setup(bot):
