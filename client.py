@@ -257,6 +257,11 @@ class DemocracivBot(commands.Bot):
         # Upload the file to the #backup channel in the Moderation category on the Democraciv server
         file = discord.File(f'db/backup/{file_name}')
         backup_channel = self.get_channel(656214962854821928)
+
+        if backup_channel is None:
+            print(f"[DATABASE] Couldn't find #backup Discord channel for database backup 'db/backup/{file_name}'.")
+            return
+
         await backup_channel.send(f"---- Database Backup from {pretty_time} ----")
         await backup_channel.send(file=file)
 

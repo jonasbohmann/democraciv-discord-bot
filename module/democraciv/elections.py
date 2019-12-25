@@ -42,7 +42,7 @@ class Elections(commands.Cog, name="Election"):
         _filename = f"{uuid.uuid4()}.csv"
 
         async with ctx.typing():
-            await csv.save(f'db/{_filename}')
+            await csv.save(f'db/stv/{_filename}')
 
             try:
                 output = await self.bot.loop.run_in_executor(None, stv.main, seats, _filename, quota)

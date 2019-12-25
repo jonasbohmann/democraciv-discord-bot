@@ -63,7 +63,7 @@ def main(_seats, csvfile, quota):
     votes = []
     voteweights = []
 
-    with open(f"db/{csvfile}") as file:
+    with open(f"db/stv/{csvfile}") as file:
         lines = csv.reader(file)
         f = 0
         for l in lines:
