@@ -3,15 +3,16 @@ import asyncpg
 import discord
 import datetime
 
-from util.flow import Flow
-from config import config, links
 from discord.ext import commands
-from util import utils, mk, exceptions
+
+from util.flow import Flow
 from util.paginator import Pages
+from config import config, links
+from util import utils, mk, exceptions
 
 
 class Legislature(commands.Cog):
-    """Useful commands for Legislators"""
+    """Organize and get details about Legislative Sessions and submit bills or motions"""
 
     def __init__(self, bot):
         self.bot = bot

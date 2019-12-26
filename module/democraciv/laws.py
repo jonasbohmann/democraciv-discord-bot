@@ -1,11 +1,13 @@
-from util import mk, utils
+from discord.ext import commands
+
 from config import config
+from util import mk, utils
 from util.flow import Flow
 from util.paginator import Pages
-from discord.ext import commands
 
 
 class Laws(commands.Cog):
+    """Get all active laws in Arabia and search for them by name or keyword"""
 
     def __init__(self, bot):
         self.bot = bot

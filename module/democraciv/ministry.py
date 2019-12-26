@@ -1,13 +1,15 @@
 import discord
 
-from util import mk, exceptions, utils
 from discord.ext import commands
-from config import config, links
+
 from util.flow import Flow
+from config import config, links
 from util.paginator import Pages
+from util import mk, exceptions, utils
 
 
 class Ministry(commands.Cog):
+    """Vote on recently passed bills from the Legislature"""
 
     def __init__(self, bot):
         self.bot = bot

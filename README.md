@@ -5,6 +5,14 @@ General-purpose Discord Bot with unique features designed for the r/Democraciv D
 
 Provides useful information, political party & role management and much more. 
 
+##  Requirements
+
+*  [Python](https://www.python.org/downloads//) 3.6 or newer
+*  [discord.py](https://github.com/Rapptz/discord.py) 1.2.5 or newer
+*  [PostgreSQL](https://www.postgresql.org/) 9.6 or newer 
+
+**Run `pip install -r requirements.txt` to install all required dependencies.**
+
 ##  Features
 *  Announcements for live streams on twitch.tv/democraciv
 *  Announcements for new posts from reddit.com/r/democraciv
@@ -18,14 +26,6 @@ Provides useful information, political party & role management and much more.
 *  Self-assignable role management
 *  Help command that automatically scales
 *  Event logging 
-
-##  Requirements
-
-*  [Python](https://www.python.org/downloads//) 3.6 or newer
-*  [discord.py](https://github.com/Rapptz/discord.py) 1.2.5 or newer
-*  [PostgreSQL](https://www.postgresql.org/) 9.6 or newer 
-
-**Run `pip install -r requirements.txt` to install all required dependencies.**
 
 ##  Installation
 

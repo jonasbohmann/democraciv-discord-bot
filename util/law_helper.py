@@ -1,6 +1,7 @@
-import collections
-import asyncpg
 import nltk
+import asyncpg
+import collections
+
 
 from bs4 import BeautifulSoup, SoupStrainer
 

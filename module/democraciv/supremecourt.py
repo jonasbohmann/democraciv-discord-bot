@@ -1,11 +1,13 @@
 import discord
 
-from util import mk, exceptions
 from discord.ext import commands
+
+from util import mk, exceptions
 from config import config, links
 
 
 class SupremeCourt(commands.Cog, name="Supreme Court"):
+    """Useful information for Supreme Court Justices"""
 
     def __init__(self, bot):
         self.bot = bot

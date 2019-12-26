@@ -264,11 +264,10 @@ class DemocracivBot(commands.Bot):
         backup_channel = self.get_channel(656214962854821928)
 
         if backup_channel is None:
-            print(f"[DATABASE] Couldn't find #backup Discord channel for databas backup 'db/backup/{file_name}'.")
+            print(f"[DATABASE] Couldn't find #backup Discord channel for database backup 'db/backup/{file_name}'.")
             return
 
-        await backup_channel.send(f"---- Database Backup from {pretty_time} ----")
-        await backup_channel.send(file=file)
+        await backup_channel.send(f"---- Database Backup from {pretty_time} ----", file=file)
 
 
 # This will start the bot when you run this file
