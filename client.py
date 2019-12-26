@@ -1,3 +1,4 @@
+import os
 import time
 import math
 import discord
@@ -248,9 +249,13 @@ class DemocracivBot(commands.Bot):
                   f'db/backup/{file_name} -U {token.POSTGRESQL_USER} ' \
                   f'-h {token.POSTGRESQL_HOST} -w'
 
+        # Check if backup dir exists
+        if not os.path.isdir('./db/backup'):
+            os.mkdir('./db/backup')
+
         # Run the command and save the backup files in db/backup/
         await asyncio.create_subprocess_shell(command)
-        
+
         # Make sure that pg_dump is finished before loading the backup
         await asyncio.sleep(20)
 
@@ -259,7 +264,7 @@ class DemocracivBot(commands.Bot):
         backup_channel = self.get_channel(656214962854821928)
 
         if backup_channel is None:
-            print(f"[DATABASE] Couldn't find #backup Discord channel for database backup 'db/backup/{file_name}'.")
+            print(f"[DATABASE] Couldn't find #backup Discord channel for databas backup 'db/backup/{file_name}'.")
             return
 
         await backup_channel.send(f"---- Database Backup from {pretty_time} ----")

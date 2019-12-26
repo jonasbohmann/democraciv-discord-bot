@@ -1,3 +1,4 @@
+import os
 import uuid
 
 from util import stv
@@ -42,6 +43,10 @@ class Elections(commands.Cog, name="Election"):
         _filename = f"{uuid.uuid4()}.csv"
 
         async with ctx.typing():
+            # Check if stv dir exists
+            if not os.path.isdir('./db/stv'):
+                os.mkdir('./db/stv')
+
             await csv.save(f'db/stv/{_filename}')
 
             try:
