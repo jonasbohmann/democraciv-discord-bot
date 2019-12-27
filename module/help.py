@@ -121,6 +121,15 @@ class PaginatedHelpCommand(commands.HelpCommand):
             'hidden': True
         })
 
+    @staticmethod
+    def get_subcommands_too(commands_list: list):
+        for cmd in commands_list:
+            if isinstance(cmd, discord.ext.commands.Group):
+                for c in cmd.commands:
+                    commands_list.append(c)
+
+        return commands_list
+
     async def on_help_command_error(self, ctx, error):
         if isinstance(error, commands.CommandInvokeError):
             await ctx.send(str(error.original))
@@ -142,13 +151,16 @@ class PaginatedHelpCommand(commands.HelpCommand):
             return c.cog_name or '\u200bNo Category'
 
         bot = self.context.bot
-        entries = await self.filter_commands(bot.commands, sort=True, key=key)
+
+        all_commands = self.get_subcommands_too(list(bot.commands))
+
+        entries = await self.filter_commands(all_commands, sort=True, key=key)
         nested_pages = []
         per_page = 9
         total = 0
 
         for cog, commands in itertools.groupby(entries, key=key):
-            commands = sorted(commands, key=lambda c: c.name)
+            commands = sorted(commands, key=lambda c: c.qualified_name)
             if len(commands) == 0:
                 continue
 
@@ -168,7 +180,12 @@ class PaginatedHelpCommand(commands.HelpCommand):
         await pages.paginate()
 
     async def send_cog_help(self, cog):
-        entries = await self.filter_commands(cog.get_commands(), sort=True)
+        def key(c):
+            return c.qualified_name
+
+        all_commands = self.get_subcommands_too(cog.get_commands())
+
+        entries = await self.filter_commands(all_commands, sort=True, key=key)
         pages = HelpPaginator(self, self.context, entries)
         pages.title = f'{cog.qualified_name} Commands'
         pages.description = cog.description

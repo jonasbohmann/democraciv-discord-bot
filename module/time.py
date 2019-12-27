@@ -50,8 +50,9 @@ class Time(commands.Cog):
 
             await ctx.send(embed=embed)
 
-    @time.command(name='convert')
+    @time.command(name='convert', hidden=True)
     async def convert(self, ctx):
+        """Get a link to worldtimebuddy.com"""
 
         embed = self.bot.embeds.embed_builder(title=f"Convert between Time Zones",
                                               description="[This website is good for converting time across different "

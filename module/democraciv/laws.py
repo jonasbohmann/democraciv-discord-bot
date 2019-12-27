@@ -6,7 +6,7 @@ from util.flow import Flow
 from util.paginator import Pages
 
 
-class Laws(commands.Cog):
+class Laws(commands.Cog, name='Law'):
     """Get all active laws in Arabia and search for them by name or keyword"""
 
     def __init__(self, bot):
