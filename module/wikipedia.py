@@ -14,6 +14,7 @@ class Wikipedia(commands.Cog):
         # This uses the newer REST API that MediaWiki offers to query their site.
         #   advantages: newer, cleaner, faster, gets thumbnail + URL
         #   disadvantages: doesn't work with typos in attr: query
+        #
         #   see: https://www.mediawiki.org/wiki/REST_API
 
         async with self.bot.session.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{query}") as response:
@@ -53,7 +54,7 @@ class Wikipedia(commands.Cog):
 
                 try:
                     suggested_query_name = suggested_pages['query']['search'][0]['title']
-                except Exception:
+                except (IndexError, KeyError):
                     await ctx.send(":x: Unexpected error occurred.")
                     return
 
@@ -61,8 +62,7 @@ class Wikipedia(commands.Cog):
                 result = await self.get_wikipedia_result_with_rest_api(suggested_query_name)
 
                 if result is None or not result:
-                    await ctx.send(":x: Unexpected error occurred.")
-                    return
+                    return await ctx.send(f":x: Didn't find any article that's related to '{topic}'")
 
             _title = result['title']
             _summary = result['extract']

@@ -18,6 +18,7 @@ from discord.ext import commands, tasks
 from event.twitch import Twitch
 from event.reddit import Reddit
 from config import config, token
+from event.youtube import YouTube
 from util.law_helper import LawUtils
 from util.utils import CheckUtils, EmbedUtils
 
@@ -115,6 +116,9 @@ class DemocracivBot(commands.Bot):
         # Create reddit new post on subreddit notification task if enabled in config
         if config.REDDIT_ENABLED:
             Reddit(self)
+
+        if config.YOUTUBE_VIDEO_ENABLED:
+            YouTube(self)
 
     async def initialize_aiohttp_session(self):
         # Initialize a shared aiohttp ClientSession to be used for -wikipedia, -submit and reddit & twitch requests

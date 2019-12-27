@@ -1,5 +1,6 @@
 import html
 import aiohttp
+import discord
 
 import util.exceptions as exceptions
 
@@ -71,9 +72,9 @@ class Reddit:
             except KeyError:
                 _thumbnail_url = reddit_post['thumbnail']
 
-            embed = self.bot.embeds.embed_builder(
-                title=f":mailbox_with_mail: New post on r/{self.subreddit}",
-                description="", time_stamp=True)
+            embed = discord.Embed(
+                title=f"<:reddit:660114002533285888> New post on r/{self.subreddit}",
+                description="", colour=0x7f0000)
             embed.add_field(name="Thread", value=f"[{_title}]({_comments_link})", inline=False)
             embed.add_field(name="Author", value=f"{_author}", inline=False)
 

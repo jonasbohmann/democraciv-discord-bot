@@ -20,7 +20,9 @@ class Twitch:
         self.twitch_API_token = token.TWITCH_API_KEY
         self.http_header = {'Client-ID': self.twitch_API_token}
         self.first_run = True
-        self.twitch_task.start()
+
+        if self.twitch_API_token != "" and self.twitch_API_token is not None:
+            self.twitch_task.start()
 
     def __del__(self):
         self.twitch_task.cancel()
@@ -99,11 +101,11 @@ class Twitch:
 
         # 2 represents active stream that we did not yet announce
         elif twitch_data[0] == 2:
-            embed = self.bot.embeds.embed_builder(title=f"{twitch_data[2]}",
-                                                  description=f"[**Watch the stream live on "
-                                                              f"twitch.tv/{self.streamer}**]"
-                                                              f"(https://twitch.tv/{self.streamer})",
-                                                  time_stamp=True)
+            embed = self.bot.embeds.embed_builder(title=f"<:twitch:660116652012077080> {self.streamer} - "
+                                                        f"Live on Twitch",
+                                                  description="", time_stamp=True)
+            embed.add_field(name="Title", value=twitch_data[2], inline=False)
+            embed.add_field(name="Link", value=f"https://twitch.tv/{self.streamer}", inline=False)
             embed.set_image(url=twitch_data[3])
 
             if config.TWITCH_EVERYONE_PING_ON_ANNOUNCEMENT:
