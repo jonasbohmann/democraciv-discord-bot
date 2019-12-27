@@ -12,54 +12,12 @@ class Laws(commands.Cog, name='Law'):
     def __init__(self, bot):
         self.bot = bot
 
-    async def search_by_name(self, name: str):
-        bills = await self.bot.db.fetch("SELECT * FROM legislature_bills WHERE bill_name % $1", name.lower())
-
-        found_bills = []
-
-        for bill in bills:
-            if bill['has_passed_leg']:
-                if bill['is_vetoable'] and bill['has_passed_ministry']:
-                    _id = (await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
-                                                      bill['id']))['law_id']
-                    found_bills.append(f"Law #{_id} - [{bill['bill_name']}]({bill['link']})")
-                elif not bill['is_vetoable']:
-                    _id = (await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
-                                                      bill['id']))['law_id']
-                    found_bills.append(f"Law #{_id} - [{bill['bill_name']}]({bill['link']})")
-                else:
-                    continue
-            else:
-                continue
-
-        return found_bills
-
-    async def search_by_tag(self, tag: str):
-        found_bills = await self.bot.db.fetch("SELECT id FROM legislature_tags WHERE tag % $1", tag.lower())
-
-        bills = []
-
-        for bill in found_bills:
-            bills.append(bill['id'])
-
-        bills = list(set(bills))
-
-        pretty_laws = []
-
-        for bill in bills:
-            bill_id = (await self.bot.db.fetchrow("SELECT bill_id FROM legislature_laws WHERE law_id = $1", bill))[
-                'bill_id']
-            details = await self.bot.db.fetchrow("SELECT link, bill_name FROM legislature_bills WHERE id = $1",
-                                                 bill_id)
-            pretty_laws.append(f"Law #{bill} - [{details['bill_name']}]({details['link']})")
-
-        return pretty_laws
-
     @commands.group(name='law', aliases=['laws'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def law(self, ctx, law_id: str = None):
         """List all laws or get details about a specific law"""
 
+        # If no ID was specified, list all existing laws
         if not law_id or law_id.lower() == 'all':
             async with ctx.typing():
                 all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws")
@@ -79,6 +37,7 @@ class Laws(commands.Cog, name='Law'):
                                                           f"details about a law.")
             await pages.paginate()
 
+        # If the user did specify a law_id, send details about that law
         else:
             try:
                 law_id = int(law_id)
@@ -110,17 +69,21 @@ class Laws(commands.Cog, name='Law'):
 
         async with ctx.typing():
             # First, search by name
-            results = await self.search_by_name(' '.join(query))
+            results = await self.bot.laws.search_by_name(' '.join(query))
 
+            # If the direct lookup by name didn't match anything, search for similar tag of each word of :param query
             if not results:
                 results = []
                 for substring in query:
-                    result = await self.search_by_tag(substring)
+                    result = await self.bot.laws.search_by_tag(substring)
                     if result:
                         results.append(result)
 
+                # As LawUtils.search_by_tag() returns a list of matches, put all elements of all sublists
+                # into the results list
                 results = [item for sublist in results for item in sublist]
 
+                # Eliminate duplicate results
                 results = list(set(results))
 
             if not results or len(results) == 0 or results[0] == []:
