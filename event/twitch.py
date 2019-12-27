@@ -184,7 +184,7 @@ class Twitch:
                                                     f"Game Session X: Turns A-B`.", inline=False)
 
         embed.add_field(name="Set the description",
-                        value=f"Use this formatting for the description: ```This is the Xth game session of the of "
+                        value=f"Use this formatting for the description: ```This is the Xth game session of "
                               f"Democraciv MK{mk.MARK}, where we play as {mk.NATION_NAME} in {mk.CIV_GAME}.\n\n"
                               f"Democraciv is a community on Reddit dedicated to play a single-player game of"
                               f" {mk.CIV_GAME} with a simulated, model government. We have a Legislature, a Supreme "
