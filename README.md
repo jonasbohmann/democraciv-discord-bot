@@ -41,6 +41,7 @@ The file should look like this:
 TOKEN = ""
 TWITCH_API_KEY = ""
 TIMEZONEDB_API_KEY = ""
+YOUTUBE_DATA_V3_API_KEY = ""
 
 
 # PostgreSQL config
@@ -49,8 +50,8 @@ POSTGRESQL_PASSWORD = ""
 POSTGRESQL_HOST = ""
 POSTGRESQL_DATABASE = ""
 ```
-Add the token of your Discord App, your Twitch Helix API key if you enabled the Twitch module, your TimeZoneDB API Key, 
-and your PostgreSQL configuration like above. 
+Add the token of your Discord App, your Twitch Helix API key if you enabled the Twitch module, your API key for the 
+YouTube Data v3 API if you enabled YouTube notifications, your TimeZoneDB API Key, and your PostgreSQL configuration like above. 
 
 After you've done all that, run `client.py`.
 
@@ -108,6 +109,7 @@ event.logging | Logs events (member joins/leaves, message deleted/edited etc.) t
 event.error_handler | Handles internal errors |
 event.reddit | Handles notifications when there's a new post on r/democraciv |
 event.twitch | Handles notifications when twitch.tv/democraciv is live |
+event.youtube | Handles notifications when a new video on the Democraciv YouTube channel was uploaded|
 
 
 ##  Roadmap
