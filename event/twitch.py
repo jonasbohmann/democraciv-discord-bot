@@ -97,7 +97,10 @@ class Twitch:
                 sent_mod_reminder = sent_mod_reminder['has_sent_mod_reminder']
 
             if not sent_mod_reminder:
-                await self.export_twitch_reminder(twitch_data[1])
+                # TODO - This does not work how you want it to work
+                # await self.export_twitch_reminder(twitch_data[1])
+
+                pass
 
         # 2 represents active stream that we did not yet announce
         elif twitch_data[0] == 2:
@@ -221,8 +224,7 @@ class Twitch:
         embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/423938725525979146/"
                                 "645394491133394966/01-twitch-logo.jpg")
 
-        await moderation_channel.send("@here")
-        await moderation_channel.send(embed=embed)
+        await moderation_channel.send(content='@here', embed=embed)
 
         await self.bot.db.execute("UPDATE twitch_streams SET has_sent_mod_reminder = true WHERE id = $1",
                                   stream_id)

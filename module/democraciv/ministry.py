@@ -1,3 +1,4 @@
+import asyncpg
 import discord
 
 from discord.ext import commands
@@ -17,6 +18,8 @@ class Ministry(commands.Cog):
         self.lt_prime_minister = None
 
     def refresh_minister_discord_objects(self):
+        """Refreshes class attributes with current Prime Minister and Lt. Prime Minister discord.Member objects"""
+
         try:
             self.prime_minister = mk.get_prime_minister_role(self.bot).members[0]
         except IndexError:
@@ -27,15 +30,18 @@ class Ministry(commands.Cog):
         except IndexError:
             raise exceptions.NoOneHasRoleError("Lieutenant Prime Minister")
 
-    async def get_open_vetos(self):
+    async def get_open_vetos(self) -> asyncpg.Record:
+        """Gets all bills that  passed the Legislature, are vetoable and were not yet voted on by the Ministry"""
         open_bills = await self.bot.db.fetch(
             "SELECT (id, link, bill_name, submitter, leg_session) FROM legislature_bills"
-            " WHERE has_passed_leg = true AND voted_on_by_ministry = false AND has_passed_ministry = false")
+            " WHERE has_passed_leg = true AND is_vetoable = true AND voted_on_by_ministry = false"
+            " AND has_passed_ministry = false")
 
         if open_bills is not None:
             return open_bills
 
-    async def get_pretty_vetos(self):
+    async def get_pretty_vetos(self) -> list:
+        """Prettifies asyncpg.Record object of open vetos into list of strings"""
         open_bills = await self.get_open_vetos()
 
         pretty_bills = []
@@ -59,8 +65,6 @@ class Ministry(commands.Cog):
         try:
             self.refresh_minister_discord_objects()
         except exceptions.DemocracivBotException as e:
-            # We're raising the same exception again because discord.ext.commands.Exceptions only "work" (i.e. get sent
-            # to events/error_handler.py) if they get raised in an actual command
             await ctx.send(e.message)
 
         embed = self.bot.embeds.embed_builder(title=f"The Ministry of {mk.NATION_NAME}",
@@ -87,12 +91,10 @@ class Ministry(commands.Cog):
             minister_value += f"Lt. Prime Minister: -"
 
         embed.add_field(name="Head of State", value=minister_value)
-
         embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
                                             f"[Legal Code]({links.laws})\n"
                                             f"[Ministry Worksheet]({links.executiveworksheet})\n"
                                             f"[Ministry Procedures]({links.execprocedures})", inline=True)
-
         embed.add_field(name="Open Bills", value=f"{pretty_bills}", inline=False)
 
         await ctx.send(embed=embed)
@@ -146,7 +148,7 @@ class Ministry(commands.Cog):
             return
 
         if str(reaction.emoji) == "\U00002705":
-            # yes
+            # Are you sure? Yes
 
             async with ctx.typing():
                 await self.bot.db.execute(
@@ -160,7 +162,8 @@ class Ministry(commands.Cog):
                                                                       f" {bill_details['bill_name']} was vetoed "
                                                                       f"by the Ministry.")
 
-        else:
+        elif str(reaction.emoji) == "\U0000274c":
+            # Are you sure? No
             await ctx.send(f"Aborted.")
 
     @veto.error
@@ -206,18 +209,22 @@ class Ministry(commands.Cog):
             return
 
         if str(reaction.emoji) == "\U00002705":
-            # yes
+            # Are you sure? Yes
 
             async with ctx.typing():
                 if await self.bot.laws.pass_into_law(ctx, bill_id, bill_details):
+                    # pass_into_law() returned True -> success
                     await ctx.send(":white_check_mark: Successfully passed this bill into law!")
                     await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_speaker_role(self.bot).mention}, "
                                                                           f"'{bill_details['bill_name']}' was passed "
                                                                           f"into law by"
                                                                           f" the Ministry.")
                 else:
-                    await ctx.send(":x: Unexpected error occured.")
-        else:
+                    # database error in pass_into_law()
+                    await ctx.send(":x: Unexpected error occurred.")
+
+        elif str(reaction.emoji) == "\U0000274c":
+            # Are you sure? No
             await ctx.send(f"Aborted.")
 
     @passbill.error
