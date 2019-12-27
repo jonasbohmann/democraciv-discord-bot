@@ -1,6 +1,6 @@
 import discord
 
-from config import config
+from config import config, links
 from discord.ext import commands
 
 
@@ -20,7 +20,10 @@ class About(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def about(self, ctx):
         """About this bot"""
-        embed = self.bot.embeds.embed_builder(title='About This Bot', description="")
+        invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
+
+        embed = self.bot.embeds.embed_builder(title='About This Bot', description=f"[Invite this bot to your"
+                                                                                  f" Discord Guild.]({invite_url})")
         embed.add_field(name='Author', value=self.bot.DerJonas_object.name, inline=True)
         embed.add_field(name='Version', value=config.BOT_VERSION, inline=True)
         embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=True)
@@ -31,7 +34,7 @@ class About(commands.Cog):
         embed.add_field(name='Ping', value=(str(self.bot.get_ping()) + 'ms'), inline=True)
         embed.add_field(name="Source Code", value="[Link](https://github.com/jonasbohmann/democraciv-discord-bot)",
                         inline=True)
-        embed.add_field(name='Commands', value='See ' + config.BOT_PREFIX + 'help', inline=True)
+        embed.add_field(name='Commands', value='See ' + config.BOT_PREFIX + 'help', inline=False)
         embed.set_thumbnail(url=self.bot.DerJonas_object.avatar_url)
         await ctx.send(embed=embed)
 
