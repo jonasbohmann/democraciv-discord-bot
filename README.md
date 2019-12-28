@@ -84,6 +84,16 @@ You can configure everything else that is Reddit related in the `config.py`.
 If you do not want to use the Reddit announcements feature, you have to set `REDDIT_ENABLED` in the
 `config.py` to `False`.
 
+####  YouTube 
+
+Notifications for new video uploads from a YouTube channel are enabled by default, but can be disabled in the `config.py`. You'll need
+an API key for the YouTube Data v3 API from Google. [This](https://developers.google.com/youtube/v3) has more information on how to get one.
+
+You can configure everything else that is YouTube related in the `config.py`.
+
+If you do not want to use the YouTube announcements feature, you have to set `YOUTUBE_VIDEO_ENABLED` in the
+`config.py` to `False`.
+
 
 ##  Modules
 You can add and remove modules by adding or removing them from `initial_extensions` in `client.py`.
