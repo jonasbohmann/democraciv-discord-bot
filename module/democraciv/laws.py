@@ -69,13 +69,13 @@ class Laws(commands.Cog, name='Law'):
 
         async with ctx.typing():
             # First, search by name
-            results = await self.bot.laws.search_by_name(' '.join(query))
+            results = await self.bot.laws.search_law_by_name(' '.join(query))
 
             # If the direct lookup by name didn't match anything, search for similar tag of each word of :param query
             if not results:
                 results = []
                 for substring in query:
-                    result = await self.bot.laws.search_by_tag(substring)
+                    result = await self.bot.laws.search_law_by_tag(substring)
                     if result:
                         results.append(result)
 

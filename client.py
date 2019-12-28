@@ -201,7 +201,8 @@ class DemocracivBot(commands.Bot):
 
         self.DerJonas_object = self.get_user(config.BOT_AUTHOR_ID)
 
-        self.daily_db_backup.start()
+        if config.DATABASE_DAILY_BACKUP_ENABLED:
+            self.daily_db_backup.start()
 
     async def on_message(self, message):
         # Don't process message/command from DMs to prevent spamming
@@ -265,10 +266,10 @@ class DemocracivBot(commands.Bot):
 
         # Upload the file to the #backup channel in the Moderation category on the Democraciv server
         file = discord.File(f'db/backup/{file_name}')
-        backup_channel = self.get_channel(656214962854821928)
+        backup_channel = self.get_channel(config.DATABASE_DAILY_BACKUP_DISCORD_CHANNEL)
 
         if backup_channel is None:
-            print(f"[DATABASE] Couldn't find #backup Discord channel for database backup 'db/backup/{file_name}'.")
+            print(f"[DATABASE] Couldn't find Backup Discord channel for database backup 'db/backup/{file_name}'.")
             return
 
         await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)

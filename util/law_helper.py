@@ -271,7 +271,7 @@ class LawUtils:
 
         return f"https://hastebin.com/{key}"
 
-    async def search_by_name(self, name: str) -> list:
+    async def search_law_by_name(self, name: str) -> list:
         """Search for laws by their name, returns list with prettified strings of found laws"""
         bills = await self.bot.db.fetch("SELECT * FROM legislature_bills WHERE bill_name % $1", name.lower())
 
@@ -300,7 +300,7 @@ class LawUtils:
 
         return found_bills
 
-    async def search_by_tag(self, tag: str) -> list:
+    async def search_law_by_tag(self, tag: str) -> list:
         """Search for laws by their tag(s), returns list with prettified strings of found laws"""
 
         # Once a bill is passed into law, the bot automatically generates tags for it to allow for easier and faster

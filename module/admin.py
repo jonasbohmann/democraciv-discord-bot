@@ -203,7 +203,7 @@ class Admin(commands.Cog):
             twitch_embed.add_field(name="Enabled", value=config.TWITCH_ENABLED)
             twitch_embed.add_field(name="Twitch Channel", value=config.TWITCH_CHANNEL)
             reddit_embed.add_field(name="Discord Channel", value=self.bot.get_channel
-            (config.TWITCH_ANNOUCEMENT_CHANNEL).mention, inline=True)
+            (config.TWITCH_ANNOUNCEMENT_CHANNEL).mention, inline=True)
             twitch_embed.add_field(name="Everyone Ping", value=config.TWITCH_ENABLED, inline=False)
             await ctx.send(embed=twitch_embed)
 

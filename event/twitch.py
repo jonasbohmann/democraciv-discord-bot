@@ -61,14 +61,14 @@ class Twitch:
             return
 
         try:
-            channel = self.bot.democraciv_guild_object.get_channel(config.TWITCH_ANNOUCEMENT_CHANNEL)
+            channel = self.bot.democraciv_guild_object.get_channel(config.TWITCH_ANNOUNCEMENT_CHANNEL)
         except AttributeError:
             print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
                   f'in the config to a server I am in or disable Twitch announcements.')
             raise exceptions.GuildNotFoundError(config.DEMOCRACIV_SERVER_ID)
 
         if channel is None:
-            raise exceptions.ChannelNotFoundError(config.TWITCH_ANNOUCEMENT_CHANNEL)
+            raise exceptions.ChannelNotFoundError(config.TWITCH_ANNOUNCEMENT_CHANNEL)
 
         twitch_data = await self.check_twitch_livestream()
 
