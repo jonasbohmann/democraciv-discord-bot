@@ -84,7 +84,7 @@ class Wiki(commands.Cog):
 
         return [_title, _description, _thumbnail, _url]
 
-    @commands.command(name='cw')
+    @commands.command(name='civwiki', aliases=['cw'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def civwiki(self, ctx, *, topic: str):
         """Search for an article on the Civilization Fandom Wiki"""
