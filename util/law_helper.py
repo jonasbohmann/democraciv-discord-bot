@@ -109,9 +109,8 @@ class LawUtils:
 
             return bill_title
 
-        except Exception as e:
-            print(e)
-            print(e.__class__.__name__)
+        except Exception:
+            return None
 
     async def get_google_docs_description(self, link: str):
         """Gets content of 'og:description' tag from HTML of a Google Docs page.
