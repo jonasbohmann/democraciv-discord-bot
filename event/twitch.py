@@ -104,9 +104,9 @@ class Twitch:
 
         # 2 represents active stream that we did not yet announce
         elif twitch_data[0] == 2:
-            embed = self.bot.embeds.embed_builder(title=f"<:twitch:660116652012077080> {self.streamer} - "
+            embed = self.bot.embeds.embed_builder(title=f"<:twitch:660116652012077080>  {self.streamer} - "
                                                         f"Live on Twitch",
-                                                  description="", time_stamp=True)
+                                                  description="", has_footer=False)
             embed.add_field(name="Title", value=twitch_data[2], inline=False)
             embed.add_field(name="Link", value=f"https://twitch.tv/{self.streamer}", inline=False)
             embed.set_image(url=twitch_data[3])

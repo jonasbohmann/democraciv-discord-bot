@@ -4,7 +4,7 @@ from config import config
 from discord.ext import commands
 
 
-class Wikipedia(commands.Cog):
+class Wiki(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
@@ -39,10 +39,76 @@ class Wikipedia(commands.Cog):
             else:
                 return None
 
+    async def get_civilization_fandom_suggested_article(self, query: str) -> int:
+
+        async with self.bot.session.get(f"https://civilization.fandom.com/api/v1/SearchSuggestions"
+                                        f"/List?query={query}") as response:
+            if response.status == 200:
+                suggested_json = await response.json()
+
+        try:
+            suggested_article = suggested_json['items'][0]['title']
+        except (IndexError, KeyError):
+            return -1
+
+        async with self.bot.session.get(f"https://civilization.fandom.com/api/v1/Search/List?query={suggested_article}"
+                                        f"&rank=most-viewed&limit=1&minArticleQuality=10&"
+                                        f"batch=1&namespaces=0%2C14") as response:
+            if response.status == 200:
+                search_json = await response.json()
+
+        try:
+            article_id = search_json['items'][0]['id']
+        except (IndexError, KeyError):
+            return -1
+
+        return article_id
+
+    async def get_civilization_fandom_article_details(self, article_id: int) -> list:
+
+        if article_id == -1:
+            return [None]
+
+        async with self.bot.session.get(f"https://civilization.fandom.com/api/v1/Articles/Details?ids={article_id}"
+                                        f"&abstract=100&width=200&height=200") as response:
+
+            if response.status == 200:
+                article = await response.json()
+
+        article_id = str(article_id)
+
+        _title = article['items'][article_id]['title'] or None
+        _description = article['items'][article_id]['abstract'] or None
+        _thumbnail = article['items'][article_id]['thumbnail'] or None
+        _url = f"https://civilization.fandom.com{article['items'][article_id]['url']}" or None
+
+        return [_title, _description, _thumbnail, _url]
+
+    @commands.command(name='cw')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def civwiki(self, ctx, *, topic: str):
+        """Search for an article on the Civilization Fandom Wiki"""
+
+        async with ctx.typing():
+            article = await self.get_civilization_fandom_article_details(
+                                                    await self.get_civilization_fandom_suggested_article(topic))
+
+        if not article[0]:
+            return await ctx.send(f":x: Couldn't find any article that's related to '{topic}'.")
+
+        embed = self.bot.embeds.embed_builder(title=f"<:fandom:660488383855984640>  {article[0]}",
+                                              description=article[1], has_footer=False)
+        embed.add_field(name='Link', value=article[3])
+
+        if article[2] is not None and article[2].startswith('https://'):
+            embed.set_thumbnail(url=article[2])
+
+        await ctx.send(embed=embed)
+
     @commands.command(name='wikipedia')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def wikipedia(self, ctx, *, topic: str):
-        """Search for a topic on Wikipedia\nUse quotes for topics that consist of multiple words!"""
+        """Search for an article on Wikipedia"""
         async with ctx.typing():  # Show typing status so that user knows that stuff is happening
             result = await self.get_wikipedia_result_with_rest_api(topic)
 
@@ -75,7 +141,8 @@ class Wikipedia(commands.Cog):
             except KeyError:
                 pass
 
-            embed = self.bot.embeds.embed_builder(title=_title, description=_summary_in_2_sentences)
+            embed = self.bot.embeds.embed_builder(title=f"<:wikipedia:660487143856275497>  {_title}",
+                                                  description=_summary_in_2_sentences, has_footer=False)
             embed.add_field(name='Link', value=_url)
 
             if _thumbnail_url.startswith('https://'):
@@ -84,4 +151,4 @@ class Wikipedia(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(Wikipedia(bot))
+    bot.add_cog(Wiki(bot))

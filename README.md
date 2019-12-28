@@ -21,7 +21,7 @@ for new uploads from the Democraciv YouTube channel
 *  Keeps track of all legislative sessions, ministry vetos and laws that passed both Legislature & Executive
 *  Search for active laws by name or by automatically generated tags
 *  Join and leave political parties and see their members and ranking
-*  Smart Wikipedia queries
+*  Smart Wikipedia and Sid Meier's Civilization Wikia queries
 *  Welcome messages & default roles
 *  Self-assignable role management
 *  Help command that automatically scales

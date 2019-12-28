@@ -76,8 +76,8 @@ class YouTube:
             video_link = f"https://youtube.com/watch?v={_id}"
 
             embed = self.bot.embeds.embed_builder(
-                title=f"<:youtube:660114810444447774> {channel} - New YouTube video uploaded",
-                description="", time_stamp=True)
+                title=f"<:youtube:660114810444447774>  {channel} - New YouTube video uploaded",
+                description="", has_footer=False)
             embed.add_field(name="Title", value=f"[{title}]({video_link})", inline=False)
             embed.add_field(name="Description", value=f"{description}", inline=False)
             embed.set_image(url=thumbnail_url)
