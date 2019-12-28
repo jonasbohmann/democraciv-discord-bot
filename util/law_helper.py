@@ -109,8 +109,9 @@ class LawUtils:
 
             return bill_title
 
-        except Exception:
-            return None
+        except Exception as e:
+            print(e)
+            print(e.__class__.__name__)
 
     async def get_google_docs_description(self, link: str):
         """Gets content of 'og:description' tag from HTML of a Google Docs page.
@@ -138,7 +139,7 @@ class LawUtils:
             return None
 
     @staticmethod
-    def generate_law_tags(google_docs_description: str, author_description: str):
+    def generate_law_tags(google_docs_description: str, author_description: str) -> list:
         """Generates tags from all nouns of submitter-provided description and the Google Docs description"""
 
         # Function to check if token is noun
