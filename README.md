@@ -14,8 +14,8 @@ Provides useful information, political party & role management and much more.
 **Run `pip install -r requirements.txt` to install all required dependencies.**
 
 ##  Features
-*  Announcements for live streams on twitch.tv/democraciv
-*  Announcements for new posts from reddit.com/r/democraciv
+*  Announcements for live streams on twitch.tv/democraciv, for new posts from reddit.com/r/democraciv and 
+for new uploads from the Democraciv YouTube channel
 *  Helps the Speaker of the Legislature with legislative sessions and submissions (bills & motions)
 *  Supports the Prime Minister with vetoes by keeping them up-to-date with passed bills from the Legislature
 *  Keeps track of all legislative sessions, ministry vetos and laws that passed both Legislature & Executive
@@ -25,6 +25,7 @@ Provides useful information, political party & role management and much more.
 *  Welcome messages & default roles
 *  Self-assignable role management
 *  Help command that automatically scales
+*  Gets the current time in over 400 timezones
 *  Event logging 
 
 ##  Installation
