@@ -1,10 +1,7 @@
 import asyncio
-
 import aiohttp
-import discord
 import unittest
 
-from config import config
 from util.law_helper import LawUtils
 
 

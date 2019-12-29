@@ -1,4 +1,5 @@
 import re
+import urllib.parse
 
 from config import config
 from discord.ext import commands
@@ -8,6 +9,15 @@ class Wiki(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    @staticmethod
+    def percentage_encode_url(link: str) -> str:
+        if link.startswith('https://'):
+            link = link[8:]
+            url = urllib.parse.quote(link)
+            return 'https://' + url
+        else:
+            return urllib.parse.quote(link)
 
     async def get_wikipedia_result_with_rest_api(self, query):
 
@@ -99,14 +109,7 @@ class Wiki(commands.Cog):
         embed = self.bot.embeds.embed_builder(title=f"<:fandom:660488383855984640>  {article[0]}",
                                               description=article[1], has_footer=False)
 
-        # Work around for https://redd.it/5y5hj1
-        if ctx.author.is_on_mobile():
-            async with self.bot.session.get(f"https://tinyurl.com/api-create.php?url={article[3]}") as response:
-                fixed_url = await response.text()
-            embed.add_field(name='Link', value=f"{fixed_url}")
-
-        else:
-            embed.add_field(name='Link', value=f"{article[3]}")
+        embed.add_field(name='Link', value=f"{self.percentage_encode_url(article[3])}")
 
         if article[2] is not None and article[2].startswith('https://'):
             embed.set_thumbnail(url=article[2])
@@ -152,14 +155,7 @@ class Wiki(commands.Cog):
             embed = self.bot.embeds.embed_builder(title=f"<:wikipedia:660487143856275497>  {_title}",
                                                   description=_summary_in_2_sentences, has_footer=False)
 
-            # Work around for https://redd.it/5y5hj1
-            if ctx.author.is_on_mobile():
-                async with self.bot.session.get(f"https://tinyurl.com/api-create.php?url={_url}") as response:
-                    fixed_url = await response.text()
-
-                embed.add_field(name='Link', value=fixed_url)
-            else:
-                embed.add_field(name='Link', value=_url)
+            embed.add_field(name='Link', value=self.percentage_encode_url(_url))
 
             if _thumbnail_url.startswith('https://'):
                 embed.set_thumbnail(url=_thumbnail_url)
