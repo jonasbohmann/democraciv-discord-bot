@@ -117,7 +117,7 @@ class DemocracivBot(commands.Bot):
         if config.REDDIT_ENABLED:
             Reddit(self)
 
-        if config.YOUTUBE_VIDEO_ENABLED:
+        if config.YOUTUBE_ENABLED:
             YouTube(self)
 
     async def initialize_aiohttp_session(self):

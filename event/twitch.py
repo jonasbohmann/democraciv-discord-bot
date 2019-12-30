@@ -112,11 +112,9 @@ class Twitch:
             embed.set_image(url=twitch_data[3])
 
             if config.TWITCH_EVERYONE_PING_ON_ANNOUNCEMENT:
-                await channel.send(f'@everyone {self.streamer} is live on Twitch!')
+                await channel.send(f'@everyone {self.streamer} is live on Twitch!', embed=embed)
             else:
-                await channel.send(f'{self.streamer} is live on Twitch!')
-
-            await channel.send(embed=embed)
+                await channel.send(f'{self.streamer} is live on Twitch!', embed=embed)
 
             # Send reminder about streaming rules to executive channel
             await self.streaming_rules_reminder(twitch_data[1])

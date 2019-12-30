@@ -15,7 +15,7 @@ Provides useful information, political party & role management and much more.
 
 ##  Features
 *  Announcements for live streams on twitch.tv/democraciv, for new posts from reddit.com/r/democraciv and 
-for new uploads from the Democraciv YouTube channel
+for new uploads and new live broadcasts from the Democraciv YouTube channel
 *  Helps the Speaker of the Legislature with legislative sessions and submissions (bills & motions)
 *  Supports the Prime Minister with vetoes by keeping them up-to-date with passed bills from the Legislature
 *  Keeps track of all legislative sessions, ministry vetos and laws that passed both Legislature & Executive

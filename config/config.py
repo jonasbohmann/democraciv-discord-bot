@@ -34,7 +34,10 @@ TWITCH_EVERYONE_PING_ON_ANNOUNCEMENT = True
 
 
 # YouTube Notifications
-YOUTUBE_VIDEO_ENABLED = True
+YOUTUBE_ENABLED = True
+YOUTUBE_VIDEO_UPLOADS_ENABLED = True
+YOUTUBE_LIVESTREAM_ENABLED = False
+YOUTUBE_EVERYONE_PING_ON_STREAM = False
 YOUTUBE_CHANNEL_ID = 'UC-NukxPakwQIvx73VjtIPnw'  # The channel ID of the YouTuber's channel
 YOUTUBE_CHANNEL_UPLOADS_PLAYLIST = 'UU-NukxPakwQIvx73VjtIPnw'  # The playlist ID of the YouTuber's 'Uploads' playlist
 YOUTUBE_ANNOUNCEMENT_CHANNEL = 209432307730350080  # The Discord Channel for YouTube notifications

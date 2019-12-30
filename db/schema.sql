@@ -27,6 +27,10 @@ CREATE TABLE IF NOT EXISTS youtube_uploads(
     id text UNIQUE
 );
 
+CREATE TABLE IF NOT EXISTS youtube_streams(
+    id text UNIQUE
+);
+
 CREATE TABLE IF NOT EXISTS twitch_streams(
     id text UNIQUE,
     has_sent_mod_reminder bool,
