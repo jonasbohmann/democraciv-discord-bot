@@ -279,23 +279,14 @@ class Log(commands.Cog):
                                                           f"send a DM to {self.bot.DerJonas_object.mention}!")
 
         # Add new guild to database
-        status = await self.bot.db.execute("INSERT INTO guilds (id, welcome, logging, logging_excluded, defaultrole) "
-                                           "VALUES ($1, false, false, ARRAY[0], false)", guild.id)
+        await self.bot.db.execute("INSERT INTO guilds (id, welcome, logging, logging_excluded, defaultrole) "
+                                  "VALUES ($1, false, false, ARRAY[0], false) ON CONFLICT DO NOTHING ",
+                                  guild.id)
 
-        if status == "INSERT 0 1":
-            try:
-                await introduction_channel.send(embed=embed)
-            except discord.Forbidden:
-                print(f"[BOT] Got Forbidden while sending my introduction message on {guild.name} ({guild.id})")
-
-        elif not status:
-            try:
-                await introduction_channel.send(f":x: Unexpected error occurred while initializing this guild.\n\n"
-                                                f"Help me {self.bot.DerJonas_object.mention} :worried:")
-            except discord.Forbidden:
-                print(f"[BOT] Got Forbidden while sending my introduction message on {guild.name} ({guild.id})")
-
-        return
+        try:
+            await introduction_channel.send(embed=embed)
+        except discord.Forbidden:
+            print(f"[BOT] Got Forbidden while sending my introduction message on {guild.name} ({guild.id})")
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role):
