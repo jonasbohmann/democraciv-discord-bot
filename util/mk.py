@@ -8,7 +8,10 @@ from util import exceptions
 """
 
 # Moderation
+MOD_REQUESTS_CHANNEL = 423942916776525825
 MODERATION_TEAM_CHANNEL = 209410498804973569
+MODERATION_NOTIFICATIONS_CHANNEL = 232108753477042187
+MODERATION_ROLE = 547530938712719373
 CIV_GAME = "Sid Meier's Civilization 5"
 MARK = "6"
 
@@ -33,6 +36,33 @@ LEGISLATOR_ROLE = 639438268601204737
 # Courts
 CHIEF_JUSTICE_ROLE = 639442447721562122
 JUSTICE_ROLE = 639438578304417792
+
+
+def get_moderation_role(bot):
+    to_return = bot.democraciv_guild_object.get_role(MODERATION_ROLE)
+
+    if to_return is None:
+        raise exceptions.RoleNotFoundError("Moderation")
+
+    return to_return
+
+
+def get_mod_requests_channel(bot):
+    to_return = bot.democraciv_guild_object.get_channel(MOD_REQUESTS_CHANNEL)
+
+    if to_return is None:
+        raise exceptions.ChannelNotFoundError("mod-requests")
+
+    return to_return
+
+
+def get_moderation_notifications_channel(bot):
+    to_return = bot.democraciv_guild_object.get_channel(MODERATION_NOTIFICATIONS_CHANNEL)
+
+    if to_return is None:
+        raise exceptions.ChannelNotFoundError("moderation-notifications")
+
+    return to_return
 
 
 def get_moderation_team_channel(bot):

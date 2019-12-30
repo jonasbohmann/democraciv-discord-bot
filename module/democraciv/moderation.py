@@ -1,6 +1,6 @@
 import discord
 
-from util import utils
+from util import utils, mk
 from config import config, token
 
 from discord.ext import commands
@@ -11,6 +11,25 @@ class Moderation(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.mod_request_channel = mk.MOD_REQUESTS_CHANNEL
+
+    @commands.Cog.listener(name="on_message")
+    async def mod_request_listener(self, message):
+        if message.channel.id != self.mod_request_channel:
+            return
+
+        if mk.get_moderation_role(self.bot) not in message.role_mentions:
+            return
+
+        embed = self.bot.embeds.embed_builder(title=":grey_exclamation: New Request in #mod-requests",
+                                              description=f"[Jump to message.]"
+                                                          f"({message.jump_url}"
+                                                          f")")
+        embed.add_field(name="From", value=message.author.mention)
+        embed.add_field(name="Request", value=message.content, inline=False)
+
+        await mk.get_moderation_notifications_channel(self.bot).send(content=mk.get_moderation_role(self.bot).mention,
+                                                                     embed=embed)
 
     @commands.command(name='hub', aliases=['modhub', 'moderationhub', 'mhub'])
     @commands.has_role("Moderation")
