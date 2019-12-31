@@ -139,9 +139,11 @@ class Moderation(commands.Cog):
         await ctx.author.send(embed=embed)
 
     @commands.command(name='alt')
+    @commands.has_role("Moderation")
+    @utils.is_democraciv_guild()
     async def alt(self, ctx, member: discord.Member):
         """Check if someone is an alt"""
-        chance = await self.calculate_alt_chance(member, False)
+        chance = await self.calculate_alt_chance(member, True)
         embed = self.bot.embeds.embed_builder(title="Possible Alt Detection", description="This is in no way perfect "
                                                                                           "and should always be taken"
                                                                                           " with a grain of salt.")
