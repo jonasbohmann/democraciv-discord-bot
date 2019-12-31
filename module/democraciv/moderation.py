@@ -76,13 +76,13 @@ class Moderation(commands.Cog):
             helpchannel = self.bot.get_channel(466922441344548905)
             propaganda = self.bot.get_channel(636446062084620288)
             offtopic = self.bot.get_channel(208986320356376578)
-            bot_channel = self.bot.get_channel(278254099768541204)
             public_forum = self.bot.get_channel(637016498535137340)
 
-            channels = [citizens, welcome, helpchannel, propaganda, offtopic, bot_channel, public_forum]
+            channels = [citizens, welcome, helpchannel, propaganda, offtopic, public_forum]
 
-            for i in range(6):
-                async for message in channels[i].history(limit=500):
+            for i in range(5):
+                async for message in channels[i].history(limit=None):
+                    # This takes a long time and shouldn't really be used
                     if message.author == member:
                         counter += 1
 
@@ -144,10 +144,10 @@ class Moderation(commands.Cog):
     @commands.command(name='alt')
     @commands.has_role("Moderation")
     @utils.is_democraciv_guild()
-    async def alt(self, ctx, member: discord.Member):
+    async def alt(self, ctx, member: discord.Member, check_messages: bool = False):
         """Check if someone is an alt"""
         async with ctx.typing():
-            chance = await self.calculate_alt_chance(member, True)
+            chance = await self.calculate_alt_chance(member, check_messages)
 
         embed = self.bot.embeds.embed_builder(title="Possible Alt Detection", description="This is in no way perfect "
                                                                                           "and should always be taken"
