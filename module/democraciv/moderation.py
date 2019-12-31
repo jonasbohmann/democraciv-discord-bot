@@ -1,4 +1,5 @@
 import discord
+import datetime
 
 from util import utils, mk
 from config import config, token
@@ -13,15 +14,92 @@ class Moderation(commands.Cog):
         self.bot = bot
         self.mod_request_channel = mk.MOD_REQUESTS_CHANNEL
 
+    async def calculate_alt_chance(self, member: discord.Member, check_messages: bool = False) -> int:
+        is_alt_chance = 0
+
+        discord_registration_duration_in_s = (datetime.datetime.utcnow() - member.created_at).total_seconds()
+        hours_since = divmod(discord_registration_duration_in_s, 3600)[0]
+
+        if hours_since <= 48:
+            is_alt_chance += 0.1
+            if hours_since <= 24:
+                is_alt_chance += 0.2
+                if hours_since <= 12:
+                    is_alt_chance += 0.25
+                    if hours_since <= 1:
+                        is_alt_chance += 0.35
+
+        weird_names = ["alt", "mysterious", "anonymous", "anon", "banned", "ban", "das", "mysterybox", "not",
+                       "definitelynot"]
+
+        if any(name in member.name.lower() for name in weird_names) or any(
+                name in member.display_name.lower() for name in weird_names):
+            is_alt_chance += 0.45
+
+        default_avatars = ["https://cdn.discordapp.com/embed/avatars/0.png",
+                           "https://cdn.discordapp.com/embed/avatars/1.png",
+                           "https://cdn.discordapp.com/embed/avatars/2.png",
+                           "https://cdn.discordapp.com/embed/avatars/3.png",
+                           "https://cdn.discordapp.com/embed/avatars/4.png"]
+
+        if member.avatar_url in default_avatars:
+            is_alt_chance += 0.65
+
+        if member.status != discord.Status.offline:
+            if isinstance(member.web_status, discord.Status) and member.web_status != discord.Status.offline:
+                is_alt_chance += 0.15
+            elif isinstance(member.desktop_status, discord.Status) and member.desktop_status != discord.Status.offline:
+                is_alt_chance += 0.05
+
+        if member.premium_since is not None:
+            is_alt_chance -= 2
+
+        if len(member.activities) > 0:
+            for act in member.activities:
+                if act.type != 4:  # Custom Status
+                    is_alt_chance -= 1.5
+                    break
+
+        if member.is_avatar_animated():
+            is_alt_chance -= 2
+
+        if check_messages:
+            # This checks how often the member talked in the most common channels (#citizens, #welcome, #public-forum,
+            # etc..)
+
+            counter = 0
+            citizens = self.bot.get_channel(208984105310879744)
+            welcome = self.bot.get_channel(253009353601318912)
+            helpchannel = self.bot.get_channel(466922441344548905)
+            propaganda = self.bot.get_channel(636446062084620288)
+            offtopic = self.bot.get_channel(208986320356376578)
+            bot_channel = self.bot.get_channel(278254099768541204)
+            public_forum = self.bot.get_channel(637016498535137340)
+
+            channels = [citizens, welcome, helpchannel, propaganda, offtopic, bot_channel, public_forum]
+
+            for i in range(6):
+                async for message in channels[i].history(limit=500):
+                    if message.author == member:
+                        counter += 1
+
+            if counter <= 20:
+                is_alt_chance += 0.65
+
+        return is_alt_chance
+
     @commands.Cog.listener(name="on_message")
     async def mod_request_listener(self, message):
+        if message.guild != self.bot.democraciv_guild_object:
+            return
+
         if message.channel.id != self.mod_request_channel:
             return
 
         if mk.get_moderation_role(self.bot) not in message.role_mentions:
             return
 
-        embed = self.bot.embeds.embed_builder(title=":grey_exclamation: New Request in #mod-requests",
+        embed = self.bot.embeds.embed_builder(title=":pushpin: New Request in #mod-requests",
                                               description=f"[Jump to message.]"
                                                           f"({message.jump_url}"
                                                           f")")
@@ -31,15 +109,46 @@ class Moderation(commands.Cog):
         await mk.get_moderation_notifications_channel(self.bot).send(content=mk.get_moderation_role(self.bot).mention,
                                                                      embed=embed)
 
+    @commands.Cog.listener(name="on_member_join")
+    async def possible_alt_listener(self, member):
+        if member.guild != self.bot.democraciv_guild_object:
+            return
+
+        if member.bot:
+            return
+
+        chance = await self.calculate_alt_chance(member, False)
+
+        if chance >= 0.2:
+            embed = self.bot.embeds.embed_builder(title="Possible Alt Account Joined", description="")
+            embed.add_field(name="Member", value=member.mention, inline=False)
+            embed.add_field(name="Member ID", value=member.id, inline=False)
+            embed.add_field(name="Chance", value=f"There is a {chance * 100}% chance that {member} is an alt.")
+
+            await mk.get_moderation_notifications_channel(self.bot).send(content=mk.get_moderation_role(self.bot)
+                                                                         .mention, embed=embed)
+
     @commands.command(name='hub', aliases=['modhub', 'moderationhub', 'mhub'])
     @commands.has_role("Moderation")
     @utils.is_democraciv_guild()
-    async def hub(self, ctx):
+    async def hub(self, ctx, ):
         """Link to the Moderation Hub"""
         link = token.MOD_HUB or 'Link not provided.'
         embed = self.bot.embeds.embed_builder(title="Moderation Hub", description=f"[Link]({link})")
         await ctx.message.add_reaction("\U0001f4e9")
         await ctx.author.send(embed=embed)
+
+    @commands.command(name='alt')
+    async def alt(self, ctx, member: discord.Member):
+        """Check if someone is an alt"""
+        chance = await self.calculate_alt_chance(member, False)
+        embed = self.bot.embeds.embed_builder(title="Possible Alt Detection", description="This is in no way perfect "
+                                                                                          "and should always be taken"
+                                                                                          " with a grain of salt.")
+        embed.add_field(name="Target", value=member.mention, inline=False)
+        embed.add_field(name="Target ID", value=member.id, inline=False)
+        embed.add_field(name="Result", value=f"There is a {chance * 100}% chance that {member} is an alt.")
+        await ctx.send(embed=embed)
 
     @commands.command(name='registry')
     @commands.has_role("Moderation")
