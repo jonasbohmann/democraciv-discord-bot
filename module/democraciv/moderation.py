@@ -17,6 +17,9 @@ class Moderation(commands.Cog):
     async def calculate_alt_chance(self, member: discord.Member, check_messages: bool = False) -> int:
         is_alt_chance = 0
 
+        if member.bot:
+            return 0
+
         discord_registration_duration_in_s = (datetime.datetime.utcnow() - member.created_at).total_seconds()
         hours_since = divmod(discord_registration_duration_in_s, 3600)[0]
 
@@ -143,7 +146,9 @@ class Moderation(commands.Cog):
     @utils.is_democraciv_guild()
     async def alt(self, ctx, member: discord.Member):
         """Check if someone is an alt"""
-        chance = await self.calculate_alt_chance(member, True)
+        async with ctx.typing():
+            chance = await self.calculate_alt_chance(member, True)
+
         embed = self.bot.embeds.embed_builder(title="Possible Alt Detection", description="This is in no way perfect "
                                                                                           "and should always be taken"
                                                                                           " with a grain of salt.")
