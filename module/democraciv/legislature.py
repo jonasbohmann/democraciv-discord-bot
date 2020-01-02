@@ -124,11 +124,6 @@ class Legislature(commands.Cog):
             except discord.Forbidden:
                 pass
 
-    @opensession.error
-    async def opensessionerror(self, ctx, error):
-        if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
-            await ctx.send(":x: Only the cabinet is allowed to use this command!")
-
     @legislature.command(name='updatesession', aliases=['us'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_any_role("Speaker of the Legislature", "Vice-Speaker of the Legislature")
@@ -174,10 +169,7 @@ class Legislature(commands.Cog):
 
     @updatesession.error
     async def updatesessionerror(self, ctx, error):
-        if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
-            await ctx.send(":x: Only the cabinet is allowed to use this command!")
-
-        elif isinstance(error, commands.MissingRequiredArgument):
+        if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'voting_form':
                 await ctx.send(":x: You have to give me a valid Google Forms URL for the voting period to begin!")
 
@@ -208,11 +200,6 @@ class Legislature(commands.Cog):
                                                               f" Legislative Session "
                                                               f"#{active_leg_session_id} has been closed by "
                                                               f"the Cabinet.")
-
-    @closesession.error
-    async def closesessionerror(self, ctx, error):
-        if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
-            await ctx.send(":x: Only the cabinet is allowed to use this command!")
 
     @legislature.command(name='session', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -606,9 +593,6 @@ class Legislature(commands.Cog):
 
     @passbill.error
     async def passbillerror(self, ctx, error):
-        if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
-            await ctx.send(":x: Only the cabinet is allowed to use this command!")
-
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'bill_id':
                 await ctx.send(':x: You have to give me the ID of the bill you want to pass!\n\n**Usage**:\n'

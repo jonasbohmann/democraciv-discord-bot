@@ -75,7 +75,7 @@ class Roles(commands.Cog):
                     try:
                         await ctx.message.author.add_roles(discord_role)
                     except discord.Forbidden:
-                        raise exceptions.ForbiddenError("add_roles", discord_role.name)
+                        raise exceptions.ForbiddenError(exceptions.ForbiddenTask.ADD_ROLE, discord_role.name)
 
                     await ctx.send(available_roles[discord_role.id])
                 else:
@@ -86,7 +86,7 @@ class Roles(commands.Cog):
                     try:
                         await ctx.message.author.remove_roles(discord_role)
                     except discord.Forbidden:
-                        raise exceptions.ForbiddenError("remove_roles", discord_role.name)
+                        raise exceptions.ForbiddenError(exceptions.ForbiddenTask.REMOVE_ROLE, discord_role.name)
 
                     await ctx.send(f":white_check_mark: The '{discord_role.name}' role was removed from you.")
                 else:
@@ -118,7 +118,7 @@ class Roles(commands.Cog):
             try:
                 discord_role = await ctx.guild.create_role(name=role_name)
             except discord.Forbidden:
-                raise exceptions.ForbiddenError("create_role", role_name)
+                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE, role_name)
 
         else:
             discord_role = role_name
@@ -166,7 +166,7 @@ class Roles(commands.Cog):
                     try:
                         await discord_role.delete()
                     except discord.Forbidden:
-                        raise exceptions.ForbiddenError(task="delete_role", detail=role)
+                        raise exceptions.ForbiddenError(exceptions.ForbiddenTask.DELETE_ROLE, detail=role)
 
                 status = await self.bot.db.execute("DELETE FROM roles WHERE guild_id = $2 AND role_id = $1",
                                                    discord_role.id, ctx.guild.id)

@@ -49,6 +49,74 @@ class ErrorHandler(commands.Cog):
     async def on_error(self, ctx, error):
         raise error
 
+    @staticmethod
+    def format_permissions(missing_perms: list) -> str:
+        """
+        The MIT License (MIT)
+
+        Copyright (c) 2015-2019 Rapptz
+
+        Permission is hereby granted, free of charge, to any person obtaining a
+        copy of this software and associated documentation files (the "Software"),
+        to deal in the Software without restriction, including without limitation
+        the rights to use, copy, modify, merge, publish, distribute, sublicense,
+        and/or sell copies of the Software, and to permit persons to whom the
+        Software is furnished to do so, subject to the following conditions:
+
+        The above copyright notice and this permission notice shall be included in
+        all copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+        FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+        DEALINGS IN THE SOFTWARE.
+        """
+        missing = [perm.replace('_', ' ').replace('guild', 'server').title() for perm in missing_perms]
+
+        if len(missing) > 2:
+            fmt = '{}, and {}'.format(", ".join(missing[:-1]), missing[-1])
+        else:
+            fmt = ' and '.join(missing)
+
+        return fmt
+
+    @staticmethod
+    def format_roles(missing_roles: list) -> str:
+        """
+        The MIT License (MIT)
+
+        Copyright (c) 2015-2019 Rapptz
+
+        Permission is hereby granted, free of charge, to any person obtaining a
+        copy of this software and associated documentation files (the "Software"),
+        to deal in the Software without restriction, including without limitation
+        the rights to use, copy, modify, merge, publish, distribute, sublicense,
+        and/or sell copies of the Software, and to permit persons to whom the
+        Software is furnished to do so, subject to the following conditions:
+
+        The above copyright notice and this permission notice shall be included in
+        all copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+        FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+        DEALINGS IN THE SOFTWARE.
+        """
+        missing = ["'{}'".format(role) for role in missing_roles]
+
+        if len(missing) > 2:
+            fmt = '{}, or {}'.format(", ".join(missing[:-1]), missing[-1])
+        else:
+            fmt = ' or '.join(missing)
+
+        return fmt
+
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         ignored = (commands.CommandNotFound, commands.UserInputError)
@@ -57,29 +125,44 @@ class ErrorHandler(commands.Cog):
         if isinstance(error, ignored):
             return
 
-        if isinstance(error, commands.CommandOnCooldown):
-            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
-            await ctx.send(str(error))
-            return
+        elif isinstance(error, commands.MissingRequiredArgument):
+            # TODO - Remove this from ignored and remove all local command error handler that also catch this
+            return await ctx.send_help(ctx.command)
 
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.send(str(error))
-            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
-            return
+        elif isinstance(error, commands.BadArgument):
+            # TODO - Remove this from ignored and remove all local command error handler that also catch this
+            return await ctx.send_help(ctx.command)
 
-        if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(str(error))
-            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
-            return
+        elif isinstance(error, commands.BotMissingPermissions):
+            return await ctx.send(f":x: I don't have '{self.format_permissions(error.missing_perms)}' permission(s)"
+                                  f" to perform this action for you.")
 
-        # This includes most exceptions declared in util.exceptions.py
-        if isinstance(error, exceptions.DemocracivBotException):
-            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
-            await ctx.send(error.message)
-            return
+        elif isinstance(error, commands.CommandOnCooldown):
+            return await ctx.send(f":x: You are on cooldown! Try again in {error.retry_after:.2f} seconds.")
 
-        if isinstance(error, commands.NoPrivateMessage):
-            await ctx.send(str(error))
+        elif isinstance(error, commands.MissingPermissions):
+            return await ctx.send(f":x: You need '{self.format_permissions(error.missing_perms)}' permission(s) to use"
+                                  f" this command.")
+
+        elif isinstance(error, commands.MissingRole):
+            return await ctx.send(f":x: You need the '{error.missing_role}' role in order to use this command.")
+
+        elif isinstance(error, commands.MissingAnyRole):
+            return await ctx.send(f":x: You need at least one of these roles in order to use this command: "
+                                  f"{self.format_roles(error.missing_roles)}")
+
+        elif isinstance(error, commands.BotMissingAnyRole):
+            return await ctx.send(f":x: I need at least one of these roles in order to perform this action for you: "
+                                  f"{self.format_roles(error.missing_roles)}")
+
+        elif isinstance(error, commands.BotMissingRole):
+            return await ctx.send(f":x: I need the '{error.missing_role}' role in order to perform this"
+                                  f" action for you.")
+
+        # This includes all exceptions declared in util.exceptions.py
+        elif isinstance(error, exceptions.DemocracivBotException):
+            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            return await ctx.send(error.message)
 
 
 def setup(bot):

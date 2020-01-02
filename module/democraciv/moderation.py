@@ -192,6 +192,7 @@ class Moderation(commands.Cog):
 
     @commands.command(name='kick')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.bot_has_permissions(kick_members=True)
     @commands.has_permissions(kick_members=True)
     async def kick(self, ctx, member: discord.Member, *, reason: str = None):
         """Kick a member"""
@@ -225,10 +226,11 @@ class Moderation(commands.Cog):
     @commands.command(name='ban')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(ban_members=True)
+    @commands.bot_has_permissions(ban_members=True)
     async def ban(self, ctx, member: str, *, reason: str = None):
         """Ban a member
 
-        If you want to ban a user that is not on this guild, use the user's ID: `-ban <id>`."""
+        If you want to ban a user that is not in this guild, use the user's ID: `-ban <id>`."""
 
         try:
             member_object = await commands.MemberConverter().convert(ctx, member)
@@ -281,6 +283,7 @@ class Moderation(commands.Cog):
     @commands.command(name='unban')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(ban_members=True)
+    @commands.bot_has_permissions(ban_members=True)
     async def unban(self, ctx, member: discord.User, *, reason: str = None):
         """Unban a member"""
 

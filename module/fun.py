@@ -40,7 +40,7 @@ class Fun(commands.Cog):
         try:
             await ctx.message.delete()
         except discord.Forbidden:
-            raise exceptions.ForbiddenError("message_delete", content)
+            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MESSAGE_DELETE, content)
 
         await ctx.send(content)
 

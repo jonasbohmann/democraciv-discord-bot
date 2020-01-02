@@ -3,6 +3,7 @@ import asyncio
 import asyncpg
 
 from config import config
+from util.exceptions import ForbiddenTask
 from util.flow import Flow
 from discord.ext import commands
 from util import utils, exceptions, mk
@@ -115,7 +116,7 @@ class Party(commands.Cog, name='Political Parties'):
                 try:
                     await ctx.message.author.add_roles(role)
                 except discord.Forbidden:
-                    raise exceptions.ForbiddenError("add_roles", role.name)
+                    raise exceptions.ForbiddenError(ForbiddenTask.ADD_ROLE, role.name)
 
                 if role.name == 'Independent':
                     await ctx.send(f':white_check_mark: You are now an {role.name}!')
@@ -181,7 +182,7 @@ class Party(commands.Cog, name='Political Parties'):
                 try:
                     await ctx.message.author.remove_roles(role)
                 except discord.Forbidden:
-                    raise exceptions.ForbiddenError(task="remove_roles", detail=role.name)
+                    raise exceptions.ForbiddenError(ForbiddenTask.REMOVE_ROLE, detail=role.name)
 
             else:
                 await ctx.send(f':x: You are not part of {role.name}!')
@@ -276,7 +277,7 @@ class Party(commands.Cog, name='Political Parties'):
             try:
                 discord_role = await ctx.guild.create_role(name=role_name)
             except discord.Forbidden:
-                raise exceptions.ForbiddenError("create_role", role_name)
+                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE, role_name)
 
         else:
             discord_role = role_name
@@ -370,7 +371,7 @@ class Party(commands.Cog, name='Political Parties'):
                 try:
                     await discord_role.delete()
                 except discord.Forbidden:
-                    raise exceptions.ForbiddenError(task="delete_role", detail=discord_role.name)
+                    raise exceptions.ForbiddenError(ForbiddenTask.DELETE_ROLE, detail=discord_role.name)
 
             async with self.bot.db.acquire() as connection:
                 async with connection.transaction():

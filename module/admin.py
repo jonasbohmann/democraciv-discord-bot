@@ -92,7 +92,7 @@ class Admin(commands.Cog):
         try:
             deleted = await ctx.channel.purge(limit=amount, check=check)
         except discord.Forbidden:
-            raise exceptions.ForbiddenError(task="", detail=":x: I'm missing Administrator permissions to do this!")
+            raise exceptions.ForbiddenError(detail=":x: I'm missing Administrator permissions to do this!")
 
         await ctx.send(f':white_check_mark: Deleted **{len(deleted)}** messages.', delete_after=5)
 

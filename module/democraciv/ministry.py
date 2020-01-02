@@ -168,9 +168,6 @@ class Ministry(commands.Cog):
 
     @veto.error
     async def vetoerr(self, ctx, error):
-        if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
-            await ctx.send(":x: Only the Prime Minister and Lt. Prime Minister are allowed to use this command!")
-
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'bill_id':
                 await ctx.send(':x: You have to give me the ID of the bill you want to veto!\n\n**Usage**:\n'
@@ -229,9 +226,6 @@ class Ministry(commands.Cog):
 
     @passbill.error
     async def passbillerr(self, ctx, error):
-        if isinstance(error, commands.MissingAnyRole) or isinstance(error, commands.MissingRole):
-            await ctx.send(":x: Only the Prime Minister and Lt. Prime Minister are allowed to use this command!")
-
         if isinstance(error, commands.MissingRequiredArgument):
             if error.param.name == 'bill_id':
                 await ctx.send(':x: You have to give me the ID of the bill you want to pass!\n\n**Usage**:\n'

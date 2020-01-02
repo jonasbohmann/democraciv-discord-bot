@@ -10,6 +10,8 @@ from discord.ext import commands
 #
 # Logging module.
 #
+from util import exceptions
+from util.exceptions import ForbiddenTask
 
 
 class Log(commands.Cog):
@@ -153,7 +155,7 @@ class Log(commands.Cog):
                     try:
                         await member.add_roles(default_role)
                     except discord.Forbidden:
-                        await welcome_channel.send(f":x: Missing permissions to add default role to {member.name}.")
+                        raise exceptions.ForbiddenError(ForbiddenTask.ADD_ROLE, default_role.name)
 
         if not await self.bot.checks.is_logging_enabled(member.guild.id):
             return

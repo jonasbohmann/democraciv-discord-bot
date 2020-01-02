@@ -303,7 +303,7 @@ class Guild(commands.Cog):
                     try:
                         new_default_role_object = await ctx.guild.create_role(name=new_default_role)
                     except discord.Forbidden:
-                        raise exceptions.ForbiddenError("create_role", new_default_role)
+                        raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE, new_default_role)
 
                 else:
                     new_default_role_object = new_default_role

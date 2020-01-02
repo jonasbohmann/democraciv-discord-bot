@@ -1,3 +1,5 @@
+import enum
+
 from discord.ext import commands
 
 
@@ -57,27 +59,41 @@ class GuildNotFoundError(DemocracivBotException):
         self.message = f":x: Couldn't find a guild named/with the ID '{name}' that I am in!"
 
 
+class ForbiddenTask(enum.Enum):
+    ADD_ROLE = 1
+    REMOVE_ROLE = 2
+    CREATE_ROLE = 3
+    DELETE_ROLE = 4
+    MESSAGE_SEND = 5
+    MESSAGE_DELETE = 6
+    MEMBER_BAN = 7
+    MEMBER_KICK = 8
+
+
 class ForbiddenError(DemocracivBotException):
     """Raised when a discord.Forbidden exception is raised"""
 
-    def __init__(self, task: str = None, detail: str = None):
+    def __init__(self, task: ForbiddenTask = None, detail: str = None):
 
-        if task == "add_roles":
+        if task == ForbiddenTask.ADD_ROLE:
             self.message = f":x: Either the '{detail}' role is higher than my role, or I'm missing Administrator " \
                            f"permissions to give you the role!"
 
-        elif task == "remove_roles":
+        elif task == ForbiddenTask.REMOVE_ROLE:
             self.message = f":x: Either the '{detail}' role is higher than my role, or I'm missing Administrator " \
                            f"permissions to remove the role from you!"
 
-        elif task == "create_role":
+        elif task == ForbiddenTask.CREATE_ROLE:
             self.message = f":x: I'm missing the required permissions to create the '{detail}' role."
 
-        elif task == "delete_role":
+        elif task == ForbiddenTask.DELETE_ROLE:
             self.message = f":x: I'm missing the required permissions to delete the '{detail}' role."
 
-        elif task == "message_delete":
+        elif task == ForbiddenTask.MESSAGE_DELETE:
             self.message = f":x: I'm missing the required permissions to delete that message."
 
+        elif task == ForbiddenTask.MESSAGE_SEND:
+            self.message = f":x: I'm missing the required permissions to send messages in this channel."
+
         else:
-            self.message = f":x: I'm missing the required permissions to perform this action."
+            self.message = f":x: Discord didn't allow me to perform this action."
