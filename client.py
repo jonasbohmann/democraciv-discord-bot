@@ -236,7 +236,7 @@ class DemocracivBot(commands.Bot):
 
             self.cached_initialized_guilds.append(message.guild.id)
 
-        # Relay message to discord.ext.commands cogs
+        # Relay message to cogs
         await self.process_commands(message)
 
     @tasks.loop(hours=24)

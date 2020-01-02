@@ -98,6 +98,10 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener(name="on_message")
     async def mod_request_listener(self, message):
+        # If it's a command, ignore
+        if (await self.bot.get_context(message)).valid:
+            return
+
         if message.guild != self.bot.democraciv_guild_object:
             return
 
