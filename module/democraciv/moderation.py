@@ -1,7 +1,7 @@
 import discord
 import datetime
 
-from util import utils, mk
+from util import utils, mk, exceptions
 from config import config, token
 
 from discord.ext import commands
@@ -191,6 +191,7 @@ class Moderation(commands.Cog):
         await ctx.author.send(embed=embed)
 
     @commands.command(name='kick')
+    @commands.guild_only()
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.bot_has_permissions(kick_members=True)
     @commands.has_permissions(kick_members=True)
@@ -201,7 +202,7 @@ class Moderation(commands.Cog):
 
         if member == self.bot.DerJonas_object:
             #  :)
-            return await ctx.send(":x: You can't kick that person.")
+            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_KICK)
 
         if member == ctx.guild.me:
             return await ctx.send(":x: You can't kick me.")
@@ -214,7 +215,7 @@ class Moderation(commands.Cog):
         try:
             await ctx.guild.kick(member, reason=formatted_reason)
         except discord.Forbidden:
-            return await ctx.send(":x: I'm not allowed to kick that person.")
+            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_KICK)
 
         try:
             await member.send(f":no_entry: You were kicked from {ctx.guild.name}.")
@@ -224,6 +225,7 @@ class Moderation(commands.Cog):
         await ctx.send(f":white_check_mark: Successfully kicked {member}!")
 
     @commands.command(name='ban')
+    @commands.guild_only()
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
@@ -250,7 +252,7 @@ class Moderation(commands.Cog):
 
         if member_object == self.bot.DerJonas_object:
             #  :)
-            return await ctx.send(":x: You can't ban that person.")
+            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_BAN)
 
         if member_object == ctx.guild.me:
             return await ctx.send(":x: You can't ban me.")
@@ -263,7 +265,7 @@ class Moderation(commands.Cog):
         try:
             await ctx.guild.ban(discord.Object(id=member_id), reason=formatted_reason, delete_message_days=0)
         except discord.Forbidden:
-            return await ctx.send(":x: I'm not allowed to ban that person.")
+            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_BAN)
         except discord.HTTPException:
             return await ctx.send(":x: I couldn't find that person.")
 
@@ -281,6 +283,7 @@ class Moderation(commands.Cog):
             await ctx.send(":x: I couldn't find that person.")
 
     @commands.command(name='unban')
+    @commands.guild_only()
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
@@ -295,7 +298,7 @@ class Moderation(commands.Cog):
         try:
             await ctx.guild.unban(discord.Object(id=member.id), reason=formatted_reason)
         except discord.Forbidden:
-            return await ctx.send(":x: I'm not allowed to unban that person.")
+            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_BAN)
         except discord.HTTPException:
             return await ctx.send(":x: That person is not banned.")
 

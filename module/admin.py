@@ -1,3 +1,5 @@
+import os
+
 import psutil
 import asyncio
 import discord
@@ -50,20 +52,41 @@ class Admin(commands.Cog):
     @commands.is_owner()
     async def reload(self, ctx, *, module):
         """Reloads a module"""
-        try:
-            self.bot.unload_extension(module)
-            self.bot.load_extension(module)
-        except Exception:
-            await ctx.send(f'```py\n{traceback.format_exc()}\n```')
+        if module.lower() == 'all':
+            try:
+                for filename in os.listdir('./module'):
+                    if filename.endswith('.py'):
+                        self.bot.unload_extension(f'module.{filename[:-3]}')
+                        self.bot.load_extension(f'module.{filename[:-3]}')
+                for filename in os.listdir('./module/democraciv'):
+                    if filename.endswith('.py'):
+                        self.bot.unload_extension(f'module.democraciv.{filename[:-3]}')
+                        self.bot.load_extension(f'module.democraciv.{filename[:-3]}')
+                self.bot.unload_extension('event.error_handler')
+                self.bot.load_extension('event.error_handler')
+                self.bot.unload_extension('event.logging')
+                self.bot.load_extension('event.logging')
+            except Exception:
+                await ctx.send(f'```py\n{traceback.format_exc()}\n```')
+            else:
+                await ctx.send(':white_check_mark: Reloaded all modules.')
+
         else:
-            await ctx.send(':white_check_mark: Reloaded ' + module)
+            try:
+                self.bot.unload_extension(module)
+                self.bot.load_extension(module)
+            except Exception:
+                await ctx.send(f'```py\n{traceback.format_exc()}\n```')
+            else:
+                await ctx.send(':white_check_mark: Reloaded ' + module)
+
+
 
     @commands.command(name='stop')
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
     async def stop(self, ctx):
         """Restarts the bot"""
-
         await ctx.send(':wave: Goodbye! Shutting down...')
         await self.bot.close()
         await self.bot.logout()
@@ -72,7 +95,6 @@ class Admin(commands.Cog):
     @commands.is_owner()
     async def reloadconfig(self, ctx):
         """Reload all config files"""
-
         await ctx.send(':white_check_mark: Reloaded config.')
         await importlib.reload(config)
 

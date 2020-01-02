@@ -133,10 +133,6 @@ class ErrorHandler(commands.Cog):
             # TODO - Remove this from ignored and remove all local command error handler that also catch this
             return await ctx.send_help(ctx.command)
 
-        elif isinstance(error, commands.BotMissingPermissions):
-            return await ctx.send(f":x: I don't have '{self.format_permissions(error.missing_perms)}' permission(s)"
-                                  f" to perform this action for you.")
-
         elif isinstance(error, commands.CommandOnCooldown):
             return await ctx.send(f":x: You are on cooldown! Try again in {error.retry_after:.2f} seconds.")
 
@@ -151,13 +147,23 @@ class ErrorHandler(commands.Cog):
             return await ctx.send(f":x: You need at least one of these roles in order to use this command: "
                                   f"{self.format_roles(error.missing_roles)}")
 
+        elif isinstance(error, commands.BotMissingPermissions):
+            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            return await ctx.send(f":x: I don't have '{self.format_permissions(error.missing_perms)}' permission(s)"
+                                  f" to perform this action for you.")
+
+        elif isinstance(error, commands.BotMissingRole):
+            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            return await ctx.send(f":x: I need the '{error.missing_role}' role in order to perform this"
+                                  f" action for you.")
+
         elif isinstance(error, commands.BotMissingAnyRole):
+            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
             return await ctx.send(f":x: I need at least one of these roles in order to perform this action for you: "
                                   f"{self.format_roles(error.missing_roles)}")
 
-        elif isinstance(error, commands.BotMissingRole):
-            return await ctx.send(f":x: I need the '{error.missing_role}' role in order to perform this"
-                                  f" action for you.")
+        elif isinstance(error, commands.NoPrivateMessage):
+            return await ctx.send(":x: This command cannot be used in DMs!")
 
         # This includes all exceptions declared in util.exceptions.py
         elif isinstance(error, exceptions.DemocracivBotException):
