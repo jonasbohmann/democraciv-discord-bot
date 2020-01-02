@@ -20,7 +20,7 @@ class Laws(commands.Cog, name='Law'):
         # If no ID was specified, list all existing laws
         if not law_id or law_id.lower() == 'all':
             async with ctx.typing():
-                all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws")
+                all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws ORDER BY law_id")
 
                 pretty_laws = []
 
