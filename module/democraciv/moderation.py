@@ -17,14 +17,24 @@ class Moderation(commands.Cog):
     async def calculate_alt_chance(self, member: discord.Member, check_messages: bool = False) -> int:
         is_alt_chance = 0
 
+        default_avatars = ["https://cdn.discordapp.com/embed/avatars/0.png",
+                           "https://cdn.discordapp.com/embed/avatars/1.png",
+                           "https://cdn.discordapp.com/embed/avatars/2.png",
+                           "https://cdn.discordapp.com/embed/avatars/3.png",
+                           "https://cdn.discordapp.com/embed/avatars/4.png"]
+
         if member.bot:
             return 0
 
+        # Check how long it has been since the user registered
         discord_registration_duration_in_s = (datetime.datetime.utcnow() - member.created_at).total_seconds()
         hours_since = divmod(discord_registration_duration_in_s, 3600)[0]
 
         if hours_since <= 48:
+            # If the account is new, check if the they bothered to change the default avatar
             is_alt_chance += 0.1
+            if member.avatar_url in default_avatars:
+                is_alt_chance += 0.65
             if hours_since <= 24:
                 is_alt_chance += 0.2
                 if hours_since <= 12:
@@ -33,37 +43,32 @@ class Moderation(commands.Cog):
                         is_alt_chance += 0.35
 
         weird_names = ["alt", "mysterious", "anonymous", "anon", "banned", "ban", "das", "mysterybox", "not",
-                       "definitelynot"]
+                       "definitelynot", "darthspectrum"]
 
         if any(name in member.name.lower() for name in weird_names) or any(
                 name in member.display_name.lower() for name in weird_names):
+            # Check if user has any names that are associated with alt accounts in the past
             is_alt_chance += 0.45
 
-        default_avatars = ["https://cdn.discordapp.com/embed/avatars/0.png",
-                           "https://cdn.discordapp.com/embed/avatars/1.png",
-                           "https://cdn.discordapp.com/embed/avatars/2.png",
-                           "https://cdn.discordapp.com/embed/avatars/3.png",
-                           "https://cdn.discordapp.com/embed/avatars/4.png"]
-
-        if member.avatar_url in default_avatars:
-            is_alt_chance += 0.65
-
         if member.status != discord.Status.offline:
+            # If the user didn't download a Discord App, but is accessing Discord through their browser, chances
+            # increase that they're an alt
             if isinstance(member.web_status, discord.Status) and member.web_status != discord.Status.offline:
-                is_alt_chance += 0.15
-            elif isinstance(member.desktop_status, discord.Status) and member.desktop_status != discord.Status.offline:
-                is_alt_chance += 0.05
+                is_alt_chance += 0.1
 
         if member.premium_since is not None:
+            # If user has Nitro (boosted this guild), it's likely not an alt
             is_alt_chance -= 2
 
         if len(member.activities) > 0:
+            # Check for linked Twitch & Spotify accounts or if user is playing a game
             for act in member.activities:
                 if act.type != 4:  # Custom Status
                     is_alt_chance -= 1.5
                     break
 
         if member.is_avatar_animated():
+            # If user has Nitro (with animated profile picture), it's likely not an alt
             is_alt_chance -= 2
 
         if check_messages:
@@ -81,7 +86,7 @@ class Moderation(commands.Cog):
             channels = [citizens, welcome, helpchannel, propaganda, offtopic, public_forum]
 
             for i in range(5):
-                async for message in channels[i].history(limit=None):
+                async for message in channels[i].history(limit=5000):
                     # This takes a long time and shouldn't really be used
                     if message.author == member:
                         counter += 1
@@ -96,21 +101,19 @@ class Moderation(commands.Cog):
         if message.guild != self.bot.democraciv_guild_object:
             return
 
-        if message.channel.id != self.mod_request_channel:
+        if message.author.bot:
             return
 
-        if mk.get_moderation_role(self.bot) not in message.role_mentions:
-            return
-
-        embed = self.bot.embeds.embed_builder(title=":pushpin: New Request in #mod-requests",
-                                              description=f"[Jump to message.]"
-                                                          f"({message.jump_url}"
-                                                          f")")
-        embed.add_field(name="From", value=message.author.mention)
-        embed.add_field(name="Request", value=message.content, inline=False)
-
-        await mk.get_moderation_notifications_channel(self.bot).send(content=mk.get_moderation_role(self.bot).mention,
-                                                                     embed=embed)
+        if mk.get_moderation_role(self.bot) in message.role_mentions:
+            embed = self.bot.embeds.embed_builder(title=f":pushpin: New Request in #{message.channel.name}",
+                                                  description=f"[Jump to message.]"
+                                                              f"({message.jump_url}"
+                                                              f")")
+            embed.add_field(name="From", value=message.author.mention)
+            embed.add_field(name="Request", value=message.content, inline=False)
+            await mk.get_moderation_notifications_channel(self.bot).send(content=mk.get_moderation_role(self.bot)
+                                                                         .mention,
+                                                                         embed=embed)
 
     @commands.Cog.listener(name="on_member_join")
     async def possible_alt_listener(self, member):
@@ -259,7 +262,7 @@ class Moderation(commands.Cog):
             await ctx.guild.ban(discord.Object(id=member_id), reason=formatted_reason, delete_message_days=0)
         except discord.Forbidden:
             return await ctx.send(":x: I'm not allowed to ban that person.")
-        except discord.HTTPException as e:
+        except discord.HTTPException:
             return await ctx.send(":x: I couldn't find that person.")
 
         if member_object:
