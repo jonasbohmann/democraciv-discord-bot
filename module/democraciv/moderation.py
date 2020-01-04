@@ -200,7 +200,6 @@ class Moderation(commands.Cog):
 
     @commands.command(name='kick')
     @commands.guild_only()
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.bot_has_permissions(kick_members=True)
     @commands.has_permissions(kick_members=True)
     async def kick(self, ctx, member: discord.Member, *, reason: str = None):
@@ -232,9 +231,77 @@ class Moderation(commands.Cog):
 
         await ctx.send(f":white_check_mark: Successfully kicked {member}!")
 
+    @commands.command(name='mute')
+    @commands.guild_only()
+    @commands.has_permissions(manage_roles=True)
+    async def mute(self, ctx, member: discord.Member, *, reason: str = None):
+        """Mute a member"""
+
+        muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
+
+        if muted_role is None:
+            try:
+                muted_role = await ctx.guild.create_role(name="Muted")
+            except discord.Forbidden:
+                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE)
+            for channel in ctx.guild.channels:
+                await channel.set_permissions(muted_role, send_messages=False)
+
+        if muted_role is None:
+            raise exceptions.RoleNotFoundError("Muted")
+
+        if reason:
+            formatted_reason = f"Action requested by {ctx.author} with reason: {reason}"
+        else:
+            formatted_reason = f"Action requested by {ctx.author} with no specified reason."
+
+        if member == ctx.author:
+            return await ctx.send(":x: You can't mute yourself.")
+
+        if member == self.bot.DerJonas_object:
+            #  :)
+            raise exceptions.ForbiddenError()
+
+        if member == ctx.guild.me:
+            return await ctx.send(":x: You can't mute me.")
+
+        try:
+            await member.add_roles(muted_role, reason=formatted_reason)
+        except discord.Forbidden:
+            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.ADD_ROLE)
+
+        try:
+            await member.send(f":shushing_face: You were **muted** in {ctx.guild.name}.")
+        except discord.Forbidden:
+            pass
+
+        await ctx.send(f":white_check_mark: Successfully muted {member}!")
+
+    @commands.command(name='unmute')
+    @commands.guild_only()
+    @commands.has_permissions(manage_roles=True)
+    async def unmute(self, ctx, member: discord.Member):
+        """Unmute a member"""
+
+        muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
+
+        if muted_role is None:
+            raise exceptions.RoleNotFoundError("Muted")
+
+        try:
+            await member.remove_roles(muted_role)
+        except discord.Forbidden:
+            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.REMOVE_ROLE)
+
+        try:
+            await member.send(f":shushing_face: You were **unmuted** in {ctx.guild.name}.")
+        except discord.Forbidden:
+            pass
+
+        await ctx.send(f":white_check_mark: Successfully unmuted {member}!")
+
     @commands.command(name='ban')
     @commands.guild_only()
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     async def ban(self, ctx, member: str, *, reason: str = None):

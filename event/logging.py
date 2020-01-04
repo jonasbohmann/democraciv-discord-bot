@@ -323,6 +323,16 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
+        muted_role = discord.utils.get(channel.guild.roles, name="Muted")
+
+        if muted_role is None:
+            try:
+                muted_role = await channel.guild.create_role(name="Muted")
+            except discord.Forbidden:
+                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE)
+
+        await channel.set_permissions(muted_role, send_messages=False)
+
         if not await self.bot.checks.is_logging_enabled(channel.guild.id):
             return
 
