@@ -215,9 +215,9 @@ class Moderation(commands.Cog):
             return await ctx.send(":x: You can't kick me.")
 
         if reason:
-            formatted_reason = f"Action requested by {ctx.author} with reason: {reason}"
+            formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
         else:
-            formatted_reason = f"Action requested by {ctx.author} with no specified reason."
+            formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with no specified reason."
 
         try:
             await ctx.guild.kick(member, reason=formatted_reason)
@@ -251,9 +251,9 @@ class Moderation(commands.Cog):
             raise exceptions.RoleNotFoundError("Muted")
 
         if reason:
-            formatted_reason = f"Action requested by {ctx.author} with reason: {reason}"
+            formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
         else:
-            formatted_reason = f"Action requested by {ctx.author} with no specified reason."
+            formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with no specified reason."
 
         if member == ctx.author:
             return await ctx.send(":x: You can't mute yourself.")
@@ -289,7 +289,7 @@ class Moderation(commands.Cog):
             raise exceptions.RoleNotFoundError("Muted")
 
         try:
-            await member.remove_roles(muted_role)
+            await member.remove_roles(muted_role, reason=f"Action requested by {ctx.author}.")
         except discord.Forbidden:
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.REMOVE_ROLE)
 
@@ -333,9 +333,9 @@ class Moderation(commands.Cog):
             return await ctx.send(":x: You can't ban me.")
 
         if reason:
-            formatted_reason = f"Action requested by {ctx.author} with reason: {reason}"
+            formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
         else:
-            formatted_reason = f"Action requested by {ctx.author} with no specified reason."
+            formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with no specified reason."
 
         try:
             await ctx.guild.ban(discord.Object(id=member_id), reason=formatted_reason, delete_message_days=0)
@@ -366,9 +366,9 @@ class Moderation(commands.Cog):
         """Unban a member"""
 
         if reason:
-            formatted_reason = f"Action requested by {ctx.author} with reason: {reason}"
+            formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
         else:
-            formatted_reason = f"Action requested by {ctx.author} with no specified reason."
+            formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with no specified reason."
 
         try:
             await ctx.guild.unban(discord.Object(id=member.id), reason=formatted_reason)
