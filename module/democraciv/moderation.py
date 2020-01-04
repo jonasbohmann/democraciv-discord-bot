@@ -138,15 +138,22 @@ class Moderation(commands.Cog):
             await mk.get_moderation_notifications_channel(self.bot).send(content=mk.get_moderation_role(self.bot)
                                                                          .mention, embed=embed)
 
+    @staticmethod
+    async def safe_send_mod_links(ctx, embed):
+        if len(ctx.channel.members) == 7:
+            await ctx.send(embed=embed)
+        else:
+            await ctx.message.add_reaction("\U0001f4e9")
+            await ctx.author.send(embed=embed)
+
     @commands.command(name='hub', aliases=['modhub', 'moderationhub', 'mhub'])
     @commands.has_role("Moderation")
     @utils.is_democraciv_guild()
-    async def hub(self, ctx, ):
+    async def hub(self, ctx):
         """Link to the Moderation Hub"""
         link = token.MOD_HUB or 'Link not provided.'
         embed = self.bot.embeds.embed_builder(title="Moderation Hub", description=f"[Link]({link})")
-        await ctx.message.add_reaction("\U0001f4e9")
-        await ctx.author.send(embed=embed)
+        await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='alt')
     @commands.has_role("Moderation")
@@ -171,8 +178,7 @@ class Moderation(commands.Cog):
         """Link to the Democraciv Registry"""
         link = token.REGISTRY or 'Link not provided.'
         embed = self.bot.embeds.embed_builder(title="Democraciv Registry", description=f"[Link]({link})")
-        await ctx.message.add_reaction("\U0001f4e9")
-        await ctx.author.send(embed=embed)
+        await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='drive', aliases=['googledrive', 'gdrive'])
     @commands.has_role("Moderation")
@@ -181,8 +187,7 @@ class Moderation(commands.Cog):
         """Link to the Google Drive for MK6"""
         link = token.MK6_DRIVE or 'Link not provided.'
         embed = self.bot.embeds.embed_builder(title="Google Drive for MK6", description=f"[Link]({link})")
-        await ctx.message.add_reaction("\U0001f4e9")
-        await ctx.author.send(embed=embed)
+        await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='elections', aliases=['election', 'pins', 'electiontool', 'pintool'])
     @commands.has_role("Moderation")
@@ -191,8 +196,7 @@ class Moderation(commands.Cog):
         """Link to DerJonas' Election Tool"""
         link = token.PIN_TOOL or 'Link not provided.'
         embed = self.bot.embeds.embed_builder(title="DerJonas' Election Tool", description=f"[Link]({link})")
-        await ctx.message.add_reaction("\U0001f4e9")
-        await ctx.author.send(embed=embed)
+        await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='kick')
     @commands.guild_only()
