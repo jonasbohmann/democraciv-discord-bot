@@ -21,12 +21,12 @@ class Ministry(commands.Cog):
         """Refreshes class attributes with current Prime Minister and Lt. Prime Minister discord.Member objects"""
 
         try:
-            self.prime_minister = mk.get_prime_minister_role(self.bot).members[0]
+            self.prime_minister = mk.get_democraciv_role(self.bot, mk.DemocracivRole.PRIME_MINISTER_ROLE).members[0]
         except IndexError:
             raise exceptions.NoOneHasRoleError("Prime Minister")
 
         try:
-            self.lt_prime_minister = mk.get_lt_prime_minister_role(self.bot).members[0]
+            self.lt_prime_minister = mk.get_democraciv_role(self.bot, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE).members[0]
         except IndexError:
             raise exceptions.NoOneHasRoleError("Lieutenant Prime Minister")
 
@@ -158,7 +158,9 @@ class Ministry(commands.Cog):
                 await ctx.send(f":white_check_mark: Successfully vetoed {bill_details['bill_name']} "
                                f"(#{bill_details['id']})!")
 
-                await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_speaker_role(self.bot).mention},"
+                await mk.get_democraciv_channel(self.bot,
+                                                mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(
+                    f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE).mention},"
                                                                       f" {bill_details['bill_name']} was vetoed "
                                                                       f"by the Ministry.")
 
@@ -212,7 +214,9 @@ class Ministry(commands.Cog):
                 if await self.bot.laws.pass_into_law(ctx, bill_id, bill_details):
                     # pass_into_law() returned True -> success
                     await ctx.send(":white_check_mark: Successfully passed this bill into law!")
-                    await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_speaker_role(self.bot).mention}, "
+                    await mk.get_democraciv_channel(self.bot,
+                                                    mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(
+                        f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE).mention}, "
                                                                           f"'{bill_details['bill_name']}' was passed "
                                                                           f"into law by"
                                                                           f" the Ministry.")

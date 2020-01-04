@@ -127,10 +127,10 @@ class Twitch:
         await self.bot.wait_until_ready()
 
     async def streaming_rules_reminder(self, stream_id):
-        executive_channel = mk.get_executive_channel(self.bot)
-        minister_role = mk.get_minister_role(self.bot)
-        governor_role = mk.get_governor_role(self.bot)
-        executive_proxy_role = mk.get_executive_proxy_role(self.bot)
+        executive_channel = mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.EXECUTIVE_CHANNEL)
+        minister_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.MINISTER_ROLE)
+        governor_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.GOVERNOR_ROLE)
+        executive_proxy_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.EXECUTIVE_PROXY_ROLE)
 
         if executive_channel is None:
             raise exceptions.ChannelNotFoundError("executive")
@@ -166,10 +166,7 @@ class Twitch:
                                   stream_id)
 
     async def export_twitch_reminder(self, stream_id):
-        moderation_channel = mk.get_moderation_team_channel(self.bot)
-
-        if moderation_channel is None:
-            raise exceptions.ChannelNotFoundError("moderation-team")
+        moderation_channel = mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.MODERATION_TEAM_CHANNEL)
 
         await asyncio.sleep(7200)  # Wait 2 hours, i.e. after the game session is done, before sending reminder to Mods
 

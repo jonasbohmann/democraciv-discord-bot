@@ -15,7 +15,7 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
 
     def refresh_court_discord_objects(self):
         try:
-            self.chief_justice = mk.get_chief_justice_role(self.bot).members[0]
+            self.chief_justice = mk.get_democraciv_role(self.bot, mk.DemocracivRole.CHIEF_JUSTICE_ROLE).members[0]
         except IndexError:
             raise exceptions.NoOneHasRoleError("Chief Justice")
 

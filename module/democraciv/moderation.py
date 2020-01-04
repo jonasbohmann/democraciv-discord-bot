@@ -12,7 +12,6 @@ class Moderation(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.mod_request_channel = mk.MOD_REQUESTS_CHANNEL
 
     async def calculate_alt_chance(self, member: discord.Member, check_messages: bool = False) -> int:
         is_alt_chance = 0
@@ -108,16 +107,16 @@ class Moderation(commands.Cog):
         if message.author.bot:
             return
 
-        if mk.get_moderation_role(self.bot) in message.role_mentions:
+        if mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE) in message.role_mentions:
             embed = self.bot.embeds.embed_builder(title=f":pushpin: New Request in #{message.channel.name}",
                                                   description=f"[Jump to message.]"
                                                               f"({message.jump_url}"
                                                               f")")
             embed.add_field(name="From", value=message.author.mention)
             embed.add_field(name="Request", value=message.content, inline=False)
-            await mk.get_moderation_notifications_channel(self.bot).send(content=mk.get_moderation_role(self.bot)
-                                                                         .mention,
-                                                                         embed=embed)
+            await mk.get_democraciv_channel(self.bot,
+                                            mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
+                content=mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE).mention, embed=embed)
 
     @commands.Cog.listener(name="on_member_join")
     async def possible_alt_listener(self, member):
@@ -135,8 +134,9 @@ class Moderation(commands.Cog):
             embed.add_field(name="Member ID", value=member.id, inline=False)
             embed.add_field(name="Chance", value=f"There is a {chance * 100}% chance that {member} is an alt.")
 
-            await mk.get_moderation_notifications_channel(self.bot).send(content=mk.get_moderation_role(self.bot)
-                                                                         .mention, embed=embed)
+            await mk.get_democraciv_channel(self.bot,
+                                      mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
+                content=mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE).mention, embed=embed)
 
     @staticmethod
     async def safe_send_mod_links(ctx, embed):

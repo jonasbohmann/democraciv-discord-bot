@@ -23,12 +23,12 @@ class Legislature(commands.Cog):
         """Refreshes class attributes with current Speaker and Vice Speaker discord.Member objects"""
 
         try:
-            self.speaker = mk.get_speaker_role(self.bot).members[0]
+            self.speaker = mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE).members[0]
         except IndexError:
             raise exceptions.NoOneHasRoleError("Speaker of the Legislature")
 
         try:
-            self.vice_speaker = mk.get_vice_speaker_role(self.bot).members[0]
+            self.vice_speaker =mk.get_democraciv_role(self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE).members[0]
         except IndexError:
             raise exceptions.NoOneHasRoleError("Vice-Speaker of the Legislature")
 
@@ -110,12 +110,12 @@ class Legislature(commands.Cog):
 
         await ctx.send(f":white_check_mark: Successfully opened the submission period for session #{new_session}!")
 
-        await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_legislator_role(self.bot).mention}, the "
+        await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE).mention}, the "
                                                               f"submission period for Legislative Session "
                                                               f"#{new_session} has started!\nSubmit your "
                                                               f"bills with `-legislature submit`.")
 
-        for legislator in mk.get_legislator_role(self.bot).members:
+        for legislator in mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE).members:
             try:
                 await legislator.send(f":envelope_with_arrow: The **submission period for Legislative Session"
                                       f" #{new_session}** has started!"
@@ -154,12 +154,12 @@ class Legislature(commands.Cog):
 
         await ctx.send(f":white_check_mark: Successfully opened session #{active_leg_session_id} up for voting!")
 
-        await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_legislator_role(self.bot).mention},"
+        await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE).mention},"
                                                               f" the voting period for Legislative Session "
                                                               f"#{active_leg_session_id} has started!\n:ballot_box:"
                                                               f" Vote here: {voting_form}")
 
-        for legislator in mk.get_legislator_role(self.bot).members:
+        for legislator in mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE).members:
             try:
                 await legislator.send(f":ballot_box: The **voting period for Legislative Session "
                                       f"#{active_leg_session_id}** has "
@@ -196,7 +196,7 @@ class Legislature(commands.Cog):
                        f"Add the bills that passed this session with `-legislature pass <bill_id>`. You can get the "
                        f"bill ids from the list of submitted bills in `-legislature session {active_leg_session_id}`")
 
-        await mk.get_gov_announcements_channel(self.bot).send(f"{mk.get_legislator_role(self.bot).mention},"
+        await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE).mention},"
                                                               f" Legislative Session "
                                                               f"#{active_leg_session_id} has been closed by "
                                                               f"the Cabinet.")
@@ -464,7 +464,7 @@ class Legislature(commands.Cog):
         elif str(reaction.emoji) == "\U0001f1f2":
             # -- Motion --
 
-            if mk.get_legislator_role(self.bot) not in ctx.author.roles:
+            if mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE) not in ctx.author.roles:
                 return await ctx.send(":x: Only Legislators are allowed to submit motions!")
 
             await ctx.send(":white_check_mark: You will submit a **motion**.")
@@ -569,8 +569,8 @@ class Legislature(commands.Cog):
                     await ctx.send(f":white_check_mark: The bill titled '{bill_details['bill_name']}' was sent to the "
                                    f"Ministry for them to vote on it.")
 
-                    await mk.get_executive_channel(self.bot).send(
-                        f"{mk.get_prime_minister_role(self.bot).mention}, the Legislature"
+                    await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.EXECUTIVE_CHANNEL).send(
+                        f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.PRIME_MINISTER_ROLE).mention}, the Legislature"
                         f" has just passed '{bill_details['bill_name']}' (#{bill_id}) that you need to vote on. "
                         f"Check `-ministry bills` to get the details.")
 
@@ -581,7 +581,7 @@ class Legislature(commands.Cog):
                         await ctx.send(f":white_check_mark: Successfully passed '{bill_details['bill_name']}' into law!"
                                        f" Remember to add it to the Legal Code, too!")
 
-                        await mk.get_gov_announcements_channel(self.bot).send(
+                        await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(
                             f"'{bill_details['bill_name']}' was passed "
                             f"into law by the Legislature without requiring a prior vote on it by the Ministry. It was"
                             f" marked as non-vetoable by the original submitter "
@@ -623,8 +623,8 @@ class Legislature(commands.Cog):
         # Voting Period.
         # The original submitter of the bill can only withdraw their own bill during the Submission Period.
 
-        if mk.get_speaker_role(self.bot) not in ctx.author.roles and mk.get_vice_speaker_role(
-                self.bot) not in ctx.author.roles:
+        if mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE) not in ctx.author.roles and mk.get_democraciv_role(
+                self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE) not in ctx.author.roles:
             if ctx.author.id == bill_details['submitter']:
                 if last_leg_session_status == "Submission Period":
                     allowed = True
