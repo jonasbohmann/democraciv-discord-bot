@@ -1,3 +1,5 @@
+import asyncio
+
 import discord
 import datetime
 
@@ -5,6 +7,8 @@ from util import utils, mk, exceptions
 from config import config, token
 
 from discord.ext import commands
+
+from util.flow import Flow
 
 
 class Moderation(commands.Cog):
@@ -137,6 +141,63 @@ class Moderation(commands.Cog):
             await mk.get_democraciv_channel(self.bot,
                                       mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
                 content=mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE).mention, embed=embed)
+
+    @commands.command(name='report')
+    @commands.dm_only()
+    async def report(self, ctx):
+        """Report something to Moderation"""
+
+        flow = Flow(self.bot, ctx)
+
+        await ctx.send("You can report something directly to the mods with this command. Abuse "
+                       "(i.e. spamming joke reports) will be punished.")
+
+        await asyncio.sleep(0.5)
+
+        anon_question = await ctx.send(":information_source: Do you want this report to be anonymous?")
+
+        is_anon = True
+
+        reaction, user = await flow.yes_no_reaction_confirm(anon_question, 150)
+
+        if reaction is None:
+            return
+
+        if str(reaction.emoji) == "\U00002705":
+            is_anon = True
+
+        elif str(reaction.emoji) == "\U0000274c":
+            is_anon = False
+
+        await ctx.send(":information_source: Reply with the content of your report. This will abort after"
+                       " 10 minutes of no reply.")
+
+        content = await flow.get_text_input(600)
+
+        if not content:
+            return
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that want to send this report?"
+                                      f"\n```Anonymous: {is_anon}\n\n{content}```")
+
+        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 150)
+
+        if str(reaction.emoji) == "\U00002705":
+            embed = self.bot.embeds.embed_builder(title="New Report", description="")
+
+            if not is_anon:
+                embed.add_field(name="From", value=f"{ctx.author} ({ctx.author.id})")
+
+            embed.add_field(name="Content", value=content)
+
+            await mk.get_democraciv_channel(self.bot,
+                                            mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
+                content=mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE).mention, embed=embed)
+
+            await ctx.send(":white_check_mark: Successfully sent report.")
+
+        elif str(reaction.emoji) == "\U0000274c":
+            return
 
     @staticmethod
     async def safe_send_mod_links(ctx, embed):

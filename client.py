@@ -206,10 +206,6 @@ class DemocracivBot(commands.Bot):
             self.daily_db_backup.start()
 
     async def on_message(self, message):
-        # Don't process message/command from DMs to prevent spamming
-        if isinstance(message.channel, discord.DMChannel):
-            return
-
         # Don't process message/command from other bots
         if message.author.bot:
             return
