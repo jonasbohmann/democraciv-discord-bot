@@ -21,6 +21,9 @@ class Log(commands.Cog):
     async def log_event(self, guild: discord.Guild, title: str, fields: dict, thumbnail: str = None,
                         to_owner: bool = False):
 
+        if guild is None:
+            return
+
         embed = self.bot.embeds.embed_builder(title=title, description="", time_stamp=True)
 
         for field in fields:

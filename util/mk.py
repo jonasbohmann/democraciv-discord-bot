@@ -13,7 +13,7 @@ from util import exceptions
 
 class DemocracivRole(enum.Enum):
     # Moderation
-    MODERATION_ROLE = 319663296728924160
+    MODERATION_ROLE = 547530938712719373
 
     # Executive
     MINISTER_ROLE = 639438027852087297
@@ -52,7 +52,7 @@ CIV_GAME = "Sid Meier's Civilization 5"
 
 
 def get_democraciv_role(bot, role: DemocracivRole) -> discord.Role:
-    to_return = bot.democraciv_guild_object.get_role(role)
+    to_return = bot.democraciv_guild_object.get_role(role.value)
 
     if to_return is None:
         raise exceptions.RoleNotFoundError(role.name)
@@ -61,7 +61,7 @@ def get_democraciv_role(bot, role: DemocracivRole) -> discord.Role:
 
 
 def get_democraciv_channel(bot, channel: DemocracivChannel) -> discord.TextChannel:
-    to_return = bot.democraciv_guild_object.get_channel(channel)
+    to_return = bot.democraciv_guild_object.get_channel(channel.value)
 
     if to_return is None:
         raise exceptions.ChannelNotFoundError(channel.name)
