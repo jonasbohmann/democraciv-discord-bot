@@ -74,25 +74,21 @@ class Fun(commands.Cog):
         if member is None:
             member = ctx.author
 
-        if member is not None:
-            embed = self.bot.embeds.embed_builder(title="User Information", description="")
-            embed.add_field(name="User", value=f"{member} {member.mention}", inline=False)
-            embed.add_field(name="ID", value=str(member.id), inline=False)
-            embed.add_field(name='Status', value=member.status, inline=True)
-            embed.add_field(name='Administrator', value=str(member.guild_permissions.administrator), inline=True)
-            embed.add_field(name='Avatar', value=f"[Link]({member.avatar_url})", inline=True)
-            embed.add_field(name='Discord Registration',
-                            value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
-            embed.add_field(name='Joined this Guild on',
-                            value=f'{member.joined_at.strftime("%B %d, %Y")}', inline=True)
-            embed.add_field(name='Join Position', value=self.get_member_join_position(member, ctx.guild.members)
-                            , inline=True)
-            embed.add_field(name='Roles', value=_get_roles(member.roles), inline=False)
-            embed.set_thumbnail(url=member.avatar_url)
-            await ctx.send(embed=embed)
-
-        else:
-            await ctx.send(':x: You have to give me a user as argument')
+        embed = self.bot.embeds.embed_builder(title="User Information", description="")
+        embed.add_field(name="User", value=f"{member} {member.mention}", inline=False)
+        embed.add_field(name="ID", value=str(member.id), inline=False)
+        embed.add_field(name='Status', value=member.status, inline=True)
+        embed.add_field(name='Administrator', value=str(member.guild_permissions.administrator), inline=True)
+        embed.add_field(name='Avatar', value=f"[Link]({member.avatar_url})", inline=True)
+        embed.add_field(name='Discord Registration',
+                        value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
+        embed.add_field(name='Joined this Guild on',
+                        value=f'{member.joined_at.strftime("%B %d, %Y")}', inline=True)
+        embed.add_field(name='Join Position', value=self.get_member_join_position(member, ctx.guild.members)
+                        , inline=True)
+        embed.add_field(name='Roles', value=_get_roles(member.roles), inline=False)
+        embed.set_thumbnail(url=member.avatar_url)
+        await ctx.send(embed=embed)
 
     @commands.command(name='veterans')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -148,22 +144,44 @@ class Fun(commands.Cog):
               `-random` will choose a random number between 1-100
               `-random coin` will choose Heads or Tails
               `-random 6` will choose a random number between 1-6
-              `-random choice England Rome` will choose between "England" and "Rome" for you
+              `-random choice England Rome` will choose between "England" and "Rome"
             """
+
+        """
+        MIT License
+
+        Copyright (c) 2016 - 2018 Eduard Nikoleisen
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        """
 
         if not arg:
             start = 1
             end = 100
+
         elif arg[0] == 'flip' or arg[0] == 'coin':
             coin = ['Heads', 'Tails']
-            await ctx.send(f':arrows_counterclockwise: {random.choice(coin)}')
-            return
+            return await ctx.send(f':arrows_counterclockwise: {random.choice(coin)}')
 
         elif arg[0] == 'choice':
-            choices = list(arg)
-            choices.pop(0)
-            await ctx.send(f':tada: The winner is: {random.choice(choices)}')
-            return
+            choices = list(arg).pop(0)
+            return await ctx.send(f':tada: The winner is: `{random.choice(choices)}`')
 
         elif len(arg) == 1:
             start = 1

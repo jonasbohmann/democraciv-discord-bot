@@ -302,10 +302,10 @@ class Moderation(commands.Cog):
         if muted_role is None:
             try:
                 muted_role = await ctx.guild.create_role(name="Muted")
+                for channel in ctx.guild.channels:
+                    await channel.set_permissions(muted_role, send_messages=False)
             except discord.Forbidden:
                 raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE)
-            for channel in ctx.guild.channels:
-                await channel.set_permissions(muted_role, send_messages=False)
 
         if muted_role is None:
             raise exceptions.RoleNotFoundError("Muted")

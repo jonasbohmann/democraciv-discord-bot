@@ -220,7 +220,7 @@ class Legislature(commands.Cog):
             active_leg_session_id = await self.bot.laws.get_active_leg_session()
 
             if active_leg_session_id is None:
-                msg = f":x: There currently is no open session.\n" \
+                msg = f":x: There currently is no open session.\n\n" \
                       f"**Usage**:\n  `{config.BOT_PREFIX}legislature session` to see details about the session that is" \
                       f" currently open,\n  " \
                       f"`{config.BOT_PREFIX}legislature session <number>` to see details about a specific " \
@@ -251,7 +251,7 @@ class Legislature(commands.Cog):
                 try:
                     active_leg_session_id = int(session)
                 except ValueError:
-                    msg = f":x: You typed neither 'all', nor a number of a session." \
+                    msg = f":x: You typed neither 'all', nor a number of a session.\n\n" \
                           f"**Usage**:\n  `{config.BOT_PREFIX}legislature session` to see details about the session" \
                           f" that is currently open,\n  " \
                           f"`{config.BOT_PREFIX}legislature session <number>` to see details about a specific " \
