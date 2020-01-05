@@ -40,6 +40,7 @@ class Roles(commands.Cog):
 
     @commands.command(name='roles')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
     async def roles(self, ctx):
         """Get a list of self-assignable roles"""
         available_roles = await self.get_roles(ctx)
@@ -60,6 +61,7 @@ class Roles(commands.Cog):
 
     @commands.command(name='role')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
     async def role(self, ctx, *, role: str):
         """Assign/remove a role to/from yourself"""
 
@@ -103,6 +105,7 @@ class Roles(commands.Cog):
     @commands.command(name='addrole')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(administrator=True)
+    @commands.guild_only()
     async def addrole(self, ctx):
         """Add a role to this guild's `-roles` list"""
 
@@ -147,6 +150,7 @@ class Roles(commands.Cog):
     @commands.command(name='deleterole')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(administrator=True)
+    @commands.guild_only()
     async def deleterole(self, ctx, hard: bool, *, role: str):
         """Remove a role from this guild's `-roles` list
 

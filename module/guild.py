@@ -21,6 +21,7 @@ class Guild(commands.Cog):
         self.bot = bot
 
     @commands.group(name='guild', case_insensitive=True, invoke_without_command=True)
+    @commands.guild_only()
     async def guild(self, ctx):
         """Configure various features of this bot for this guild"""
 

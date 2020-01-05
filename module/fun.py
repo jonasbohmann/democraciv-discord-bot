@@ -46,6 +46,7 @@ class Fun(commands.Cog):
 
     @commands.command(name='whois')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
     async def whois(self, ctx, *, member: discord.Member = None):
         """Get detailed information about a member of this guild
 
@@ -95,6 +96,7 @@ class Fun(commands.Cog):
 
     @commands.command(name='veterans')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
     async def veterans(self, ctx):
         """List the first 15 members who joined this guild"""
 

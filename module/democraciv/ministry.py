@@ -101,7 +101,6 @@ class Ministry(commands.Cog):
 
     @ministry.group(name='bills', aliases=['b'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.is_democraciv_guild()
     async def bills(self, ctx):
         """See all open bills from the Legislature to vote on"""
 
