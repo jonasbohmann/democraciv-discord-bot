@@ -13,7 +13,7 @@ from util import exceptions
 
 class DemocracivRole(enum.Enum):
     # Moderation
-    MODERATION_ROLE = 547530938712719373
+    MODERATION_ROLE = 319663296728924160
 
     # Executive
     MINISTER_ROLE = 639438027852087297

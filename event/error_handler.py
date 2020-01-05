@@ -11,6 +11,9 @@ class ErrorHandler(commands.Cog):
         self.bot = bot
 
     async def log_error(self, ctx, error, severe: bool = False, to_log_channel: bool = True, to_owner: bool = False):
+        if ctx.guild is None:
+            return
+
         log_channel = await utils.get_logging_channel(self.bot, ctx.guild.id)
 
         embed = self.bot.embeds.embed_builder(title=':x: Command Error', description="", time_stamp=True)
