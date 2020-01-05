@@ -212,25 +212,26 @@ class DemocracivBot(commands.Bot):
 
         # If, for whatever reason, the current guild does not have an entry in the bot's database, attempt to initialize
         # the default config
-        if message.guild.id not in self.cached_initialized_guilds:
-            if not await self.checks.is_guild_initialized(message.guild.id):
-                print(f"[DATABASE] Guild {message.guild.name} ({message.guild.id}) was not initialized. "
-                      f"Adding default entry to database... ")
-                try:
-                    await self.db.execute("INSERT INTO guilds (id, welcome, logging, logging_excluded, defaultrole) "
-                                          "VALUES ($1, false, false, ARRAY[0], false)",
-                                          message.guild.id)
-                except Exception:
-                    await self.DerJonas_object.send(
-                        f":x: Fatal database error occurred while initializing new guild "
-                        f"{message.guild.name} ({message.guild.id})")
-                    print(
-                        f"[DATABASE] Fatal error while initializing new guild {message.guild.name} ({message.guild.id})")
-                    return
+        if not isinstance(message.channel, discord.DMChannel):
+            if message.guild.id not in self.cached_initialized_guilds:
+                if not await self.checks.is_guild_initialized(message.guild.id):
+                    print(f"[DATABASE] Guild {message.guild.name} ({message.guild.id}) was not initialized. "
+                          f"Adding default entry to database... ")
+                    try:
+                        await self.db.execute("INSERT INTO guilds (id, welcome, logging, logging_excluded, defaultrole) "
+                                              "VALUES ($1, false, false, ARRAY[0], false)",
+                                              message.guild.id)
+                    except Exception:
+                        await self.DerJonas_object.send(
+                            f":x: Fatal database error occurred while initializing new guild "
+                            f"{message.guild.name} ({message.guild.id})")
+                        print(
+                            f"[DATABASE] Fatal error while initializing new guild {message.guild.name} ({message.guild.id})")
+                        return
 
-                print(f"[DATABASE] Successfully initialized guild {message.guild.name} ({message.guild.id})")
+                    print(f"[DATABASE] Successfully initialized guild {message.guild.name} ({message.guild.id})")
 
-            self.cached_initialized_guilds.append(message.guild.id)
+                self.cached_initialized_guilds.append(message.guild.id)
 
         # Relay message to cogs
         await self.process_commands(message)

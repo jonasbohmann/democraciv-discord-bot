@@ -165,6 +165,9 @@ class ErrorHandler(commands.Cog):
         elif isinstance(error, commands.NoPrivateMessage):
             return await ctx.send(":x: This command cannot be used in DMs!")
 
+        elif isinstance(error, commands.PrivateMessageOnly):
+            return await ctx.send(":x: This command can only be used in DMs!")
+
         # This includes all exceptions declared in util.exceptions.py
         elif isinstance(error, exceptions.DemocracivBotException):
             await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)

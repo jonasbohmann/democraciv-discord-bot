@@ -152,8 +152,6 @@ class Moderation(commands.Cog):
         await ctx.send("You can report something directly to the mods with this command. Abuse "
                        "(i.e. spamming joke reports) will be punished.")
 
-        await asyncio.sleep(0.5)
-
         anon_question = await ctx.send(":information_source: Do you want this report to be anonymous?")
 
         is_anon = True
@@ -177,8 +175,10 @@ class Moderation(commands.Cog):
         if not content:
             return
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that want to send this report?"
-                                      f"\n```Anonymous: {is_anon}\n\n{content}```")
+        pretty_anon = "Yes" if is_anon else "No"
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to send this report?"
+                                      f"\n```Anonymous: {pretty_anon}\n\n\nReport: {content}```")
 
         reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 150)
 
@@ -197,7 +197,7 @@ class Moderation(commands.Cog):
             await ctx.send(":white_check_mark: Successfully sent report.")
 
         elif str(reaction.emoji) == "\U0000274c":
-            return
+            return await ctx.send("Aborted.")
 
     @staticmethod
     async def safe_send_mod_links(ctx, embed):
