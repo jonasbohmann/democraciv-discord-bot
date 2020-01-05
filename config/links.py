@@ -35,3 +35,4 @@ legislativeprocedures = "https://docs.google.com/document/d/1vUGVIv0F0ZK2cAJrhaD
 stvcalcsource = "https://gist.github.com/jonasbohmann/adadbe6c2c77a748b8e89d9d10ead074"
 execprocedures = "https://docs.google.com/document/d/1qAdq0cXkAqHDkEW4BKp2M79fDQrpJksEDh3YTlLn3U4/edit"
 scpolicy = "https://docs.google.com/document/d/1WQ887wi--kCqloXwrlwadi_8ixAsxGxYIYdog7Dc7_Y/edit?usp=sharing"
+formparty = "https://forms.gle/ETyFrr6qucr95MMA9"

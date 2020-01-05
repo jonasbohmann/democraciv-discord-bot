@@ -15,7 +15,7 @@ class RoleNotFoundError(DemocracivBotException):
 
     def __init__(self, role: str):
         self.role = role
-        self.message = f":x: Couldn't find a role named '{role}' on this guild!"
+        self.message = f":x: Couldn't find a role named `{role}` on this guild!"
 
 
 class ChannelNotFoundError(DemocracivBotException):
@@ -23,7 +23,7 @@ class ChannelNotFoundError(DemocracivBotException):
 
     def __init__(self, channel: str):
         self.channel = channel
-        self.message = f":x: Couldn't find a channel named '{channel}' on this guild!"
+        self.message = f":x: Couldn't find a channel named `{channel}` on this guild!"
 
 
 class MemberNotFoundError(DemocracivBotException):
@@ -31,7 +31,7 @@ class MemberNotFoundError(DemocracivBotException):
 
     def __init__(self, member: str):
         self.member = member
-        self.message = f":x: Couldn't find a member named {member} on this guild!"
+        self.message = f":x: Couldn't find a member named `{member}` on this guild!"
 
 
 class NoOneHasRoleError(DemocracivBotException):
@@ -39,7 +39,7 @@ class NoOneHasRoleError(DemocracivBotException):
 
     def __init__(self, role: str):
         self.role = role
-        self.message = f":x: No one on this guild has the role named '{role}'!"
+        self.message = f":x: No one on this guild has the role named `{role}`!"
 
 
 class NotDemocracivGuildError(DemocracivBotException):
@@ -56,7 +56,7 @@ class GuildNotFoundError(DemocracivBotException):
     """Raised when the bot tries to use a bot.get(guild) or similar query with a non-existing guild"""
 
     def __init__(self, name):
-        self.message = f":x: Couldn't find a guild named/with the ID '{name}' that I am in!"
+        self.message = f":x: Couldn't find a guild named/with the ID `{name}` that I am in!"
 
 
 class ForbiddenTask(enum.Enum):
@@ -76,18 +76,18 @@ class ForbiddenError(DemocracivBotException):
     def __init__(self, task: ForbiddenTask = None, detail: str = None):
 
         if task == ForbiddenTask.ADD_ROLE:
-            self.message = f":x: Either the '{detail}' role is higher than my role, or I'm missing Administrator " \
+            self.message = f":x: Either the `{detail}` role is higher than my role, or I'm missing Administrator " \
                            f"permissions to give you the role!"
 
         elif task == ForbiddenTask.REMOVE_ROLE:
-            self.message = f":x: Either the '{detail}' role is higher than my role, or I'm missing Administrator " \
+            self.message = f":x: Either the `{detail}` role is higher than my role, or I'm missing Administrator " \
                            f"permissions to remove the role from you!"
 
         elif task == ForbiddenTask.CREATE_ROLE:
-            self.message = f":x: I'm missing the required permissions to create the '{detail}' role."
+            self.message = f":x: I'm missing the required permissions to create the `{detail}` role."
 
         elif task == ForbiddenTask.DELETE_ROLE:
-            self.message = f":x: I'm missing the required permissions to delete the '{detail}' role."
+            self.message = f":x: I'm missing the required permissions to delete the `{detail}` role."
 
         elif task == ForbiddenTask.MESSAGE_DELETE:
             self.message = ":x: I'm missing the required permissions to delete that message."

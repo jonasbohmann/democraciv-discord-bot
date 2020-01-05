@@ -459,7 +459,7 @@ class Legislature(commands.Cog):
                 embed.add_field(name="URL", value=google_docs_url, inline=False)
 
             await ctx.send(
-                f":white_check_mark: Successfully submitted bill '{bill_title}' for session #{current_leg_session}!")
+                f":white_check_mark: Successfully submitted bill `{bill_title}` for session #{current_leg_session}!")
 
         elif str(reaction.emoji) == "\U0001f1f2":
             # -- Motion --
@@ -505,7 +505,7 @@ class Legislature(commands.Cog):
                 embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow(), inline=False)
 
             await ctx.send(
-                f":white_check_mark: Successfully submitted motion titled '{title}'"
+                f":white_check_mark: Successfully submitted motion titled `{title}`"
                 f" for session #{current_leg_session}!")
 
         # -- Send DM to Cabinet after everything is done and succeed --
@@ -527,7 +527,7 @@ class Legislature(commands.Cog):
         bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
         if bill_details is None:
-            return await ctx.send(f":x: There is no submitted bill with ID #{bill_id}!")
+            return await ctx.send(f":x: There is no submitted bill with ID `#{bill_id}`!")
 
         last_leg_session = await self.bot.laws.get_last_leg_session()
 
@@ -607,7 +607,7 @@ class Legislature(commands.Cog):
         bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
         if bill_details is None:
-            return await ctx.send(f":x: There is no submitted bill with ID #{bill_id}!")
+            return await ctx.send(f":x: There is no submitted bill with ID `#{bill_id}`!")
 
         last_leg_session = await self.bot.laws.get_last_leg_session()
 

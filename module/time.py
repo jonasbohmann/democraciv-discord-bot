@@ -30,7 +30,7 @@ class Time(commands.Cog):
                 time_response = await response.json()
 
             if time_response['status'] != "OK":
-                return await ctx.send(f":x: '{zone}' is not a valid time zone!")
+                return await ctx.send(f":x: `{zone}` is not a valid time zone!")
 
             us_time = datetime.utcfromtimestamp(time_response['timestamp']).strftime("%A, %B %d %Y "
                                                                                      " %I:%M:%S %p")

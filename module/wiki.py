@@ -104,7 +104,7 @@ class Wiki(commands.Cog):
                                                     await self.get_civilization_fandom_suggested_article(topic))
 
         if not article[0]:
-            return await ctx.send(f":x: Couldn't find any article that's related to '{topic}'.")
+            return await ctx.send(f":x: Couldn't find any article that's related to `{topic}`.")
 
         embed = self.bot.embeds.embed_builder(title=f"<:fandom:660488383855984640>  {article[0]}",
                                               description=article[1], has_footer=False)
@@ -139,7 +139,7 @@ class Wiki(commands.Cog):
                 result = await self.get_wikipedia_result_with_rest_api(suggested_query_name)
 
                 if result is None or not result:
-                    return await ctx.send(f":x: Didn't find any article that's related to '{topic}'")
+                    return await ctx.send(f":x: Didn't find any article that's related to `{topic}`")
 
             _title = result['title']
             _summary = result['extract']

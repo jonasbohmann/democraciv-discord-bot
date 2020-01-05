@@ -82,7 +82,7 @@ class Roles(commands.Cog):
                     await ctx.send(available_roles[discord_role.id])
                 else:
                     await ctx.send(f":x: You are not allowed to give yourself this role! "
-                                   f"If you're trying to join a political party, use `-join {discord_role.name}`")
+                                   f"If you're trying to join a political party, use `-join {discord_role.name}`.")
             elif discord_role in ctx.message.author.roles:
                 if discord_role.id in available_roles:
                     try:
@@ -93,7 +93,7 @@ class Roles(commands.Cog):
                     await ctx.send(f":white_check_mark: The '{discord_role.name}' role was removed from you.")
                 else:
                     await ctx.send(f":x: You are not allowed remove this role from you! "
-                                   f"If you're trying to leave a political party, use `-leave {discord_role.name}`")
+                                   f"If you're trying to leave a political party, use `-leave {discord_role.name}`.")
 
     @role.error
     async def rolerror(self, ctx, error):

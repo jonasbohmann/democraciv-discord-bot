@@ -2,7 +2,7 @@ import discord
 import asyncio
 import asyncpg
 
-from config import config
+from config import config, links
 from util.exceptions import ForbiddenTask
 from util.flow import Flow
 from discord.ext import commands
@@ -88,7 +88,7 @@ class Party(commands.Cog, name='Political Parties'):
         role = await self.get_party_role(party)
 
         if role is None:
-            await ctx.send(f":x: Couldn't find a party named '{party}'!\n\n**Try one of these:**")
+            await ctx.send(f":x: Couldn't find a party named `{party}`!\n\n**Try one of these:**")
             msg = ''
             for key in available_parties_by_id:
                 role = ctx.guild.get_role(key)
@@ -147,8 +147,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def form(self, ctx):
         """Form a political party"""
-        link = "https://forms.gle/ETyFrr6qucr95MMA9"
-        await ctx.send(f"You can fill out this form with all the details to form a political party:\n{link}")
+        await ctx.send(f"You can fill out this form with all the details to form a political party:\n{links.formparty}")
 
     @commands.command(name='leave')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -162,7 +161,7 @@ class Party(commands.Cog, name='Political Parties'):
         role = await self.get_party_role(party)
 
         if role is None:
-            await ctx.send(f":x: Couldn't find a party named '{party}'!\n\n**Try one of these:**")
+            await ctx.send(f":x: Couldn't find a party named `{party}`!\n\n**Try one of these:**")
             msg = ''
             for key in available_parties_by_id:
                 role = ctx.guild.get_role(key)
@@ -272,7 +271,7 @@ class Party(commands.Cog, name='Political Parties'):
 
         if isinstance(role_name, str):
             await ctx.send(
-                f":white_check_mark: I will **create a new role** on this guild named '{role_name}'"
+                f":white_check_mark: I will **create a new role** on this guild named `{role_name}`"
                 f" for the new party.")
             try:
                 discord_role = await ctx.guild.create_role(name=role_name)
@@ -326,7 +325,7 @@ class Party(commands.Cog, name='Political Parties'):
                             discord_role.id,
                             party_invite, True, leader_role.id)
                     except asyncpg.UniqueViolationError:
-                        await ctx.send(f":x: A party named '{discord_role.name}' already exists!")
+                        await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
                         return
                 else:
                     try:
@@ -334,7 +333,7 @@ class Party(commands.Cog, name='Political Parties'):
                             "INSERT INTO parties (id, discord, private) VALUES ($1, $2, $3)", discord_role.id,
                             party_invite, False)
                     except asyncpg.UniqueViolationError:
-                        await ctx.send(f":x: A party named '{discord_role.name}' already exists!")
+                        await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
                         return
 
                 status = await self.bot.db.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
@@ -378,7 +377,7 @@ class Party(commands.Cog, name='Political Parties'):
                     await self.bot.db.execute("DELETE FROM party_alias WHERE party_id = $1", discord_role.id)
                     await self.bot.db.execute("DELETE FROM parties WHERE id = $1", discord_role.id)
 
-            await ctx.send(f':white_check_mark: Deleted the party "{discord_role.name}" and all its aliases.')
+            await ctx.send(f':white_check_mark: Deleted the party `{discord_role.name}` and all its aliases.')
 
     @deleteparty.error
     async def deletepartyerror(self, ctx, error):
@@ -420,7 +419,7 @@ class Party(commands.Cog, name='Political Parties'):
         if discord_role is None:
             raise exceptions.RoleNotFoundError(party.content)
 
-        await ctx.send(f":information_source: Answer with the alias for '{discord_role.name}':")
+        await ctx.send(f":information_source: Answer with the alias for `{discord_role.name}`:")
 
         flow = Flow(self.bot, ctx)
         alias = await flow.get_text_input(240)
@@ -434,7 +433,7 @@ class Party(commands.Cog, name='Political Parties'):
                                                    alias.lower(), discord_role.id)
 
         if status == "INSERT 0 1":
-            await ctx.send(f':white_check_mark: Added the alias "{alias}" for party '
+            await ctx.send(f':white_check_mark: Added the alias `{alias}` for party '
                            f'"{discord_role.name}"!')
         else:
             await ctx.send(":x: Unexpected database error occurred.")
@@ -469,7 +468,7 @@ class Party(commands.Cog, name='Political Parties'):
             message += f"{record['alias']}\n"
 
         if message == '':
-            await ctx.send(f":x: No aliases found for {discord_role.name}!")
+            await ctx.send(f":x: No aliases found for `{discord_role.name}`!")
 
         if message:
             embed = self.bot.embeds.embed_builder(title=f'Aliases of {discord_role.name}', description=f'{message}',
