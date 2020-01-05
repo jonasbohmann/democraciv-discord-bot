@@ -139,7 +139,7 @@ class Moderation(commands.Cog):
             embed.add_field(name="Chance", value=f"There is a {chance * 100}% chance that {member} is an alt.")
 
             await mk.get_democraciv_channel(self.bot,
-                                      mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
+                                            mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
                 content=mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE).mention, embed=embed)
 
     @commands.command(name='report')
@@ -149,10 +149,9 @@ class Moderation(commands.Cog):
 
         flow = Flow(self.bot, ctx)
 
-        await ctx.send("You can report something directly to the mods with this command. Abuse "
-                       "(i.e. spamming joke reports) will be punished.")
-
-        anon_question = await ctx.send(":information_source: Do you want this report to be anonymous?")
+        anon_question = await ctx.send("You can report something directly to the mods with this command. Abuse "
+                                       "(i.e. spamming joke reports) will be punished.\n\n\n:information_source: "
+                                       "Do you want this report to be anonymous?")
 
         is_anon = True
 
@@ -167,7 +166,7 @@ class Moderation(commands.Cog):
         elif str(reaction.emoji) == "\U0000274c":
             is_anon = False
 
-        await ctx.send(":information_source: Reply with the content of your report. This will abort after"
+        await ctx.send(":information_source: Reply with the details of your report. This will abort after"
                        " 10 minutes of no reply.")
 
         content = await flow.get_text_input(600)
@@ -183,12 +182,12 @@ class Moderation(commands.Cog):
         reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 150)
 
         if str(reaction.emoji) == "\U00002705":
-            embed = self.bot.embeds.embed_builder(title="New Report", description="")
+            embed = self.bot.embeds.embed_builder(title=":exclamation: New Report", description="")
 
             if not is_anon:
                 embed.add_field(name="From", value=f"{ctx.author} ({ctx.author.id})")
 
-            embed.add_field(name="Content", value=content)
+            embed.add_field(name="Content", value=content, inline=False)
 
             await mk.get_democraciv_channel(self.bot,
                                             mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
