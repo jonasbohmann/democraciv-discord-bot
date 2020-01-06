@@ -139,8 +139,7 @@ class Moderation(commands.Cog):
             embed.add_field(name="Chance", value=f"There is a {chance * 100}% chance that {member} is an alt.")
 
             await mk.get_democraciv_channel(self.bot,
-                                            mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
-                content=mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE).mention, embed=embed)
+                                            mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(embed=embed)
 
     @commands.command(name='report')
     @commands.dm_only()
