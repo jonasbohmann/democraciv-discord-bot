@@ -110,10 +110,11 @@ class Legislature(commands.Cog):
 
         await ctx.send(f":white_check_mark: Successfully opened the submission period for session #{new_session}!")
 
-        await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE).mention}, the "
+        await mk.get_democraciv_channel(self.bot,
+                                        mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(f"The "
                                                               f"submission period for Legislative Session "
-                                                              f"#{new_session} has started!\nSubmit your "
-                                                              f"bills with `-legislature submit`.")
+                                                              f"#{new_session} has started!\nEveryone is allowed to sub"
+                                                              f"mit bills with `-legislature submit`.")
 
         for legislator in mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE).members:
             try:
@@ -154,10 +155,14 @@ class Legislature(commands.Cog):
 
         await ctx.send(f":white_check_mark: Successfully opened session #{active_leg_session_id} up for voting!")
 
-        await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE).mention},"
-                                                              f" the voting period for Legislative Session "
-                                                              f"#{active_leg_session_id} has started!\n:ballot_box:"
-                                                              f" Vote here: {voting_form}")
+        await mk.get_democraciv_channel(self.bot,
+                                        mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(f"The voting period for "
+                                                                                             f"Legislative Session "
+                                                                                             f"#{active_leg_session_id}"
+                                                                                             f" has started!"
+                                                                                             f"\n:ballot_box:"
+                                                                                             f" Legislators can vote"
+                                                                                             f" here: {voting_form}")
 
         for legislator in mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE).members:
             try:

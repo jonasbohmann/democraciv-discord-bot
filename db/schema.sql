@@ -95,3 +95,11 @@ CREATE TABLE IF NOT EXISTS legislature_motions(
     description text,
     submitter bigint
 );
+
+CREATE TABLE IF NOT EXISTS guild_tags(
+    guild_id bigint references guilds(id),
+    id serial UNIQUE PRIMARY KEY,
+    name text,
+    content text
+);
+
