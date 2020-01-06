@@ -119,8 +119,7 @@ class Moderation(commands.Cog):
             embed.add_field(name="From", value=message.author.mention)
             embed.add_field(name="Request", value=message.content, inline=False)
             await mk.get_democraciv_channel(self.bot,
-                                            mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
-                content=mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE).mention, embed=embed)
+                                            mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(embed=embed)
 
     @commands.Cog.listener(name="on_member_join")
     async def possible_alt_listener(self, member):
