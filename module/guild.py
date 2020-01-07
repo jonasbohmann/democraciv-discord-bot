@@ -352,6 +352,106 @@ class Guild(commands.Cog):
                       , show_index=False, footer_text=config.BOT_NAME)
         await pages.paginate()
 
+    @commands.command(name="addtagalias")
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    @commands.has_permissions(administrator=True)
+    async def addtagalias(self, ctx):
+        """Add a new alias to a tag"""
+
+        flow = Flow(self.bot, ctx)
+
+        await ctx.send(":information_source: Reply with the name of the tag that the new alias should belong to.")
+
+        tag = await flow.get_text_input(240)
+
+        tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND guild_id = $2",
+                                                 tag.lower(), ctx.guild.id)
+
+        if tag_details is None:
+            return await ctx.send(f":x: This guild has no tag called `{tag}`!")
+
+        await ctx.send(f":information_source: Reply with the alias for `{config.BOT_PREFIX}{tag}`.")
+
+        alias = await flow.get_text_input(240)
+
+        if not alias:
+            return
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to add the alias "
+                                      f"`{config.BOT_PREFIX}{alias}` to "
+                                      f"`{config.BOT_PREFIX}{tag_details['name']}`?")
+
+        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+
+        if reaction is None:
+            return
+
+        if str(reaction.emoji) == "\U0000274c":
+            return await ctx.send("Aborted.")
+
+        elif str(reaction.emoji) == "\U00002705":
+            async with self.bot.db.acquire() as con:
+                async with con.transaction():
+                    status = await self.bot.db.execute("INSERT INTO guild_tags_alias (alias, guild_tag_id) VALUES "
+                                                       "($1, $2)", alias.lower(), tag_details['id'])
+
+        if status == "INSERT 0 1":
+            await ctx.send(f':white_check_mark: Added the alias `{config.BOT_PREFIX}{alias}` to'
+                           f'`{config.BOT_PREFIX}{tag_details["name"]}`.')
+        else:
+            await ctx.send(":x: Unexpected database error occurred.")
+
+    @commands.command(name="removetagalias")
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    @commands.has_permissions(administrator=True)
+    async def removetagalias(self, ctx, alias: str):
+        """Remove a alias from a tag"""
+
+        flow = Flow(self.bot, ctx)
+
+        tag = await self.resolve_tag_name(alias.lower(), ctx.guild)
+
+        if tag is None:
+            return await ctx.send(f":x: This guild has no tag with the associated alias `{alias}`!")
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove the alias "
+                                      f"`{config.BOT_PREFIX}{alias}` from `{config.BOT_PREFIX}{tag['name']}`?")
+
+        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+
+        if reaction is None:
+            return
+
+        if str(reaction.emoji) == "\U0000274c":
+            return await ctx.send("Aborted.")
+
+        elif str(reaction.emoji) == "\U00002705":
+            async with self.bot.db.acquire() as con:
+                async with con.transaction():
+                    try:
+                        await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE alias = $1 AND guild_tag_id = $2",
+                                                  alias.lower(), tag['id'])
+                        await ctx.send(f":white_check_mark: Successfully removed the alias "
+                                       f"`{config.BOT_PREFIX}{alias}` from `{config.BOT_PREFIX}{tag['name']}`.")
+                    except Exception as e:
+                        print(e)
+                        await ctx.send(f":x: Unexpected error occurred.")
+                        raise
+
+    async def resolve_tag_name(self, query: str, guild: discord.Guild):
+
+        tag_id = await self.bot.db.fetchval("SELECT guild_tag_id FROM guild_tags_alias WHERE alias = $1", query.lower())
+
+        if tag_id is None:
+            return None
+
+        tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1 AND guild_id = $2", tag_id,
+                                                 guild.id)
+
+        return tag_details
+
     @commands.command(name="addtag")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
@@ -424,7 +524,7 @@ class Guild(commands.Cog):
                                          ctx.guild.id)
 
         if tag is None:
-            await ctx.send(f":x: This guild has no tag called `{name}`!")
+            return await ctx.send(f":x: This guild has no tag called `{name}`!")
 
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove the tag "
                                       f"`{config.BOT_PREFIX}{tag['name']}`?")
@@ -450,7 +550,7 @@ class Guild(commands.Cog):
 
     async def resolve_tag_name(self, query: str, guild: discord.Guild):
 
-        tag_id = await self.bot.db.fetchval("SELECT guild_tag_id FROM guild_tags_alias WHERE alias % $1", query)
+        tag_id = await self.bot.db.fetchval("SELECT guild_tag_id FROM guild_tags_alias WHERE alias = $1", query.lower())
 
         if tag_id is None:
             return None
