@@ -103,3 +103,7 @@ CREATE TABLE IF NOT EXISTS guild_tags(
     content text
 );
 
+CREATE TABLE IF NOT EXISTS guild_tags_alias(
+    guild_tag_id serial references guild_tags(id),
+    alias text
+);

@@ -1,3 +1,4 @@
+import asyncpg
 import discord
 
 import util.exceptions as exceptions
@@ -329,6 +330,48 @@ class Guild(commands.Cog):
         """Get an active invite link to this guild"""
         invite = await ctx.channel.create_invite(max_age=0, unique=False)
         await ctx.send(invite.url)
+
+    @commands.group(name="tag")
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    async def invite(self, ctx):
+        """Get an active invite link to this guild"""
+        invite = await ctx.channel.create_invite(max_age=0, unique=False)
+        await ctx.send(invite.url)
+
+    async def resolve_tag_name(self, query: str, guild: discord.Guild):
+
+        tag_id = await self.bot.db.fetchval("SELECT guild_tag_id FROM guild_tags_alias WHERE alias % $1", query)
+
+        if tag_id is None:
+            return None
+
+        tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1 AND guild_id = $2", tag_id,
+                                                 guild.id)
+
+        return tag_details
+
+    @commands.Cog.listener(name="on_message")
+    async def guild_tags_listener(self, message):
+        if message.author.bot:
+            return
+
+        if (await self.bot.get_context(message)).valid:
+            return
+
+        if message.guild is None:
+            return
+
+        if not message.content.startswith(config.BOT_PREFIX):
+            return
+
+        tag_details = await self.resolve_tag_name(message.content[len(config.BOT_PREFIX):], message.guild)
+
+        if tag_details is None:
+            return
+
+        embed = self.bot.embeds.embed_builder(title=tag_details['name'], description=tag_details['content'])
+        await message.channel.send(embed=embed)
 
 
 def setup(bot):
