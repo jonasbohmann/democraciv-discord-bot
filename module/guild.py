@@ -13,6 +13,7 @@ from discord.ext import commands
 #
 # Commands that manage a guild's settings. Requires administrator permissions.
 #
+from util.paginator import Pages
 
 
 class Guild(commands.Cog):
@@ -331,6 +332,26 @@ class Guild(commands.Cog):
         invite = await ctx.channel.create_invite(max_age=0, unique=False)
         await ctx.send(invite.url)
 
+    @commands.command(name="tags", aliases=["alltags"])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    async def tags(self, ctx):
+        """See all tags on this guild"""
+
+        all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1", ctx.guild.id)
+
+        pretty_tags = []
+
+        for record in all_tags:
+            pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`\n")
+
+        if not pretty_tags or len(pretty_tags) == 0:
+            pretty_tags = ['There are no tags on this guild.']
+
+        pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=False, title=f"All tags in {ctx.guild.name}"
+                      , show_index=False, footer_text=config.BOT_NAME)
+        await pages.paginate()
+
     @commands.command(name="addtag")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
@@ -413,8 +434,7 @@ class Guild(commands.Cog):
                         await self.bot.db.execute("DELETE FROM guild_tags WHERE name = $1 AND guild_id = $2",
                                                   name.lower(), ctx.guild.id)
                         await ctx.send(f":white_check_mark: Successfully removed `{config.BOT_PREFIX}{name}`!")
-                    except Exception as e:
-                        print(e)
+                    except Exception:
                         await ctx.send(f":x: Unexpected error occurred.")
                         raise
 
