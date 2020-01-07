@@ -628,6 +628,8 @@ class Legislature(commands.Cog):
         # Voting Period.
         # The original submitter of the bill can only withdraw their own bill during the Submission Period.
 
+        is_cabinet = False
+
         if mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE) not in ctx.author.roles and mk.get_democraciv_role(
                 self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE) not in ctx.author.roles:
             if ctx.author.id == bill_details['submitter']:
@@ -639,6 +641,7 @@ class Legislature(commands.Cog):
             else:
                 allowed = False
         else:
+            is_cabinet = True
             allowed = True
 
         if not allowed:
@@ -664,8 +667,16 @@ class Legislature(commands.Cog):
             except asyncpg.ForeignKeyViolationError:
                 return await ctx.send(":x: This bill is already a law and cannot be withdrawn.")
 
-            return await ctx.send(f":white_check_mark: Successfully withdrew '{bill_details['bill_name']}"
+            await ctx.send(f":white_check_mark: Successfully withdrew '{bill_details['bill_name']}"
                                   f"' (#{bill_details['id']}) from session #{last_leg_session}!")
+
+            if not is_cabinet:
+                msg = f"**Bill Withdrawn**\n{ctx.author.name} has withdrawn their bill " \
+                      f"'{bill_details['bill_name']}' "  \
+                      f"'(#{bill_details['id']}) from the current session."
+
+                await self.speaker.send(msg)
+                await self.vice_speaker.send(msg)
 
     @withdrawbill.error
     async def wberror(self, ctx, error):
