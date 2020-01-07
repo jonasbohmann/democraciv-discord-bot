@@ -343,7 +343,7 @@ class Guild(commands.Cog):
         pretty_tags = []
 
         for record in all_tags:
-            pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`\n")
+            pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}\n")
 
         if not pretty_tags or len(pretty_tags) == 0:
             pretty_tags = ['There are no tags on this guild.']
@@ -361,11 +361,19 @@ class Guild(commands.Cog):
 
         flow = Flow(self.bot, ctx)
 
-        await ctx.send(":information_source: Reply with the name of the tag.")
+        await ctx.send(":information_source: Reply with the name of the tag. This will be used to access the"
+                       " tag via the bot's prefix.")
 
         name = await flow.get_text_input(300)
 
         if name is None:
+            return
+
+        await ctx.send(":information_source: Reply with the full title of the tag.")
+
+        title = await flow.get_text_input(300)
+
+        if title is None:
             return
 
         await ctx.send(":information_source: Reply with the content of the tag.")
@@ -390,9 +398,11 @@ class Guild(commands.Cog):
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     try:
-                        await self.bot.db.execute("INSERT INTO guild_tags (guild_id, name, content) VALUES ($1, $2, $3)",
-                                                  ctx.guild.id, name.lower(), content)
-                        _id = await self.bot.db.fetchval("SELECT id FROM guild_tags WHERE name = $1 AND guild_id = $2 AND "
+                        await self.bot.db.execute("INSERT INTO guild_tags (guild_id, name, content, title) VALUES "
+                                                  "($1, $2, $3, $4)",
+                                                  ctx.guild.id, name.lower(), content, title)
+                        _id = await self.bot.db.fetchval("SELECT id FROM guild_tags WHERE name = $1 AND guild_id "
+                                                         "= $2 AND "
                                                          "content = $3", name.lower(), ctx.guild.id, content)
                         await self.bot.db.execute("INSERT INTO guild_tags_alias (guild_tag_id, alias) VALUES ($1, $2)",
                                                   _id, name.lower())
@@ -469,7 +479,7 @@ class Guild(commands.Cog):
         if tag_details is None:
             return
 
-        embed = self.bot.embeds.embed_builder(title=tag_details['name'], description=tag_details['content'])
+        embed = self.bot.embeds.embed_builder(title=tag_details['title'], description=tag_details['content'])
         await message.channel.send(embed=embed)
 
 

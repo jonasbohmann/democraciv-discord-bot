@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS guild_tags(
     guild_id bigint references guilds(id),
     id serial UNIQUE PRIMARY KEY,
     name text,
+    title text,
     content text
 );
 
