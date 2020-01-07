@@ -104,6 +104,6 @@ CREATE TABLE IF NOT EXISTS guild_tags(
 );
 
 CREATE TABLE IF NOT EXISTS guild_tags_alias(
-    guild_tag_id serial references guild_tags(id),
+    guild_tag_id serial references guild_tags(id) ON DELETE CASCADE,
     alias text
 );

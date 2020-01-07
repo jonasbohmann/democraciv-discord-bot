@@ -1,14 +1,11 @@
-import asyncio
-
 import discord
 import datetime
 
+from util.flow import Flow
 from util import utils, mk, exceptions
 from config import config, token
 
 from discord.ext import commands
-
-from util.flow import Flow
 
 
 class Moderation(commands.Cog):

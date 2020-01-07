@@ -72,7 +72,7 @@ class Guild(commands.Cog):
 
         if await flow.gear_reaction_confirm(info_embed, 300):
             status_question = await ctx.send(
-               "React with :white_check_mark: to enable the welcome module, or with :x: to disable the welcome module.")
+                "React with :white_check_mark: to enable the welcome module, or with :x: to disable the welcome module.")
 
             reaction, user = await flow.yes_no_reaction_confirm(status_question, 240)
 
@@ -146,7 +146,7 @@ class Guild(commands.Cog):
         if await flow.gear_reaction_confirm(info_embed, 300):
 
             status_question = await ctx.send(
-               "React with :white_check_mark: to enable the logging module, or with :x: to disable the logging module.")
+                "React with :white_check_mark: to enable the logging module, or with :x: to disable the logging module.")
 
             reaction, user = await flow.yes_no_reaction_confirm(status_question, 240)
 
@@ -331,13 +331,92 @@ class Guild(commands.Cog):
         invite = await ctx.channel.create_invite(max_age=0, unique=False)
         await ctx.send(invite.url)
 
-    @commands.group(name="tag")
+    @commands.command(name="addtag")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def invite(self, ctx):
-        """Get an active invite link to this guild"""
-        invite = await ctx.channel.create_invite(max_age=0, unique=False)
-        await ctx.send(invite.url)
+    @commands.has_permissions(administrator=True)
+    async def addtag(self, ctx):
+        """Add a tag for this guild"""
+
+        flow = Flow(self.bot, ctx)
+
+        await ctx.send(":information_source: Reply with the name of the tag.")
+
+        name = await flow.get_text_input(300)
+
+        if name is None:
+            return
+
+        await ctx.send(":information_source: Reply with the content of the tag.")
+
+        content = await flow.get_text_input(300)
+
+        if content is None:
+            return
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to add the tag "
+                                      f"`{config.BOT_PREFIX}{name}`?")
+
+        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+
+        if reaction is None:
+            return
+
+        if str(reaction.emoji) == "\U0000274c":
+            return await ctx.send("Aborted.")
+
+        elif str(reaction.emoji) == "\U00002705":
+            async with self.bot.db.acquire() as con:
+                async with con.transaction():
+                    try:
+                        await self.bot.db.execute("INSERT INTO guild_tags (guild_id, name, content) VALUES ($1, $2, $3)",
+                                                  ctx.guild.id, name.lower(), content)
+                        _id = await self.bot.db.fetchval("SELECT id FROM guild_tags WHERE name = $1 AND guild_id = $2 AND "
+                                                         "content = $3", name.lower(), ctx.guild.id, content)
+                        await self.bot.db.execute("INSERT INTO guild_tags_alias (guild_tag_id, alias) VALUES ($1, $2)",
+                                                  _id, name.lower())
+                        await ctx.send(f":white_check_mark: Successfully added `{config.BOT_PREFIX}{name}`!")
+                    except Exception:
+                        await ctx.send(f":x: Unexpected error occurred.")
+                        raise
+
+    @commands.command(name="removetag")
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    @commands.has_permissions(administrator=True)
+    async def removetag(self, ctx, name: str):
+        """Remove a tag"""
+
+        flow = Flow(self.bot, ctx)
+
+        tag = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND guild_id = $2", name.lower(),
+                                         ctx.guild.id)
+
+        if tag is None:
+            await ctx.send(f":x: This guild has no tag called `{name}`!")
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove the tag "
+                                      f"`{config.BOT_PREFIX}{tag['name']}`?")
+
+        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+
+        if reaction is None:
+            return
+
+        if str(reaction.emoji) == "\U0000274c":
+            return await ctx.send("Aborted.")
+
+        elif str(reaction.emoji) == "\U00002705":
+            async with self.bot.db.acquire() as con:
+                async with con.transaction():
+                    try:
+                        await self.bot.db.execute("DELETE FROM guild_tags WHERE name = $1 AND guild_id = $2",
+                                                  name.lower(), ctx.guild.id)
+                        await ctx.send(f":white_check_mark: Successfully removed `{config.BOT_PREFIX}{name}`!")
+                    except Exception as e:
+                        print(e)
+                        await ctx.send(f":x: Unexpected error occurred.")
+                        raise
 
     async def resolve_tag_name(self, query: str, guild: discord.Guild):
 
