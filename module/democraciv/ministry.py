@@ -106,8 +106,8 @@ class Ministry(commands.Cog):
 
         pretty_bills = await self.get_pretty_vetos()
 
-        help_description = f"Use {self.bot.commands_prefix}ministry veto <law_id> to veto a bill, or " \
-                           f"{self.bot.commands_prefix}ministry pass <law_id> to pass a bill into law."
+        help_description = f"Use {self.bot.commands_prefix}ministry veto <bill_id> to veto a bill, or " \
+                           f"{self.bot.commands_prefix}ministry pass <bill_id> to pass a bill into law."
 
         pages = Pages(ctx=ctx, entries=pretty_bills, show_entry_count=False, title="Open Bills to Veto"
                       , show_index=False, footer_text=help_description)
