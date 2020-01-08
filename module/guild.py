@@ -511,7 +511,7 @@ class Guild(commands.Cog):
                         await ctx.send(f":x: Unexpected error occurred.")
                         raise
 
-    @commands.command(name="removetag")
+    @commands.command(name="removetag", aliases=['deletetag'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
@@ -541,24 +541,13 @@ class Guild(commands.Cog):
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     try:
+                        await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE guild_tag_id = $1", tag['id'])
                         await self.bot.db.execute("DELETE FROM guild_tags WHERE name = $1 AND guild_id = $2",
                                                   name.lower(), ctx.guild.id)
                         await ctx.send(f":white_check_mark: Successfully removed `{config.BOT_PREFIX}{name}`!")
                     except Exception:
                         await ctx.send(f":x: Unexpected error occurred.")
                         raise
-
-    async def resolve_tag_name(self, query: str, guild: discord.Guild):
-
-        tag_id = await self.bot.db.fetchval("SELECT guild_tag_id FROM guild_tags_alias WHERE alias = $1", query.lower())
-
-        if tag_id is None:
-            return None
-
-        tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1 AND guild_id = $2", tag_id,
-                                                 guild.id)
-
-        return tag_details
 
     @commands.Cog.listener(name="on_message")
     async def guild_tags_listener(self, message):
@@ -579,7 +568,8 @@ class Guild(commands.Cog):
         if tag_details is None:
             return
 
-        embed = self.bot.embeds.embed_builder(title=tag_details['title'], description=tag_details['content'])
+        embed = self.bot.embeds.embed_builder(title=tag_details['title'], description=tag_details['content'],
+                                              has_footer=False)
         await message.channel.send(embed=embed)
 
 
