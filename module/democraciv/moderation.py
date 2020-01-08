@@ -269,6 +269,9 @@ class Moderation(commands.Cog):
         if member == ctx.guild.me:
             return await ctx.send(":x: You can't kick me.")
 
+        if member.top_role >= ctx.author.top_role:
+            return await ctx.send(":x: You aren't allowed to kick someone with a higher role than yours.")
+
         if reason:
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
         else:
@@ -386,6 +389,9 @@ class Moderation(commands.Cog):
 
         if member_object == ctx.guild.me:
             return await ctx.send(":x: You can't ban me.")
+
+        if member_object is not None and member_object.top_role >= ctx.author.top_role:
+            return await ctx.send(":x: You aren't allowed to ban someone with a higher role than yours.")
 
         if reason:
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
