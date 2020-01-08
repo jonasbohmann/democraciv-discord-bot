@@ -1,11 +1,11 @@
-import asyncpg
 import discord
-
-import util.exceptions as exceptions
-import util.utils as utils
 
 from config import config
 from util.flow import Flow
+import util.utils as utils
+from util.paginator import Pages
+import util.exceptions as exceptions
+
 from discord.ext import commands
 
 
@@ -13,7 +13,6 @@ from discord.ext import commands
 #
 # Commands that manage a guild's settings. Requires administrator permissions.
 #
-from util.paginator import Pages
 
 
 class Guild(commands.Cog):
@@ -435,8 +434,7 @@ class Guild(commands.Cog):
                                                   alias.lower(), tag['id'])
                         await ctx.send(f":white_check_mark: Successfully removed the alias "
                                        f"`{config.BOT_PREFIX}{alias}` from `{config.BOT_PREFIX}{tag['name']}`.")
-                    except Exception as e:
-                        print(e)
+                    except Exception:
                         await ctx.send(f":x: Unexpected error occurred.")
                         raise
 
