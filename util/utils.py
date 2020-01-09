@@ -19,6 +19,20 @@ def is_democraciv_guild():
 
     return commands.check(check)
 
+def add_tag_check():
+    """Wrapper for a discord.ext.commands decorator to check if the -addtag command is used on the Democraciv guild"""
+
+    def check(ctx):
+        if config.DEMOCRACIV_SERVER_ID != ctx.guild.id:
+            if ctx.author.guild_permissions.administrator:
+                return True
+            else:
+                return False
+        else:
+            return True
+
+    return commands.check(check)
+
 
 async def get_logging_channel(bot, guild_id):
     logging_channel = (await bot.db.fetchrow("SELECT logging_channel FROM guilds WHERE id = $1",

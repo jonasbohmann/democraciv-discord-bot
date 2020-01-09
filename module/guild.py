@@ -453,7 +453,7 @@ class Guild(commands.Cog):
     @commands.command(name="addtag")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
+    @utils.add_tag_check()
     async def addtag(self, ctx):
         """Add a tag for this guild"""
 
