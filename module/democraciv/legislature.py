@@ -590,7 +590,7 @@ class Legislature(commands.Cog):
                                        f" Remember to add it to the Legal Code, too!")
 
                         await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(
-                            f"'{bill_details['bill_name']}' was passed "
+                            f"The '{bill_details['bill_name']}' ({bill_details['tiny_link']}) was passed "
                             f"into law by the Legislature without requiring a prior vote on it by the Ministry. It was"
                             f" marked as non-vetoable by the original submitter "
                             f"{self.bot.get_user(bill_details['submitter']).name}.")

@@ -160,8 +160,9 @@ class Ministry(commands.Cog):
                 await mk.get_democraciv_channel(self.bot,
                                                 mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(
                     f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE).mention},"
-                                                                      f" {bill_details['bill_name']} was vetoed "
-                                                                      f"by the Ministry.")
+                    f" '{bill_details['bill_name']}' "
+                    f"({bill_details['tiny_link']}) was vetoed "
+                    f"by the Ministry.")
 
         elif str(reaction.emoji) == "\U0000274c":
             # Are you sure? No
@@ -216,9 +217,8 @@ class Ministry(commands.Cog):
                     await mk.get_democraciv_channel(self.bot,
                                                     mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(
                         f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE).mention}, "
-                                                                          f"'{bill_details['bill_name']}' was passed "
-                                                                          f"into law by"
-                                                                          f" the Ministry.")
+                        f"'{bill_details['bill_name']}' ({bill_details['tiny_link']}) was passed into"
+                        f" law by the Ministry.")
                 else:
                     # database error in pass_into_law()
                     await ctx.send(":x: Unexpected error occurred.")
