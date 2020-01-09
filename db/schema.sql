@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS legislature_motions(
     leg_session int references legislature_sessions(id),
     title text,
     description text,
+    hastebin text,
     submitter bigint
 );
 

@@ -280,15 +280,15 @@ class Legislature(commands.Cog):
                 return
 
             motions = await self.bot.db.fetch(
-                "SELECT (id, title, description, submitter) FROM legislature_motions"
+                "SELECT id, title, description, submitter, hastebin FROM legislature_motions"
                 " WHERE leg_session = $1", active_leg_session_id)
 
             pretty_motions = f""
 
             if len(motions) > 0:
                 for record in motions:
-                    pretty_motions += f"Motion #{record[0][0]} - {record[0][1]} by " \
-                                      f"{self.bot.get_user(record[0][3]).mention}\n"
+                    pretty_motions += f"Motion #{record['id']} - [{record['title']}]({record['hastebin']})" \
+                                      f" by {self.bot.get_user(record['submitter']).mention}\n"
 
             else:
                 pretty_motions = "No one submitted any motions during this session."
@@ -481,7 +481,8 @@ class Legislature(commands.Cog):
             if not title:
                 return
 
-            await ctx.send(":information_source: Reply with a short description or the content of your motion.")
+            await ctx.send(":information_source: Reply with the content of your motion. If your motion is"
+                           " inside a Google Docs document, just use a link to that for this.")
 
             description = await flow.get_text_input(600)
 
@@ -491,11 +492,13 @@ class Legislature(commands.Cog):
             async with ctx.typing():
                 _new_id = await self.bot.laws.generate_new_motion_id()
 
+                haste_bin_url = await self.bot.laws.post_to_hastebin(description)
+
                 try:
                     await self.bot.db.execute(
-                        "INSERT INTO legislature_motions (id, leg_session, title, description, submitter) "
-                        "VALUES ($1, $2, $3, $4, $5)", _new_id, current_leg_session, title, description, ctx.author.id)
-
+                        "INSERT INTO legislature_motions (id, leg_session, title, description, submitter, hastebin) "
+                        "VALUES ($1, $2, $3, $4, $5, $6)", _new_id, current_leg_session, title, description,
+                        ctx.author.id, haste_bin_url)
                 except asyncpg.UniqueViolationError:
                     return await ctx.send(":x: This motion was already submitted!")
                 except Exception:
