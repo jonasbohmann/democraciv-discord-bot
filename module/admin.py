@@ -88,8 +88,7 @@ class Admin(commands.Cog):
     async def stop(self, ctx):
         """Restarts the bot"""
         await ctx.send(':wave: Goodbye! Shutting down...')
-        await self.bot.close()
-        await self.bot.logout()
+        await self.bot.close_bot()
 
     @commands.command(name='reloadconfig', aliases=['rlc', 'rc', 'rlcfg'])
     @commands.is_owner()

@@ -135,19 +135,28 @@ class DemocracivBot(commands.Bot):
                                                 password=token.POSTGRESQL_PASSWORD,
                                                 database=token.POSTGRESQL_DATABASE,
                                                 host=token.POSTGRESQL_HOST)
-        except ConnectionRefusedError:
-            print("[DATABASE] Connection to database was denied")
-            self.db_ready = False
-            return
-        except Exception:
-            print("[DATABASE] Unexpected error occurred while connecting to PostgreSQL database")
+        except Exception as e:
+            print("[DATABASE] Unexpected error occurred while connecting to PostgreSQL database.")
+            print(f"[DATABASE] {e}")
             self.db_ready = False
             return
 
         with open('db/schema.sql') as sql:
-            await self.db.execute(sql.read())
-            print("[DATABASE] Successfully initialised database")
+            try:
+                await self.db.execute(sql.read())
+            except asyncpg.InsufficientPrivilegeError:
+                print("[DATABASE] Could not create extension 'pg_trgm' as this user. Login as the"
+                      " postgres user and manually create extension on database.")
+                self.db_ready = False
+                await asyncio.sleep(5)
+                return
+            except Exception as e:
+                print("[DATABASE] Unexpected error occurred while executing default schema on PostgreSQL database")
+                print(f"[DATABASE] {e}")
+                self.db_ready = False
+                return
 
+        print("[DATABASE] Successfully initialised database")
         self.db_ready = True
 
     def initialize_democraciv_guild(self):
@@ -178,13 +187,17 @@ class DemocracivBot(commands.Bot):
     def get_ping(self):
         return math.floor(self.latency * 1000)
 
+    async def close_bot(self):
+        await self.session.close()
+        await self.db.close()
+        await self.close()
+        await self.logout()
+
     async def on_ready(self):
         if not self.db_ready:
             # If the connection to the database fails, stop the bot
             print("[DATABASE] Fatal error while connecting to database. Closing bot...")
-            await self.close()
-            await self.logout()
-            return
+            return await self.close_bot()
 
         print(f"[BOT] Logged in as {self.user.name} with discord.py {discord.__version__}")
         print("------------------------------------------------------------")
@@ -275,4 +288,10 @@ class DemocracivBot(commands.Bot):
 
 # This will start the bot when you run this file
 if __name__ == '__main__':
-    DemocracivBot().run(token.TOKEN, reconnect=True, bot=True)
+    dciv = DemocracivBot()
+
+    try:
+        dciv.run(token.TOKEN, reconnect=True, bot=True)
+    except KeyboardInterrupt:
+        asyncio.create_task(dciv.close_bot())
+
