@@ -28,7 +28,7 @@ class Legislature(commands.Cog):
             raise exceptions.NoOneHasRoleError("Speaker of the Legislature")
 
         try:
-            self.vice_speaker =mk.get_democraciv_role(self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE).members[0]
+            self.vice_speaker = mk.get_democraciv_role(self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE).members[0]
         except IndexError:
             raise exceptions.NoOneHasRoleError("Vice-Speaker of the Legislature")
 
@@ -40,7 +40,8 @@ class Legislature(commands.Cog):
         try:
             self.refresh_leg_discord_objects()
         except exceptions.DemocracivBotException as e:
-            await ctx.send(e.message)
+            if isinstance(e, exceptions.RoleNotFoundError):
+                await ctx.send(e.message)
 
         active_leg_session_id = await self.bot.laws.get_active_leg_session()
 
@@ -219,7 +220,8 @@ class Legislature(commands.Cog):
         try:
             self.refresh_leg_discord_objects()
         except exceptions.DemocracivBotException as e:
-            await ctx.send(e.message)
+            if isinstance(e, exceptions.RoleNotFoundError):
+                await ctx.send(e.message)
 
         if not session or session is None:
             active_leg_session_id = await self.bot.laws.get_active_leg_session()
@@ -519,7 +521,7 @@ class Legislature(commands.Cog):
         # -- Send DM to Cabinet after everything is done and succeed --
 
         try:
-            await self.speaker.send(contet=message, embed=embed)
+            await self.speaker.send(content=message, embed=embed)
             await self.vice_speaker.send(content=message, embed=embed)
         except discord.Forbidden:
             return await ctx.send(f":x: Unexpected error occurred while DMing the Speaker or Vice-Speaker."

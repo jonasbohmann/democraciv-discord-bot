@@ -27,7 +27,8 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
         try:
             self.refresh_court_discord_objects()
         except exceptions.DemocracivBotException as e:
-            await ctx.send(e.message)
+            if isinstance(e, exceptions.RoleNotFoundError):
+                await ctx.send(e.message)
             
         embed = self.bot.embeds.embed_builder(title=f"Supreme Court of {mk.NATION_NAME}", description="")
 

@@ -65,7 +65,8 @@ class Ministry(commands.Cog):
         try:
             self.refresh_minister_discord_objects()
         except exceptions.DemocracivBotException as e:
-            await ctx.send(e.message)
+            if isinstance(e, exceptions.RoleNotFoundError):
+                await ctx.send(e.message)
 
         embed = self.bot.embeds.embed_builder(title=f"The Ministry of {mk.NATION_NAME}",
                                               description="")
