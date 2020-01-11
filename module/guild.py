@@ -450,6 +450,33 @@ class Guild(commands.Cog):
 
         return tag_details
 
+    async def validate_tag_name(self, ctx, name: str) -> bool:
+
+        all_cmds = list(self.bot.commands)
+        aliases = []
+
+        for command in self.bot.commands:
+            if isinstance(command, commands.Group):
+                for c in command.commands:
+                    all_cmds.append(c)
+                    aliases.append(c.aliases)
+            aliases.append(command.aliases)
+
+        qualified_command_names = [c.qualified_name for c in all_cmds]
+
+        if name in qualified_command_names or any(name in a for a in aliases):
+            await ctx.send(":x: You can't create a tag with the same name of one of my commands!")
+            return False
+
+        found_tag = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 AND name = $2",
+                                             ctx.guild.id, name)
+
+        if len(found_tag) > 0:
+            await ctx.send(":x: A tag with that name already exists on this guild!")
+            return False
+
+        return True
+
     @commands.command(name="addtag")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
@@ -465,6 +492,9 @@ class Guild(commands.Cog):
         name = await flow.get_text_input(300)
 
         if name is None:
+            return
+
+        if not await self.validate_tag_name(ctx, name.lower()):
             return
 
         await ctx.send(":information_source: Reply with the full title of the tag.")
