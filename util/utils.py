@@ -59,7 +59,7 @@ class EmbedUtils:
         """Creates discord.Embed object and adds the bot's signature footer to it as well as a UTC timestamp if
          required."""
 
-        embed = discord.Embed(title=title, description=description, colour=self.embed_colour)
+        embed = discord.Embed(title=title, description=description)
 
         if has_footer:
             if footer:
@@ -69,6 +69,11 @@ class EmbedUtils:
 
         if time_stamp:
             embed.timestamp = datetime.datetime.utcnow()
+
+        if colour:
+            embed.colour = colour
+        else:
+            embed.colour = self.embed_colour
 
         return embed
 

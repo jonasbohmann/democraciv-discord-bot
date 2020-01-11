@@ -90,6 +90,45 @@ class Fun(commands.Cog):
         embed.set_thumbnail(url=member.avatar_url)
         await ctx.send(embed=embed)
 
+    @commands.command(name='spotify')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    async def spotify(self, ctx, *, member: discord.Member = None):
+        """See what someone is listening to
+
+            Usage:
+             `-spotify`
+             `-spotify @DerJonas`
+             `-spotify DerJonas`
+             `-spotify DerJonas#8109`
+        """
+
+        if member is None:
+            member = ctx.author
+
+        member_spotify = None
+
+        if len(member.activities) > 0:
+            for act in member.activities:
+                if act.type == discord.ActivityType.listening:
+                    member_spotify = act
+                    break
+
+        if member_spotify is None:
+            return await ctx.send(":x: That person is either not listening to something on Spotify right now, "
+                                  "or I just can't detect it.")
+
+        pretty_artists = ', '.join(member_spotify.artists)
+
+        embed = self.bot.embeds.embed_builder(title=f"<:spotify:665703093425537046>  {member.name} on Spotify",
+                                              description="", has_footer=False, colour=0x1DB954)
+        embed.add_field(name="Song", value=f"[{member_spotify.title}](https://open.spotify.com/"
+                                           f"track/{member_spotify.track_id})", inline=False)
+        embed.add_field(name="Artist(s)", value=pretty_artists, inline=True)
+        embed.add_field(name="Album", value=member_spotify.album, inline=True)
+        embed.set_thumbnail(url=member_spotify.album_cover_url)
+        await ctx.send(embed=embed)
+
     @commands.command(name='veterans')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
