@@ -121,7 +121,7 @@ class Fun(commands.Cog):
         pretty_artists = ', '.join(member_spotify.artists)
 
         embed = self.bot.embeds.embed_builder(title=f"<:spotify:665703093425537046>  {member.name} on Spotify",
-                                              description="", has_footer=False, colour=0x1DB954)
+                                              description="", has_footer=False, colour=0x36393E)
         embed.add_field(name="Song", value=f"[{member_spotify.title}](https://open.spotify.com/"
                                            f"track/{member_spotify.track_id})", inline=False)
         embed.add_field(name="Artist(s)", value=pretty_artists, inline=True)
