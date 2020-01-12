@@ -104,7 +104,7 @@ Module | Description
 module.links | Collection of useful links for the game (Wiki, Constitution, political parties etc.) |
 module.about | Commands regarding the bot itself |
 module.admin | Re-, un- and load modules and the config |
-module.fun | `-whois`, `-veterans`, `-random` and `-say` commands | 
+module.fun | `-whois`, `-veterans`, `-random`, `-spotify`, and `-say` commands | 
 module.help | Scaling `-help` command |
 module.guild | Configure various functions of this bot for your guild |
 module.roles | Add or remove roles from you |
@@ -116,6 +116,7 @@ module.democraciv.ministry | Helps the Prime Minister with keeping track of pass
 module.democraciv.supremecourt | Collection of links for Supreme Court Justices |
 module.democraciv.laws | Lists all laws passed by the Legislature & Ministry and allows to search for laws by automatically generated tags |
 module.democraciv.elections | Calculate results for STV elections |
+module.democraciv.moderation | Tools for the Moderation Team of Democraciv |
 event.logging | Logs events (member joins/leaves, message deleted/edited etc.) to a specified channel |
 event.error_handler | Handles internal errors |
 event.reddit | Handles notifications when there's a new post on r/democraciv |
@@ -153,10 +154,12 @@ for database~~
 *  ~~Rewrite the `time.py` module~~
 
 
-####  Update 0.16.0 - The Moderation Update
+####  Update 0.16.0 - The Moderation Update ✅
 
-*  Add a Moderation module with `-kick`, `-ban` etc. commands
-*  Add webhook for notifications on new Quire tasks
+*  ~~Add a Moderation module with `-kick`, `-ban` etc. commands~~
+*  ~~Add anonymous report feature~~
+*  ~~Add multiple event notifications for #moderation-notifications~~
+*  ~~Add alt detection~~
 
 ####  Update 0.17.0 - The Suggestions Update
 
