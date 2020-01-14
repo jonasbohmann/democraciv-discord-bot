@@ -219,7 +219,8 @@ class Fun(commands.Cog):
             return await ctx.send(f':arrows_counterclockwise: {random.choice(coin)}')
 
         elif arg[0] == 'choice':
-            choices = list(arg).pop(0)
+            choices = list(arg)
+            choices.pop(0)
             return await ctx.send(f':tada: The winner is: `{random.choice(choices)}`')
 
         elif len(arg) == 1:
