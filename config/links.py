@@ -36,3 +36,4 @@ stvcalcsource = "https://gist.github.com/jonasbohmann/adadbe6c2c77a748b8e89d9d10
 execprocedures = "https://docs.google.com/document/d/1c6HtdY7urz4F3fH9Nra83Qc1bNVrp_O9zmaeFs6szgA/edit?usp=sharing"
 scpolicy = "https://docs.google.com/document/d/1WQ887wi--kCqloXwrlwadi_8ixAsxGxYIYdog7Dc7_Y/edit?usp=sharing"
 formparty = "https://forms.gle/ETyFrr6qucr95MMA9"
+dcivmap = "https://democraciv-map.com"
