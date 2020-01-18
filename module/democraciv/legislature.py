@@ -238,7 +238,7 @@ class Legislature(commands.Cog):
         elif session:
             if session.lower() == "all":
 
-                all_session_ids = await self.bot.db.fetch("SELECT (id, status) FROM legislature_sessions")
+                all_session_ids = await self.bot.db.fetch("SELECT (id, status) FROM legislature_sessions ORDER BY id")
 
                 pretty_sessions = []
 
@@ -283,7 +283,7 @@ class Legislature(commands.Cog):
 
             motions = await self.bot.db.fetch(
                 "SELECT id, title, description, submitter, hastebin FROM legislature_motions"
-                " WHERE leg_session = $1", active_leg_session_id)
+                " WHERE leg_session = $1 ORDER BY id", active_leg_session_id)
 
             pretty_motions = f""
 
@@ -297,7 +297,7 @@ class Legislature(commands.Cog):
 
             bills = await self.bot.db.fetch(
                 "SELECT (id, tiny_link, bill_name, submitter) FROM legislature_bills"
-                " WHERE leg_session = $1", active_leg_session_id)
+                " WHERE leg_session = $1 ORDER BY id", active_leg_session_id)
 
             pretty_bills = f""
 
