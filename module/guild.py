@@ -394,7 +394,7 @@ class Guild(commands.Cog):
         elif str(reaction.emoji) == "\U00002705":
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
-                    status = await self.bot.db.execute("INSERT INTO guild_tags_alias (alias, guild_tag_id) VALUES "
+                    status = await self.bot.db.execute("INSERT INTO guild_tags_alias (alias, tag_id) VALUES "
                                                        "($1, $2)", alias.lower(), tag_details['id'])
 
         if status == "INSERT 0 1":
@@ -529,8 +529,9 @@ class Guild(commands.Cog):
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     try:
-                        await self.bot.db.execute("INSERT INTO guild_tags (guild_id, name, content, title) VALUES "
-                                                  "($1, $2, $3, $4)",
+                        await self.bot.db.execute("INSERT INTO guild_tags (guild_id, name, content, title,"
+                                                  " global) VALUES "
+                                                  "($1, $2, $3, $4, false)",
                                                   ctx.guild.id, name.lower(), content, title)
                         _id = await self.bot.db.fetchval("SELECT id FROM guild_tags WHERE name = $1 AND guild_id "
                                                          "= $2 AND "
@@ -538,8 +539,8 @@ class Guild(commands.Cog):
                         await self.bot.db.execute("INSERT INTO guild_tags_alias (tag_id, alias, guild_id) VALUES"
                                                   " ($1, $2, $3)", _id, name.lower(), ctx.guild.id)
                         await ctx.send(f":white_check_mark: Successfully added `{config.BOT_PREFIX}{name}`!")
-                    except Exception:
-                        await ctx.send(f":x: Unexpected error occurred.")
+                    except Exception as e:
+                        await ctx.send(f":x: Unexpected error occurred:\n\n```{e}```")
                         raise
 
     @commands.command(name="removetag", aliases=['deletetag'])
@@ -572,7 +573,7 @@ class Guild(commands.Cog):
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     try:
-                        await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE guild_tag_id = $1", tag['id'])
+                        await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE tag_id = $1", tag['id'])
                         await self.bot.db.execute("DELETE FROM guild_tags WHERE name = $1 AND guild_id = $2",
                                                   name.lower(), ctx.guild.id)
                         await ctx.send(f":white_check_mark: Successfully removed `{config.BOT_PREFIX}{name}`!")
