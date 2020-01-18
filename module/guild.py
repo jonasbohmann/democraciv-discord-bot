@@ -581,6 +581,23 @@ class Guild(commands.Cog):
                         await ctx.send(f":x: Unexpected error occurred.")
                         raise
 
+    @staticmethod
+    def is_emoji_or_media_url(tag_content: str) -> bool:
+        emoji_pattern = re.compile("<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>")
+
+        url_pattern = re.compile("((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*")
+        url_endings = ('.jpeg', '.jpg', '.avi', '.png', '.gif', '.webp', '.mp4', '.mp3', '.bmp', '.img',
+                       '.svg', '.mov', '.flv', '.wmv')
+
+        if url_pattern.match(tag_content) and (tag_content.endswith(url_endings) or any(s in tag_content for
+                                                                                        s in ['youtube', 'youtu.be'])):
+            return True
+
+        elif emoji_pattern.match(tag_content):
+            return True
+
+        return False
+
     @commands.Cog.listener(name="on_message")
     async def guild_tags_listener(self, message):
         if message.author.bot:
@@ -600,10 +617,7 @@ class Guild(commands.Cog):
         if tag_details is None:
             return
 
-        emoji_pattern = re.compile("<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>")
-        url_pattern = re.compile("((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*")
-
-        if emoji_pattern.match(tag_details['content']) or url_pattern.match(tag_details['content']):
+        if self.is_emoji_or_media_url(tag_details['content']):
             return await message.channel.send(discord.utils.escape_mentions(tag_details['content']))
 
         embed = self.bot.embeds.embed_builder(title=tag_details['title'], description=tag_details['content'],
