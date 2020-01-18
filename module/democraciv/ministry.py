@@ -35,7 +35,7 @@ class Ministry(commands.Cog):
         open_bills = await self.bot.db.fetch(
             "SELECT (id, link, bill_name, submitter, leg_session) FROM legislature_bills"
             " WHERE has_passed_leg = true AND is_vetoable = true AND voted_on_by_ministry = false"
-            " AND has_passed_ministry = false")
+            " AND has_passed_ministry = false ORDER BY id")
 
         if open_bills is not None:
             return open_bills
