@@ -16,25 +16,25 @@ DEMOCRACIV_SERVER_ID = 208984105310879744  # Democraciv
 
 
 # Database Configuration
-DATABASE_DAILY_BACKUP_ENABLED = True
+DATABASE_DAILY_BACKUP_ENABLED = False
 DATABASE_DAILY_BACKUP_DISCORD_CHANNEL = 656214962854821928
 
 
 # Reddit Notifications
-REDDIT_ENABLED = True
+REDDIT_ENABLED = False
 REDDIT_SUBREDDIT = 'democraciv'
 REDDIT_ANNOUNCEMENT_CHANNEL = 330162836095631360  # The Discord Channel in which the bot will post Reddit notifications
 
 
 # Twitch Notifications
-TWITCH_ENABLED = True
+TWITCH_ENABLED = False
 TWITCH_CHANNEL = 'democraciv'  # The twitch.tv streamer that the bot should check for live streams
 TWITCH_ANNOUNCEMENT_CHANNEL = 209432307730350080  # The Discord Channel in which the bot will post Twitch notifications
 TWITCH_EVERYONE_PING_ON_ANNOUNCEMENT = True
 
 
 # YouTube Notifications
-YOUTUBE_ENABLED = True
+YOUTUBE_ENABLED = False
 YOUTUBE_VIDEO_UPLOADS_ENABLED = True
 YOUTUBE_LIVESTREAM_ENABLED = False
 YOUTUBE_EVERYONE_PING_ON_STREAM = False

@@ -99,13 +99,18 @@ CREATE TABLE IF NOT EXISTS legislature_motions(
 
 CREATE TABLE IF NOT EXISTS guild_tags(
     guild_id bigint references guilds(id),
-    id serial UNIQUE PRIMARY KEY,
+    id serial UNIQUE,
     name text,
     title text,
-    content text
+    content text,
+    global bool,
+    PRIMARY KEY (guild_id, id),
+    UNIQUE (guild_id, name)
 );
 
 CREATE TABLE IF NOT EXISTS guild_tags_alias(
-    guild_tag_id serial references guild_tags(id) ON DELETE CASCADE,
-    alias text
+    tag_id serial references guild_tags(id) ON DELETE CASCADE,
+    guild_id bigint references guilds(id),
+    alias text,
+    UNIQUE (guild_id, alias)
 );

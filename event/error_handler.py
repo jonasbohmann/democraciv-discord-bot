@@ -176,6 +176,9 @@ class ErrorHandler(commands.Cog):
             await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
             return await ctx.send(error.message)
 
+        elif isinstance(error, utils.AddTagCheckError):
+            return await ctx.send(error.message)
+
 
 def setup(bot):
     bot.add_cog(ErrorHandler(bot))

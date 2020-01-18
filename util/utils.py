@@ -5,8 +5,13 @@ import util.exceptions as exceptions
 from config import config
 from discord.ext import commands
 
-
 """Various utility classes and functions that the bot regular uses."""
+
+
+class AddTagCheckError(commands.CheckFailure):
+
+    def __init__(self, message):
+        self.message = message
 
 
 def is_democraciv_guild():
@@ -19,6 +24,7 @@ def is_democraciv_guild():
 
     return commands.check(check)
 
+
 def add_tag_check():
     """Wrapper for a discord.ext.commands decorator to check if the -addtag command is used on the Democraciv guild"""
 
@@ -27,7 +33,7 @@ def add_tag_check():
             if ctx.author.guild_permissions.administrator:
                 return True
             else:
-                return False
+                raise AddTagCheckError(message=":x: Only Administrators can add tags on this guild!")
         else:
             return True
 
@@ -76,6 +82,7 @@ class EmbedUtils:
             embed.colour = self.embed_colour
 
         return embed
+
 
 class CheckUtils:
     """Utils to assist with discord.ext.commands checks"""

@@ -217,15 +217,18 @@ class LawUtils:
         i = 1
 
         for key, value in to_be_pretty.items():
+            if self.bot.get_user(key) is not None:
+                if value == 1:
+                    # Singular stats_name
 
-            if value == 1:
-                # Singular stats_name
-                pretty += f"{i}. {self.bot.get_user(key).mention} with {value} {stats_name[:-1]}\n"
+                    pretty += f"{i}. {self.bot.get_user(key).mention} with {value} {stats_name[:-1]}\n"
+                else:
+                    # Plural stats_name
+                    pretty += f"{i}. {self.bot.get_user(key).mention} with {value} {stats_name}\n"
+                i += 1
+
             else:
-                # Plural stats_name
-                pretty += f"{i}. {self.bot.get_user(key).mention} with {value} {stats_name}\n"
-
-            i += 1
+                continue
 
         return pretty
 

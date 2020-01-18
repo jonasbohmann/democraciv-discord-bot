@@ -260,6 +260,14 @@ class Link(commands.Cog):
                                               description=links.stvcalcsource)
         await ctx.send(embed=embed)
 
+    @commands.command(name='map')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def map(self, ctx):
+        """Interactive Democraciv Map"""
+        embed = self.bot.embeds.embed_builder(title='Interactive Map of our Continent',
+                                              description=links.dcivmap)
+        await ctx.send(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Link(bot))

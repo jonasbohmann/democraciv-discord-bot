@@ -1,3 +1,5 @@
+import re
+
 import discord
 
 from config import config
@@ -392,7 +394,7 @@ class Guild(commands.Cog):
         elif str(reaction.emoji) == "\U00002705":
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
-                    status = await self.bot.db.execute("INSERT INTO guild_tags_alias (alias, guild_tag_id) VALUES "
+                    status = await self.bot.db.execute("INSERT INTO guild_tags_alias (alias, tag_id) VALUES "
                                                        "($1, $2)", alias.lower(), tag_details['id'])
 
         if status == "INSERT 0 1":
@@ -430,7 +432,7 @@ class Guild(commands.Cog):
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     try:
-                        await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE alias = $1 AND guild_tag_id = $2",
+                        await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE alias = $1 AND tag_id = $2",
                                                   alias.lower(), tag['id'])
                         await ctx.send(f":white_check_mark: Successfully removed the alias "
                                        f"`{config.BOT_PREFIX}{alias}` from `{config.BOT_PREFIX}{tag['name']}`.")
@@ -440,7 +442,8 @@ class Guild(commands.Cog):
 
     async def resolve_tag_name(self, query: str, guild: discord.Guild):
 
-        tag_id = await self.bot.db.fetchval("SELECT guild_tag_id FROM guild_tags_alias WHERE alias = $1", query.lower())
+        tag_id = await self.bot.db.fetchval("SELECT tag_id FROM guild_tags_alias WHERE alias = $1 AND guild_id = $2",
+                                            query.lower(), guild.id)
 
         if tag_id is None:
             return None
@@ -469,7 +472,7 @@ class Guild(commands.Cog):
             return False
 
         found_tag = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 AND name = $2",
-                                             ctx.guild.id, name)
+                                                    ctx.guild.id, name)
 
         if len(found_tag) > 0:
             await ctx.send(":x: A tag with that name already exists on this guild!")
@@ -526,17 +529,18 @@ class Guild(commands.Cog):
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     try:
-                        await self.bot.db.execute("INSERT INTO guild_tags (guild_id, name, content, title) VALUES "
-                                                  "($1, $2, $3, $4)",
+                        await self.bot.db.execute("INSERT INTO guild_tags (guild_id, name, content, title,"
+                                                  " global) VALUES "
+                                                  "($1, $2, $3, $4, false)",
                                                   ctx.guild.id, name.lower(), content, title)
                         _id = await self.bot.db.fetchval("SELECT id FROM guild_tags WHERE name = $1 AND guild_id "
                                                          "= $2 AND "
                                                          "content = $3", name.lower(), ctx.guild.id, content)
-                        await self.bot.db.execute("INSERT INTO guild_tags_alias (guild_tag_id, alias) VALUES ($1, $2)",
-                                                  _id, name.lower())
+                        await self.bot.db.execute("INSERT INTO guild_tags_alias (tag_id, alias, guild_id) VALUES"
+                                                  " ($1, $2, $3)", _id, name.lower(), ctx.guild.id)
                         await ctx.send(f":white_check_mark: Successfully added `{config.BOT_PREFIX}{name}`!")
-                    except Exception:
-                        await ctx.send(f":x: Unexpected error occurred.")
+                    except Exception as e:
+                        await ctx.send(f":x: Unexpected error occurred:\n\n```{e}```")
                         raise
 
     @commands.command(name="removetag", aliases=['deletetag'])
@@ -569,13 +573,30 @@ class Guild(commands.Cog):
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     try:
-                        await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE guild_tag_id = $1", tag['id'])
+                        await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE tag_id = $1", tag['id'])
                         await self.bot.db.execute("DELETE FROM guild_tags WHERE name = $1 AND guild_id = $2",
                                                   name.lower(), ctx.guild.id)
                         await ctx.send(f":white_check_mark: Successfully removed `{config.BOT_PREFIX}{name}`!")
                     except Exception:
                         await ctx.send(f":x: Unexpected error occurred.")
                         raise
+
+    @staticmethod
+    def is_emoji_or_media_url(tag_content: str) -> bool:
+        emoji_pattern = re.compile("<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>")
+
+        url_pattern = re.compile("((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*")
+        url_endings = ('.jpeg', '.jpg', '.avi', '.png', '.gif', '.webp', '.mp4', '.mp3', '.bmp', '.img',
+                       '.svg', '.mov', '.flv', '.wmv')
+
+        if url_pattern.match(tag_content) and (tag_content.endswith(url_endings) or any(s in tag_content for
+                                                                                        s in ['youtube', 'youtu.be'])):
+            return True
+
+        elif emoji_pattern.match(tag_content):
+            return True
+
+        return False
 
     @commands.Cog.listener(name="on_message")
     async def guild_tags_listener(self, message):
@@ -595,6 +616,9 @@ class Guild(commands.Cog):
 
         if tag_details is None:
             return
+
+        if self.is_emoji_or_media_url(tag_details['content']):
+            return await message.channel.send(discord.utils.escape_mentions(tag_details['content']))
 
         embed = self.bot.embeds.embed_builder(title=tag_details['title'], description=tag_details['content'],
                                               has_footer=False)
