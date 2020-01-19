@@ -339,17 +339,28 @@ class Guild(commands.Cog):
     async def tags(self, ctx):
         """See all tags on this guild"""
 
-        all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1", ctx.guild.id)
+        global_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE global = true")
+        all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 AND global = false",
+                                           ctx.guild.id)
 
         pretty_tags = []
 
-        for record in all_tags:
-            pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}\n")
+        if global_tags:
+            pretty_tags = ['**Global Tags**']
 
-        if not pretty_tags or len(pretty_tags) == 0:
+        for record in global_tags:
+            pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
+
+        if all_tags:
+            pretty_tags.append('\n**Local Tags**')
+
+        for record in all_tags:
+            pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
+
+        if len(pretty_tags) < 2:
             pretty_tags = ['There are no tags on this guild.']
 
-        pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=False, title=f"All tags in {ctx.guild.name}"
+        pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"All Tags in {ctx.guild.name}"
                       , show_index=False, footer_text=config.BOT_NAME)
         await pages.paginate()
 
@@ -442,18 +453,23 @@ class Guild(commands.Cog):
 
     async def resolve_tag_name(self, query: str, guild: discord.Guild):
 
-        tag_id = await self.bot.db.fetchval("SELECT tag_id FROM guild_tags_alias WHERE alias = $1 AND guild_id = $2",
-                                            query.lower(), guild.id)
+        tag_id = await self.bot.db.fetchval("SELECT id FROM guild_tags WHERE global = true AND name = $1",
+                                            query.lower())
+
+        if tag_id is None:
+            tag_id = await self.bot.db.fetchval("SELECT tag_id FROM guild_tags_alias WHERE alias = $1 AND guild_id = $2",
+                                                query.lower(), guild.id)
 
         if tag_id is None:
             return None
 
-        tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1 AND guild_id = $2", tag_id,
-                                                 guild.id)
+        tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1", tag_id)
 
         return tag_details
 
-    async def validate_tag_name(self, ctx, name: str) -> bool:
+    async def validate_tag_name(self, ctx, tag_name: str) -> bool:
+
+        tag_name = tag_name.lower()
 
         all_cmds = list(self.bot.commands)
         aliases = []
@@ -467,12 +483,18 @@ class Guild(commands.Cog):
 
         qualified_command_names = [c.qualified_name for c in all_cmds]
 
-        if name in qualified_command_names or any(name in a for a in aliases):
+        if tag_name in qualified_command_names or any(tag_name in a for a in aliases):
             await ctx.send(":x: You can't create a tag with the same name of one of my commands!")
             return False
 
+        global_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE global = true AND name = $1", tag_name)
+
+        if len(global_tags) > 0:
+            await ctx.send(":x: A global tag with that name already exists!")
+            return False
+
         found_tag = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 AND name = $2",
-                                                    ctx.guild.id, name)
+                                                    ctx.guild.id, tag_name)
 
         if len(found_tag) > 0:
             await ctx.send(":x: A tag with that name already exists on this guild!")
@@ -514,6 +536,22 @@ class Guild(commands.Cog):
         if content is None:
             return
 
+        is_global = False
+
+        if ctx.author.guild_permissions.administrator and ctx.guild.id == self.bot.democraciv_guild_object.id:
+            is_global_msg = await ctx.send(":information_source: Should this tag be global?")
+
+            reaction, user = await flow.yes_no_reaction_confirm(is_global_msg, 300)
+
+            if reaction is None:
+                return
+
+            if str(reaction.emoji) == "\U0000274c":
+                is_global = False
+
+            elif str(reaction.emoji) == "\U00002705":
+                is_global = True
+
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to add the tag "
                                       f"`{config.BOT_PREFIX}{name}`?")
 
@@ -531,8 +569,8 @@ class Guild(commands.Cog):
                     try:
                         await self.bot.db.execute("INSERT INTO guild_tags (guild_id, name, content, title,"
                                                   " global) VALUES "
-                                                  "($1, $2, $3, $4, false)",
-                                                  ctx.guild.id, name.lower(), content, title)
+                                                  "($1, $2, $3, $4, $5)",
+                                                  ctx.guild.id, name.lower(), content, title, is_global)
                         _id = await self.bot.db.fetchval("SELECT id FROM guild_tags WHERE name = $1 AND guild_id "
                                                          "= $2 AND "
                                                          "content = $3", name.lower(), ctx.guild.id, content)

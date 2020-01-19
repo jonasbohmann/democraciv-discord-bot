@@ -53,8 +53,12 @@ class Laws(commands.Cog, name='Law'):
 
             law_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
-            submitted_by_value = f"{self.bot.get_user(law_details['submitter']).mention} (during Session #" \
+            if self.bot.get_user(law_details['submitter']) is not None:
+                submitted_by_value = f"{self.bot.get_user(law_details['submitter']).mention} (during Session #" \
                                  f"{law_details['leg_session']})"
+            else:
+                submitted_by_value = f"*Submitter left the server* (during Session #" \
+                                     f"{law_details['leg_session']})"
 
             embed = self.bot.embeds.embed_builder(title=f"{law_details['bill_name']}", description="")
             embed.add_field(name="Link", value=law_details['link'])
