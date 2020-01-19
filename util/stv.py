@@ -133,4 +133,6 @@ def main(_seats, csvfile, quota):
             break
         n += 1
 
-    return output
+    success_output = output
+    output = ""
+    return success_output

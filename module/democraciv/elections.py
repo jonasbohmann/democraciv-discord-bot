@@ -50,13 +50,20 @@ class Elections(commands.Cog, name="Election"):
 
             await csv.save(f'db/stv/{_filename}')
 
+            error = None
+
             try:
                 output = await self.bot.loop.run_in_executor(None, stv.main, seats, _filename, quota)
-            except Exception:
+            except Exception as e:
                 output = None
+                error = e
 
             if output is None or output == "":
-                results = "There was an error while calculating the results."
+                if error:
+                    results = f"There was an error while calculating the results.\n\n\nError\n{error}"
+                else:
+                    results = "There was an error while calculating the results."
+
             else:
                 results = output
 
