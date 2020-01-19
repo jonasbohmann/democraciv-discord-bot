@@ -218,7 +218,7 @@ class LawUtils:
 
         for key, value in to_be_pretty.items():
             if self.bot.get_user(key) is not None:
-                if i >= 5:
+                if i > 5:
                     break
 
                 if value == 1:
