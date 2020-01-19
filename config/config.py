@@ -27,7 +27,7 @@ REDDIT_ANNOUNCEMENT_CHANNEL = 330162836095631360  # The Discord Channel in which
 
 
 # Twitch Notifications
-TWITCH_ENABLED = False
+TWITCH_ENABLED = True
 TWITCH_CHANNEL = 'democraciv'  # The twitch.tv streamer that the bot should check for live streams
 TWITCH_ANNOUNCEMENT_CHANNEL = 209432307730350080  # The Discord Channel in which the bot will post Twitch notifications
 TWITCH_EVERYONE_PING_ON_ANNOUNCEMENT = True
