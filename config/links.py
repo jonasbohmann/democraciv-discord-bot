@@ -34,6 +34,6 @@ scworksheet = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRiRXPbam6BuhsfjZ
 legislativeprocedures = "https://docs.google.com/document/d/1vUGVIv0F0ZK2cAJrhaDaOS02iKIz8KOXSwjoZZgnEmo/edit?usp=sharing"
 stvcalcsource = "https://gist.github.com/jonasbohmann/adadbe6c2c77a748b8e89d9d10ead074"
 execprocedures = "https://docs.google.com/document/d/1c6HtdY7urz4F3fH9Nra83Qc1bNVrp_O9zmaeFs6szgA/edit?usp=sharing"
-scpolicy = "https://docs.google.com/document/d/1WQ887wi--kCqloXwrlwadi_8ixAsxGxYIYdog7Dc7_Y/edit?usp=sharing"
+scpolicy = "https://docs.google.com/document/d/1VLqD3WKBp-awe4BQvy9lL2_aFHdiYi7rgt7Bo7Tumrs/edit"
 formparty = "https://forms.gle/ETyFrr6qucr95MMA9"
 dcivmap = "https://democraciv-map.com"
