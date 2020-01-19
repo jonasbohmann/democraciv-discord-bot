@@ -319,7 +319,11 @@ class Legislature(commands.Cog):
 
             embed = self.bot.embeds.embed_builder(title=f"Legislative Session #{str(active_leg_session_id)}",
                                                   description="", time_stamp=True)
-            embed.add_field(name="Opened by", value=self.bot.get_user(session_info[0][0]).mention)
+            try:
+                embed.add_field(name="Opened by", value=self.bot.get_user(session_info[0][0]).mention)
+            except AttributeError:
+                embed.add_field(name="Opened by", value="*Person left Democraciv*")
+
             embed.add_field(name="Status", value=session_info[0][5], inline=True)
             embed.add_field(name="Opened on (UTC)", value=pretty_start_date, inline=False)
 
@@ -337,7 +341,13 @@ class Legislature(commands.Cog):
                                                                                                   " %H:%M:%S")
                 embed.add_field(name="Ended on (UTC)", value=pretty_end_date, inline=False)
 
-            embed.add_field(name="Submitted Motions", value=pretty_motions, inline=False)
+            # TODO - Hastebin is unreliable
+            if len(pretty_motions) < 1024:
+                embed.add_field(name="Submitted Motions", value=pretty_motions, inline=False)
+            elif len(pretty_motions) > 1024:
+                haste_bin_murl = await self.bot.laws.post_to_hastebin(pretty_motions)
+                too_long_motions = f"This text was too long for Discord, so I put it on [here.]({haste_bin_murl})"
+                embed.add_field(name="Submitted Motions", value=too_long_motions, inline=False)
 
             # If the submitted bills text is longer than 1024 characters, the Discord API returns a 403.
             # To combat this, we upload the raw Markdown to Hastebin if it's too long.

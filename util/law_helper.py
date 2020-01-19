@@ -218,6 +218,9 @@ class LawUtils:
 
         for key, value in to_be_pretty.items():
             if self.bot.get_user(key) is not None:
+                if i >= 5:
+                    break
+
                 if value == 1:
                     # Singular stats_name
 
