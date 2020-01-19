@@ -19,7 +19,7 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
         except IndexError:
             raise exceptions.NoOneHasRoleError("Chief Justice")
 
-    @commands.group(name='court', aliases=['sc', 'supremecourt'], case_insensitive=True, invoke_without_command=True)
+    @commands.group(name='court', aliases=['sc', 'courts'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def court(self, ctx):
         """Dashboard for Supreme Court Justices"""
@@ -30,7 +30,7 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
             if isinstance(e, exceptions.RoleNotFoundError):
                 await ctx.send(e.message)
             
-        embed = self.bot.embeds.embed_builder(title=f"Supreme Court of {mk.NATION_NAME}", description="")
+        embed = self.bot.embeds.embed_builder(title=f"Courts of {mk.NATION_NAME}", description="")
 
         chief_justice_value = f""
 
@@ -42,21 +42,22 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
 
         embed.add_field(name="Chief Justice", value=chief_justice_value)
 
+        embed.add_field(name="Supreme Court Justices", value='\n'.join([justice.mention for justice in
+                                                                        mk.get_democraciv_role(self.bot,
+                                                                                               mk.DemocracivRole.JUSTICE_ROLE).members]),
+                        inline=True)
+
+        embed.add_field(name="Appeals Court Judges", value='\n'.join([justice.mention for justice in
+                                                                        mk.get_democraciv_role(self.bot,
+                                                                                               mk.DemocracivRole.JUDGE_ROLE).members]),
+                        inline=False)
+
         embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
                                             f"[Legal Code]({links.laws})\n"
                                             f"[Submit a new Case]({links.sue})\n"
                                             f"[Court Cases]({links.sccases})\n"
                                             f"[Court Worksheet]({links.scworksheet})\n"
                                             f"[Court Policies]({links.scpolicy})", inline=True)
-
-        embed.add_field(name="Supreme Court Justices", value='\n'.join([justice.mention for justice in
-                                                                        mk.get_democraciv_role(self.bot,
-                                                                                               mk.DemocracivRole.JUSTICE_ROLE).members]),
-                        inline=False)
-        embed.add_field(name="Appeals Court Judges", value='\n'.join([justice.mention for justice in
-                                                                        mk.get_democraciv_role(self.bot,
-                                                                                               mk.DemocracivRole.JUDGE_ROLE).members]),
-                        inline=True)
 
         await ctx.send(embed=embed)
 
