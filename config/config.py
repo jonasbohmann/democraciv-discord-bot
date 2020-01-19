@@ -3,7 +3,7 @@
 
 # Bot Configuration
 BOT_NAME = 'Democraciv Bot'
-BOT_PREFIX = '.'
+BOT_PREFIX = '-'
 BOT_COMMAND_COOLDOWN = 2.0  # seconds
 BOT_DESCRIPTION = 'Discord Bot for the r/Democraciv community.'
 BOT_VERSION = '0.16.0'
