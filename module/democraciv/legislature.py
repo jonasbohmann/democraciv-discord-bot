@@ -289,8 +289,11 @@ class Legislature(commands.Cog):
 
             if len(motions) > 0:
                 for record in motions:
-                    pretty_motions += f"Motion #{record['id']} - [{record['title']}]({record['hastebin']})" \
+                    if self.bot.get_user(record['submitter']) is not None:
+                        pretty_motions += f"Motion #{record['id']} - [{record['title']}]({record['hastebin']})" \
                                       f" by {self.bot.get_user(record['submitter']).mention}\n"
+                    else:
+                        pretty_motions += f"Motion #{record['id']} - [{record['title']}]({record['hastebin']})\n"
 
             else:
                 pretty_motions = "No one submitted any motions during this session."
@@ -303,9 +306,11 @@ class Legislature(commands.Cog):
 
             if len(bills) > 0:
                 for record in bills:
-                    pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by " \
+                    if self.bot.get_user(record[0][3]) is not None:
+                        pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by " \
                                     f"{self.bot.get_user(record[0][3]).mention}\n"
-
+                    else:
+                        pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]})\n"
             else:
                 pretty_bills = "No one submitted any bills during this session."
 
