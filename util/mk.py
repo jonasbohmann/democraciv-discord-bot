@@ -30,6 +30,7 @@ class DemocracivRole(enum.Enum):
     # Courts
     CHIEF_JUSTICE_ROLE = 639442447721562122
     JUSTICE_ROLE = 639438578304417792
+    JUDGE_ROLE = 668544161884143657
 
 
 class DemocracivChannel(enum.Enum):

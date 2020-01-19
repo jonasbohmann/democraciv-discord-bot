@@ -49,6 +49,15 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
                                             f"[Court Worksheet]({links.scworksheet})\n"
                                             f"[Court Policies]({links.scpolicy})", inline=True)
 
+        embed.add_field(name="Supreme Court Justices", value='\n'.join([justice.mention for justice in
+                                                                        mk.get_democraciv_role(self.bot,
+                                                                                               mk.DemocracivRole.JUSTICE_ROLE).members]),
+                        inline=False)
+        embed.add_field(name="Appeals Court Judges", value='\n'.join([justice.mention for justice in
+                                                                        mk.get_democraciv_role(self.bot,
+                                                                                               mk.DemocracivRole.JUDGE_ROLE).members]),
+                        inline=False)
+
         await ctx.send(embed=embed)
 
 
