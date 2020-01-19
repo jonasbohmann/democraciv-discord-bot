@@ -48,9 +48,13 @@ class Ministry(commands.Cog):
 
         if len(open_bills) > 0:
             for record in open_bills:
-                pretty_bills.append(f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by "
+                if self.bot.get_user(record[0][3]) is not None:
+                    pretty_bills.append(f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by "
                                     f"{self.bot.get_user(record[0][3]).mention}"
                                     f" from Leg. Session #{record[0][4]}")
+                else:
+                    pretty_bills.append(f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) from "
+                                        f"Leg. Session #{record[0][4]}")
 
         if len(pretty_bills) == 0:
             pretty_bills = ["There are no new bills to vote on."]
