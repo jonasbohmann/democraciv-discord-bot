@@ -50,14 +50,14 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
         embed.add_field(name="Appeals Court Judges", value='\n'.join([justice.mention for justice in
                                                                         mk.get_democraciv_role(self.bot,
                                                                                                mk.DemocracivRole.JUDGE_ROLE).members]),
-                        inline=True)
+                        inline=False)
 
         embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
                                             f"[Legal Code]({links.laws})\n"
                                             f"[Submit a new Case]({links.sue})\n"
                                             f"[Court Cases]({links.sccases})\n"
                                             f"[Court Worksheet]({links.scworksheet})\n"
-                                            f"[Court Policies]({links.scpolicy})", inline=True)
+                                            f"[Court Policies]({links.scpolicy})", inline=False)
 
         await ctx.send(embed=embed)
 
