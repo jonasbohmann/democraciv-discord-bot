@@ -110,7 +110,7 @@ module.guild | Configure various functions of this bot for your guild |
 module.roles | Add or remove roles from you |
 module.parties | Join and leave political parties |
 module.time | Get the current time in a number of different timezones |
-module.wikipedia | Search for a topic on wikipedia |
+module.wiki | Search for a topic on Wikipedia and the Sid Meier's Civilization Fandon wiki |
 module.democraciv.legislature | Helps the Speaker of the Legislature with keeping track of submitted bills, motions and legislative sessions in general |
 module.democraciv.ministry | Helps the Prime Minister with keeping track of passed bills that need to be voted on (vetoed) |
 module.democraciv.supremecourt | Collection of links for Supreme Court Justices |
@@ -121,7 +121,7 @@ event.logging | Logs events (member joins/leaves, message deleted/edited etc.) t
 event.error_handler | Handles internal errors |
 event.reddit | Handles notifications when there's a new post on r/democraciv |
 event.twitch | Handles notifications when twitch.tv/democraciv is live |
-event.youtube | Handles notifications when a new video on the Democraciv YouTube channel was uploaded|
+event.youtube | Handles notifications when a new video or livestream on the Democraciv YouTube channel was uploadedor started|
 
 
 ##  Roadmap
