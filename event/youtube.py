@@ -1,10 +1,8 @@
 import aiohttp
 
 from util import exceptions
-from config import config, token
-
 from discord.ext import tasks
-
+from config import config, token
 
 class YouTube:
 
@@ -184,5 +182,9 @@ class YouTube:
             await discord_channel.send(embed=embed)
 
     @youtube_upload_tasks.before_loop
-    async def before_youtube_task(self):
+    async def before_upload_task(self):
+        await self.bot.wait_until_ready()
+
+    @youtube_stream_task.before_loop
+    async def before_stream_task(self):
         await self.bot.wait_until_ready()

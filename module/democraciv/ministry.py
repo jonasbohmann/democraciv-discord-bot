@@ -146,7 +146,7 @@ class Ministry(commands.Cog):
                                       f"'{bill_details['bill_name']}"
                                       f"' (#{bill_details['id']})?")
 
-        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if not reaction or reaction is None:
             return
@@ -207,7 +207,7 @@ class Ministry(commands.Cog):
                                       f"'{bill_details['bill_name']}"
                                       f"' (#{bill_details['id']}) into law?")
 
-        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if not reaction or reaction is None:
             return

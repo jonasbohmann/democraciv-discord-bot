@@ -126,7 +126,7 @@ class Laws(commands.Cog, name='Law'):
 
         flow = Flow(self.bot, ctx)
 
-        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if not reaction or reaction is None:
             return

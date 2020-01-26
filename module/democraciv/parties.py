@@ -1,12 +1,11 @@
 import discord
-import asyncio
 import asyncpg
 
-from config import config, links
-from util.exceptions import ForbiddenTask
 from util.flow import Flow
 from discord.ext import commands
+from config import config, links
 from util import utils, exceptions, mk
+from util.exceptions import ForbiddenTask
 
 # -- parties.py | module.parties --
 #
@@ -48,12 +47,12 @@ class Party(commands.Cog, name='Political Parties'):
 
     async def resolve_party_from_alias(self, party: str):
         """Gets party name from related alias, returns input argument if no aliases are found"""
-        party_id = await self.bot.db.fetchrow("SELECT party_id FROM party_alias WHERE alias = $1", party)
+        party_id = await self.bot.db.fetchval("SELECT party_id FROM party_alias WHERE alias = $1", party)
 
         if party_id is None:
             return party
         else:
-            return party_id['party_id']
+            return party_id
 
     async def collect_parties_and_members(self):
         """Returns all parties with a role on the Democraciv guild and their amount of members for -members."""
@@ -99,19 +98,19 @@ class Party(commands.Cog, name='Political Parties'):
 
         if role.id in available_parties_by_id:
             if role not in ctx.message.author.roles:
-                is_private = (await self.bot.db.fetchrow("SELECT private FROM parties WHERE id = $1", role.id))[
-                    'private']
+
+                is_private = await self.bot.db.fetchval("SELECT private FROM parties WHERE id = $1", role.id)
+
                 if is_private:
                     party_leader_mention = self.bot.get_user(
-                        (await self.bot.db.fetchrow("SELECT leader FROM parties WHERE id = $1", role.id))['leader'])
+                        await self.bot.db.fetchval("SELECT leader FROM parties WHERE id = $1", role.id))
 
                     if party_leader_mention is None:
                         msg = f':x: {role.name} is invite-only. Ask the party leader for an invitation.'
                     else:
                         msg = f':x: {role.name} is invite-only. Ask {party_leader_mention.mention} for an invitation.'
 
-                    await ctx.send(msg)
-                    return
+                    return await ctx.send(msg)
 
                 try:
                     await ctx.message.author.add_roles(role)
@@ -128,8 +127,7 @@ class Party(commands.Cog, name='Political Parties'):
                     await ctx.send(available_parties[role.id])
 
             else:
-                await ctx.send(f':x: You are already part of {role.name}!')
-                return
+                return await ctx.send(f':x: You are already part of {role.name}!')
 
         else:
             await ctx.send(
@@ -162,13 +160,14 @@ class Party(commands.Cog, name='Political Parties'):
 
         if role is None:
             await ctx.send(f":x: Couldn't find a party named `{party}`!\n\n**Try one of these:**")
+
             msg = ''
             for key in available_parties_by_id:
                 role = ctx.guild.get_role(key)
                 if role is not None:
                     msg += f'{role.name}\n'
-            await ctx.send(msg)
-            return
+
+            return await ctx.send(msg)
 
         if role.id in available_parties_by_id:
             if role in ctx.message.author.roles:
@@ -184,8 +183,7 @@ class Party(commands.Cog, name='Political Parties'):
                     raise exceptions.ForbiddenError(ForbiddenTask.REMOVE_ROLE, detail=role.name)
 
             else:
-                await ctx.send(f':x: You are not part of {role.name}!')
-                return
+                return await ctx.send(f':x: You are not part of {role.name}!')
 
         else:
             await ctx.send(f":x: That is not a political party! If you're trying to remove a role from `-roles` from "
@@ -205,29 +203,28 @@ class Party(commands.Cog, name='Political Parties'):
         if party is None or not party:
             party_list_embed_content = ''
 
-            async with ctx.typing():
-                sorted_parties_and_members = sorted(await self.collect_parties_and_members(), key=lambda x: x[1],
-                                                    reverse=True)
+            sorted_parties_and_members = sorted(await self.collect_parties_and_members(), key=lambda x: x[1],
+                                                reverse=True)
 
-                for party in sorted_parties_and_members:
-                    if party[0] == 'Independent':
-                        continue
-                    if party[1] == 1:
-                        party_list_embed_content += f'**{party[0]}**\n{party[1]} member\n\n'
-                    else:
-                        party_list_embed_content += f'**{party[0]}**\n{party[1]} members\n\n'
-
-                # Append Independents to message
-                independent_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name='Independent')
-                if len(independent_role.members) == 1:
-                    party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
-                                                f' citizen\n\n'
+            for party in sorted_parties_and_members:
+                if party[0] == 'Independent':
+                    continue
+                if party[1] == 1:
+                    party_list_embed_content += f'**{party[0]}**\n{party[1]} member\n\n'
                 else:
-                    party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
-                                                f' citizens\n\n'
+                    party_list_embed_content += f'**{party[0]}**\n{party[1]} members\n\n'
 
-                embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in {mk.NATION_NAME}',
-                                                      description=f'{party_list_embed_content}', colour=0x7f0000)
+            # Append Independents to message
+            independent_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name='Independent')
+            if len(independent_role.members) == 1:
+                party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
+                                            f' citizen\n\n'
+            else:
+                party_list_embed_content += f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}' \
+                                            f' citizens\n\n'
+
+            embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in {mk.NATION_NAME}',
+                                                  description=party_list_embed_content, colour=0x7f0000)
 
             await ctx.send(embed=embed)
 
@@ -254,7 +251,7 @@ class Party(commands.Cog, name='Political Parties'):
             else:
                 title = f'Members of {role.name}'
 
-            embed = self.bot.embeds.embed_builder(title=title, description=f'{amount_of_members}', colour=0x7f0000)
+            embed = self.bot.embeds.embed_builder(title=title, description=amount_of_members, colour=0x7f0000)
             await ctx.send(embed=embed)
 
     @commands.command(name='addparty')
@@ -292,10 +289,11 @@ class Party(commands.Cog, name='Political Parties'):
         if not party_invite:
             return
 
+        is_private = False
         private_question = await ctx.send(
             "Should this new party be private? React with :white_check_mark: if yes, or with :x: if not.")
 
-        reaction, user = await flow.yes_no_reaction_confirm(private_question, 240)
+        reaction, user = await flow.get_yes_no_reaction_confirm(private_question, 240)
 
         if reaction is None:
             return
@@ -325,16 +323,14 @@ class Party(commands.Cog, name='Political Parties'):
                             discord_role.id,
                             party_invite, True, leader_role.id)
                     except asyncpg.UniqueViolationError:
-                        await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
-                        return
+                        return await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
                 else:
                     try:
                         await self.bot.db.execute(
                             "INSERT INTO parties (id, discord, private) VALUES ($1, $2, $3)", discord_role.id,
                             party_invite, False)
                     except asyncpg.UniqueViolationError:
-                        await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
-                        return
+                        return await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
 
                 status = await self.bot.db.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
                                                    discord_role.name.lower(), discord_role.id)
@@ -406,11 +402,11 @@ class Party(commands.Cog, name='Political Parties'):
 
         await ctx.send(":information_source: Answer with the name of the party that the new alias should belong to:")
 
-        try:
-            party = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(ctx),
-                                            timeout=240)
-        except asyncio.TimeoutError:
-            await ctx.send(":x: Aborted.")
+        flow = Flow(self.bot, ctx)
+
+        party = await flow.get_text_input(240)
+
+        if not party:
             return
 
         # Check if party role already exists
@@ -421,7 +417,6 @@ class Party(commands.Cog, name='Political Parties'):
 
         await ctx.send(f":information_source: Answer with the alias for `{discord_role.name}`:")
 
-        flow = Flow(self.bot, ctx)
         alias = await flow.get_text_input(240)
 
         if not alias:

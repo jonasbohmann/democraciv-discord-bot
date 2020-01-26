@@ -164,7 +164,7 @@ class Moderation(commands.Cog):
 
         is_anon = True
 
-        reaction, user = await flow.yes_no_reaction_confirm(anon_question, 150)
+        reaction, user = await flow.get_yes_no_reaction_confirm(anon_question, 150)
 
         if reaction is None:
             return
@@ -188,7 +188,7 @@ class Moderation(commands.Cog):
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to send this report?"
                                       f"\n```Anonymous: {pretty_anon}\n\n\nReport: {content}```")
 
-        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 150)
+        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 150)
 
         if str(reaction.emoji) == "\U00002705":
             embed = self.bot.embeds.embed_builder(title=":exclamation: New Report", description="")

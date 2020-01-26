@@ -46,27 +46,28 @@ class Guild(commands.Cog):
 
         is_welcome_enabled = await self.bot.checks.is_welcome_message_enabled(ctx.guild.id)
 
-        current_welcome_channel = (await self.bot.db.fetchrow("SELECT welcome_channel FROM guilds WHERE id = $1",
-                                                              ctx.guild.id))['welcome_channel']
+        current_welcome_channel = await self.bot.db.fetchval("SELECT welcome_channel FROM guilds WHERE id = $1",
+                                                              ctx.guild.id)
+
         current_welcome_channel = self.bot.get_channel(current_welcome_channel)
 
-        current_welcome_message = (await self.bot.db.fetchrow("SELECT welcome_message FROM guilds WHERE id = $1",
-                                                              ctx.guild.id))['welcome_message']
+        current_welcome_message = await self.bot.db.fetchval("SELECT welcome_message FROM guilds WHERE id = $1",
+                                                              ctx.guild.id)
 
         if current_welcome_channel is None:
             current_welcome_channel = "This guild currently has no welcome channel."
         else:
             current_welcome_channel = current_welcome_channel.mention
 
-        if current_welcome_message is None or current_welcome_message == "":
+        if not current_welcome_message:
             current_welcome_message = "This guild currently has no welcome message."
 
         embed = self.bot.embeds.embed_builder(title=f":wave: Welcome Module for {ctx.guild.name}",
                                               description="React with the :gear: emoji to change "
                                                           "the settings of this module.")
-        embed.add_field(name="Enabled", value=f"{str(is_welcome_enabled)}")
-        embed.add_field(name="Channel", value=f"{current_welcome_channel}")
-        embed.add_field(name="Message", value=f"{current_welcome_message}", inline=False)
+        embed.add_field(name="Enabled", value=str(is_welcome_enabled))
+        embed.add_field(name="Channel", value=current_welcome_channel)
+        embed.add_field(name="Message", value=current_welcome_message, inline=False)
 
         info_embed = await ctx.send(embed=embed)
 
@@ -76,7 +77,7 @@ class Guild(commands.Cog):
             status_question = await ctx.send(
                 "React with :white_check_mark: to enable the welcome module, or with :x: to disable the welcome module.")
 
-            reaction, user = await flow.yes_no_reaction_confirm(status_question, 240)
+            reaction, user = await flow.get_yes_no_reaction_confirm(status_question, 240)
 
             if reaction is None:
                 return
@@ -138,8 +139,8 @@ class Guild(commands.Cog):
                                               description="React with the :gear: emoji to change the "
                                                           "settings of this module.")
 
-        embed.add_field(name="Enabled", value=f"{str(is_logging_enabled)}")
-        embed.add_field(name="Channel", value=f"{current_logging_channel}")
+        embed.add_field(name="Enabled", value=str(is_logging_enabled))
+        embed.add_field(name="Channel", value=current_logging_channel)
 
         info_embed = await ctx.send(embed=embed)
 
@@ -150,7 +151,7 @@ class Guild(commands.Cog):
             status_question = await ctx.send(
                 "React with :white_check_mark: to enable the logging module, or with :x: to disable the logging module.")
 
-            reaction, user = await flow.yes_no_reaction_confirm(status_question, 240)
+            reaction, user = await flow.get_yes_no_reaction_confirm(status_question, 240)
 
             if reaction is None:
                 return
@@ -190,19 +191,17 @@ class Guild(commands.Cog):
         current_logging_channel = await utils.get_logging_channel(self.bot, ctx.guild.id)
 
         if current_logging_channel is None:
-            await ctx.send(":x: This guild currently has no logging channel. Please set one with `-guild logs`.")
-            return
+            return await ctx.send(":x: This guild currently has no logging channel. Please set one with `-guild logs`.")
 
         help_description = "Add/Remove a channel to the excluded channels with:\n`-guild exclude [channel_name]`\n"
 
-        excluded_channels = (await self.bot.db.fetchrow("SELECT logging_excluded FROM guilds WHERE id = $1"
-                                                        , ctx.guild.id))['logging_excluded']
+        excluded_channels = await self.bot.db.fetchval("SELECT logging_excluded FROM guilds WHERE id = $1",
+                                                       ctx.guild.id)
         if not channel:
             current_excluded_channels_by_name = ""
 
             if excluded_channels is None:
-                await ctx.send("There are no from logging excluded channels on this guild.")
-                return
+                return await ctx.send("There are no from logging excluded channels on this guild.")
 
             for channel in excluded_channels:
                 channel = self.bot.get_channel(channel)
@@ -234,12 +233,11 @@ class Guild(commands.Cog):
                     ctx.guild.id, channel_object.id)
 
                 if remove_status == "UPDATE 1":
-                    await ctx.send(f":white_check_mark: {channel_object.mention} is no longer excluded from"
+                    return await ctx.send(f":white_check_mark: {channel_object.mention} is no longer excluded from"
                                    f" showing up in {current_logging_channel.mention}!")
-                    return
+
                 else:
-                    await ctx.send(f":x: Unexpected error occurred.")
-                    return
+                    return await ctx.send(f":x: Unexpected error occurred.")
 
             # Add channel
             add_status = await self.bot.db.execute("UPDATE guilds SET logging_excluded = array_append(logging_excluded,"
@@ -274,8 +272,8 @@ class Guild(commands.Cog):
         embed = self.bot.embeds.embed_builder(title=f":partying_face: Default Role for {ctx.guild.name}",
                                               description="React with the :gear: emoji to change the settings"
                                                           " of this module.")
-        embed.add_field(name="Enabled", value=f"{str(is_default_role_enabled)}")
-        embed.add_field(name="Role", value=f"{current_default_role}")
+        embed.add_field(name="Enabled", value=str(is_default_role_enabled))
+        embed.add_field(name="Role", value=current_default_role)
 
         info_embed = await ctx.send(embed=embed)
 
@@ -286,7 +284,7 @@ class Guild(commands.Cog):
             status_question = await ctx.send(
                 "React with :white_check_mark: to enable the default role, or with :x: to disable the default role.")
 
-            reaction, user = await flow.yes_no_reaction_confirm(status_question, 240)
+            reaction, user = await flow.get_yes_no_reaction_confirm(status_question, 240)
 
             if reaction is None:
                 return
@@ -395,7 +393,7 @@ class Guild(commands.Cog):
                                       f"`{config.BOT_PREFIX}{alias}` to "
                                       f"`{config.BOT_PREFIX}{tag_details['name']}`?")
 
-        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if reaction is None:
             return
@@ -432,7 +430,7 @@ class Guild(commands.Cog):
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove the alias "
                                       f"`{config.BOT_PREFIX}{alias}` from `{config.BOT_PREFIX}{tag['name']}`?")
 
-        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if reaction is None:
             return
@@ -453,7 +451,6 @@ class Guild(commands.Cog):
                         raise
 
     async def resolve_tag_name(self, query: str, guild: discord.Guild):
-
         tag_id = await self.bot.db.fetchval("SELECT id FROM guild_tags WHERE global = true AND name = $1",
                                             query.lower())
 
@@ -469,7 +466,6 @@ class Guild(commands.Cog):
         return tag_details
 
     async def validate_tag_name(self, ctx, tag_name: str) -> bool:
-
         tag_name = tag_name.lower()
 
         all_cmds = list(self.bot.commands)
@@ -542,7 +538,7 @@ class Guild(commands.Cog):
         if ctx.author.guild_permissions.administrator and ctx.guild.id == self.bot.democraciv_guild_object.id:
             is_global_msg = await ctx.send(":information_source: Should this tag be global?")
 
-            reaction, user = await flow.yes_no_reaction_confirm(is_global_msg, 300)
+            reaction, user = await flow.get_yes_no_reaction_confirm(is_global_msg, 300)
 
             if reaction is None:
                 return
@@ -556,7 +552,7 @@ class Guild(commands.Cog):
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to add the tag "
                                       f"`{config.BOT_PREFIX}{name}`?")
 
-        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if reaction is None:
             return
@@ -600,7 +596,7 @@ class Guild(commands.Cog):
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove the tag "
                                       f"`{config.BOT_PREFIX}{tag['name']}`?")
 
-        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if reaction is None:
             return

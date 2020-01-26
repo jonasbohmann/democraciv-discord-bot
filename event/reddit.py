@@ -1,6 +1,5 @@
 import html
 import aiohttp
-import discord
 
 import util.exceptions as exceptions
 

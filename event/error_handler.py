@@ -45,12 +45,7 @@ class ErrorHandler(commands.Cog):
             embed.add_field(name='Guild', value=ctx.guild.name)
 
             await self.bot.DerJonas_object.send(
-                f":x: An error occurred on {ctx.guild.name} at {datetime.datetime.now()}!\n\n{error}")
-            await self.bot.DerJonas_object.send(embed=embed)
-
-    @commands.Cog.listener()
-    async def on_error(self, ctx, error):
-        raise error
+                f":x: An error occurred on {ctx.guild.name} at {datetime.datetime.now()}!\n\n{error}", embed=embed)
 
     @staticmethod
     def format_permissions(missing_perms: list) -> str:
@@ -124,6 +119,8 @@ class ErrorHandler(commands.Cog):
     async def on_command_error(self, ctx, error):
         ignored = (commands.CommandNotFound, commands.UserInputError)
 
+        error = getattr(error, 'original', error)
+
         # Anything in ignored will return
         if isinstance(error, ignored):
             return
@@ -178,6 +175,9 @@ class ErrorHandler(commands.Cog):
 
         elif isinstance(error, utils.AddTagCheckError):
             return await ctx.send(error.message)
+
+        else:
+            await self.log_error(ctx, error, severe=True, to_log_channel=False, to_owner=True)
 
 
 def setup(bot):

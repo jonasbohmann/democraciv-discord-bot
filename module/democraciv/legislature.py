@@ -407,7 +407,7 @@ class Legislature(commands.Cog):
             veto_question = await ctx.send(":information_source: Is the Ministry legally allowed to veto (or vote on) "
                                            "this bill?")
 
-            reaction, user = await flow.yes_no_reaction_confirm(veto_question, 200)
+            reaction, user = await flow.get_yes_no_reaction_confirm(veto_question, 200)
 
             if not reaction:
                 return
@@ -574,7 +574,7 @@ class Legislature(commands.Cog):
 
         flow = Flow(self.bot, ctx)
 
-        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if not reaction or reaction is None:
             return
@@ -673,7 +673,7 @@ class Legislature(commands.Cog):
 
         flow = Flow(self.bot, ctx)
 
-        reaction, user = await flow.yes_no_reaction_confirm(are_you_sure, 200)
+        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if not reaction or reaction is None:
             return

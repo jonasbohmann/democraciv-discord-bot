@@ -47,7 +47,7 @@ class Flow:
         else:
             return True
 
-    async def yes_no_reaction_confirm(self, message, timeout):
+    async def get_yes_no_reaction_confirm(self, message, timeout):
         """Adds the :white_check_mark: and :x: emojies to the message and returns the reaction and user if either
            reaction has been added by the original user.
 

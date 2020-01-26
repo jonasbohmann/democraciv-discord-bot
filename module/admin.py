@@ -80,8 +80,6 @@ class Admin(commands.Cog):
             else:
                 await ctx.send(':white_check_mark: Reloaded ' + module)
 
-
-
     @commands.command(name='stop')
     @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
@@ -143,20 +141,19 @@ class Admin(commands.Cog):
         if not ctx.author == self.bot.DerJonas_object:
             return await ctx.send(":x: Nope.")
 
-        # Just to make absolutely double sure
-        if not ctx.author.id == self.bot.DerJonas_object.id and not ctx.author.id == config.BOT_AUTHOR_ID:
-            return await ctx.send(":x: Nope.")
+        try:
+            if sqltype == 1:
+                status = await self.bot.db.execute(query)
 
-        if sqltype == 1:
-            status = await self.bot.db.execute(query)
+            elif sqltype == 2:
+                status = await self.bot.db.fetch(query)
 
-        elif sqltype == 2:
-            status = await self.bot.db.fetch(query)
-
-        elif sqltype == 3:
-            status = await self.bot.db.fetchrow(query)
-        else:
-            status = "Invalid type."
+            elif sqltype == 3:
+                status = await self.bot.db.fetchrow(query)
+            else:
+                status = "Invalid type."
+        except Exception as e:
+            return await ctx.send(f"```{e}```")
 
         await ctx.send(f"```{status}```")
 
