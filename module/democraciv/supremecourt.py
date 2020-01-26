@@ -32,23 +32,16 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
             
         embed = self.bot.embeds.embed_builder(title=f"Courts of {mk.NATION_NAME}", description="")
 
-        chief_justice_value = f""
+        justices = [justice.mention for justice in mk.get_democraciv_role(self.bot, mk.DemocracivRole.JUSTICE_ROLE).members
+                    if justice.id != self.chief_justice.id]
 
         if isinstance(self.chief_justice, discord.Member):
-            chief_justice_value += f"{self.chief_justice.mention}"
+            justices.insert(0, f"{self.chief_justice.mention} (Chief Justice)")
 
-        else:
-            chief_justice_value += f"-"
-
-        embed.add_field(name="Chief Justice", value=chief_justice_value)
-
-        embed.add_field(name="Supreme Court Justices", value='\n'.join([justice.mention for justice in
-                                                                        mk.get_democraciv_role(self.bot,
-                                                                                               mk.DemocracivRole.JUSTICE_ROLE).members]),
-                        inline=True)
+        embed.add_field(name="Supreme Court Justices", value=justices, inline=False)
 
         embed.add_field(name="Appeals Court Judges", value='\n'.join([justice.mention for justice in
-                                                                        mk.get_democraciv_role(self.bot,
+                                                                      mk.get_democraciv_role(self.bot,
                                                                                                mk.DemocracivRole.JUDGE_ROLE).members]),
                         inline=False)
 
