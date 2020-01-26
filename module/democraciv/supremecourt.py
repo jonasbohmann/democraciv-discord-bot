@@ -38,7 +38,7 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
         if isinstance(self.chief_justice, discord.Member):
             justices.insert(0, f"{self.chief_justice.mention} (Chief Justice)")
 
-        embed.add_field(name="Supreme Court Justices", value=justices, inline=False)
+        embed.add_field(name="Supreme Court Justices", value='\n'.join(justices), inline=False)
 
         embed.add_field(name="Appeals Court Judges", value='\n'.join([justice.mention for justice in
                                                                       mk.get_democraciv_role(self.bot,
