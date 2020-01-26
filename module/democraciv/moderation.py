@@ -145,7 +145,8 @@ class Moderation(commands.Cog):
             embed.add_field(name="Member", value=f"{member.mention} ({member.id})", inline=False)
             embed.add_field(name="Chance", value=f"There is a {chance * 100}% chance that {member} is an alt.",
                             inline=False)
-            embed.add_field(name="Factors", value=details, inline=False)
+            if details:
+                embed.add_field(name="Factors", value=details, inline=False)
 
             await mk.get_democraciv_channel(self.bot,
                                             mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(embed=embed)
@@ -236,7 +237,10 @@ class Moderation(commands.Cog):
                                                                                           " with a grain of salt.")
         embed.add_field(name="Target", value=f"{member.mention} ({member.id})", inline=False)
         embed.add_field(name="Result", value=f"There is a {chance * 100}% chance that {member} is an alt.")
-        embed.add_field(name="Factors", value=details, inline=False)
+
+        if details:
+            embed.add_field(name="Factors", value=details, inline=False)
+
         await ctx.send(embed=embed)
 
     @commands.command(name='registry')
