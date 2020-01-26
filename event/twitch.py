@@ -1,3 +1,5 @@
+import enum
+
 import aiohttp
 import asyncio
 
@@ -13,12 +15,16 @@ from util import mk
 
 class Twitch:
 
+    class StreamStatus(enum.Enum):
+        OFFLINE = 0
+        LIVE_AND_ANNOUNCED = 1
+        LIVE_AND_NOT_ANNOUNCED = 2
+
     def __init__(self, bot):
         self.bot = bot
         self.streamer = config.TWITCH_CHANNEL
         self.twitch_API_url = "https://api.twitch.tv/helix/streams?user_login=" + self.streamer
         self.twitch_API_token = token.TWITCH_API_KEY
-        self.http_header = {'Client-ID': self.twitch_API_token}
         self.first_run = True
 
         if self.twitch_API_token != "" and self.twitch_API_token is not None:
@@ -29,17 +35,17 @@ class Twitch:
 
     async def check_twitch_livestream(self):
         try:
-            async with self.bot.session.get(self.twitch_API_url, headers=self.http_header) as response:
+            async with self.bot.session.get(self.twitch_API_url, headers={'Client-ID': self.twitch_API_token}) as response:
                 twitch = await response.json()
         except aiohttp.ClientConnectionError:
             print("[BOT] ERROR - aiohttp.ClientConnectionError in Twitch session.get()!")
-            return 0
+            return self.StreamStatus.OFFLINE
 
         try:
             _stream_id = twitch['data'][0]['id']
         except (IndexError, KeyError):
-            # Streamer is not live
-            return 0
+            return self.StreamStatus.OFFLINE
+
         else:
             # Streamer is currently live
             status = await self.bot.db.execute("INSERT INTO twitch_streams (id) VALUES ($1) ON CONFLICT DO NOTHING",
@@ -47,13 +53,13 @@ class Twitch:
 
             # ID already in database -> stream already announced
             if status == "INSERT 0 0":
-                return [1, _stream_id]
+                return [self.StreamStatus.LIVE_AND_ANNOUNCED, _stream_id]
 
             # Get thumbnail in right size
             thumbnail = twitch['data'][0]['thumbnail_url'].replace('{width}', '720').replace('{height}', '380')
-            return [2, _stream_id, twitch['data'][0]['title'], thumbnail]
+            return [self.StreamStatus.LIVE_AND_NOT_ANNOUNCED, _stream_id, twitch['data'][0]['title'], thumbnail]
 
-    @tasks.loop(minutes=3)
+    @tasks.loop(seconds=30)
     async def twitch_task(self):
 
         if self.first_run:
@@ -72,38 +78,28 @@ class Twitch:
 
         twitch_data = await self.check_twitch_livestream()
 
-        # 0 represents no active stream
-        if twitch_data == 0:
+        if twitch_data == self.StreamStatus.OFFLINE:
             return
 
-        # 1 represents active stream that we already announced
-        elif twitch_data[0] == 1:
+        elif twitch_data[0] == self.StreamStatus.LIVE_AND_ANNOUNCED:
 
             # Check if we sent the streaming rules reminder
-            sent_exec_reminder = await self.bot.db.fetchrow("SELECT has_sent_exec_reminder FROM twitch_streams"
+            sent_exec_reminder = await self.bot.db.fetchval("SELECT has_sent_exec_reminder FROM twitch_streams"
                                                             " WHERE id = $1", twitch_data[1])
-
-            if sent_exec_reminder is not None:
-                sent_exec_reminder = sent_exec_reminder['has_sent_exec_reminder']
 
             if not sent_exec_reminder:
                 await self.streaming_rules_reminder(twitch_data[1])
 
             # Check if we sent the mod reminder
-            sent_mod_reminder = await self.bot.db.fetchrow("SELECT has_sent_mod_reminder FROM twitch_streams"
+            sent_mod_reminder = await self.bot.db.fetchval("SELECT has_sent_mod_reminder FROM twitch_streams"
                                                            " WHERE id = $1", twitch_data[1])
-
-            if sent_mod_reminder is not None:
-                sent_mod_reminder = sent_mod_reminder['has_sent_mod_reminder']
 
             if not sent_mod_reminder:
                 # TODO - This does not work how you want it to work
                 # await self.export_twitch_reminder(twitch_data[1])
-
                 pass
 
-        # 2 represents active stream that we did not yet announce
-        elif twitch_data[0] == 2:
+        elif twitch_data[0] == self.StreamStatus.LIVE_AND_NOT_ANNOUNCED:
             embed = self.bot.embeds.embed_builder(title=f"<:twitch:660116652012077080>  {self.streamer} - "
                                                         f"Live on Twitch",
                                                   description="", has_footer=False)

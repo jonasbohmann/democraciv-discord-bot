@@ -261,8 +261,9 @@ class Guild(commands.Cog):
 
         is_default_role_enabled = await self.bot.checks.is_default_role_enabled(ctx.guild.id)
 
-        current_default_role = (await self.bot.db.fetchrow("SELECT defaultrole_role FROM guilds WHERE id = $1",
-                                                           ctx.guild.id))['defaultrole_role']
+        current_default_role = await self.bot.db.fetchval("SELECT defaultrole_role FROM guilds WHERE id = $1",
+                                                          ctx.guild.id)
+
         current_default_role = ctx.guild.get_role(current_default_role)
 
         if current_default_role is None:
