@@ -14,8 +14,9 @@ class Moderation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def calculate_alt_chance(self, member: discord.Member, check_messages: bool = False) -> int:
+    async def calculate_alt_chance(self, member: discord.Member, check_messages: bool = False) -> (int, str):
         is_alt_chance = 0
+        factor_details = ""
 
         default_avatars = ["https://cdn.discordapp.com/embed/avatars/0.png",
                            "https://cdn.discordapp.com/embed/avatars/1.png",
@@ -24,7 +25,7 @@ class Moderation(commands.Cog):
                            "https://cdn.discordapp.com/embed/avatars/4.png"]
 
         if member.bot:
-            return 0
+            return 0, "Bot Account (0%)"
 
         # Check how long it has been since the user registered
         discord_registration_duration_in_s = (datetime.datetime.utcnow() - member.created_at).total_seconds()
@@ -33,14 +34,19 @@ class Moderation(commands.Cog):
         if hours_since <= 48:
             # If the account is new, check if the they bothered to change the default avatar
             is_alt_chance += 0.1
+            factor_details += "Less than 48 hours since registration (+10%)\n"
             if member.avatar_url in default_avatars:
                 is_alt_chance += 0.65
+                factor_details += "Default avatar (+65%)\n"
             if hours_since <= 24:
                 is_alt_chance += 0.2
+                factor_details += "Less than 24 hours since registration (+20%)\n"
                 if hours_since <= 12:
                     is_alt_chance += 0.25
+                    factor_details += "Less than 12 hours since registration (+25%)\n"
                     if hours_since <= 1:
                         is_alt_chance += 0.35
+                        factor_details += "Less than 1 hour since registration (+35%)\n"
 
         weird_names = ["alt", "mysterious", "anonymous", "anon", "banned", "ban", "das", "mysterybox", "not",
                        "definitelynot", "darthspectrum"]
@@ -49,15 +55,18 @@ class Moderation(commands.Cog):
                 name in member.display_name.lower() for name in weird_names):
             # Check if user has any names that are associated with alt accounts in the past
             is_alt_chance += 0.45
+            factor_details += "Suspicious username (+45%)\n"
 
         if member.status != discord.Status.offline:
             # If the user didn't download a Discord App, but is accessing Discord through their browser, chances
             # increase that they're an alt
             if isinstance(member.web_status, discord.Status) and member.web_status != discord.Status.offline:
+                factor_details += "Uses Discord Web instead of apps (+10%)\n"
                 is_alt_chance += 0.1
 
         if member.premium_since is not None:
             # If user has Nitro (boosted this guild), it's likely not an alt
+            factor_details += "Discord Nitro (-200%)\n"
             is_alt_chance -= 2
 
         if len(member.activities) > 0:
@@ -65,11 +74,13 @@ class Moderation(commands.Cog):
             for act in member.activities:
                 if act.type != 4:  # Custom Status
                     is_alt_chance -= 1.5
+                    factor_details += "Game, Twitch or Spotify connection (-150%)\n"
                     break
 
         if member.is_avatar_animated():
             # If user has Nitro (with animated profile picture), it's likely not an alt
             is_alt_chance -= 2
+            factor_details += "Discord Nitro (-200%)\n"
 
         if check_messages:
             # This checks how often the member talked in the most common channels (#citizens, #welcome, #public-forum,
@@ -93,8 +104,9 @@ class Moderation(commands.Cog):
 
             if counter <= 20:
                 is_alt_chance += 0.65
+                factor_details += "Did not write any messages recently (+65%)\n"
 
-        return is_alt_chance
+        return is_alt_chance, factor_details
 
     @commands.Cog.listener(name="on_message")
     async def mod_request_listener(self, message):
@@ -126,13 +138,14 @@ class Moderation(commands.Cog):
         if member.bot:
             return
 
-        chance = await self.calculate_alt_chance(member, False)
+        chance, details = await self.calculate_alt_chance(member, False)
 
         if chance >= 0.2:
             embed = self.bot.embeds.embed_builder(title="Possible Alt Account Joined", description="")
-            embed.add_field(name="Member", value=member.mention, inline=False)
-            embed.add_field(name="Member ID", value=member.id, inline=False)
-            embed.add_field(name="Chance", value=f"There is a {chance * 100}% chance that {member} is an alt.")
+            embed.add_field(name="Member", value=f"{member.mention} ({member.id})", inline=False)
+            embed.add_field(name="Chance", value=f"There is a {chance * 100}% chance that {member} is an alt.",
+                            inline=False)
+            embed.add_field(name="Factors", value=details, inline=False)
 
             await mk.get_democraciv_channel(self.bot,
                                             mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(embed=embed)
@@ -216,14 +229,14 @@ class Moderation(commands.Cog):
     async def alt(self, ctx, member: discord.Member, check_messages: bool = False):
         """Check if someone is an alt"""
         async with ctx.typing():
-            chance = await self.calculate_alt_chance(member, check_messages)
+            chance, details = await self.calculate_alt_chance(member, check_messages)
 
         embed = self.bot.embeds.embed_builder(title="Possible Alt Detection", description="This is in no way perfect "
                                                                                           "and should always be taken"
                                                                                           " with a grain of salt.")
-        embed.add_field(name="Target", value=member.mention, inline=False)
-        embed.add_field(name="Target ID", value=member.id, inline=False)
+        embed.add_field(name="Target", value=f"{member.mention} ({member.id})", inline=False)
         embed.add_field(name="Result", value=f"There is a {chance * 100}% chance that {member} is an alt.")
+        embed.add_field(name="Factors", value=details, inline=False)
         await ctx.send(embed=embed)
 
     @commands.command(name='registry')
