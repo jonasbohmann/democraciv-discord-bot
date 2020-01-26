@@ -37,3 +37,4 @@ execprocedures = "https://docs.google.com/document/d/1c6HtdY7urz4F3fH9Nra83Qc1bN
 scpolicy = "https://docs.google.com/document/d/1VLqD3WKBp-awe4BQvy9lL2_aFHdiYi7rgt7Bo7Tumrs/edit"
 formparty = "https://forms.gle/ETyFrr6qucr95MMA9"
 dcivmap = "https://democraciv-map.com"
+sctrello = "https://trello.com/b/deLdNjq1/public-log"

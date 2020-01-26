@@ -57,6 +57,7 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
                                             f"[Submit a new Case]({links.sue})\n"
                                             f"[Court Cases]({links.sccases})\n"
                                             f"[Court Worksheet]({links.scworksheet})\n"
+                                            f"[Court Log on Trello]({links.sctrello})\n"
                                             f"[Court Policies]({links.scpolicy})", inline=False)
 
         await ctx.send(embed=embed)
