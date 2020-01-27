@@ -67,10 +67,7 @@ initial_extensions = ['event.logging',
 class DemocracivBot(commands.Bot):
 
     def __init__(self):
-        self.name = config.BOT_NAME
         self.description = config.BOT_DESCRIPTION
-        self.version = config.BOT_VERSION
-        self.icon = config.BOT_ICON_URL
 
         # Save the bot's start time for get_uptime()
         self.start_time = time.time()
@@ -79,7 +76,9 @@ class DemocracivBot(commands.Bot):
         self.commands_prefix = config.BOT_PREFIX
 
         # Initialize commands.Bot with prefix, description and disable case_sensitivity
-        super().__init__(command_prefix=self.commands_prefix, description=self.description, case_insensitive=True)
+        super().__init__(command_prefix=self.commands_prefix, description=self.description, case_insensitive=True,
+                         activity=discord.Game(name=config.BOT_PREFIX + 'help | Watching over '
+                                                                        'the Democraciv community'))
 
         # Set up aiohttp.ClientSession() for usage in wikipedia, reddit & twitch API calls
         self.session = None
@@ -209,10 +208,6 @@ class DemocracivBot(commands.Bot):
         # config.py is invalid
         self.initialize_democraciv_guild()
 
-        # Set status on Discord
-        await self.change_presence(activity=discord.Game(name=config.BOT_PREFIX + 'help | Watching over '
-                                                                                  'the Democraciv community'))
-
         self.DerJonas_object = self.get_user(config.BOT_AUTHOR_ID)
 
         if config.DATABASE_DAILY_BACKUP_ENABLED:
@@ -231,8 +226,8 @@ class DemocracivBot(commands.Bot):
                     print(f"[DATABASE] Guild {message.guild.name} ({message.guild.id}) was not initialized. "
                           f"Adding default entry to database... ")
                     try:
-                        await self.db.execute("INSERT INTO guilds (id, welcome, logging, logging_excluded, defaultrole) "
-                                              "VALUES ($1, false, false, ARRAY[0], false)",
+                        await self.db.execute("INSERT INTO guilds (id, welcome, logging, logging_excluded, defaultrole)"
+                                              " VALUES ($1, false, false, ARRAY[0], false)",
                                               message.guild.id)
                     except Exception:
                         await self.DerJonas_object.send(
