@@ -207,22 +207,19 @@ class Moderation(commands.Cog):
         elif str(reaction.emoji) == "\U0000274c":
             return await ctx.send("Aborted.")
 
-    @staticmethod
-    async def safe_send_mod_links(ctx, embed):
-        if len(ctx.channel.members) == 7:
-            await ctx.send(embed=embed)
-        else:
+    async def safe_send_mod_links(self, ctx, embed):
+        if len(ctx.channel.members) >= 20:
+            await ctx.message.add_reaction("\U0001f4e9")
+            return await ctx.author.send(embed=embed)
+
+        unsafe_members = [member for member in ctx.channel.members if not member.bot
+                          and mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE) not in member.roles]
+
+        if unsafe_members:
             await ctx.message.add_reaction("\U0001f4e9")
             await ctx.author.send(embed=embed)
-
-    @commands.command(name='hub', aliases=['modhub', 'moderationhub', 'mhub'])
-    @commands.has_role("Moderation")
-    @utils.is_democraciv_guild()
-    async def hub(self, ctx):
-        """Link to the Moderation Hub"""
-        link = token.MOD_HUB or 'Link not provided.'
-        embed = self.bot.embeds.embed_builder(title="Moderation Hub", description=f"[Link]({link})")
-        await self.safe_send_mod_links(ctx, embed)
+        else:
+            await ctx.send(embed=embed)
 
     @commands.command(name='alt')
     @commands.has_role("Moderation")
@@ -243,12 +240,21 @@ class Moderation(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    @commands.command(name='hub', aliases=['modhub', 'moderationhub', 'mhub'])
+    @commands.has_role("Moderation")
+    @utils.is_democraciv_guild()
+    async def hub(self, ctx):
+        """Link to the Moderation Hub"""
+        link = token.MOD_HUB or 'https://hastebin.com/afijavahox.coffeescript'
+        embed = self.bot.embeds.embed_builder(title="Moderation Hub", description=f"[Link]({link})")
+        await self.safe_send_mod_links(ctx, embed)
+
     @commands.command(name='registry')
     @commands.has_role("Moderation")
     @utils.is_democraciv_guild()
     async def registry(self, ctx):
         """Link to the Democraciv Registry"""
-        link = token.REGISTRY or 'Link not provided.'
+        link = token.REGISTRY or 'https://hastebin.com/afijavahox.coffeescript'
         embed = self.bot.embeds.embed_builder(title="Democraciv Registry", description=f"[Link]({link})")
         await self.safe_send_mod_links(ctx, embed)
 
@@ -257,7 +263,7 @@ class Moderation(commands.Cog):
     @utils.is_democraciv_guild()
     async def gdrive(self, ctx):
         """Link to the Google Drive for MK6"""
-        link = token.MK6_DRIVE or 'Link not provided.'
+        link = token.MK6_DRIVE or 'https://hastebin.com/afijavahox.coffeescript'
         embed = self.bot.embeds.embed_builder(title="Google Drive for MK6", description=f"[Link]({link})")
         await self.safe_send_mod_links(ctx, embed)
 
@@ -266,7 +272,7 @@ class Moderation(commands.Cog):
     @utils.is_democraciv_guild()
     async def electiontool(self, ctx):
         """Link to DerJonas' Election Tool"""
-        link = token.PIN_TOOL or 'Link not provided.'
+        link = token.PIN_TOOL or 'https://hastebin.com/afijavahox.coffeescript'
         embed = self.bot.embeds.embed_builder(title="DerJonas' Election Tool", description=f"[Link]({link})")
         await self.safe_send_mod_links(ctx, embed)
 
