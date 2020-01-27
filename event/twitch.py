@@ -70,7 +70,7 @@ class Twitch:
         except AttributeError:
             print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
                   f'in the config to a server I am in or disable Twitch announcements.')
-            raise exceptions.GuildNotFoundError(config.DEMOCRACIV_SERVER_ID)
+            raise exceptions.GuildNotFoundError(config.DEMOCRACIV_GUILD_ID)
 
         if channel is None:
             raise exceptions.ChannelNotFoundError(config.TWITCH_ANNOUNCEMENT_CHANNEL)

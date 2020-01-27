@@ -192,7 +192,7 @@ class Admin(commands.Cog):
             config_embed = self.bot.embeds.embed_builder(title="Config Diagnosis", description="")
             config_embed.add_field(name="Connected Democraciv Guild", value=f"{self.bot.democraciv_guild_object.name}")
             config_embed.add_field(name="Democraciv Guild specified in config",
-                                   value=f"{self.bot.get_guild(config.DEMOCRACIV_SERVER_ID)}",
+                                   value=f"{self.bot.get_guild(config.DEMOCRACIV_GUILD_ID)}",
                                    inline=False)
 
             await ctx.send(embed=config_embed)

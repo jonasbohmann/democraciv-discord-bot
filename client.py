@@ -72,11 +72,8 @@ class DemocracivBot(commands.Bot):
         # Save the bot's start time for get_uptime()
         self.start_time = time.time()
 
-        self.commands_cooldown = config.BOT_COMMAND_COOLDOWN
-        self.commands_prefix = config.BOT_PREFIX
-
         # Initialize commands.Bot with prefix, description and disable case_sensitivity
-        super().__init__(command_prefix=self.commands_prefix, description=self.description, case_insensitive=True,
+        super().__init__(command_prefix=config.BOT_PREFIX, description=self.description, case_insensitive=True,
                          activity=discord.Game(name=config.BOT_PREFIX + 'help | Watching over '
                                                                         'the Democraciv community'))
 
@@ -160,10 +157,10 @@ class DemocracivBot(commands.Bot):
 
     def initialize_democraciv_guild(self):
         # The bot needs a "main" guild object that will be used for reddit & twitch notifications, political parties and
-        # admin commands. The bot will automatically pick a random guild that it can see if 'democracivServerID' from
+        # admin commands. The bot will automatically pick a random guild that it can see if 'DEMOCRACIV_GUILD_ID' from
         # config.py is invalid
 
-        self.democraciv_guild_object = self.get_guild(config.DEMOCRACIV_SERVER_ID)
+        self.democraciv_guild_object = self.get_guild(config.DEMOCRACIV_GUILD_ID)
 
         if self.democraciv_guild_object is None:
 
@@ -173,9 +170,9 @@ class DemocracivBot(commands.Bot):
             self.democraciv_guild_object = self.guilds[0]
 
             if self.democraciv_guild_object is None:
-                raise exceptions.GuildNotFoundError(config.DEMOCRACIV_SERVER_ID)
+                raise exceptions.GuildNotFoundError(config.DEMOCRACIV_GUILD_ID)
 
-            config.DEMOCRACIV_SERVER_ID = self.democraciv_guild_object.id
+            config.DEMOCRACIV_GUILD_ID = self.democraciv_guild_object.id
 
             print(f"[BOT] Using '{self.democraciv_guild_object.name}' as Democraciv guild.")
 
@@ -204,7 +201,7 @@ class DemocracivBot(commands.Bot):
         await asyncio.sleep(1)
 
         # The bot needs a "main" guild object that will be used for reddit & twitch notifications, political parties and
-        # admin commands. The bot will automatically pick a random guild that it can see if 'democracivServerID' from
+        # admin commands. The bot will automatically pick the first guild that it can see if 'democracivServerID' from
         # config.py is invalid
         self.initialize_democraciv_guild()
 
@@ -286,7 +283,7 @@ if __name__ == '__main__':
     dciv = DemocracivBot()
 
     try:
-        dciv.run(token.TOKEN, reconnect=True, bot=True)
+        dciv.run(token.TOKEN)
     except KeyboardInterrupt:
         asyncio.create_task(dciv.close_bot())
 

@@ -86,7 +86,7 @@ class YouTube:
         except AttributeError:
             print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
                   f'in the config to a server I am in or disable YouTube announcements.')
-            raise exceptions.GuildNotFoundError(config.DEMOCRACIV_SERVER_ID)
+            raise exceptions.GuildNotFoundError(config.DEMOCRACIV_GUILD_ID)
 
         if discord_channel is None:
             raise exceptions.ChannelNotFoundError(config.YOUTUBE_ANNOUNCEMENT_CHANNEL)
@@ -142,7 +142,7 @@ class YouTube:
         except AttributeError:
             print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
                   f'in the config to a server I am in or disable YouTube announcements.')
-            raise exceptions.GuildNotFoundError(config.DEMOCRACIV_SERVER_ID)
+            raise exceptions.GuildNotFoundError(config.DEMOCRACIV_GUILD_ID)
 
         if discord_channel is None:
             raise exceptions.ChannelNotFoundError(config.YOUTUBE_ANNOUNCEMENT_CHANNEL)

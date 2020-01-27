@@ -6,7 +6,6 @@ from jishaku.metacog import GroupCogMeta
 
 class Debug(JishakuBase, metaclass=GroupCogMeta, command_parent=jsk, command_attrs=dict(hidden=True)):
     """Jishaku debug and monitoring commands"""
-
     pass
 
 

@@ -18,7 +18,7 @@ def is_democraciv_guild():
     """Wrapper for a discord.ext.commands decorator to check if command is used on the Democraciv guild"""
 
     def check(ctx):
-        if config.DEMOCRACIV_SERVER_ID != ctx.guild.id:
+        if config.DEMOCRACIV_GUILD_ID != ctx.guild.id:
             raise exceptions.NotDemocracivGuildError()
         return True
 
@@ -29,7 +29,7 @@ def add_tag_check():
     """Wrapper for a discord.ext.commands decorator to check if the -addtag command is used on the Democraciv guild"""
 
     def check(ctx):
-        if config.DEMOCRACIV_SERVER_ID != ctx.guild.id:
+        if config.DEMOCRACIV_GUILD_ID != ctx.guild.id:
             if ctx.author.guild_permissions.administrator:
                 return True
             else:
@@ -42,13 +42,13 @@ def add_tag_check():
 
 async def get_logging_channel(bot, guild_id):
     logging_channel = await bot.db.fetchval("SELECT logging_channel FROM guilds WHERE id = $1",
-                                             guild_id)
+                                            guild_id)
     return bot.get_channel(logging_channel)
 
 
 async def get_welcome_channel(bot, guild_id):
     welcome_channel = await bot.db.fetchval("SELECT welcome_channel FROM guilds WHERE id = $1",
-                                             guild_id)
+                                            guild_id)
     return bot.get_channel(welcome_channel)
 
 
