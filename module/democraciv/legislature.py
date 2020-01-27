@@ -266,104 +266,110 @@ class Legislature(commands.Cog):
                           f"`{config.BOT_PREFIX}legislature session all` to see a list of all previous sessions."
                     return await ctx.send(msg)
 
-        async with ctx.typing():
-            session_info = await self.bot.db.fetchrow(
-                "SELECT (speaker, is_active, vote_form, start_unixtime, end_unixtime, status, voting_start_unixtime) "
-                "FROM legislature_sessions WHERE id = $1", active_leg_session_id)
+        session_info = await self.bot.db.fetchrow(
+            "SELECT (speaker, is_active, vote_form, start_unixtime, end_unixtime, status, voting_start_unixtime) "
+            "FROM legislature_sessions WHERE id = $1", active_leg_session_id)
 
-            if session_info is None:
-                msg = f":x: I couldn't find that session.\n\n" \
-                      f"**Usage**:\n  `{config.BOT_PREFIX}legislature session` to see details about the session that" \
-                      f" is currently open,\n  " \
-                      f"`{config.BOT_PREFIX}legislature session <number>` to see details about a specific " \
-                      f"session or\n  " \
-                      f"`{config.BOT_PREFIX}legislature session all` to see a list of all previous sessions."
-                await ctx.send(msg)
-                return
+        if session_info is None:
+            msg = f":x: I couldn't find that session.\n\n" \
+                  f"**Usage**:\n  `{config.BOT_PREFIX}legislature session` to see details about the session that" \
+                  f" is currently open,\n  " \
+                  f"`{config.BOT_PREFIX}legislature session <number>` to see details about a specific " \
+                  f"session or\n  " \
+                  f"`{config.BOT_PREFIX}legislature session all` to see a list of all previous sessions."
+            await ctx.send(msg)
+            return
 
-            motions = await self.bot.db.fetch(
-                "SELECT id, title, description, submitter, hastebin FROM legislature_motions"
-                " WHERE leg_session = $1 ORDER BY id", active_leg_session_id)
+        motions = await self.bot.db.fetch(
+            "SELECT id, title, description, submitter, hastebin FROM legislature_motions"
+            " WHERE leg_session = $1 ORDER BY id", active_leg_session_id)
 
-            pretty_motions = f""
+        pretty_motions = f""
 
-            if len(motions) > 0:
-                for record in motions:
-                    if self.bot.get_user(record['submitter']) is not None:
-                        pretty_motions += f"Motion #{record['id']} - [{record['title']}]({record['hastebin']})" \
-                                      f" by {self.bot.get_user(record['submitter']).mention}\n"
-                    else:
-                        pretty_motions += f"Motion #{record['id']} - [{record['title']}]({record['hastebin']})\n"
+        if len(motions) > 0:
+            for record in motions:
+                # If the motion's description is just a Google Docs link, use that link instead of the Hastebin
+                is_google_docs = self.bot.laws.is_google_doc_link(record['description']) and len(record['description']) <= 100
+                if is_google_docs:
+                    link = record['description']
+                else:
+                    link = record['hastebin']
 
-            else:
-                pretty_motions = "No one submitted any motions during this session."
+                if self.bot.get_user(record['submitter']) is not None:
+                    pretty_motions += f"Motion #{record['id']} - [{record['title']}]({link})" \
+                                  f" by {self.bot.get_user(record['submitter']).mention}\n"
+                else:
+                    pretty_motions += f"Motion #{record['id']} - [{record['title']}]({link})\n"
 
-            bills = await self.bot.db.fetch(
-                "SELECT (id, tiny_link, bill_name, submitter) FROM legislature_bills"
-                " WHERE leg_session = $1 ORDER BY id", active_leg_session_id)
+        else:
+            pretty_motions = "No one submitted any motions during this session."
 
-            pretty_bills = f""
+        bills = await self.bot.db.fetch(
+            "SELECT (id, tiny_link, bill_name, submitter) FROM legislature_bills"
+            " WHERE leg_session = $1 ORDER BY id", active_leg_session_id)
 
-            if len(bills) > 0:
-                for record in bills:
-                    if self.bot.get_user(record[0][3]) is not None:
-                        pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by " \
-                                    f"{self.bot.get_user(record[0][3]).mention}\n"
-                    else:
-                        pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]})\n"
-            else:
-                pretty_bills = "No one submitted any bills during this session."
+        pretty_bills = f""
 
-            pretty_start_date = datetime.datetime.utcfromtimestamp(session_info[0][3]).strftime("%A, %B %d %Y"
-                                                                                                " %H:%M:%S")
+        if len(bills) > 0:
+            for record in bills:
+                if self.bot.get_user(record[0][3]) is not None:
+                    pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by " \
+                                f"{self.bot.get_user(record[0][3]).mention}\n"
+                else:
+                    pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]})\n"
+        else:
+            pretty_bills = "No one submitted any bills during this session."
 
-            embed = self.bot.embeds.embed_builder(title=f"Legislative Session #{str(active_leg_session_id)}",
-                                                  description="", time_stamp=True)
-            try:
-                embed.add_field(name="Opened by", value=self.bot.get_user(session_info[0][0]).mention)
-            except AttributeError:
-                embed.add_field(name="Opened by", value="*Person left Democraciv*")
+        pretty_start_date = datetime.datetime.utcfromtimestamp(session_info[0][3]).strftime("%A, %B %d %Y"
+                                                                                            " %H:%M:%S")
 
-            embed.add_field(name="Status", value=session_info[0][5], inline=True)
-            embed.add_field(name="Opened on (UTC)", value=pretty_start_date, inline=False)
+        embed = self.bot.embeds.embed_builder(title=f"Legislative Session #{str(active_leg_session_id)}",
+                                              description="", time_stamp=True)
+        try:
+            embed.add_field(name="Opened by", value=self.bot.get_user(session_info[0][0]).mention)
+        except AttributeError:
+            embed.add_field(name="Opened by", value="*Person left Democraciv*")
 
-            if session_info[0][5] != "Submission Period":
-                # Session is either closed or in Voting Period
-                pretty_voting_date = datetime.datetime.utcfromtimestamp(session_info[0][6]).strftime("%A, %B %d %Y"
-                                                                                                     " %H:%M:%S")
+        embed.add_field(name="Status", value=session_info[0][5], inline=True)
+        embed.add_field(name="Opened on (UTC)", value=pretty_start_date, inline=False)
 
-                embed.add_field(name="Voting Started on (UTC)", value=pretty_voting_date, inline=False)
-                embed.add_field(name="Vote Form", value=f"[Link]({session_info[0][2]})", inline=False)
+        if session_info[0][5] != "Submission Period":
+            # Session is either closed or in Voting Period
+            pretty_voting_date = datetime.datetime.utcfromtimestamp(session_info[0][6]).strftime("%A, %B %d %Y"
+                                                                                                 " %H:%M:%S")
 
-            if not session_info[0][1]:
-                # Session is closed
-                pretty_end_date = datetime.datetime.utcfromtimestamp(session_info[0][4]).strftime("%A, %B %d %Y"
-                                                                                                  " %H:%M:%S")
-                embed.add_field(name="Ended on (UTC)", value=pretty_end_date, inline=False)
+            embed.add_field(name="Voting Started on (UTC)", value=pretty_voting_date, inline=False)
+            embed.add_field(name="Vote Form", value=f"[Link]({session_info[0][2]})", inline=False)
 
-            # TODO - Hastebin is unreliable
-            if len(pretty_motions) < 1024:
-                embed.add_field(name="Submitted Motions", value=pretty_motions, inline=False)
-            elif len(pretty_motions) > 1024:
-                haste_bin_murl = await self.bot.laws.post_to_hastebin(pretty_motions)
-                too_long_motions = f"This text was too long for Discord, so I put it on [here.]({haste_bin_murl})"
-                embed.add_field(name="Submitted Motions", value=too_long_motions, inline=False)
+        if not session_info[0][1]:
+            # Session is closed
+            pretty_end_date = datetime.datetime.utcfromtimestamp(session_info[0][4]).strftime("%A, %B %d %Y"
+                                                                                              " %H:%M:%S")
+            embed.add_field(name="Ended on (UTC)", value=pretty_end_date, inline=False)
 
-            # If the submitted bills text is longer than 1024 characters, the Discord API returns a 403.
-            # To combat this, we upload the raw Markdown to Hastebin if it's too long.
-            if len(pretty_bills) < 1024:
-                embed.add_field(name="Submitted Bills", value=pretty_bills, inline=False)
-            elif len(pretty_bills) > 1024:
-                haste_bin_url = await self.bot.laws.post_to_hastebin(pretty_bills)
-                too_long_bills = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
-                embed.add_field(name="Submitted Bills", value=too_long_bills, inline=False)
+        # TODO - Hastebin is unreliable
+        if len(pretty_motions) < 1024:
+            embed.add_field(name="Submitted Motions", value=pretty_motions, inline=False)
+        elif len(pretty_motions) > 1024:
+            haste_bin_murl = await self.bot.laws.post_to_hastebin(pretty_motions)
+            too_long_motions = f"This text was too long for Discord, so I put it on [here.]({haste_bin_murl})"
+            embed.add_field(name="Submitted Motions", value=too_long_motions, inline=False)
 
-            try:
-                await ctx.send(embed=embed)
-            except discord.HTTPException:
-                await ctx.send(
-                    f":x: The embed value is > 1024 as there were too many "
-                    f"bills or motions submitted. Jonas is working on this.")
+        # If the submitted bills text is longer than 1024 characters, the Discord API returns a 403.
+        # To combat this, we upload the raw Markdown to Hastebin if it's too long.
+        if len(pretty_bills) < 1024:
+            embed.add_field(name="Submitted Bills", value=pretty_bills, inline=False)
+        elif len(pretty_bills) > 1024:
+            haste_bin_url = await self.bot.laws.post_to_hastebin(pretty_bills)
+            too_long_bills = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
+            embed.add_field(name="Submitted Bills", value=too_long_bills, inline=False)
+
+        try:
+            await ctx.send(embed=embed)
+        except discord.HTTPException:
+            await ctx.send(
+                f":x: The embed value is > 1024 as there were too many "
+                f"bills or motions submitted. Jonas is working on this.")
 
     @legislature.command(name='submit')
     @utils.is_democraciv_guild()

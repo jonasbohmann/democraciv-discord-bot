@@ -5,7 +5,7 @@ import collections
 from bs4 import BeautifulSoup, SoupStrainer
 
 """
-   Several helper functions to query the database for date relevant for legislative sessions.
+   Several helper functions to query the database for data relevant for legislative sessions.
    
 """
 
