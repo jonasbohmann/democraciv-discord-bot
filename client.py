@@ -68,6 +68,7 @@ class DemocracivBot(commands.Bot):
 
     def __init__(self):
         self.description = config.BOT_DESCRIPTION
+        self.commands_prefix = config.BOT_PREFIX
 
         # Save the bot's start time for get_uptime()
         self.start_time = time.time()
