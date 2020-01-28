@@ -619,6 +619,7 @@ class Guild(commands.Cog):
     @staticmethod
     def is_emoji_or_media_url(tag_content: str) -> bool:
         emoji_pattern = re.compile("<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>")
+        discord_invite_pattern = re.compile("(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
 
         url_pattern = re.compile("((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*")
         url_endings = ('.jpeg', '.jpg', '.avi', '.png', '.gif', '.webp', '.mp4', '.mp3', '.bmp', '.img',
@@ -629,6 +630,9 @@ class Guild(commands.Cog):
             return True
 
         elif emoji_pattern.match(tag_content):
+            return True
+
+        elif discord_invite_pattern.match(tag_content):
             return True
 
         return False
