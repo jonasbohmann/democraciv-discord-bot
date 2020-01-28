@@ -188,7 +188,6 @@ class DemocracivBot(commands.Bot):
         await self.session.close()
         await self.db.close()
         await self.close()
-        await self.logout()
 
     async def on_ready(self):
         if not self.db_ready:
