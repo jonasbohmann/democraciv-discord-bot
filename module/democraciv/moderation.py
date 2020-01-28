@@ -222,7 +222,7 @@ class Moderation(commands.Cog):
             await ctx.send(embed=embed)
 
     @commands.command(name='alt')
-    @commands.has_role("Moderation")
+    @commands.has_role(mk.DemocracivRole.MODERATION_ROLE)
     @utils.is_democraciv_guild()
     async def alt(self, ctx, member: discord.Member, check_messages: bool = False):
         """Check if someone is an alt"""
@@ -241,7 +241,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name='hub', aliases=['modhub', 'moderationhub', 'mhub'])
-    @commands.has_role("Moderation")
+    @commands.has_role(mk.DemocracivRole.MODERATION_ROLE)
     @utils.is_democraciv_guild()
     async def hub(self, ctx):
         """Link to the Moderation Hub"""
@@ -250,7 +250,7 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='registry')
-    @commands.has_role("Moderation")
+    @commands.has_role(mk.DemocracivRole.MODERATION_ROLE)
     @utils.is_democraciv_guild()
     async def registry(self, ctx):
         """Link to the Democraciv Registry"""
@@ -259,7 +259,7 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='drive', aliases=['googledrive', 'gdrive'])
-    @commands.has_role("Moderation")
+    @commands.has_role(mk.DemocracivRole.MODERATION_ROLE)
     @utils.is_democraciv_guild()
     async def gdrive(self, ctx):
         """Link to the Google Drive for MK6"""
@@ -268,7 +268,7 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='elections', aliases=['election', 'pins', 'electiontool', 'pintool'])
-    @commands.has_role("Moderation")
+    @commands.has_role(mk.DemocracivRole.MODERATION_ROLE)
     @utils.is_democraciv_guild()
     async def electiontool(self, ctx):
         """Link to DerJonas' Election Tool"""

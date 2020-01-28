@@ -108,7 +108,7 @@ class Laws(commands.Cog, name='Law'):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
     @law.command(name='remove', aliases=['r'])
-    @commands.has_any_role("Speaker of the Legislature", "Vice-Speaker of the Legislature")
+    @commands.has_any_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def removebill(self, ctx, law_id: int):
         """Remove a law from the laws of this nation"""
 

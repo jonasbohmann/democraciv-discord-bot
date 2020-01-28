@@ -81,7 +81,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='opensession', aliases=['os'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.has_any_role("Speaker of the Legislature", "Vice-Speaker of the Legislature")
+    @commands.has_any_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     @utils.is_democraciv_guild()
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
@@ -128,7 +128,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='updatesession', aliases=['us'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.has_any_role("Speaker of the Legislature", "Vice-Speaker of the Legislature")
+    @commands.has_any_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     @utils.is_democraciv_guild()
     async def updatesession(self, ctx, voting_form: str):
         """Changes the current session's status to be open for voting. Needs a Google Forms link as argument."""
@@ -181,7 +181,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='closesession', aliases=['cs'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.has_any_role("Speaker of the Legislature", "Vice-Speaker of the Legislature")
+    @commands.has_any_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     @utils.is_democraciv_guild()
     async def closesession(self, ctx):
         """Closes the current session"""
@@ -550,7 +550,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.has_any_role("Speaker of the Legislature", "Vice-Speaker of the Legislature")
+    @commands.has_any_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     @utils.is_democraciv_guild()
     async def passbill(self, ctx, bill_id: int):
         """Mark a bill as passed from the Legislature"""
