@@ -187,7 +187,7 @@ class Fun(commands.Cog):
 
             if now_playing is None:
                 return await ctx.send(":x: You either have to give me something to search for or listen to a song"
-                                      "on Spotify!")
+                                      " on Spotify!")
 
             query = f"{now_playing.title} {' '.join(now_playing.artists)}"
 
