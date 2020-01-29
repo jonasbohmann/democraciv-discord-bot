@@ -121,7 +121,7 @@ class Ministry(commands.Cog):
 
     @ministry.group(name='veto', aliases=['v'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.has_any_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
+    @commands.has_any_role(639438159498838016, 646677815755931659)
     @utils.is_democraciv_guild()
     async def veto(self, ctx, bill_id: int):
         """Veto a bill"""
@@ -182,7 +182,7 @@ class Ministry(commands.Cog):
 
     @ministry.group(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.has_any_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
+    @commands.has_any_role(639438159498838016, 646677815755931659)
     @utils.is_democraciv_guild()
     async def passbill(self, ctx, bill_id: int):
         """Pass a bill into law"""
