@@ -197,7 +197,8 @@ class Fun(commands.Cog):
         if len(embed) >= 6000:
             embed = self.bot.embeds.embed_builder(title=f"{lyrics['title']} by {lyrics['author']}",
                                                   description="The lyrics were too long for Discord, click  "
-                                                              "the title to read them on Genius instead.")
+                                                              "the title to read them on Genius instead.",
+                                                  colour=0x36393E)
             embed.url = lyrics['links']['genius']
             embed.set_thumbnail(url=lyrics['thumbnail']['genius'])
             return await ctx.send(embed=embed)
