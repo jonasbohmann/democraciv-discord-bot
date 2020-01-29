@@ -5,6 +5,8 @@ import util.exceptions as exceptions
 from config import config
 from discord.ext import commands
 
+from util import mk
+
 """Various utility classes and functions that the bot regular uses."""
 
 
@@ -15,7 +17,7 @@ class AddTagCheckError(commands.CheckFailure):
 
 
 def is_democraciv_guild():
-    """Wrapper for a discord.ext.commands decorator to check if command is used on the Democraciv guild"""
+    """Wrapper for a discord.ext.commands check to check if command is used on the Democraciv guild"""
 
     def check(ctx):
         if config.DEMOCRACIV_GUILD_ID != ctx.guild.id:
@@ -23,6 +25,23 @@ def is_democraciv_guild():
         return True
 
     return commands.check(check)
+
+
+def has_democraciv_role(role: mk.DemocracivRole):
+    """Wrapper for a discord.ext.commands check to check if someone has a role from utils.mk"""
+
+    def predicate(ctx):
+        if not isinstance(ctx.channel, discord.abc.GuildChannel):
+            raise commands.NoPrivateMessage()
+
+        found = discord.utils.get(ctx.author.roles, id=role)
+
+        if found is None:
+            raise commands.MissingRole(role)
+
+        return True
+
+    return commands.check(predicate)
 
 
 def add_tag_check():

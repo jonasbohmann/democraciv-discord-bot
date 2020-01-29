@@ -174,6 +174,26 @@ class Fun(commands.Cog):
         embed = self.bot.embeds.embed_builder(title=f"Veterans of {ctx.guild.name}", description=message)
         await ctx.send(embed=embed)
 
+    @commands.command()
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def lyrics(self, ctx, *, query: str):
+        """Find lyrics for a song"""
+
+        if len(query) < 3:
+            return await ctx.send(":x: The query has to be more than 3 characters!")
+
+        async with self.bot.session.get(f"https://some-random-api.ml/lyrics?title={query}") as response:
+            lyrics = await response.json()
+
+        try:
+            embed = self.bot.embeds.embed_builder(title=f"{lyrics['title']} by {lyrics['author']}",
+                                                  description=lyrics['lyrics'], url=lyrics['links']['genius'])
+            embed.set_thumbnail(url=lyrics['thumbnail']['genius'])
+        except KeyError:
+            return await ctx.send(f":x: Couldn't find anything that matches `{query}`.")
+
+        await ctx.send(embed=embed)
+
     @commands.command(name='random')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def random(self, ctx, *arg):
