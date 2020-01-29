@@ -60,7 +60,8 @@ class Pages:
     """
 
     def __init__(self, ctx, *, entries, per_page=12, show_entry_count=True, title=None, show_index=True,
-                 footer_text=None):
+                 footer_text=config.BOT_NAME, colour=0x7f0000, title_url=None, thumbnail=None,
+                 show_amount_of_pages=False):
         self.bot = ctx.bot
         self.entries = entries
         self.message = ctx.message
@@ -74,9 +75,14 @@ class Pages:
             pages += 1
         self.maximum_pages = pages
         self.title = title
-        self.embed = discord.Embed(colour=0x7f0000)
+        self.embed = discord.Embed(colour=colour)
+        if title_url:
+            self.embed.url = title_url
+        if thumbnail:
+            self.embed.set_thumbnail(url=thumbnail)
         self.paginating = len(entries) > per_page
         self.show_entry_count = show_entry_count
+        self.show_amount_of_pages = show_amount_of_pages
         self.reaction_emojis = [
             ('\N{BLACK LEFT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}', self.first_page),
             ('\N{BLACK LEFT-POINTING TRIANGLE}', self.previous_page),
@@ -142,6 +148,10 @@ class Pages:
 
         self.embed.description = '\n'.join(p)
         self.embed.set_footer(text=self.footer, icon_url=config.BOT_ICON_URL)
+
+        if self.maximum_pages:
+            if self.show_amount_of_pages:
+                self.embed.set_author(name=f'Page {page}/{self.maximum_pages}')
 
     async def show_page(self, page, *, first=False):
         self.current_page = page

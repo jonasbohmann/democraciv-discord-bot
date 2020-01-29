@@ -34,7 +34,7 @@ class Laws(commands.Cog, name='Law'):
 
             pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}"
                           , show_index=False, footer_text=f"Use {self.bot.commands_prefix}law <id> to get more "
-                                                          f"details about a law.")
+                                                          f"details about a law.", show_amount_of_pages=True)
             await pages.paginate()
 
         # If the user did specify a law_id, send details about that law

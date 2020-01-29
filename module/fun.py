@@ -7,11 +7,11 @@ import util.exceptions as exceptions
 from config import config
 from discord.ext import commands
 
-
 # -- fun.py | module.fun --
 #
 # Fun commands.
 #
+from util.paginator import Pages
 
 
 class Fun(commands.Cog):
@@ -90,6 +90,14 @@ class Fun(commands.Cog):
         embed.set_thumbnail(url=member.avatar_url)
         await ctx.send(embed=embed)
 
+    @staticmethod
+    def get_spotify_connection(member: discord.Member):
+        if len(member.activities) > 0:
+            for act in member.activities:
+                if act.type == discord.ActivityType.listening:
+                    return act
+        return None
+
     @commands.command(name='spotify')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
@@ -106,13 +114,7 @@ class Fun(commands.Cog):
         if member is None:
             member = ctx.author
 
-        member_spotify = None
-
-        if len(member.activities) > 0:
-            for act in member.activities:
-                if act.type == discord.ActivityType.listening:
-                    member_spotify = act
-                    break
+        member_spotify = self.get_spotify_connection(member)
 
         if member_spotify is None:
             return await ctx.send(":x: That person is either not listening to something on Spotify right now, "
@@ -176,8 +178,18 @@ class Fun(commands.Cog):
 
     @commands.command()
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def lyrics(self, ctx, *, query: str):
-        """Find lyrics for a song"""
+    async def lyrics(self, ctx, *, query: str = None):
+        """Find lyrics for a song. Leave 'query' blank to get the lyrics for
+        the song you're listening to on Spotify right now"""
+
+        if query is None:
+            now_playing = self.get_spotify_connection(ctx.author)
+
+            if now_playing is None:
+                return await ctx.send(":x: You either have to give me something to search for or listen to a song"
+                                      "on Spotify!")
+
+            query = f"{now_playing.title} {' '.join(now_playing.artists)}"
 
         if len(query) < 3:
             return await ctx.send(":x: The query has to be more than 3 characters!")
@@ -187,23 +199,24 @@ class Fun(commands.Cog):
                 lyrics = await response.json()
 
         try:
-            embed = self.bot.embeds.embed_builder(title=f"{lyrics['title']} by {lyrics['author']}",
-                                                  description=lyrics['lyrics'])
-            embed.url = lyrics['links']['genius']
-            embed.set_thumbnail(url=lyrics['thumbnail']['genius'])
+
+            lyrics['lyrics'] = lyrics['lyrics'].replace("[", "**[").replace("]", "]**")
+
+            if len(lyrics['lyrics']) <= 2048:
+                embed = self.bot.embeds.embed_builder(title=f"{lyrics['title']} by {lyrics['author']}",
+                                                      description=lyrics['lyrics'], colour=0x36393E)
+                embed.url = lyrics['links']['genius']
+                embed.set_thumbnail(url=lyrics['thumbnail']['genius'])
+                return await ctx.send(embed=embed)
+
+            pages = Pages(ctx=ctx, entries=lyrics['lyrics'].splitlines(), show_entry_count=False,
+                          title=f"{lyrics['title']} by {lyrics['author']}", show_index=False,
+                          title_url=lyrics['links']['genius'], thumbnail=lyrics['thumbnail']['genius'], per_page=20,
+                          colour=0x36393E, show_amount_of_pages=True)
         except KeyError:
             return await ctx.send(f":x: Couldn't find anything that matches `{query}`.")
 
-        if len(embed) >= 6000:
-            embed = self.bot.embeds.embed_builder(title=f"{lyrics['title']} by {lyrics['author']}",
-                                                  description="The lyrics were too long for Discord, click  "
-                                                              "the title to read them on Genius instead.",
-                                                  colour=0x36393E)
-            embed.url = lyrics['links']['genius']
-            embed.set_thumbnail(url=lyrics['thumbnail']['genius'])
-            return await ctx.send(embed=embed)
-
-        await ctx.send(embed=embed)
+        await pages.paginate()
 
     @commands.command(name='random')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
