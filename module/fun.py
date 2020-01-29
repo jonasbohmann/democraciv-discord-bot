@@ -187,7 +187,8 @@ class Fun(commands.Cog):
 
         try:
             embed = self.bot.embeds.embed_builder(title=f"{lyrics['title']} by {lyrics['author']}",
-                                                  description=lyrics['lyrics'], url=lyrics['links']['genius'])
+                                                  description=lyrics['lyrics'])
+            embed.url = lyrics['links']['genius']
             embed.set_thumbnail(url=lyrics['thumbnail']['genius'])
         except KeyError:
             return await ctx.send(f":x: Couldn't find anything that matches `{query}`.")
