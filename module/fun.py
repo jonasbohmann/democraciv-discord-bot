@@ -179,17 +179,35 @@ class Fun(commands.Cog):
     async def lyrics(self, ctx, *, query: str):
         """Find lyrics for a song"""
 
+        def split_lyrics(content):
+            fields = []
+            remaining_content = content
+            while len(remaining_content) > 1024:
+                last_chunk_line_break = remaining_content[:1024].rfind("\n")
+                if last_chunk_line_break == -1:
+                    last_chunk_line_break = 1024
+                fields.append(remaining_content[:last_chunk_line_break + 1])
+                remaining_content = remaining_content[last_chunk_line_break + 1:]
+            if remaining_content:
+                fields.append(remaining_content)
+            return fields
+
         if len(query) < 3:
             return await ctx.send(":x: The query has to be more than 3 characters!")
 
-        async with self.bot.session.get(f"https://some-random-api.ml/lyrics?title={query}") as response:
-            lyrics = await response.json()
+        async with ctx.typing():
+            async with self.bot.session.get(f"https://some-random-api.ml/lyrics?title={query}") as response:
+                lyrics = await response.json()
 
         try:
             embed = self.bot.embeds.embed_builder(title=f"{lyrics['title']} by {lyrics['author']}",
-                                                  description=lyrics['lyrics'])
+                                                  description="\u200b")
             embed.url = lyrics['links']['genius']
             embed.set_thumbnail(url=lyrics['thumbnail']['genius'])
+
+            for field in split_lyrics(lyrics['lyrics']):
+                embed.add_field(name="\u200b", value=field, inline=False)
+
         except KeyError:
             return await ctx.send(f":x: Couldn't find anything that matches `{query}`.")
 
