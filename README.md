@@ -18,7 +18,7 @@ Provides useful information, political party & role management and much more.
 for new uploads and new live broadcasts from the Democraciv YouTube channel
 *  Helps the Speaker of the Legislature with legislative sessions and submissions (bills & motions)
 *  Supports the Prime Minister with vetoes by keeping them up-to-date with passed bills from the Legislature
-*  Keeps track of all legislative sessions, ministry vetos and laws that passed both Legislature & Executive
+*  Keeps track of all legislative sessions, ministry vetoes and laws that passed both Legislature & Executive
 *  Search for active laws by name or by automatically generated tags
 *  Join and leave political parties and see their members and ranking
 *  Smart Wikipedia and Sid Meier's Civilization Wikia queries
@@ -110,7 +110,7 @@ module.guild | Configure various functions of this bot for your guild |
 module.roles | Add or remove roles from you |
 module.parties | Join and leave political parties |
 module.time | Get the current time in a number of different timezones |
-module.wiki | Search for a topic on Wikipedia and the Sid Meier's Civilization Fandon wiki |
+module.wiki | Search for a topic on Wikipedia and the Sid Meier's Civilization Fandom wiki |
 module.democraciv.legislature | Helps the Speaker of the Legislature with keeping track of submitted bills, motions and legislative sessions in general |
 module.democraciv.ministry | Helps the Prime Minister with keeping track of passed bills that need to be voted on (vetoed) |
 module.democraciv.supremecourt | Collection of links for Supreme Court Justices |
@@ -160,11 +160,6 @@ for database~~
 *  ~~Add anonymous report feature~~
 *  ~~Add multiple event notifications for #moderation-notifications~~
 *  ~~Add alt detection~~
-
-####  Update 0.17.0 - The Suggestions Update
-
-*  Add suggestions from the community
-*  **Refactor & Cleanup to prepare for 1.0.0 release**
 
 
 ##  Democraciv Discord Server

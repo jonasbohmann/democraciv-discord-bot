@@ -143,7 +143,7 @@ class Moderation(commands.Cog):
         if chance >= 0.2:
             embed = self.bot.embeds.embed_builder(title="Possible Alt Account Joined", description="")
             embed.add_field(name="Member", value=f"{member.mention} ({member.id})", inline=False)
-            embed.add_field(name="Chance", value=f"There is a {chance * 100}% chance that {member} is an alt.",
+            embed.add_field(name="Chance", value=f"There is a {(chance * 100):2f}% chance that {member} is an alt.",
                             inline=False)
             if details:
                 embed.add_field(name="Factors", value=details, inline=False)
