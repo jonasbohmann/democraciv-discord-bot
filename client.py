@@ -165,8 +165,8 @@ class DemocracivBot(commands.Bot):
 
         if self.democraciv_guild_object is None:
 
-            print("[BOT] Couldn't find guild with ID specified in config.py 'DEMOCRACIV_SERVER_ID'.\n"
-                  "      I will use a random guild that I can see to be used for my Democraciv-specific features.")
+            print("[BOT] Couldn't find guild with ID specified in config.py 'DEMOCRACIV_GUILD_ID'.\n"
+                  "      I will use the first guild that I can see to be used for my Democraciv-specific features.")
 
             self.democraciv_guild_object = self.guilds[0]
 

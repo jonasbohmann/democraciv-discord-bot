@@ -3,7 +3,7 @@ import datetime
 
 from util.flow import Flow
 from util import utils, mk, exceptions
-from config import config, token
+from config import config, token, links
 
 from discord.ext import commands
 
@@ -275,6 +275,13 @@ class Moderation(commands.Cog):
         link = token.PIN_TOOL or 'https://hastebin.com/afijavahox.coffeescript'
         embed = self.bot.embeds.embed_builder(title="DerJonas' Election Tool", description=f"[Link]({link})")
         await self.safe_send_mod_links(ctx, embed)
+
+    @commands.command(name='quire', aliases=['q'])
+    async def quire(self, ctx):
+        """Quire Project Management"""
+        embed = self.bot.embeds.embed_builder(title='Quire',
+                                              description=links.quire)
+        await ctx.send(embed=embed)
 
     @commands.command(name='kick')
     @commands.guild_only()

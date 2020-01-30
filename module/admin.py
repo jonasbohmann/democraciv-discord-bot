@@ -18,6 +18,7 @@ from discord.ext import commands
 #
 # Commands that manage the bot. Requires administrator permissions.
 #
+from util import mk
 
 
 class Admin(commands.Cog):
@@ -81,8 +82,8 @@ class Admin(commands.Cog):
                 await ctx.send(':white_check_mark: Reloaded ' + module)
 
     @commands.command(name='stop')
-    @commands.has_permissions(administrator=True)
     @utils.is_democraciv_guild()
+    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def stop(self, ctx):
         """Restarts the bot"""
         await ctx.send(':wave: Goodbye! Shutting down...')

@@ -1,5 +1,5 @@
 from config import links, config
-from util import mk
+from util import mk, utils
 from discord.ext import commands
 
 
@@ -202,14 +202,6 @@ class Link(commands.Cog):
     async def turnout(self, ctx):
         """Live turnout of the latest election"""
         embed = self.bot.embeds.embed_builder(title='Live Election Turnout', description=links.turnout)
-        await ctx.send(embed=embed)
-
-    @commands.command(name='quire', aliases=['q'])
-    @commands.has_permissions(administrator=True)
-    async def quire(self, ctx):
-        """Quire Project Management"""
-        embed = self.bot.embeds.embed_builder(title='Quire',
-                                              description=links.quire)
         await ctx.send(embed=embed)
 
     @commands.command(name='docket', aliases=['d'])
