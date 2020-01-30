@@ -121,7 +121,7 @@ event.logging | Logs events (member joins/leaves, message deleted/edited etc.) t
 event.error_handler | Handles internal errors |
 event.reddit | Handles notifications when there's a new post on r/democraciv |
 event.twitch | Handles notifications when twitch.tv/democraciv is live |
-event.youtube | Handles notifications when a new video or livestream on the Democraciv YouTube channel was uploadedor started|
+event.youtube | Handles notifications when a new video or livestream on the Democraciv YouTube channel was uploaded or started|
 
 
 ##  Roadmap
