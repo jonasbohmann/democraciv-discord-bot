@@ -410,10 +410,10 @@ class Party(commands.Cog, name='Political Parties'):
             return
 
         # Check if party role already exists
-        discord_role = await self.get_party_role(party.content)
+        discord_role = await self.get_party_role(party)
 
         if discord_role is None:
-            raise exceptions.RoleNotFoundError(party.content)
+            raise exceptions.RoleNotFoundError(party)
 
         await ctx.send(f":information_source: Answer with the alias for `{discord_role.name}`:")
 
