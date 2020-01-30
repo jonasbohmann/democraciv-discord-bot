@@ -277,8 +277,7 @@ class Legislature(commands.Cog):
                   f"`{config.BOT_PREFIX}legislature session <number>` to see details about a specific " \
                   f"session or\n  " \
                   f"`{config.BOT_PREFIX}legislature session all` to see a list of all previous sessions."
-            await ctx.send(msg)
-            return
+            return await ctx.send(msg)
 
         motions = await self.bot.db.fetch(
             "SELECT id, title, description, submitter, hastebin FROM legislature_motions"
@@ -372,8 +371,8 @@ class Legislature(commands.Cog):
                 f"bills or motions submitted. Jonas is working on this.")
 
     @legislature.command(name='submit')
-    @utils.is_democraciv_guild()
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.is_democraciv_guild()
     async def submit(self, ctx):
         """Submit a new bill or motion for the currently active session"""
 
@@ -462,6 +461,10 @@ class Legislature(commands.Cog):
                         f"https://tinyurl.com/api-create.php?url={google_docs_url}") as response:
                     tiny_url = await response.text()
 
+                if tiny_url == "Error":
+                    return await ctx.send(":x: Your bill was not submitted, there was a problem with tinyurl.com. "
+                                          "Try again in a few minutes.")
+
                 try:
                     await self.bot.db.execute(
                         "INSERT INTO legislature_bills (id, leg_session, link, bill_name, submitter, is_vetoable, "
@@ -517,6 +520,10 @@ class Legislature(commands.Cog):
 
                 haste_bin_url = await self.bot.laws.post_to_hastebin(description)
 
+                if not haste_bin_url:
+                    return await ctx.send(":x: Your motion was not submitted, there was a problem with hastebin.com. "
+                                          "Try again in a few minutes.")
+
                 try:
                     await self.bot.db.execute(
                         "INSERT INTO legislature_motions (id, leg_session, title, description, submitter, hastebin) "
@@ -539,7 +546,7 @@ class Legislature(commands.Cog):
                 f":white_check_mark: Successfully submitted motion titled `{title}`"
                 f" for session #{current_leg_session}!")
 
-        # -- Send DM to Cabinet after everything is done and succeed --
+        # -- Send DM to Cabinet after everything is done --
 
         try:
             await self.speaker.send(content=message, embed=embed)

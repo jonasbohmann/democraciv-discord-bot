@@ -258,7 +258,6 @@ class LawUtils:
                                                                                              "= true"), 'submitter')
 
         # Prettified sorted statistics by discord.Member
-        # TODO - Limit to Top 5
         pretty_top_submitter = self.get_pretty_stats(self.sort_dict_by_value(amount_of_bills_by_submitter), 'bills')
 
         pretty_top_speaker = self.get_pretty_stats(self.sort_dict_by_value(amount_of_sessions_by_speaker), 'sessions')
@@ -273,7 +272,10 @@ class LawUtils:
 
         async with self.bot.session.post("https://hastebin.com/documents", data=text) as response:
             data = await response.json()
-            key = data['key']
+            try:
+                key = data['key']
+            except KeyError:
+                return None
 
         return f"https://hastebin.com/{key}"
 
