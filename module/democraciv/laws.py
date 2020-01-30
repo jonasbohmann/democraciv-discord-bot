@@ -34,7 +34,7 @@ class Laws(commands.Cog, name='Law'):
 
             pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}"
                           , show_index=False, footer_text=f"Use {self.bot.commands_prefix}law <id> to get more "
-                                                          f"details about a law.", show_amount_of_pages=True)
+                                                          f"details about a law.", show_amount_of_pages=False)
             await pages.paginate()
 
         # If the user did specify a law_id, send details about that law
@@ -105,10 +105,10 @@ class Laws(commands.Cog, name='Law'):
                 await ctx.send(':x: You have to give me something to search for!\n\n**Usage**:\n'
                                '`-law search <query>`')
 
+    @law.command(name='remove', aliases=['r'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
-    @law.command(name='remove', aliases=['r'])
-    @commands.has_any_role(639438304705642506, 639439805729734656)
+    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def removebill(self, ctx, law_id: int):
         """Remove a law from the laws of this nation"""
 

@@ -1,5 +1,6 @@
 import discord
 import datetime
+import functools
 import util.exceptions as exceptions
 
 from config import config
@@ -11,7 +12,6 @@ from util import mk
 
 
 class AddTagCheckError(commands.CheckFailure):
-
     def __init__(self, message):
         self.message = message
 
@@ -34,12 +34,27 @@ def has_democraciv_role(role: mk.DemocracivRole):
         if not isinstance(ctx.channel, discord.abc.GuildChannel):
             raise commands.NoPrivateMessage()
 
-        found = discord.utils.get(ctx.author.roles, id=role)
+        found = discord.utils.get(ctx.author.roles, id=role.value)
 
         if found is None:
-            raise commands.MissingRole(role)
+            raise commands.MissingRole(role.printable_name)
 
         return True
+
+    return commands.check(predicate)
+
+
+def has_any_democraciv_role(*roles: mk.DemocracivRole):
+    """Wrapper for a discord.ext.commands check to check if someone has any role from utils.mk"""
+
+    def predicate(ctx):
+        if not isinstance(ctx.channel, discord.abc.GuildChannel):
+            raise commands.NoPrivateMessage()
+
+        getter = functools.partial(discord.utils.get, ctx.author.roles)
+        if any(getter(id=role.value) is not None for role in roles):
+            return True
+        raise commands.MissingAnyRole(roles)
 
     return commands.check(predicate)
 

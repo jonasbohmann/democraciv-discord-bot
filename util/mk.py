@@ -11,26 +11,40 @@ from util import exceptions
 """
 
 
-class DemocracivRole(enum.Enum):
+class PrettyEnumValue(object):
+    def __init__(self, value, printable_name):
+        self.value = value
+        self.printable_name = printable_name
+
+
+class PrettyEnum(enum.Enum):
+    def __new__(cls, value):
+        obj = object.__new__(cls)
+        obj._value_ = value.value
+        obj.printable_name = value.printable_name
+        return obj
+
+
+class DemocracivRole(PrettyEnum):
     # Moderation
-    MODERATION_ROLE = 319663296728924160
+    MODERATION_ROLE = PrettyEnumValue(319663296728924160, 'Moderation')
 
     # Executive
-    MINISTER_ROLE = 639438027852087297
-    GOVERNOR_ROLE = 639438794239639573
-    EXECUTIVE_PROXY_ROLE = 643190277494013962
-    PRIME_MINISTER_ROLE = 639438159498838016
-    LT_PRIME_MINISTER_ROLE = 646677815755931659
+    MINISTER_ROLE = PrettyEnumValue(639438027852087297, 'Minister')
+    GOVERNOR_ROLE = PrettyEnumValue(639438794239639573, 'Governor')
+    EXECUTIVE_PROXY_ROLE = PrettyEnumValue(643190277494013962, 'Executive Proxy')
+    PRIME_MINISTER_ROLE = PrettyEnumValue(639438159498838016, 'Prime Minister')
+    LT_PRIME_MINISTER_ROLE = PrettyEnumValue(646677815755931659, 'Lieutenant Prime Minister')
 
     # Legislature
-    SPEAKER_ROLE = 639438304705642506
-    VICE_SPEAKER_ROLE = 639439805729734656
-    LEGISLATOR_ROLE = 639438268601204737
+    SPEAKER_ROLE = PrettyEnumValue(639438304705642506, 'Speaker of the Legislature')
+    VICE_SPEAKER_ROLE = PrettyEnumValue(639439805729734656, 'Vice-Speaker of the Legislature')
+    LEGISLATOR_ROLE = PrettyEnumValue(639438268601204737, 'Legislator')
 
     # Courts
-    CHIEF_JUSTICE_ROLE = 639442447721562122
-    JUSTICE_ROLE = 639438578304417792
-    JUDGE_ROLE = 668544161884143657
+    CHIEF_JUSTICE_ROLE = PrettyEnumValue(639442447721562122, 'Chief Justice')
+    JUSTICE_ROLE = PrettyEnumValue(639438578304417792, 'Justice')
+    JUDGE_ROLE = PrettyEnumValue(668544161884143657, 'Judge')
 
 
 class DemocracivChannel(enum.Enum):

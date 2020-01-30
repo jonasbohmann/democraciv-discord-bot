@@ -81,8 +81,8 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='opensession', aliases=['os'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.has_any_role(639438304705642506, 639439805729734656)
     @utils.is_democraciv_guild()
+    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
 
@@ -128,8 +128,8 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='updatesession', aliases=['us'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.has_any_role(639438304705642506, 639439805729734656)
     @utils.is_democraciv_guild()
+    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def updatesession(self, ctx, voting_form: str):
         """Changes the current session's status to be open for voting. Needs a Google Forms link as argument."""
 
@@ -181,8 +181,8 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='closesession', aliases=['cs'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.has_any_role(639438304705642506, 639439805729734656)
     @utils.is_democraciv_guild()
+    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def closesession(self, ctx):
         """Closes the current session"""
 
@@ -550,8 +550,8 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.has_any_role(639438304705642506, 639439805729734656)
     @utils.is_democraciv_guild()
+    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def passbill(self, ctx, bill_id: int):
         """Mark a bill as passed from the Legislature"""
 

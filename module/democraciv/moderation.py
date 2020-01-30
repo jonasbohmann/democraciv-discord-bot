@@ -222,8 +222,8 @@ class Moderation(commands.Cog):
             await ctx.send(embed=embed)
 
     @commands.command(name='alt')
-    @commands.has_role(319663296728924160)
     @utils.is_democraciv_guild()
+    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def alt(self, ctx, member: discord.Member, check_messages: bool = False):
         """Check if someone is an alt"""
         async with ctx.typing():
@@ -241,8 +241,8 @@ class Moderation(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name='hub', aliases=['modhub', 'moderationhub', 'mhub'])
-    @commands.has_role(319663296728924160)
     @utils.is_democraciv_guild()
+    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def hub(self, ctx):
         """Link to the Moderation Hub"""
         link = token.MOD_HUB or 'https://hastebin.com/afijavahox.coffeescript'
@@ -250,8 +250,8 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='registry')
-    @commands.has_role(319663296728924160)
     @utils.is_democraciv_guild()
+    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def registry(self, ctx):
         """Link to the Democraciv Registry"""
         link = token.REGISTRY or 'https://hastebin.com/afijavahox.coffeescript'
@@ -259,8 +259,8 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='drive', aliases=['googledrive', 'gdrive'])
-    @commands.has_role(319663296728924160)
     @utils.is_democraciv_guild()
+    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def gdrive(self, ctx):
         """Link to the Google Drive for MK6"""
         link = token.MK6_DRIVE or 'https://hastebin.com/afijavahox.coffeescript'
@@ -268,8 +268,8 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='elections', aliases=['election', 'pins', 'electiontool', 'pintool'])
-    @commands.has_role(319663296728924160)
     @utils.is_democraciv_guild()
+    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def electiontool(self, ctx):
         """Link to DerJonas' Election Tool"""
         link = token.PIN_TOOL or 'https://hastebin.com/afijavahox.coffeescript'

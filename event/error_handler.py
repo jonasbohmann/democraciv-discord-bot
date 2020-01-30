@@ -5,6 +5,8 @@ import util.exceptions as exceptions
 
 from discord.ext import commands
 
+from util import mk
+
 
 class ErrorHandler(commands.Cog):
     def __init__(self, bot):
@@ -106,7 +108,10 @@ class ErrorHandler(commands.Cog):
         FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
         DEALINGS IN THE SOFTWARE.
         """
-        missing = ["'{}'".format(role) for role in missing_roles]
+        if isinstance(missing_roles[0], mk.DemocracivRole):
+            missing = ["'{}'".format(role.printable_name) for role in missing_roles]
+        else:
+            missing = ["'{}'".format(role) for role in missing_roles]
 
         if len(missing) > 2:
             fmt = '{}, or {}'.format(", ".join(missing[:-1]), missing[-1])
