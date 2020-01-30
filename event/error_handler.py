@@ -1,11 +1,10 @@
 import datetime
 
+from util import mk
 import util.utils as utils
 import util.exceptions as exceptions
 
 from discord.ext import commands
-
-from util import mk
 
 
 class ErrorHandler(commands.Cog):
@@ -45,9 +44,8 @@ class ErrorHandler(commands.Cog):
         # Send error embed to author DM
         if to_owner:
             embed.add_field(name='Guild', value=ctx.guild.name)
-
-            await self.bot.DerJonas_object.send(
-                f":x: An error occurred on {ctx.guild.name} at {datetime.datetime.now()}!\n\n{error}", embed=embed)
+            embed.add_field(name='Error Details', value=f"{error.__class__.__name__}: {error}")
+            await self.bot.DerJonas_object.send(embed=embed)
 
     @staticmethod
     def format_permissions(missing_perms: list) -> str:

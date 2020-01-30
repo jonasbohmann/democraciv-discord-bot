@@ -34,7 +34,7 @@ class Admin(commands.Cog):
         try:
             self.bot.load_extension(module)
         except Exception:
-            await ctx.send(f'```py\n{traceback.format_exc()}\n```')
+            await self.bot.DerJonas_object.send(f'```py\n{traceback.format_exc()}\n```')
         else:
             await ctx.send(':white_check_mark: Loaded ' + module)
 
@@ -45,7 +45,7 @@ class Admin(commands.Cog):
         try:
             self.bot.unload_extension(module)
         except Exception:
-            await ctx.send(f'```py\n{traceback.format_exc()}\n```')
+            await self.bot.DerJonas_object.send(f'```py\n{traceback.format_exc()}\n```')
         else:
             await ctx.send(':white_check_mark: Unloaded ' + module)
 
@@ -68,7 +68,7 @@ class Admin(commands.Cog):
                 self.bot.unload_extension('event.logging')
                 self.bot.load_extension('event.logging')
             except Exception:
-                await ctx.send(f'```py\n{traceback.format_exc()}\n```')
+                await self.bot.DerJonas_object.send(f'```py\n{traceback.format_exc()}\n```')
             else:
                 await ctx.send(':white_check_mark: Reloaded all modules.')
 
@@ -77,7 +77,7 @@ class Admin(commands.Cog):
                 self.bot.unload_extension(module)
                 self.bot.load_extension(module)
             except Exception:
-                await ctx.send(f'```py\n{traceback.format_exc()}\n```')
+                await self.bot.DerJonas_object.send(f'```py\n{traceback.format_exc()}\n```')
             else:
                 await ctx.send(':white_check_mark: Reloaded ' + module)
 
