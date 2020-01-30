@@ -122,57 +122,14 @@ class Fun(commands.Cog):
         pretty_artists = ', '.join(member_spotify.artists)
 
         embed = self.bot.embeds.embed_builder(title=f"<:spotify:665703093425537046>  {member.name} on Spotify",
-                                              description="", has_footer=False, colour=0x36393E)
+                                              description="", has_footer=False,
+                                              colour=0x36393E, footer=f"Use `{ctx.prefix}lyrics` to get lyrics"
+                                                                      f" for a song!")
         embed.add_field(name="Song", value=f"[{member_spotify.title}](https://open.spotify.com/"
                                            f"track/{member_spotify.track_id})", inline=False)
         embed.add_field(name="Artist(s)", value=pretty_artists, inline=True)
         embed.add_field(name="Album", value=member_spotify.album, inline=True)
         embed.set_thumbnail(url=member_spotify.album_cover_url)
-        await ctx.send(embed=embed)
-
-    @commands.command(name='vibecheck', hidden=True)
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.guild_only()
-    async def vibecheck(self, ctx, *, member: discord.Member = None):
-        """vibecheck"""
-
-        member = member or ctx.author
-
-        not_vibing = [
-            'https://i.kym-cdn.com/entries/icons/mobile/000/031/163/Screen_Shot_2019-09-16_at_10.22.26_AM.jpg',
-            'https://t6.rbxcdn.com/e92c5706e16411bdb1aeaa23e268c4aa',
-            'https://s3.amazonaws.com/media.thecrimson.com/photos/2019/11/18/194724_1341037.png',
-            'https://i.kym-cdn.com/photos/images/newsfeed/001/574/493/3ab.jpg',
-            'https://i.imgflip.com/3ebtvt.jpg',
-            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT814jrNuqJsaVVHGqWw_0snlcysLN5fLpocEYrx6hzkgXYx7RV5w&s',
-            'https://i.redd.it/qajwen1dpcn31.png',
-            'https://pl.scdn.co/images/pl/default/8b3875b1f9c2a05ebc96df0fb4404265246bc4bb',
-            'https://img.buzzfeed.com/buzzfeed-static/static/2019-10/7/15/asset/c5dd65974640/sub-buzz-521-1570462442-1.png?downsize=700:*&output-format=auto&output-quality=auto',
-            'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/12132fe4-1709-4287-9dcc-4ee9fc252a01/ddk55pz-bf72cab3-2b9e-474e-94a8-00e5f53d2baf.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzEyMTMyZmU0LTE3MDktNDI4Ny05ZGNjLTRlZTlmYzI1MmEwMVwvZGRrNTVwei1iZjcyY2FiMy0yYjllLTQ3NGUtOTRhOC0wMGU1ZjUzZDJiYWYuanBnIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.Sb6Axu0O6iZ3YmZJHg5wRe-r41iLnWVqa_ddWrtbQlo',
-            'https://pbs.twimg.com/media/EHgYHjOX4AAuv6s.jpg',
-            'https://pbs.twimg.com/media/EGTsxzaUwAAuBLG?format=jpg&name=900x900',
-            'https://66.media.tumblr.com/c2fc65d9f8614dbd9bb7378983e0598e/tumblr_pxw332rEmZ1yom1s3o1_1280.png'
-            ]
-
-        vibing = ['https://i.redd.it/ax6jb6lhdah31.jpg',
-                  'https://i.redd.it/3a6nr5b3u4x31.png',
-                  'https://i.kym-cdn.com/photos/images/original/001/599/028/bf3.jpg',
-                  'https://i.redd.it/p4e6a65i3bw31.jpg',
-                  'https://media.makeameme.org/created/congratulations-you-have-61e05e0d4b.jpg']
-
-        passed = bool(random.getrandbits(1))
-
-        if passed:
-            image = random.choice(vibing)
-            pretty = "passed"
-        else:
-            image = random.choice(not_vibing)
-            pretty = "not passed"
-
-        embed = self.bot.embeds.embed_builder(title=":flushed:  Vibe Check", description=f"{member.mention} "
-                                                                                         f"has **{pretty}** "
-                                                                                         f"the vibe check!")
-        embed.set_image(url=image)
         await ctx.send(embed=embed)
 
     @commands.command(name='veterans')
@@ -320,6 +277,51 @@ class Fun(commands.Cog):
 
         await ctx.send(
             f'**:arrows_counterclockwise:** Random number ({start} - {end}): {random.randint(start, end)}')
+
+    @commands.command(name='vibecheck', hidden=True)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    async def vibecheck(self, ctx, *, member: discord.Member = None):
+        """vibecheck"""
+
+        member = member or ctx.author
+
+        not_vibing = [
+            'https://i.kym-cdn.com/entries/icons/mobile/000/031/163/Screen_Shot_2019-09-16_at_10.22.26_AM.jpg',
+            'https://t6.rbxcdn.com/e92c5706e16411bdb1aeaa23e268c4aa',
+            'https://s3.amazonaws.com/media.thecrimson.com/photos/2019/11/18/194724_1341037.png',
+            'https://i.kym-cdn.com/photos/images/newsfeed/001/574/493/3ab.jpg',
+            'https://i.imgflip.com/3ebtvt.jpg',
+            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT814jrNuqJsaVVHGqWw_0snlcysLN5fLpocEYrx6hzkgXYx7RV5w&s',
+            'https://i.redd.it/qajwen1dpcn31.png',
+            'https://pl.scdn.co/images/pl/default/8b3875b1f9c2a05ebc96df0fb4404265246bc4bb',
+            'https://img.buzzfeed.com/buzzfeed-static/static/2019-10/7/15/asset/c5dd65974640/sub-buzz-521-1570462442-1.png?downsize=700:*&output-format=auto&output-quality=auto',
+            'https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/12132fe4-1709-4287-9dcc-4ee9fc252a01/ddk55pz-bf72cab3-2b9e-474e-94a8-00e5f53d2baf.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzEyMTMyZmU0LTE3MDktNDI4Ny05ZGNjLTRlZTlmYzI1MmEwMVwvZGRrNTVwei1iZjcyY2FiMy0yYjllLTQ3NGUtOTRhOC0wMGU1ZjUzZDJiYWYuanBnIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.Sb6Axu0O6iZ3YmZJHg5wRe-r41iLnWVqa_ddWrtbQlo',
+            'https://pbs.twimg.com/media/EHgYHjOX4AAuv6s.jpg',
+            'https://pbs.twimg.com/media/EGTsxzaUwAAuBLG?format=jpg&name=900x900',
+            'https://66.media.tumblr.com/c2fc65d9f8614dbd9bb7378983e0598e/tumblr_pxw332rEmZ1yom1s3o1_1280.png'
+        ]
+
+        vibing = ['https://i.redd.it/ax6jb6lhdah31.jpg',
+                  'https://i.redd.it/3a6nr5b3u4x31.png',
+                  'https://i.kym-cdn.com/photos/images/original/001/599/028/bf3.jpg',
+                  'https://i.redd.it/p4e6a65i3bw31.jpg',
+                  'https://media.makeameme.org/created/congratulations-you-have-61e05e0d4b.jpg']
+
+        passed = bool(random.getrandbits(1))
+
+        if passed:
+            image = random.choice(vibing)
+            pretty = "passed"
+        else:
+            image = random.choice(not_vibing)
+            pretty = "not passed"
+
+        embed = self.bot.embeds.embed_builder(title=":flushed:  Vibe Check", description=f"{member.mention} "
+                                                                                         f"has **{pretty}** "
+                                                                                         f"the vibe check!")
+        embed.set_image(url=image)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):

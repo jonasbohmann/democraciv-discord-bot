@@ -104,7 +104,7 @@ Module | Description
 module.links | Collection of useful links for the game (Wiki, Constitution, political parties etc.) |
 module.about | Commands regarding the bot itself |
 module.admin | Re-, un- and load modules and the config |
-module.fun | `-whois`, `-veterans`, `-random`, `-spotify`, and `-say` commands | 
+module.fun | `-whois`, `-veterans`, `-random`, `-spotify`, `-lyrics` and `-say` commands | 
 module.help | Scaling `-help` command |
 module.guild | Configure various functions of this bot for your guild |
 module.roles | Add or remove roles from you |
