@@ -23,26 +23,30 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def court(self, ctx):
         """Dashboard for Supreme Court Justices"""
-        
+
         try:
             self.refresh_court_discord_objects()
         except exceptions.DemocracivBotException as e:
             if isinstance(e, exceptions.RoleNotFoundError):
                 await ctx.send(e.message)
-            
+
         embed = self.bot.embeds.embed_builder(title=f"Courts of {mk.NATION_NAME}", description="")
 
-        justices = [justice.mention for justice in mk.get_democraciv_role(self.bot, mk.DemocracivRole.JUSTICE_ROLE).members
-                    if justice.id != self.chief_justice.id]
-
         if isinstance(self.chief_justice, discord.Member):
+            justices = [justice.mention for justice in
+                        mk.get_democraciv_role(self.bot, mk.DemocracivRole.JUSTICE_ROLE).members
+                        if justice.id != self.chief_justice.id]
             justices.insert(0, f"{self.chief_justice.mention} (Chief Justice)")
+
+        else:
+            justices = [justice.mention for justice in
+                        mk.get_democraciv_role(self.bot, mk.DemocracivRole.JUSTICE_ROLE).members]
 
         embed.add_field(name="Supreme Court Justices", value='\n'.join(justices), inline=False)
 
         embed.add_field(name="Appeals Court Judges", value='\n'.join([justice.mention for justice in
                                                                       mk.get_democraciv_role(self.bot,
-                                                                                               mk.DemocracivRole.JUDGE_ROLE).members]),
+                                                                                             mk.DemocracivRole.JUDGE_ROLE).members]),
                         inline=False)
 
         embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
