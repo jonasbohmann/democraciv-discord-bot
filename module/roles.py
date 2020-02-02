@@ -19,7 +19,7 @@ class Roles(commands.Cog):
         role_dict = {}
 
         for record in role_list:
-            role_dict[record[0]['role_id']] = record[0]['join_message']
+            role_dict[record['role_id']] = record['join_message']
 
         return role_dict
 
