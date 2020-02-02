@@ -1,12 +1,6 @@
+from util import mk
 from config import links, config
-from util import mk, utils
 from discord.ext import commands
-
-
-# -- link.py | module.links --
-#
-# Collection of link commands.
-#
 
 
 class Link(commands.Cog):

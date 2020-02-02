@@ -1,20 +1,13 @@
 import re
-
 import discord
+
+import util.utils as utils
+import util.exceptions as exceptions
 
 from config import config
 from util.flow import Flow
-import util.utils as utils
 from util.paginator import Pages
-import util.exceptions as exceptions
-
 from discord.ext import commands
-
-
-# -- guild.py | module.guild --
-#
-# Commands that manage a guild's settings. Requires administrator permissions.
-#
 
 
 class Guild(commands.Cog):
@@ -45,14 +38,11 @@ class Guild(commands.Cog):
         """Configure a welcome message that every new member will see once they join this guild"""
 
         is_welcome_enabled = await self.bot.checks.is_welcome_message_enabled(ctx.guild.id)
-
         current_welcome_channel = await self.bot.db.fetchval("SELECT welcome_channel FROM guilds WHERE id = $1",
-                                                              ctx.guild.id)
-
+                                                             ctx.guild.id)
         current_welcome_channel = self.bot.get_channel(current_welcome_channel)
-
         current_welcome_message = await self.bot.db.fetchval("SELECT welcome_message FROM guilds WHERE id = $1",
-                                                              ctx.guild.id)
+                                                             ctx.guild.id)
 
         if current_welcome_channel is None:
             current_welcome_channel = "This guild currently has no welcome channel."
@@ -125,8 +115,7 @@ class Guild(commands.Cog):
     async def logs(self, ctx):
         """Configure the logging module that logs every guild event to a specified channel"""
 
-        is_logging_enabled = (await self.bot.db.fetchrow("SELECT logging FROM guilds WHERE id = $1", ctx.guild.id))[
-            'logging']
+        is_logging_enabled = await self.bot.db.fetchval("SELECT logging FROM guilds WHERE id = $1", ctx.guild.id)
 
         current_logging_channel = await utils.get_logging_channel(self.bot, ctx.guild.id)
 
@@ -234,7 +223,7 @@ class Guild(commands.Cog):
 
                 if remove_status == "UPDATE 1":
                     return await ctx.send(f":white_check_mark: {channel_object.mention} is no longer excluded from"
-                                   f" showing up in {current_logging_channel.mention}!")
+                                          f" showing up in {current_logging_channel.mention}!")
 
                 else:
                     return await ctx.send(f":x: Unexpected error occurred.")
@@ -455,8 +444,9 @@ class Guild(commands.Cog):
                                             query.lower())
 
         if tag_id is None:
-            tag_id = await self.bot.db.fetchval("SELECT tag_id FROM guild_tags_alias WHERE alias = $1 AND guild_id = $2",
-                                                query.lower(), guild.id)
+            tag_id = await self.bot.db.fetchval(
+                "SELECT tag_id FROM guild_tags_alias WHERE alias = $1 AND guild_id = $2",
+                query.lower(), guild.id)
 
         if tag_id is None:
             return None
@@ -491,7 +481,7 @@ class Guild(commands.Cog):
             return False
 
         found_tag = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 AND name = $2",
-                                                    ctx.guild.id, tag_name)
+                                            ctx.guild.id, tag_name)
 
         if len(found_tag) > 0:
             await ctx.send(":x: A tag with that name already exists on this guild!")
@@ -621,7 +611,8 @@ class Guild(commands.Cog):
         emoji_pattern = re.compile("<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>")
         discord_invite_pattern = re.compile("(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
 
-        url_pattern = re.compile("((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*")
+        url_pattern = re.compile(
+            "((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*")
         url_endings = ('.jpeg', '.jpg', '.avi', '.png', '.gif', '.webp', '.mp4', '.mp3', '.bmp', '.img',
                        '.svg', '.mov', '.flv', '.wmv')
 

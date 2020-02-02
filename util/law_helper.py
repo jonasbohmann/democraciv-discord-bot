@@ -223,11 +223,11 @@ class LawUtils:
 
                 if value == 1:
                     # Singular stats_name
-
                     pretty += f"{i}. {self.bot.get_user(key).mention} with {value} {stats_name[:-1]}\n"
                 else:
                     # Plural stats_name
                     pretty += f"{i}. {self.bot.get_user(key).mention} with {value} {stats_name}\n"
+
                 i += 1
 
             else:
@@ -239,12 +239,12 @@ class LawUtils:
         """Generates statistics for the -legislature stats command"""
 
         # General total amount of things
-        amount_of_sessions = (await self.bot.db.fetchrow("SELECT COUNT(id) FROM legislature_sessions"))['count']
-        amount_of_bills = (await self.bot.db.fetchrow("SELECT COUNT(id) FROM legislature_bills"))['count']
-        amount_of_laws = (await self.bot.db.fetchrow("SELECT COUNT(law_id) FROM legislature_laws"))['count']
-        amount_of_motions = (await self.bot.db.fetchrow("SELECT COUNT(id) FROM legislature_motions"))['count']
+        amount_of_sessions = await self.bot.db.fetchval("SELECT COUNT(id) FROM legislature_sessions")
+        amount_of_bills = await self.bot.db.fetchval("SELECT COUNT(id) FROM legislature_bills")
+        amount_of_laws = await self.bot.db.fetchval("SELECT COUNT(law_id) FROM legislature_laws")
+        amount_of_motions = await self.bot.db.fetchval("SELECT COUNT(id) FROM legislature_motions")
 
-        # Sorted statistics by discord.Member
+        # Sorted statistics by Discord Member
         amount_of_bills_by_submitter = self.count_rows_from_db_record(await self.bot.db.fetch("SELECT submitter FROM "
                                                                                               "legislature_bills"),
                                                                       'submitter')
@@ -292,12 +292,13 @@ class LawUtils:
 
                 # Only find bills that are either not vetoable, or that also passed the Ministry if they are vetoable
                 if bill['is_vetoable'] and bill['has_passed_ministry']:
-                    _id = (await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
-                                                      bill['id']))['law_id']
+                    _id = await self.bot.db.fetchval("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
+                                                     bill['id'])
                     found_bills.append(f"Law #{_id} - [{bill['bill_name']}]({bill['link']})")
+
                 elif not bill['is_vetoable']:
-                    _id = (await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
-                                                      bill['id']))['law_id']
+                    _id = await self.bot.db.fetchval("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
+                                                     bill['id'])
                     found_bills.append(f"Law #{_id} - [{bill['bill_name']}]({bill['link']})")
 
                 else:
@@ -331,8 +332,7 @@ class LawUtils:
         pretty_laws = []
 
         for bill in bills:
-            bill_id = (await self.bot.db.fetchrow("SELECT bill_id FROM legislature_laws WHERE law_id = $1", bill))[
-                'bill_id']
+            bill_id = await self.bot.db.fetchval("SELECT bill_id FROM legislature_laws WHERE law_id = $1", bill)
             details = await self.bot.db.fetchrow("SELECT link, bill_name FROM legislature_bills WHERE id = $1",
                                                  bill_id)
             pretty_laws.append(f"Law #{bill} - [{details['bill_name']}]({details['link']})")

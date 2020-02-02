@@ -6,11 +6,6 @@ import util.exceptions as exceptions
 
 from config import config
 from discord.ext import commands
-
-# -- fun.py | module.fun --
-#
-# Fun commands.
-#
 from util.paginator import Pages
 
 
@@ -145,11 +140,7 @@ class Fun(commands.Cog):
         # If cache is empty OR ctx not on democraciv guild, calculate & sort again
         else:
             async with ctx.typing():
-                guild_members_without_bots = []
-
-                for member in ctx.guild.members:
-                    if not member.bot:
-                        guild_members_without_bots.append(member)
+                guild_members_without_bots = [member for member in ctx.guild.members if not member.bot]
 
                 first_15_members = []
 
@@ -172,7 +163,7 @@ class Fun(commands.Cog):
         message = "These are the first 15 people who joined this guild.\nBot accounts are not counted.\n\n"
 
         for veteran in sorted_first_15_members:
-            message += f"{veteran[1]}. {veteran[0].name}\n"
+            message += f"{veteran[1]}. {str(veteran[0])}\n"
 
         embed = self.bot.embeds.embed_builder(title=f"Veterans of {ctx.guild.name}", description=message)
         await ctx.send(embed=embed)

@@ -1,5 +1,4 @@
 import os
-
 import psutil
 import asyncio
 import discord
@@ -12,12 +11,6 @@ import util.exceptions as exceptions
 
 from config import config
 from discord.ext import commands
-
-
-# -- admin.py | module.admin --
-#
-# Commands that manage the bot. Requires administrator permissions.
-#
 from util import mk
 
 
@@ -34,7 +27,7 @@ class Admin(commands.Cog):
         try:
             self.bot.load_extension(module)
         except Exception:
-            await self.bot.DerJonas_object.send(f'```py\n{traceback.format_exc()}\n```')
+            await self.bot.owner.send(f'```py\n{traceback.format_exc()}\n```')
         else:
             await ctx.send(':white_check_mark: Loaded ' + module)
 
@@ -45,7 +38,7 @@ class Admin(commands.Cog):
         try:
             self.bot.unload_extension(module)
         except Exception:
-            await self.bot.DerJonas_object.send(f'```py\n{traceback.format_exc()}\n```')
+            await self.bot.owner.send(f'```py\n{traceback.format_exc()}\n```')
         else:
             await ctx.send(':white_check_mark: Unloaded ' + module)
 
@@ -68,7 +61,7 @@ class Admin(commands.Cog):
                 self.bot.unload_extension('event.logging')
                 self.bot.load_extension('event.logging')
             except Exception:
-                await self.bot.DerJonas_object.send(f'```py\n{traceback.format_exc()}\n```')
+                await self.bot.owner.send(f'```py\n{traceback.format_exc()}\n```')
             else:
                 await ctx.send(':white_check_mark: Reloaded all modules.')
 
@@ -77,7 +70,7 @@ class Admin(commands.Cog):
                 self.bot.unload_extension(module)
                 self.bot.load_extension(module)
             except Exception:
-                await self.bot.DerJonas_object.send(f'```py\n{traceback.format_exc()}\n```')
+                await self.bot.owner.send(f'```py\n{traceback.format_exc()}\n```')
             else:
                 await ctx.send(':white_check_mark: Reloaded ' + module)
 
@@ -139,7 +132,7 @@ class Admin(commands.Cog):
         """Interact with the bot's database"""
 
         # Just to make absolutely sure
-        if not ctx.author == self.bot.DerJonas_object:
+        if ctx.author != self.bot.owner:
             return await ctx.send(":x: Nope.")
 
         try:

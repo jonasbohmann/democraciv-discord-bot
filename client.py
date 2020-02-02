@@ -14,7 +14,6 @@ import util.exceptions as exceptions
 
 from discord.ext import commands, tasks
 
-# Internal Imports
 from event.twitch import Twitch
 from event.reddit import Reddit
 from config import config, token
@@ -22,23 +21,7 @@ from event.youtube import YouTube
 from util.law_helper import LawUtils
 from util.utils import CheckUtils, EmbedUtils
 
-# -- Discord Bot for the r/Democraciv Server --
-#
-# Author: DerJonas
-# Library: discord.py 1.2.5
-# License: MIT
-# Source: https://github.com/jonasbohmann/democraciv-discord-bot
-#
 
-
-# -- client.py --
-#
-# Main part of the bot. Loads all modules on startup and initializes PostgreSQL database.
-# Remove or add new modules by adding or removing them to/from "initial_extensions".
-#
-
-
-# Set up logging for discord.py
 logging.basicConfig(level=logging.INFO)
 
 # List of cogs that will be loaded on startup
@@ -86,13 +69,12 @@ class DemocracivBot(commands.Bot):
         self.db_ready = False
         self.db = self.loop.create_task(self.connect_to_db())
 
-        # Create util objects from ./util/utils.py
         self.embeds = EmbedUtils()
         self.checks = CheckUtils(self)
         self.laws = LawUtils(self)
 
         # Attributes will be "initialized" in on_ready as they need a connection to Discord
-        self.DerJonas_object = None
+        self.owner = None
         self.democraciv_guild_object = None
 
         # Cache initialized guilds to limit database queries
@@ -119,7 +101,7 @@ class DemocracivBot(commands.Bot):
             YouTube(self)
 
     async def initialize_aiohttp_session(self):
-        # Initialize a shared aiohttp ClientSession to be used for -wikipedia, -submit and reddit & twitch requests
+        # Initialize a shared aiohttp ClientSession to be used for -wikipedia, -leg submit and reddit & twitch requests
         # aiohttp needs to have this in an async function, that's why it's separated from __init__()
         self.session = aiohttp.ClientSession()
 
@@ -205,7 +187,8 @@ class DemocracivBot(commands.Bot):
         # config.py is invalid
         self.initialize_democraciv_guild()
 
-        self.DerJonas_object = self.get_user(config.BOT_AUTHOR_ID)
+        self.owner = (await self.application_info()).owner
+        self.owner_id = self.owner.id
 
         if config.DATABASE_DAILY_BACKUP_ENABLED:
             self.daily_db_backup.start()
@@ -227,7 +210,7 @@ class DemocracivBot(commands.Bot):
                                               " VALUES ($1, false, false, ARRAY[0], false)",
                                               message.guild.id)
                     except Exception:
-                        await self.DerJonas_object.send(
+                        await self.owner.send(
                             f":x: Fatal database error occurred while initializing new guild "
                             f"{message.guild.name} ({message.guild.id})")
                         print(
@@ -286,4 +269,3 @@ if __name__ == '__main__':
         dciv.run(token.TOKEN)
     except KeyboardInterrupt:
         asyncio.create_task(dciv.close_bot())
-

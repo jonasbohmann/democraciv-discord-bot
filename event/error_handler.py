@@ -45,7 +45,7 @@ class ErrorHandler(commands.Cog):
         if to_owner:
             embed.add_field(name='Guild', value=ctx.guild.name)
             embed.add_field(name='Error Details', value=f"{error.__class__.__name__}: {error}")
-            await self.bot.DerJonas_object.send(embed=embed)
+            await self.bot.owner.send(embed=embed)
 
     @staticmethod
     def format_permissions(missing_perms: list) -> str:

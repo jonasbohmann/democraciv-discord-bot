@@ -5,7 +5,6 @@ import util.utils as utils
 
 from discord.ext import commands
 
-
 # -- logging.py | event.logging --
 #
 # Logging module.
@@ -41,11 +40,11 @@ class Log(commands.Cog):
         # Send event embed to author DM
         if to_owner:
             embed.add_field(name='Guild', value=f"{guild.name} ({guild.id})", inline=False)
-            await self.bot.DerJonas_object.send(embed=embed)
+            await self.bot.owner.send(embed=embed)
 
     async def is_channel_excluded(self, guild_id, channel_id):
-        excluded_channels = (await self.bot.db.fetchrow("SELECT logging_excluded FROM guilds WHERE id = $1"
-                                                        , guild_id))['logging_excluded']
+        excluded_channels = await self.bot.db.fetchval("SELECT logging_excluded FROM guilds WHERE id = $1"
+                                                       , guild_id)
 
         if excluded_channels is not None:
             return channel_id in excluded_channels
@@ -83,7 +82,7 @@ class Log(commands.Cog):
                     "Before": [f"{before.clean_content}", False],
                     "After": [f"{after.clean_content}", False]
                 }
-                await self.log_event(before.guild, ":pencil2: Message Edited", embed_fields, to_owner=False)
+                await self.log_event(before.guild, ":pencil2:  Message Edited", embed_fields, to_owner=False)
 
         else:
             return
@@ -108,7 +107,7 @@ class Log(commands.Cog):
                 if len(message.content) <= 1024:
                     embed_fields['Message'] = [message.clean_content, False]
 
-            await self.log_event(message.guild, ':wastebasket: Message Deleted', embed_fields, to_owner=False)
+            await self.log_event(message.guild, ':wastebasket:  Message Deleted', embed_fields, to_owner=False)
 
         else:
             return
@@ -128,7 +127,7 @@ class Log(commands.Cog):
                 "Channel": [f"{channel.mention}", True]
             }
 
-            await self.log_event(guild, ':wastebasket: :wastebasket: Bulk of Messages Deleted', embed_fields,
+            await self.log_event(guild, ':wastebasket: :wastebasket:  Bulk of Messages Deleted', embed_fields,
                                  to_owner=False)
 
         else:
@@ -143,15 +142,13 @@ class Log(commands.Cog):
         if welcome_channel is not None:
             if await self.bot.checks.is_welcome_message_enabled(member.guild.id):
                 # Apparently this doesn't raise an error if {member} is not in welcome_message
-                welcome_message = (await self.bot.db.fetchrow("SELECT welcome_message FROM guilds WHERE id = $1",
-                                                              member.guild.id))['welcome_message']. \
-                    format(member=member.mention)
+                welcome_message = await self.bot.db.fetchval("SELECT welcome_message FROM guilds WHERE id = $1",
+                                                             member.guild.id).format(member=member.mention)
                 await welcome_channel.send(welcome_message)
 
             if await self.bot.checks.is_default_role_enabled(member.guild.id):
-
-                default_role = (await self.bot.db.fetchrow("SELECT defaultrole_role FROM guilds WHERE id = $1",
-                                                           member.guild.id))['defaultrole_role']
+                default_role = await self.bot.db.fetchval("SELECT defaultrole_role FROM guilds WHERE id = $1",
+                                                          member.guild.id)
                 default_role = member.guild.get_role(default_role)
 
                 if default_role is not None:
@@ -170,7 +167,7 @@ class Log(commands.Cog):
             "ID": [f"{member.id}", False]
         }
 
-        await self.log_event(member.guild, ':tada: Member Joined', embed_fields, thumbnail=member.avatar_url,
+        await self.log_event(member.guild, ':tada:  Member Joined', embed_fields, thumbnail=member.avatar_url,
                              to_owner=False)
 
     @commands.Cog.listener()
@@ -182,7 +179,7 @@ class Log(commands.Cog):
             "Name": [f"{member.name} #{member.discriminator}", True]
         }
 
-        await self.log_event(member.guild, ':no_pedestrians: Member Left', embed_fields, thumbnail=member.avatar_url,
+        await self.log_event(member.guild, ':no_pedestrians:  Member Left', embed_fields, thumbnail=member.avatar_url,
                              to_owner=False)
 
     @commands.Cog.listener()
@@ -198,7 +195,7 @@ class Log(commands.Cog):
 
             }
 
-            await self.log_event(before.guild, ':arrows_counterclockwise: Nickname Changed', embed_fields,
+            await self.log_event(before.guild, ':arrows_counterclockwise:  Nickname Changed', embed_fields,
                                  thumbnail=before.avatar_url, to_owner=False)
 
         if before.roles != after.roles:
@@ -213,7 +210,7 @@ class Log(commands.Cog):
                     "Role": [given_role, False]
                 }
 
-                await self.log_event(before.guild, ':sunglasses: Role given to Member', embed_fields,
+                await self.log_event(before.guild, ':sunglasses:  Role given to Member', embed_fields,
                                      thumbnail=before.avatar_url, to_owner=False)
 
             if len(before.roles) > len(after.roles):
@@ -226,7 +223,7 @@ class Log(commands.Cog):
                     "Role": [removed_role, False]
                 }
 
-                await self.log_event(before.guild, ':zipper_mouth: Role removed from Member', embed_fields,
+                await self.log_event(before.guild, ':zipper_mouth:  Role removed from Member', embed_fields,
                                      thumbnail=before.avatar_url, to_owner=False)
 
             else:
@@ -241,7 +238,7 @@ class Log(commands.Cog):
             "Name": [f"{user.name} #{user.discriminator}", True]
         }
 
-        await self.log_event(guild, ':no_entry: Member Banned', embed_fields, thumbnail=user.avatar_url,
+        await self.log_event(guild, ':no_entry:  Member Banned', embed_fields, thumbnail=user.avatar_url,
                              to_owner=True)
 
     @commands.Cog.listener()
@@ -253,7 +250,7 @@ class Log(commands.Cog):
             "Name": [f"{user.name} #{user.discriminator}", True]
         }
 
-        await self.log_event(guild, ':dove: Member Unbanned', embed_fields, thumbnail=user.avatar_url,
+        await self.log_event(guild, ':dove:  Member Unbanned', embed_fields, thumbnail=user.avatar_url,
                              to_owner=True)
 
     # -- Guild Events --
@@ -263,14 +260,14 @@ class Log(commands.Cog):
         introduction_channel = guild.text_channels[0]
 
         # Alert owner of this bot that the bot was invited to some place
-        await self.bot.DerJonas_object.send(
-            f":warning: I was added to {guild.name} ({guild.id}). Here are some invites:")
+        await self.bot.owner.send(
+            f":warning:  I was added to {guild.name} ({guild.id}). Here are some invites:")
 
         # Get invite for new guild to send to owner_dm_channel
         try:
             guild_invites = await guild.invites()
             guild_invite_1 = str(guild_invites[0])
-            await self.bot.DerJonas_object.send(guild_invite_1)
+            await self.bot.owner.send(guild_invite_1)
         except (IndexError, discord.Forbidden):
             pass
 
@@ -281,7 +278,7 @@ class Log(commands.Cog):
                                                           f"about me.\n\nUse the `-guild` command to "
                                                           f"configure me for this guild.\n\nIf you "
                                                           f"have any questions or suggestions, "
-                                                          f"send a DM to {self.bot.DerJonas_object.mention}!")
+                                                          f"send a DM to {self.bot.owner.mention}!")
 
         # Add new guild to database
         await self.bot.db.execute("INSERT INTO guilds (id, welcome, logging, logging_excluded, defaultrole) "
@@ -306,7 +303,7 @@ class Log(commands.Cog):
                 "ID": [role.id, False]
             }
 
-            await self.log_event(role.guild, ':new: Role Created', embed_fields, to_owner=False)
+            await self.log_event(role.guild, ':new:  Role Created', embed_fields, to_owner=False)
 
         except TypeError:
             return
@@ -322,7 +319,7 @@ class Log(commands.Cog):
             "ID": [role.id, False]
         }
 
-        await self.log_event(role.guild, ':exclamation: Role Deleted', embed_fields, to_owner=False)
+        await self.log_event(role.guild, ':exclamation:  Role Deleted', embed_fields, to_owner=False)
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
@@ -344,7 +341,7 @@ class Log(commands.Cog):
             "Category": [channel.category, True]
         }
 
-        await self.log_event(channel.guild, ':new: Channel Created', embed_fields, to_owner=False)
+        await self.log_event(channel.guild, ':new:  Channel Created', embed_fields, to_owner=False)
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
@@ -356,7 +353,7 @@ class Log(commands.Cog):
             "Category": [channel.category, True]
         }
 
-        await self.log_event(channel.guild, ':exclamation: Channel Deleted', embed_fields, to_owner=False)
+        await self.log_event(channel.guild, ':exclamation:  Channel Deleted', embed_fields, to_owner=False)
 
 
 def setup(bot):

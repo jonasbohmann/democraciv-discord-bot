@@ -4,6 +4,7 @@ from util import exceptions
 from discord.ext import tasks
 from config import config, token
 
+
 class YouTube:
 
     def __init__(self, bot):

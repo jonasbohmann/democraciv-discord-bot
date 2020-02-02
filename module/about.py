@@ -1,13 +1,7 @@
 import discord
 
-from config import config, links
+from config import config
 from discord.ext import commands
-
-
-# -- about.py | module.about --
-#
-# Commands regarding the bot itself.
-#
 
 
 class About(commands.Cog):
@@ -24,7 +18,7 @@ class About(commands.Cog):
 
         embed = self.bot.embeds.embed_builder(title='About This Bot', description=f"[Invite this bot to your"
                                                                                   f" Discord Guild.]({invite_url})")
-        embed.add_field(name='Author', value=self.bot.DerJonas_object.name, inline=True)
+        embed.add_field(name='Author', value=str(self.bot.owner), inline=True)
         embed.add_field(name='Version', value=config.BOT_VERSION, inline=True)
         embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=True)
         embed.add_field(name='Guilds', value=str(len(self.bot.guilds)), inline=True)
@@ -35,7 +29,7 @@ class About(commands.Cog):
         embed.add_field(name="Source Code", value="[Link](https://github.com/jonasbohmann/democraciv-discord-bot)",
                         inline=True)
         embed.add_field(name='Commands', value='See ' + config.BOT_PREFIX + 'help', inline=False)
-        embed.set_thumbnail(url=self.bot.DerJonas_object.avatar_url)
+        embed.set_thumbnail(url=self.bot.owner.avatar_url)
         await ctx.send(embed=embed)
 
     @commands.command(name='uptime')

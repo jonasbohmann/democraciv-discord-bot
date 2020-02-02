@@ -9,9 +9,6 @@ from config import config, token, links
 from util import mk
 
 
-# -- Twitch  --
-# Background task that posts an alert if twitch.tv/democraciv is live
-
 class Twitch:
 
     class StreamStatus(enum.Enum):

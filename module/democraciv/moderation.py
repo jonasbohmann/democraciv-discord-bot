@@ -292,7 +292,7 @@ class Moderation(commands.Cog):
         if member == ctx.author:
             return await ctx.send(":x: You can't kick yourself.")
 
-        if member == self.bot.DerJonas_object:
+        if member == self.bot.owner:
             #  :)
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_KICK)
 
@@ -346,7 +346,7 @@ class Moderation(commands.Cog):
         if member == ctx.author:
             return await ctx.send(":x: You can't mute yourself.")
 
-        if member == self.bot.DerJonas_object:
+        if member == self.bot.owner:
             #  :)
             raise exceptions.ForbiddenError()
 
@@ -413,7 +413,7 @@ class Moderation(commands.Cog):
         if member_object == ctx.author:
             return await ctx.send(":x: You can't ban yourself.")
 
-        if member_object == self.bot.DerJonas_object:
+        if member_object == self.bot.owner:
             #  :)
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_BAN)
 

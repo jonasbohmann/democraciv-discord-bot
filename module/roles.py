@@ -1,15 +1,10 @@
 import discord
-
 import util.exceptions as exceptions
 
 from config import config
 from util.flow import Flow
 from discord.ext import commands
-
-# -- roles.py | module.role --
-#
-# User role management.
-#
+from typing import Optional, Dict
 
 
 class Roles(commands.Cog):
@@ -18,20 +13,19 @@ class Roles(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def get_roles(self, ctx):
-        role_list = await self.bot.db.fetch("SELECT (role_id, join_message) FROM roles WHERE guild_id = $1",
+    async def get_roles(self, ctx) -> Dict[int, str]:
+        role_list = await self.bot.db.fetch("SELECT role_id, join_message FROM roles WHERE guild_id = $1",
                                             ctx.guild.id)
         role_dict = {}
 
         for record in role_list:
-            role_dict[record[0][0]] = record[0][1]
+            role_dict[record[0]['role_id']] = record[0]['join_message']
 
         return role_dict
 
-    async def get_role_from_db(self, ctx, role: str):
-        lowercase_role = role.lower()
+    async def get_role_from_db(self, ctx, role: str) -> Optional[discord.Role]:
         role_id = await self.bot.db.fetchrow("SELECT role_id FROM roles WHERE guild_id = $1 AND role_name = $2",
-                                             ctx.guild.id, lowercase_role)
+                                             ctx.guild.id, role.lower())
 
         if role_id is None:
             return discord.utils.get(ctx.guild.roles, name=role)
@@ -130,7 +124,7 @@ class Roles(commands.Cog):
                 f":white_check_mark: I'll use the **pre-existing role** named "
                 f"'{discord_role.name}' for this.")
 
-        await ctx.send(":information_source: Answer with a short message the user should see when they get the role: ")
+        await ctx.send(":information_source: Answer with a short message the user should see when they get the role.")
 
         role_join_message = await flow.get_text_input(300)
 
