@@ -10,7 +10,8 @@ class ErrorHandler(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def log_error(self, ctx, error, severe: bool = False, to_log_channel: bool = True, to_owner: bool = False):
+    async def log_error(self, ctx, error, severe: bool = False, to_log_channel: bool = True, to_owner: bool = False,
+                        to_context: bool = False):
         if ctx.guild is None:
             return
 
@@ -40,7 +41,14 @@ class ErrorHandler(commands.Cog):
                 if log_channel is not None:
                     await log_channel.send(embed=embed)
 
-        # Send error embed to author DM
+        if to_context:
+            mention = self.bot.owner.mention if self.bot.owner is not None else "Jonas"
+            local_embed = self.bot.embeds.embed_builder(title=":warning:  Unexpected Error occurred",
+                                                        description=f"An unexpected error occurred while"
+                                                                    f" performing this command."
+                                                                    f"\n\n\n```{error.__class__.__name__}:"
+                                                                    f" {error}```\n\n\n{mention} has been notified.")
+            await ctx.send(embed=local_embed)
         if to_owner:
             embed.add_field(name='Guild', value=ctx.guild.name)
             embed.add_field(name='Error Details', value=f"{error.__class__.__name__}: {error}")
@@ -179,7 +187,7 @@ class ErrorHandler(commands.Cog):
             return await ctx.send(error.message)
 
         else:
-            await self.log_error(ctx, error, severe=True, to_log_channel=False, to_owner=True)
+            await self.log_error(ctx, error, severe=True, to_log_channel=False, to_owner=True, to_context=True)
 
 
 def setup(bot):
