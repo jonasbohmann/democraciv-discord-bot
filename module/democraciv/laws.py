@@ -146,6 +146,52 @@ class Laws(commands.Cog, name='Law'):
                 await ctx.send(':x: You have to give me the ID of the law to remove!\n\n**Usage**:\n'
                                '`-law remove <law_id>`')
 
+    @law.command(name='updatelink', aliases=['ul'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.is_democraciv_guild()
+    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    async def updatelink(self, ctx, law_id: int, new_link: str):
+        """Update the link to a law"""
+
+        law_details = await self.bot.db.fetchrow("SELECT * FROM legislature_laws WHERE law_id = $1", law_id)
+
+        if law_details is None:
+            return await ctx.send(f":x: There is no law with ID `#{law_id}`")
+
+        if not self.bot.laws.is_google_doc_link(new_link):
+            return await ctx.send(f":x: This does not look like a Google Docs link: `{new_link}`")
+
+        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1",
+                                                  law_details['bill_id'])
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to change the link to "
+                                      f"'{bill_details['bill_name']}"
+                                      f"' (#{law_details['law_id']})?")
+
+        flow = Flow(self.bot, ctx)
+
+        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+
+        if not reaction:
+            return
+
+        if str(reaction.emoji) == "\U0000274c":
+            return await ctx.send("Aborted.")
+
+        elif str(reaction.emoji) == "\U00002705":
+            async with self.bot.session.get(f"https://tinyurl.com/api-create.php?url={new_link}") as response:
+                tiny_url = await response.text()
+
+            if tiny_url == "Error":
+                return await ctx.send(":x: tinyurl.com returned an error, the link was not updated."
+                                      " Try again in a few minutes.")
+
+            await self.bot.db.execute("UPDATE legislature_bills SET link = $1, tiny_link = $2 WHERE id = $3",
+                                      new_link, tiny_url, bill_details['id'])
+
+            return await ctx.send(f":white_check_mark: Successfully changed the link to '{bill_details['bill_name']}"
+                                  f"' (#{bill_details['id']}).")
+
 
 def setup(bot):
     bot.add_cog(Laws(bot))

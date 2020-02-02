@@ -4,11 +4,6 @@ import datetime
 import util.utils as utils
 
 from discord.ext import commands
-
-# -- logging.py | event.logging --
-#
-# Logging module.
-#
 from util import exceptions
 from util.exceptions import ForbiddenTask
 
