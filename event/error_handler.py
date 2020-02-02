@@ -42,12 +42,12 @@ class ErrorHandler(commands.Cog):
                     await log_channel.send(embed=embed)
 
         if to_context:
-            mention = self.bot.owner.mention if self.bot.owner is not None else "Jonas"
             local_embed = self.bot.embeds.embed_builder(title=":warning:  Unexpected Error occurred",
                                                         description=f"An unexpected error occurred while"
-                                                                    f" performing this command."
-                                                                    f"\n\n\n```{error.__class__.__name__}:"
-                                                                    f" {error}```\n\n\n{mention} has been notified.")
+                                                                    f" performing this command. The developer"
+                                                                    f" has been notified."
+                                                                    f"\n\n```{error.__class__.__name__}:"
+                                                                    f" {error}```", has_footer=False)
             await ctx.send(embed=local_embed)
         if to_owner:
             embed.add_field(name='Guild', value=ctx.guild.name)
