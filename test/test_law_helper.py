@@ -73,3 +73,19 @@ class TestLawHelper(unittest.TestCase):
                                              ' the freedoms of the People, provide for the common defence and insure'
                                              ' domestic tranquility, do ordain and establish this Constitution of the '
                                              'People of Arabia.  A', 'Google Docs Descriptions do not match')
+
+    @async_test
+    async def test_post_to_hastebin(self):
+        bot = MockBot(aiohttp.ClientSession())
+        self.laws = LawUtils(bot)
+
+        post = await self.laws.post_to_hastebin(text="Lorem ipsum dolor sit amet, consetetur sadipscing elitr, "
+                                                     "sed diam nonumy eirmod tempor invidunt ut labore et dolore "
+                                                     "magna aliquyam erat, sed diam voluptua. At vero eos et accusam "
+                                                     "et justo duo dolores et ea rebum. Stet clita kasd gubergren, no"
+                                                     " sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum"
+                                                     " dolor sit amet, consetetur sadipscing elitr, sed diam nonumy "
+                                                     "eirmod tempor invidunt ut labore et dolore magna aliquyam erat,"
+                                                     " sed diam voluptua.")
+
+        self.assertIsNotNone(post, 'Posting to Hastebin.com failed')
