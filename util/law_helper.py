@@ -271,7 +271,7 @@ class LawUtils:
         """Post text to hastebin.com"""
 
         async with self.bot.session.post("https://hastebin.com/documents", data=text) as response:
-            data = await response.json()
+            data = await response.json(content_type=None)
             try:
                 key = data['key']
             except KeyError:

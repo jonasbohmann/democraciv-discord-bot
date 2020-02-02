@@ -85,7 +85,7 @@ class Legislature(commands.Cog):
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
-
+p
         active_leg_session_id = await self.bot.laws.get_active_leg_session()
 
         if active_leg_session_id is not None:
