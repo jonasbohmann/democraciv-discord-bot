@@ -32,7 +32,7 @@ class Time(commands.Cog):
             if time_response['status'] != "OK":
                 return await ctx.send(f":x: `{zone}` is not a valid time zone!")
 
-            us_time = datetime.utcfromtimestamp(time_response['timestamp']).strftime("%A, %B %d %Y "
+            us_time = datetime.utcfromtimestamp(time_response['timestamp']).strftime("%A, %B %d %Y"
                                                                                      " %I:%M:%S %p")
             eu_time = datetime.utcfromtimestamp(time_response['timestamp']).strftime("%A, %B %d %Y"
                                                                                      " %H:%M:%S")

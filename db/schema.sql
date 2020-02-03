@@ -114,3 +114,9 @@ CREATE TABLE IF NOT EXISTS guild_tags_alias(
     alias text,
     UNIQUE (guild_id, alias)
 );
+
+CREATE TABLE IF NOT EXISTS original_join_dates(
+    member bigint UNIQUE,
+    join_date timestamp,
+    join_position int
+);

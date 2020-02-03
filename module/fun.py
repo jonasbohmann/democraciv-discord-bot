@@ -1,3 +1,4 @@
+import datetime
 import random
 import discord
 import operator
@@ -15,18 +16,29 @@ class Fun(commands.Cog):
         self.bot = bot
         self.cached_sorted_veterans_on_democraciv = []
 
-    @staticmethod
-    def get_member_join_position(user, members: list):
-        try:
-            joins = tuple(sorted(members, key=operator.attrgetter("joined_at")))
-            if None in joins:
-                return None
-            for key, elem in enumerate(joins):
-                if elem == user:
-                    return key + 1
+    async def get_member_join_date(self, member: discord.Member) -> datetime.datetime:
+        if member.guild.id == self.bot.democraciv_guild_object.id:
+            original_date = await self.bot.db.fetchval("SELECT join_date FROM original_join_dates WHERE member = $1",
+                                                       member.id)
+            if original_date is not None:
+                return original_date
+
+        return member.joined_at
+
+    async def get_member_join_position(self, user, members: list):
+        if user.guild.id == self.bot.democraciv_guild_object.id:
+            original_position = await self.bot.db.fetchval("SELECT join_position FROM original_join_dates "
+                                                           "WHERE member = $1", user.id)
+            if original_position:
+                return original_position
+
+        joins = tuple(sorted(members, key=operator.attrgetter("joined_at")))
+        if None in joins:
             return None
-        except Exception:
-            return None
+        for key, elem in enumerate(joins):
+            if elem == user:
+                return key + 1
+        return None
 
     @commands.command(name='say')
     @commands.has_permissions(administrator=True)
@@ -78,8 +90,8 @@ class Fun(commands.Cog):
         embed.add_field(name='Discord Registration',
                         value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
         embed.add_field(name='Joined this Guild on',
-                        value=f'{member.joined_at.strftime("%B %d, %Y")}', inline=True)
-        embed.add_field(name='Join Position', value=self.get_member_join_position(member, ctx.guild.members)
+                        value=f'{(await self.get_member_join_date(member)).strftime("%B %d, %Y")}', inline=True)
+        embed.add_field(name='Join Position', value=await self.get_member_join_position(member, ctx.guild.members)
                         , inline=True)
         embed.add_field(name='Roles', value=_get_roles(member.roles), inline=False)
         embed.set_thumbnail(url=member.avatar_url)
@@ -146,8 +158,7 @@ class Fun(commands.Cog):
 
                 # Veterans can only be human, exclude bot accounts
                 for member in guild_members_without_bots:
-
-                    join_position = self.get_member_join_position(member, guild_members_without_bots)
+                    join_position = await self.get_member_join_position(member, guild_members_without_bots)
 
                     if join_position <= 15:
                         first_15_members.append((member, join_position))

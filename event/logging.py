@@ -132,6 +132,13 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
+        if member.guild.id == self.bot.democraciv_guild_object.id:
+            joined_on = member.joined_at or datetime.datetime.utcnow()
+            position = len(member.guild.members)
+            await self.bot.db.execute("INSERT INTO original_join_dates (member, join_date, join_position) "
+                                      "VALUES ($1, $2, $3) "
+                                      "ON CONFLICT DO NOTHING", member.id, joined_on, position)
+
         welcome_channel = await utils.get_welcome_channel(self.bot, member.guild.id)
 
         if welcome_channel is not None:
