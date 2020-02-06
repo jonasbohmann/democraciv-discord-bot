@@ -145,9 +145,20 @@ class Fun(commands.Cog):
     async def veterans(self, ctx):
         """List the first 15 members who joined this guild"""
 
+        sorted_first_15_members = []
+
         # As veterans rarely change, use a cached version of sorted list if exists
-        if len(self.cached_sorted_veterans_on_democraciv) >= 2 and ctx.guild.id == self.bot.democraciv_guild_object.id:
-            sorted_first_15_members = self.cached_sorted_veterans_on_democraciv
+        if ctx.guild.id == self.bot.democraciv_guild_object.id:
+            if len(self.cached_sorted_veterans_on_democraciv) >= 2:
+                sorted_first_15_members = self.cached_sorted_veterans_on_democraciv
+            else:
+                vets = await self.bot.db.fetch("SELECT member, join_position FROM original_join_dates WHERE "
+                                               "join_position <= 15 ORDER BY join_position")
+                for record in vets:
+                    member = self.bot.get_user(record['member'])
+                    sorted_first_15_members.append((member, record['join_position']))
+
+                self.cached_sorted_veterans_on_democraciv = sorted_first_15_members
 
         # If cache is empty OR ctx not on democraciv guild, calculate & sort again
         else:

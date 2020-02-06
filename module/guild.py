@@ -564,8 +564,7 @@ class Guild(commands.Cog):
                         await self.bot.db.execute("INSERT INTO guild_tags_alias (tag_id, alias, guild_id) VALUES"
                                                   " ($1, $2, $3)", _id, name.lower(), ctx.guild.id)
                         await ctx.send(f":white_check_mark: Successfully added `{config.BOT_PREFIX}{name}`!")
-                    except Exception as e:
-                        await ctx.send(f":x: Unexpected error occurred:\n\n```{e}```")
+                    except Exception:
                         raise
 
     @commands.command(name="removetag", aliases=['deletetag'])
