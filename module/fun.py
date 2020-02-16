@@ -78,14 +78,11 @@ class Fun(commands.Cog):
         #   https:/github.com/Der-Eddy/discord_bot
         #   https:/github.com/Rapptz/RoboDanny/
 
-        if member is None:
-            member = ctx.author
+        member = member or ctx.author
 
         embed = self.bot.embeds.embed_builder(title="User Information", description="")
-        embed.add_field(name="User", value=f"{member} {member.mention} ({member.id})", inline=False)
-        embed.add_field(name='Status', value=member.status, inline=False)
-        embed.add_field(name='Avatar', value=f"[Link]({member.avatar_url_as(static_format='png', size=4096)})",
-                        inline=False)
+        embed.add_field(name="User", value=f"{member} {member.mention}", inline=False)
+        embed.add_field(name="ID", value=member.id, inline=False)
         embed.add_field(name='Discord Registration',
                         value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
         embed.add_field(name='Joined this Guild on',
@@ -95,6 +92,19 @@ class Fun(commands.Cog):
         embed.add_field(name='Roles', value=_get_roles(member.roles), inline=False)
         embed.set_thumbnail(url=member.avatar_url)
         await ctx.send(embed=embed)
+
+    @commands.command(name='avatar')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    async def avatar(self, ctx, *, member: discord.Member = None):
+        """Get a members's avatar in detail"""
+
+        member = member or ctx.author
+        avatar_png: discord.Asset = member.avatar_url_as(static_format="png", size=4096)
+
+        embed = self.bot.embeds.embed_builder(title=f"{member.display_name}'s Avatar",
+                                              description=f"[Link]({avatar_png})", has_footer=False)
+        embed.set_image(url=str(avatar_png))
 
     @staticmethod
     def get_spotify_connection(member: discord.Member):
@@ -108,7 +118,7 @@ class Fun(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def spotify(self, ctx, *, member: discord.Member = None):
-        """See what someone is listening to
+        """See what someone is listening to on Spotify
 
             Usage:
              `-spotify`
@@ -118,7 +128,6 @@ class Fun(commands.Cog):
         """
 
         member = member or ctx.author
-
         member_spotify = self.get_spotify_connection(member)
 
         if member_spotify is None:

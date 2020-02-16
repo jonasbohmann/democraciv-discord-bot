@@ -323,7 +323,7 @@ class Legislature(commands.Cog):
                                                                                             " %H:%M:%S")
 
         embed = self.bot.embeds.embed_builder(title=f"Legislative Session #{str(active_leg_session_id)}",
-                                              description="", time_stamp=True)
+                                              description="")
         try:
             embed.add_field(name="Opened by", value=self.bot.get_user(session_info[0][0]).mention)
         except AttributeError:
