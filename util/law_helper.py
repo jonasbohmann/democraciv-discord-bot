@@ -277,7 +277,7 @@ class LawUtils:
             except KeyError:
                 return None
 
-        return f"https://hastebin.com/{key}"
+        return f"https://mystb.in/{key}"
 
     async def search_law_by_name(self, name: str) -> list:
         """Search for laws by their name, returns list with prettified strings of found laws"""
