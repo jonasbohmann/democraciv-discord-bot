@@ -1,13 +1,10 @@
 import csv
 
-
 """STV Calculator by Chemiczny_Bogdan.
     
     See this for details: https://gist.github.com/jonasbohmann/adadbe6c2c77a748b8e89d9d10ead074"""
 
-
 elimset = set()
-output = ""
 
 
 def count(v, w, n):
@@ -20,8 +17,7 @@ def count(v, w, n):
     return c
 
 
-def winupdate(i, v, w, c, q):
-    global output
+def winupdate(i, v, w, c, q, output):
     factor = 1 - q / c[i]
     output += "\n\nWinning ballots go to next round reweighed by a factor of " + str(factor)
     for c in range(len(v)):
@@ -57,7 +53,7 @@ def lossupdate(i, v):
 
 
 def main(_seats, csvfile, quota):
-    global output
+    output = ""
     seats = _seats
     seatsleft = seats
     votes = []
@@ -114,7 +110,7 @@ def main(_seats, csvfile, quota):
         for cand in actcount:
             if cand >= quota:
                 output += "\n#" + names[w] + " won a seat!\n"
-                winupdate(w, votes, voteweights, actcount, quota)
+                winupdate(w, votes, voteweights, actcount, quota, output)
                 seatsleft -= 1
                 candidatesleft -= 1
                 foundwinner = 1
@@ -133,6 +129,4 @@ def main(_seats, csvfile, quota):
             break
         n += 1
 
-    success_output = output
-    output = ""
-    return success_output
+    return output
