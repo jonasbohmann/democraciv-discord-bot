@@ -109,23 +109,6 @@ class Admin(commands.Cog):
 
         await ctx.send(f':white_check_mark: Deleted **{len(deleted)}** messages.', delete_after=5)
 
-    @commands.command(name="tinyurl", aliases=["tiny"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def tinyurl(self, ctx, url: str):
-        """Shorten a link with tinyurl"""
-        if len(url) <= 3:
-            await ctx.send(":x: That doesn't look like a valid URL!")
-            return
-
-        async with self.bot.session.get(f"https://tinyurl.com/api-create.php?url={url}") as response:
-            tiny_url = await response.text()
-
-        if tiny_url == "Error":
-            await ctx.send(":x: tinyurl.com returned an error!")
-            return
-
-        await ctx.send(tiny_url)
-
     @commands.command(name='sql')
     @commands.is_owner()
     async def sql(self, ctx, sqltype: int, *, query: str):
