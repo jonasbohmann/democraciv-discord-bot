@@ -105,6 +105,7 @@ class Fun(commands.Cog):
         embed = self.bot.embeds.embed_builder(title=f"{member.display_name}'s Avatar",
                                               description=f"[Link]({avatar_png})", has_footer=False)
         embed.set_image(url=str(avatar_png))
+        await ctx.send(embed=embed)
 
     @staticmethod
     def get_spotify_connection(member: discord.Member):
