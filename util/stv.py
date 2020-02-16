@@ -78,7 +78,7 @@ def main(_seats, csvfile, quota):
                 gl = []
                 for i in range(wid):
                     e = l[i]
-                    if e == 'Abstain':
+                    if e == 'Abstain' or not e:
                         gl.append('0')
                     else:
                         gl.append(e)
