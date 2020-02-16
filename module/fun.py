@@ -82,11 +82,10 @@ class Fun(commands.Cog):
             member = ctx.author
 
         embed = self.bot.embeds.embed_builder(title="User Information", description="")
-        embed.add_field(name="User", value=f"{member} {member.mention}", inline=False)
-        embed.add_field(name="ID", value=str(member.id), inline=False)
-        embed.add_field(name='Status', value=member.status, inline=True)
-        embed.add_field(name='Administrator', value=str(member.guild_permissions.administrator), inline=True)
-        embed.add_field(name='Avatar', value=f"[Link]({member.avatar_url})", inline=True)
+        embed.add_field(name="User", value=f"{member} {member.mention} ({member.id})", inline=False)
+        embed.add_field(name='Status', value=member.status, inline=False)
+        embed.add_field(name='Avatar', value=f"[Link]({member.avatar_url_as(static_format='png', size=4096)})",
+                        inline=False)
         embed.add_field(name='Discord Registration',
                         value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
         embed.add_field(name='Joined this Guild on',
