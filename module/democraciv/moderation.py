@@ -277,6 +277,8 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='quire', aliases=['q'])
+    @utils.is_democraciv_guild()
+    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def quire(self, ctx):
         """Quire Project Management"""
         embed = self.bot.embeds.embed_builder(title='Quire',
