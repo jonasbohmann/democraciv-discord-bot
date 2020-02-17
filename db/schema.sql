@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS guild_tags(
     title text,
     content text,
     global bool,
+    author bigint,
     PRIMARY KEY (guild_id, id),
     UNIQUE (guild_id, name)
 );

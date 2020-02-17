@@ -59,15 +59,15 @@ def has_any_democraciv_role(*roles: mk.DemocracivRole):
     return commands.check(predicate)
 
 
-def add_tag_check():
-    """Wrapper for a discord.ext.commands decorator to check if the -addtag command is used on the Democraciv guild"""
+def tag_check():
+    """Wrapper for a discord.ext.commands check to check if the tag command are used on the Democraciv guild"""
 
     def check(ctx):
         if config.DEMOCRACIV_GUILD_ID != ctx.guild.id:
             if ctx.author.guild_permissions.administrator:
                 return True
             else:
-                raise AddTagCheckError(message=":x: Only Administrators can add tags on this guild!")
+                raise AddTagCheckError(message=":x: Only Administrators can add or remove tags on this guild!")
         else:
             return True
 

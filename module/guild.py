@@ -492,7 +492,7 @@ class Guild(commands.Cog):
     @commands.command(name="addtag")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @utils.add_tag_check()
+    @utils.tag_check()
     async def addtag(self, ctx):
         """Add a tag for this guild"""
 
@@ -554,23 +554,21 @@ class Guild(commands.Cog):
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     try:
-                        await self.bot.db.execute("INSERT INTO guild_tags (guild_id, name, content, title,"
-                                                  " global) VALUES "
-                                                  "($1, $2, $3, $4, $5)",
-                                                  ctx.guild.id, name.lower(), content, title, is_global)
-                        _id = await self.bot.db.fetchval("SELECT id FROM guild_tags WHERE name = $1 AND guild_id "
-                                                         "= $2 AND "
-                                                         "content = $3", name.lower(), ctx.guild.id, content)
+                        _id = await self.bot.db.execute("INSERT INTO guild_tags (guild_id, name, content, title,"
+                                                        " global, author) VALUES "
+                                                        "($1, $2, $3, $4, $5, $6) RETURNING id",
+                                                        ctx.guild.id, name.lower(), content, title, is_global,
+                                                        ctx.author.id)
                         await self.bot.db.execute("INSERT INTO guild_tags_alias (tag_id, alias, guild_id) VALUES"
                                                   " ($1, $2, $3)", _id, name.lower(), ctx.guild.id)
-                        await ctx.send(f":white_check_mark: Successfully added `{config.BOT_PREFIX}{name}`!")
+                        await ctx.send(f":white_check_mark: The `{config.BOT_PREFIX}{name}` tag was added.")
                     except Exception:
                         raise
 
     @commands.command(name="removetag", aliases=['deletetag'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
+    @utils.tag_check()
     async def removetag(self, ctx, name: str):
         """Remove a tag"""
 
@@ -581,6 +579,10 @@ class Guild(commands.Cog):
 
         if tag is None:
             return await ctx.send(f":x: This guild has no tag called `{name}`!")
+
+        if tag['author'] is not None:  # Handle tags before author column existed
+            if tag['author'] != ctx.author.id and not ctx.author.guild_permissions.administrator:
+                return await ctx.send(f":x: This isn't your tag!")
 
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove the tag "
                                       f"`{config.BOT_PREFIX}{tag['name']}`?")
@@ -629,16 +631,16 @@ class Guild(commands.Cog):
 
     @commands.Cog.listener(name="on_message")
     async def guild_tags_listener(self, message):
-        if message.author.bot:
+        if not message.content.startswith(config.BOT_PREFIX):
             return
 
-        if (await self.bot.get_context(message)).valid:
+        if message.author.bot:
             return
 
         if message.guild is None:
             return
 
-        if not message.content.startswith(config.BOT_PREFIX):
+        if (await self.bot.get_context(message)).valid:
             return
 
         tag_details = await self.resolve_tag_name(message.content[len(config.BOT_PREFIX):], message.guild)
