@@ -321,7 +321,7 @@ class Guild(commands.Cog):
         invite = await ctx.channel.create_invite(max_age=0, unique=False)
         await ctx.send(invite.url)
 
-    @commands.group(name="tags", aliases=['tag'])
+    @commands.group(name="tags", aliases=['tag'], invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def tags(self, ctx):
@@ -402,7 +402,7 @@ class Guild(commands.Cog):
         else:
             await ctx.send(":x: Unexpected database error occurred.")
 
-    @tags.command(name="removealias", alias=['deletealias'])
+    @tags.command(name="removealias", aliases=['deletealias'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
@@ -489,7 +489,7 @@ class Guild(commands.Cog):
 
         return True
 
-    @tags.command(name="add", aliase=['make'])
+    @tags.command(name="add", aliases=['make'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @utils.tag_check()
@@ -569,7 +569,7 @@ class Guild(commands.Cog):
     async def addtag(self, ctx):
         await ctx.send("This was moved to `-tag add` :)\n\nSee `-help tag` for more info.")
 
-    @tags.command(name="info", alias=['about'])
+    @tags.command(name="info", aliases=['about'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @utils.tag_check()
@@ -585,7 +585,7 @@ class Guild(commands.Cog):
 
         pretty_aliases = (', '.join([f"`{ctx.prefix}{record['alias']}`" for record in aliases])) or 'None'
 
-        embed = self.bot.embeds.embed_builder(title="Tag Info")
+        embed = self.bot.embeds.embed_builder(title="Tag Info", description="")
         embed.add_field(name="Name", value=tag['title'], inline=False)
 
         if tag['author'] is not None:
@@ -600,7 +600,7 @@ class Guild(commands.Cog):
         embed.add_field(name="Aliases", value=pretty_aliases, inline=False)
         await ctx.send(embed=embed)
 
-    @tags.command(name="remove", alias=['delete'])
+    @tags.command(name="remove", aliases=['delete'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @utils.tag_check()
