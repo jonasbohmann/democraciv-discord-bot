@@ -321,7 +321,7 @@ class Guild(commands.Cog):
         invite = await ctx.channel.create_invite(max_age=0, unique=False)
         await ctx.send(invite.url)
 
-    @commands.command(name="tags", aliases=["alltags"])
+    @commands.group(name="tags", aliases=['tag'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def tags(self, ctx):
@@ -352,7 +352,7 @@ class Guild(commands.Cog):
                       , show_index=False, footer_text=config.BOT_NAME)
         await pages.paginate()
 
-    @commands.command(name="addtagalias")
+    @tags.command(name="addalias")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
@@ -402,7 +402,7 @@ class Guild(commands.Cog):
         else:
             await ctx.send(":x: Unexpected database error occurred.")
 
-    @commands.command(name="removetagalias")
+    @tags.command(name="removealias", alias=['deletealias'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
@@ -489,7 +489,7 @@ class Guild(commands.Cog):
 
         return True
 
-    @commands.command(name="addtag")
+    @tags.command(name="add", aliase=['make'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @utils.tag_check()
@@ -565,7 +565,42 @@ class Guild(commands.Cog):
                     except Exception:
                         raise
 
-    @commands.command(name="removetag", aliases=['deletetag'])
+    @commands.command(name="addtag", hidden=True)
+    async def addtag(self, ctx):
+        await ctx.send("This was moved to `-tag add` :)\n\nSee `-help tag` for more info.")
+
+    @tags.command(name="info", alias=['about'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    @utils.tag_check()
+    async def taginfo(self, ctx, name: str):
+        """Info about a tag"""
+
+        tag = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND guild_id = $2", name.lower(),
+                                         ctx.guild.id)
+        if tag is None:
+            return await ctx.send(f":x: This guild has no tag called `{name}`!")
+
+        aliases = await self.bot.db.fetch("SELECT alias FROM guild_tags_alias WHERE tag_id = $1 ", tag['id'])
+
+        pretty_aliases = (', '.join([f"`{ctx.prefix}{record['alias']}`" for record in aliases])) or 'None'
+
+        embed = self.bot.embeds.embed_builder(title="Tag Info")
+        embed.add_field(name="Name", value=tag['title'], inline=False)
+
+        if tag['author'] is not None:
+            member = self.bot.get_user(tag['author'])
+            if member is not None:
+                embed.add_field(name="Author", value=member.mention, inline=False)
+                embed.set_thumbnail(url=member.avatar_url)
+
+        embed.add_field(name="Global Tag", value=str(tag['global']), inline=True)
+        embed.add_field(name="Emoji or Media Tag", value=str(self.is_emoji_or_media_url(tag['content'])),
+                        inline=True)
+        embed.add_field(name="Aliases", value=pretty_aliases, inline=False)
+        await ctx.send(embed=embed)
+
+    @tags.command(name="remove", alias=['delete'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @utils.tag_check()
