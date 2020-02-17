@@ -554,11 +554,11 @@ class Guild(commands.Cog):
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     try:
-                        _id = await self.bot.db.execute("INSERT INTO guild_tags (guild_id, name, content, title,"
-                                                        " global, author) VALUES "
-                                                        "($1, $2, $3, $4, $5, $6) RETURNING id",
-                                                        ctx.guild.id, name.lower(), content, title, is_global,
-                                                        ctx.author.id)
+                        _id = await self.bot.db.fetchval("INSERT INTO guild_tags (guild_id, name, content, title,"
+                                                         " global, author) VALUES "
+                                                         "($1, $2, $3, $4, $5, $6) RETURNING id",
+                                                         ctx.guild.id, name.lower(), content, title, is_global,
+                                                         ctx.author.id)
                         await self.bot.db.execute("INSERT INTO guild_tags_alias (tag_id, alias, guild_id) VALUES"
                                                   " ($1, $2, $3)", _id, name.lower(), ctx.guild.id)
                         await ctx.send(f":white_check_mark: The `{config.BOT_PREFIX}{name}` tag was added.")
