@@ -321,7 +321,7 @@ class Guild(commands.Cog):
         invite = await ctx.channel.create_invite(max_age=0, unique=False)
         await ctx.send(invite.url)
 
-    @commands.group(name="tags", aliases=['tag'], invoke_without_command=True)
+    @commands.group(name="tags", aliases=['tag'], invoke_without_command=True, case_insensitive=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def tags(self, ctx):
@@ -567,7 +567,9 @@ class Guild(commands.Cog):
 
     @commands.command(name="addtag", hidden=True)
     async def oldaddtagwarning(self, ctx):
-        await ctx.send("This was moved to `-tag add` :)\n\nSee `-help tag` for more info.")
+        await ctx.send("This was moved to `-tag add` :)\nTag creators can now remove their own "
+                       "tags with `-tag remove <tagname>` and "
+                       "`-tag info <tagname>` is new too! :)\nSee `-help tag` for more info.")
 
     @tags.command(name="info", aliases=['about'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
