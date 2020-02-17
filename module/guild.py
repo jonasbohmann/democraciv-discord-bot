@@ -566,7 +566,7 @@ class Guild(commands.Cog):
                         raise
 
     @commands.command(name="addtag", hidden=True)
-    async def addtag(self, ctx):
+    async def oldaddtagwarning(self, ctx):
         await ctx.send("This was moved to `-tag add` :)\n\nSee `-help tag` for more info.")
 
     @tags.command(name="info", aliases=['about'])
