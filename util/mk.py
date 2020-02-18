@@ -1,5 +1,6 @@
 import enum
 import discord
+import typing
 
 from util import exceptions
 
@@ -9,6 +10,11 @@ from util import exceptions
    This was separated into its own file so the maintainer only has to change this file (and links.py) in the actual
     code-base if a new Democraciv MK starts.
 """
+
+MARK = "6"
+NATION_NAME = "Arabia"
+NATION_ADJECTIVE = "Arabian"
+CIV_GAME = "Sid Meier's Civilization 5"
 
 
 class PrettyEnumValue(object):
@@ -60,13 +66,7 @@ class DemocracivChannel(enum.Enum):
     EXECUTIVE_CHANNEL = 637051136955777049
 
 
-MARK = "6"
-NATION_NAME = "Arabia"
-NATION_ADJECTIVE = "Arabian"
-CIV_GAME = "Sid Meier's Civilization 5"
-
-
-def get_democraciv_role(bot, role: DemocracivRole) -> discord.Role:
+def get_democraciv_role(bot, role: DemocracivRole) -> typing.Optional[discord.Role]:
     to_return = bot.democraciv_guild_object.get_role(role.value)
 
     if to_return is None:
@@ -75,7 +75,7 @@ def get_democraciv_role(bot, role: DemocracivRole) -> discord.Role:
     return to_return
 
 
-def get_democraciv_channel(bot, channel: DemocracivChannel) -> discord.TextChannel:
+def get_democraciv_channel(bot, channel: DemocracivChannel) -> typing.Optional[discord.TextChannel]:
     to_return = bot.democraciv_guild_object.get_channel(channel.value)
 
     if to_return is None:

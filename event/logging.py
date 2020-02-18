@@ -27,7 +27,7 @@ class Log(commands.Cog):
             embed.set_thumbnail(url=thumbnail)
 
         # Send event embed to log channel
-        log_channel = await utils.get_logging_channel(self.bot, guild.id)
+        log_channel = await utils.get_logging_channel(self.bot, guild)
 
         if log_channel is not None:
             await log_channel.send(embed=embed)
@@ -139,7 +139,7 @@ class Log(commands.Cog):
                                       "VALUES ($1, $2, $3) "
                                       "ON CONFLICT DO NOTHING", member.id, joined_on, position)
 
-        welcome_channel = await utils.get_welcome_channel(self.bot, member.guild.id)
+        welcome_channel = await utils.get_welcome_channel(self.bot, member.guild)
 
         if welcome_channel is not None:
             if await self.bot.checks.is_welcome_message_enabled(member.guild.id):
@@ -264,14 +264,6 @@ class Log(commands.Cog):
         # Alert owner of this bot that the bot was invited to some place
         await self.bot.owner.send(
             f":warning:  I was added to {guild.name} ({guild.id}). Here are some invites:")
-
-        # Get invite for new guild to send to owner_dm_channel
-        try:
-            guild_invites = await guild.invites()
-            guild_invite_1 = str(guild_invites[0])
-            await self.bot.owner.send(guild_invite_1)
-        except (IndexError, discord.Forbidden):
-            pass
 
         # Send introduction message to random guild channel
         embed = self.bot.embeds.embed_builder(title=':two_hearts: Hey there!',

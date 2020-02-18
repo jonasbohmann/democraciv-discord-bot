@@ -1,10 +1,10 @@
+import typing
 import discord
 import util.exceptions as exceptions
 
 from config import config
 from util.flow import Flow
 from discord.ext import commands
-from typing import Optional, Dict
 
 
 class Roles(commands.Cog):
@@ -13,7 +13,7 @@ class Roles(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def get_roles(self, ctx) -> Dict[int, str]:
+    async def get_roles(self, ctx) -> typing.Dict[int, str]:
         role_list = await self.bot.db.fetch("SELECT role_id, join_message FROM roles WHERE guild_id = $1",
                                             ctx.guild.id)
         role_dict = {}
@@ -23,7 +23,7 @@ class Roles(commands.Cog):
 
         return role_dict
 
-    async def get_role_from_db(self, ctx, role: str) -> Optional[discord.Role]:
+    async def get_role_from_db(self, ctx, role: str) -> typing.Optional[discord.Role]:
         role_id = await self.bot.db.fetchrow("SELECT role_id FROM roles WHERE guild_id = $1 AND role_name = $2",
                                              ctx.guild.id, role.lower())
 

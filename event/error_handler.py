@@ -15,7 +15,7 @@ class ErrorHandler(commands.Cog):
         if ctx.guild is None:
             return
 
-        log_channel = await utils.get_logging_channel(self.bot, ctx.guild.id)
+        log_channel = await utils.get_logging_channel(self.bot, ctx.guild)
 
         embed = self.bot.embeds.embed_builder(title=':x: Command Error', description="", time_stamp=True)
 
@@ -188,6 +188,8 @@ class ErrorHandler(commands.Cog):
 
         else:
             await self.log_error(ctx, error, severe=True, to_log_channel=False, to_owner=True, to_context=True)
+
+        print(f"[BOT] Logging Exception: {error}")
 
 
 def setup(bot):

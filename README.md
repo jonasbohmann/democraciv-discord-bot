@@ -21,18 +21,21 @@ for new uploads and new live broadcasts from the Democraciv YouTube channel
 *  Keeps track of all legislative sessions, ministry vetoes and laws that passed both Legislature & Executive
 *  Search for active laws by name or by automatically generated tags
 *  Join and leave political parties and see their members and ranking
+*  Tags: Users can save text for later retrieval to command-like tags
 *  Smart Wikipedia and Sid Meier's Civilization Wikia queries
 *  Welcome messages & default roles
 *  Self-assignable role management
 *  Help command that automatically scales
 *  Gets the current time in over 400 timezones
+*  Moderation commands 
+*  Alt detection
 *  Event logging 
 
 ##  Installation
 
 *As some features are implemented in a way to fit the very specific needs and use cases of the Democraciv Discord, it is not recommended 
 to run the bot yourself as you might run into unexpected errors. Instead, invite the bot to your server with this
- [link](https://discordapp.com/oauth2/authorize?client_id=486971089222631455&scope=bot&permissions=8).*
+ [link](https://discordapp.com/oauth2/authorize?client_id=486971089222631455&scope=bot&permissions=2081418487).*
 
 After installing all the dependencies, create a `token.py` in the config folder.
 
@@ -104,7 +107,7 @@ Module | Description
 module.links | Collection of useful links for the game (Wiki, Constitution, political parties etc.) |
 module.about | Commands regarding the bot itself |
 module.admin | Re-, un- and load modules and the config |
-module.fun | `-whois`, `-veterans`, `-random`, `-spotify`, `-lyrics` and `-say` commands | 
+module.fun | Miscellaneous commands | 
 module.help | Scaling `-help` command |
 module.guild | Configure various functions of this bot for your guild |
 module.roles | Add or remove roles from you |

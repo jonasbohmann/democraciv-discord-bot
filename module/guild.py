@@ -38,9 +38,7 @@ class Guild(commands.Cog):
         """Configure a welcome message that every new member will see once they join this guild"""
 
         is_welcome_enabled = await self.bot.checks.is_welcome_message_enabled(ctx.guild.id)
-        current_welcome_channel = await self.bot.db.fetchval("SELECT welcome_channel FROM guilds WHERE id = $1",
-                                                             ctx.guild.id)
-        current_welcome_channel = self.bot.get_channel(current_welcome_channel)
+        current_welcome_channel = await utils.get_welcome_channel(self.bot, ctx.guild)
         current_welcome_message = await self.bot.db.fetchval("SELECT welcome_message FROM guilds WHERE id = $1",
                                                              ctx.guild.id)
 
@@ -117,7 +115,7 @@ class Guild(commands.Cog):
 
         is_logging_enabled = await self.bot.db.fetchval("SELECT logging FROM guilds WHERE id = $1", ctx.guild.id)
 
-        current_logging_channel = await utils.get_logging_channel(self.bot, ctx.guild.id)
+        current_logging_channel = await utils.get_logging_channel(self.bot, ctx.guild)
 
         if current_logging_channel is None:
             current_logging_channel = "This guild currently has no logging channel."
@@ -177,7 +175,7 @@ class Guild(commands.Cog):
                 `-guild exclude` to see all excluded channels
                 `-guild exclude <channel>` too add/remove a channel to/from the excluded channels list
         """
-        current_logging_channel = await utils.get_logging_channel(self.bot, ctx.guild.id)
+        current_logging_channel = await utils.get_logging_channel(self.bot, ctx.guild)
 
         if current_logging_channel is None:
             return await ctx.send(":x: This guild currently has no logging channel. Please set one with `-guild logs`.")

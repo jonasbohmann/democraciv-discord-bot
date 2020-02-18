@@ -1,12 +1,13 @@
+import typing
 import discord
 import datetime
 import functools
 import util.exceptions as exceptions
 
+from util import mk
 from config import config
 from discord.ext import commands
 
-from util import mk
 
 """Various utility classes and functions that the bot regular uses."""
 
@@ -74,16 +75,16 @@ def tag_check():
     return commands.check(check)
 
 
-async def get_logging_channel(bot, guild_id):
+async def get_logging_channel(bot, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
     logging_channel = await bot.db.fetchval("SELECT logging_channel FROM guilds WHERE id = $1",
-                                            guild_id)
-    return bot.get_channel(logging_channel)
+                                            guild.id)
+    return guild.get_channel(logging_channel)
 
 
-async def get_welcome_channel(bot, guild_id):
+async def get_welcome_channel(bot, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
     welcome_channel = await bot.db.fetchval("SELECT welcome_channel FROM guilds WHERE id = $1",
-                                            guild_id)
-    return bot.get_channel(welcome_channel)
+                                            guild.id)
+    return guild.get_channel(welcome_channel)
 
 
 class EmbedUtils:
@@ -132,7 +133,7 @@ class CheckUtils:
 
         return check
 
-    def wait_for_reaction_check(self, ctx, original_message):
+    def wait_for_reaction_check(self, ctx, original_message: discord.Message):
         """Wrapper function for a client.wait_for('reaction_add') check"""
 
         def check(reaction, user):
@@ -140,7 +141,7 @@ class CheckUtils:
 
         return check
 
-    def wait_for_gear_reaction_check(self, ctx, original_message):
+    def wait_for_gear_reaction_check(self, ctx, original_message: discord.Message):
         """Wrapper function for a client.wait_for('reaction_add') check.
             Also checks if reaction.emoji == ⚙"""
 
@@ -150,7 +151,7 @@ class CheckUtils:
 
         return check
 
-    async def is_logging_enabled(self, guild_id):
+    async def is_logging_enabled(self, guild_id: int):
         """Returns true if logging is enabled for this guild."""
         return_bool = await self.bot.db.fetchval("SELECT logging FROM guilds WHERE id = $1", guild_id)
 
@@ -159,7 +160,7 @@ class CheckUtils:
         else:
             return return_bool
 
-    async def is_welcome_message_enabled(self, guild_id):
+    async def is_welcome_message_enabled(self, guild_id: int):
         """Returns true if welcome messages are enabled for this guild."""
         return_bool = await self.bot.db.fetchval("SELECT welcome FROM guilds WHERE id = $1", guild_id)
 
@@ -168,7 +169,7 @@ class CheckUtils:
         else:
             return return_bool
 
-    async def is_default_role_enabled(self, guild_id):
+    async def is_default_role_enabled(self, guild_id: int):
         """Returns true if a default role is enabled for this guild."""
         return_bool = await self.bot.db.fetchval("SELECT defaultrole FROM guilds WHERE id = $1", guild_id)
 
@@ -177,7 +178,7 @@ class CheckUtils:
         else:
             return return_bool
 
-    async def is_guild_initialized(self, guild_id):
+    async def is_guild_initialized(self, guild_id: int):
         """Returns true if the guild has an entry in the bot's database."""
         return_bool = await self.bot.db.fetchval("SELECT id FROM guilds WHERE id = $1", guild_id)
 

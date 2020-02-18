@@ -324,6 +324,27 @@ class Moderation(commands.Cog):
 
         await ctx.send(f":white_check_mark: Successfully kicked {member}!")
 
+    @commands.command(name="clear")
+    @commands.guild_only()
+    @commands.has_permissions(manage_messages=True)
+    async def clear(self, ctx, amount: int, target: discord.Member = None):
+        """Purge an amount of messages in the current channel"""
+        if amount > 500 or amount < 0:
+            await ctx.send(":x: Invalid amount, maximum is 500.")
+            return
+
+        def check(message):
+            if target:
+                return message.author.id == target.id
+            return True
+
+        try:
+            deleted = await ctx.channel.purge(limit=amount, check=check)
+        except discord.Forbidden:
+            raise exceptions.ForbiddenError(detail=":x: I'm missing Administrator permissions to do this!")
+
+        await ctx.send(f':white_check_mark: Deleted **{len(deleted)}** messages.', delete_after=5)
+
     @commands.command(name='mute')
     @commands.guild_only()
     @commands.has_permissions(manage_roles=True)

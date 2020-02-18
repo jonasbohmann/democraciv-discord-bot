@@ -75,7 +75,7 @@ class LawUtils:
 
         return last_motion + 1
 
-    async def get_google_docs_title(self, link: str):
+    async def get_google_docs_title(self, link: str) -> str:
         """Gets title of a Google Docs document"""
 
         try:
@@ -97,7 +97,7 @@ class LawUtils:
         except Exception:
             return None
 
-    async def get_google_docs_description(self, link: str):
+    async def get_google_docs_description(self, link: str) -> str:
         """Gets content of 'og:description' tag from HTML of a Google Docs page.
 
             That content includes the document's title and the first few paragraphs of text."""
@@ -252,8 +252,8 @@ class LawUtils:
         return [amount_of_sessions, amount_of_bills, amount_of_laws, amount_of_motions,
                 pretty_top_submitter, pretty_top_speaker, pretty_top_lawmaker]
 
-    async def post_to_hastebin(self, text: str):
-        """Post text to hastebin.com"""
+    async def post_to_hastebin(self, text: str) -> str:
+        """Post text to mystb.in"""
 
         async with self.bot.session.post("https://mystb.in/documents", data=text) as response:
             data = await response.json()
