@@ -393,8 +393,8 @@ class Guild(commands.Cog):
         elif str(reaction.emoji) == "\U00002705":
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
-                    status = await self.bot.db.execute("INSERT INTO guild_tags_alias (alias, tag_id) VALUES "
-                                                       "($1, $2)", alias.lower(), tag_details['id'])
+                    status = await self.bot.db.execute("INSERT INTO guild_tags_alias (alias, tag_id, guild_id) VALUES "
+                                                       "($1, $2, $3)", alias.lower(), tag_details['id'], ctx.guild.id)
 
         if status == "INSERT 0 1":
             await ctx.send(f':white_check_mark: Added the alias `{config.BOT_PREFIX}{alias}` to'
@@ -436,7 +436,6 @@ class Guild(commands.Cog):
                         await ctx.send(f":white_check_mark: Successfully removed the alias "
                                        f"`{config.BOT_PREFIX}{alias}` from `{config.BOT_PREFIX}{tag['name']}`.")
                     except Exception:
-                        await ctx.send(f":x: Unexpected error occurred.")
                         raise
 
     async def resolve_tag_name(self, query: str, guild: discord.Guild):
@@ -452,6 +451,8 @@ class Guild(commands.Cog):
             return None
 
         tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1", tag_id)
+
+        await self.bot.db.execute("UPDATE guild_tags SET uses = uses + 1 WHERE id = $1", tag_id)
 
         return tag_details
 
@@ -574,7 +575,6 @@ class Guild(commands.Cog):
     @tags.command(name="info", aliases=['about'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @utils.tag_check()
     async def taginfo(self, ctx, name: str):
         """Info about a tag"""
 
@@ -599,6 +599,7 @@ class Guild(commands.Cog):
         embed.add_field(name="Global Tag", value=str(tag['global']), inline=True)
         embed.add_field(name="Emoji or Media Tag", value=str(self.is_emoji_or_media_url(tag['content'])),
                         inline=True)
+        embed.add_field(name="Uses", value=str(tag['uses']), inline=False)
         embed.add_field(name="Aliases", value=pretty_aliases, inline=False)
         await ctx.send(embed=embed)
 
