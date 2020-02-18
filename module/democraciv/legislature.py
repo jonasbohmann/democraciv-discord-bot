@@ -214,7 +214,7 @@ class Legislature(commands.Cog):
         """Get details about a legislative session
 
         Usage:
-        `-legislature session` to see details about the session that is currently open
+        `-legislature session` to see details about the last session
         `-legislature session <number>` to see details about a specific session
         `-legislature session all` to see a list of all previous sessions."""
 
@@ -224,61 +224,39 @@ class Legislature(commands.Cog):
             if isinstance(e, exceptions.RoleNotFoundError):
                 await ctx.send(e.message)
 
-        if not session or session is None:
-            active_leg_session_id = await self.bot.laws.get_active_leg_session()
+        session = session or await self.bot.laws.get_last_leg_session()
 
-            if active_leg_session_id is None:
-                msg = f":x: There currently is no open session.\n\n" \
-                      f"**Usage**:\n  `{config.BOT_PREFIX}legislature session` to see details about the session that is" \
-                      f" currently open,\n  " \
-                      f"`{config.BOT_PREFIX}legislature session <number>` to see details about a specific " \
-                      f"session or\n  " \
-                      f"`{config.BOT_PREFIX}legislature session all` to see a list of all previous sessions."
-                return await ctx.send(msg)
+        usage_hint = f"**Usage**:\n  `{config.BOT_PREFIX}legislature session` to see details about the last session\n"\
+                     f"`{config.BOT_PREFIX}legislature session <number>` to see details about a specific " \
+                     f"session or\n  " \
+                     f"`{config.BOT_PREFIX}legislature session all` to see a list of all previous sessions."
 
-        elif session:
-            if session.lower() == "all":
+        # Show all past sessions and their status
+        if session.lower() == "all":
+            all_sessions = await self.bot.db.fetch("SELECT id, status FROM legislature_sessions ORDER BY id")
 
-                all_session_ids = await self.bot.db.fetch("SELECT (id, status) FROM legislature_sessions ORDER BY id")
+            pretty_sessions = [f"**Session #{record['id']}**  - {record['status']}" for record in all_sessions]
+            footer = f"Use {ctx.prefix}legislature session <number> to get more details about a session."
 
-                pretty_sessions = []
+            pages = Pages(ctx=ctx, entries=pretty_sessions, show_entry_count=False,
+                          title=f"All Sessions of the {mk.NATION_ADJECTIVE} Legislature"
+                          , show_index=False, footer_text=footer)
+            await pages.paginate()
+            return
 
-                for record in all_session_ids:
-                    pretty_sessions.append(f"**Session #{record[0][0]}**   - {record[0][1]}")
-
-                footer = f"Use {self.bot.commands_prefix}legislature session <number> to get more details about" \
-                         f" a session."
-
-                pages = Pages(ctx=ctx, entries=pretty_sessions, show_entry_count=False,
-                              title=f"All Sessions of the {mk.NATION_ADJECTIVE} Legislature"
-                              , show_index=False, footer_text=footer)
-                await pages.paginate()
-                return
-
-            else:
-                try:
-                    active_leg_session_id = int(session)
-                except ValueError:
-                    msg = f":x: You typed neither 'all', nor a number of a session.\n\n" \
-                          f"**Usage**:\n  `{config.BOT_PREFIX}legislature session` to see details about the session" \
-                          f" that is currently open,\n  " \
-                          f"`{config.BOT_PREFIX}legislature session <number>` to see details about a specific " \
-                          f"session or\n  " \
-                          f"`{config.BOT_PREFIX}legislature session all` to see a list of all previous sessions."
-                    return await ctx.send(msg)
+        # Show detail embed for a single session, either from user input or the last session
+        else:
+            try:
+                active_leg_session_id = int(session)
+            except ValueError:
+                return await ctx.send(f":x: You typed neither 'all', nor a number of a session.\n\n{usage_hint}")
 
         session_info = await self.bot.db.fetchrow(
             "SELECT (speaker, is_active, vote_form, start_unixtime, end_unixtime, status, voting_start_unixtime) "
             "FROM legislature_sessions WHERE id = $1", active_leg_session_id)
 
         if session_info is None:
-            msg = f":x: I couldn't find that session.\n\n" \
-                  f"**Usage**:\n  `{config.BOT_PREFIX}legislature session` to see details about the session that" \
-                  f" is currently open,\n  " \
-                  f"`{config.BOT_PREFIX}legislature session <number>` to see details about a specific " \
-                  f"session or\n  " \
-                  f"`{config.BOT_PREFIX}legislature session all` to see a list of all previous sessions."
-            return await ctx.send(msg)
+            return await ctx.send(f":x: I couldn't find that session.\n\n{usage_hint}")
 
         motions = await self.bot.db.fetch(
             "SELECT id, title, description, submitter, hastebin FROM legislature_motions"
