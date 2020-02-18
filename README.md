@@ -90,12 +90,12 @@ If you do not want to use the Reddit announcements feature, you have to set `RED
 
 ####  YouTube 
 
-Notifications for new video uploads from a YouTube channel are enabled by default, but can be disabled in the `config.py`. You'll need
+Notifications for new video uploads and livestreams from a YouTube channel are enabled by default, but can be disabled in the `config.py`. You'll need
 an API key for the YouTube Data v3 API from Google. [This](https://developers.google.com/youtube/v3) has more information on how to get one.
 
 You can configure everything else that is YouTube related in the `config.py`.
 
-If you do not want to use the YouTube announcements feature, you have to set `YOUTUBE_VIDEO_ENABLED` in the
+If you do not want to use the YouTube announcements feature, you have to set `YOUTUBE_ENABLED` in the
 `config.py` to `False`.
 
 
