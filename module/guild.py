@@ -578,10 +578,16 @@ class Guild(commands.Cog):
     async def taginfo(self, ctx, name: str):
         """Info about a tag"""
 
-        tag = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND guild_id = $2", name.lower(),
-                                         ctx.guild.id)
+        # Search for global tags first
+        tag = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND global = true",
+                                         name.lower())
+
         if tag is None:
-            return await ctx.send(f":x: This guild has no tag called `{name}`!")
+            # If no global tag exists with that name, search for local tags
+            tag = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND guild_id = $2", name.lower(),
+                                             ctx.guild.id)
+            if tag is None:
+                return await ctx.send(f":x: This guild has no tag called `{name}`!")
 
         aliases = await self.bot.db.fetch("SELECT alias FROM guild_tags_alias WHERE tag_id = $1 ", tag['id'])
 
