@@ -322,7 +322,7 @@ class Moderation(commands.Cog):
         except discord.Forbidden:
             pass
 
-        await ctx.send(f":white_check_mark: Successfully kicked {member}!")
+        await ctx.send(f":white_check_mark: {member} was kicked.")
 
     @commands.command(name="clear")
     @commands.guild_only()
@@ -389,7 +389,7 @@ class Moderation(commands.Cog):
         except discord.Forbidden:
             pass
 
-        await ctx.send(f":white_check_mark: Successfully muted {member}!")
+        await ctx.send(f":white_check_mark: {member} was muted.")
 
     @commands.command(name='unmute')
     @commands.guild_only()
@@ -412,7 +412,7 @@ class Moderation(commands.Cog):
         except discord.Forbidden:
             pass
 
-        await ctx.send(f":white_check_mark: Successfully unmuted {member}!")
+        await ctx.send(f":white_check_mark: {member} was unmuted.")
 
     @commands.command(name='ban')
     @commands.guild_only()
@@ -467,7 +467,7 @@ class Moderation(commands.Cog):
             except discord.Forbidden:
                 pass
 
-        await ctx.send(f":white_check_mark: Successfully banned {member}!")
+        await ctx.send(f":white_check_mark: {member} was banned.")
 
     @ban.error
     async def banerror(self, ctx, error):
@@ -494,7 +494,7 @@ class Moderation(commands.Cog):
         except discord.HTTPException:
             return await ctx.send(":x: That person is not banned.")
 
-        await ctx.send(f":white_check_mark: Successfully unbanned {member}!")
+        await ctx.send(f":white_check_mark: {member} was unbanned.")
 
     @unban.error
     async def unbanerror(self, ctx, error):

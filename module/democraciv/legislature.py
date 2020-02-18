@@ -109,7 +109,7 @@ class Legislature(commands.Cog):
         except Exception:
             return await ctx.send(":x: Fatal database error.")
 
-        await ctx.send(f":white_check_mark: Successfully opened the submission period for session #{new_session}!")
+        await ctx.send(f":white_check_mark: The **submission period** for session #{new_session} was opened.")
 
         await mk.get_democraciv_channel(self.bot,
                                         mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(f"The "
@@ -154,7 +154,7 @@ class Legislature(commands.Cog):
         except Exception:
             return await ctx.send(":x: Fatal database error.")
 
-        await ctx.send(f":white_check_mark: Successfully opened session #{active_leg_session_id} up for voting!")
+        await ctx.send(f":white_check_mark: Session #{active_leg_session_id} is now in  **voting period**.")
 
         await mk.get_democraciv_channel(self.bot,
                                         mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(f"The voting period for "
@@ -198,8 +198,8 @@ class Legislature(commands.Cog):
         except Exception:
             return await ctx.send(":x: Fatal database error.")
 
-        await ctx.send(f":white_check_mark: Successfully closed Session #{active_leg_session_id}!\n"
-                       f"Add the bills that passed this session with `-legislature pass <bill_id>`. You can get the "
+        await ctx.send(f":white_check_mark: Session #{active_leg_session_id} was closed.\n"
+                       f"Add the bills that passed this session with `-legislature pass <bill_id>`. Get the "
                        f"bill ids from the list of submitted bills in `-legislature session {active_leg_session_id}`")
 
         await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(
@@ -405,13 +405,13 @@ class Legislature(commands.Cog):
         if not reaction:
             return
 
+        # -- Bill --
         if str(reaction.emoji) == "\U0001f1e7":
-            # -- Bill --
-
-            await ctx.send(":white_check_mark: You will submit a **bill**.")
+            is_vetoable = True
 
             # Vetoable?
-            veto_question = await ctx.send(":information_source: Is the Ministry legally allowed to veto (or vote on) "
+            veto_question = await ctx.send(":white_check_mark: You will submit a **bill**.\n"
+                                           ":information_source: Is the Ministry legally allowed to veto (or vote on) "
                                            "this bill?")
 
             reaction = await flow.get_yes_no_reaction_confirm(veto_question, 200)
@@ -452,7 +452,8 @@ class Legislature(commands.Cog):
                 bill_title = await self.bot.laws.get_google_docs_title(google_docs_url)
 
                 if bill_title is None:
-                    return await ctx.send(":x: Could not connect to Google Docs!")
+                    return await ctx.send(":x: Couldn't connect to Google Docs. Make sure that the document can be"
+                                          " read by everyone and that it's not a published version!")
 
                 # -- Submit Bill --
                 new_id = await self.bot.laws.generate_new_bill_id()
@@ -478,31 +479,29 @@ class Legislature(commands.Cog):
                         , bill_title, ctx.author.id, is_vetoable, bill_description, tiny_url)
 
                 except asyncpg.UniqueViolationError:
-                    return await ctx.send(":x: This bill was already submitted!")
+                    return await ctx.send(":x: A bill with the same exact Google Docs Document was already submitted!")
                 except Exception:
-                    return await ctx.send(":x: Database error!")
+                    raise
 
                 message = "Hey! A new **bill** was just submitted."
                 embed = self.bot.embeds.embed_builder(title="Bill Submitted", description="", time_stamp=True)
                 embed.add_field(name="Title", value=bill_title, inline=False)
-                embed.add_field(name="Author", value=ctx.message.author.name)
+                embed.add_field(name="Author", value=ctx.message.author.name, inline=False)
                 embed.add_field(name="Session", value=current_leg_session)
                 embed.add_field(name="Ministry Veto Allowed", value=is_vetoable)
                 embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow(), inline=False)
                 embed.add_field(name="URL", value=google_docs_url, inline=False)
 
             await ctx.send(
-                f":white_check_mark: Successfully submitted bill `{bill_title}` for session #{current_leg_session}!")
+                f":white_check_mark: Your bill `{bill_title}` was submitted to session #{current_leg_session}.")
 
+        # -- Motion --
         elif str(reaction.emoji) == "\U0001f1f2":
-            # -- Motion --
-
             if mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE) not in ctx.author.roles:
                 return await ctx.send(":x: Only Legislators are allowed to submit motions!")
 
-            await ctx.send(":white_check_mark: You will submit a **motion**.")
-
-            await ctx.send(":information_source: Reply with the title of your motion.")
+            await ctx.send(":white_check_mark: You will submit a **motion**."
+                           "\n:information_source: Reply with the title of your motion.")
 
             title = await flow.get_text_input(300)
 
@@ -526,15 +525,10 @@ class Legislature(commands.Cog):
                     return await ctx.send(":x: Your motion was not submitted, there was a problem with hastebin.com. "
                                           "Try again in a few minutes.")
 
-                try:
-                    await self.bot.db.execute(
-                        "INSERT INTO legislature_motions (id, leg_session, title, description, submitter, hastebin) "
-                        "VALUES ($1, $2, $3, $4, $5, $6)", _new_id, current_leg_session, title, description,
-                        ctx.author.id, haste_bin_url)
-                except asyncpg.UniqueViolationError:
-                    return await ctx.send(":x: This motion was already submitted!")
-                except Exception:
-                    return await ctx.send(":x: Database error!")
+                await self.bot.db.execute(
+                    "INSERT INTO legislature_motions (id, leg_session, title, description, submitter, hastebin) "
+                    "VALUES ($1, $2, $3, $4, $5, $6)", _new_id, current_leg_session, title, description,
+                    ctx.author.id, haste_bin_url)
 
                 message = "Hey! A new **motion** was just submitted."
                 embed = self.bot.embeds.embed_builder(title="Motion Submitted", description="", time_stamp=True)
@@ -545,17 +539,18 @@ class Legislature(commands.Cog):
                 embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow(), inline=False)
 
             await ctx.send(
-                f":white_check_mark: Successfully submitted motion titled `{title}`"
-                f" for session #{current_leg_session}!")
+                f":white_check_mark: Your motion `{title}` was submitted to session #{current_leg_session}.")
+
+        speaker_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE)
+        vice_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE)
 
         # -- Send DM to Cabinet after everything is done --
-
-        try:
-            await self.speaker.send(content=message, embed=embed)
-            await self.vice_speaker.send(content=message, embed=embed)
-        except discord.Forbidden:
-            return await ctx.send(f":x: Unexpected error occurred while DMing the Speaker or Vice-Speaker."
-                                  f" Your bill was still submitted for session #{current_leg_session}, though!")
+        if speaker_role not in ctx.author.roles and vice_role not in ctx.author.roles:
+            try:
+                await self.speaker.send(content=message, embed=embed)
+                await self.vice_speaker.send(content=message, embed=embed)
+            except discord.Forbidden:
+                pass
 
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -567,18 +562,19 @@ class Legislature(commands.Cog):
         bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
 
         if bill_details is None:
-            return await ctx.send(f":x: There is no submitted bill with ID `#{bill_id}`!")
+            return await ctx.send(f":x: There is no submitted bill with ID #{bill_id}!")
 
         last_leg_session = await self.bot.laws.get_last_leg_session()
 
         if last_leg_session != bill_details['leg_session']:
             return await ctx.send(f":x: You can only mark bills from the most recent session of the "
-                                  f"Legislature as passed!")
+                                  f"Legislature as passed.")
 
         last_leg_session_status = await self.bot.laws.get_status_of_active_leg_session()
 
         if last_leg_session_status == "Submission Period":
-            return await ctx.send(f":x: You cannot mark bills as passed in the Submission Period!")
+            return await ctx.send(f":x: You cannot mark bills as passed while the session"
+                                  f" is still in submission period.")
 
         if bill_details['voted_on_by_leg']:
             return await ctx.send(f":x: You already passed this bill!")
@@ -588,7 +584,6 @@ class Legislature(commands.Cog):
                                       f"' (#{bill_details['id']}) as passed from the Legislature?")
 
         flow = Flow(self.bot, ctx)
-
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if reaction is None:
@@ -597,10 +592,8 @@ class Legislature(commands.Cog):
         if not reaction:
             return await ctx.send("Aborted.")
 
-        elif reaction:  # yes
-
+        elif reaction:
             async with ctx.typing():
-
                 await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true, voted_on_by_leg = true "
                                           "WHERE id = $1", bill_id)
 
@@ -610,15 +603,16 @@ class Legislature(commands.Cog):
                                    f"Ministry for them to vote on it.")
 
                     await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.EXECUTIVE_CHANNEL).send(
-                        f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.PRIME_MINISTER_ROLE).mention}, the Legislature"
-                        f" has just passed '{bill_details['bill_name']}' (#{bill_id}) that you need to vote on. "
+                        f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.PRIME_MINISTER_ROLE).mention},"
+                        f" the Legislature has just passed '{bill_details['bill_name']}' (#{bill_id})"
+                        f" that you need to vote on. "
                         f"Check `-ministry bills` to get the details.")
 
                 # Bill is not vetoable
                 else:
                     if await self.bot.laws.pass_into_law(ctx, bill_id, bill_details):
                         # pass_into_law() returned True -> success
-                        await ctx.send(f":white_check_mark: Successfully passed '{bill_details['bill_name']}' into law!"
+                        await ctx.send(f":white_check_mark: `{bill_details['bill_name']}` was passed into law."
                                        f" Remember to add it to the Legal Code, too!")
 
                         await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(
@@ -667,7 +661,7 @@ class Legislature(commands.Cog):
 
         if mk.get_democraciv_role(self.bot,
                                   mk.DemocracivRole.SPEAKER_ROLE) not in ctx.author.roles and mk.get_democraciv_role(
-                self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE) not in ctx.author.roles:
+            self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE) not in ctx.author.roles:
             if ctx.author.id == bill_details['submitter']:
                 if last_leg_session_status == "Submission Period":
                     allowed = True
@@ -703,8 +697,8 @@ class Legislature(commands.Cog):
             except asyncpg.ForeignKeyViolationError:
                 return await ctx.send(":x: This bill is already a law and cannot be withdrawn.")
 
-            await ctx.send(f":white_check_mark: Successfully withdrew '{bill_details['bill_name']}"
-                           f"' (#{bill_details['id']}) from session #{last_leg_session}!")
+            await ctx.send(f":white_check_mark: `{bill_details['bill_name']}`"
+                           f" (#{bill_details['id']}) was withdrawn from session #{last_leg_session}.")
 
             if not is_cabinet:
                 msg = f"**Bill Withdrawn**\n{ctx.author.name} has withdrawn their bill " \

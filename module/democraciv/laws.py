@@ -136,8 +136,8 @@ class Laws(commands.Cog, name='Law'):
 
         elif reaction:
             await self.bot.db.execute("DELETE FROM legislature_laws WHERE law_id = $1", law_id)
-            return await ctx.send(f":white_check_mark: Successfully removed '{bill_details['bill_name']}"
-                                  f"' (#{bill_details['id']}) from the laws of {mk.NATION_NAME}!")
+            return await ctx.send(f":white_check_mark: Removed '{bill_details['bill_name']}"
+                                  f"' (#{bill_details['id']}) from the laws of {mk.NATION_NAME}.")
 
     @removebill.error
     async def removebillerror(self, ctx, error):
@@ -189,7 +189,7 @@ class Laws(commands.Cog, name='Law'):
             await self.bot.db.execute("UPDATE legislature_bills SET link = $1, tiny_link = $2 WHERE id = $3",
                                       new_link, tiny_url, bill_details['id'])
 
-            return await ctx.send(f":white_check_mark: Successfully changed the link to '{bill_details['bill_name']}"
+            return await ctx.send(f":white_check_mark: Changed the link to '{bill_details['bill_name']}"
                                   f"' (#{bill_details['id']}).")
 
 

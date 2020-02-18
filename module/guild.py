@@ -644,7 +644,7 @@ class Guild(commands.Cog):
                         await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE tag_id = $1", tag['id'])
                         await self.bot.db.execute("DELETE FROM guild_tags WHERE name = $1 AND guild_id = $2",
                                                   name.lower(), ctx.guild.id)
-                        await ctx.send(f":white_check_mark: Successfully removed `{config.BOT_PREFIX}{name}`!")
+                        await ctx.send(f":white_check_mark: `{config.BOT_PREFIX}{name}` was removed.")
                     except Exception:
                         raise
 
