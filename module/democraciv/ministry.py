@@ -146,21 +146,20 @@ class Ministry(commands.Cog):
                                       f"'{bill_details['bill_name']}"
                                       f"' (#{bill_details['id']})?")
 
-        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
-        if not reaction or reaction is None:
+        if reaction is None:
             return
 
-        if str(reaction.emoji) == "\U00002705":
+        if reaction:
             # Are you sure? Yes
-
             async with ctx.typing():
                 await self.bot.db.execute(
                     "UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
                     "false WHERE id = $1", bill_id)
 
-                await ctx.send(f":white_check_mark: Successfully vetoed {bill_details['bill_name']} "
-                               f"(#{bill_details['id']})!")
+                await ctx.send(f":white_check_mark: Vetoed {bill_details['bill_name']} "
+                               f"(#{bill_details['id']}).")
 
                 await mk.get_democraciv_channel(self.bot,
                                                 mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(
@@ -169,7 +168,7 @@ class Ministry(commands.Cog):
                     f"({bill_details['tiny_link']}) was vetoed "
                     f"by the Ministry.")
 
-        elif str(reaction.emoji) == "\U0000274c":
+        elif not reaction:
             # Are you sure? No
             await ctx.send(f"Aborted.")
 
@@ -207,18 +206,17 @@ class Ministry(commands.Cog):
                                       f"'{bill_details['bill_name']}"
                                       f"' (#{bill_details['id']}) into law?")
 
-        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
-        if not reaction or reaction is None:
+        if reaction is None:
             return
 
-        if str(reaction.emoji) == "\U00002705":
+        if reaction:
             # Are you sure? Yes
-
             async with ctx.typing():
                 if await self.bot.laws.pass_into_law(ctx, bill_id, bill_details):
                     # pass_into_law() returned True -> success
-                    await ctx.send(":white_check_mark: Successfully passed this bill into law!")
+                    await ctx.send(":white_check_mark: Passed into law.")
                     await mk.get_democraciv_channel(self.bot,
                                                     mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(
                         f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE).mention}, "
@@ -228,7 +226,7 @@ class Ministry(commands.Cog):
                     # database error in pass_into_law()
                     await ctx.send(":x: Unexpected error occurred.")
 
-        elif str(reaction.emoji) == "\U0000274c":
+        elif not reaction:
             # Are you sure? No
             await ctx.send(f"Aborted.")
 

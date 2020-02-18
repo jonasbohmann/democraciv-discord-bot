@@ -164,15 +164,15 @@ class Moderation(commands.Cog):
 
         is_anon = True
 
-        reaction, user = await flow.get_yes_no_reaction_confirm(anon_question, 150)
+        reaction = await flow.get_yes_no_reaction_confirm(anon_question, 150)
 
         if reaction is None:
             return
 
-        if str(reaction.emoji) == "\U00002705":
+        if reaction:
             is_anon = True
 
-        elif str(reaction.emoji) == "\U0000274c":
+        elif not reaction:
             is_anon = False
 
         await ctx.send(":information_source: Reply with the details of your report. This will abort after"
@@ -188,9 +188,12 @@ class Moderation(commands.Cog):
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to send this report?"
                                       f"\n```Anonymous: {pretty_anon}\n\n\nReport: {content}```")
 
-        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 150)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 150)
 
-        if str(reaction.emoji) == "\U00002705":
+        if reaction is None:
+            return
+
+        if reaction:
             embed = self.bot.embeds.embed_builder(title=":exclamation: New Report", description="")
 
             if not is_anon:
@@ -202,9 +205,9 @@ class Moderation(commands.Cog):
                                             mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
                 content=mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE).mention, embed=embed)
 
-            await ctx.send(":white_check_mark: Successfully sent report.")
+            await ctx.send(":white_check_mark: Report was sent.")
 
-        elif str(reaction.emoji) == "\U0000274c":
+        elif not reaction:
             return await ctx.send("Aborted.")
 
     async def safe_send_mod_links(self, ctx, embed):

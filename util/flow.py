@@ -1,5 +1,7 @@
+import typing
 import asyncio
 
+import discord
 from discord.ext import commands
 
 
@@ -10,8 +12,10 @@ class Flow:
         self.bot = bot
         self.ctx = ctx
 
-    async def get_emoji_choice(self, yes_emoji, no_emoji, message, timeout):
-        """Adds the two specified emojis to the message and returns which one has been clicked by the
+    async def get_emoji_choice(self, yes_emoji: str, no_emoji: str,
+                               message: discord.Message, timeout: int) -> (discord.Reaction,
+                                                                           typing.Union[discord.User, discord.Member]):
+        """Adds the two specified emoji to the message and returns which one has been clicked by the
            original user in the specified time"""
 
         await message.add_reaction(yes_emoji)
@@ -29,7 +33,7 @@ class Flow:
         else:
             return reaction, user
 
-    async def gear_reaction_confirm(self, message, timeout):
+    async def gear_reaction_confirm(self, message: discord.Message, timeout: int) -> bool:
         """Adds the :gear: emoji to the message and returns whether it has been clicked by the
            original user in the specified time"""
 
@@ -47,14 +51,17 @@ class Flow:
         else:
             return True
 
-    async def get_yes_no_reaction_confirm(self, message, timeout):
-        """Adds the :white_check_mark: and :x: emojies to the message and returns the reaction and user if either
+    async def get_yes_no_reaction_confirm(self, message: discord.Message, timeout: int) -> typing.Optional[bool]:
+        """Adds the :white_check_mark: and :x: emoji to the message and returns the reaction and user if either
            reaction has been added by the original user.
 
            Returns None if the user did nothing."""
 
-        await message.add_reaction("\U00002705")
-        await message.add_reaction("\U0000274c")
+        yes_emoji = "\U00002705"
+        no_emoji = "\U0000274c"
+
+        await message.add_reaction(yes_emoji)
+        await message.add_reaction(no_emoji)
 
         try:
             reaction, user = await self.ctx.bot.wait_for('reaction_add',
@@ -66,9 +73,16 @@ class Flow:
             return None
 
         else:
-            return reaction, user
+            if reaction is None:
+                return None
 
-    async def get_new_channel(self, timeout):
+            if str(reaction.emoji) == yes_emoji:
+                return True
+
+            elif str(reaction.emoji) == no_emoji:
+                return False
+
+    async def get_new_channel(self, timeout: int) -> typing.Union[discord.TextChannel, str, None]:
         """Waits for a reply by the original user in the original channel and coverts reply to a channel object
            reaction has been added by the original user.
 
@@ -81,11 +95,11 @@ class Flow:
                                               timeout=timeout)
         except asyncio.TimeoutError:
             await self.ctx.send(":x: Aborted.")
-            return
+            return None
 
         if not channel.content:
             await self.ctx.send(":x: Aborted.")
-            return
+            return None
 
         try:
             channel_object = await commands.TextChannelConverter().convert(self.ctx, channel.content)
@@ -97,7 +111,7 @@ class Flow:
 
         return channel_object
 
-    async def get_text_input(self, timeout):
+    async def get_text_input(self, timeout: int) -> typing.Optional[str]:
         """Waits for a reply by the original user in the original channel and returns reply as string.
 
            Returns None if the user did nothing."""
@@ -108,16 +122,16 @@ class Flow:
                                            timeout=timeout)
         except asyncio.TimeoutError:
             await self.ctx.send(":x: Aborted.")
-            return
+            return None
 
         if not text.content:
             await self.ctx.send(":x: Aborted.")
-            return
+            return None
 
         else:
             return text.content
 
-    async def get_new_role(self, timeout):
+    async def get_new_role(self, timeout: int) -> typing.Union[discord.Role, str, None]:
         """Waits for a reply by the original user in the original channel and coverts reply to a role object
            reaction has been added by the original user.
 
@@ -130,11 +144,11 @@ class Flow:
                                            timeout=timeout)
         except asyncio.TimeoutError:
             await self.ctx.send(":x: Aborted.")
-            return
+            return None
 
         if not role.content:
             await self.ctx.send(":x: Aborted.")
-            return
+            return None
 
         try:
             role_object = await commands.RoleConverter().convert(self.ctx, role.content)

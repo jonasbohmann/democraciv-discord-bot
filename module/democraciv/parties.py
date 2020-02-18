@@ -293,12 +293,12 @@ class Party(commands.Cog, name='Political Parties'):
         private_question = await ctx.send(
             "Should this new party be private? React with :white_check_mark: if yes, or with :x: if not.")
 
-        reaction, user = await flow.get_yes_no_reaction_confirm(private_question, 240)
+        reaction = await flow.get_yes_no_reaction_confirm(private_question, 240)
 
         if reaction is None:
             return
 
-        if str(reaction.emoji) == "\U00002705":
+        if reaction:
             is_private = True
 
             await ctx.send(":information_source: Answer with the name of the party's leader:")
@@ -311,7 +311,7 @@ class Party(commands.Cog, name='Political Parties'):
                 except commands.BadArgument:
                     raise exceptions.MemberNotFoundError(leader)
 
-        elif str(reaction.emoji) == "\U0000274c":
+        elif not reaction:
             is_private = False
 
         async with self.bot.db.acquire() as connection:

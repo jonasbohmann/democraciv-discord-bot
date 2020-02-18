@@ -67,12 +67,12 @@ class Guild(commands.Cog):
             status_question = await ctx.send(
                 "React with :white_check_mark: to enable the welcome module, or with :x: to disable the welcome module.")
 
-            reaction, user = await flow.get_yes_no_reaction_confirm(status_question, 240)
+            reaction = await flow.get_yes_no_reaction_confirm(status_question, 240)
 
             if reaction is None:
                 return
 
-            if str(reaction.emoji) == "\U00002705":
+            if reaction:
                 await self.bot.db.execute("UPDATE guilds SET welcome = true WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Enabled the welcome module.")
 
@@ -106,7 +106,7 @@ class Guild(commands.Cog):
                     if status == "UPDATE 1":
                         await ctx.send(f":white_check_mark: Set welcome message to '{welcome_message}'.")
 
-            elif str(reaction.emoji) == "\U0000274c":
+            elif not reaction:
                 await self.bot.db.execute("UPDATE guilds SET welcome = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Disabled the welcome module.")
 
@@ -140,12 +140,12 @@ class Guild(commands.Cog):
             status_question = await ctx.send(
                 "React with :white_check_mark: to enable the logging module, or with :x: to disable the logging module.")
 
-            reaction, user = await flow.get_yes_no_reaction_confirm(status_question, 240)
+            reaction = await flow.get_yes_no_reaction_confirm(status_question, 240)
 
             if reaction is None:
                 return
 
-            if str(reaction.emoji) == "\U00002705":
+            if reaction:
                 await self.bot.db.execute("UPDATE guilds SET logging = true WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Enabled the logging module.")
 
@@ -163,7 +163,7 @@ class Guild(commands.Cog):
                 if status == "UPDATE 1":
                     await ctx.send(f":white_check_mark: Set the logging channel to {channel_object.mention}.")
 
-            elif str(reaction.emoji) == "\U0000274c":
+            elif not reaction:
                 await self.bot.db.execute("UPDATE guilds SET logging = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Disabled the logging module.")
 
@@ -273,12 +273,12 @@ class Guild(commands.Cog):
             status_question = await ctx.send(
                 "React with :white_check_mark: to enable the default role, or with :x: to disable the default role.")
 
-            reaction, user = await flow.get_yes_no_reaction_confirm(status_question, 240)
+            reaction = await flow.get_yes_no_reaction_confirm(status_question, 240)
 
             if reaction is None:
                 return
 
-            if str(reaction.emoji) == "\U00002705":
+            if reaction:
                 await self.bot.db.execute("UPDATE guilds SET defaultrole = true WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Enabled the default role.")
 
@@ -310,7 +310,7 @@ class Guild(commands.Cog):
                 if status == "UPDATE 1":
                     await ctx.send(f":white_check_mark: Set the default role to '{new_default_role_object.name}'.")
 
-            elif str(reaction.emoji) == "\U0000274c":
+            elif not reaction:
                 await self.bot.db.execute("UPDATE guilds SET defaultrole = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Disabled the default role.")
 
@@ -382,15 +382,15 @@ class Guild(commands.Cog):
                                       f"`{config.BOT_PREFIX}{alias}` to "
                                       f"`{config.BOT_PREFIX}{tag_details['name']}`?")
 
-        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if reaction is None:
             return
 
-        if str(reaction.emoji) == "\U0000274c":
-            return await ctx.send("Aborted.")
+        if not reaction:
+            return await ctx.send(":x: Aborted.")
 
-        elif str(reaction.emoji) == "\U00002705":
+        elif reaction:
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     status = await self.bot.db.execute("INSERT INTO guild_tags_alias (alias, tag_id, guild_id) VALUES "
@@ -419,15 +419,15 @@ class Guild(commands.Cog):
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove the alias "
                                       f"`{config.BOT_PREFIX}{alias}` from `{config.BOT_PREFIX}{tag['name']}`?")
 
-        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if reaction is None:
             return
 
-        if str(reaction.emoji) == "\U0000274c":
+        if not reaction:
             return await ctx.send("Aborted.")
 
-        elif str(reaction.emoji) == "\U00002705":
+        elif reaction:
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     try:
@@ -529,29 +529,29 @@ class Guild(commands.Cog):
         if ctx.author.guild_permissions.administrator and ctx.guild.id == self.bot.democraciv_guild_object.id:
             is_global_msg = await ctx.send(":information_source: Should this tag be global?")
 
-            reaction, user = await flow.get_yes_no_reaction_confirm(is_global_msg, 300)
+            reaction = await flow.get_yes_no_reaction_confirm(is_global_msg, 300)
 
             if reaction is None:
                 return
 
-            if str(reaction.emoji) == "\U0000274c":
+            if reaction:
                 is_global = False
 
-            elif str(reaction.emoji) == "\U00002705":
+            elif not reaction:
                 is_global = True
 
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to add the tag "
                                       f"`{config.BOT_PREFIX}{name}`?")
 
-        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if reaction is None:
             return
 
-        if str(reaction.emoji) == "\U0000274c":
+        if not reaction:
             return await ctx.send("Aborted.")
 
-        elif str(reaction.emoji) == "\U00002705":
+        elif reaction:
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     try:
@@ -631,15 +631,15 @@ class Guild(commands.Cog):
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove the tag "
                                       f"`{config.BOT_PREFIX}{tag['name']}`?")
 
-        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if reaction is None:
             return
 
-        if str(reaction.emoji) == "\U0000274c":
+        if not reaction:
             return await ctx.send("Aborted.")
 
-        elif str(reaction.emoji) == "\U00002705":
+        elif reaction:
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     try:
@@ -648,7 +648,6 @@ class Guild(commands.Cog):
                                                   name.lower(), ctx.guild.id)
                         await ctx.send(f":white_check_mark: Successfully removed `{config.BOT_PREFIX}{name}`!")
                     except Exception:
-                        await ctx.send(f":x: Unexpected error occurred.")
                         raise
 
     @staticmethod

@@ -126,15 +126,15 @@ class Laws(commands.Cog, name='Law'):
 
         flow = Flow(self.bot, ctx)
 
-        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
-        if not reaction or reaction is None:
+        if reaction is None:
             return
 
-        if str(reaction.emoji) == "\U0000274c":
+        if not reaction:
             return await ctx.send("Aborted.")
 
-        elif str(reaction.emoji) == "\U00002705":
+        elif reaction:
             await self.bot.db.execute("DELETE FROM legislature_laws WHERE law_id = $1", law_id)
             return await ctx.send(f":white_check_mark: Successfully removed '{bill_details['bill_name']}"
                                   f"' (#{bill_details['id']}) from the laws of {mk.NATION_NAME}!")
@@ -170,15 +170,15 @@ class Laws(commands.Cog, name='Law'):
 
         flow = Flow(self.bot, ctx)
 
-        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
-        if not reaction:
+        if reaction is None:
             return
 
-        if str(reaction.emoji) == "\U0000274c":
+        if not reaction:
             return await ctx.send("Aborted.")
 
-        elif str(reaction.emoji) == "\U00002705":
+        elif reaction:
             async with self.bot.session.get(f"https://tinyurl.com/api-create.php?url={new_link}") as response:
                 tiny_url = await response.text()
 

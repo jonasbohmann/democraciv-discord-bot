@@ -113,9 +113,9 @@ class Legislature(commands.Cog):
 
         await mk.get_democraciv_channel(self.bot,
                                         mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(f"The "
-                                                              f"submission period for Legislative Session "
-                                                              f"#{new_session} has started!\nEveryone is allowed to sub"
-                                                              f"mit bills with `-legislature submit`.")
+                                                                                             f"submission period for Legislative Session "
+                                                                                             f"#{new_session} has started!\nEveryone is allowed to sub"
+                                                                                             f"mit bills with `-legislature submit`.")
 
         for legislator in mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE).members:
             try:
@@ -202,10 +202,11 @@ class Legislature(commands.Cog):
                        f"Add the bills that passed this session with `-legislature pass <bill_id>`. You can get the "
                        f"bill ids from the list of submitted bills in `-legislature session {active_leg_session_id}`")
 
-        await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE).mention},"
-                                                              f" Legislative Session "
-                                                              f"#{active_leg_session_id} has been closed by "
-                                                              f"the Cabinet.")
+        await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(
+            f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE).mention},"
+            f" Legislative Session "
+            f"#{active_leg_session_id} has been closed by "
+            f"the Cabinet.")
 
     @legislature.command(name='session', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -288,7 +289,8 @@ class Legislature(commands.Cog):
         if len(motions) > 0:
             for record in motions:
                 # If the motion's description is just a Google Docs link, use that link instead of the Hastebin
-                is_google_docs = self.bot.laws.is_google_doc_link(record['description']) and len(record['description']) <= 100
+                is_google_docs = self.bot.laws.is_google_doc_link(record['description']) and len(
+                    record['description']) <= 100
                 if is_google_docs:
                     link = record['description']
                 else:
@@ -296,7 +298,7 @@ class Legislature(commands.Cog):
 
                 if self.bot.get_user(record['submitter']) is not None:
                     pretty_motions += f"Motion #{record['id']} - [{record['title']}]({link})" \
-                                  f" by {self.bot.get_user(record['submitter']).mention}\n"
+                                      f" by {self.bot.get_user(record['submitter']).mention}\n"
                 else:
                     pretty_motions += f"Motion #{record['id']} - [{record['title']}]({link})\n"
 
@@ -313,7 +315,7 @@ class Legislature(commands.Cog):
             for record in bills:
                 if self.bot.get_user(record[0][3]) is not None:
                     pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by " \
-                                f"{self.bot.get_user(record[0][3]).mention}\n"
+                                    f"{self.bot.get_user(record[0][3]).mention}\n"
                 else:
                     pretty_bills += f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]})\n"
         else:
@@ -412,15 +414,15 @@ class Legislature(commands.Cog):
             veto_question = await ctx.send(":information_source: Is the Ministry legally allowed to veto (or vote on) "
                                            "this bill?")
 
-            reaction, user = await flow.get_yes_no_reaction_confirm(veto_question, 200)
+            reaction = await flow.get_yes_no_reaction_confirm(veto_question, 200)
 
-            if not reaction:
+            if reaction is None:
                 return
 
-            if str(reaction.emoji) == "\U00002705":
+            if reaction:
                 is_vetoable = True
 
-            elif str(reaction.emoji) == "\U0000274c":
+            elif not reaction:
                 is_vetoable = False
 
             # Description?
@@ -587,15 +589,15 @@ class Legislature(commands.Cog):
 
         flow = Flow(self.bot, ctx)
 
-        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
-        if not reaction or reaction is None:
+        if reaction is None:
             return
 
-        if str(reaction.emoji) == "\U0000274c":
+        if not reaction:
             return await ctx.send("Aborted.")
 
-        elif str(reaction.emoji) == "\U00002705":  # yes
+        elif reaction:  # yes
 
             async with ctx.typing():
 
@@ -663,7 +665,8 @@ class Legislature(commands.Cog):
 
         is_cabinet = False
 
-        if mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE) not in ctx.author.roles and mk.get_democraciv_role(
+        if mk.get_democraciv_role(self.bot,
+                                  mk.DemocracivRole.SPEAKER_ROLE) not in ctx.author.roles and mk.get_democraciv_role(
                 self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE) not in ctx.author.roles:
             if ctx.author.id == bill_details['submitter']:
                 if last_leg_session_status == "Submission Period":
@@ -686,26 +689,26 @@ class Legislature(commands.Cog):
 
         flow = Flow(self.bot, ctx)
 
-        reaction, user = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
-        if not reaction or reaction is None:
+        if reaction is None:
             return
 
-        if str(reaction.emoji) == "\U0000274c":
+        if not reaction:
             return await ctx.send("Aborted.")
 
-        elif str(reaction.emoji) == "\U00002705":
+        elif reaction:
             try:
                 await self.bot.db.execute("DELETE FROM legislature_bills WHERE id = $1", bill_id)
             except asyncpg.ForeignKeyViolationError:
                 return await ctx.send(":x: This bill is already a law and cannot be withdrawn.")
 
             await ctx.send(f":white_check_mark: Successfully withdrew '{bill_details['bill_name']}"
-                                  f"' (#{bill_details['id']}) from session #{last_leg_session}!")
+                           f"' (#{bill_details['id']}) from session #{last_leg_session}!")
 
             if not is_cabinet:
                 msg = f"**Bill Withdrawn**\n{ctx.author.name} has withdrawn their bill " \
-                      f"'{bill_details['bill_name']}' "  \
+                      f"'{bill_details['bill_name']}' " \
                       f"'(#{bill_details['id']}) from the current session."
 
                 await self.speaker.send(msg)

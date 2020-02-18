@@ -31,31 +31,16 @@ class LawUtils:
         else:
             return True
 
-    async def get_active_leg_session(self):
-        active_leg_session_id = await self.bot.db.fetchrow("SELECT id FROM legislature_sessions WHERE is_active = true")
+    async def get_active_leg_session(self) -> int:
+        return await self.bot.db.fetchval("SELECT id FROM legislature_sessions WHERE is_active = true")
 
-        if active_leg_session_id is None:
-            return None
-        else:
-            return active_leg_session_id['id']
+    async def get_status_of_active_leg_session(self) -> str:
+        return await self.bot.db.fetchval("SELECT status FROM legislature_sessions WHERE"
+                                          " is_active = true")
 
-    async def get_status_of_active_leg_session(self):
-        active_leg_session_status = await self.bot.db.fetchrow("SELECT status FROM legislature_sessions WHERE"
-                                                               " is_active = true")
-
-        if active_leg_session_status is None:
-            return None
-        else:
-            return active_leg_session_status['status']
-
-    async def get_last_leg_session(self):
-        last_session = await self.bot.db.fetchrow("SELECT id FROM legislature_sessions WHERE id = "
-                                                  "(SELECT MAX(id) FROM legislature_sessions)")
-
-        if last_session is not None:
-            return last_session['id']
-        else:
-            return None
+    async def get_last_leg_session(self) -> int:
+        return await self.bot.db.fetchval("SELECT id FROM legislature_sessions WHERE id = "
+                                          "(SELECT MAX(id) FROM legislature_sessions)")
 
     async def generate_new_bill_id(self) -> int:
         last_bill = await self.bot.db.fetchrow("SELECT id FROM legislature_bills WHERE id = "
