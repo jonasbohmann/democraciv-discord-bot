@@ -111,7 +111,6 @@ module.fun | Miscellaneous commands |
 module.help | Scaling `-help` command |
 module.guild | Configure various functions of this bot for your guild |
 module.roles | Add or remove roles from you |
-module.parties | Join and leave political parties |
 module.time | Get the current time in a number of different timezones |
 module.wiki | Search for a topic on Wikipedia and the Sid Meier's Civilization Fandom wiki |
 module.democraciv.legislature | Helps the Speaker of the Legislature with keeping track of submitted bills, motions and legislative sessions in general |
@@ -119,6 +118,7 @@ module.democraciv.ministry | Helps the Prime Minister with keeping track of pass
 module.democraciv.supremecourt | Collection of links for Supreme Court Justices |
 module.democraciv.laws | Lists all laws passed by the Legislature & Ministry and allows to search for laws by automatically generated tags |
 module.democraciv.elections | Calculate results for STV elections |
+module.democraciv.parties | Join and leave political parties |
 module.democraciv.moderation | Tools for the Moderation Team of Democraciv |
 event.logging | Logs events (member joins/leaves, message deleted/edited etc.) to a specified channel |
 event.error_handler | Handles internal errors |
@@ -163,6 +163,17 @@ for database~~
 *  ~~Add anonymous report feature~~
 *  ~~Add multiple event notifications for #moderation-notifications~~
 *  ~~Add alt detection~~
+
+####  Update 0.17.0 - The Suggestions Update 
+
+*  Starboard-like system for the #press channel with weekly summaries to Reddit
+*  Add motion support to -legislature withdraw
+*  Add utility mod commands to support the process between MKs
+*  Allow Speaker and Ministry to pass multiple bills in a single command
+*  Add -mergeparties command 
+*  Wait a certain amount of time for multiple consecutive -legislature pass to bundle messages in #gov-announcements
+*  Refactor & cleanup for 1.0 release
+
 
 
 ##  Democraciv Discord Server
