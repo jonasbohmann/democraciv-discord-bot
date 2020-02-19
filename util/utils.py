@@ -16,8 +16,12 @@ def is_democraciv_guild():
     """Wrapper for a discord.ext.commands check to check if command is used on the Democraciv guild"""
 
     def check(ctx):
+        if not isinstance(ctx.channel, discord.abc.GuildChannel):
+            raise commands.NoPrivateMessage()
+
         if config.DEMOCRACIV_GUILD_ID != ctx.guild.id:
             raise exceptions.NotDemocracivGuildError()
+
         return True
 
     return commands.check(check)

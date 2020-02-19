@@ -155,6 +155,7 @@ class PaginatedHelpCommand(commands.HelpCommand):
         all_commands = self.get_subcommands_too(list(bot.commands))
 
         entries = await self.filter_commands(all_commands, sort=True, key=key)
+
         nested_pages = []
         per_page = 9
         total = 0
