@@ -12,11 +12,6 @@ from discord.ext import commands
 """Various utility classes and functions that the bot regular uses."""
 
 
-class AddTagCheckError(commands.CheckFailure):
-    def __init__(self, message):
-        self.message = message
-
-
 def is_democraciv_guild():
     """Wrapper for a discord.ext.commands check to check if command is used on the Democraciv guild"""
 
@@ -68,7 +63,8 @@ def tag_check():
             if ctx.author.guild_permissions.administrator:
                 return True
             else:
-                raise AddTagCheckError(message=":x: Only Administrators can add or remove tags on this guild!")
+                raise exceptions.AddTagCheckError(message=":x: Only Administrators can add or "
+                                                          "remove tags on this guild!")
         else:
             return True
 

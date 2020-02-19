@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS parties(
 );
 
 CREATE TABLE IF NOT EXISTS party_alias(
-    alias text,
+    alias text UNIQUE,
     party_id bigint references parties(id)
 );
 

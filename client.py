@@ -89,11 +89,9 @@ class DemocracivBot(commands.Bot):
                 print(f'[BOT] Failed to load module {extension}.')
                 traceback.print_exc()
 
-        # Create twitch live notification task if enabled in config
         if config.TWITCH_ENABLED:
             Twitch(self)
 
-        # Create reddit new post on subreddit notification task if enabled in config
         if config.REDDIT_ENABLED:
             Reddit(self)
 
@@ -221,7 +219,6 @@ class DemocracivBot(commands.Bot):
 
                 self.cached_initialized_guilds.append(message.guild.id)
 
-        # Relay message to cogs
         await self.process_commands(message)
 
     @tasks.loop(hours=24)

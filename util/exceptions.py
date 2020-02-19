@@ -45,11 +45,8 @@ class NoOneHasRoleError(DemocracivBotException):
 class NotDemocracivGuildError(DemocracivBotException):
     """Raised when a Democraciv-specific command is called outside the Democraciv guild"""
 
-    def __init__(self, message=None):
-        if not message:
-            self.message = ":x: You can only use this command on the Democraciv guild!"
-        else:
-            self.message = message
+    def __init__(self, message=":x: You can only use this command on the Democraciv guild!"):
+        self.message = message
 
 
 class GuildNotFoundError(DemocracivBotException):
@@ -57,6 +54,11 @@ class GuildNotFoundError(DemocracivBotException):
 
     def __init__(self, name):
         self.message = f":x: Couldn't find a guild named/with the ID `{name}` that I am in!"
+
+
+class AddTagCheckError(commands.CheckFailure):
+    def __init__(self, message):
+        self.message = message
 
 
 class ForbiddenTask(enum.Enum):
