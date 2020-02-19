@@ -105,7 +105,7 @@ class Laws(commands.Cog, name='Law'):
                 await ctx.send(':x: You have to give me something to search for!\n\n**Usage**:\n'
                                '`-law search <query>`')
 
-    @law.command(name='remove', aliases=['r'])
+    @law.command(name='remove', aliases=['r, repeal'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
@@ -115,7 +115,7 @@ class Laws(commands.Cog, name='Law'):
         law_details = await self.bot.db.fetchrow("SELECT * FROM legislature_laws WHERE law_id = $1", law_id)
 
         if law_details is None:
-            return await ctx.send(f":x: There is no law with ID `#{law_id}`")
+            return await ctx.send(f":x: There is no law with ID #{law_id}.")
 
         bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1",
                                                   law_details['bill_id'])
@@ -136,8 +136,11 @@ class Laws(commands.Cog, name='Law'):
 
         elif reaction:
             await self.bot.db.execute("DELETE FROM legislature_laws WHERE law_id = $1", law_id)
-            return await ctx.send(f":white_check_mark: Removed '{bill_details['bill_name']}"
-                                  f"' (#{bill_details['id']}) from the laws of {mk.NATION_NAME}.")
+            announcement_msg = f"Cabinet Member {ctx.author} has removed `{bill_details['bill_name']}`" \
+                               f" from the laws of {mk.NATION_NAME}."
+            await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(announcement_msg)
+            return await ctx.send(f":white_check_mark: `{bill_details['bill_name']}` was removed"
+                                  f" from the laws of {mk.NATION_NAME}.")
 
     @removebill.error
     async def removebillerror(self, ctx, error):

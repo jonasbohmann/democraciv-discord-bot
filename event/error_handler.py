@@ -189,7 +189,7 @@ class ErrorHandler(commands.Cog):
         else:
             await self.log_error(ctx, error, severe=True, to_log_channel=False, to_owner=True, to_context=True)
 
-        print(f"[BOT] Logging Exception: {error}")
+        print(f"[BOT] {error}")
 
 
 def setup(bot):
