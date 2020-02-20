@@ -122,3 +122,22 @@ CREATE TABLE IF NOT EXISTS original_join_dates(
     join_date timestamp,
     join_position int
 );
+
+CREATE TABLE IF NOT EXISTS starboard_entries(
+    id serial PRIMARY KEY,
+    author_id bigint,
+    message_id bigint UNIQUE,
+    message_content text,
+    channel_id bigint,
+    guild_id bigint,
+    message_creation_date timestamp,
+    is_posted_to_reddit bool DEFAULT false,
+    starboard_message_id bigint UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS starboard_starrers(
+    id serial PRIMARY KEY,
+    entry_id serial references starboard_entries(id) ON DELETE CASCADE,
+    starrer_id bigint,
+    UNIQUE (entry_id, starrer_id)
+);

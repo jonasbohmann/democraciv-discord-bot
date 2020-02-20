@@ -37,15 +37,6 @@ class Log(commands.Cog):
             embed.add_field(name='Guild', value=f"{guild.name} ({guild.id})", inline=False)
             await self.bot.owner.send(embed=embed)
 
-    async def is_channel_excluded(self, guild_id, channel_id):
-        excluded_channels = await self.bot.db.fetchval("SELECT logging_excluded FROM guilds WHERE id = $1"
-                                                       , guild_id)
-
-        if excluded_channels is not None:
-            return channel_id in excluded_channels
-        else:
-            return False
-
     # -- Message Events --
 
     @commands.Cog.listener()
@@ -56,7 +47,7 @@ class Log(commands.Cog):
         if not await self.bot.checks.is_logging_enabled(before.guild.id):
             return
 
-        if not await self.is_channel_excluded(before.guild.id, before.channel.id):
+        if not await self.bot.checks.is_channel_excluded(before.guild.id, before.channel.id):
             if not before.clean_content or not after.clean_content:
                 # Removing this throws a http 400 bad request exception
                 return
@@ -90,7 +81,7 @@ class Log(commands.Cog):
         if not await self.bot.checks.is_logging_enabled(message.guild.id):
             return
 
-        if not await self.is_channel_excluded(message.guild.id, message.channel.id):
+        if not await self.bot.checks.is_channel_excluded(message.guild.id, message.channel.id):
             embed_fields = {
                 "Author": [f"{message.author.mention} {message.author.name}#{message.author.discriminator}", True],
                 "Channel": [f"{message.channel.mention}", False]
@@ -114,7 +105,7 @@ class Log(commands.Cog):
         if not await self.bot.checks.is_logging_enabled(guild.id):
             return
 
-        if not await self.is_channel_excluded(guild.id, payload.channel_id):
+        if not await self.bot.checks.is_channel_excluded(guild.id, payload.channel_id):
             channel = self.bot.get_channel(payload.channel_id)
 
             embed_fields = {

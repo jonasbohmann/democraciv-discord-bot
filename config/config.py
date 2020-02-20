@@ -12,24 +12,27 @@ DEMOCRACIV_GUILD_ID = 208984105310879744  # Democraciv
 # DEMOCRACIV_GUILD_ID = 653946455337467904  # Democraciv Bot Support
 # DEMOCRACIV_GUILD_ID = 232108753477042187  # Test Server
 
+# Starboard Configuration
+STARBOARD_ENABLED = True
+STARBOARD_CHANNEL = 639549494693724170
+STARBOARD_REDDIT_SUMMARY_ENABLED = True
+STARBOARD_MIN_STARS = 4
+STARBOARD_STAR_EMOJI = "\U00002b50"
 
 # Database Configuration
 DATABASE_DAILY_BACKUP_ENABLED = True
 DATABASE_DAILY_BACKUP_DISCORD_CHANNEL = 656214962854821928
-
 
 # Reddit Notifications
 REDDIT_ENABLED = True
 REDDIT_SUBREDDIT = 'democraciv'
 REDDIT_ANNOUNCEMENT_CHANNEL = 330162836095631360  # The Discord Channel in which the bot will post Reddit notifications
 
-
 # Twitch Notifications
 TWITCH_ENABLED = True
 TWITCH_CHANNEL = 'democraciv'  # The twitch.tv streamer that the bot should check for live streams
 TWITCH_ANNOUNCEMENT_CHANNEL = 209432307730350080  # The Discord Channel in which the bot will post Twitch notifications
 TWITCH_EVERYONE_PING_ON_ANNOUNCEMENT = True
-
 
 # YouTube Notifications
 YOUTUBE_ENABLED = True

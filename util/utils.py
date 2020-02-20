@@ -151,7 +151,7 @@ class CheckUtils:
 
         return check
 
-    async def is_logging_enabled(self, guild_id: int):
+    async def is_logging_enabled(self, guild_id: int) -> bool:
         """Returns true if logging is enabled for this guild."""
         return_bool = await self.bot.db.fetchval("SELECT logging FROM guilds WHERE id = $1", guild_id)
 
@@ -160,7 +160,7 @@ class CheckUtils:
         else:
             return return_bool
 
-    async def is_welcome_message_enabled(self, guild_id: int):
+    async def is_welcome_message_enabled(self, guild_id: int) -> bool:
         """Returns true if welcome messages are enabled for this guild."""
         return_bool = await self.bot.db.fetchval("SELECT welcome FROM guilds WHERE id = $1", guild_id)
 
@@ -169,7 +169,7 @@ class CheckUtils:
         else:
             return return_bool
 
-    async def is_default_role_enabled(self, guild_id: int):
+    async def is_default_role_enabled(self, guild_id: int) -> bool:
         """Returns true if a default role is enabled for this guild."""
         return_bool = await self.bot.db.fetchval("SELECT defaultrole FROM guilds WHERE id = $1", guild_id)
 
@@ -178,7 +178,7 @@ class CheckUtils:
         else:
             return return_bool
 
-    async def is_guild_initialized(self, guild_id: int):
+    async def is_guild_initialized(self, guild_id: int) -> bool:
         """Returns true if the guild has an entry in the bot's database."""
         return_bool = await self.bot.db.fetchval("SELECT id FROM guilds WHERE id = $1", guild_id)
 
@@ -186,3 +186,13 @@ class CheckUtils:
             return False
         else:
             return True
+
+    async def is_channel_excluded(self, guild_id: int, channel_id: int) -> bool:
+        """Returns true if the channel is excluded from logging. This is used for the Starboard too."""
+        excluded_channels = await self.bot.db.fetchval("SELECT logging_excluded FROM guilds WHERE id = $1"
+                                                       , guild_id)
+
+        if excluded_channels is not None:
+            return channel_id in excluded_channels
+        else:
+            return False
