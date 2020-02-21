@@ -58,7 +58,8 @@ class Starboard(commands.Cog):
             return False
 
     @staticmethod
-    def group_starred_messages_by_day(starred_messages: typing.List[asyncpg.Record]) -> typing.List[typing.List[asyncpg.Record]]:
+    def group_starred_messages_by_day(starred_messages: typing.List[asyncpg.Record]) -> typing.List[
+        typing.List[asyncpg.Record]]:
         """Groups a list of records of starboard_entries by the message_creation_date row."""
 
         def get_date(item):
@@ -153,7 +154,7 @@ class Starboard(commands.Cog):
         start_of_last_week = today - datetime.timedelta(days=7)
 
         post_content = await self.get_reddit_post_content(grouped_stars)
-        title = f"Weekly Discord News from {start_of_last_week.strftime('%B %d')} to {today.strftime('%B %d')}"
+        title = f"Weekly Discord News - {start_of_last_week.strftime('%B %d')} to {today.strftime('%B %d')}"
 
         data = {
             "kind": "self",
@@ -243,6 +244,14 @@ class Starboard(commands.Cog):
 
         # Do this check here instead of in verify_reaction() to not waste a possibly useless API call
         if payload.user_id == message.author.id:
+            return
+
+        max_age = datetime.datetime.utcnow() - datetime.timedelta(days=config.STARBOARD_MAX_AGE)
+
+        if message.created_at < max_age:
+            return
+
+        if (not message.content and len(message.attachments) == 0) or message.type is not discord.MessageType.default:
             return
 
         starrer = self.bot.democraciv_guild_object.get_member(payload.user_id)

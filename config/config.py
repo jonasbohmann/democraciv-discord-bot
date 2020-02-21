@@ -17,6 +17,7 @@ STARBOARD_ENABLED = True
 STARBOARD_CHANNEL = 639549494693724170  # The Discord channel for the starboard
 STARBOARD_REDDIT_SUMMARY_ENABLED = True  # Toggle weekly posts to r/REDDIT_SUBREDDIT with last week's starboard
 STARBOARD_MIN_STARS = 4  # How many star reactions does a message need to be added to the starboard
+STARBOARD_MAX_AGE = 7  # Messages older than 7 days won't be allowed into the starboard
 STARBOARD_STAR_EMOJI = "\U00002b50"
 
 # Database Configuration
