@@ -4,9 +4,9 @@ import asyncio
 
 import util.exceptions as exceptions
 
+from util import mk
 from discord.ext import tasks
 from config import config, token, links
-from util import mk
 
 
 class Twitch:
@@ -22,7 +22,7 @@ class Twitch:
         self.twitch_API_url = "https://api.twitch.tv/helix/streams?user_login=" + self.streamer
         self.twitch_API_token = token.TWITCH_API_KEY
 
-        if self.twitch_API_token != "" and self.twitch_API_token is not None:
+        if self.twitch_API_token:
             self.twitch_task.start()
 
     def __del__(self):
@@ -60,11 +60,13 @@ class Twitch:
         try:
             channel = self.bot.democraciv_guild_object.get_channel(config.TWITCH_ANNOUNCEMENT_CHANNEL)
         except AttributeError:
-            print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
-                  f'in the config to a server I am in or disable Twitch announcements.')
+            print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "DEMOCRACIV_GUILD_ID" '
+                  f'in the config.py to a server I am in or disable Twitch announcements.')
             raise exceptions.GuildNotFoundError(config.DEMOCRACIV_GUILD_ID)
 
         if channel is None:
+            print("[BOT] ERROR - The TWITCH_ANNOUNCEMENT_CHANNEL id in config.py is not a channel on the"
+                  " specified Democraciv guild.")
             raise exceptions.ChannelNotFoundError(config.TWITCH_ANNOUNCEMENT_CHANNEL)
 
         twitch_data = await self.check_twitch_livestream()

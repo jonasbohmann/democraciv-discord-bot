@@ -13,7 +13,9 @@ class Reddit:
     def __init__(self, bot):
         self.bot = bot
         self.subreddit = config.REDDIT_SUBREDDIT
-        self.reddit_task.start()
+
+        if self.subreddit and config.REDDIT_ANNOUNCEMENT_CHANNEL:
+            self.reddit_task.start()
 
     def __del__(self):
         self.reddit_task.cancel()
@@ -31,13 +33,14 @@ class Reddit:
 
         try:
             channel = self.bot.democraciv_guild_object.get_channel(config.REDDIT_ANNOUNCEMENT_CHANNEL)
-
         except AttributeError:
-            print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
-                  f'in the config to a server I am in or disable Twitch announcements.')
+            print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "DEMOCRACIV_GUILD_ID" '
+                  f'in config.py to a server I am in or disable Reddit announcements.')
             raise exceptions.GuildNotFoundError(config.DEMOCRACIV_GUILD_ID)
 
         if channel is None:
+            print("[BOT] ERROR - The REDDIT_ANNOUNCEMENT_CHANNEL id in config.py is not a channel on the"
+                  " specified Democraciv guild.")
             raise exceptions.ChannelNotFoundError(config.REDDIT_ANNOUNCEMENT_CHANNEL)
 
         reddit_post_json = await self.get_newest_reddit_post()

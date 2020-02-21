@@ -80,11 +80,13 @@ class YouTube:
             discord_channel = self.bot.democraciv_guild_object.get_channel(config.YOUTUBE_ANNOUNCEMENT_CHANNEL)
 
         except AttributeError:
-            print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
-                  f'in the config to a server I am in or disable YouTube announcements.')
+            print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "DEMOCRACIV_GUILD_ID" '
+                  f'in the config to a server I am in or disable YouTube Stream announcements.')
             raise exceptions.GuildNotFoundError(config.DEMOCRACIV_GUILD_ID)
 
         if discord_channel is None:
+            print("[BOT] ERROR - The YOUTUBE_ANNOUNCEMENT_CHANNEL id in config.py is not a channel on the"
+                  " specified Democraciv guild.")
             raise exceptions.ChannelNotFoundError(config.YOUTUBE_ANNOUNCEMENT_CHANNEL)
 
         stream_data = await self.get_live_broadcast()
@@ -130,13 +132,14 @@ class YouTube:
 
         try:
             discord_channel = self.bot.democraciv_guild_object.get_channel(config.YOUTUBE_ANNOUNCEMENT_CHANNEL)
-
         except AttributeError:
-            print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "democracivServerID" '
-                  f'in the config to a server I am in or disable YouTube announcements.')
+            print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "DEMOCRACIV_GUILD_ID" '
+                  f'in the config to a server I am in or disable YouTube Upload announcements.')
             raise exceptions.GuildNotFoundError(config.DEMOCRACIV_GUILD_ID)
 
         if discord_channel is None:
+            print("[BOT] ERROR - The YOUTUBE_ANNOUNCEMENT_CHANNEL id in config.py is not a channel on the"
+                  " specified Democraciv guild.")
             raise exceptions.ChannelNotFoundError(config.YOUTUBE_ANNOUNCEMENT_CHANNEL)
 
         youtube_data = await self.get_newest_upload()

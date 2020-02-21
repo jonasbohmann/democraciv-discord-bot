@@ -23,7 +23,22 @@ class Starboard(commands.Cog):
         self.bearer_token = None
 
         if config.STARBOARD_ENABLED and config.STARBOARD_REDDIT_SUMMARY_ENABLED:
-            self.weekly_starboard_to_reddit_task.start()
+            if not config.REDDIT_SUBREDDIT:
+                print("[BOT] ERROR - Starboard Reddit post is enabled but no subreddit was provided in config.py!")
+            elif not token.REDDIT_CLIENT_ID:
+                print("[BOT] ERROR - Starboard Reddit post is enabled but no Reddit Client ID "
+                      "was provided in token.py!")
+            elif not token.REDDIT_CLIENT_SECRET:
+                print("[BOT] ERROR - Starboard Reddit post is enabled but no Reddit Client Secret was provided "
+                      "in token.py!")
+            elif not token.REDDIT_REFRESH_TOKEN:
+                print("[BOT] ERROR - Starboard Reddit post is enabled but no Reddit Refresh Token was provided"
+                      " in token.py!")
+            else:
+                self.weekly_starboard_to_reddit_task.start()
+
+    def __del__(self):
+        self.weekly_starboard_to_reddit_task.cancel()
 
     async def refresh_reddit_bearer_token(self):
         """Gets a new access_token for the Reddit API with a refresh token that was previously acquired by following
@@ -50,11 +65,11 @@ class Starboard(commands.Cog):
             async with self.bot.session.post("https://oauth.reddit.com/api/submit", data=data,
                                              headers=headers) as response:
                 if response.status != 200:
-                    print(f"[BOT] Error while posting Starboard to Reddit, got status {response.status}.")
+                    print(f"[BOT] ERROR - Error while posting Starboard to Reddit, got status {response.status}.")
                     return False
                 return True
         except Exception as e:
-            print(f"[BOT] Error while posting Starboard to Reddit: {e}")
+            print(f"[BOT] ERROR - Error while posting Starboard to Reddit: {e}")
             return False
 
     @staticmethod
