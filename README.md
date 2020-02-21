@@ -22,6 +22,7 @@ for new uploads and new live broadcasts from the Democraciv YouTube channel
 *  Search for active laws by name or by automatically generated tags
 *  Join and leave political parties and see their members and ranking
 *  Tags: Users can save text for later retrieval to command-like tags
+*  Starboard: A starboard on Discord _and_ weekly posts to r/Democraciv with last week's starboard as a sort of "summary" of newsworthy Discord messages to our subreddit
 *  Smart Wikipedia and Sid Meier's Civilization Wikia queries
 *  Welcome messages & default roles
 *  Self-assignable role management
@@ -40,6 +41,7 @@ to run the bot yourself as you might run into unexpected errors. Instead, invite
 After installing all the dependencies, create a `token.py` in the config folder.
 
 The file should look like this:
+
 ```
 # Token
 TOKEN = ""
@@ -47,6 +49,10 @@ TWITCH_API_KEY = ""
 TIMEZONEDB_API_KEY = ""
 YOUTUBE_DATA_V3_API_KEY = ""
 
+# Reddit
+REDDIT_CLIENT_ID = ""
+REDDIT_CLIENT_SECRET = ""
+REDDIT_REFRESH_TOKEN = ""
 
 # PostgreSQL config
 POSTGRESQL_USER = ""
@@ -54,6 +60,7 @@ POSTGRESQL_PASSWORD = ""
 POSTGRESQL_HOST = ""
 POSTGRESQL_DATABASE = ""
 ```
+
 Add the token of your Discord App, your Twitch Helix API key if you enabled the Twitch module, your API key for the 
 YouTube Data v3 API if you enabled YouTube notifications, your TimeZoneDB API Key, and your PostgreSQL configuration like above. 
 
@@ -75,18 +82,18 @@ and add it to the `token.py` in the config folder.
 
 You can configure everything else that is Twitch related in the `config.py`.
 
-If you do not want to use the Twitch announcements feature, you have to set `TWITCH_ENABLED` in the
-`config.py` to `False`.
 
 ####  Reddit 
 
 Notifications for new posts from a subreddit are enabled by default, but can be disabled in the `config.py`. Unlike the
 Twitch Notification module, we don't need to register an API key for Reddit.
 
+If you want to make the bot post the weekly Starboard to a subreddit, you do have to provide the client ID, client secret and 
+a **refresh token** (not application token!) of your reddit app. Follow this [guide](https://github.com/reddit-archive/reddit/wiki/OAuth2) on how to get these. 
+Make sure your refresh token has the `submit` scope.
+
 You can configure everything else that is Reddit related in the `config.py`.
 
-If you do not want to use the Reddit announcements feature, you have to set `REDDIT_ENABLED` in the
-`config.py` to `False`.
 
 ####  YouTube 
 
@@ -94,9 +101,6 @@ Notifications for new video uploads and livestreams from a YouTube channel are e
 an API key for the YouTube Data v3 API from Google. [This](https://developers.google.com/youtube/v3) has more information on how to get one.
 
 You can configure everything else that is YouTube related in the `config.py`.
-
-If you do not want to use the YouTube announcements feature, you have to set `YOUTUBE_ENABLED` in the
-`config.py` to `False`.
 
 
 ##  Modules
@@ -111,6 +115,7 @@ module.fun | Miscellaneous commands |
 module.help | Scaling `-help` command |
 module.guild | Configure various functions of this bot for your guild |
 module.roles | Add or remove roles from you |
+module.starboard | A Starboard for the Democraciv guild. If a message receives at least 4 ⭐ reactions, it will be added to the Starboard. |
 module.time | Get the current time in a number of different timezones |
 module.wiki | Search for a topic on Wikipedia and the Sid Meier's Civilization Fandom wiki |
 module.democraciv.legislature | Helps the Speaker of the Legislature with keeping track of submitted bills, motions and legislative sessions in general |
@@ -166,7 +171,7 @@ for database~~
 
 ####  Update 0.17.0 - The Suggestions Update 
 
-*  Starboard-like system for the #press channel with weekly summaries to Reddit
+*  ~~Starboard-like system for the #press channel with weekly summaries to Reddit~~
 *  Add motion support to -legislature withdraw
 *  Add utility mod commands to support the process between MKs
 *  Allow Speaker and Ministry to pass multiple bills in a single command
