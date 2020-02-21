@@ -65,6 +65,7 @@ class Log(commands.Cog):
                 embed_fields = {
                     "Author": [f"{before.author.mention} {before.author.name}#{before.author.discriminator}", False],
                     "Channel": [f"{before.channel.mention}", True],
+                    "Jump": [f"[Link]({before.jump_url})", True],
                     "Before": [f"{before.clean_content}", False],
                     "After": [f"{after.clean_content}", False]
                 }

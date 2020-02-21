@@ -10,30 +10,18 @@ class ErrorHandler(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def log_error(self, ctx, error, severe: bool = False, to_log_channel: bool = True, to_owner: bool = False,
+    async def log_error(self, ctx, error, to_log_channel: bool = True, to_owner: bool = False,
                         to_context: bool = False):
         if ctx.guild is None:
             return
 
         log_channel = await utils.get_logging_channel(self.bot, ctx.guild)
 
-        embed = self.bot.embeds.embed_builder(title=':x: Command Error', description="", time_stamp=True)
+        embed = self.bot.embeds.embed_builder(title=':x:  Command Error', description="", time_stamp=True)
 
-        # Get the name of the error
-        embed.add_field(name='Error', value=error.__class__.__name__, inline=False)
-
-        # If the error has its own error message, add it to the embed
-        try:
-            embed.add_field(name='Error Message', value=error.message, inline=False)
-        except AttributeError:
-            pass
-
+        embed.add_field(name='Error', value=f"{error.__class__.__name__}: {error}", inline=False)
         embed.add_field(name='Channel', value=ctx.channel.mention, inline=True)
-        embed.add_field(name='User', value=ctx.author.name, inline=True)
-
-        if severe:
-            embed.add_field(name='Severe', value='Yes', inline=True)
-
+        embed.add_field(name='Context', value=f"[Jump]({ctx.message.jump_url})", inline=True)
         embed.add_field(name='Caused by', value=ctx.message.clean_content, inline=False)
 
         if to_log_channel:
@@ -49,9 +37,9 @@ class ErrorHandler(commands.Cog):
                                                                     f"\n\n```{error.__class__.__name__}:"
                                                                     f" {error}```", has_footer=False)
             await ctx.send(embed=local_embed)
+
         if to_owner:
-            embed.add_field(name='Guild', value=ctx.guild.name)
-            embed.add_field(name='Error Details', value=f"{error.__class__.__name__}: {error}")
+            embed.add_field(name='Guild', value=ctx.guild.name, inline=False)
             await self.bot.owner.send(embed=embed)
 
     @staticmethod
@@ -158,17 +146,17 @@ class ErrorHandler(commands.Cog):
                                   f"{self.format_roles(error.missing_roles)}")
 
         elif isinstance(error, commands.BotMissingPermissions):
-            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
             return await ctx.send(f":x: I don't have '{self.format_permissions(error.missing_perms)}' permission(s)"
                                   f" to perform this action for you.")
 
         elif isinstance(error, commands.BotMissingRole):
-            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
             return await ctx.send(f":x: I need the '{error.missing_role}' role in order to perform this"
                                   f" action for you.")
 
         elif isinstance(error, commands.BotMissingAnyRole):
-            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
             return await ctx.send(f":x: I need at least one of these roles in order to perform this action for you: "
                                   f"{self.format_roles(error.missing_roles)}")
 
@@ -180,14 +168,14 @@ class ErrorHandler(commands.Cog):
 
         # This includes all exceptions declared in util.exceptions.py
         elif isinstance(error, exceptions.DemocracivBotException):
-            await self.log_error(ctx, error, severe=False, to_log_channel=True, to_owner=False)
+            await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
             return await ctx.send(error.message)
 
         elif isinstance(error, exceptions.AddTagCheckError):
             return await ctx.send(error.message)
 
         else:
-            await self.log_error(ctx, error, severe=True, to_log_channel=False, to_owner=True, to_context=True)
+            await self.log_error(ctx, error, to_log_channel=False, to_owner=True, to_context=True)
 
         print(f"[BOT] {error}")
 
