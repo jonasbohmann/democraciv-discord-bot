@@ -160,7 +160,8 @@ class Log(commands.Cog):
             "ID": [f"{member.id}", False]
         }
 
-        await self.log_event(member.guild, ':tada:  Member Joined', embed_fields, thumbnail=member.avatar_url,
+        await self.log_event(member.guild, ':tada:  Member Joined', embed_fields,
+                             thumbnail=member.avatar_url_as(static_format="png"),
                              to_owner=False)
 
     @commands.Cog.listener()
@@ -172,7 +173,8 @@ class Log(commands.Cog):
             "Name": [f"{member.name} #{member.discriminator}", True]
         }
 
-        await self.log_event(member.guild, ':no_pedestrians:  Member Left', embed_fields, thumbnail=member.avatar_url,
+        await self.log_event(member.guild, ':no_pedestrians:  Member Left', embed_fields,
+                             thumbnail=member.avatar_url_as(static_format="png"),
                              to_owner=False)
 
     @commands.Cog.listener()
@@ -189,7 +191,7 @@ class Log(commands.Cog):
             }
 
             await self.log_event(before.guild, ':arrows_counterclockwise:  Nickname Changed', embed_fields,
-                                 thumbnail=before.avatar_url, to_owner=False)
+                                 thumbnail=before.avatar_url_as(static_format="png"), to_owner=False)
 
         if before.roles != after.roles:
 
@@ -204,7 +206,7 @@ class Log(commands.Cog):
                 }
 
                 await self.log_event(before.guild, ':sunglasses:  Role given to Member', embed_fields,
-                                     thumbnail=before.avatar_url, to_owner=False)
+                                     thumbnail=before.avatar_url_as(static_format="png"), to_owner=False)
 
             if len(before.roles) > len(after.roles):
                 for x in before.roles:
@@ -217,7 +219,7 @@ class Log(commands.Cog):
                 }
 
                 await self.log_event(before.guild, ':zipper_mouth:  Role removed from Member', embed_fields,
-                                     thumbnail=before.avatar_url, to_owner=False)
+                                     thumbnail=before.avatar_url_as(static_format="png"), to_owner=False)
 
             else:
                 return
@@ -231,7 +233,8 @@ class Log(commands.Cog):
             "Name": [f"{user.name} #{user.discriminator}", True]
         }
 
-        await self.log_event(guild, ':no_entry:  Member Banned', embed_fields, thumbnail=user.avatar_url,
+        await self.log_event(guild, ':no_entry:  Member Banned', embed_fields,
+                             thumbnail=user.avatar_url_as(static_format="png"),
                              to_owner=True)
 
     @commands.Cog.listener()
@@ -243,7 +246,8 @@ class Log(commands.Cog):
             "Name": [f"{user.name} #{user.discriminator}", True]
         }
 
-        await self.log_event(guild, ':dove:  Member Unbanned', embed_fields, thumbnail=user.avatar_url,
+        await self.log_event(guild, ':dove:  Member Unbanned', embed_fields,
+                             thumbnail=user.avatar_url_as(static_format="png"),
                              to_owner=True)
 
     # -- Guild Events --

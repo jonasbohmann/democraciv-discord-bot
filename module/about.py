@@ -29,7 +29,7 @@ class About(commands.Cog):
         embed.add_field(name="Source Code", value="[Link](https://github.com/jonasbohmann/democraciv-discord-bot)",
                         inline=True)
         embed.add_field(name='Commands', value='See ' + config.BOT_PREFIX + 'help', inline=False)
-        embed.set_thumbnail(url=self.bot.owner.avatar_url)
+        embed.set_thumbnail(url=self.bot.owner.avatar_url_as(static_format="png"))
         await ctx.send(embed=embed)
 
     @commands.command(name='uptime')

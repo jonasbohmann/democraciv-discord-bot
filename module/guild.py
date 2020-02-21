@@ -598,7 +598,7 @@ class Guild(commands.Cog):
             member = self.bot.get_user(tag['author'])
             if member is not None:
                 embed.add_field(name="Author", value=member.mention, inline=False)
-                embed.set_thumbnail(url=member.avatar_url)
+                embed.set_thumbnail(url=member.avatar_url_as(static_format="png"))
 
         embed.add_field(name="Global Tag", value=str(tag['global']), inline=True)
         embed.add_field(name="Emoji or Media Tag", value=str(self.is_emoji_or_media_url(tag['content'])),

@@ -90,7 +90,7 @@ class Fun(commands.Cog):
         embed.add_field(name='Join Position', value=await self.get_member_join_position(member, ctx.guild.members)
                         , inline=True)
         embed.add_field(name='Roles', value=_get_roles(member.roles), inline=False)
-        embed.set_thumbnail(url=member.avatar_url)
+        embed.set_thumbnail(url=member.avatar_url_as(static_format="png"))
         await ctx.send(embed=embed)
 
     @commands.command(name='avatar')

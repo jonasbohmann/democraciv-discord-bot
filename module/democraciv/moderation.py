@@ -35,7 +35,7 @@ class Moderation(commands.Cog):
             # If the account is new, check if the they bothered to change the default avatar
             is_alt_chance += 0.1
             factor_details += "Less than 48 hours since registration (+10%)\n"
-            if member.avatar_url in default_avatars:
+            if str(member.avatar_url_as(static_format="png")) in default_avatars:
                 is_alt_chance += 0.65
                 factor_details += "Default avatar (+65%)\n"
             if hours_since <= 24:
