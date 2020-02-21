@@ -127,12 +127,14 @@ CREATE TABLE IF NOT EXISTS starboard_entries(
     id serial PRIMARY KEY,
     author_id bigint,
     message_id bigint UNIQUE,
+    message_jump_url text,
     message_content text,
     channel_id bigint,
     guild_id bigint,
     message_creation_date timestamp,
     is_posted_to_reddit bool DEFAULT false,
-    starboard_message_id bigint UNIQUE
+    starboard_message_id bigint UNIQUE,
+    starboard_message_created_at timestamp
 );
 
 CREATE TABLE IF NOT EXISTS starboard_starrers(
