@@ -14,14 +14,13 @@ class YouTube:
         self.youtube_channel = config.YOUTUBE_CHANNEL_ID
         self.api_key = token.YOUTUBE_DATA_V3_API_KEY
         self.header = {'Accept': 'application/json'}
-
         self.playlist_url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet" \
                             f"&maxResults=3&playlistId={config.YOUTUBE_CHANNEL_UPLOADS_PLAYLIST}" \
                             f"&key={self.api_key}"
         self.stream_url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&channelId={self.youtube_channel}"\
                           f"&type=video&eventType=live&maxResults=1&key={self.api_key}"
 
-        if self.api_key != "" and self.api_key is not None:
+        if self.api_key:
             if config.YOUTUBE_VIDEO_UPLOADS_ENABLED:
                 self.youtube_upload_tasks.start()
             if config.YOUTUBE_LIVESTREAM_ENABLED:
