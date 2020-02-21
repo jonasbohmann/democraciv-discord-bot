@@ -1,22 +1,15 @@
-import enum
 import typing
 import aiohttp
 import asyncpg
 import discord
+import asyncio
 import datetime
+import itertools
 
 from config import config, token
 from discord.ext import commands, tasks
 
-
-class Weekday(enum.Enum):
-    MONDAY = 1
-    TUESDAY = 2
-    WEDNESDAY = 3
-    THURSDAY = 4
-    FRIDAY = 5
-    SATURDAY = 6
-    SUNDAY = 7
+from util import mk
 
 
 class Starboard(commands.Cog):
@@ -28,8 +21,9 @@ class Starboard(commands.Cog):
         self.star_emoji = config.STARBOARD_STAR_EMOJI
         self.star_threshold = config.STARBOARD_MIN_STARS
         self.bearer_token = None
-        self.first_run = True
-        self.weekly_starboard_to_reddit_task.start()
+
+        if config.STARBOARD_ENABLED and config.STARBOARD_REDDIT_SUMMARY_ENABLED:
+            self.weekly_starboard_to_reddit_task.start()
 
     async def refresh_reddit_bearer_token(self):
         """Gets a new access_token for the Reddit API with a refresh token that was previously acquired by following
@@ -47,7 +41,7 @@ class Starboard(commands.Cog):
     async def post_to_reddit(self, data: dict) -> bool:
         """Submits weekly starboard to r/Democraciv"""
 
-        # await self.refresh_reddit_bearer_token()
+        await self.refresh_reddit_bearer_token()
 
         headers = {"Authorization": f"bearer {self.bearer_token}",
                    "User-Agent": "democraciv-discord-bot 0.17.0 by DerJonas - u/Jovanos"}
@@ -63,94 +57,126 @@ class Starboard(commands.Cog):
             print(f"[BOT] Error while posting Starboard to Reddit: {e}")
             return False
 
+    @staticmethod
+    def group_starred_messages_by_day(starred_messages: typing.List[asyncpg.Record]) -> typing.List[typing.List[asyncpg.Record]]:
+        """Groups a list of records of starboard_entries by the message_creation_date row."""
+
+        def get_date(item):
+            date_identifier = f"{item['message_creation_date'].year}" \
+                              f"{item['message_creation_date'].month}" \
+                              f"{item['message_creation_date'].day}"
+            return int(date_identifier)
+
+        groups = []
+
+        for k, g in itertools.groupby(starred_messages, get_date):
+            groups.append(list(g))
+
+        return groups
+
     async def get_starred_from_last_week(self) -> typing.List[asyncpg.Record]:
-        """Returns all rows from starboard_entries that are from last week and have enough stars"""
+        """Returns all rows from starboard_entries that are from last week and have enough stars."""
 
         today = datetime.datetime.utcnow().today()
         start_of_last_week = today - datetime.timedelta(days=7)
 
-        # TODO - Merge this query with the query in the loop
         starred_messages = await self.bot.db.fetch("SELECT * FROM starboard_entries "
                                                    "WHERE starboard_message_created_at >= $1 "
                                                    "AND starboard_message_created_at < $2 "
                                                    "AND is_posted_to_reddit = FALSE "
-                                                   "ORDER BY starboard_message_created_at",
+                                                   "ORDER BY message_creation_date",
                                                    start_of_last_week, today)
 
         return starred_messages
 
-    #def sort_starred_by_weekday(self, starred_messages: typing.List[asyncpg.Record]) -> typing.Dict[
-    #    Weekday, typing.List[asyncpg.Record]]:
-    #    sorted = {Weekday.MONDAY: [], Weekday.TUESDAY: [], Weekday.WEDNESDAY: [],
-    #              Weekday.THURSDAY: [], Weekday.FRIDAY: [],
-    #              Weekday.SATURDAY: [], Weekday.SUNDAY: []}
-    #
-    #   for record in starred_messages:
-    #        day = record['message_creation_date'].day
-    #       print(day)
-    #
-    #       return sorted
+    async def get_reddit_post_content(self, starred_messages: typing.List[typing.List[asyncpg.Record]]) -> str:
+        """Formats the starred messages that are about to be posted to Reddit into raw markdown."""
 
-    async def get_reddit_post_content(self, starred_messages: typing.List[asyncpg.Record]) -> str:
         intro = """ **This is a list of messages from our [Discord](https://discord.gg/AK7dYMG) that at least 4
-         people marked as newsworthy.\n\n** Should there be messages that break the content policy of Reddit or are 
+         people marked as newsworthy.**\n\nShould there be messages that break the content policy of Reddit or are 
          against the rules of this subreddit, then please contact the Moderators.\n\nIf you don't want your Discord 
-         messages being shown here, contact the Moderators.\n\n --- """
+         messages being shown here, contact the Moderators.\n\n&nbsp;\n\n"""
 
         markdown = [intro]
 
-        for record in starred_messages:
-            author = self.bot.get_user(record['author_id'])
-            author = f"{author.display_name} ({str(author)})" if author is not None else "_Author left Democraciv_"
-            channel = self.bot.democraciv_guild_object.get_channel(record['channel_id'])
-            channel = f"#{channel.name}" if channel is not None else "_channel was deleted_"
-            pretty_time = record['message_creation_date'].strftime("%H:%M")
+        for group in starred_messages:
+            title = group[0]['message_creation_date'].strftime("##%A, %B %d")
+            markdown.append(title)
 
-            markdown.append(f"{author} said in {channel} at {pretty_time} UTC:\n> {record['message_content']}")
+            for record in group:
+                author = self.bot.democraciv_guild_object.get_member(record['author_id'])
+                author = f"**{author.display_name}** ({str(author)})" if author is not None else "_Author left " \
+                                                                                                 "Democraciv_ "
 
-        outro = """---\n\n *I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) and this is 
+                channel = self.bot.democraciv_guild_object.get_channel(record['channel_id'])
+                channel = f"**#{channel.name}**" if channel is not None else "_channel was deleted_"
+
+                pretty_time = record['message_creation_date'].strftime("%H:%M")
+
+                quote = [f"> {line}" for line in record['message_content'].splitlines()]
+
+                if record['message_image_url']:
+                    quote.append(f"> [Attached Image]({record['message_image_url']})")
+
+                content = '\n'.join(quote)
+
+                markdown.append(f"{author} [said]({record['message_jump_url']}) in "
+                                f"{channel} at {pretty_time} UTC:\n{content}\n\n---\n\n")
+
+            markdown.append("\n\n&nbsp;\n\n")
+
+        outro = """\n\n &nbsp; \n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) and this is 
         an automated service. Contact u/Jovanos (DerJonas#8109 on Discord) for further questions or bug reports.* """
         markdown.append(outro)
 
         return "\n\n".join(markdown)
 
-    @tasks.loop(seconds=60)
+    @tasks.loop(hours=12)
     async def weekly_starboard_to_reddit_task(self):
         """If today is Monday, post all entries of last week's starboard to r/Democraciv"""
 
-        if self.first_run:
-            self.first_run = False
+        if datetime.datetime.utcnow().weekday() != 0:
             return
 
-        now = datetime.datetime.utcnow().weekday()
+        new_starred_messages = await self.get_starred_from_last_week()
 
-        if now != 4:
+        if not new_starred_messages:
             return
 
-        print("[BOT] Posting last week's starboard to Reddit...")
-        #sorted = self.sort_starred_by_weekday(await self.get_starred_from_last_week())
+        grouped_stars = self.group_starred_messages_by_day(new_starred_messages)
 
-        post_content = await self.get_reddit_post_content(await self.get_starred_from_last_week())
-        title = "Starboard for Week X"
-        subreddit = "dcivcss"
+        msg = "[BOT] Posting last week's starboard to Reddit..."
+        await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(msg)
+        print(msg)
+
+        today = datetime.datetime.utcnow().today()
+        start_of_last_week = today - datetime.timedelta(days=7)
+
+        post_content = await self.get_reddit_post_content(grouped_stars)
+        title = f"Weekly Discord News from {start_of_last_week.strftime('%B %d')} to {today.strftime('%B %d')}"
 
         data = {
             "kind": "self",
             "nsfw": False,
-            "sr": subreddit,
+            "sr": config.REDDIT_SUBREDDIT,
             "title": title,
             "text": post_content,
             "spoiler": False,
-            "ad": False,
-            "flair-text": "Weekly Starboard"
+            "ad": False
         }
 
         if await self.post_to_reddit(data):
-            today = datetime.datetime.utcnow().today()
-            start_of_last_week = today - datetime.timedelta(days=7)
             await self.bot.db.execute("UPDATE starboard_entries SET is_posted_to_reddit = true "
                                       "WHERE starboard_message_created_at >= $1 AND starboard_message_created_at < $2",
                                       start_of_last_week, today)
+
+    @weekly_starboard_to_reddit_task.before_loop
+    async def before_starboard_task(self):
+        await self.bot.wait_until_ready()
+
+        # Delay first run of task until Democraciv Guild has been found
+        if self.bot.democraciv_guild_object is None:
+            await asyncio.sleep(5)
 
     @property
     def starboard_channel(self) -> typing.Optional[discord.TextChannel]:
@@ -165,6 +191,7 @@ class Starboard(commands.Cog):
                                               colour=0xFFAC33, has_footer=False)
         embed.set_footer(text=footer_text, icon_url="https://cdn.discordapp.com/attachments/"
                                                     "639549494693724170/679824104190115911/star.png")
+        embed.timestamp = message.created_at
         embed.set_author(name=message.author.display_name, icon_url=message.author.avatar_url_as(format='png'))
         embed.add_field(name="Original", value=f"[Jump]({message.jump_url})", inline=False)
 
@@ -184,6 +211,9 @@ class Starboard(commands.Cog):
 
     async def verify_reaction(self, payload: discord.RawReactionActionEvent, channel: discord.abc.GuildChannel) -> bool:
         """Checks if a reaction in on_raw_reaction_add is valid for the Starboard"""
+
+        if not config.STARBOARD_ENABLED:
+            return False
 
         if str(payload.emoji) != self.star_emoji:
             return False
@@ -212,8 +242,8 @@ class Starboard(commands.Cog):
         message = await channel.fetch_message(payload.message_id)
 
         # Do this check here instead of in verify_reaction() to not waste a possibly useless API call
-        # if payload.user_id == message.author.id:
-        #    return False
+        if payload.user_id == message.author.id:
+            return
 
         starrer = self.bot.democraciv_guild_object.get_member(payload.user_id)
 
@@ -229,8 +259,8 @@ class Starboard(commands.Cog):
         message = await channel.fetch_message(payload.message_id)
 
         # Do this check here instead of in verify_reaction() to not waste a possibly useless API call
-        # if payload.user_id == message.author.id:
-        #    return False
+        if payload.user_id == message.author.id:
+            return
 
         starrer = self.bot.democraciv_guild_object.get_member(payload.user_id)
 
@@ -240,13 +270,25 @@ class Starboard(commands.Cog):
         """Star a message"""
 
         query = """INSERT INTO starboard_entries (author_id, message_id, message_content, channel_id, guild_id, 
-                   message_creation_date, message_jump_url) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                   message_creation_date, message_jump_url, message_image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                    ON CONFLICT DO NOTHING RETURNING id"""
+
+        image_url = None
+
+        if message.embeds:
+            data = message.embeds[0]
+            if data.type == 'image':
+                image_url = data.url
+
+        if message.attachments:
+            file = message.attachments[0]
+            if file.url.lower().endswith(('png', 'jpeg', 'jpg', 'gif', 'webp')):
+                image_url = file.url
 
         entry_id = await self.bot.db.fetchval(query,
                                               message.author.id, message.id, message.clean_content,
                                               message.channel.id, message.guild.id, message.created_at,
-                                              message.jump_url)
+                                              message.jump_url, image_url)
 
         if entry_id is None:
             entry_id = await self.bot.db.fetchval("SELECT id FROM starboard_entries WHERE message_id = $1", message.id)

@@ -21,7 +21,6 @@ class Twitch:
         self.streamer = config.TWITCH_CHANNEL
         self.twitch_API_url = "https://api.twitch.tv/helix/streams?user_login=" + self.streamer
         self.twitch_API_token = token.TWITCH_API_KEY
-        self.first_run = True
 
         if self.twitch_API_token != "" and self.twitch_API_token is not None:
             self.twitch_task.start()
@@ -57,10 +56,6 @@ class Twitch:
 
     @tasks.loop(seconds=30)
     async def twitch_task(self):
-
-        if self.first_run:
-            self.first_run = False
-            return
 
         try:
             channel = self.bot.democraciv_guild_object.get_channel(config.TWITCH_ANNOUNCEMENT_CHANNEL)
@@ -117,6 +112,10 @@ class Twitch:
     @twitch_task.before_loop
     async def before_twitch_task(self):
         await self.bot.wait_until_ready()
+
+        # Delay first run of task until Democraciv Guild has been found
+        if self.bot.democraciv_guild_object is None:
+            await asyncio.sleep(5)
 
     async def streaming_rules_reminder(self, stream_id):
         executive_channel = mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.EXECUTIVE_CHANNEL)

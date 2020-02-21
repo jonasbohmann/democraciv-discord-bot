@@ -1,4 +1,5 @@
 import html
+import asyncio
 import aiohttp
 
 import util.exceptions as exceptions
@@ -12,7 +13,6 @@ class Reddit:
     def __init__(self, bot):
         self.bot = bot
         self.subreddit = config.REDDIT_SUBREDDIT
-        self.first_run = True
         self.reddit_task.start()
 
     def __del__(self):
@@ -28,10 +28,6 @@ class Reddit:
 
     @tasks.loop(seconds=30)
     async def reddit_task(self):
-
-        if self.first_run:
-            self.first_run = False
-            return
 
         try:
             channel = self.bot.democraciv_guild_object.get_channel(config.REDDIT_ANNOUNCEMENT_CHANNEL)
@@ -86,3 +82,7 @@ class Reddit:
     @reddit_task.before_loop
     async def before_reddit_task(self):
         await self.bot.wait_until_ready()
+
+        # Delay first run of task until Democraciv Guild has been found
+        if self.bot.democraciv_guild_object is None:
+            await asyncio.sleep(5)

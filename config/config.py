@@ -4,7 +4,7 @@
 # Bot Configuration
 BOT_NAME = 'Democraciv Bot'
 BOT_PREFIX = '-'
-BOT_COMMAND_COOLDOWN = 2.0  # seconds
+BOT_COMMAND_COOLDOWN = 2.0  # In seconds
 BOT_DESCRIPTION = 'Discord Bot for the r/Democraciv community.'
 BOT_VERSION = '0.16.2'
 BOT_ICON_URL = 'https://cdn.discordapp.com/attachments/585502938571604056/586310405618532362/final_pride2.png'
@@ -14,9 +14,9 @@ DEMOCRACIV_GUILD_ID = 208984105310879744  # Democraciv
 
 # Starboard Configuration
 STARBOARD_ENABLED = True
-STARBOARD_CHANNEL = 639549494693724170
-STARBOARD_REDDIT_SUMMARY_ENABLED = True
-STARBOARD_MIN_STARS = 1
+STARBOARD_CHANNEL = 639549494693724170  # The Discord channel for the starboard
+STARBOARD_REDDIT_SUMMARY_ENABLED = True  # Toggle weekly posts to r/REDDIT_SUBREDDIT with last week's starboard
+STARBOARD_MIN_STARS = 4  # How many star reactions does a message need to be added to the starboard
 STARBOARD_STAR_EMOJI = "\U00002b50"
 
 # Database Configuration
@@ -25,7 +25,7 @@ DATABASE_DAILY_BACKUP_DISCORD_CHANNEL = 656214962854821928
 
 # Reddit Notifications
 REDDIT_ENABLED = True
-REDDIT_SUBREDDIT = 'democraciv'
+REDDIT_SUBREDDIT = 'democraciv'  # This will also be used for Starboard subreddit
 REDDIT_ANNOUNCEMENT_CHANNEL = 330162836095631360  # The Discord Channel in which the bot will post Reddit notifications
 
 # Twitch Notifications

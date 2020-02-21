@@ -21,7 +21,6 @@ from event.youtube import YouTube
 from util.law_helper import LawUtils
 from util.utils import CheckUtils, EmbedUtils
 
-
 logging.basicConfig(level=logging.INFO)
 
 # List of cogs that will be loaded on startup
@@ -179,12 +178,12 @@ class DemocracivBot(commands.Bot):
         print(f"[BOT] Logged in as {self.user.name} with discord.py {discord.__version__}")
         print("------------------------------------------------------------")
 
-        await asyncio.sleep(1)
-
         # The bot needs a "main" guild object that will be used for reddit & twitch notifications, political parties and
         # admin commands. The bot will automatically pick the first guild that it can see if 'democracivServerID' from
         # config.py is invalid
         self.initialize_democraciv_guild()
+
+        await asyncio.sleep(1)
 
         self.owner = (await self.application_info()).owner
         self.owner_id = self.owner.id

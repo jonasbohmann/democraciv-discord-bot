@@ -1,3 +1,5 @@
+import asyncio
+
 import aiohttp
 
 from util import exceptions
@@ -18,8 +20,6 @@ class YouTube:
                             f"&key={self.api_key}"
         self.stream_url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&channelId={self.youtube_channel}"\
                           f"&type=video&eventType=live&maxResults=1&key={self.api_key}"
-
-        self.first_run = True
 
         if self.api_key != "" and self.api_key is not None:
             if config.YOUTUBE_VIDEO_UPLOADS_ENABLED:
@@ -73,13 +73,8 @@ class YouTube:
     async def youtube_stream_task(self):
 
         # A standard Google API key has 10.000 units per day
-
-        # This task, with the minutes set to 10, costs approx. 14.832 units per day
-        # This task, with the minutes set to 15, costs approx. 9.888 units per day
-
-        if self.first_run:
-            self.first_run = False
-            return
+        #   This task, with the minutes set to 10, costs approx. 14.832 units per day
+        #   This task, with the minutes set to 15, costs approx. 9.888 units per day
 
         try:
             discord_channel = self.bot.democraciv_guild_object.get_channel(config.YOUTUBE_ANNOUNCEMENT_CHANNEL)
@@ -131,11 +126,7 @@ class YouTube:
     async def youtube_upload_tasks(self):
 
         # A standard Google API key has 10.000 units per day
-        # This task, with the minutes set to 10, costs approx. 2160 units per day
-
-        if self.first_run:
-            self.first_run = False
-            return
+        #   This task, with the minutes set to 10, costs approx. 2160 units per day
 
         try:
             discord_channel = self.bot.democraciv_guild_object.get_channel(config.YOUTUBE_ANNOUNCEMENT_CHANNEL)
@@ -186,6 +177,14 @@ class YouTube:
     async def before_upload_task(self):
         await self.bot.wait_until_ready()
 
+        # Delay first run of task until Democraciv Guild has been found
+        if self.bot.democraciv_guild_object is None:
+            await asyncio.sleep(5)
+
     @youtube_stream_task.before_loop
     async def before_stream_task(self):
         await self.bot.wait_until_ready()
+
+        # Delay first run of task until Democraciv Guild has been found
+        if self.bot.democraciv_guild_object is None:
+            await asyncio.sleep(5)

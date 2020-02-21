@@ -129,6 +129,7 @@ CREATE TABLE IF NOT EXISTS starboard_entries(
     message_id bigint UNIQUE,
     message_jump_url text,
     message_content text,
+    message_image_url text,
     channel_id bigint,
     guild_id bigint,
     message_creation_date timestamp,
