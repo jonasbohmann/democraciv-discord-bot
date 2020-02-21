@@ -4,13 +4,15 @@ import discord
 import util.utils as utils
 
 from config import config
+from util import mk
 from util.flow import Flow
 from discord.ext import commands
+
 from util.paginator import Pages
 
 
 class Tags(commands.Cog):
-    """Tags for later retrieval of text, images & links via the bot's prefix"""
+    """Create tags for later retrieval of text, images & links and access them with just the bot's prefix"""
 
     def __init__(self, bot):
         self.bot = bot
@@ -302,6 +304,67 @@ class Tags(commands.Cog):
         embed.add_field(name="Uses", value=str(tag['uses']), inline=False)
         embed.add_field(name="Aliases", value=pretty_aliases, inline=False)
         await ctx.send(embed=embed)
+
+    @tags.command(name="edit")
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    @utils.tag_check()
+    async def edittag(self, ctx, name: str):
+        """Edit one of your tags"""
+
+        flow = Flow(self.bot, ctx)
+
+        # Search for global tags first
+        tag = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND global = true",
+                                         name.lower())
+
+        if tag is None:
+            # If no global tag exists with that name, search for local tags
+            tag = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND guild_id = $2", name.lower(),
+                                             ctx.guild.id)
+            if tag is None:
+                return await ctx.send(f":x: This guild has no tag called `{name}`!")
+
+        if tag['author'] is not None:  # Handle tags before author column existed
+            if tag['author'] != ctx.author.id and not ctx.author.guild_permissions.administrator:
+                return await ctx.send(f":x: This isn't your tag!")
+
+        await ctx.send(":information_source: Reply with the updated content of the tag.")
+
+        new_content = await flow.get_text_input(300)
+
+        if new_content is None:
+            return
+
+        await self.bot.db.execute("UPDATE guild_tags SET content = $1 WHERE id = $2", new_content, tag['id'])
+        await ctx.send(":white_check_mark: Your tag was edited.")
+
+    @tags.command(name="toggleglobal")
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    @utils.is_democraciv_guild()
+    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    async def toggleglobal(self, ctx, name: str):
+        """Change a tag to be global/local"""
+
+        # Search for global tags first
+        tag = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND global = true",
+                                         name.lower())
+
+        if tag is None:
+            # Local -> Global
+            tag = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND guild_id = $2", name.lower(),
+                                             ctx.guild.id)
+            if tag is None:
+                return await ctx.send(f":x: There is no global or local tag named `{name}`!")
+
+            await self.bot.db.execute("UPDATE guild_tags SET global = true WHERE id = $1", tag['id'])
+            await ctx.send(f":white_check_mark: `{name}` is now a global tag. ")
+
+        else:
+            # Global -> Local
+            await self.bot.db.execute("UPDATE guild_tags SET global = false WHERE id = $1", tag['id'])
+            await ctx.send(f":white_check_mark: `{name}` is now a local tag.")
 
     @tags.command(name="remove", aliases=['delete'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
