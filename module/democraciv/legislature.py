@@ -391,7 +391,8 @@ class Legislature(commands.Cog):
         if str(reaction.emoji) == "\U0001f1e7":
 
             # Google Docs Link
-            await ctx.send(":information_source: Reply with the Google Docs link to the bill"
+            await ctx.send(":white_check_mark: You will submit a **bill**.\n"
+                           ":information_source: Reply with the Google Docs link to the bill"
                            " you want to submit.")
 
             google_docs_url = await flow.get_text_input(150)
@@ -404,8 +405,7 @@ class Legislature(commands.Cog):
                     ":x: That doesn't look like a Google Docs URL.")
 
             # Vetoable
-            veto_question = await ctx.send(":white_check_mark: You will submit a **bill**.\n"
-                                           ":information_source: Is the Ministry legally allowed to veto (or vote on) "
+            veto_question = await ctx.send(":information_source: Is the Ministry legally allowed to veto (or vote on) "
                                            "this bill?")
             reaction = await flow.get_yes_no_reaction_confirm(veto_question, 200)
 
@@ -429,7 +429,7 @@ class Legislature(commands.Cog):
 
                 if bill_title is None:
                     return await ctx.send(":x: Couldn't connect to Google Docs. Make sure that the document can be"
-                                          " read by everyone and that it's not a published version!")
+                                          " read by anyone and that it's not a published version!")
 
                 # -- Submit Bill --
                 new_id = await self.bot.laws.generate_new_bill_id()
