@@ -16,6 +16,7 @@ class Guild(commands.Cog):
 
     @commands.group(name='guild', case_insensitive=True, invoke_without_command=True)
     @commands.guild_only()
+    @commands.has_permissions(administrator=True)
     async def guild(self, ctx):
         """Configure various features of this bot for this guild"""
 
@@ -31,7 +32,6 @@ class Guild(commands.Cog):
         await ctx.send(embed=embed)
 
     @guild.command(name='welcome')
-    @commands.has_permissions(administrator=True)
     async def welcome(self, ctx):
         """Configure a welcome message that every new member will see once they join this guild"""
 
@@ -107,7 +107,6 @@ class Guild(commands.Cog):
                 await ctx.send(":white_check_mark: Disabled the welcome module.")
 
     @guild.command(name='logs')
-    @commands.has_permissions(administrator=True)
     async def logs(self, ctx):
         """Configure the logging module that logs every guild event to a specified channel"""
 
@@ -164,7 +163,6 @@ class Guild(commands.Cog):
                 await ctx.send(":white_check_mark: Disabled the logging module.")
 
     @guild.command(name='exclude')
-    @commands.has_permissions(administrator=True)
     async def exclude(self, ctx, channel: str = None):
         """
         Configure the channels that should be excluded from the logging module on this guild
@@ -238,7 +236,6 @@ class Guild(commands.Cog):
             return
 
     @guild.command(name='defaultrole')
-    @commands.has_permissions(administrator=True)
     async def defaultrole(self, ctx):
         """Configure a default role that every new member will get once they join this guild"""
 
