@@ -89,54 +89,6 @@ class Link(commands.Cog):
         embed = self.bot.embeds.embed_builder(title="Beginner's Guide", description=links.beginnersGuide)
         await ctx.send(embed=embed)
 
-    @commands.command(name='discord')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def discord(self, ctx):
-        """Get an active invite link to the Democraciv Discord guild"""
-        await ctx.send(links.discord)
-
-    @commands.command(name='archive')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def archive(self, ctx):
-        """Discover the Archives of r/Democraciv"""
-        embed = self.bot.embeds.embed_builder(title='Democraciv Archive', description=links.archive)
-        await ctx.send(embed=embed)
-
-    @commands.command(name='mk5')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def mk5(self, ctx):
-        """Archives of Democraciv MK5"""
-        embed = self.bot.embeds.embed_builder(title='Democraciv Archive - MK5', description=links.mk5)
-        await ctx.send(embed=embed)
-
-    @commands.command(name='mk4')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def mk4(self, ctx):
-        """Archives of Democraciv MK4"""
-        embed = self.bot.embeds.embed_builder(title='Democraciv Archive - MK4', description=links.mk4)
-        await ctx.send(embed=embed)
-
-    @commands.command(name='mk3')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def mk3(self, ctx):
-        """Archives of Democraciv MK3"""
-        embed = self.bot.embeds.embed_builder(title='Democraciv Archive - MK3', description=links.mk3)
-        await ctx.send(embed=embed)
-
-    @commands.command(name='mk2')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def mk2(self, ctx):
-        """Archives of Democraciv MK2"""
-        embed = self.bot.embeds.embed_builder(title='Democraciv Archive - MK2', description=links.mk2)
-        await ctx.send(embed=embed)
-
-    @commands.command(name='mk1')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def mk1(self, ctx):
-        """Archives of Democraciv MK1"""
-        embed = self.bot.embeds.embed_builder(title='Democraciv Archive - MK1', description=links.mk1)
-        await ctx.send(embed=embed)
-
     @commands.command(name='gamesessions', aliases=['gs'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def gamesessions(self, ctx):
@@ -152,22 +104,6 @@ class Link(commands.Cog):
         """Schedule for the next elections"""
         embed = self.bot.embeds.embed_builder(title='Schedule', description=links.schedule)
         await ctx.send(embed=embed)
-
-    # @commands.command(name='move')
-    # @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    # async def move(self, ctx):
-    #    """Change your city of residence"""
-    #    embed = self.bot.embeds.embed_builder(title='Change your City of Residency',
-    #                                          description=links.residencyForm'])
-    #    await ctx.send(embed=embed)
-
-    # @commands.command(name='residency')
-    # @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    # async def residency(self, ctx):
-    #    """See the current population of every city"""
-    #    embed = self.bot.embeds.embed_builder(title='Residency Spreadsheet',
-    #                                          description=links.residencyList'])
-    #    await ctx.send(embed=embed)
 
     @commands.command(name='sue')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -191,13 +127,6 @@ class Link(commands.Cog):
         embed = self.bot.embeds.embed_builder(title=f'The States of {mk.NATION_NAME}', description=links.states)
         await ctx.send(embed=embed)
 
-    @commands.command(name='turnout')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def turnout(self, ctx):
-        """Live turnout of the latest election"""
-        embed = self.bot.embeds.embed_builder(title='Live Election Turnout', description=links.turnout)
-        await ctx.send(embed=embed)
-
     @commands.command(name='docket', aliases=['d'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def docket(self, ctx):
@@ -214,44 +143,12 @@ class Link(commands.Cog):
                                               description=links.executiveworksheet)
         await ctx.send(embed=embed)
 
-    @commands.command(name='dgwiki', aliases=['rbwiki'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def dgwiki(self, ctx):
-        """Get a link to the (unofficial) dgwiki.tk"""
-        embed = self.bot.embeds.embed_builder(title='Unofficial Demogames Wiki',
-                                              description=links.dgwikitk)
-        await ctx.send(embed=embed)
-
-    @commands.command(name='cases')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def cases(self, ctx):
-        """See all Supreme Court cases"""
-        embed = self.bot.embeds.embed_builder(title=f'Cases of the Supreme Court of {mk.NATION_NAME}',
-                                              description=links.sccases)
-        await ctx.send(embed=embed)
-
     @commands.command(name='procedures', aliases=['procedure'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def legislativeprocedures(self, ctx):
         """The Legislative Procedures"""
         embed = self.bot.embeds.embed_builder(title=f'Procedures for the {mk.NATION_ADJECTIVE} Legislature',
                                               description=links.legislativeprocedures)
-        await ctx.send(embed=embed)
-
-    @commands.command(name='stvcalculator')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def stvcalculator(self, ctx):
-        """Source Code of our STV calculator"""
-        embed = self.bot.embeds.embed_builder(title='Source Code of our STV calculator',
-                                              description=links.stvcalcsource)
-        await ctx.send(embed=embed)
-
-    @commands.command(name='map')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def map(self, ctx):
-        """Interactive Democraciv Map"""
-        embed = self.bot.embeds.embed_builder(title='Interactive Map of our Continent',
-                                              description=links.dcivmap)
         await ctx.send(embed=embed)
 
     @commands.command(name='invite')
