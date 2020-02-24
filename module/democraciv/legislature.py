@@ -154,7 +154,7 @@ class Legislature(commands.Cog):
         except Exception:
             return await ctx.send(":x: Fatal database error.")
 
-        await ctx.send(f":white_check_mark: Session #{active_leg_session_id} is now in  **voting period**.")
+        await ctx.send(f":white_check_mark: Session #{active_leg_session_id} is now in **voting period**.")
 
         await mk.get_democraciv_channel(self.bot,
                                         mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(f"The voting period for "

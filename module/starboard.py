@@ -46,7 +46,7 @@ class Starboard(commands.Cog):
 
         auth = aiohttp.BasicAuth(login=token.REDDIT_CLIENT_ID, password=token.REDDIT_CLIENT_SECRET)
         post_data = {"grant_type": "refresh_token", "refresh_token": token.REDDIT_REFRESH_TOKEN}
-        headers = {"User-Agent": "democraciv-discord-bot 0.17.0 by DerJonas - u/Jovanos"}
+        headers = {"User-Agent": f"democraciv-discord-bot {config.BOT_VERSION} by DerJonas - u/Jovanos"}
 
         async with self.bot.session.post("https://www.reddit.com/api/v1/access_token",
                                          data=post_data, auth=auth, headers=headers) as response:
@@ -59,7 +59,7 @@ class Starboard(commands.Cog):
         await self.refresh_reddit_bearer_token()
 
         headers = {"Authorization": f"bearer {self.bearer_token}",
-                   "User-Agent": "democraciv-discord-bot 0.17.0 by DerJonas - u/Jovanos"}
+                   "User-Agent": f"democraciv-discord-bot {config.BOT_VERSION} by DerJonas - u/Jovanos"}
 
         try:
             async with self.bot.session.post("https://oauth.reddit.com/api/submit", data=data,
