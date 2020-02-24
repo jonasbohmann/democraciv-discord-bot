@@ -23,8 +23,9 @@ class Tags(commands.Cog):
     async def tags(self, ctx):
         """See all tags on this guild"""
 
-        global_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE global = true")
-        all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 AND global = false",
+        global_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE global = true ORDER BY uses")
+        all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 AND global = false"
+                                           " ORDER BY uses",
                                            ctx.guild.id)
 
         pretty_tags = []
@@ -134,7 +135,7 @@ class Tags(commands.Cog):
                     except Exception:
                         raise
 
-    async def resolve_tag_name(self, query: str, guild: discord.Guild):
+    async def resolve_tag_name(self, query: str, guild: discord.Guild, update_uses: bool = True):
         tag_id = await self.bot.db.fetchval("SELECT id FROM guild_tags WHERE global = true AND name = $1",
                                             query.lower())
 
@@ -148,7 +149,8 @@ class Tags(commands.Cog):
 
         tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1", tag_id)
 
-        await self.bot.db.execute("UPDATE guild_tags SET uses = uses + 1 WHERE id = $1", tag_id)
+        if update_uses:
+            await self.bot.db.execute("UPDATE guild_tags SET uses = uses + 1 WHERE id = $1", tag_id)
 
         return tag_details
 
@@ -275,15 +277,10 @@ class Tags(commands.Cog):
         """Info about a tag"""
 
         # Search for global tags first
-        tag = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND global = true",
-                                         name.lower())
+        tag = await self.resolve_tag_name(name, ctx.guild, update_uses=False)
 
         if tag is None:
-            # If no global tag exists with that name, search for local tags
-            tag = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND guild_id = $2", name.lower(),
-                                             ctx.guild.id)
-            if tag is None:
-                return await ctx.send(f":x: This guild has no tag called `{name}`!")
+            return await ctx.send(f":x: This guild has no tag called `{name}`!")
 
         aliases = await self.bot.db.fetch("SELECT alias FROM guild_tags_alias WHERE tag_id = $1 ", tag['id'])
 
