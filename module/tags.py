@@ -466,13 +466,23 @@ class Tags(commands.Cog):
         if message.author.bot:
             return
 
-        if message.guild is None:
-            return
-
         if (await self.bot.get_context(message)).valid:
             return
 
-        tag_details = await self.resolve_tag_name(message.content[len(config.BOT_PREFIX):], message.guild)
+        tag_name = message.content[len(config.BOT_PREFIX):]
+
+        if message.guild is None:
+            tag_id = await self.bot.db.fetchval(
+                "SELECT tag_id FROM guild_tags_alias WHERE global = true AND alias = $1",
+                tag_name.lower())
+
+            if tag_id is None:
+                return
+
+            tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1", tag_id)
+
+        else:
+            tag_details = await self.resolve_tag_name(tag_name, message.guild)
 
         if tag_details is None:
             return
