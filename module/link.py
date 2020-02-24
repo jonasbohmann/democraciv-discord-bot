@@ -44,8 +44,7 @@ class Link(commands.Cog):
         if not number:
             embed = self.bot.embeds.embed_builder(title=f'The Government of {mk.NATION_NAME}',
                                                   description=links.government)
-            await ctx.send(embed=embed)
-            return
+            return await ctx.send(embed=embed)
 
         if number == 1:
             ordinal = "First"
@@ -59,7 +58,6 @@ class Link(commands.Cog):
         embed = self.bot.embeds.embed_builder(title=f'{ordinal} Government of {mk.NATION_NAME}',
                                               description=f'{links.government}/{str(number)}')
         await ctx.send(embed=embed)
-        return
 
     @commands.command(name='gamesessions', aliases=['gs'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

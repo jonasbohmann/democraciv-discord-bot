@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS guild_tags(
     name text,
     title text,
     content text,
-    global bool,
+    global bool DEFAULT FALSE,
     author bigint,
     uses int DEFAULT 0,
     PRIMARY KEY (guild_id, id),
@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS guild_tags_alias(
     tag_id serial references guild_tags(id) ON DELETE CASCADE,
     guild_id bigint references guilds(id),
     alias text,
+    global bool DEFAULT FALSE,
     UNIQUE (guild_id, alias)
 );
 

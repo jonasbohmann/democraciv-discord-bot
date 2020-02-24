@@ -56,7 +56,7 @@ class GuildNotFoundError(DemocracivBotException):
         self.message = f":x: Couldn't find a guild named/with the ID `{name}` that I am in!"
 
 
-class AddTagCheckError(commands.CheckFailure):
+class TagCheckError(commands.CheckFailure):
     def __init__(self, message):
         self.message = message
 

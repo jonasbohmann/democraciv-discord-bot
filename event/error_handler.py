@@ -171,7 +171,7 @@ class ErrorHandler(commands.Cog):
             await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
             return await ctx.send(error.message)
 
-        elif isinstance(error, exceptions.AddTagCheckError):
+        elif isinstance(error, exceptions.TagCheckError):
             return await ctx.send(error.message)
 
         else:

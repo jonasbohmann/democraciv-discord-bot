@@ -67,7 +67,7 @@ def tag_check():
             if ctx.author.guild_permissions.administrator:
                 return True
             else:
-                raise exceptions.AddTagCheckError(message=":x: Only Administrators can add or "
+                raise exceptions.TagCheckError(message=":x: Only Administrators can add or "
                                                           "remove tags on this guild!")
         else:
             return True
