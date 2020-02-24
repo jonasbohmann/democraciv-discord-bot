@@ -23,9 +23,9 @@ class Tags(commands.Cog):
     async def tags(self, ctx):
         """See all tags on this guild"""
 
-        global_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE global = true ORDER BY uses")
+        global_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE global = true ORDER BY uses desc")
         all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 AND global = false"
-                                           " ORDER BY uses",
+                                           " ORDER BY uses desc",
                                            ctx.guild.id)
 
         pretty_tags = []
