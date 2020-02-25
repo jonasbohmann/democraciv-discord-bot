@@ -46,7 +46,7 @@ class Tags(commands.Cog):
             pretty_tags = ['There are no tags on this guild.']
 
         pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"All Tags in {ctx.guild.name}"
-                      , show_index=False, footer_text=config.BOT_NAME)
+                      , show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
         await pages.paginate()
 
     @tags.command(name="local")
@@ -67,7 +67,7 @@ class Tags(commands.Cog):
             pretty_tags = ['There are no local tags on this guild.']
 
         pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"Local Tags in {ctx.guild.name}"
-                      , show_index=False, footer_text=config.BOT_NAME)
+                      , show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
         await pages.paginate()
 
     @tags.command(name="addalias")
