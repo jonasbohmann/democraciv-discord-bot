@@ -108,10 +108,10 @@ You can add and remove modules by adding or removing them from `initial_extensio
 
 Module | Description 
 ------------ | ------------- |
-module.links | Collection of useful links for the game (Wiki, Constitution, political parties etc.) |
 module.about | Commands regarding the bot itself |
 module.admin | Re-, un- and load modules and the config |
 module.fun | Miscellaneous commands | 
+module.tags | Tags: Users can save text for later retrieval to command-like tags | 
 module.help | Scaling `-help` command |
 module.guild | Configure various functions of this bot for your guild |
 module.roles | Add or remove roles from you |

@@ -362,6 +362,13 @@ class Fun(commands.Cog):
         embed.set_image(url=image)
         await ctx.send(embed=embed)
 
+    @commands.command(name='invite')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def invite(self, ctx):
+        """Get an active invite link to this guild"""
+        invite = await ctx.channel.create_invite(max_age=0, unique=False)
+        await ctx.send(invite.url)
+
 
 def setup(bot):
     bot.add_cog(Fun(bot))
