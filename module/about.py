@@ -14,7 +14,7 @@ class About(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def about(self, ctx):
         """About this bot"""
-        invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
+        invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(2081418487))
 
         embed = self.bot.embeds.embed_builder(title='About This Bot', description=f"[Invite this bot to your"
                                                                                   f" Discord Guild.]({invite_url})")

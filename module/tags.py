@@ -74,7 +74,7 @@ class Tags(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
-    async def addtagalias(self, ctx, tag: str):
+    async def addtagalias(self, ctx, *, tag: str):
         """Add a new alias to a tag"""
 
         flow = Flow(self.bot, ctx)
@@ -124,7 +124,7 @@ class Tags(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
-    async def removetagalias(self, ctx, alias: str):
+    async def removetagalias(self, ctx, *, alias: str):
         """Remove an alias from a tag"""
 
         flow = Flow(self.bot, ctx)
@@ -299,7 +299,7 @@ class Tags(commands.Cog):
     @tags.command(name="info", aliases=['about'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def taginfo(self, ctx, tag: str):
+    async def taginfo(self, ctx, *, tag: str):
         """Info about a tag"""
 
         tag_details = await self.resolve_tag_name(tag, ctx.guild, update_uses=False)
@@ -331,7 +331,7 @@ class Tags(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @utils.tag_check()
-    async def edittag(self, ctx, tag: str):
+    async def edittag(self, ctx, *, tag: str):
         """Edit one of your tags"""
 
         flow = Flow(self.bot, ctx)
@@ -369,7 +369,7 @@ class Tags(commands.Cog):
     @commands.guild_only()
     @utils.is_democraciv_guild()
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
-    async def toggleglobal(self, ctx, tag: str):
+    async def toggleglobal(self, ctx, *, tag: str):
         """Change a tag to be global/local"""
 
         # Search for global tags first
@@ -397,7 +397,7 @@ class Tags(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @utils.tag_check()
-    async def removetag(self, ctx, tag: str):
+    async def removetag(self, ctx, *, tag: str):
         """Remove a tag"""
 
         flow = Flow(self.bot, ctx)
