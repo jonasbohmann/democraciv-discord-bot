@@ -1,3 +1,5 @@
+import traceback
+
 import util.utils as utils
 import util.exceptions as exceptions
 
@@ -40,6 +42,14 @@ class ErrorHandler(commands.Cog):
 
         if to_owner:
             embed.add_field(name='Guild', value=ctx.guild.name, inline=False)
+
+            pretty_traceback = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+
+            if len(pretty_traceback) <= 1024:
+                embed.add_field(name='Traceback', value=f'```py\n{pretty_traceback}```')
+            else:
+                self.bot.owner.send(embed=f'```py\n{pretty_traceback}```')
+
             await self.bot.owner.send(embed=embed)
 
     @staticmethod
@@ -177,7 +187,8 @@ class ErrorHandler(commands.Cog):
         else:
             await self.log_error(ctx, error, to_log_channel=False, to_owner=True, to_context=True)
 
-        print(f"[BOT] {error}")
+        print(f"[BOT] ERROR - Ignoring exception in command '{ctx.command}':")
+        traceback.print_exception(type(error), error, error.__traceback__)
 
 
 def setup(bot):

@@ -1,5 +1,6 @@
 import discord
 
+from util.help import PaginatedHelpCommand
 from config import config
 from discord.ext import commands
 
@@ -9,6 +10,16 @@ class About(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.old_help_command = bot.help_command
+        bot.help_command = PaginatedHelpCommand()
+        bot.help_command.cog = self
+
+    def cog_unload(self):
+        self.bot.help_command = self.old_help_command
+
+    async def cog_command_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            await ctx.send(error)
 
     @commands.command(name='about')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -24,53 +35,22 @@ class About(commands.Cog):
         embed.add_field(name='Guilds', value=str(len(self.bot.guilds)), inline=True)
         embed.add_field(name='Users', value=str(len(self.bot.users)), inline=True)
         embed.add_field(name='Prefix', value=config.BOT_PREFIX, inline=True)
-        embed.add_field(name='Uptime', value=self.bot.get_uptime(), inline=True)
-        embed.add_field(name='Ping', value=(str(self.bot.get_ping()) + 'ms'), inline=True)
+        embed.add_field(name='Uptime', value=self.bot.uptime, inline=True)
+        embed.add_field(name='Ping', value=(str(self.bot.ping) + 'ms'), inline=True)
         embed.add_field(name="Source Code", value="[Link](https://github.com/jonasbohmann/democraciv-discord-bot)",
                         inline=True)
         embed.add_field(name='Commands', value='See ' + config.BOT_PREFIX + 'help', inline=False)
         embed.set_thumbnail(url=self.bot.owner.avatar_url_as(static_format="png"))
         await ctx.send(embed=embed)
 
-    @commands.command(name='uptime')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def uptime(self, ctx):
-        """Check how long I've been working"""
-        embed = self.bot.embeds.embed_builder(title='Uptime', description=self.bot.get_uptime())
-        await ctx.send(embed=embed)
-
-    @commands.command(name='ping')
+    @commands.command(name='ping', aliases=['pong'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def ping(self, ctx):
         """Pong!"""
-        embed = self.bot.embeds.embed_builder(title='Ping', description=(str(self.bot.get_ping()) + 'ms'))
+        embed = self.bot.embeds.embed_builder(title='Ping', description=(str(self.bot.ping) + 'ms'))
         await ctx.send(embed=embed)
 
-    @commands.command(name='pong', hidden=True)
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def pong(self, ctx):
-        """Ping!"""
-        embed = self.bot.embeds.embed_builder(title='Ping', description=(str(self.bot.get_ping()) + 'ms'))
-        await ctx.send(embed=embed)
-
-    @commands.command(name='source')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def source(self, ctx):
-        """Check out the source code on GitHub"""
-        embed = self.bot.embeds.embed_builder(title='Source',
-                                              description="https://github.com/jonasbohmann/democraciv-discord-bot")
-        await ctx.send(embed=embed)
-
-    @commands.command(name='contributors')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def contributors(self, ctx):
-        """See who helped with this project"""
-        embed = self.bot.embeds.embed_builder(title='Contributors :heart:',
-                                              description="https://github.com/jonasbohmann/democraciv"
-                                                          "-discord-bot/graphs/contributors")
-        await ctx.send(embed=embed)
-
-    @commands.command(name='addme')
+    @commands.command(name='addme', aliases=['inviteme'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def addme(self, ctx):
         """Invite this bot to your Discord server"""

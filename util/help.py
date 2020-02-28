@@ -55,7 +55,7 @@ class HelpPaginator(Pages):
                               icon_url=config.BOT_ICON_URL)
 
         for entry in entries:
-            signature = f'{entry.qualified_name} {entry.signature}'
+            signature = f'**__{entry.qualified_name} {entry.signature}__**'
             self.embed.add_field(name=signature, value=entry.short_doc or "No help given", inline=False)
 
         if self.maximum_pages:
@@ -118,7 +118,7 @@ class PaginatedHelpCommand(commands.HelpCommand):
         super().__init__(command_attrs={
             'cooldown': commands.Cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.member),
             'help': 'Shows help about the bot, a command, or a category',
-            'hidden': True
+            'hidden': False
         })
 
     @staticmethod
@@ -214,24 +214,4 @@ class PaginatedHelpCommand(commands.HelpCommand):
         entries = await self.filter_commands(subcommands, sort=True)
         pages = HelpPaginator(self, self.context, entries)
         self.common_command_formatting(pages, group)
-
         await pages.paginate()
-
-
-class Meta(commands.Cog, command_attrs=dict(hidden=True)):
-    def __init__(self, bot):
-        self.bot = bot
-        self.old_help_command = bot.help_command
-        bot.help_command = PaginatedHelpCommand()
-        bot.help_command.cog = self
-
-    def cog_unload(self):
-        self.bot.help_command = self.old_help_command
-
-    async def cog_command_error(self, ctx, error):
-        if isinstance(error, commands.BadArgument):
-            await ctx.send(error)
-
-
-def setup(bot):
-    bot.add_cog(Meta(bot))

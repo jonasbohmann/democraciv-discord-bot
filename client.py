@@ -12,13 +12,12 @@ import discord.utils
 
 import util.exceptions as exceptions
 
-from discord.ext import commands, tasks
-
 from event.twitch import Twitch
 from event.reddit import Reddit
 from config import config, token
 from event.youtube import YouTube
 from util.law_helper import LawUtils
+from discord.ext import commands, tasks
 from util.utils import CheckUtils, EmbedUtils
 
 logging.basicConfig(level=logging.INFO)
@@ -29,11 +28,9 @@ initial_extensions = ['event.logging',
                       'module.about',
                       'module.time',
                       'module.fun',
-                      'module.admin',
-                      'module.help',
                       'module.roles',
                       'module.guild',
-                      'module.debug',
+                      'module.admin',
                       'module.wiki',
                       'module.tags',
                       'module.starboard',
@@ -53,7 +50,7 @@ class DemocracivBot(commands.Bot):
         self.description = config.BOT_DESCRIPTION
         self.commands_prefix = config.BOT_PREFIX
 
-        # Save the bot's start time for get_uptime()
+        # Save the bot's start time for self.uptime
         self.start_time = time.time()
 
         # Initialize commands.Bot with prefix, description and disable case_sensitivity
@@ -98,6 +95,15 @@ class DemocracivBot(commands.Bot):
         if config.YOUTUBE_ENABLED:
             YouTube(self)
 
+        if config.DATABASE_DAILY_BACKUP_ENABLED:
+            self.daily_db_backup.start()
+
+        # The bot needs a "main" guild that will be used for Reddit, Twitch & Youtube notifications, political
+        # parties, legislature & ministry organization, the starboard and other admin commands.
+        # The bot will automatically pick the first guild that it can see if 'DEMOCRACIV_GUILD_ID' from
+        # config.py is invalid
+        self.loop.create_task(self.initialize_democraciv_guild())
+
     async def initialize_aiohttp_session(self):
         # Initialize a shared aiohttp ClientSession to be used for -wikipedia, -leg submit and reddit & twitch requests
         # aiohttp needs to have this in an async function, that's why it's separated from __init__()
@@ -136,10 +142,11 @@ class DemocracivBot(commands.Bot):
         print("[DATABASE] Successfully initialised database")
         self.db_ready = True
 
-    def initialize_democraciv_guild(self):
-        # The bot needs a "main" guild object that will be used for reddit & twitch notifications, political parties and
-        # admin commands. The bot will automatically pick a random guild that it can see if 'DEMOCRACIV_GUILD_ID' from
-        # config.py is invalid
+    async def initialize_democraciv_guild(self):
+        """Saves the Democraciv guild object (main guild) as a class attribute. If config.DEMOCRACIV_GUILD_ID is
+        not a guild, the first guild in self.guilds will be used instead."""
+
+        await self.wait_until_ready()
 
         self.democraciv_guild_object = self.get_guild(config.DEMOCRACIV_GUILD_ID)
 
@@ -157,39 +164,31 @@ class DemocracivBot(commands.Bot):
 
             print(f"[BOT] Using '{self.democraciv_guild_object.name}' as Democraciv guild.")
 
-    def get_uptime(self):
+    @property
+    def uptime(self):
         difference = int(round(time.time() - self.start_time))
         return str(datetime.timedelta(seconds=difference))
 
-    def get_ping(self):
+    @property
+    def ping(self):
         return math.floor(self.latency * 1000)
 
     async def close_bot(self):
+        """Closes the aiohttp ClientSession, the connection pool to the PostgreSQL database and the bot itself."""
         await self.session.close()
         await self.db.close()
         await self.close()
 
     async def on_ready(self):
         if not self.db_ready:
-            # If the connection to the database fails, stop the bot
             print("[DATABASE] Fatal error while connecting to database. Closing bot...")
             return await self.close_bot()
 
         print(f"[BOT] Logged in as {self.user.name} with discord.py {discord.__version__}")
         print("------------------------------------------------------------")
 
-        # The bot needs a "main" guild object that will be used for reddit & twitch notifications, political parties and
-        # admin commands. The bot will automatically pick the first guild that it can see if 'democracivServerID' from
-        # config.py is invalid
-        self.initialize_democraciv_guild()
-
-        await asyncio.sleep(1)
-
         self.owner = (await self.application_info()).owner
         self.owner_id = self.owner.id
-
-        if config.DATABASE_DAILY_BACKUP_ENABLED:
-            self.daily_db_backup.start()
 
     async def on_message(self, message):
         # Don't process message/command from other bots
@@ -198,7 +197,7 @@ class DemocracivBot(commands.Bot):
 
         # If, for whatever reason, the current guild does not have an entry in the bot's database, attempt to initialize
         # the default config
-        if not isinstance(message.channel, discord.DMChannel):
+        if message.guild is not None:
             if message.guild.id not in self.cached_initialized_guilds:
                 if not await self.checks.is_guild_initialized(message.guild.id):
                     print(f"[DATABASE] Guild {message.guild.name} ({message.guild.id}) was not initialized. "

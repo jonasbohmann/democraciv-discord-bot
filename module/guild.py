@@ -2,14 +2,12 @@ import discord
 
 import util.utils as utils
 import util.exceptions as exceptions
-
-from config import config
 from util.flow import Flow
 from discord.ext import commands
 
 
 class Guild(commands.Cog):
-    """Commands regarding this guild"""
+    """Configure various features of this bot for this guild"""
 
     def __init__(self, bot):
         self.bot = bot

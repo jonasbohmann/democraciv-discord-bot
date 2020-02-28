@@ -147,7 +147,7 @@ class Starboard(commands.Cog):
 
         return "\n\n".join(markdown)
 
-    @tasks.loop(hours=12)
+    @tasks.loop(hours=24)
     async def weekly_starboard_to_reddit_task(self):
         """If today is Monday, post all entries of last week's starboard to r/Democraciv"""
 

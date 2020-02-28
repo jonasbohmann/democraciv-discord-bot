@@ -9,11 +9,8 @@ from config import config
 from discord.ext import commands
 
 
-"""Various utility classes and functions that the bot regular uses."""
-
-
 def is_democraciv_guild():
-    """Wrapper for a discord.ext.commands check to check if command is used on the Democraciv guild"""
+    """Commands check decorator to check if a command was invoked on the Democraciv guild"""
 
     def check(ctx):
         if not isinstance(ctx.channel, discord.abc.GuildChannel):
@@ -28,11 +25,15 @@ def is_democraciv_guild():
 
 
 def has_democraciv_role(role: mk.DemocracivRole):
-    """Wrapper for a discord.ext.commands check to check if someone has a role from utils.mk"""
+    """Commands check decorator to check if a command was invoked on the Democraciv guild AND to check whether the
+        person has the specified role from utils.py"""
 
     def predicate(ctx):
         if not isinstance(ctx.channel, discord.abc.GuildChannel):
             raise commands.NoPrivateMessage()
+
+        if config.DEMOCRACIV_GUILD_ID != ctx.guild.id:
+            raise exceptions.NotDemocracivGuildError()
 
         found = discord.utils.get(ctx.author.roles, id=role.value)
 
@@ -45,11 +46,15 @@ def has_democraciv_role(role: mk.DemocracivRole):
 
 
 def has_any_democraciv_role(*roles: mk.DemocracivRole):
-    """Wrapper for a discord.ext.commands check to check if someone has any role from utils.mk"""
+    """Commands check decorator to check if a command was invoked on the Democraciv guild AND to check whether the
+    person has any of the specified roles from utils.py"""
 
     def predicate(ctx):
         if not isinstance(ctx.channel, discord.abc.GuildChannel):
             raise commands.NoPrivateMessage()
+
+        if config.DEMOCRACIV_GUILD_ID != ctx.guild.id:
+            raise exceptions.NotDemocracivGuildError()
 
         getter = functools.partial(discord.utils.get, ctx.author.roles)
         if any(getter(id=role.value) is not None for role in roles):
@@ -60,7 +65,8 @@ def has_any_democraciv_role(*roles: mk.DemocracivRole):
 
 
 def tag_check():
-    """Wrapper for a discord.ext.commands check to check if the tag command are used on the Democraciv guild"""
+    """Commands check decorator. On the Democraciv Guild, anyone can create tags and remove and edit their own tags. On
+    all other guilds (i.e. party guilds), only Administrators can create tags."""
 
     def check(ctx):
         if config.DEMOCRACIV_GUILD_ID != ctx.guild.id:
@@ -68,7 +74,7 @@ def tag_check():
                 return True
             else:
                 raise exceptions.TagCheckError(message=":x: Only Administrators can add or "
-                                                          "remove tags on this guild!")
+                                                       "remove tags on this guild!")
         else:
             return True
 

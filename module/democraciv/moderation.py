@@ -224,6 +224,13 @@ class Moderation(commands.Cog):
         else:
             await ctx.send(embed=embed)
 
+    @commands.command(name='restart', aliases=['stop'])
+    @commands.check_any(utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE), commands.is_owner())
+    async def restart(self, ctx):
+        """Restarts the bot"""
+        await ctx.send(':wave: Restarting...')
+        await self.bot.close_bot()
+
     @commands.command(name='alt')
     @utils.is_democraciv_guild()
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
