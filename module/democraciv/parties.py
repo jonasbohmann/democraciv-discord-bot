@@ -256,7 +256,6 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='addparty')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.is_democraciv_guild()
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def addparty(self, ctx):
         """Add a new political party"""
@@ -342,7 +341,6 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='deleteparty')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.is_democraciv_guild()
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def deleteparty(self, ctx, hard: bool, *, party: str):
         """Remove a political party
@@ -394,7 +392,6 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='addalias')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.is_democraciv_guild()
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def addalias(self, ctx):
         """Add a new alias to a political party"""
@@ -434,7 +431,6 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='deletealias', aliases=['removealias'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.is_democraciv_guild()
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def deletealias(self, ctx, *, alias: str):
         """Delete a party's alias"""

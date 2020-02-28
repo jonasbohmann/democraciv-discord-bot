@@ -3,12 +3,12 @@ import discord
 
 import util.utils as utils
 
-from config import config
 from util import mk
+from config import config
 from util.flow import Flow
 from discord.ext import commands
-
 from util.paginator import Pages
+from util.converter import Tag, OwnedTag
 
 
 class Tags(commands.Cog):
@@ -21,7 +21,7 @@ class Tags(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def tags(self, ctx):
-        """See all tags on this guild"""
+        """List all tags on this guild"""
 
         global_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE global = true ORDER BY uses desc")
         all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 AND global = false"
@@ -49,43 +49,61 @@ class Tags(commands.Cog):
                       , show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
         await pages.paginate()
 
-    @tags.command(name="local")
+    @tags.command(name="local", aliases=['l'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def local(self, ctx):
-        """See just the local tags on this guild"""
+        """List only the tags that were made on this guild"""
 
         all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 ORDER BY uses desc",
                                            ctx.guild.id)
 
-        pretty_tags = ['\n**Local Tags**']
+        pretty_tags = []
 
         for record in all_tags:
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
 
-        if len(pretty_tags) < 2:
+        if not len(pretty_tags):
             pretty_tags = ['There are no local tags on this guild.']
 
         pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"Local Tags in {ctx.guild.name}"
                       , show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
         await pages.paginate()
 
+    @tags.command(name="from")
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    async def _from(self, ctx, member: discord.Member = None):
+        """List someone's tags"""
+
+        member = member or ctx.author
+
+        all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE author = $1 AND guild_id = $2"
+                                           " ORDER BY uses desc",
+                                           member.id, ctx.guild.id)
+
+        pretty_tags = []
+
+        for record in all_tags:
+            pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
+
+        if not len(pretty_tags):
+            pretty_tags = ['This person hasn\'t made any tags yet.']
+
+        pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"{member.name}'s Tags"
+                      , show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
+        await pages.paginate()
+
     @tags.command(name="addalias")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
-    async def addtagalias(self, ctx, *, tag: str):
+    @utils.tag_check()
+    async def addtagalias(self, ctx, *, tag: OwnedTag):
         """Add a new alias to a tag"""
 
         flow = Flow(self.bot, ctx)
 
-        tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND guild_id = $2",
-                                                 tag.lower(), ctx.guild.id)
-
-        if tag_details is None:
-            return await ctx.send(f":x: This guild has no tag called `{tag.lower()}`!")
-
-        await ctx.send(f":information_source: Reply with the new alias for `{config.BOT_PREFIX}{tag.lower()}`.")
+        await ctx.send(f":information_source: Reply with the new alias for `{config.BOT_PREFIX}{tag.name}`.")
 
         alias = await flow.get_text_input(240)
 
@@ -97,7 +115,7 @@ class Tags(commands.Cog):
 
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to add the alias "
                                       f"`{config.BOT_PREFIX}{alias}` to "
-                                      f"`{config.BOT_PREFIX}{tag_details['name']}`?")
+                                      f"`{config.BOT_PREFIX}{tag.name}`?")
 
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
@@ -111,34 +129,31 @@ class Tags(commands.Cog):
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     status = await self.bot.db.execute("INSERT INTO guild_tags_alias (alias, tag_id, guild_id, global)"
-                                                       " VALUES ($1, $2, $3, $4)", alias.lower(), tag_details['id'],
-                                                       ctx.guild.id, tag_details['global'])
+                                                       " VALUES ($1, $2, $3, $4)", alias.lower(), tag.id,
+                                                       ctx.guild.id, tag.is_global)
 
         if status == "INSERT 0 1":
             await ctx.send(f':white_check_mark: Added the alias `{config.BOT_PREFIX}{alias}` to'
-                           f'`{config.BOT_PREFIX}{tag_details["name"]}`.')
+                           f'`{config.BOT_PREFIX}{tag.name}`.')
         else:
             await ctx.send(":x: Unexpected database error occurred.")
 
     @tags.command(name="removealias", aliases=['deletealias'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
-    async def removetagalias(self, ctx, *, alias: str):
+    @utils.tag_check()
+    async def removetagalias(self, ctx, *, alias: OwnedTag):
         """Remove an alias from a tag"""
 
         flow = Flow(self.bot, ctx)
 
-        tag = await self.bot.db.fetchrow("SELECT * FROM guild_tags_alias WHERE alias = $1 AND guild_id = $2",
-                                         alias.lower(), ctx.guild.id)
-
-        if tag is None:
-            return await ctx.send(f":x: This guild has no tag with the associated alias `{alias}`!")
-
-        guild_tag = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1", tag['tag_id'])
+        if alias.invoked_with == alias.name:
+            return await ctx.send(f":x: That is not an alias, but the tag's name. "
+                                  f"Try {ctx.prefix}tag delete {alias.invoked_with} instead!")
 
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove the alias "
-                                      f"`{config.BOT_PREFIX}{alias}` from `{config.BOT_PREFIX}{guild_tag['name']}`?")
+                                      f"`{config.BOT_PREFIX}{alias.invoked_with}` "
+                                      f"from `{config.BOT_PREFIX}{alias.name}`?")
 
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
@@ -153,30 +168,12 @@ class Tags(commands.Cog):
                 async with con.transaction():
                     try:
                         await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE alias = $1 AND tag_id = $2",
-                                                  alias.lower(), guild_tag['id'])
+                                                  alias.invoked_with, alias.id)
                         await ctx.send(f":white_check_mark: Successfully removed the alias "
-                                       f"`{config.BOT_PREFIX}{alias}` from `{config.BOT_PREFIX}{guild_tag['name']}`.")
+                                       f"`{config.BOT_PREFIX}{alias.invoked_with}` from "
+                                       f"`{config.BOT_PREFIX}{alias.name}`.")
                     except Exception:
                         raise
-
-    async def resolve_tag_name(self, query: str, guild: discord.Guild, update_uses: bool = True):
-        tag_id = await self.bot.db.fetchval("SELECT tag_id FROM guild_tags_alias WHERE global = true AND alias = $1",
-                                            query.lower())
-
-        if tag_id is None:
-            tag_id = await self.bot.db.fetchval(
-                "SELECT tag_id FROM guild_tags_alias WHERE alias = $1 AND guild_id = $2",
-                query.lower(), guild.id)
-
-        if tag_id is None:
-            return None
-
-        tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1", tag_id)
-
-        if update_uses:
-            await self.bot.db.execute("UPDATE guild_tags SET uses = uses + 1 WHERE id = $1", tag_id)
-
-        return tag_details
 
     async def validate_tag_name(self, ctx, tag_name: str) -> bool:
         tag_name = tag_name.lower()
@@ -234,14 +231,12 @@ class Tags(commands.Cog):
             return
 
         await ctx.send(":information_source: Reply with the full title of the tag.")
-
         title = await flow.get_text_input(300)
 
         if title is None:
             return
 
         await ctx.send(":information_source: Reply with the content of the tag.")
-
         content = await flow.get_text_input(300)
 
         if content is None:
@@ -299,54 +294,62 @@ class Tags(commands.Cog):
     @tags.command(name="info", aliases=['about'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def taginfo(self, ctx, *, tag: str):
+    async def taginfo(self, ctx, *, tag: Tag):
         """Info about a tag"""
 
-        tag_details = await self.resolve_tag_name(tag, ctx.guild, update_uses=False)
-
-        if tag_details is None:
-            return await ctx.send(f":x: This guild has no tag called `{tag}`!")
-
-        aliases = await self.bot.db.fetch("SELECT alias FROM guild_tags_alias WHERE tag_id = $1 ", tag_details['id'])
-
-        pretty_aliases = (', '.join([f"`{ctx.prefix}{record['alias']}`" for record in aliases])) or 'None'
+        pretty_aliases = (', '.join([f"`{ctx.prefix}{alias}`" for alias in tag.aliases])) or 'None'
 
         embed = self.bot.embeds.embed_builder(title="Tag Info", description="")
-        embed.add_field(name="Name", value=tag_details['title'], inline=False)
+        embed.add_field(name="Name", value=tag.title, inline=False)
 
-        if tag_details['author'] is not None:
-            member = self.bot.get_user(tag_details['author'])
-            if member is not None:
-                embed.add_field(name="Author", value=member.mention, inline=False)
-                embed.set_thumbnail(url=member.avatar_url_as(static_format="png"))
+        if tag.author is not None:
+            embed.add_field(name="Author", value=tag.author.mention, inline=False)
+            embed.set_thumbnail(url=tag.author.avatar_url_as(static_format="png"))
 
-        embed.add_field(name="Global Tag", value=str(tag_details['global']), inline=True)
-        embed.add_field(name="Emoji or Media Tag", value=str(self.is_emoji_or_media_url(tag_details['content'])),
+        embed.add_field(name="Global Tag", value=str(tag.is_global), inline=True)
+        embed.add_field(name="Emoji or Media Tag", value=str(self.is_emoji_or_media_url(tag.content)),
                         inline=True)
-        embed.add_field(name="Uses", value=str(tag_details['uses']), inline=False)
+        embed.add_field(name="Uses", value=str(tag.uses), inline=False)
         embed.add_field(name="Aliases", value=pretty_aliases, inline=False)
         await ctx.send(embed=embed)
+
+    @tags.command(name="claim")
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    async def claim(self, ctx, *, tag: Tag):
+        """Claim a tag if the author left this server"""
+
+        if tag.is_global:
+            return await ctx.send(":x: Global tags cannot be claimed!")
+
+        if tag.author == ctx.author:
+            return await ctx.send(":x: You already own this tag.")
+
+        if isinstance(tag.author, discord.Member):
+            return await ctx.send(":x: The tag's owner is still in this guild!")
+
+        await self.bot.db.execute("UPDATE guild_tags SET author = $1 WHERE id = $2", ctx.author.id, tag.id)
+
+        return await ctx.send(f":white_check_mark: You now own `{ctx.prefix}{tag.name}`.")
+
+    @tags.command(name="raw")
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    async def raw(self, ctx, *, tag: Tag):
+        """Raw markdown of a tag
+
+        Useful when you want to update a tag with -tag edit
+        """
+        return await ctx.send(f"```{tag.content}```")
 
     @tags.command(name="edit")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @utils.tag_check()
-    async def edittag(self, ctx, *, tag: str):
+    async def edittag(self, ctx, *, tag: OwnedTag):
         """Edit one of your tags"""
 
         flow = Flow(self.bot, ctx)
-
-        tag_details = await self.resolve_tag_name(tag, ctx.guild, update_uses=False)
-
-        if tag_details is None:
-            return await ctx.send(f":x: This guild has no tag called `{tag}`!")
-
-        if tag_details['global'] and tag_details['guild_id'] != ctx.guild.id:
-            return await ctx.send(f":x: Global tags can only be edited on the guild they were originally created!")
-
-        if tag_details['author'] is not None:  # Handle tags before author column existed
-            if tag_details['author'] != ctx.author.id and not ctx.author.guild_permissions.administrator:
-                return await ctx.send(f":x: This isn't your tag!")
 
         await ctx.send(":information_source: Reply with the updated **title** of this tag.")
         new_title = await flow.get_text_input(300)
@@ -361,61 +364,39 @@ class Tags(commands.Cog):
             return
 
         await self.bot.db.execute("UPDATE guild_tags SET content = $1, title = $3 WHERE id = $2", new_content,
-                                  tag_details['id'], new_title)
+                                  tag.id, new_title)
         await ctx.send(":white_check_mark: Your tag was edited.")
 
     @tags.command(name="toggleglobal")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @utils.is_democraciv_guild()
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
-    async def toggleglobal(self, ctx, *, tag: str):
+    async def toggleglobal(self, ctx, *, tag: Tag):
         """Change a tag to be global/local"""
 
-        # Search for global tags first
-        tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND global = true",
-                                                 tag.lower())
-
-        if tag_details is None:
+        if not tag.is_global:
             # Local -> Global
-            tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE name = $1 AND guild_id = $2",
-                                                     tag.lower(), ctx.guild.id)
-            if tag_details is None:
-                return await ctx.send(f":x: There is no global or local tag named `{tag}`!")
-
-            await self.bot.db.execute("UPDATE guild_tags SET global = true WHERE id = $1", tag_details['id'])
-            await self.bot.db.execute("UPDATE guild_tags_alias SET global = true WHERE tag_id = $1", tag_details['id'])
-            await ctx.send(f":white_check_mark: `{ctx.prefix}{tag}` is now a global tag. ")
+            await self.bot.db.execute("UPDATE guild_tags SET global = true WHERE id = $1", tag.id)
+            await self.bot.db.execute("UPDATE guild_tags_alias SET global = true WHERE tag_id = $1", tag.id)
+            await ctx.send(f":white_check_mark: `{ctx.prefix}{tag.name}` is now a global tag. ")
 
         else:
             # Global -> Local
-            await self.bot.db.execute("UPDATE guild_tags SET global = false WHERE id = $1", tag_details['id'])
-            await self.bot.db.execute("UPDATE guild_tags_alias SET global = false WHERE tag_id = $1", tag_details['id'])
-            await ctx.send(f":white_check_mark: `{ctx.prefix}{tag}` is now a local tag.")
+            await self.bot.db.execute("UPDATE guild_tags SET global = false WHERE id = $1", tag.id)
+            await self.bot.db.execute("UPDATE guild_tags_alias SET global = false WHERE tag_id = $1", tag.id)
+            await ctx.send(f":white_check_mark: `{ctx.prefix}{tag.name}` is now a local tag.")
 
     @tags.command(name="remove", aliases=['delete'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @utils.tag_check()
-    async def removetag(self, ctx, *, tag: str):
+    async def removetag(self, ctx, *, tag: OwnedTag):
         """Remove a tag"""
 
         flow = Flow(self.bot, ctx)
 
-        tag_details = await self.resolve_tag_name(tag, ctx.guild, update_uses=False)
-
-        if tag_details is None:
-            return await ctx.send(f":x: This guild has no tag called `{tag}`!")
-
-        if tag_details['global'] and tag_details['guild_id'] != ctx.guild.id:
-            return await ctx.send(f":x: Global tags can only be edited on the guild they were originally created!")
-
-        if tag_details['author'] is not None:  # Handle tags before author column existed
-            if tag_details['author'] != ctx.author.id and not ctx.author.guild_permissions.administrator:
-                return await ctx.send(f":x: This isn't your tag!")
-
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove the tag "
-                                      f"`{config.BOT_PREFIX}{tag_details['name']}`?")
+                                      f"`{config.BOT_PREFIX}{tag.name}`?")
 
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
@@ -429,10 +410,10 @@ class Tags(commands.Cog):
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     try:
-                        await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE tag_id = $1", tag_details['id'])
+                        await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE tag_id = $1", tag.id)
                         await self.bot.db.execute("DELETE FROM guild_tags WHERE name = $1 AND guild_id = $2",
-                                                  tag.lower(), ctx.guild.id)
-                        await ctx.send(f":white_check_mark: `{config.BOT_PREFIX}{tag}` was removed.")
+                                                  tag.name, ctx.guild.id)
+                        await ctx.send(f":white_check_mark: `{config.BOT_PREFIX}{tag.name}` was removed.")
                     except Exception:
                         raise
 
@@ -457,6 +438,23 @@ class Tags(commands.Cog):
             return True
 
         return False
+
+    async def resolve_tag_name(self, query: str, guild: discord.Guild):
+        tag_id = await self.bot.db.fetchval("SELECT tag_id FROM guild_tags_alias WHERE global = true AND alias = $1",
+                                            query.lower())
+
+        if tag_id is None:
+            tag_id = await self.bot.db.fetchval(
+                "SELECT tag_id FROM guild_tags_alias WHERE alias = $1 AND guild_id = $2",
+                query.lower(), guild.id)
+
+        if tag_id is None:
+            return None
+
+        tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1", tag_id)
+
+        await self.bot.db.execute("UPDATE guild_tags SET uses = uses + 1 WHERE id = $1", tag_id)
+        return tag_details
 
     @commands.Cog.listener(name="on_message")
     async def guild_tags_listener(self, message):

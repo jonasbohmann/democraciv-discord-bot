@@ -125,7 +125,7 @@ class ErrorHandler(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
-        ignored = (commands.CommandNotFound, commands.UserInputError)
+        ignored = commands.CommandNotFound
 
         error = getattr(error, 'original', error)
 
@@ -139,6 +139,7 @@ class ErrorHandler(commands.Cog):
 
         elif isinstance(error, commands.BadArgument):
             # TODO - Remove this from ignored and remove all local command error handler that also catch this
+            await ctx.send(error)
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.CommandOnCooldown):

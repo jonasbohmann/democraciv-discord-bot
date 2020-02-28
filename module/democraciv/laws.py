@@ -107,7 +107,6 @@ class Laws(commands.Cog, name='Law'):
 
     @law.command(name='remove', aliases=['r, repeal'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.is_democraciv_guild()
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def removebill(self, ctx, law_id: int):
         """Remove a law from the laws of this nation"""
@@ -151,7 +150,6 @@ class Laws(commands.Cog, name='Law'):
 
     @law.command(name='updatelink', aliases=['ul'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.is_democraciv_guild()
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def updatelink(self, ctx, law_id: int, new_link: str):
         """Update the link to a law"""
