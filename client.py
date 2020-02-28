@@ -105,13 +105,14 @@ class DemocracivBot(commands.Bot):
         self.loop.create_task(self.initialize_democraciv_guild())
 
     async def initialize_aiohttp_session(self):
-        # Initialize a shared aiohttp ClientSession to be used for -wikipedia, -leg submit and reddit & twitch requests
-        # aiohttp needs to have this in an async function, that's why it's separated from __init__()
+        """Initialize a shared aiohttp ClientSession to be used for -wikipedia, -leg submit and reddit & twitch requests
+        aiohttp needs to have this in an async function, that's why it's separated from __init__()"""
+
         self.session = aiohttp.ClientSession()
 
     async def connect_to_db(self):
-        # Attempt to connect to PostgreSQL database with specified credentials from token.py
-        # This will also fill an empty database with tables needed by the bot
+        """Attempt to connect to PostgreSQL database with specified credentials from token.py.
+        This will also fill an empty database with tables needed by the bot"""
 
         try:
             self.db = await asyncpg.create_pool(user=token.POSTGRESQL_USER,
@@ -222,8 +223,8 @@ class DemocracivBot(commands.Bot):
 
     @tasks.loop(hours=24)
     async def daily_db_backup(self):
-        # This task makes a backup of the bot's PostgreSQL database every 24hours and uploads
-        # that backup to the #backup channel to the Democraciv Discord guild
+        """This task makes a backup of the bot's PostgreSQL database every 24hours and uploads
+        that backup to the #backup channel to the Democraciv Discord guild."""
 
         # Unique filenames with current UNIX timestamp
         now = time.time()

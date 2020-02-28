@@ -109,10 +109,9 @@ You can add and remove modules by adding or removing them from `initial_extensio
 Module | Description 
 ------------ | ------------- |
 module.about | Commands regarding the bot itself |
-module.admin | Re-, un- and load modules and the config |
+module.admin | Debug commands for the developer |
 module.fun | Miscellaneous commands | 
 module.tags | Tags: Users can save text for later retrieval to command-like tags | 
-module.help | Scaling `-help` command |
 module.guild | Configure various functions of this bot for your guild |
 module.roles | Add or remove roles from you |
 module.starboard | A Starboard for the Democraciv guild. If a message receives at least 4 ⭐ reactions, it will be added to the Starboard. |
