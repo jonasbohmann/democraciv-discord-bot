@@ -48,7 +48,7 @@ class ErrorHandler(commands.Cog):
             if len(pretty_traceback) <= 1024:
                 embed.add_field(name='Traceback', value=f'```py\n{pretty_traceback}```')
             else:
-                self.bot.owner.send(embed=f'```py\n{pretty_traceback}```')
+                self.bot.owner.send(f'```py\n{pretty_traceback}```')
 
             await self.bot.owner.send(embed=embed)
 

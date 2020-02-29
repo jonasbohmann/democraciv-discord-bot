@@ -49,7 +49,11 @@ CREATE TABLE IF NOT EXISTS party_alias(
     party_id bigint references parties(id)
 );
 
-CREATE TYPE session_status AS ENUM ('Submission Period', 'Voting Period', 'Closed');
+DO $$ BEGIN
+    CREATE TYPE session_status AS ENUM ('Submission Period', 'Voting Period', 'Closed');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 CREATE TABLE IF NOT EXISTS legislature_sessions(
     id int UNIQUE PRIMARY KEY,
@@ -78,7 +82,7 @@ CREATE TABLE IF NOT EXISTS legislature_bills(
 );
 
 CREATE TABLE IF NOT EXISTS legislature_laws(
-    bill_id int UNIQUE references legislature_bills(id),
+    bill_id int UNIQUE references legislature_bills(id) ON DELETE CASCADE,
     law_id int UNIQUE PRIMARY KEY,
     description text
 );

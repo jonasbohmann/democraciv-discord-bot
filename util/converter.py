@@ -143,7 +143,7 @@ class Session(commands.Converter):
         except ValueError:
             raise BadArgument(f":x: {argument} is not a number.")
 
-        session = await ctx.bot.fetchrow("SELECT * FROM legislature_sessions WHERE id = $1", argument)
+        session = await ctx.bot.db.fetchrow("SELECT * FROM legislature_sessions WHERE id = $1", argument)
 
         if session is None:
             raise BadArgument(f":x: Couldn't find any session with ID #{argument}")
@@ -188,22 +188,22 @@ class Bill(commands.Converter):
     async def convert(cls, ctx, argument: str):
         try:
             argument = int(argument)
-            bill = await ctx.bot.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", argument)
+            bill = await ctx.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", argument)
         except ValueError:
-            bill = await ctx.bot.fetchrow("SELECT * FROM legislature_bills WHERE bill_name = $1", argument)
+            bill = await ctx.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE bill_name = $1", argument)
             if bill is None:
-                bill = await ctx.bot.fetchrow("SELECT * FROM legislature_bills WHERE link = $1", argument)
+                bill = await ctx.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE link = $1", argument)
 
         if bill is None:
             raise BadArgument(f":x: Couldn't find any bill that matches {argument}.")
 
         session = await Session.convert(ctx, bill['leg_session'])
 
-        return cls(id=bill['id'], name=bill['name'], link=bill['link'], tiny_link=bill['tiny_link'],
+        return cls(id=bill['id'], name=bill['bill_name'], link=bill['link'], tiny_link=bill['tiny_link'],
                    description=bill['description'], is_vetoable=bill['is_vetoable'],
-                   voted_on_by_leg=bill['voted_on_by_leg'], passed_leg=bill['passed_leg'],
-                   voted_on_by_ministry=bill['voted_on_by_ministry'], passed_ministry=bill['passed_ministry'],
-                   session=session, submitter=['submitter'], bot=ctx.bot)
+                   voted_on_by_leg=bill['voted_on_by_leg'], passed_leg=bill['has_passed_leg'],
+                   voted_on_by_ministry=bill['voted_on_by_ministry'], passed_ministry=bill['has_passed_ministry'],
+                   session=session, submitter=bill['submitter'], bot=ctx.bot)
 
 
 class Law(commands.Converter):
@@ -227,17 +227,17 @@ class Law(commands.Converter):
         except ValueError:
             raise BadArgument(f":x: {argument} is not a number.")
 
-        law = await ctx.bot.fetchrow("SELECT * FROM legislature_laws WHERE id = $1", argument)
+        law = await ctx.bot.db.fetchrow("SELECT * FROM legislature_laws WHERE law_id = $1", argument)
 
         if law is None:
             raise BadArgument(f":x: Couldn't find any law with ID #{argument}")
 
-        bill = Bill.convert(ctx, law['bill_id'])
+        bill = await Bill.convert(ctx, law['bill_id'])
 
         if bill is None:
             raise BadArgument()
 
-        tags = await ctx.bot.fetch("SELECT * FROM legislature_tags WHERE id = $1", law['id'])
+        tags = await ctx.bot.db.fetch("SELECT * FROM legislature_tags WHERE id = $1", law['law_id'])
         tags = [record['tag'] for record in tags]
 
-        return cls(id=law['id'], bill=bill, tags=tags)
+        return cls(id=law['law_id'], bill=bill, tags=tags)

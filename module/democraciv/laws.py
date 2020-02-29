@@ -1,9 +1,12 @@
-from discord.ext import commands
+import typing
+import discord
 
 from config import config
 from util import mk, utils
+from util.converter import Law
 from util.flow import Flow
 from util.paginator import Pages
+from discord.ext import commands
 
 
 class Laws(commands.Cog, name='Law'):
@@ -12,59 +15,51 @@ class Laws(commands.Cog, name='Law'):
     def __init__(self, bot):
         self.bot = bot
 
+    @property
+    def gov_announcements_channel(self) -> typing.Optional[discord.TextChannel]:
+        return mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+
+    async def paginate_all_laws(self, ctx):
+        async with ctx.typing():
+            all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws ORDER BY law_id")
+
+            pretty_laws = []
+
+            for law in all_laws:
+                details = await self.bot.db.fetchrow("SELECT link, bill_name FROM legislature_bills WHERE id = $1",
+                                                     law['bill_id'])
+                pretty_laws.append(f"Law #{law['law_id']} - [{details['bill_name']}]({details['link']})\n")
+
+            if not pretty_laws or len(pretty_laws) == 0:
+                pretty_laws = ['There are no laws yet.']
+
+        pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}",
+                      show_index=False, show_amount_of_pages=False,
+                      footer_text=f"Use {self.bot.commands_prefix}law <id> to get more details about a law.", )
+        await pages.paginate()
+
     @commands.group(name='law', aliases=['laws'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def law(self, ctx, law_id: str = None):
+    async def law(self, ctx, law_id: Law = None):
         """List all laws or get details about a specific law"""
 
         # If no ID was specified, list all existing laws
-        if not law_id or law_id.lower() == 'all':
-            async with ctx.typing():
-                all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws ORDER BY law_id")
-
-                pretty_laws = []
-
-                for law in all_laws:
-                    details = await self.bot.db.fetchrow("SELECT link, bill_name FROM legislature_bills WHERE id = $1",
-                                                         law['bill_id'])
-                    pretty_laws.append(f"Law #{law['law_id']} - [{details['bill_name']}]({details['link']})\n")
-
-                if not pretty_laws or len(pretty_laws) == 0:
-                    pretty_laws = ['There are no laws yet.']
-
-            pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}"
-                          , show_index=False, footer_text=f"Use {self.bot.commands_prefix}law <id> to get more "
-                                                          f"details about a law.", show_amount_of_pages=False)
-            await pages.paginate()
+        if not law_id:
+            return await self.paginate_all_laws(ctx)
 
         # If the user did specify a law_id, send details about that law
+        law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
+
+        if law.bill.submitter is not None:
+            submitted_by_value = f"{law.bill.submitter.mention} (during Session #{law.bill.session.id})"
         else:
-            try:
-                law_id = int(law_id)
-            except ValueError:
-                return await ctx.send(f":x: Couldn't find any law with ID `#{law_id}`!")
+            submitted_by_value = f"*Submitter left the server* (during Session #{law.bill.session.id})"
 
-            bill_id = await self.bot.db.fetchrow("SELECT bill_id FROM legislature_laws WHERE law_id = $1", law_id)
-
-            if bill_id is None:
-                return await ctx.send(f":x: Couldn't find any law with ID `#{law_id}`!")
-
-            bill_id = bill_id['bill_id']
-
-            law_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
-
-            if self.bot.get_user(law_details['submitter']) is not None:
-                submitted_by_value = f"{self.bot.get_user(law_details['submitter']).mention} (during Session #" \
-                                 f"{law_details['leg_session']})"
-            else:
-                submitted_by_value = f"*Submitter left the server* (during Session #" \
-                                     f"{law_details['leg_session']})"
-
-            embed = self.bot.embeds.embed_builder(title=f"{law_details['bill_name']}", description="")
-            embed.add_field(name="Link", value=law_details['link'])
-            embed.add_field(name="Description", value=law_details['description'], inline=False)
-            embed.add_field(name="Submitter", value=submitted_by_value)
-            await ctx.send(embed=embed)
+        embed = self.bot.embeds.embed_builder(title=law.bill.name, description=f"Associated Bill: #{law.bill.id}")
+        embed.add_field(name="Link", value=law.bill.link)
+        embed.add_field(name="Description", value=law.bill.description, inline=False)
+        embed.add_field(name="Submitter", value=submitted_by_value)
+        await ctx.send(embed=embed)
 
     @law.command(name='search', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -73,6 +68,7 @@ class Laws(commands.Cog, name='Law'):
 
         async with ctx.typing():
             # First, search by name
+            # TODO This finds repealed laws
             results = await self.bot.laws.search_law_by_name(' '.join(query))
 
             # If the direct lookup by name didn't match anything, search for similar tag of each word of :param query
@@ -93,35 +89,21 @@ class Laws(commands.Cog, name='Law'):
             if not results or len(results) == 0 or results[0] == []:
                 results = ['Nothing found.']
 
-        pages = Pages(ctx=ctx, entries=results, show_entry_count=False, title=f"Search Results for '{' '.join(query)}'"
-                      , show_index=False, footer_text=f"Use {self.bot.commands_prefix}law <id> to get more "
-                                                      f"details about a law.")
+        pages = Pages(ctx=ctx, entries=results, show_entry_count=False, title=f"Search Results for '{' '.join(query)}'",
+                      show_index=False, footer_text=f"Use {self.bot.commands_prefix}law <id> to get more "
+                                                    f"details about a law.")
         await pages.paginate()
-
-    @search.error
-    async def searcherror(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'query':
-                await ctx.send(':x: You have to give me something to search for!\n\n**Usage**:\n'
-                               '`-law search <query>`')
 
     @law.command(name='remove', aliases=['r, repeal'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
-    async def removebill(self, ctx, law_id: int):
+    async def removelaw(self, ctx, law_id: Law):
         """Remove a law from the laws of this nation"""
 
-        law_details = await self.bot.db.fetchrow("SELECT * FROM legislature_laws WHERE law_id = $1", law_id)
+        law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
 
-        if law_details is None:
-            return await ctx.send(f":x: There is no law with ID #{law_id}.")
-
-        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1",
-                                                  law_details['bill_id'])
-
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove "
-                                      f"'{bill_details['bill_name']}"
-                                      f"' (#{law_details['law_id']}) from the laws of {mk.NATION_NAME}?")
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove `{law.bill.name}`"
+                                      f" (#{law.id}) from the laws of {mk.NATION_NAME}?")
 
         flow = Flow(self.bot, ctx)
 
@@ -135,39 +117,26 @@ class Laws(commands.Cog, name='Law'):
 
         elif reaction:
             await self.bot.db.execute("DELETE FROM legislature_laws WHERE law_id = $1", law_id)
-            announcement_msg = f"Cabinet Member {ctx.author} has removed `{bill_details['bill_name']}`" \
-                               f" from the laws of {mk.NATION_NAME}."
-            await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(announcement_msg)
-            return await ctx.send(f":white_check_mark: `{bill_details['bill_name']}` was removed"
-                                  f" from the laws of {mk.NATION_NAME}.")
 
-    @removebill.error
-    async def removebillerror(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'law_id':
-                await ctx.send(':x: You have to give me the ID of the law to remove!\n\n**Usage**:\n'
-                               '`-law remove <law_id>`')
+            await self.gov_announcements_channel.send(f"Cabinet Member {ctx.author} has removed `{law.bill.name}`"
+                                                      f" from the laws of {mk.NATION_NAME}.")
 
-    @law.command(name='updatelink', aliases=['ul'])
+            return await ctx.send(f":white_check_mark: `{law.bill.name}` was removed from "
+                                  f"the laws of {mk.NATION_NAME}.")
+
+    @law.command(name='updatelink', aliases=['ul', 'amend'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
-    async def updatelink(self, ctx, law_id: int, new_link: str):
-        """Update the link to a law"""
-
-        law_details = await self.bot.db.fetchrow("SELECT * FROM legislature_laws WHERE law_id = $1", law_id)
-
-        if law_details is None:
-            return await ctx.send(f":x: There is no law with ID `#{law_id}`")
+    async def updatelink(self, ctx, law_id: Law, new_link: str):
+        """Update the link to a law. Useful for applying amendments to laws."""
 
         if not self.bot.laws.is_google_doc_link(new_link):
             return await ctx.send(f":x: This does not look like a Google Docs link: `{new_link}`")
 
-        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1",
-                                                  law_details['bill_id'])
+        law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
 
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to change the link to "
-                                      f"'{bill_details['bill_name']}"
-                                      f"' (#{law_details['law_id']})?")
+                                      f"`{law.bill.name}` (#{law.id})?")
 
         flow = Flow(self.bot, ctx)
 
@@ -188,10 +157,12 @@ class Laws(commands.Cog, name='Law'):
                                       " Try again in a few minutes.")
 
             await self.bot.db.execute("UPDATE legislature_bills SET link = $1, tiny_link = $2 WHERE id = $3",
-                                      new_link, tiny_url, bill_details['id'])
+                                      new_link, tiny_url, law.bill.id)
 
-            return await ctx.send(f":white_check_mark: Changed the link to '{bill_details['bill_name']}"
-                                  f"' (#{bill_details['id']}).")
+            await self.gov_announcements_channel.send(f"Cabinet Member {ctx.author} has amended `{law.bill.name}`. The"
+                                                      f"new link for this law is: {tiny_url}")
+
+            return await ctx.send(f":white_check_mark: Changed the link to `{law.bill.id}` #{law.id}).")
 
 
 def setup(bot):
