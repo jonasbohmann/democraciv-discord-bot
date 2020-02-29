@@ -1,5 +1,3 @@
-import enum
-
 import nltk
 import typing
 import asyncpg
@@ -7,11 +5,12 @@ import collections
 
 from bs4 import BeautifulSoup, SoupStrainer
 
+from util.converter import Session, Bill
 
-class SessionStatus(enum.Enum):
-    SUBMISSION_PERIOD = "Submission Period"
-    VOTING_PERIOD = "Voting Period"
-    CLOSED = "Closed"
+
+class MockContext:
+    def __init__(self, bot):
+        self.bot = bot
 
 
 class LawUtils:
@@ -26,7 +25,7 @@ class LawUtils:
 
     @staticmethod
     def is_google_doc_link(link: str) -> bool:
-        """Checks wether a link is a valid Google Docs or Google Forms link"""
+        """Checks whether a link is a valid Google Docs or Google Forms link"""
 
         valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/',
                                          'https://forms.gle/', 'https://goo.gl/forms']
@@ -36,45 +35,21 @@ class LawUtils:
         else:
             return True
 
-    async def get_active_leg_session(self) -> int:
-        return await self.bot.db.fetchval("SELECT id FROM legislature_sessions WHERE is_active = true")
+    async def get_active_leg_session(self) -> typing.Optional[Session]:
+        law_id = await self.bot.db.fetchval("SELECT id FROM legislature_sessions WHERE is_active = true")
 
-    async def get_status_of_active_leg_session(self) -> str:
-        return await self.bot.db.fetchval("SELECT status FROM legislature_sessions WHERE"
-                                          " is_active = true")
+        if law_id is not None:
+            return await Session.convert(MockContext(self.bot), law_id)
 
-    async def get_last_leg_session(self) -> int:
-        return await self.bot.db.fetchval("SELECT MAX(id) FROM legislature_sessions")
+        return None
 
-    async def generate_new_bill_id(self) -> int:
-        last_bill = await self.bot.db.fetchrow("SELECT MAX(id) FROM legislature_bills")
+    async def get_last_leg_session(self) -> typing.Optional[Session]:
+        law_id = await self.bot.db.fetchval("SELECT MAX(id) FROM legislature_sessions")
 
-        if last_bill is not None:
-            last_bill = last_bill['id']
-        else:
-            last_bill = 0
+        if law_id is not None:
+            return await Session.convert(MockContext(self.bot), law_id)
 
-        return last_bill + 1
-
-    async def generate_new_law_id(self) -> int:
-        last_law = await self.bot.db.fetchrow("SELECT MAX(law_id) FROM legislature_laws")
-
-        if last_law is not None:
-            last_law = last_law['law_id']
-        else:
-            last_law = 0
-
-        return last_law + 1
-
-    async def generate_new_motion_id(self) -> int:
-        last_motion = await self.bot.db.fetchrow("SELECT MAX(id) FROM legislature_motions")
-
-        if last_motion is not None:
-            last_motion = last_motion['id']
-        else:
-            last_motion = 0
-
-        return last_motion + 1
+        return None
 
     async def get_google_docs_title(self, link: str) -> typing.Optional[str]:
         """Gets title of a Google Docs document"""
@@ -124,7 +99,7 @@ class LawUtils:
             return None
 
     @staticmethod
-    def generate_law_tags(google_docs_description: str, author_description: str) -> list:
+    def generate_law_tags(google_docs_description: str, author_description: str) -> typing.List[str]:
         """Generates tags from all nouns of submitter-provided description and the Google Docs description"""
 
         # Function to check if token is noun
@@ -143,18 +118,15 @@ class LawUtils:
 
         return tags
 
-    async def pass_into_law(self, ctx, bill_id: int, bill_details: asyncpg.Record) -> bool:
+    async def pass_into_law(self, ctx, bill: Bill) -> bool:
         """Marks a Bill as passed and creates new Law from that Bill."""
 
         await self.bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
-                                  "true WHERE id = $1", bill_id)
-
-        # This could've been solved with SQL 'AUTO INCREMENT' but I didn't know that that existed
-        _law_id = await self.bot.laws.generate_new_law_id()
+                                  "true WHERE id = $1", bill.id)
 
         try:
-            await self.bot.db.execute("INSERT INTO legislature_laws (bill_id, law_id, description) VALUES"
-                                      "($1, $2, $3)", bill_id, _law_id, bill_details['description'])
+            law_id = await self.bot.db.fetchval("INSERT INTO legislature_laws (bill_id)"
+                                                " VALUES ($1) RETURNING law_id", bill.id)
         except asyncpg.UniqueViolationError:
             await ctx.send(f":x: This bill is already law!")
             return False
@@ -164,14 +136,12 @@ class LawUtils:
         # few sentence's of content.) and tokenizes those with nltk. Then, every noun from both descriptions is saved
         # into the legislature_tags table with the corresponding law_id.
 
-        _google_docs_description = await self.bot.laws.get_google_docs_description(bill_details['link'])
+        _google_docs_description = await self.bot.laws.get_google_docs_description(bill.link)
         _tags = await self.bot.loop.run_in_executor(None, self.bot.laws.generate_law_tags, _google_docs_description,
-                                                    bill_details['description'])
+                                                    bill.description)
+        _tags = [tag.lower() for tag in _tags]
 
-        for tag in _tags:
-            await self.bot.db.execute("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2)", _law_id,
-                                      tag.lower())
-
+        await self.bot.db.executemany("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2)", law_id, _tags)
         return True
 
     @staticmethod
@@ -264,6 +234,15 @@ class LawUtils:
                 return None
 
         return f"https://mystb.in/{key}"
+
+    async def post_to_tinyurl(self, url: str) -> typing.Optional[str]:
+        async with self.bot.session.get(f"https://tinyurl.com/api-create.php?url={url}") as response:
+            tiny_url = await response.text()
+
+        if tiny_url == "Error":
+            return None
+
+        return tiny_url
 
     async def search_law_by_name(self, name: str) -> list:
         """Search for laws by their name, returns list with prettified strings of found laws"""

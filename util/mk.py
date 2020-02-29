@@ -70,7 +70,7 @@ def get_democraciv_role(bot, role: DemocracivRole) -> typing.Optional[discord.Ro
     to_return = bot.democraciv_guild_object.get_role(role.value)
 
     if to_return is None:
-        raise exceptions.RoleNotFoundError(role.name)
+        raise exceptions.RoleNotFoundError(role.printable_name)
 
     return to_return
 

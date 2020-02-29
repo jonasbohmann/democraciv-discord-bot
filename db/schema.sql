@@ -56,47 +56,46 @@ EXCEPTION
 END $$;
 
 CREATE TABLE IF NOT EXISTS legislature_sessions(
-    id int UNIQUE PRIMARY KEY,
+    id serial UNIQUE PRIMARY KEY,
     speaker bigint,
     is_active bool,
     status session_status DEFAULT 'Submission Period'::session_status,
     vote_form text,
     opened_on timestamp without time zone,
     voting_started_on timestamp without time zone,
-    end_unixtime timestamp without time zone
+    closed_on timestamp without time zone
 );
 
 CREATE TABLE IF NOT EXISTS legislature_bills(
-    id int UNIQUE PRIMARY KEY,
-    leg_session int references legislature_sessions(id),
+    id serial UNIQUE PRIMARY KEY,
+    leg_session serial references legislature_sessions(id),
     link text UNIQUE,
     tiny_link text UNIQUE,
     bill_name text,
     description text,
     submitter bigint,
     is_vetoable bool,
-    voted_on_by_leg bool,
-    has_passed_leg bool,
-    voted_on_by_ministry bool,
-    has_passed_ministry bool
+    voted_on_by_leg bool default false,
+    has_passed_leg bool default false,
+    voted_on_by_ministry bool default false,
+    has_passed_ministry bool default false
 );
 
 CREATE TABLE IF NOT EXISTS legislature_laws(
-    bill_id int UNIQUE references legislature_bills(id) ON DELETE CASCADE,
-    law_id int UNIQUE PRIMARY KEY,
-    description text
+    bill_id serial UNIQUE references legislature_bills(id),
+    law_id serial UNIQUE PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS legislature_tags(
-    id int references legislature_laws(law_id) ON DELETE CASCADE,
+    id serial references legislature_laws(law_id) ON DELETE CASCADE,
     tag text
 );
 
 CREATE INDEX ON legislature_tags USING gin (tag gin_trgm_ops);
 
 CREATE TABLE IF NOT EXISTS legislature_motions(
-    id int UNIQUE PRIMARY KEY,
-    leg_session int references legislature_sessions(id),
+    id serial UNIQUE PRIMARY KEY,
+    leg_session serial references legislature_sessions(id),
     title text,
     description text,
     hastebin text,

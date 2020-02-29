@@ -126,7 +126,11 @@ class PaginatedHelpCommand(commands.HelpCommand):
         for cmd in commands_list:
             if isinstance(cmd, discord.ext.commands.Group):
                 for c in cmd.commands:
-                    commands_list.append(c)
+                    if isinstance(c, discord.ext.commands.Group):
+                        for co in c.commands:
+                            commands_list.append(co)
+                    else:
+                        commands_list.append(c)
 
         return commands_list
 

@@ -1,3 +1,4 @@
+import enum
 import typing
 from datetime import datetime
 
@@ -12,6 +13,27 @@ from util.exceptions import DemocracivBotException
 
 class TagError(DemocracivBotException):
     pass
+
+
+class NotFoundError(DemocracivBotException):
+    pass
+
+
+class SessionStatus(enum.Enum):
+    SUBMISSION_PERIOD = "Submission Period"
+    VOTING_PERIOD = "Voting Period"
+    CLOSED = "Closed"
+
+    @staticmethod
+    def from_str(label: str):
+        if label.lower() == 'submission period':
+            return SessionStatus.SUBMISSION_PERIOD
+        elif label.lower() == 'voting period':
+            return SessionStatus.VOTING_PERIOD
+        elif label.lower() == 'closed':
+            return SessionStatus.CLOSED
+        else:
+            raise NotImplementedError
 
 
 class Tag(commands.Converter):
@@ -123,11 +145,13 @@ class Session(commands.Converter):
     def __init__(self, **kwargs):
         self.id: int = kwargs.get('id')
         self.is_active: bool = kwargs.get('is_active')
-        self.status: law_helper.SessionStatus = kwargs.get('status')
+        self.status: SessionStatus = kwargs.get('status')
         self.vote_form: str = kwargs.get('vote_form', None)
         self.opened_on: datetime = kwargs.get('opened_on')
         self.voting_started_on: datetime = kwargs.get('voting_started_on', None)
         self.closed_on: datetime = kwargs.get('closed_on', None)
+        self.bills: typing.List[Bill] = kwargs.get('bills')
+        self.motions: typing.List[Motion] = kwargs.get('motions')
         self._speaker: int = kwargs.get('speaker')
         self._bot = kwargs.get('bot')
 
@@ -137,7 +161,10 @@ class Session(commands.Converter):
         return user
 
     @classmethod
-    async def convert(cls, ctx, argument: str):
+    async def convert(cls, ctx, argument: int):
+        if str(argument).lower() == "all":
+            return argument
+
         try:
             argument = int(argument)
         except ValueError:
@@ -146,12 +173,18 @@ class Session(commands.Converter):
         session = await ctx.bot.db.fetchrow("SELECT * FROM legislature_sessions WHERE id = $1", argument)
 
         if session is None:
-            raise BadArgument(f":x: Couldn't find any session with ID #{argument}")
+            raise NotFoundError(f":x: Couldn't find any session with ID #{argument}")
 
-        return cls(id=session['id'], is_active=session['is_active'], status=session['status'],
-                   vote_form=session['vote_form'], opened_on=session['start_unixtime'],
-                   voting_started_on=session['voting_start_unixtime'], closed_on=session['end_unixtime'],
-                   speaker=session['speaker'], bot=ctx.bot)
+        bills = await ctx.bot.db.fetch("SELECT id FROM legislature_bills WHERE leg_session = $1", session['id'])
+        bills = [await Bill.convert(ctx, record['id']) for record in bills]
+
+        motions = await ctx.bot.db.fetch("SELECT id FROM legislature_motions WHERE leg_session = $1", session['id'])
+        motions = [await Motion.convert(ctx, record['id']) for record in motions]
+
+        return cls(id=session['id'], is_active=session['is_active'], status=SessionStatus.from_str(session['status']),
+                   vote_form=session['vote_form'], opened_on=session['opened_on'],
+                   voting_started_on=session['voting_started_on'], closed_on=session['closed_on'],
+                   speaker=session['speaker'], bills=bills, motions=motions, bot=ctx.bot)
 
 
 class Bill(commands.Converter):
@@ -195,7 +228,7 @@ class Bill(commands.Converter):
                 bill = await ctx.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE link = $1", argument)
 
         if bill is None:
-            raise BadArgument(f":x: Couldn't find any bill that matches {argument}.")
+            raise NotFoundError(f":x: Couldn't find any bill that matches {argument}.")
 
         session = await Session.convert(ctx, bill['leg_session'])
 
@@ -230,14 +263,54 @@ class Law(commands.Converter):
         law = await ctx.bot.db.fetchrow("SELECT * FROM legislature_laws WHERE law_id = $1", argument)
 
         if law is None:
-            raise BadArgument(f":x: Couldn't find any law with ID #{argument}")
+            raise NotFoundError(f":x: Couldn't find any law with ID #{argument}")
 
         bill = await Bill.convert(ctx, law['bill_id'])
 
         if bill is None:
-            raise BadArgument()
+            raise DemocracivBotException("Something fucked up")
 
         tags = await ctx.bot.db.fetch("SELECT * FROM legislature_tags WHERE id = $1", law['law_id'])
         tags = [record['tag'] for record in tags]
 
         return cls(id=law['law_id'], bill=bill, tags=tags)
+
+
+class Motion(commands.Converter):
+    """
+    Represents a motion that someone submitted to a session of the Legislature.
+
+    The lookup strategy for the converter is as follows (in order):
+        1. Lookup by ID.
+    """
+
+    def __init__(self, **kwargs):
+        self.id: int = kwargs.get('id')
+        self.title: str = kwargs.get('title')
+        self.session: Session = kwargs.get('session')
+        self.description: str = kwargs.get('description')
+        self.link: str = kwargs.get('link')
+        self._submitter: int = kwargs.get('submitter')
+        self._bot = kwargs.get('bot')
+
+    @property
+    def submitter(self) -> typing.Union[discord.Member, discord.User, None]:
+        user = self._bot.democraciv_guild_object.get_member(self._submitter) or self._bot.get_user(self._submitter)
+        return user
+
+    @classmethod
+    async def convert(cls, ctx, argument: str):
+        try:
+            argument = int(argument)
+        except ValueError:
+            raise BadArgument(f":x: {argument} is not a number.")
+
+        motion = await ctx.bot.db.fetchrow("SELECT * FROM legislature_motions WHERE id = $1", argument)
+
+        if motion is None:
+            raise NotFoundError(f":x: Couldn't find any motion that matches {argument}.")
+
+        session = await Session.convert(ctx, motion['leg_session'])
+
+        return cls(id=motion['id'], title=motion['title'], link=motion['hastebin'], description=motion['description'],
+                   session=session, submitter=motion['submitter'], bot=ctx.bot)

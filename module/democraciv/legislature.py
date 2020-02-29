@@ -1,4 +1,3 @@
-import time
 import asyncpg
 import discord
 import datetime
@@ -6,6 +5,7 @@ import datetime
 import typing
 from discord.ext import commands
 
+from util.converter import Session, SessionStatus, Bill, Motion
 from util.flow import Flow
 from util.paginator import Pages
 from config import config, links
@@ -22,15 +22,23 @@ class Legislature(commands.Cog):
     def speaker(self) -> typing.Optional[discord.Member]:
         try:
             return mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE).members[0]
-        except IndexError:
+        except (IndexError, exceptions.RoleNotFoundError):
             return None
+
+    @property
+    def speaker_role(self) -> typing.Optional[discord.Role]:
+        return mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE)
 
     @property
     def vice_speaker(self) -> typing.Optional[discord.Member]:
         try:
             return mk.get_democraciv_role(self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE).members[0]
-        except IndexError:
+        except (IndexError, exceptions.RoleNotFoundError):
             return None
+
+    @property
+    def vice_speaker_role(self) -> typing.Optional[discord.Role]:
+        return mk.get_democraciv_role(self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE)
 
     @property
     def gov_announcements_channel(self) -> typing.Optional[discord.TextChannel]:
@@ -52,21 +60,14 @@ class Legislature(commands.Cog):
     async def legislature(self, ctx):
         """Dashboard for Legislators"""
 
-        active_leg_session_id = await self.bot.laws.get_active_leg_session()
+        active_leg_session = await self.bot.laws.get_active_leg_session()
 
-        if active_leg_session_id is None:
-            active_leg_session = "There currently is no open session."
+        if active_leg_session is None:
+            current_session_value = "There currently is no open session."
         else:
-            status_record = await self.bot.db.fetchrow("SELECT status FROM legislature_sessions WHERE id = $1",
-                                                       active_leg_session_id)
-            if status_record is not None:
-                status = status_record['status']
-                active_leg_session = f"Session #{active_leg_session_id} - {status}"
-            else:
-                active_leg_session = f"Session #{active_leg_session_id}"
+            current_session_value = f"Session #{active_leg_session.id} - {active_leg_session.status.value}"
 
-        embed = self.bot.embeds.embed_builder(title=f"The Legislature of {mk.NATION_NAME}",
-                                              description="")
+        embed = self.bot.embeds.embed_builder(title=f"The Legislature of {mk.NATION_NAME}", description="")
         speaker_value = []
 
         if isinstance(self.speaker, discord.Member):
@@ -84,7 +85,7 @@ class Legislature(commands.Cog):
                                             f"[Docket]({links.legislativedocket})\n"
                                             f"[Legal Code]({links.laws})\n"
                                             f"[Legislative Procedures]({links.legislativeprocedures})", inline=True)
-        embed.add_field(name="Current Session", value=f"{active_leg_session}", inline=False)
+        embed.add_field(name="Current Session", value=current_session_value, inline=False)
 
         await ctx.send(embed=embed)
 
@@ -94,25 +95,15 @@ class Legislature(commands.Cog):
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
 
-        active_leg_session_id = await self.bot.laws.get_active_leg_session()
+        active_leg_session = await self.bot.laws.get_active_leg_session()
 
-        if active_leg_session_id is not None:
-            return await ctx.send(f":x: There is still an open session, close session #{active_leg_session_id} first!")
+        if active_leg_session is not None:
+            return await ctx.send(f":x: There is still an open session, close session #{active_leg_session.id} first!")
 
-        last_session = await self.bot.laws.get_last_leg_session()
-
-        if last_session is None:
-            last_session = 0
-
-        new_session = last_session + 1
-
-        try:
-            await self.bot.db.execute('INSERT INTO legislature_sessions (id, speaker, is_active, status, '
-                                      'start_unixtime)'
-                                      'VALUES ($1, $2, true, $3, $4)', int(new_session), ctx.author.id,
-                                      'Submission Period', time.time())
-        except asyncpg.UniqueViolationError:
-            return await ctx.send(":x: This session already exists!")
+        new_session = await self.bot.db.fetchval(
+            'INSERT INTO legislature_sessions (speaker, is_active, status, opened_on)'
+            'VALUES ($1, true, $2, $3) RETURNING id', ctx.author.id, 'Submission Period',
+            datetime.datetime.utcnow())
 
         await ctx.send(f":white_check_mark: The **submission period** for session #{new_session} was opened.")
 
@@ -133,34 +124,26 @@ class Legislature(commands.Cog):
         if not self.bot.laws.is_google_doc_link(voting_form):
             return await ctx.send(":x: That doesn't look like a Google Docs URL.")
 
-        active_leg_session_id = await self.bot.laws.get_active_leg_session()
+        active_leg_session: Session = await self.bot.laws.get_active_leg_session()
 
-        if active_leg_session_id is None:
+        if active_leg_session is None:
             return await ctx.send(":x: There is no open session!")
 
-        status_of_active_session = await self.bot.laws.get_status_of_active_leg_session()
-
-        if status_of_active_session != "Submission Period":
+        if active_leg_session.status != SessionStatus.SUBMISSION_PERIOD:
             return await ctx.send(":x: You can only update a session to be in Voting Period that was previously in the"
                                   "Submission Period!")
 
         await self.bot.db.execute("UPDATE legislature_sessions SET status = 'Voting Period',"
-                                  " voting_start_unixtime = $2, vote_form = $3"
-                                  " WHERE id = $1", active_leg_session_id, time.time(), voting_form)
+                                  " voting_started_on = $2, vote_form = $3"
+                                  " WHERE id = $1", active_leg_session.id, datetime.datetime.utcnow(), voting_form)
 
-        await ctx.send(f":white_check_mark: Session #{active_leg_session_id} is now in **voting period**.")
+        await ctx.send(f":white_check_mark: Session #{active_leg_session.id} is now in **voting period**.")
 
-        await self.gov_announcements_channel.send(f"The voting period for Legislative Session #{active_leg_session_id}"
+        await self.gov_announcements_channel.send(f"The voting period for Legislative Session #{active_leg_session.id}"
                                                   f" has started! Legislators can vote here: {voting_form}")
 
         await self.dm_legislators(f":ballot_box: The **voting period** for Legislative Session "
-                                  f"#{active_leg_session_id} has started!\nVote here: {voting_form}")
-
-    @updatesession.error
-    async def updatesessionerror(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'voting_form':
-                await ctx.send(":x: You have to give me a valid Google Forms URL for the voting period to begin!")
+                                  f"#{active_leg_session.id} has started!\nVote here: {voting_form}")
 
     @legislature.command(name='closesession', aliases=['cs'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -168,21 +151,20 @@ class Legislature(commands.Cog):
     async def closesession(self, ctx):
         """Closes the current session"""
 
-        active_leg_session_id = await self.bot.laws.get_active_leg_session()
+        active_leg_session = await self.bot.laws.get_active_leg_session()
 
-        if active_leg_session_id is None:
+        if active_leg_session is None:
             return await ctx.send(f":x: There is no open session!")
 
-        await self.bot.db.execute("UPDATE legislature_sessions SET is_active = false, end_unixtime = $2,"
-                                  " status = 'Closed'"
-                                  " WHERE id = $1", active_leg_session_id, time.time())
+        await self.bot.db.execute("UPDATE legislature_sessions SET is_active = false, closed_on = $2,"
+                                  " status = 'Closed' WHERE id = $1", active_leg_session.id, datetime.datetime.utcnow())
 
-        await ctx.send(f":white_check_mark: Session #{active_leg_session_id} was closed.\n"
-                       f"Add the bills that passed this session with `-legislature pass <bill_id>`. Get the "
-                       f"bill ids from the list of submitted bills in `-legislature session {active_leg_session_id}`")
+        await ctx.send(f":white_check_mark: Session #{active_leg_session.id} was closed."
+                       f" Add the bills that passed this session with `-legislature pass <bill_id>`. Get the "
+                       f"bill ids from the list of submitted bills in `-legislature session {active_leg_session.id}`")
 
         await self.gov_announcements_channel.send(f"{self.legislator_role.mention}, Legislative Session "
-                                                  f"#{active_leg_session_id} has been closed by the Cabinet.")
+                                                  f"#{active_leg_session.id} has been closed by the Cabinet.")
 
     async def paginate_all_sessions(self, ctx):
         all_sessions = await self.bot.db.fetch("SELECT id, status FROM legislature_sessions ORDER BY id")
@@ -197,7 +179,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='session', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def session(self, ctx, session: str = None):
+    async def session(self, ctx, session: Session = None):
         """Get details about a legislative session
 
         Usage:
@@ -206,119 +188,81 @@ class Legislature(commands.Cog):
         `-legislature session all` to see a list of all previous sessions."""
 
         # Show all past sessions and their status
-        if session is not None and session.lower() == "all":
+        if session == "all":
             return await self.paginate_all_sessions(ctx)
 
         # User invoked -legislature session without arguments
         elif session is None:
             session = await self.bot.laws.get_last_leg_session()
 
-        # Show detail embed for a single session, either from user input or the last session
-        try:
-            active_leg_session_id = int(session)
-        except ValueError:
-            return await ctx.send(f":x: You typed neither 'all', nor a number of a session.")
-
-        session_info = await self.bot.db.fetchrow(
-            "SELECT speaker, is_active, vote_form, start_unixtime, end_unixtime, status, voting_start_unixtime "
-            "FROM legislature_sessions WHERE id = $1", active_leg_session_id)
-
-        if session_info is None:
-            await ctx.send(f":x: I couldn't find that session.")
-
-        motions = await self.bot.db.fetch(
-            "SELECT id, title, description, submitter, hastebin FROM legislature_motions"
-            " WHERE leg_session = $1 ORDER BY id", active_leg_session_id)
-
-        if len(motions) > 0:
+        if len(session.motions) > 0:
             pretty_motions = []
-            for record in motions:
+            for motion in session.motions:
                 # If the motion's description is just a Google Docs link, use that link instead of the Hastebin
-                is_google_docs = self.bot.laws.is_google_doc_link(record['description']) and len(
-                    record['description']) <= 100
+                is_google_docs = self.bot.laws.is_google_doc_link(motion.description) and len(motion.description) <= 100
+                link = motion.description if is_google_docs else motion.link
 
-                link = record['description'] if is_google_docs else record['hastebin']
-
-                if self.bot.get_user(record['submitter']) is not None:
-                    pretty_motions.append(f"Motion #{record['id']} - [{record['title']}]({link}) by "
-                                          f"{self.bot.get_user(record['submitter']).mention}")
+                if motion.submitter is not None:
+                    pretty_motions.append(f"Motion #{motion.id} - [{motion.title}]({link}) by "
+                                          f"{motion.submitter.mention}")
                 else:
-                    pretty_motions.append(f"Motion #{record['id']} - [{record['title']}]({link})")
-
+                    pretty_motions.append(f"Motion #{motion.id} - [{motion.title}]({link})")
         else:
-            pretty_motions = ["No one submitted any motions during this session."]
+            pretty_motions = ["-"]
 
-        bills = await self.bot.db.fetch(
-            "SELECT id, tiny_link, bill_name, submitter FROM legislature_bills"
-            " WHERE leg_session = $1 ORDER BY id", active_leg_session_id)
-
-        if len(bills) > 0:
+        if len(session.bills) > 0:
             pretty_bills = []
 
-            for record in bills:
-                if self.bot.get_user(record['submitter']) is not None:
-                    pretty_bills.append(f"Bill #{record['id']} - [{record['bill_name']}]({record['tiny_link']}) by "
-                                        f"{self.bot.get_user(record['submitter']).mention}")
+            for bill in session.bills:
+                if bill.submitter is not None:
+                    pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) by "
+                                        f"{bill.submitter.mention}")
                 else:
-                    pretty_bills.append(f"Bill #{record['id']} - [{record['bill_name']}]({record['tiny_link']})")
+                    pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link})")
         else:
-            pretty_bills = ["No one submitted any bills during this session."]
+            pretty_bills = ["-"]
 
-        pretty_start_date = datetime.datetime.utcfromtimestamp(session_info['start_unixtime']).strftime("%A, %B %d %Y"
-                                                                                                        " %H:%M:%S")
+        embed = self.bot.embeds.embed_builder(title=f"Legislative Session #{session.id}", description="")
 
-        embed = self.bot.embeds.embed_builder(title=f"Legislative Session #{active_leg_session_id}",
-                                              description="")
-
-        try:
-            embed.add_field(name="Opened by", value=self.bot.get_user(session_info['speaker']).mention)
-        except AttributeError:
+        if session.speaker is not None:
+            embed.add_field(name="Opened by", value=session.speaker.mention)
+        else:
             embed.add_field(name="Opened by", value="*Person left Democraciv*")
 
-        embed.add_field(name="Status", value=session_info['status'], inline=True)
-        embed.add_field(name="Opened on (UTC)", value=pretty_start_date, inline=False)
+        embed.add_field(name="Status", value=session.status.value, inline=True)
+        embed.add_field(name="Opened on (UTC)", value=session.opened_on.strftime("%A, %B %d %Y %H:%M:%S"), inline=False)
 
-        if session_info['status'] != "Submission Period":
+        if session.status != SessionStatus.SUBMISSION_PERIOD:
             # Session is either closed or in Voting Period
-            pretty_voting_date = datetime.datetime.utcfromtimestamp(session_info['voting_start_unixtime']).strftime(
-                "%A, %B %d %Y"
-                " %H:%M:%S")
+            embed.add_field(name="Voting Started on (UTC)",
+                            value=session.voting_started_on.strftime("%A, %B %d %Y %H:%M:%S"), inline=False)
+            embed.add_field(name="Vote Form", value=f"[Link]({session.vote_form})", inline=False)
 
-            embed.add_field(name="Voting Started on (UTC)", value=pretty_voting_date, inline=False)
-            embed.add_field(name="Vote Form", value=f"[Link]({session_info['vote_form']})", inline=False)
-
-        if not session_info['is_active']:
+        if not session.is_active:
             # Session is closed
-            pretty_end_date = datetime.datetime.utcfromtimestamp(session_info['end_unixtime']).strftime("%A, %B %d %Y"
-                                                                                                        " %H:%M:%S")
-            embed.add_field(name="Ended on (UTC)", value=pretty_end_date, inline=False)
+            embed.add_field(name="Ended on (UTC)",
+                            value=session.closed_on.strftime("%A, %B %d %Y %H:%M:%S"), inline=False)
 
         pretty_motions = '\n'.join(pretty_motions)
         pretty_bills = '\n'.join(pretty_bills)
 
-        # TODO - Hastebin is unreliable
-        if len(pretty_motions) < 1024:
+        if len(pretty_motions) <= 1024:
             embed.add_field(name="Submitted Motions", value=pretty_motions, inline=False)
-        elif len(pretty_motions) > 1024:
+        else:
             haste_bin_url = await self.bot.laws.post_to_hastebin(pretty_motions)
             too_long_motions = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
             embed.add_field(name="Submitted Motions", value=too_long_motions, inline=False)
 
-        if len(pretty_bills) < 1024:
+        if len(pretty_bills) <= 1024:
             embed.add_field(name="Submitted Bills", value=pretty_bills, inline=False)
-        elif len(pretty_bills) > 1024:
+        else:
             haste_bin_url = await self.bot.laws.post_to_hastebin(pretty_bills)
             too_long_bills = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
             embed.add_field(name="Submitted Bills", value=too_long_bills, inline=False)
 
-        try:
-            await ctx.send(embed=embed)
-        except discord.HTTPException:
-            await ctx.send(
-                f":x: The embed value is > 1024 as there were too many "
-                f"bills or motions submitted. Jonas is working on this.")
+        await ctx.send(embed=embed)
 
-    async def submit_bill(self, ctx, current_leg_session: int) -> typing.Optional[typing.Tuple[str, discord.Embed]]:
+    async def submit_bill(self, ctx, current_leg_session_id: int) -> typing.Optional[typing.Tuple[str, discord.Embed]]:
         """Submits a bill to a session that is in Submission Period. Uses the Flow API to get the bill
          details via Discord. Returns the message and formatted Embed that will be sent to
           the Cabinet upon submission."""
@@ -327,9 +271,7 @@ class Legislature(commands.Cog):
 
         # Google Docs Link
         await ctx.send(":white_check_mark: You will submit a **bill**.\n"
-                       ":information_source: Reply with the Google Docs link to the bill"
-                       " you want to submit.")
-
+                       ":information_source: Reply with the Google Docs link to the bill you want to submit.")
         google_docs_url = await flow.get_text_input(150)
 
         if not google_docs_url:
@@ -366,28 +308,21 @@ class Legislature(commands.Cog):
                                " read by anyone and that it's not a published version!")
                 return None
 
-            # -- Submit Bill --
-            new_id = await self.bot.laws.generate_new_bill_id()
-
             # Make the Google Docs link smaller to workaround the "embed value cannot be longer than 1024 characters
             # in -legislature session" issue
-            async with self.bot.session.get(
-                    f"https://tinyurl.com/api-create.php?url={google_docs_url}") as response:
-                tiny_url = await response.text()
+            tiny_url = await self.bot.laws.post_to_tinyurl(google_docs_url)
 
-            if tiny_url == "Error":
+            if tiny_url is None:
                 await ctx.send(":x: Your bill was not submitted since there was a problem with tinyurl.com. "
                                "Try again in a few minutes.")
                 return None
 
             try:
                 await self.bot.db.execute(
-                    "INSERT INTO legislature_bills (id, leg_session, link, bill_name, submitter, is_vetoable, "
-                    " has_passed_leg, has_passed_ministry, description, tiny_link, voted_on_by_leg, "
-                    "voted_on_by_ministry) "
-                    "VALUES ($1, $2, $3, $4, $5, $6, false, false, $7, $8, false, false)", new_id,
-                    current_leg_session, google_docs_url, bill_title, ctx.author.id,
-                    is_vetoable, bill_description, tiny_url)
+                    "INSERT INTO legislature_bills (leg_session, link, bill_name, submitter, is_vetoable, "
+                    "description, tiny_link) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+                    current_leg_session_id, google_docs_url, bill_title, ctx.author.id, is_vetoable,
+                    bill_description, tiny_url)
             except asyncpg.UniqueViolationError:
                 await ctx.send(":x: A bill with the same exact Google Docs Document was already submitted!")
                 return None
@@ -396,17 +331,17 @@ class Legislature(commands.Cog):
             embed = self.bot.embeds.embed_builder(title="Bill Submitted", description="", time_stamp=True)
             embed.add_field(name="Title", value=bill_title, inline=False)
             embed.add_field(name="Author", value=ctx.message.author.name, inline=False)
-            embed.add_field(name="Session", value=current_leg_session)
+            embed.add_field(name="Session", value=current_leg_session_id)
             embed.add_field(name="Ministry Veto Allowed", value=is_vetoable)
             embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow(), inline=False)
             embed.add_field(name="URL", value=google_docs_url, inline=False)
 
         await ctx.send(
-            f":white_check_mark: Your bill `{bill_title}` was submitted for session #{current_leg_session}.")
+            f":white_check_mark: Your bill `{bill_title}` was submitted for session #{current_leg_session_id}.")
 
         return message, embed
 
-    async def submit_motion(self, ctx, current_leg_session: int) -> typing.Optional[typing.Tuple[str, discord.Embed]]:
+    async def submit_motion(self, ctx, current_leg_session_id: int) -> typing.Optional[typing.Tuple[str, discord.Embed]]:
         """Submits a motion to a session that is in Submission Period. Uses the Flow API to get the bill
            details via Discord. Returns the message and formatted Embed that will be sent to
            the Cabinet upon submission."""
@@ -430,7 +365,6 @@ class Legislature(commands.Cog):
             return None
 
         async with ctx.typing():
-            _new_id = await self.bot.laws.generate_new_motion_id()
             haste_bin_url = await self.bot.laws.post_to_hastebin(description)
 
             if not haste_bin_url:
@@ -439,20 +373,20 @@ class Legislature(commands.Cog):
                 return None
 
             await self.bot.db.execute(
-                "INSERT INTO legislature_motions (id, leg_session, title, description, submitter, hastebin) "
-                "VALUES ($1, $2, $3, $4, $5, $6)",
-                _new_id, current_leg_session, title, description, ctx.author.id, haste_bin_url)
+                "INSERT INTO legislature_motions (leg_session, title, description, submitter, hastebin) "
+                "VALUES ($1, $2, $3, $4, $5)",
+                current_leg_session_id, title, description, ctx.author.id, haste_bin_url)
 
             message = "Hey! A new **motion** was just submitted."
             embed = self.bot.embeds.embed_builder(title="Motion Submitted", description="", time_stamp=True)
             embed.add_field(name="Title", value=title, inline=False)
             embed.add_field(name="Content", value=description, inline=False)
             embed.add_field(name="Author", value=ctx.message.author.name)
-            embed.add_field(name="Session", value=current_leg_session)
+            embed.add_field(name="Session", value=current_leg_session_id)
             embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow(), inline=False)
 
         await ctx.send(
-            f":white_check_mark: Your motion `{title}` was submitted for session #{current_leg_session}.")
+            f":white_check_mark: Your motion `{title}` was submitted for session #{current_leg_session_id}.")
 
         return message, embed
 
@@ -465,44 +399,39 @@ class Legislature(commands.Cog):
         if self.speaker is None:
             raise exceptions.NoOneHasRoleError(mk.DemocracivRole.SPEAKER_ROLE.printable_name)
 
-        current_leg_session = await self.bot.laws.get_active_leg_session()
+        current_leg_session: Session = await self.bot.laws.get_active_leg_session()
 
         if current_leg_session is None:
             return await ctx.send(":x: There is no active session!")
 
-        current_leg_session_status = await self.bot.laws.get_status_of_active_leg_session()
-
-        if current_leg_session_status != "Submission Period":
-            return await ctx.send(f":x: The submission period for session #{current_leg_session} is already over!")
+        if current_leg_session.status != SessionStatus.SUBMISSION_PERIOD:
+            return await ctx.send(f":x: The submission period for session #{current_leg_session.id} is already over!")
 
         flow = Flow(self.bot, ctx)
 
         bill_motion_question = await ctx.send(":information_source: Do you want to submit a motion or a bill?"
-                                              " React with :regional_indicator_b: for bill, and with "
-                                              ":regional_indicator_m: for a motion.")
+                                              " React with <:bill:683370062358642737> for bill, and with "
+                                              "<:motion:683370053508399121> for a motion.")
 
-        reaction, user = await flow.get_emoji_choice("<:bill:683370062358642737>",
-                                                     "<:motion:683370053508399121>", bill_motion_question, 200)
+        reaction, user = await flow.get_emoji_choice("<:bill:683370062358642737>", "<:motion:683370053508399121>",
+                                                     bill_motion_question, 200)
 
         if not reaction:
             return
 
         if str(reaction.emoji) == "<:bill:683370062358642737>":
-            message, embed = await self.submit_bill(ctx, current_leg_session)
+            message, embed = await self.submit_bill(ctx, current_leg_session.id)
 
         elif str(reaction.emoji) == "<:motion:683370053508399121>":
             if self.legislator_role not in ctx.author.roles:
                 return await ctx.send(":x: Only Legislators are allowed to submit motions!")
-            message, embed = await self.submit_motion(ctx, current_leg_session)
+            message, embed = await self.submit_motion(ctx, current_leg_session.id)
 
         if message is None:
             return
 
-        speaker_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE)
-        vice_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE)
-
         # Send DM to Cabinet after everything is done
-        if speaker_role not in ctx.author.roles and vice_role not in ctx.author.roles:
+        if self.speaker_role not in ctx.author.roles and self.vice_speaker_role not in ctx.author.roles:
             try:
                 await self.speaker.send(content=message, embed=embed)
                 await self.vice_speaker.send(content=message, embed=embed)
@@ -512,32 +441,26 @@ class Legislature(commands.Cog):
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
-    async def passbill(self, ctx, bill_id: int):
+    async def passbill(self, ctx, bill_id: Bill):
         """Mark a bill as passed from the Legislature"""
 
-        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
+        bill = bill_id  # At this point, bill_id is already a Bill object, so calling it ball_id makes no sense
 
-        if bill_details is None:
-            return await ctx.send(f":x: There is no submitted bill with ID #{bill_id}!")
+        last_leg_session: Session = await self.bot.laws.get_last_leg_session()
 
-        last_leg_session = await self.bot.laws.get_last_leg_session()
+        if last_leg_session.id != bill.session.id:
+            return await ctx.send(f":x: You can only mark bills from the most recent "
+                                  f"session of the Legislature as passed.")
 
-        if last_leg_session != bill_details['leg_session']:
-            return await ctx.send(f":x: You can only mark bills from the most recent session of the "
-                                  f"Legislature as passed.")
+        if last_leg_session.status == SessionStatus.SUBMISSION_PERIOD:
+            return await ctx.send(f":x: You cannot mark bills as passed while the"
+                                  f"session is still in submission period.")
 
-        last_leg_session_status = await self.bot.laws.get_status_of_active_leg_session()
-
-        if last_leg_session_status == "Submission Period":
-            return await ctx.send(f":x: You cannot mark bills as passed while the session"
-                                  f" is still in submission period.")
-
-        if bill_details['voted_on_by_leg']:
+        if bill.voted_on_by_leg:
             return await ctx.send(f":x: You already passed this bill!")
 
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to mark "
-                                      f"'{bill_details['bill_name']}"
-                                      f"' (#{bill_details['id']}) as passed from the Legislature?")
+                                      f"`{bill.name}` (#{bill.id}) as passed from the Legislature?")
 
         flow = Flow(self.bot, ctx)
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
@@ -551,63 +474,53 @@ class Legislature(commands.Cog):
         elif reaction:
             async with ctx.typing():
                 await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true, voted_on_by_leg = true "
-                                          "WHERE id = $1", bill_id)
+                                          "WHERE id = $1", bill.id)
 
                 # Bill is vetoable
-                if bill_details['is_vetoable']:
-                    await ctx.send(f":white_check_mark: The bill titled '{bill_details['bill_name']}' was sent to the "
+                if bill.is_vetoable:
+                    await ctx.send(f":white_check_mark: The bill named `{bill.name}` was sent to the "
                                    f"Ministry for them to vote on it.")
 
                     await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.EXECUTIVE_CHANNEL).send(
-                        f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.PRIME_MINISTER_ROLE).mention},"
-                        f" the Legislature has just passed '{bill_details['bill_name']}' (#{bill_id})"
-                        f" that you need to vote on. "
+                        f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.PRIME_MINISTER_ROLE).mention}, "
+                        f"the Legislature has just passed `{bill.name}` (#{bill.id}) hat you need to vote on. "
                         f"Check `-ministry bills` to get the details.")
 
                 # Bill is not vetoable
                 else:
-                    if await self.bot.laws.pass_into_law(ctx, bill_id, bill_details):
+                    if await self.bot.laws.pass_into_law(ctx, bill):
                         # pass_into_law() returned True -> success
-                        await ctx.send(f":white_check_mark: `{bill_details['bill_name']}` was passed into law."
+                        await ctx.send(f":white_check_mark: `{bill.name}` was passed into law."
                                        f" Remember to add it to the Legal Code, too!")
 
                         await self.gov_announcements_channel.send(
-                            f"The '{bill_details['bill_name']}' ({bill_details['tiny_link']}) was passed "
-                            f"into law by the Legislature without requiring a prior vote on it by the Ministry. It was"
-                            f" marked as non-vetoable by the original submitter "
-                            f"{self.bot.get_user(bill_details['submitter']).name}.")
+                            f"The `{bill.name}` ({bill.tiny_link}) was passed into law by the Legislature without "
+                            f"requiring a prior vote on it by the Ministry. It was marked as non-vetoable by the "
+                            f"original submitter {bill.submitter.name}.")
 
                     else:
                         # pass_into_law() returned False -> Database Error
                         await ctx.send(":x: Unexpected error occurred.")
 
-    @passbill.error
-    async def passbillerror(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'bill_id':
-                await ctx.send(':x: You have to give me the ID of the bill you want to pass!\n\n**Usage**:\n'
-                               '`-legislature pass <bill_id>`')
-
+    @legislature.group(name='withdraw', aliases=['w'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
-    @legislature.command(name='withdraw', aliases=['w'])
-    async def withdrawbill(self, ctx, bill_id: int):
+    async def withdraw(self, ctx):
+        """Withdraw a bill or motion from the current session"""
+        pass
+
+    @withdraw.command(name='bill', aliases=['b'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.is_democraciv_guild()
+    async def withdrawbill(self, ctx, bill_id: Bill):
         """Withdraw a bill from the current session"""
 
-        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
-
-        if bill_details is None:
-            return await ctx.send(f":x: There is no submitted bill with ID `#{bill_id}`!")
+        bill = bill_id  # At this point, bill_id is already a Bill object, so calling it ball_id makes no sense
 
         last_leg_session = await self.bot.laws.get_last_leg_session()
 
-        if last_leg_session != bill_details['leg_session']:
+        if last_leg_session.id != bill.session.id:
             return await ctx.send(f":x: This bill was not submitted in the last session of the Legislature!")
-
-        last_leg_session_status = await self.bot.laws.get_status_of_active_leg_session()
-
-        if last_leg_session_status is None:
-            return await ctx.send(":x: The session is already closed!")
 
         # The Speaker and Vice-Speaker can withdraw every submitted bill during both the Submission Period and the
         # Voting Period.
@@ -615,15 +528,13 @@ class Legislature(commands.Cog):
 
         is_cabinet = False
 
-        if mk.get_democraciv_role(self.bot,
-                                  mk.DemocracivRole.SPEAKER_ROLE) not in ctx.author.roles and mk.get_democraciv_role(
-            self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE) not in ctx.author.roles:
-            if ctx.author.id == bill_details['submitter']:
-                if last_leg_session_status == "Submission Period":
+        if self.speaker_role not in ctx.author.roles and self.vice_speaker_role not in ctx.author.roles:
+            if ctx.author.id == bill.submitter.id:
+                if last_leg_session.status == SessionStatus.SUBMISSION_PERIOD:
                     allowed = True
                 else:
-                    return await ctx.send(f":x: The original submitter can only withdraw bills during "
-                                          f"the Submission Period!")
+                    return await ctx.send(f":x: The original submitter can only withdraw "
+                                          f"bills during the Submission Period!")
             else:
                 allowed = False
         else:
@@ -633,12 +544,10 @@ class Legislature(commands.Cog):
         if not allowed:
             return await ctx.send(":x: Only the Cabinet and the original submitter of this bill can withdraw it!")
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to withdraw "
-                                      f"'{bill_details['bill_name']}"
-                                      f"' (#{bill_details['id']}) from session #{last_leg_session}?")
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to withdraw the **bill** "
+                                      f"`{bill.name}` (#{bill.id}) from session #{last_leg_session.id}?")
 
         flow = Flow(self.bot, ctx)
-
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
         if reaction is None:
@@ -649,27 +558,84 @@ class Legislature(commands.Cog):
 
         elif reaction:
             try:
-                await self.bot.db.execute("DELETE FROM legislature_bills WHERE id = $1", bill_id)
+                await self.bot.db.execute("DELETE FROM legislature_bills WHERE id = $1", bill.id)
             except asyncpg.ForeignKeyViolationError:
                 return await ctx.send(":x: This bill is already a law and cannot be withdrawn.")
 
-            await ctx.send(f":white_check_mark: `{bill_details['bill_name']}`"
-                           f" (#{bill_details['id']}) was withdrawn from session #{last_leg_session}.")
+            await ctx.send(f":white_check_mark: `{bill.name}` (#{bill.id}) was withdrawn "
+                           f"from session #{last_leg_session}.")
 
             if not is_cabinet:
-                msg = f"**Bill Withdrawn**\n{ctx.author.name} has withdrawn their bill " \
-                      f"'{bill_details['bill_name']}' " \
-                      f"'(#{bill_details['id']}) from the current session."
+                msg = f"**Bill Withdrawn**\n{ctx.author.name} has withdrawn their bill `{bill.name}` (#{bill.id}) " \
+                      f"from the current session."
 
-                await self.speaker.send(msg)
-                await self.vice_speaker.send(msg)
+                try:
+                    await self.speaker.send(msg)
+                    await self.vice_speaker.send(msg)
+                except discord.Forbidden:
+                    pass
 
-    @withdrawbill.error
-    async def wberror(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'bill_id':
-                await ctx.send(':x: You have to give me the ID of the bill to withdraw!\n\n**Usage**:\n'
-                               '`-legislature withdraw <bill_id>`')
+    @withdraw.command(name='motion', aliases=['m'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.is_democraciv_guild()
+    async def withdrawmotion(self, ctx, motion_id: Motion):
+        """Withdraw a motion from the current session"""
+
+        motion = motion_id
+
+        last_leg_session = await self.bot.laws.get_last_leg_session()
+
+        if last_leg_session.id != motion.session.id:
+            return await ctx.send(f":x: This motion was not submitted in the last session of the Legislature!")
+
+        # The Speaker and Vice-Speaker can withdraw every submitted motion during both the Submission Period and the
+        # Voting Period.
+        # The original submitter of the bill can only withdraw their own bill during the Submission Period.
+
+        is_cabinet = False
+
+        if self.speaker_role not in ctx.author.roles and self.vice_speaker_role not in ctx.author.roles:
+            if ctx.author.id == motion.submitter.id:
+                if last_leg_session.status == SessionStatus.SUBMISSION_PERIOD:
+                    allowed = True
+                else:
+                    return await ctx.send(f":x: The original submitter can only withdraw "
+                                          f"motions during the Submission Period!")
+            else:
+                allowed = False
+        else:
+            is_cabinet = True
+            allowed = True
+
+        if not allowed:
+            return await ctx.send(":x: Only the Cabinet and the original submitter of this motion can withdraw it!")
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to withdraw the **motion**"
+                                      f" `{motion.title}` (#{motion.id}) from session #{last_leg_session.id}?")
+
+        flow = Flow(self.bot, ctx)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+
+        if reaction is None:
+            return
+
+        if not reaction:
+            return await ctx.send("Aborted.")
+
+        elif reaction:
+            await self.bot.db.execute("DELETE FROM legislature_motions WHERE id = $1", motion.id)
+            await ctx.send(f":white_check_mark: `{motion.title}` (#{motion.id}) was withdrawn "
+                           f"from session #{last_leg_session}.")
+
+            if not is_cabinet:
+                msg = f"**Motion Withdrawn**\n{ctx.author.name} has withdrawn their motion" \
+                      f" `{motion.title}` (#{motion.id}) from the current session."
+
+                try:
+                    await self.speaker.send(msg)
+                    await self.vice_speaker.send(msg)
+                except discord.Forbidden:
+                    pass
 
     @legislature.command(name='stats')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
