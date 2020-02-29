@@ -1,8 +1,14 @@
-import discord
 import typing
+import discord
 
 from discord.ext import commands
 from discord.ext.commands import BadArgument
+
+from util.exceptions import DemocracivBotException
+
+
+class TagError(DemocracivBotException):
+    pass
 
 
 class Tag(commands.Converter):
@@ -42,7 +48,7 @@ class Tag(commands.Converter):
                 argument.lower(), ctx.guild.id)
 
         if tag_id is None:
-            raise BadArgument(f":x: There is no global or local tag named `{argument}`!")
+            raise TagError(f":x: There is no global or local tag named `{argument}`!")
 
         tag_details = await ctx.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1", tag_id)
 
@@ -71,16 +77,16 @@ class OwnedTag(Tag):
                 argument.lower(), ctx.guild.id)
 
         if tag_id is None:
-            raise BadArgument(f":x: There is no global or local tag named `{argument}`!")
+            raise TagError(f":x: There is no global or local tag named `{argument}`!")
 
         tag_details = await ctx.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1", tag_id)
 
         if tag_details['global'] and tag_details['guild_id'] != ctx.guild.id:
-            raise BadArgument(f":x: Global tags can only be edited or removed on "
-                              f"the guild they were originally created on!")
+            raise TagError(f":x: Global tags can only be edited or removed on "
+                           f"the guild they were originally created on!")
 
         if tag_details['author'] != ctx.author.id and not ctx.author.guild_permissions.administrator:
-            raise BadArgument(f":x: This isn't your tag!")
+            raise TagError(f":x: This isn't your tag!")
 
         aliases = await ctx.bot.db.fetch("SELECT alias FROM guild_tags_alias WHERE tag_id = $1", tag_id)
         aliases = [record['alias'] for record in aliases]
