@@ -6,11 +6,12 @@ import operator
 import util.exceptions as exceptions
 
 from config import config
+from util import utils, mk
 from discord.ext import commands
 from util.paginator import Pages
 
 
-class Fun(commands.Cog):
+class Misc(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
@@ -41,7 +42,7 @@ class Fun(commands.Cog):
         return None
 
     @commands.command(name='say')
-    @commands.has_permissions(administrator=True)
+    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def say(self, ctx, *, content: str):
         """Make the bot say something"""
         try:
@@ -371,4 +372,4 @@ class Fun(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(Fun(bot))
+    bot.add_cog(Misc(bot))

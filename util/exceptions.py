@@ -15,7 +15,7 @@ class RoleNotFoundError(DemocracivBotException):
 
     def __init__(self, role: str):
         self.role = role
-        self.message = f":x: Couldn't find a role named `{role}` on this guild!"
+        self.message = f":x: There is no role named `{role}` on this guild."
 
 
 class ChannelNotFoundError(DemocracivBotException):
@@ -23,7 +23,7 @@ class ChannelNotFoundError(DemocracivBotException):
 
     def __init__(self, channel: str):
         self.channel = channel
-        self.message = f":x: Couldn't find a channel named `{channel}` on this guild!"
+        self.message = f":x: There is no channel named `{channel}` on this guild."
 
 
 class MemberNotFoundError(DemocracivBotException):
@@ -31,7 +31,7 @@ class MemberNotFoundError(DemocracivBotException):
 
     def __init__(self, member: str):
         self.member = member
-        self.message = f":x: Couldn't find a member named `{member}` on this guild!"
+        self.message = f":x: There is no member named `{member}` on this guild."
 
 
 class NoOneHasRoleError(DemocracivBotException):

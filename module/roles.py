@@ -32,32 +32,39 @@ class Roles(commands.Cog):
         else:
             return ctx.guild.get_role(role_id['role_id'])
 
-    @commands.command(name='roles')
+    @commands.group(name='role', aliases=['roles'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def roles(self, ctx):
-        """Get a list of self-assignable roles"""
-        available_roles = await self.get_roles(ctx)
-        embed_message = ""
+    async def roles(self, ctx, role: str = None):
+        """Self-assignable roles
 
-        for role in available_roles:
-            role_object = ctx.guild.get_role(role)
-            if role_object is not None:
-                embed_message += f"{role_object.name}\n"
+        **Usage:**
+          `-roles` List all available roles
+          `-roles` <role> Get/Lose a role
+        """
 
-        if embed_message == "":
-            embed_message = "This server has no roles."
+        if role:
+            await self.togglerole(ctx, role)
 
-        embed = self.bot.embeds.embed_builder(title="Roles",
-                                              description="In order to add or remove a role from you, use `-role Role`")
-        embed.add_field(name="Available Roles", value=embed_message)
-        await ctx.send(embed=embed)
+        else:
+            available_roles = await self.get_roles(ctx)
+            embed_message = []
 
-    @commands.command(name='role')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.guild_only()
-    async def role(self, ctx, *, role: str):
-        """Assign/remove a role to/from yourself"""
+            for role in available_roles:
+                role_object = ctx.guild.get_role(role)
+                if role_object is not None:
+                    embed_message.append(f"{role_object.name}")
+
+            if not embed_message:
+                embed_message = ["This guild has no roles."]
+
+            embed = self.bot.embeds.embed_builder(title="Roles", description="In order to add or remove a role "
+                                                                             "from you, use `-role Role`")
+            embed.add_field(name="Available Roles", value='\n'.join(embed_message))
+            await ctx.send(embed=embed)
+
+    async def togglerole(self, ctx, role: str):
+        """Assigns or removes a role from someone"""
 
         available_roles = await self.get_roles(ctx)
         discord_role = await self.get_role_from_db(ctx, role)
@@ -89,14 +96,7 @@ class Roles(commands.Cog):
                     await ctx.send(f":x: You are not allowed remove this role from you! "
                                    f"If you're trying to leave a political party, use `-leave {discord_role.name}`.")
 
-    @role.error
-    async def rolerror(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'role':
-                await ctx.send(':x: You have to tell me which role you want to join or leave!\n\n**Usage**:\n'
-                               '`-role <role>`')
-
-    @commands.command(name='addrole')
+    @roles.command(name='add', aliases=['create, make'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @commands.guild_only()
@@ -110,7 +110,7 @@ class Roles(commands.Cog):
 
         if isinstance(role_name, str):
             await ctx.send(
-                f":white_check_mark: I will **create a new role** on this guild named '{role_name}'"
+                f":white_check_mark: I will **create a new role** on this guild named `{role_name}`"
                 f" for this.")
             try:
                 discord_role = await ctx.guild.create_role(name=role_name)
@@ -122,7 +122,7 @@ class Roles(commands.Cog):
 
             await ctx.send(
                 f":white_check_mark: I'll use the **pre-existing role** named "
-                f"'{discord_role.name}' for this.")
+                f"`{discord_role.name}` for this.")
 
         await ctx.send(":information_source: Answer with a short message the user should see when they get the role.")
 
@@ -136,12 +136,11 @@ class Roles(commands.Cog):
                                            discord_role.name.lower(), role_join_message)
 
         if status == "INSERT 0 1":
-            await ctx.send(f':white_check_mark: Added the role "{discord_role.name}" with the join message '
-                           f'"{role_join_message}"!')
+            await ctx.send(f':white_check_mark: The role `{discord_role.name}` was added.')
         else:
             await ctx.send(":x: Unexpected database error occurred.")
 
-    @commands.command(name='deleterole')
+    @roles.command(name='delete', aliases=['remove'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @commands.guild_only()
@@ -149,8 +148,8 @@ class Roles(commands.Cog):
         """Remove a role from this guild's `-roles` list
 
         Usage:
-         `-deleterole true <role>` will remove the role **and** delete its Discord role
-         `-deleterole false <role>` will remove the role but not delete its Discord role
+         `-role delete true <role>` will remove the role **and** delete its Discord role
+         `-role delete false <role>` will remove the role but not delete its Discord role
 
         """
         discord_role = discord.utils.get(ctx.guild.roles, name=role)
@@ -171,32 +170,14 @@ class Roles(commands.Cog):
 
                 if status == "DELETE 1":
                     if hard:
-                        await ctx.send(f":white_check_mark: Removed the role '{role}' and deleted its Discord "
-                                       f"role.")
+                        await ctx.send(f":white_check_mark: The role `{role}` and its Discord "
+                                       f"role was deleted.")
                     else:
-                        await ctx.send(f":white_check_mark: Removed the role '{role}' but did not delete its "
+                        await ctx.send(f":white_check_mark: Removed the role `{role}` but did **not** delete its "
                                        f"Discord role.")
 
                 else:
                     await ctx.send(":x: Unexpected database error occurred.")
-
-    @deleterole.error
-    async def deleteroleerror(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'hard':
-                await ctx.send(':x: You have to specify if I should hard-delete or not!\n\n**Usage**:\n'
-                               '`-deleterole true <role>` will remove the role **and** delete its Discord role\n'
-                               '`-deleterole false <role>` will remove the role but not delete its Discord role')
-
-            if error.param.name == 'role':
-                await ctx.send(':x: You have to give me the name of a role to delete!\n\n**Usage**:\n'
-                               '`-deleterole true <role>` will remove the role **and** delete its Discord role\n'
-                               '`-deleterole false <role>` will remove the role but not delete its Discord role')
-
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send(':x: Error!\n\n**Usage**:\n'
-                           '`-deleterole true <role>` will remove the role **and** delete its Discord role\n'
-                           '`-deleterole false <role>` will remove the role but not delete its Discord role')
 
 
 def setup(bot):

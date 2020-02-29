@@ -210,7 +210,7 @@ class Tags(commands.Cog):
 
         return True
 
-    @tags.command(name="add", aliases=['make'])
+    @tags.command(name="add", aliases=['make', 'create'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @utils.tag_check()

@@ -110,7 +110,7 @@ Module | Description
 ------------ | ------------- |
 module.about | Commands regarding the bot itself |
 module.admin | Debug commands for the developer |
-module.fun | Miscellaneous commands | 
+module.misc | Miscellaneous commands | 
 module.tags | Tags: Users can save text for later retrieval to command-like tags | 
 module.guild | Configure various functions of this bot for your guild |
 module.roles | Add or remove roles from you |
