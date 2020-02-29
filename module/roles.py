@@ -36,7 +36,7 @@ class Roles(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def roles(self, ctx, role: str = None):
-        """Self-assignable roles
+        """List all roles or get/lose a role by specifying the role's name
 
         **Usage:**
           `-roles` List all available roles
@@ -101,7 +101,7 @@ class Roles(commands.Cog):
     @commands.has_permissions(administrator=True)
     @commands.guild_only()
     async def addrole(self, ctx):
-        """Add a role to this guild's `-roles` list"""
+        """Add a role to this guild's `-role` list"""
 
         await ctx.send(":information_source: Answer with the name of the role you want to create:")
 
@@ -145,7 +145,7 @@ class Roles(commands.Cog):
     @commands.has_permissions(administrator=True)
     @commands.guild_only()
     async def deleterole(self, ctx, hard: bool, *, role: str):
-        """Remove a role from this guild's `-roles` list
+        """Remove a role from this guild's `-role` list
 
         Usage:
          `-role delete true <role>` will remove the role **and** delete its Discord role

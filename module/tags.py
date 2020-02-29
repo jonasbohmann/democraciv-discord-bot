@@ -11,8 +11,8 @@ from util.paginator import Pages
 from util.converter import Tag, OwnedTag
 
 
-class Tags(commands.Cog):
-    """Create tags for later retrieval of text, images & links and access them with just the bot's prefix"""
+class Tags(commands.Cog, name="Tag"):
+    """Create tags for later retrieval of text, images & links and access them with just the bot's prefix."""
 
     def __init__(self, bot):
         self.bot = bot
