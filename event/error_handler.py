@@ -134,13 +134,11 @@ class ErrorHandler(commands.Cog):
             return
 
         elif isinstance(error, commands.MissingRequiredArgument):
-            # TODO - Remove this from ignored and remove all local command error handler that also catch this
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.BadArgument):
-            # TODO - Remove this from ignored and remove all local command error handler that also catch this
-            await ctx.send(f":x: There was an error with one of the arguments you provided (or not provided)!"
-                           f" Take a look at the help page for this command:")
+            await ctx.send(f":x: There was an error with one of the arguments you provided (or not provided),"
+                           f" take a look at the help page for this command:")
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.CommandOnCooldown):

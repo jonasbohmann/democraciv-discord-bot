@@ -49,15 +49,17 @@ CREATE TABLE IF NOT EXISTS party_alias(
     party_id bigint references parties(id)
 );
 
+CREATE TYPE session_status AS ENUM ('Submission Period', 'Voting Period', 'Closed');
+
 CREATE TABLE IF NOT EXISTS legislature_sessions(
     id int UNIQUE PRIMARY KEY,
     speaker bigint,
     is_active bool,
-    status text,
+    status session_status DEFAULT 'Submission Period'::session_status,
     vote_form text,
-    start_unixtime bigint,
-    voting_start_unixtime bigint,
-    end_unixtime bigint
+    opened_on timestamp without time zone,
+    voting_started_on timestamp without time zone,
+    end_unixtime timestamp without time zone
 );
 
 CREATE TABLE IF NOT EXISTS legislature_bills(
@@ -120,7 +122,7 @@ CREATE TABLE IF NOT EXISTS guild_tags_alias(
 
 CREATE TABLE IF NOT EXISTS original_join_dates(
     member bigint UNIQUE,
-    join_date timestamp,
+    join_date timestamp without time zone,
     join_position int
 );
 
@@ -133,7 +135,7 @@ CREATE TABLE IF NOT EXISTS starboard_entries(
     message_image_url text,
     channel_id bigint,
     guild_id bigint,
-    message_creation_date timestamp,
+    message_creation_date timestamp without time zone,
     is_posted_to_reddit bool DEFAULT false,
     starboard_message_id bigint UNIQUE,
     starboard_message_created_at timestamp

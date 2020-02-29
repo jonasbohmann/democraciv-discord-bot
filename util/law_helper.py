@@ -1,9 +1,17 @@
+import enum
+
 import nltk
 import typing
 import asyncpg
 import collections
 
 from bs4 import BeautifulSoup, SoupStrainer
+
+
+class SessionStatus(enum.Enum):
+    SUBMISSION_PERIOD = "Submission Period"
+    VOTING_PERIOD = "Voting Period"
+    CLOSED = "Closed"
 
 
 class LawUtils:
@@ -36,12 +44,10 @@ class LawUtils:
                                           " is_active = true")
 
     async def get_last_leg_session(self) -> int:
-        return await self.bot.db.fetchval("SELECT id FROM legislature_sessions WHERE id = "
-                                          "(SELECT MAX(id) FROM legislature_sessions)")
+        return await self.bot.db.fetchval("SELECT MAX(id) FROM legislature_sessions")
 
     async def generate_new_bill_id(self) -> int:
-        last_bill = await self.bot.db.fetchrow("SELECT id FROM legislature_bills WHERE id = "
-                                               "(SELECT MAX(id) FROM legislature_bills)")
+        last_bill = await self.bot.db.fetchrow("SELECT MAX(id) FROM legislature_bills")
 
         if last_bill is not None:
             last_bill = last_bill['id']
@@ -51,8 +57,7 @@ class LawUtils:
         return last_bill + 1
 
     async def generate_new_law_id(self) -> int:
-        last_law = await self.bot.db.fetchrow("SELECT law_id FROM legislature_laws WHERE law_id = "
-                                              "(SELECT MAX(law_id) FROM legislature_laws)")
+        last_law = await self.bot.db.fetchrow("SELECT MAX(law_id) FROM legislature_laws")
 
         if last_law is not None:
             last_law = last_law['law_id']
@@ -62,8 +67,7 @@ class LawUtils:
         return last_law + 1
 
     async def generate_new_motion_id(self) -> int:
-        last_motion = await self.bot.db.fetchrow("SELECT id FROM legislature_motions WHERE id = "
-                                                 "(SELECT MAX(id) FROM legislature_motions)")
+        last_motion = await self.bot.db.fetchrow("SELECT MAX(id) FROM legislature_motions")
 
         if last_motion is not None:
             last_motion = last_motion['id']
