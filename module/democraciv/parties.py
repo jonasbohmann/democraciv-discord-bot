@@ -10,11 +10,11 @@ from util.converter import PoliticalParty
 from util.exceptions import ForbiddenTask
 
 
-# TODO add -mergeparty
-# TODO -party command group instead of addparty, removeparty etc
-
 class Party(commands.Cog, name='Political Parties'):
     """Interact with the political parties of Democraciv"""
+
+    # TODO - Move all party commands into -party group. Don't allow non-party roles in -members <role>, move that
+    #  functionality into -whois <role>
 
     def __init__(self, bot):
         self.bot = bot

@@ -3,6 +3,7 @@ import discord
 from util.help import PaginatedHelpCommand
 from config import config
 from discord.ext import commands
+from discord.ext.commands import CheckFailure
 
 
 class About(commands.Cog):
@@ -16,12 +17,6 @@ class About(commands.Cog):
 
     def cog_unload(self):
         self.bot.help_command = self.old_help_command
-
-    async def cog_command_error(self, ctx, error):
-        if isinstance(error, commands.BadArgument):
-            await ctx.send(error)
-
-    # TODO - Add -commands
 
     @commands.command(name='about')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -41,7 +36,8 @@ class About(commands.Cog):
         embed.add_field(name='Ping', value=(str(self.bot.ping) + 'ms'), inline=True)
         embed.add_field(name="Source Code", value="[Link](https://github.com/jonasbohmann/democraciv-discord-bot)",
                         inline=True)
-        embed.add_field(name='Commands', value='See ' + config.BOT_PREFIX + 'help', inline=False)
+        embed.add_field(name='Commands', value=f'Check `{config.BOT_PREFIX}commands` '
+                                               f'or `{config.BOT_PREFIX}help`', inline=False)
         embed.set_thumbnail(url=self.bot.owner.avatar_url_as(static_format="png"))
         await ctx.send(embed=embed)
 
@@ -50,6 +46,56 @@ class About(commands.Cog):
     async def ping(self, ctx):
         """Pong!"""
         embed = self.bot.embeds.embed_builder(title='Ping', description=(str(self.bot.ping) + 'ms'))
+        await ctx.send(embed=embed)
+
+    @staticmethod
+    def collect_all_commands(cog):
+        commands_list = []
+        for cmd in cog.get_commands():
+            if isinstance(cmd, discord.ext.commands.Group):
+                for c in cmd.commands:
+                    if isinstance(c, discord.ext.commands.Group):
+                        for co in c.commands:
+                            commands_list.append(co)
+                    commands_list.append(c)
+            commands_list.append(cmd)
+        return len(commands_list), sorted(commands_list, key=lambda com: com.qualified_name)
+
+    @commands.command(name='commands', aliases=['cmd', 'cmds'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def allcmds(self, ctx):
+        """List all commands"""
+
+        all_commands = []
+        hidden_cogs = ('Admin', 'ErrorHandler', 'Log', 'Starboard')
+        amounts = 0
+
+        for name, cog in sorted(self.bot.cogs.items()):
+            if name in hidden_cogs:
+                continue
+
+            all_commands.append(f"**__{name}__**\n")
+
+            amount, cog_cmds = self.collect_all_commands(cog)
+            amounts += amount
+
+            for command in cog_cmds:
+                if not command.hidden:
+                    try:
+                        if await command.can_run(ctx):
+                            all_commands.append(f"`{command.qualified_name}` ")
+                        else:
+                            all_commands.append(f"*`{command.qualified_name}`* ")
+                    except CheckFailure:
+                        all_commands.append(f"*`{command.qualified_name}`* ")
+
+            all_commands.append("\n")
+
+        embed = self.bot.embeds.embed_builder(title=f'All Commands ({amounts})',
+                                              description=f"Commands that you are not allowed to use (missing role"
+                                                          f" or missing permission) or that cannot be used"
+                                                          f" on this server, "
+                                                          f"are in _italic_.\n\n{' '.join(all_commands)}")
         await ctx.send(embed=embed)
 
     @commands.command(name='addme', aliases=['inviteme'])
