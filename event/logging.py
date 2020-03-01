@@ -156,7 +156,7 @@ class Log(commands.Cog):
 
         embed_fields = {
             "Member": [member.mention, True],
-            "Name": [f"{member.name} #{member.discriminator}", True],
+            "Name": [str(member), True],
             "Mobile": [f"{member.is_on_mobile()}", True],
             "ID": [f"{member.id}", False]
         }
@@ -171,7 +171,7 @@ class Log(commands.Cog):
             return
 
         embed_fields = {
-            "Name": [f"{member.name} #{member.discriminator}", True]
+            "Name": [str(member), True]
         }
 
         await self.log_event(member.guild, ':no_pedestrians:  Member Left', embed_fields,
@@ -185,7 +185,7 @@ class Log(commands.Cog):
 
         if before.display_name != after.display_name:
             embed_fields = {
-                "Member": [f"{before.mention} {before.name}#{before.discriminator}", False],
+                "Member": [f"{before.mention} {before}", False],
                 "Before": [before.display_name, False],
                 "After": [after.display_name, False]
 
@@ -194,7 +194,7 @@ class Log(commands.Cog):
             await self.log_event(before.guild, ':arrows_counterclockwise:  Nickname Changed', embed_fields,
                                  thumbnail=before.avatar_url_as(static_format="png"), to_owner=False)
 
-        if before.roles != after.roles:
+        elif before.roles != after.roles:
 
             if len(before.roles) < len(after.roles):
                 for x in after.roles:
@@ -202,20 +202,20 @@ class Log(commands.Cog):
                         given_role = x.name
 
                 embed_fields = {
-                    "Member": [f"{before.mention} {before.name}#{before.discriminator}", False],
+                    "Member": [f"{before.mention} {before}", False],
                     "Role": [given_role, False]
                 }
 
                 await self.log_event(before.guild, ':sunglasses:  Role given to Member', embed_fields,
                                      thumbnail=before.avatar_url_as(static_format="png"), to_owner=False)
 
-            if len(before.roles) > len(after.roles):
+            elif len(before.roles) > len(after.roles):
                 for x in before.roles:
                     if x not in after.roles:
                         removed_role = x.name
 
                 embed_fields = {
-                    "Member": [f"{before.mention} {before.name}#{before.discriminator}", False],
+                    "Member": [f"{before.mention} {before}", False],
                     "Role": [removed_role, False]
                 }
 
@@ -231,7 +231,7 @@ class Log(commands.Cog):
             return
 
         embed_fields = {
-            "Name": [f"{user.name} #{user.discriminator}", True]
+            "Name": [str(user), True]
         }
 
         await self.log_event(guild, ':no_entry:  Member Banned', embed_fields,
@@ -244,7 +244,7 @@ class Log(commands.Cog):
             return
 
         embed_fields = {
-            "Name": [f"{user.name} #{user.discriminator}", True]
+            "Name": [str(user), True]
         }
 
         await self.log_event(guild, ':dove:  Member Unbanned', embed_fields,
@@ -254,12 +254,12 @@ class Log(commands.Cog):
     # -- Guild Events --
 
     @commands.Cog.listener()
-    async def on_guild_join(self, guild):
-        introduction_channel = guild.text_channels[0]
+    async def on_guild_join(self, guild: discord.Guild):
+        introduction_channel = guild.system_channel or guild.text_channels[0]
 
         # Alert owner of this bot that the bot was invited to some place
         await self.bot.owner.send(
-            f":warning:  I was added to {guild.name} ({guild.id}). Here are some invites:")
+            f":warning:  I was added to {guild.name} ({guild.id}).")
 
         # Send introduction message to random guild channel
         embed = self.bot.embeds.embed_builder(title=':two_hearts: Hey there!',
@@ -271,9 +271,7 @@ class Log(commands.Cog):
                                                           f"send a DM to {self.bot.owner.mention}!")
 
         # Add new guild to database
-        await self.bot.db.execute("INSERT INTO guilds (id, welcome, logging, logging_excluded, defaultrole) "
-                                  "VALUES ($1, false, false, ARRAY[0], false) ON CONFLICT DO NOTHING ",
-                                  guild.id)
+        await self.bot.db.execute("INSERT INTO guilds (id) VALUES ($1) ON CONFLICT DO NOTHING ", guild.id)
 
         try:
             await introduction_channel.send(embed=embed)

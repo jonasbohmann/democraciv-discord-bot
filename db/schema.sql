@@ -2,13 +2,13 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TABLE IF NOT EXISTS guilds(
     id bigint UNIQUE PRIMARY KEY,
-    welcome bool,
+    welcome bool DEFAULT FALSE,
     welcome_message text,
     welcome_channel bigint,
-    logging bool,
+    logging bool DEFAULT FALSE,
     logging_channel bigint,
-    logging_excluded bigint[],
-    defaultrole bool,
+    logging_excluded bigint[] DEFAULT ARRAY[0],
+    defaultrole bool DEFAULT FALSE,
     defaultrole_role bigint
 );
 
@@ -32,15 +32,13 @@ CREATE TABLE IF NOT EXISTS youtube_streams(
 );
 
 CREATE TABLE IF NOT EXISTS twitch_streams(
-    id text UNIQUE,
-    has_sent_mod_reminder bool,
-    has_sent_exec_reminder bool
+    id text UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS parties(
     id bigint UNIQUE PRIMARY KEY,
-    discord text,
-    private bool,
+    discord_invite text,
+    is_private bool DEFAULT FALSE,
     leader bigint
 );
 
@@ -61,9 +59,9 @@ CREATE TABLE IF NOT EXISTS legislature_sessions(
     is_active bool,
     status session_status DEFAULT 'Submission Period'::session_status,
     vote_form text,
-    opened_on timestamp without time zone,
-    voting_started_on timestamp without time zone,
-    closed_on timestamp without time zone
+    opened_on timestamp WITHOUT TIME ZONE,
+    voting_started_on timestamp WITHOUT TIME ZONE,
+    closed_on timestamp WITHOUT TIME ZONE
 );
 
 CREATE TABLE IF NOT EXISTS legislature_bills(
@@ -75,10 +73,10 @@ CREATE TABLE IF NOT EXISTS legislature_bills(
     description text,
     submitter bigint,
     is_vetoable bool,
-    voted_on_by_leg bool default false,
-    has_passed_leg bool default false,
-    voted_on_by_ministry bool default false,
-    has_passed_ministry bool default false
+    voted_on_by_leg bool DEFAULT FALSE,
+    has_passed_leg bool DEFAULT FALSE,
+    voted_on_by_ministry bool DEFAULT FALSE,
+    has_passed_ministry bool DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS legislature_laws(
@@ -125,7 +123,7 @@ CREATE TABLE IF NOT EXISTS guild_tags_alias(
 
 CREATE TABLE IF NOT EXISTS original_join_dates(
     member bigint UNIQUE,
-    join_date timestamp without time zone,
+    join_date timestamp WITHOUT TIME ZONE,
     join_position int
 );
 
@@ -138,8 +136,8 @@ CREATE TABLE IF NOT EXISTS starboard_entries(
     message_image_url text,
     channel_id bigint,
     guild_id bigint,
-    message_creation_date timestamp without time zone,
-    is_posted_to_reddit bool DEFAULT false,
+    message_creation_date timestamp WITHOUT TIME ZONE,
+    is_posted_to_reddit bool DEFAULT FALSE,
     starboard_message_id bigint UNIQUE,
     starboard_message_created_at timestamp
 );

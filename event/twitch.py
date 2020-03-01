@@ -31,7 +31,8 @@ class Twitch:
     async def check_twitch_livestream(self):
         try:
             async with self.bot.session.get(self.twitch_API_url, headers={'Client-ID': self.twitch_API_token}) as response:
-                twitch = await response.json()
+                if response.status == 200:
+                    twitch = await response.json()
         except aiohttp.ClientConnectionError:
             print("[BOT] ERROR - aiohttp.ClientConnectionError in Twitch session.get()!")
             return self.StreamStatus.OFFLINE
@@ -48,7 +49,7 @@ class Twitch:
 
             # ID already in database -> stream already announced
             if status == "INSERT 0 0":
-                return [self.StreamStatus.LIVE_AND_ANNOUNCED, _stream_id]
+                return self.StreamStatus.LIVE_AND_ANNOUNCED
 
             # Get thumbnail in right size
             thumbnail = twitch['data'][0]['thumbnail_url'].replace('{width}', '720').replace('{height}', '380')
@@ -74,23 +75,8 @@ class Twitch:
         if twitch_data == self.StreamStatus.OFFLINE:
             return
 
-        elif twitch_data[0] == self.StreamStatus.LIVE_AND_ANNOUNCED:
-
-            # Check if we sent the streaming rules reminder
-            sent_exec_reminder = await self.bot.db.fetchval("SELECT has_sent_exec_reminder FROM twitch_streams"
-                                                            " WHERE id = $1", twitch_data[1])
-
-            if not sent_exec_reminder:
-                await self.streaming_rules_reminder(twitch_data[1])
-
-            # Check if we sent the mod reminder
-            sent_mod_reminder = await self.bot.db.fetchval("SELECT has_sent_mod_reminder FROM twitch_streams"
-                                                           " WHERE id = $1", twitch_data[1])
-
-            if not sent_mod_reminder:
-                # TODO - This does not work how you want it to work
-                # await self.export_twitch_reminder(twitch_data[1])
-                pass
+        elif twitch_data == self.StreamStatus.LIVE_AND_ANNOUNCED:
+            return
 
         elif twitch_data[0] == self.StreamStatus.LIVE_AND_NOT_ANNOUNCED:
             embed = self.bot.embeds.embed_builder(title=f"<:twitch:660116652012077080>  {self.streamer} - "
@@ -106,10 +92,10 @@ class Twitch:
                 await channel.send(f'{self.streamer} is live on Twitch!', embed=embed)
 
             # Send reminder about streaming rules to executive channel
-            await self.streaming_rules_reminder(twitch_data[1])
+            await self.streaming_rules_reminder()
 
             # Send reminder to moderation to export Twitch VOD
-            await self.export_twitch_reminder(twitch_data[1])
+            await self.export_twitch_reminder()
 
     @twitch_task.before_loop
     async def before_twitch_task(self):
@@ -119,7 +105,7 @@ class Twitch:
         if self.bot.democraciv_guild_object is None:
             await asyncio.sleep(5)
 
-    async def streaming_rules_reminder(self, stream_id):
+    async def streaming_rules_reminder(self):
         executive_channel = mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.EXECUTIVE_CHANNEL)
         minister_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.MINISTER_ROLE)
         governor_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.GOVERNOR_ROLE)
@@ -155,10 +141,7 @@ class Twitch:
 
         await executive_channel.send(embed=embed)
 
-        await self.bot.db.execute("UPDATE twitch_streams SET has_sent_exec_reminder = true WHERE id = $1",
-                                  stream_id)
-
-    async def export_twitch_reminder(self, stream_id):
+    async def export_twitch_reminder(self):
         moderation_channel = mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.MODERATION_TEAM_CHANNEL)
 
         await asyncio.sleep(7200)  # Wait 2 hours, i.e. after the game session is done, before sending reminder to Mods
@@ -213,6 +196,3 @@ class Twitch:
                                 "645394491133394966/01-twitch-logo.jpg")
 
         await moderation_channel.send(content='@here', embed=embed)
-
-        await self.bot.db.execute("UPDATE twitch_streams SET has_sent_mod_reminder = true WHERE id = $1",
-                                  stream_id)

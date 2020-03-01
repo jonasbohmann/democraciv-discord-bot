@@ -25,7 +25,7 @@ class Party(commands.Cog, name='Political Parties'):
         party_dict = {}
 
         for record in party_list:
-            party_dict[record['id']] = record['discord']
+            party_dict[record['id']] = record['discord_invite']
 
         return party_dict
 
@@ -101,7 +101,7 @@ class Party(commands.Cog, name='Political Parties'):
         if role.id in available_parties_by_id:
             if role not in ctx.message.author.roles:
 
-                is_private = await self.bot.db.fetchval("SELECT private FROM parties WHERE id = $1", role.id)
+                is_private = await self.bot.db.fetchval("SELECT is_private FROM parties WHERE id = $1", role.id)
 
                 if is_private:
                     party_leader_mention = self.bot.get_user(
@@ -308,7 +308,7 @@ class Party(commands.Cog, name='Political Parties'):
                 if is_private:
                     try:
                         await self.bot.db.execute(
-                            "INSERT INTO parties (id, discord, private, leader) VALUES ($1, $2, $3, $4)",
+                            "INSERT INTO parties (id, discord_invite, is_private, leader) VALUES ($1, $2, $3, $4)",
                             discord_role.id,
                             party_invite, True, leader_role.id)
                     except asyncpg.UniqueViolationError:
@@ -316,7 +316,7 @@ class Party(commands.Cog, name='Political Parties'):
                 else:
                     try:
                         await self.bot.db.execute(
-                            "INSERT INTO parties (id, discord, private) VALUES ($1, $2, $3)", discord_role.id,
+                            "INSERT INTO parties (id, discord_invite, is_private) VALUES ($1, $2, $3)", discord_role.id,
                             party_invite, False)
                     except asyncpg.UniqueViolationError:
                         return await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
