@@ -1,22 +1,11 @@
 import enum
 import typing
-from datetime import datetime
-
 import discord
 
+from datetime import datetime
 from discord.ext import commands
 from discord.ext.commands import BadArgument
-
-from util import law_helper
-from util.exceptions import DemocracivBotException
-
-
-class TagError(DemocracivBotException):
-    pass
-
-
-class NotFoundError(DemocracivBotException):
-    pass
+from util.exceptions import DemocracivBotException, TagError, NotFoundError
 
 
 class SessionStatus(enum.Enum):

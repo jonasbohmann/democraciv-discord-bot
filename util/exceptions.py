@@ -61,6 +61,14 @@ class TagCheckError(commands.CheckFailure):
         self.message = message
 
 
+class TagError(DemocracivBotException):
+    pass
+
+
+class NotFoundError(DemocracivBotException):
+    pass
+
+
 class ForbiddenTask(enum.Enum):
     ADD_ROLE = 1
     REMOVE_ROLE = 2

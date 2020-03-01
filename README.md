@@ -171,7 +171,7 @@ for database~~
 ####  Update 0.17.0 - The Suggestions Update 
 
 *  ~~Starboard-like system for the #press channel with weekly summaries to Reddit~~
-*  Add motion support to -legislature withdraw
+*  ~~Add motion support to -legislature withdraw~~
 *  Add utility mod commands to support the process between MKs
 *  Allow Speaker and Ministry to pass multiple bills in a single command
 *  Add -mergeparties command 

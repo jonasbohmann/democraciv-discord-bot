@@ -1,8 +1,10 @@
 import asyncpg
 import discord
+import typing
 
 from discord.ext import commands
 
+from util.converter import Bill
 from util.flow import Flow
 from config import config, links
 from util.paginator import Pages
@@ -14,21 +16,31 @@ class Ministry(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.prime_minister = None
-        self.lt_prime_minister = None
 
-    def refresh_minister_discord_objects(self):
-        """Refreshes class attributes with current Prime Minister and Lt. Prime Minister discord.Member objects"""
-
+    @property
+    def prime_minister(self) -> typing.Optional[discord.Member]:
         try:
-            self.prime_minister = mk.get_democraciv_role(self.bot, mk.DemocracivRole.PRIME_MINISTER_ROLE).members[0]
-        except IndexError:
-            raise exceptions.NoOneHasRoleError("Prime Minister")
+            return mk.get_democraciv_role(self.bot, mk.DemocracivRole.PRIME_MINISTER_ROLE).members[0]
+        except (IndexError, exceptions.RoleNotFoundError):
+            return None
 
+    @property
+    def lt_prime_minister(self) -> typing.Optional[discord.Member]:
         try:
-            self.lt_prime_minister = mk.get_democraciv_role(self.bot, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE).members[0]
-        except IndexError:
-            raise exceptions.NoOneHasRoleError("Lieutenant Prime Minister")
+            return mk.get_democraciv_role(self.bot, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE).members[0]
+        except (IndexError, exceptions.RoleNotFoundError):
+            return None
+
+    @property
+    def speaker(self) -> typing.Optional[discord.Member]:
+        try:
+            return mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE).members[0]
+        except (IndexError, exceptions.RoleNotFoundError):
+            return None
+
+    @property
+    def gov_announcements_channel(self) -> typing.Optional[discord.TextChannel]:
+        return mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
     async def get_open_vetos(self) -> asyncpg.Record:
         """Gets all bills that  passed the Legislature, are vetoable and were not yet voted on by the Ministry"""
@@ -50,8 +62,8 @@ class Ministry(commands.Cog):
             for record in open_bills:
                 if self.bot.get_user(record[0][3]) is not None:
                     pretty_bills.append(f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by "
-                                    f"{self.bot.get_user(record[0][3]).mention}"
-                                    f" from Leg. Session #{record[0][4]}")
+                                        f"{self.bot.get_user(record[0][3]).mention}"
+                                        f" from Leg. Session #{record[0][4]}")
                 else:
                     pretty_bills.append(f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) from "
                                         f"Leg. Session #{record[0][4]}")
@@ -66,15 +78,7 @@ class Ministry(commands.Cog):
     async def ministry(self, ctx):
         """Dashboard for Ministers"""
 
-        try:
-            self.refresh_minister_discord_objects()
-        except exceptions.DemocracivBotException as e:
-            if isinstance(e, exceptions.RoleNotFoundError):
-                await ctx.send(e.message)
-
-        embed = self.bot.embeds.embed_builder(title=f"The Ministry of {mk.NATION_NAME}",
-                                              description="")
-        minister_value = f""
+        embed = self.bot.embeds.embed_builder(title=f"The Ministry of {mk.NATION_NAME}", description="")
 
         pretty_bills = await self.get_pretty_vetos()
 
@@ -82,26 +86,27 @@ class Ministry(commands.Cog):
             pretty_bills = pretty_bills[0]
 
         elif len(pretty_bills) >= 1 and pretty_bills[0] != "There are no new bills to vote on.":
-            pretty_bills = f"You can vote on new bills, check `{self.bot.commands_prefix}ministry bills`."
+            pretty_bills = f"You can vote on new bills, check `{ctx.prefix}ministry bills`."
+
+        minister_value = []
 
         if isinstance(self.prime_minister, discord.Member):
-            minister_value += f"Prime Minister: {self.prime_minister.mention}\n"
+            minister_value.append(f"Prime Minister: {self.prime_minister.mention}")
 
         else:
-            minister_value += f"Prime Minister: -\n"
+            minister_value.append("Prime Minister: -")
 
         if isinstance(self.lt_prime_minister, discord.Member):
-            minister_value += f"Lt. Prime Minister: {self.lt_prime_minister.mention}"
+            minister_value.append(f"Lt. Prime Minister: {self.lt_prime_minister.mention}")
         else:
-            minister_value += f"Lt. Prime Minister: -"
+            minister_value.append("Lt. Prime Minister: -")
 
-        embed.add_field(name="Head of State", value=minister_value)
+        embed.add_field(name="Head of State", value='\n'.join(minister_value))
         embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
                                             f"[Legal Code]({links.laws})\n"
                                             f"[Ministry Worksheet]({links.executiveworksheet})\n"
                                             f"[Ministry Procedures]({links.execprocedures})", inline=True)
-        embed.add_field(name="Open Bills", value=f"{pretty_bills}", inline=False)
-
+        embed.add_field(name="Open Bills", value=pretty_bills, inline=False)
         await ctx.send(embed=embed)
 
     @ministry.group(name='bills', aliases=['b'])
@@ -114,36 +119,31 @@ class Ministry(commands.Cog):
         help_description = f"Use {self.bot.commands_prefix}ministry veto <bill_id> to veto a bill, or " \
                            f"{self.bot.commands_prefix}ministry pass <bill_id> to pass a bill into law."
 
-        pages = Pages(ctx=ctx, entries=pretty_bills, show_entry_count=False, title="Open Bills to Veto"
-                      , show_index=False, footer_text=help_description)
-
+        pages = Pages(ctx=ctx, entries=pretty_bills, show_entry_count=False, title="Open Bills to Vote On",
+                      show_index=False, footer_text=help_description)
         await pages.paginate()
 
     @ministry.group(name='veto', aliases=['v'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
-    async def veto(self, ctx, bill_id: int):
+    async def veto(self, ctx, bill_id: Bill):
         """Veto a bill"""
 
-        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
+        bill = bill_id
 
-        if bill_details is None:
-            return await ctx.send(f":x: Could not find any bill with ID `#{bill_id}`")
-
-        if not bill_details['is_vetoable']:
+        if not bill.is_vetoable:
             return await ctx.send(f":x: The Ministry cannot veto this!")
 
-        if not bill_details['has_passed_leg']:
+        if not bill.passed_leg:
             return await ctx.send(f":x: This bill hasn't passed the Legislature yet!")
 
-        if bill_details['voted_on_by_ministry'] or bill_details['has_passed_ministry']:
+        if bill.voted_on_by_ministry:
             return await ctx.send(f":x: You already voted on this bill!")
 
         flow = Flow(self.bot, ctx)
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to veto "
-                                      f"'{bill_details['bill_name']}"
-                                      f"' (#{bill_details['id']})?")
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to "
+                                      f"veto `{bill.name}` (#{bill.id}?")
 
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
@@ -151,58 +151,41 @@ class Ministry(commands.Cog):
             return
 
         if reaction:
-            # Are you sure? Yes
             async with ctx.typing():
                 await self.bot.db.execute(
                     "UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
                     "false WHERE id = $1", bill_id)
 
-                await ctx.send(f":white_check_mark: Vetoed {bill_details['bill_name']} "
-                               f"(#{bill_details['id']}).")
+                await ctx.send(f":white_check_mark: `{bill.name}` was vetoed.")
 
-                await mk.get_democraciv_channel(self.bot,
-                                                mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(
-                    f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE).mention},"
-                    f" '{bill_details['bill_name']}' "
-                    f"({bill_details['tiny_link']}) was vetoed "
-                    f"by the Ministry.")
+                await self.gov_announcements_channel.send(
+                    f"{self.speaker.mention}, `{bill.name}` ({bill.tiny_link}) was **vetoed** by the Ministry.")
 
         elif not reaction:
-            # Are you sure? No
             await ctx.send(f"Aborted.")
-
-    @veto.error
-    async def vetoerr(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'bill_id':
-                await ctx.send(':x: You have to give me the ID of the bill you want to veto!\n\n**Usage**:\n'
-                               '`-ministry veto <bill_id>`')
 
     @ministry.group(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
-    async def passbill(self, ctx, bill_id: int):
+    async def passbill(self, ctx, bill_id: Bill):
         """Pass a bill into law"""
 
-        bill_details = await self.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", bill_id)
+        bill = bill_id
 
-        if bill_details is None:
-            return await ctx.send(f":x: Could not find any bill with ID `#{bill_id}`")
+        if not bill.is_vetoable:
+            return await ctx.send(f":x: The Ministry cannot veto this!")
 
-        if not bill_details['is_vetoable']:
-            return await ctx.send(f":x: The Ministry cannot vote on this!")
-
-        if not bill_details['has_passed_leg']:
+        if not bill.passed_leg:
             return await ctx.send(f":x: This bill hasn't passed the Legislature yet!")
 
-        if bill_details['voted_on_by_ministry'] or bill_details['has_passed_ministry']:
+        if bill.voted_on_by_ministry:
             return await ctx.send(f":x: You already voted on this bill!")
+
 
         flow = Flow(self.bot, ctx)
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to pass "
-                                      f"'{bill_details['bill_name']}"
-                                      f"' (#{bill_details['id']}) into law?")
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to pass `{bill.name}` "
+                                      f"(#{bill.id}) into law?")
 
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
@@ -210,30 +193,17 @@ class Ministry(commands.Cog):
             return
 
         if reaction:
-            # Are you sure? Yes
             async with ctx.typing():
-                if await self.bot.laws.pass_into_law(ctx, bill_id, bill_details):
-                    # pass_into_law() returned True -> success
+                if await self.bot.laws.pass_into_law(ctx, bill):
                     await ctx.send(":white_check_mark: Passed into law.")
-                    await mk.get_democraciv_channel(self.bot,
-                                                    mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL).send(
-                        f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE).mention}, "
-                        f"'{bill_details['bill_name']}' ({bill_details['tiny_link']}) was passed into"
-                        f" law by the Ministry.")
+                    await self.gov_announcements_channel.send(
+                        f"{self.speaker.mention}, `{bill.name}` ({bill.tiny_link}) was "
+                        f"**passed into law** by the Ministry.")
                 else:
-                    # database error in pass_into_law()
                     await ctx.send(":x: Unexpected error occurred.")
 
         elif not reaction:
-            # Are you sure? No
             await ctx.send(f"Aborted.")
-
-    @passbill.error
-    async def passbillerr(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'bill_id':
-                await ctx.send(':x: You have to give me the ID of the bill you want to pass!\n\n**Usage**:\n'
-                               '`-ministry pass <bill_id>`')
 
 
 def setup(bot):

@@ -132,13 +132,6 @@ class Party(commands.Cog, name='Political Parties'):
                 f":x: That is not a political party! If you're trying to give yourself a role from `-roles`, "
                 f"use `-role {role.name}`.")
 
-    @join.error
-    async def joinerror(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'party':
-                await ctx.send(':x: You have to specify the party you want to join!\n\n**Usage**:\n'
-                               '`-join <party>`')
-
     @commands.command(name='form')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def form(self, ctx):
@@ -188,13 +181,6 @@ class Party(commands.Cog, name='Political Parties'):
         else:
             await ctx.send(f":x: That is not a political party! If you're trying to remove a role from `-roles` from "
                            f"you, use `-role {role.name}`.")
-
-    @leave.error
-    async def leaveerror(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'party':
-                await ctx.send(':x: You have to specify the party you want to leave!\n\n**Usage**:\n'
-                               '`-leave <party>`')
 
     @commands.command(name='members')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -371,24 +357,6 @@ class Party(commands.Cog, name='Political Parties'):
                     await self.bot.db.execute("DELETE FROM parties WHERE id = $1", discord_role.id)
 
             await ctx.send(f':white_check_mark: `{discord_role.name}` and all its aliases were deleted.')
-
-    @deleteparty.error
-    async def deletepartyerror(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'hard':
-                await ctx.send(':x: You have to specify if I should hard-delete or not!\n\n**Usage**:\n'
-                               '`-deleteparty true <party>` will remove the party **and** delete its Discord role\n'
-                               '`-deleteparty false <party>` will remove the party but not delete its Discord role')
-
-            if error.param.name == 'party':
-                await ctx.send(':x: You have to give me the name of a party to delete!\n\n**Usage**:\n'
-                               '`-deleteparty true <party>` will remove the party **and** delete its Discord role\n'
-                               '`-deleteparty false <party>` will remove the party but not delete its Discord role')
-
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send(':x: Error!\n\n**Usage**:\n'
-                           '`-deleteparty true <party>` will remove the party **and** delete its Discord role\n'
-                           '`-deleteparty false <party>` will remove the party but not delete its Discord role')
 
     @commands.command(name='addalias')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
