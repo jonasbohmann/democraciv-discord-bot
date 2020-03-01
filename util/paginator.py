@@ -62,6 +62,7 @@ class Pages:
     def __init__(self, ctx, *, entries, per_page=12, show_entry_count=True, title=None, show_index=True,
                  footer_text=config.BOT_NAME, colour=0x7f0000, title_url=None, thumbnail=None,
                  show_amount_of_pages=False):
+        # TODO Clean up the kwargs
         self.bot = ctx.bot
         self.entries = entries
         self.message = ctx.message
@@ -83,6 +84,7 @@ class Pages:
         self.paginating = len(entries) > per_page
         self.show_entry_count = show_entry_count
         self.show_amount_of_pages = show_amount_of_pages
+        # TODO Remove useless buttons
         self.reaction_emojis = [
             ('\N{BLACK LEFT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}', self.first_page),
             ('\N{BLACK LEFT-POINTING TRIANGLE}', self.previous_page),

@@ -48,7 +48,7 @@ class ErrorHandler(commands.Cog):
             if len(pretty_traceback) <= 1024:
                 embed.add_field(name='Traceback', value=f'```py\n{pretty_traceback}```')
             else:
-                self.bot.owner.send(f'```py\n{pretty_traceback}```')
+                await self.bot.owner.send(f'```py\n{pretty_traceback}```')
 
             await self.bot.owner.send(embed=embed)
 
@@ -134,6 +134,8 @@ class ErrorHandler(commands.Cog):
             return
 
         elif isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send(f":x: There was an error with one of the arguments you provided (or not provided),"
+                           f" take a look at the help page for this command:")
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.BadArgument):

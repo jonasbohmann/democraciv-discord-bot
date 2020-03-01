@@ -6,6 +6,8 @@ from config import config
 from util.flow import Flow
 from discord.ext import commands
 
+# TODO move to converter
+
 
 class Roles(commands.Cog):
     """Self-assignable roles for this guild"""

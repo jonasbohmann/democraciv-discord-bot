@@ -16,6 +16,7 @@ class Guild(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
     async def guild(self, ctx):
+        # TODO Show summary of guild settings
         """Configure various features of this bot for this guild"""
 
         configuration_list_message = "`-guild welcome` to enable/disable welcome messages for this guild\n" \

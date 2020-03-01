@@ -8,6 +8,9 @@ from config import config, token, links
 from discord.ext import commands
 
 
+# TODO add tempmute, tempban
+# TODO utility commnads for when MK is over
+
 class Moderation(commands.Cog):
     """Commands for the Mod Team"""
 

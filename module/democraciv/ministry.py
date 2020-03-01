@@ -56,6 +56,8 @@ class Ministry(commands.Cog):
         """Prettifies asyncpg.Record object of open vetos into list of strings"""
         open_bills = await self.get_open_vetos()
 
+        # TODO remove tuple from sql query
+
         pretty_bills = []
 
         if len(open_bills) > 0:
@@ -154,7 +156,7 @@ class Ministry(commands.Cog):
             async with ctx.typing():
                 await self.bot.db.execute(
                     "UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
-                    "false WHERE id = $1", bill_id)
+                    "false WHERE id = $1", bill.id)
 
                 await ctx.send(f":white_check_mark: `{bill.name}` was vetoed.")
 

@@ -250,12 +250,10 @@ class Misc(commands.Cog, name="Miscellaneous"):
             await ctx.send(":x: That doesn't look like a valid URL!")
             return
 
-        async with self.bot.session.get(f"https://tinyurl.com/api-create.php?url={url}") as response:
-            tiny_url = await response.text()
+        tiny_url = await self.bot.laws.post_to_tinyurl(url)
 
-        if tiny_url == "Error":
-            await ctx.send(":x: tinyurl.com returned an error!")
-            return
+        if tiny_url is None:
+            return await ctx.send(":x: tinyurl.com returned an error!")
 
         await ctx.send(tiny_url)
 

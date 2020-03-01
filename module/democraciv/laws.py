@@ -53,7 +53,7 @@ class Laws(commands.Cog, name='Law'):
         if law.bill.submitter is not None:
             submitted_by_value = f"{law.bill.submitter.mention} (during Session #{law.bill.session.id})"
         else:
-            submitted_by_value = f"*Submitter left the server* (during Session #{law.bill.session.id})"
+            submitted_by_value = f"*Submitter left Democraciv* (during Session #{law.bill.session.id})"
 
         embed = self.bot.embeds.embed_builder(title=law.bill.name, description=f"Associated Bill: #{law.bill.id}")
         embed.add_field(name="Link", value=law.bill.link)
@@ -149,10 +149,9 @@ class Laws(commands.Cog, name='Law'):
             return await ctx.send("Aborted.")
 
         elif reaction:
-            async with self.bot.session.get(f"https://tinyurl.com/api-create.php?url={new_link}") as response:
-                tiny_url = await response.text()
+            tiny_url = await self.bot.laws.post_to_tinyurl(new_link)
 
-            if tiny_url == "Error":
+            if tiny_url is None:
                 return await ctx.send(":x: tinyurl.com returned an error, the link was not updated."
                                       " Try again in a few minutes.")
 

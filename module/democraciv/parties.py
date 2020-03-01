@@ -9,6 +9,10 @@ from util import utils, exceptions, mk
 from util.exceptions import ForbiddenTask
 
 
+# TODO add -mergeparty
+# TODO -party command group instead of addparty, removeparty etc
+# TODO move to converter
+
 class Party(commands.Cog, name='Political Parties'):
     """Interact with the political parties of Democraciv"""
 

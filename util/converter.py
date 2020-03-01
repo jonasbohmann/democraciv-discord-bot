@@ -139,8 +139,8 @@ class Session(commands.Converter):
         self.opened_on: datetime = kwargs.get('opened_on')
         self.voting_started_on: datetime = kwargs.get('voting_started_on', None)
         self.closed_on: datetime = kwargs.get('closed_on', None)
-        self.bills: typing.List[Bill] = kwargs.get('bills')
-        self.motions: typing.List[Motion] = kwargs.get('motions')
+        self.bills: typing.List[int] = kwargs.get('bills')
+        self.motions: typing.List[int] = kwargs.get('motions')
         self._speaker: int = kwargs.get('speaker')
         self._bot = kwargs.get('bot')
 
@@ -162,13 +162,13 @@ class Session(commands.Converter):
         session = await ctx.bot.db.fetchrow("SELECT * FROM legislature_sessions WHERE id = $1", argument)
 
         if session is None:
-            raise NotFoundError(f":x: Couldn't find any session with ID #{argument}")
+            raise NotFoundError(f":x: There is no session with ID #{argument}!")
 
         bills = await ctx.bot.db.fetch("SELECT id FROM legislature_bills WHERE leg_session = $1", session['id'])
-        bills = [await Bill.convert(ctx, record['id']) for record in bills]
+        bills = [record['id'] for record in bills]
 
         motions = await ctx.bot.db.fetch("SELECT id FROM legislature_motions WHERE leg_session = $1", session['id'])
-        motions = [await Motion.convert(ctx, record['id']) for record in motions]
+        motions = [record['id'] for record in motions]
 
         return cls(id=session['id'], is_active=session['is_active'], status=SessionStatus.from_str(session['status']),
                    vote_form=session['vote_form'], opened_on=session['opened_on'],
@@ -207,7 +207,7 @@ class Bill(commands.Converter):
         return user
 
     @classmethod
-    async def convert(cls, ctx, argument: str):
+    async def convert(cls, ctx, argument: typing.Union[int, str]):
         try:
             argument = int(argument)
             bill = await ctx.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", argument)
@@ -217,7 +217,7 @@ class Bill(commands.Converter):
                 bill = await ctx.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE link = $1", argument)
 
         if bill is None:
-            raise NotFoundError(f":x: Couldn't find any bill that matches {argument}.")
+            raise NotFoundError(f":x: There is no bill with ID #{argument}!")
 
         session = await Session.convert(ctx, bill['leg_session'])
 
@@ -252,7 +252,7 @@ class Law(commands.Converter):
         law = await ctx.bot.db.fetchrow("SELECT * FROM legislature_laws WHERE law_id = $1", argument)
 
         if law is None:
-            raise NotFoundError(f":x: Couldn't find any law with ID #{argument}")
+            raise NotFoundError(f":x: There is no law with ID #{argument}!")
 
         bill = await Bill.convert(ctx, law['bill_id'])
 
@@ -288,7 +288,7 @@ class Motion(commands.Converter):
         return user
 
     @classmethod
-    async def convert(cls, ctx, argument: str):
+    async def convert(cls, ctx, argument: int):
         try:
             argument = int(argument)
         except ValueError:
@@ -297,7 +297,7 @@ class Motion(commands.Converter):
         motion = await ctx.bot.db.fetchrow("SELECT * FROM legislature_motions WHERE id = $1", argument)
 
         if motion is None:
-            raise NotFoundError(f":x: Couldn't find any motion that matches {argument}.")
+            raise NotFoundError(f":x: There is no motion with ID #{argument}!")
 
         session = await Session.convert(ctx, motion['leg_session'])
 

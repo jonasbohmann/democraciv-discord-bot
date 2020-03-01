@@ -1,16 +1,18 @@
+import typing
 import asyncpg
 import discord
 import datetime
 
-import typing
-from discord.ext import commands
-
-from util.converter import Session, SessionStatus, Bill, Motion
 from util.flow import Flow
+from discord.ext import commands
 from util.paginator import Pages
 from config import config, links
 from util import utils, mk, exceptions
+from util.converter import Session, SessionStatus, Bill, Motion
 
+
+# TODO - multiple bills in -leg pass, -m pass, -m veto
+# TODO - queue new vetos & pass to not spam discord channels
 
 class Legislature(commands.Cog):
     """Organize and get details about Legislative Sessions and submit bills or motions"""
@@ -86,7 +88,61 @@ class Legislature(commands.Cog):
                                             f"[Legal Code]({links.laws})\n"
                                             f"[Legislative Procedures]({links.legislativeprocedures})", inline=True)
         embed.add_field(name="Current Session", value=current_session_value, inline=False)
+        await ctx.send(embed=embed)
 
+    @legislature.group(name='bill', aliases=['b'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def bill(self, ctx, bill_id: Bill):
+        """Details about a bill"""
+
+        bill = bill_id
+
+        if bill.submitter is not None:
+            submitted_by_value = f"{bill.submitter.mention} (during Session #{bill.session.id})"
+        else:
+            submitted_by_value = f"*Submitter left Democraciv* (during Session #{bill.session.id})"
+
+        status = []
+
+        if not bill.voted_on_by_leg:
+            status.append("Legislature: <:yellow:660562049817903116> *(Not Voted On Yet)*")
+        else:
+            if bill.passed_leg:
+                status.append("Legislature: <:green:660562089298886656> *(Passed)*")
+            else:
+                status.append("Legislature: <:red:660562078217797647> *(Failed)*")
+
+        if not bill.voted_on_by_ministry:
+            status.append("Ministry: <:yellow:660562049817903116> *(Not Voted On Yet)*")
+        else:
+            if bill.passed_ministry:
+                status.append("Ministry: <:green:660562089298886656> *(Passed)*")
+            else:
+                status.append("Ministry: <:red:660562078217797647> *(Failed)*")
+
+        embed = self.bot.embeds.embed_builder(title=f"Bill Details", description="")
+        embed.add_field(name="Name", value=f"[{bill.name}]({bill.link})")
+        embed.add_field(name="Description", value=bill.description, inline=False)
+        embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
+        embed.add_field(name="Status", value='\n'.join(status), inline=False)
+        await ctx.send(embed=embed)
+
+    @legislature.group(name='motion', aliases=['m'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def motion(self, ctx, motion_id: Motion):
+        """Details about a bill"""
+
+        motion = motion_id
+
+        if motion.submitter is not None:
+            submitted_by_value = f"{motion.submitter.mention} (during Session #{motion.session.id})"
+        else:
+            submitted_by_value = f"*Submitter left Democraciv* (during Session #{motion.session.id})"
+
+        embed = self.bot.embeds.embed_builder(title=f"Motion Details", description="")
+        embed.add_field(name="Name", value=f"[{motion.title}]({motion.link})")
+        embed.add_field(name="Content", value=motion.description, inline=False)
+        embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
         await ctx.send(embed=embed)
 
     @legislature.command(name='opensession', aliases=['os'])
@@ -107,12 +163,12 @@ class Legislature(commands.Cog):
 
         await ctx.send(f":white_check_mark: The **submission period** for session #{new_session} was opened.")
 
-        await self.gov_announcements_channel.send(f"The submission period for Legislative Session "
-                                                  f"#{new_session} has started!\nEveryone is allowed "
+        await self.gov_announcements_channel.send(f"The **submission period** for Legislative Session "
+                                                  f"#{new_session} has started! Everyone is allowed "
                                                   f"to submit bills with `-legislature submit`.")
 
         await self.dm_legislators(f":envelope_with_arrow: The **submission period** for Legislative Session"
-                                  f" #{new_session} has started!\nSubmit your bills with "
+                                  f" #{new_session} has started! Submit your bills with "
                                   f"`-legislature submit` on the Democraciv guild.")
 
     @legislature.command(name='updatesession', aliases=['us'])
@@ -139,7 +195,8 @@ class Legislature(commands.Cog):
 
         await ctx.send(f":white_check_mark: Session #{active_leg_session.id} is now in **voting period**.")
 
-        await self.gov_announcements_channel.send(f"The voting period for Legislative Session #{active_leg_session.id}"
+        await self.gov_announcements_channel.send(f"The **voting period for Legislative "
+                                                  f"Session #{active_leg_session.id}**"
                                                   f" has started! Legislators can vote here: {voting_form}")
 
         await self.dm_legislators(f":ballot_box: The **voting period** for Legislative Session "
@@ -163,8 +220,8 @@ class Legislature(commands.Cog):
                        f" Add the bills that passed this session with `-legislature pass <bill_id>`. Get the "
                        f"bill ids from the list of submitted bills in `-legislature session {active_leg_session.id}`")
 
-        await self.gov_announcements_channel.send(f"{self.legislator_role.mention}, Legislative Session "
-                                                  f"#{active_leg_session.id} has been closed by the Cabinet.")
+        await self.gov_announcements_channel.send(f"{self.legislator_role.mention}, **Legislative Session "
+                                                  f"#{active_leg_session.id} has been closed** by the Cabinet.")
 
     async def paginate_all_sessions(self, ctx):
         all_sessions = await self.bot.db.fetch("SELECT id, status FROM legislature_sessions ORDER BY id")
@@ -176,6 +233,28 @@ class Legislature(commands.Cog):
                       title=f"All Sessions of the {mk.NATION_ADJECTIVE} Legislature",
                       show_index=False, footer_text=footer)
         await pages.paginate()
+
+    @staticmethod
+    def get_bill_status(bill: Bill) -> str:
+        # TODO -leg veto is not a thing
+        status = []
+        if not bill.voted_on_by_leg:
+            return "<:yellow:660562049817903116><:yellow:660562049817903116>"
+        else:
+            if bill.passed_leg:
+                status.append("<:green:660562089298886656>")
+
+                if not bill.voted_on_by_ministry:
+                    status.append("<:yellow:660562049817903116>")
+                else:
+                    if bill.passed_ministry:
+                        status.append("<:green:660562089298886656>")
+                    else:
+                        status.append("<:red:660562078217797647>")
+            else:
+                return "<:red:660562078217797647>"
+
+        return ''.join(status)
 
     @legislature.command(name='session', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -197,7 +276,9 @@ class Legislature(commands.Cog):
 
         if len(session.motions) > 0:
             pretty_motions = []
-            for motion in session.motions:
+            for motion_id in session.motions:
+                motion = await Motion.convert(ctx, motion_id)
+
                 # If the motion's description is just a Google Docs link, use that link instead of the Hastebin
                 is_google_docs = self.bot.laws.is_google_doc_link(motion.description) and len(motion.description) <= 100
                 link = motion.description if is_google_docs else motion.link
@@ -213,12 +294,14 @@ class Legislature(commands.Cog):
         if len(session.bills) > 0:
             pretty_bills = []
 
-            for bill in session.bills:
+            for bill_id in session.bills:
+                bill = await Bill.convert(ctx, bill_id)
                 if bill.submitter is not None:
                     pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) by "
-                                        f"{bill.submitter.mention}")
+                                        f"{bill.submitter.mention} {self.get_bill_status(bill)}")
                 else:
-                    pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link})")
+                    pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) "
+                                        f"{self.get_bill_status(bill)}")
         else:
             pretty_bills = ["-"]
 
@@ -230,18 +313,18 @@ class Legislature(commands.Cog):
             embed.add_field(name="Opened by", value="*Person left Democraciv*")
 
         embed.add_field(name="Status", value=session.status.value, inline=True)
-        embed.add_field(name="Opened on (UTC)", value=session.opened_on.strftime("%A, %B %d %Y %H:%M:%S"), inline=False)
+        embed.add_field(name="Opened on (UTC)", value=session.opened_on.strftime("%A, %B %d %Y at %H:%M"), inline=False)
 
         if session.status != SessionStatus.SUBMISSION_PERIOD:
             # Session is either closed or in Voting Period
             embed.add_field(name="Voting Started on (UTC)",
-                            value=session.voting_started_on.strftime("%A, %B %d %Y %H:%M:%S"), inline=False)
+                            value=session.voting_started_on.strftime("%A, %B %d %Y at %H:%M"), inline=False)
             embed.add_field(name="Vote Form", value=f"[Link]({session.vote_form})", inline=False)
 
         if not session.is_active:
             # Session is closed
             embed.add_field(name="Ended on (UTC)",
-                            value=session.closed_on.strftime("%A, %B %d %Y %H:%M:%S"), inline=False)
+                            value=session.closed_on.strftime("%A, %B %d %Y at %H:%M"), inline=False)
 
         pretty_motions = '\n'.join(pretty_motions)
         pretty_bills = '\n'.join(pretty_bills)
@@ -341,7 +424,8 @@ class Legislature(commands.Cog):
 
         return message, embed
 
-    async def submit_motion(self, ctx, current_leg_session_id: int) -> typing.Optional[typing.Tuple[str, discord.Embed]]:
+    async def submit_motion(self, ctx, current_leg_session_id: int) -> typing.Optional[
+        typing.Tuple[str, discord.Embed]]:
         """Submits a motion to a session that is in Submission Period. Uses the Flow API to get the bill
            details via Discord. Returns the message and formatted Embed that will be sent to
            the Cabinet upon submission."""
@@ -453,7 +537,7 @@ class Legislature(commands.Cog):
                                   f"session of the Legislature as passed.")
 
         if last_leg_session.status == SessionStatus.SUBMISSION_PERIOD:
-            return await ctx.send(f":x: You cannot mark bills as passed while the"
+            return await ctx.send(f":x: You cannot mark bills as passed while the "
                                   f"session is still in submission period.")
 
         if bill.voted_on_by_leg:
@@ -522,6 +606,9 @@ class Legislature(commands.Cog):
         if last_leg_session.id != bill.session.id:
             return await ctx.send(f":x: This bill was not submitted in the last session of the Legislature!")
 
+        if bill.voted_on_by_leg:
+            return await ctx.send(f":x: This bill was already voted on by the Legislature!")
+
         # The Speaker and Vice-Speaker can withdraw every submitted bill during both the Submission Period and the
         # Voting Period.
         # The original submitter of the bill can only withdraw their own bill during the Submission Period.
@@ -563,7 +650,7 @@ class Legislature(commands.Cog):
                 return await ctx.send(":x: This bill is already a law and cannot be withdrawn.")
 
             await ctx.send(f":white_check_mark: `{bill.name}` (#{bill.id}) was withdrawn "
-                           f"from session #{last_leg_session}.")
+                           f"from session #{last_leg_session.id}.")
 
             if not is_cabinet:
                 msg = f"**Bill Withdrawn**\n{ctx.author.name} has withdrawn their bill `{bill.name}` (#{bill.id}) " \
@@ -625,7 +712,7 @@ class Legislature(commands.Cog):
         elif reaction:
             await self.bot.db.execute("DELETE FROM legislature_motions WHERE id = $1", motion.id)
             await ctx.send(f":white_check_mark: `{motion.title}` (#{motion.id}) was withdrawn "
-                           f"from session #{last_leg_session}.")
+                           f"from session #{last_leg_session.id}.")
 
             if not is_cabinet:
                 msg = f"**Motion Withdrawn**\n{ctx.author.name} has withdrawn their motion" \

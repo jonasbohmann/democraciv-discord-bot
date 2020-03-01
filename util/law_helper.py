@@ -227,7 +227,9 @@ class LawUtils:
         """Post text to mystb.in"""
 
         async with self.bot.session.post("https://mystb.in/documents", data=text) as response:
-            data = await response.json()
+            if response.status == 200:
+                data = await response.json()
+
             try:
                 key = data['key']
             except KeyError:
@@ -237,7 +239,8 @@ class LawUtils:
 
     async def post_to_tinyurl(self, url: str) -> typing.Optional[str]:
         async with self.bot.session.get(f"https://tinyurl.com/api-create.php?url={url}") as response:
-            tiny_url = await response.text()
+            if response.status == 200:
+                tiny_url = await response.text()
 
         if tiny_url == "Error":
             return None

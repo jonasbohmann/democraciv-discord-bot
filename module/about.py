@@ -21,6 +21,8 @@ class About(commands.Cog):
         if isinstance(error, commands.BadArgument):
             await ctx.send(error)
 
+    # TODO - Add -commands
+
     @commands.command(name='about')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def about(self, ctx):
