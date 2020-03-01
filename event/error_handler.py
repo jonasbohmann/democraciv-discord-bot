@@ -49,10 +49,10 @@ class ErrorHandler(commands.Cog):
 
             if len(pretty_traceback) <= 1024:
                 embed.add_field(name='Traceback', value=f'```py\n{pretty_traceback}```')
+                await self.bot.owner.send(embed=embed)
             else:
+                await self.bot.owner.send(embed=embed)
                 await self.bot.owner.send(f'```py\n{pretty_traceback}```')
-
-            await self.bot.owner.send(embed=embed)
 
     @staticmethod
     def format_permissions(missing_perms: list) -> str:
@@ -181,18 +181,18 @@ class ErrorHandler(commands.Cog):
             return await ctx.send(":x: This command can only be used in DMs!")
 
         elif isinstance(error, exceptions.PartyNotFoundError):
-            await ctx.send(f":x: There is no party named `{error.party}`.")
+            await ctx.send(f":x: There is no political party named `{error.party}`.")
 
             parties = await self.bot.db.fetch("SELECT id FROM parties")
             parties = [record['id'] for record in parties]
 
-            msg = ['**Try one of these:**\n']
+            msg = ['**Try one of these:**']
             for party in parties:
-                role = ctx.bot.democraciv_guild_object.get_role(party)
+                role = self.bot.democraciv_guild_object.get_role(party)
                 if role is not None:
                     msg.append(role.name)
 
-            if len(msg) < 1:
+            if len(msg) > 1:
                 await ctx.send('\n'.join(msg))
             return
 

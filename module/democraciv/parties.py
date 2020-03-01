@@ -164,13 +164,8 @@ class Party(commands.Cog, name='Political Parties'):
             embed = self.bot.embeds.embed_builder(title=title, description='\n'.join(list_of_members), colour=0x7f0000)
             return await ctx.send(embed=embed)
 
-    @commands.command(name='addparty')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
-    async def addparty(self, ctx):
-        """Add a new political party"""
-
-        await ctx.send(":information_source: Reply with the name of the party you want to create:")
+    async def create_new_party(self, ctx) -> typing.Optional[PoliticalParty]:
+        await ctx.send(":information_source: Reply with the name of the new party you want to create.")
 
         flow = Flow(self.bot, ctx)
         role_name = await flow.get_new_role(240)
@@ -191,12 +186,12 @@ class Party(commands.Cog, name='Political Parties'):
                 f":white_check_mark: I'll use the **pre-existing role** named "
                 f"'{discord_role.name}' for the new party.")
 
-        await ctx.send(":information_source: Reply with the invite link to the party's Discord guild:")
+        await ctx.send(":information_source: Reply with the invite link to the party's Discord guild.")
 
         party_invite = await flow.get_text_input(300)
 
         if not party_invite:
-            return
+            return None
 
         is_private = False
         private_question = await ctx.send(
@@ -205,12 +200,12 @@ class Party(commands.Cog, name='Political Parties'):
         reaction = await flow.get_yes_no_reaction_confirm(private_question, 240)
 
         if reaction is None:
-            return
+            return None
 
         if reaction:
             is_private = True
 
-            await ctx.send(":information_source: Reply with the name of the party's leader:")
+            await ctx.send(":information_source: Reply with the name of the party's leader.")
 
             leader = await flow.get_text_input(240)
 
@@ -231,14 +226,16 @@ class Party(commands.Cog, name='Political Parties'):
                             "INSERT INTO parties (id, discord_invite, is_private, leader) VALUES ($1, $2, $3, $4)",
                             discord_role.id, party_invite, True, leader_role.id)
                     except asyncpg.UniqueViolationError:
-                        return await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
+                        await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
+                        return None
                 else:
                     try:
                         await self.bot.db.execute(
                             "INSERT INTO parties (id, discord_invite, is_private) VALUES ($1, $2, $3)",
                             discord_role.id, party_invite, False)
                     except asyncpg.UniqueViolationError:
-                        return await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
+                        await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
+                        return None
 
                 status = await self.bot.db.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
                                                    discord_role.name.lower(), discord_role.id)
@@ -247,6 +244,15 @@ class Party(commands.Cog, name='Political Parties'):
             await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a new party.')
         else:
             await ctx.send(":x: Unexpected database error occurred.")
+
+        return await PoliticalParty.convert(ctx, discord_role.id)
+
+    @commands.command(name='addparty')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    async def addparty(self, ctx):
+        """Add a new political party"""
+        await self.create_new_party(ctx)
 
     @commands.command(name='deleteparty')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -327,7 +333,6 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='listaliases')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.is_democraciv_guild()
     async def listaliases(self, ctx, *, party: PoliticalParty):
         """List all aliases of a given party"""
 
@@ -337,6 +342,67 @@ class Party(commands.Cog, name='Political Parties'):
         embed = self.bot.embeds.embed_builder(title=f'Aliases of {party.role.name}',
                                               description='\n'.join(party.aliases))
         await ctx.send(embed=embed)
+
+    @commands.command(name='mergeparty', aliases=['mergeparties'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    async def mergeparties(self, ctx, amount_of_parties: int):
+        """Merge one or multiple parties into a single, new party"""
+
+        flow = Flow(self.bot, ctx)
+
+        to_be_merged = []
+
+        for i in range(1, amount_of_parties + 1):
+            await ctx.send(f":information_source: What's the name or alias political party #{i}?")
+
+            name = await flow.get_text_input(120)
+
+            if not name:
+                return
+
+            try:
+                party = await PoliticalParty.convert(ctx, name)
+            except exceptions.PartyNotFoundError:
+                return await ctx.send(f":x: There is no party that matches `{name}`. Aborted.")
+
+            to_be_merged.append(party)
+
+        members_to_merge = list(set([member for party in to_be_merged for member in party.role.members]))
+        pretty_parties = [f"`{party.role.name}`" for party in to_be_merged]
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to merge"
+                                      f" {', '.join(pretty_parties)} into one, new party?")
+
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 120)
+
+        if reaction is None:
+            return
+
+        if not reaction:
+            return await ctx.send("Aborted.")
+
+        try:
+            new_party = await self.create_new_party(ctx)
+        except exceptions.DemocracivBotException as e:
+            return await ctx.send(f"{e.message}\n:x: Party creation failed, old parties were not deleted.")
+
+        if new_party is None:
+            return await ctx.send(":x: Party creation failed, old parties were not deleted.")
+
+        for member in members_to_merge:
+            await member.add_roles(new_party.role)
+
+        for party in to_be_merged:
+            async with self.bot.db.acquire() as connection:
+                async with connection.transaction():
+                    await self.bot.db.execute("DELETE FROM party_alias WHERE party_id = $1", party.role.id)
+                    await self.bot.db.execute("DELETE FROM parties WHERE id = $1", party.role.id)
+
+            await party.role.delete()
+
+        await ctx.send(":white_check_mark: The old parties were deleted and"
+                       " all their members have now the role of the new party.")
 
 
 def setup(bot):
