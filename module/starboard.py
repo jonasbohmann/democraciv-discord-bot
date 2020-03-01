@@ -50,8 +50,9 @@ class Starboard(commands.Cog):
 
         async with self.bot.session.post("https://www.reddit.com/api/v1/access_token",
                                          data=post_data, auth=auth, headers=headers) as response:
-            r = await response.json()
-            self.bearer_token = r['access_token']
+            if response.status == 200:
+                r = await response.json()
+                self.bearer_token = r['access_token']
 
     async def post_to_reddit(self, data: dict) -> bool:
         """Submits weekly starboard to r/Democraciv"""

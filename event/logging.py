@@ -155,9 +155,7 @@ class Log(commands.Cog):
             return
 
         embed_fields = {
-            "Member": [member.mention, True],
-            "Name": [str(member), True],
-            "Mobile": [f"{member.is_on_mobile()}", True],
+            "Member": [f"{member.mention} {member}", False],
             "ID": [f"{member.id}", False]
         }
 
@@ -258,8 +256,7 @@ class Log(commands.Cog):
         introduction_channel = guild.system_channel or guild.text_channels[0]
 
         # Alert owner of this bot that the bot was invited to some place
-        await self.bot.owner.send(
-            f":warning:  I was added to {guild.name} ({guild.id}).")
+        await self.bot.owner.send(f":warning:  I was added to {guild.name} ({guild.id}).")
 
         # Send introduction message to random guild channel
         embed = self.bot.embeds.embed_builder(title=':two_hearts: Hey there!',

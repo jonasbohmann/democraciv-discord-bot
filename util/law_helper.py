@@ -56,7 +56,8 @@ class LawUtils:
 
         try:
             async with self.bot.session.get(link) as response:
-                text = await response.read()
+                if response.status == 200:
+                    text = await response.read()
 
             strainer = SoupStrainer(property="og:title")  # Only parse the title property to save time
             soup = BeautifulSoup(text, "lxml", parse_only=strainer)  # Use lxml parser to speed things up
@@ -80,7 +81,8 @@ class LawUtils:
 
         try:
             async with self.bot.session.get(link) as response:
-                text = await response.read()
+                if response.status == 200:
+                    text = await response.read()
 
             strainer = SoupStrainer(property="og:description")
             soup = BeautifulSoup(text, "lxml", parse_only=strainer)
@@ -247,7 +249,7 @@ class LawUtils:
 
         return tiny_url
 
-    async def search_law_by_name(self, name: str) -> list:
+    async def search_law_by_name(self, name: str) -> typing.List[str]:
         """Search for laws by their name, returns list with prettified strings of found laws"""
         bills = await self.bot.db.fetch("SELECT * FROM legislature_bills WHERE bill_name % $1", name.lower())
 
@@ -277,7 +279,7 @@ class LawUtils:
 
         return found_bills
 
-    async def search_law_by_tag(self, tag: str) -> list:
+    async def search_law_by_tag(self, tag: str) -> typing.List[str]:
         """Search for laws by their tag(s), returns list with prettified strings of found laws"""
 
         # Once a bill is passed into law, the bot automatically generates tags for it to allow for easier and faster

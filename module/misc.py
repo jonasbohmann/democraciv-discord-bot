@@ -220,7 +220,10 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         async with ctx.typing():
             async with self.bot.session.get(f"https://some-random-api.ml/lyrics?title={query}") as response:
-                lyrics = await response.json()
+                if response.status == 200:
+                    lyrics = await response.json()
+                else:
+                    return await ctx.send(f":x: Couldn't find anything that matches `{query}`.")
 
         try:
 

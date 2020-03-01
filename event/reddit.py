@@ -1,6 +1,6 @@
 import html
+import typing
 import asyncio
-import aiohttp
 
 import util.exceptions as exceptions
 
@@ -9,6 +9,7 @@ from discord.ext import tasks
 
 
 class Reddit:
+    """Announcements for new posts on a subreddit. Does not need any API key or tokens."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -20,16 +21,19 @@ class Reddit:
     def __del__(self):
         self.reddit_task.cancel()
 
-    async def get_newest_reddit_post(self):
-        try:
-            async with self.bot.session.get(f"https://www.reddit.com/r/{self.subreddit}/new.json?limit=5") as response:
+    async def get_newest_reddit_post(self) -> typing.Optional[typing.Mapping]:
+        """Gets the 5 newest reddit posts."""
+
+        async with self.bot.session.get(f"https://www.reddit.com/r/{self.subreddit}/new.json?limit=5") as response:
+            if response.status == 200:
                 return await response.json()
-        except aiohttp.ClientConnectionError:
-            print("[BOT] ERROR - ConnectionError in Reddit session.get()!")
-            return None
+
+        return None
 
     @tasks.loop(seconds=30)
     async def reddit_task(self):
+        """Checks every 30 seconds if the 5 newest reddit posts of a subreddit are new. If at least one is, send
+        announcement to the specified Discord channel."""
 
         try:
             channel = self.bot.democraciv_guild_object.get_channel(config.REDDIT_ANNOUNCEMENT_CHANNEL)

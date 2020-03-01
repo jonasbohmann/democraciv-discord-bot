@@ -1,6 +1,5 @@
+import typing
 import asyncio
-
-import aiohttp
 
 from util import exceptions
 from discord.ext import tasks
@@ -8,17 +7,14 @@ from config import config, token
 
 
 class YouTube:
+    """Announcements for new video uploads and live broadcasts from a YouTube Channel.
+    Needs a valid YouTube Data V3 API key for the requests."""
 
     def __init__(self, bot):
         self.bot = bot
         self.youtube_channel = config.YOUTUBE_CHANNEL_ID
         self.api_key = token.YOUTUBE_DATA_V3_API_KEY
         self.header = {'Accept': 'application/json'}
-        self.playlist_url = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet" \
-                            f"&maxResults=3&playlistId={config.YOUTUBE_CHANNEL_UPLOADS_PLAYLIST}" \
-                            f"&key={self.api_key}"
-        self.stream_url = f"https://www.googleapis.com/youtube/v3/search?part=snippet&channelId={self.youtube_channel}"\
-                          f"&type=video&eventType=live&maxResults=1&key={self.api_key}"
 
         if self.api_key:
             if config.YOUTUBE_VIDEO_UPLOADS_ENABLED:
@@ -39,37 +35,40 @@ class YouTube:
         else:
             return string
 
-    async def get_live_broadcast(self):
+    async def get_live_broadcast(self) -> typing.Optional[typing.Dict]:
+        """If a YouTube channel is streaming a live broadcast, returns JSON of broadcast details. Else, returns None.
+        The two API requests in this method are expensive and should only be called every 15 minutes for a standard
+        API key."""
 
-        try:
-            async with self.bot.session.get(self.stream_url, headers=self.header) as response:
+        async with self.bot.session.get(f"https://www.googleapis.com/youtube/v3/search?"
+                                        f"part=snippet&channelId={self.youtube_channel}" 
+                                        f"&type=video&eventType=live&maxResults=1&key={self.api_key}",
+                                        headers=self.header) as response:
+            if response.status == 200:
                 stream_data = await response.json()
-        except aiohttp.ClientConnectionError:
-            print("[BOT] ERROR - ConnectionError in YouTube session.get()!")
-            return None
 
         try:
             _id = stream_data['items'][0]['id']['videoId']
         except (IndexError, KeyError):
             return None
 
-        status = await self.bot.db.execute("INSERT INTO youtube_streams (id) VALUES ($1) ON CONFLICT DO NOTHING",
-                                           _id)
+        status = await self.bot.db.execute("INSERT INTO youtube_streams (id) VALUES ($1) ON CONFLICT DO NOTHING", _id)
 
         # ID already in database -> stream already announced
         if status == "INSERT 0 0":
             return None
 
-        try:
-            async with self.bot.session.get(f"https://www.googleapis.com/youtube/v3/videos?part=snippet&"
-                                            f"id={_id}&key={self.api_key}", headers=self.header) as response:
+        async with self.bot.session.get(f"https://www.googleapis.com/youtube/v3/videos?part=snippet&"
+                                        f"id={_id}&key={self.api_key}", headers=self.header) as response:
+            if response.status == 200:
                 return await response.json()
-        except aiohttp.ClientConnectionError:
-            print("[BOT] ERROR - ConnectionError in YouTube session.get()!")
-            return None
+
+        return None
 
     @tasks.loop(minutes=15)
     async def youtube_stream_task(self):
+        """Check every 15 minutes if a YouTube channel is streaming live. If it is, send an announcement to the
+         specified Discord channel."""
 
         # A standard Google API key has 10.000 units per day
         #   This task, with the minutes set to 10, costs approx. 14.832 units per day
@@ -77,7 +76,6 @@ class YouTube:
 
         try:
             discord_channel = self.bot.democraciv_guild_object.get_channel(config.YOUTUBE_ANNOUNCEMENT_CHANNEL)
-
         except AttributeError:
             print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "DEMOCRACIV_GUILD_ID" '
                   f'in the config to a server I am in or disable YouTube Stream announcements.')
@@ -115,16 +113,18 @@ class YouTube:
         else:
             await discord_channel.send(f'{_channel_title} is live on YouTube!', embed=embed)
 
-    async def get_newest_upload(self):
-        try:
-            async with self.bot.session.get(self.playlist_url, headers=self.header) as response:
+    async def get_newest_upload(self) -> typing.Optional[typing.Dict]:
+        async with self.bot.session.get("https://www.googleapis.com/youtube/v3/playlistItems?part=snippet"
+                                        f"&maxResults=3&playlistId={config.YOUTUBE_CHANNEL_UPLOADS_PLAYLIST}"
+                                        f"&key={self.api_key}", headers=self.header) as response:
+            if response.status == 200:
                 return await response.json()
-        except aiohttp.ClientConnectionError:
-            print("[BOT] ERROR - ConnectionError in YouTube session.get()!")
-            return None
+        return None
 
     @tasks.loop(minutes=10)
     async def youtube_upload_tasks(self):
+        """Check every 10 minutes if the 3 last uploads of a YouTube channel are new. If at least one is,
+         send an announcement to the specified Discord channel."""
 
         # A standard Google API key has 10.000 units per day
         #   This task, with the minutes set to 10, costs approx. 2160 units per day

@@ -1,6 +1,7 @@
 import enum
-import aiohttp
 import asyncio
+
+import typing
 
 import util.exceptions as exceptions
 
@@ -10,6 +11,7 @@ from config import config, token, links
 
 
 class Twitch:
+    """Announcements for new live streams on Twitch."""
 
     class StreamStatus(enum.Enum):
         OFFLINE = 0
@@ -28,14 +30,16 @@ class Twitch:
     def __del__(self):
         self.twitch_task.cancel()
 
-    async def check_twitch_livestream(self):
-        try:
-            async with self.bot.session.get(self.twitch_API_url, headers={'Client-ID': self.twitch_API_token}) as response:
-                if response.status == 200:
-                    twitch = await response.json()
-        except aiohttp.ClientConnectionError:
-            print("[BOT] ERROR - aiohttp.ClientConnectionError in Twitch session.get()!")
-            return self.StreamStatus.OFFLINE
+    async def check_twitch_livestream(self) -> typing.Union[StreamStatus, typing.List]:
+        """Checks if a streamer is live and returns the corresponding StreamStatus. If a stream has not yet been
+        announced, also returns relevant stream data."""
+
+        async with self.bot.session.get(self.twitch_API_url,
+                                        headers={'Client-ID': self.twitch_API_token}) as response:
+            if response.status == 200:
+                twitch = await response.json()
+            else:
+                return self.StreamStatus.OFFLINE
 
         try:
             _stream_id = twitch['data'][0]['id']
@@ -57,6 +61,8 @@ class Twitch:
 
     @tasks.loop(seconds=30)
     async def twitch_task(self):
+        """Checks every 30 seconds if a stream is live on Twitch. If it is and has not been announced yet, send
+        announcement and mod/executive reminders to specified Discord channel."""
 
         try:
             channel = self.bot.democraciv_guild_object.get_channel(config.TWITCH_ANNOUNCEMENT_CHANNEL)

@@ -27,7 +27,8 @@ class Time(commands.Cog):
 
         async with ctx.typing():
             async with self.bot.session.get(query_base) as response:
-                time_response = await response.json()
+                if response.status == 200:
+                    time_response = await response.json()
 
             if time_response['status'] != "OK":
                 return await ctx.send(f":x: `{zone}` is not a valid time zone!")
