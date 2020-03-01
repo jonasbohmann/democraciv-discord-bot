@@ -90,7 +90,7 @@ class Legislature(commands.Cog):
         embed.add_field(name="Current Session", value=current_session_value, inline=False)
         await ctx.send(embed=embed)
 
-    @legislature.group(name='bill', aliases=['b'])
+    @legislature.command(name='bill', aliases=['b'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def bill(self, ctx, bill_id: Bill):
         """Details about a bill"""
@@ -127,10 +127,10 @@ class Legislature(commands.Cog):
         embed.add_field(name="Status", value='\n'.join(status), inline=False)
         await ctx.send(embed=embed)
 
-    @legislature.group(name='motion', aliases=['m'])
+    @legislature.command(name='motion', aliases=['m'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def motion(self, ctx, motion_id: Motion):
-        """Details about a bill"""
+        """Details about a motion"""
 
         motion = motion_id
 

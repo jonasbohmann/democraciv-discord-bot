@@ -62,7 +62,6 @@ class Pages:
     def __init__(self, ctx, *, entries, per_page=12, show_entry_count=True, title=None, show_index=True,
                  footer_text=config.BOT_NAME, colour=0x7f0000, title_url=None, thumbnail=None,
                  show_amount_of_pages=False):
-        # TODO Clean up the kwargs
         self.bot = ctx.bot
         self.entries = entries
         self.message = ctx.message
@@ -71,28 +70,33 @@ class Pages:
         self.per_page = per_page
         self.show_index = show_index
         self.footer = footer_text
+        self.title = title
+        self.embed = discord.Embed(colour=colour)
+
         pages, left_over = divmod(len(self.entries), self.per_page)
         if left_over:
             pages += 1
+
         self.maximum_pages = pages
-        self.title = title
-        self.embed = discord.Embed(colour=colour)
+
         if title_url:
             self.embed.url = title_url
         if thumbnail:
             self.embed.set_thumbnail(url=thumbnail)
+
         self.paginating = len(entries) > per_page
         self.show_entry_count = show_entry_count
         self.show_amount_of_pages = show_amount_of_pages
-        # TODO Remove useless buttons
+
+        # This often leads to weird ratelimit situations, thus we remove the stop and info buttons as they are
+        # rarely used anyway.
         self.reaction_emojis = [
             ('\N{BLACK LEFT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}', self.first_page),
             ('\N{BLACK LEFT-POINTING TRIANGLE}', self.previous_page),
             ('\N{BLACK RIGHT-POINTING TRIANGLE}', self.next_page),
             ('\N{BLACK RIGHT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}', self.last_page),
-            ('\N{INPUT SYMBOL FOR NUMBERS}', self.numbered_page),
-            ('\N{BLACK SQUARE FOR STOP}', self.stop_pages),
-            ('\N{INFORMATION SOURCE}', self.show_help),
+            # ('\N{BLACK SQUARE FOR STOP}', self.stop_pages)
+            # ('\N{INFORMATION SOURCE}', self.show_help),
         ]
 
         if ctx.guild is not None:
@@ -101,18 +105,18 @@ class Pages:
             self.permissions = self.channel.permissions_for(ctx.bot.user)
 
         if not self.permissions.embed_links:
-            raise CannotPaginate('Bot does not have embed links permission.')
+            raise CannotPaginate(':x: Bot does not have embed links permission.')
 
         if not self.permissions.send_messages:
-            raise CannotPaginate('Bot cannot send messages.')
+            raise CannotPaginate(':x: Bot cannot send messages.')
 
         if self.paginating:
             # verify we can actually use the pagination session
             if not self.permissions.add_reactions:
-                raise CannotPaginate('Bot does not have add reactions permission.')
+                raise CannotPaginate(':x: Bot does not have add reactions permission.')
 
             if not self.permissions.read_message_history:
-                raise CannotPaginate('Bot does not have Read Message History permission.')
+                raise CannotPaginate(':x: Bot does not have Read Message History permission.')
 
     def get_page(self, page):
         base = (page - 1) * self.per_page
@@ -142,12 +146,7 @@ class Pages:
 
             self.embed.set_footer(text=text, icon_url=config.BOT_ICON_URL)
 
-        if self.paginating and first:
-            p.append('')
-            p.append('Confused? React with \N{INFORMATION SOURCE} for more info.')
-
         self.embed.title = self.title
-
         self.embed.description = '\n'.join(p)
         self.embed.set_footer(text=self.footer, icon_url=config.BOT_ICON_URL)
 
@@ -201,35 +200,6 @@ class Pages:
     async def show_current_page(self):
         if self.paginating:
             await self.show_page(self.current_page)
-
-    async def numbered_page(self):
-        """lets you type a page number to go to"""
-        to_delete = []
-        to_delete.append(await self.channel.send('What page do you want to go to?'))
-
-        def message_check(m):
-            return m.author == self.author and \
-                   self.channel == m.channel and \
-                   m.content.isdigit()
-
-        try:
-            msg = await self.bot.wait_for('message', check=message_check, timeout=30.0)
-        except asyncio.TimeoutError:
-            to_delete.append(await self.channel.send('Took too long.'))
-            await asyncio.sleep(5)
-        else:
-            page = int(msg.content)
-            to_delete.append(msg)
-            if page != 0 and page <= self.maximum_pages:
-                await self.show_page(page)
-            else:
-                to_delete.append(await self.channel.send(f'Invalid page given. ({page}/{self.maximum_pages})'))
-                await asyncio.sleep(5)
-
-        try:
-            await self.channel.delete_messages(to_delete)
-        except Exception:
-            pass
 
     async def show_help(self):
         """shows this message"""
