@@ -1,13 +1,13 @@
-import asyncpg
-import discord
 import typing
+import discord
 
-from discord.ext import commands
 
-from util.converter import Bill
 from util.flow import Flow
+from util.converter import Bill
 from config import config, links
 from util.paginator import Pages
+from discord.ext import commands
+from util.law_helper import MockContext
 from util import mk, exceptions, utils
 
 
@@ -42,36 +42,31 @@ class Ministry(commands.Cog):
     def gov_announcements_channel(self) -> typing.Optional[discord.TextChannel]:
         return mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
-    async def get_open_vetos(self) -> asyncpg.Record:
-        """Gets all bills that  passed the Legislature, are vetoable and were not yet voted on by the Ministry"""
-        open_bills = await self.bot.db.fetch(
-            "SELECT (id, link, bill_name, submitter, leg_session) FROM legislature_bills"
-            " WHERE has_passed_leg = true AND is_vetoable = true AND voted_on_by_ministry = false"
-            " AND has_passed_ministry = false ORDER BY id")
+    async def get_open_vetos(self) -> typing.List[Bill]:
+        """Gets all bills that passed the Legislature, are vetoable and were not yet voted on by the Ministry"""
+        open_bills = await self.bot.db.fetch('SELECT id FROM legislature_bills WHERE has_passed_leg = true'
+                                             ' AND is_vetoable = true AND voted_on_by_ministry = false'
+                                             ' AND has_passed_ministry = false ORDER BY id')
 
-        if open_bills is not None:
-            return open_bills
+        return [await Bill.convert(MockContext(self.bot), record['id']) for record in open_bills]
 
-    async def get_pretty_vetos(self) -> list:
-        """Prettifies asyncpg.Record object of open vetos into list of strings"""
+    async def get_pretty_vetos(self) -> typing.Optional[typing.List[str]]:
+        """Prettifies a list of Bill objects of open vetoes into list of strings"""
         open_bills = await self.get_open_vetos()
-
-        # TODO remove tuple from sql query
 
         pretty_bills = []
 
         if len(open_bills) > 0:
-            for record in open_bills:
-                if self.bot.get_user(record[0][3]) is not None:
-                    pretty_bills.append(f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) by "
-                                        f"{self.bot.get_user(record[0][3]).mention}"
-                                        f" from Leg. Session #{record[0][4]}")
+            for bill in open_bills:
+                if bill.submitter is not None:
+                    pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) by "
+                                        f"{bill.submitter.mention} from session #{bill.session.id}")
                 else:
-                    pretty_bills.append(f"Bill #{record[0][0]} - [{record[0][2]}]({record[0][1]}) from "
-                                        f"Leg. Session #{record[0][4]}")
+                    pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) "
+                                        f"from session #{bill.session.id}")
 
-        if len(pretty_bills) == 0:
-            pretty_bills = ["There are no new bills to vote on."]
+        if not pretty_bills:
+            return None
 
         return pretty_bills
 
@@ -84,17 +79,15 @@ class Ministry(commands.Cog):
 
         pretty_bills = await self.get_pretty_vetos()
 
-        if len(pretty_bills) == 1 and pretty_bills[0] == "There are no new bills to vote on.":
-            pretty_bills = pretty_bills[0]
-
-        elif len(pretty_bills) >= 1 and pretty_bills[0] != "There are no new bills to vote on.":
+        if pretty_bills is None:
+            pretty_bills = 'There are no new bills to vote on.'
+        else:
             pretty_bills = f"You can vote on new bills, check `{ctx.prefix}ministry bills`."
 
         minister_value = []
 
         if isinstance(self.prime_minister, discord.Member):
             minister_value.append(f"Prime Minister: {self.prime_minister.mention}")
-
         else:
             minister_value.append("Prime Minister: -")
 
@@ -117,6 +110,9 @@ class Ministry(commands.Cog):
         """See all open bills from the Legislature to vote on"""
 
         pretty_bills = await self.get_pretty_vetos()
+
+        if pretty_bills is None:
+            pretty_bills = ['There are no new bills to vote on.']
 
         help_description = f"Use {self.bot.commands_prefix}ministry veto <bill_id> to veto a bill, or " \
                            f"{self.bot.commands_prefix}ministry pass <bill_id> to pass a bill into law."
@@ -182,7 +178,6 @@ class Ministry(commands.Cog):
 
         if bill.voted_on_by_ministry:
             return await ctx.send(f":x: You already voted on this bill!")
-
 
         flow = Flow(self.bot, ctx)
 
