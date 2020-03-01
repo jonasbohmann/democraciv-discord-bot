@@ -69,6 +69,11 @@ class NotFoundError(DemocracivBotException):
     pass
 
 
+class PartyNotFoundError(NotFoundError):
+    def __init__(self, party):
+        self.party = party
+
+
 class ForbiddenTask(enum.Enum):
     ADD_ROLE = 1
     REMOVE_ROLE = 2

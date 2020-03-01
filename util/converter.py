@@ -5,7 +5,7 @@ import discord
 from datetime import datetime
 from discord.ext import commands
 from discord.ext.commands import BadArgument
-from util.exceptions import DemocracivBotException, TagError, NotFoundError
+from util.exceptions import DemocracivBotException, TagError, NotFoundError, PartyNotFoundError
 
 
 class SessionStatus(enum.Enum):
@@ -150,30 +150,30 @@ class Session(commands.Converter):
         return user
 
     @classmethod
-    async def convert(cls, ctx, argument: int):
-        if str(argument).lower() == "all":
-            return argument
+    async def convert(cls, ctx, argument: typing.Union[int, str]):
+        if isinstance(argument, str):
+            if argument.lower() == "all":
+                return argument
 
-        try:
-            argument = int(argument)
-        except ValueError:
-            raise BadArgument(f":x: {argument} is not a number.")
+        elif isinstance(argument, int):
+            session = await ctx.bot.db.fetchrow("SELECT * FROM legislature_sessions WHERE id = $1", argument)
 
-        session = await ctx.bot.db.fetchrow("SELECT * FROM legislature_sessions WHERE id = $1", argument)
+            if session is None:
+                raise NotFoundError(f":x: There is no session with ID #{argument}!")
 
-        if session is None:
-            raise NotFoundError(f":x: There is no session with ID #{argument}!")
+            bills = await ctx.bot.db.fetch("SELECT id FROM legislature_bills WHERE leg_session = $1", session['id'])
+            bills = [record['id'] for record in bills]
 
-        bills = await ctx.bot.db.fetch("SELECT id FROM legislature_bills WHERE leg_session = $1", session['id'])
-        bills = [record['id'] for record in bills]
+            motions = await ctx.bot.db.fetch("SELECT id FROM legislature_motions WHERE leg_session = $1", session['id'])
+            motions = [record['id'] for record in motions]
 
-        motions = await ctx.bot.db.fetch("SELECT id FROM legislature_motions WHERE leg_session = $1", session['id'])
-        motions = [record['id'] for record in motions]
-
-        return cls(id=session['id'], is_active=session['is_active'], status=SessionStatus.from_str(session['status']),
-                   vote_form=session['vote_form'], opened_on=session['opened_on'],
-                   voting_started_on=session['voting_started_on'], closed_on=session['closed_on'],
-                   speaker=session['speaker'], bills=bills, motions=motions, bot=ctx.bot)
+            return cls(id=session['id'], is_active=session['is_active'],
+                       status=SessionStatus.from_str(session['status']),
+                       vote_form=session['vote_form'], opened_on=session['opened_on'],
+                       voting_started_on=session['voting_started_on'], closed_on=session['closed_on'],
+                       speaker=session['speaker'], bills=bills, motions=motions, bot=ctx.bot)
+        else:
+            raise BadArgument(f":x: {argument} is neither a number nor 'all'.")
 
 
 class Bill(commands.Converter):
@@ -243,7 +243,7 @@ class Law(commands.Converter):
         self.tags: typing.List[str] = kwargs.get('tags')
 
     @classmethod
-    async def convert(cls, ctx, argument: str):
+    async def convert(cls, ctx, argument: int):
         try:
             argument = int(argument)
         except ValueError:
@@ -303,3 +303,75 @@ class Motion(commands.Converter):
 
         return cls(id=motion['id'], title=motion['title'], link=motion['hastebin'], description=motion['description'],
                    session=session, submitter=motion['submitter'], bot=ctx.bot)
+
+
+class PoliticalParty(commands.Converter):
+    """
+    Represents a political party.
+
+    The lookup strategy for the converter is as follows (in order):
+        1. Lookup by Discord role ID on the Democraciv guild.
+        2. Lookup via database by name/alias.
+        3. Lookup via Discord roles on the Democraciv Guild by name/alias.
+
+    """
+
+    def __init__(self, **kwargs):
+        self.is_private: str = kwargs.get('is_private')
+        self.discord_invite: str = kwargs.get('discord_invite')
+        self.aliases: typing.List[str] = kwargs.get('aliases')
+        self._leader: str = kwargs.get('leader')
+        self._id: int = kwargs.get('id')
+        self._bot = kwargs.get('bot')
+
+        if kwargs.get('role'):
+            self._id = kwargs.get('role').id
+
+    @property
+    def leader(self) -> typing.Union[discord.Member, discord.User, None]:
+        user = self._bot.democraciv_guild_object.get_member(self._leader) or self._bot.get_user(self._leader)
+        return user
+
+    @property
+    def role(self) -> typing.Optional[discord.Role]:
+        return self._bot.democraciv_guild_object.get_role(self._id)
+
+    @classmethod
+    async def convert(cls, ctx, argument: typing.Union[int, str]):
+        if isinstance(argument, int):
+            # Check if role still exists before doing DB query
+            party = ctx.bot.democraciv_guild_object.get_role(argument)
+
+            if party is None:
+                raise PartyNotFoundError(argument)
+
+            party_id = argument
+
+        elif isinstance(argument, str):
+            if argument.lower() == "independent" or argument.lower() == "ind":
+                return cls(role=discord.utils.get(ctx.bot.democraciv_guild_object.roles, name="Independent"),
+                           is_private=False, bot=ctx.bot)
+
+            party_id = await ctx.bot.db.fetchval("SELECT party_id FROM party_alias WHERE alias = $1", argument.lower())
+
+            if party_id is None:
+                party = discord.utils.get(ctx.bot.democraciv_guild_object.roles, name=argument)
+
+                if party is None:
+                    raise PartyNotFoundError(argument)
+                else:
+                    party_id = party.id
+
+        else:
+            raise PartyNotFoundError(argument)
+
+        party = await ctx.bot.db.fetchrow("SELECT * FROM parties WHERE id = $1", party_id)
+
+        if party is None:
+            raise PartyNotFoundError(argument)
+
+        aliases = await ctx.bot.db.fetch("SELECT alias FROM party_alias WHERE party_id = $1", party['id'])
+        aliases = [record['alias'] for record in aliases]
+
+        return cls(id=party['id'], leader=party['leader'], discord_invite=party['discord_invite'],
+                   is_private=party['is_private'], aliases=aliases, bot=ctx.bot)

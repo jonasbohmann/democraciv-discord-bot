@@ -1,5 +1,7 @@
 import traceback
 
+import typing
+
 import util.utils as utils
 import util.exceptions as exceptions
 
@@ -177,6 +179,22 @@ class ErrorHandler(commands.Cog):
 
         elif isinstance(error, commands.PrivateMessageOnly):
             return await ctx.send(":x: This command can only be used in DMs!")
+
+        elif isinstance(error, exceptions.PartyNotFoundError):
+            await ctx.send(f":x: There is no party named `{error.party}`.")
+
+            parties = await self.bot.db.fetch("SELECT id FROM parties")
+            parties = [record['id'] for record in parties]
+
+            msg = ['**Try one of these:**\n']
+            for party in parties:
+                role = ctx.bot.democraciv_guild_object.get_role(party)
+                if role is not None:
+                    msg.append(role.name)
+
+            if len(msg) < 1:
+                await ctx.send('\n'.join(msg))
+            return
 
         # This includes all exceptions declared in util.exceptions.py
         elif isinstance(error, exceptions.DemocracivBotException):
