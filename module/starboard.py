@@ -109,10 +109,11 @@ class Starboard(commands.Cog):
     async def get_reddit_post_content(self, starred_messages: typing.List[typing.List[asyncpg.Record]]) -> str:
         """Formats the starred messages that are about to be posted to Reddit into raw markdown."""
 
-        intro = """ **This is a list of messages from our [Discord](https://discord.gg/AK7dYMG) that at least 4
-         people marked as newsworthy.**\n\nShould there be messages that break the content policy of Reddit or are 
-         against the rules of this subreddit, then please contact the Moderators.\n\nIf you don't want your Discord 
-         messages being shown here, contact the Moderators.\n\n&nbsp;\n\n"""
+        intro = f"""**This is a list of messages from our [Discord](https://discord.gg/AK7dYMG) that at least
+                {self.star_threshold} people marked as newsworthy.**\n\nShould there be messages that 
+                break the content policy of Reddit or are against the rules of this subreddit, then please contact 
+                the Moderators.\n\nIf you don't want your Discord messages being shown here,
+                contact the Moderators.\n\n&nbsp;\n\n"""
 
         markdown = [intro]
 

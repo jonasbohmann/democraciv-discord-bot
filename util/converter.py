@@ -206,6 +206,78 @@ class Bill(commands.Converter):
         user = self._bot.democraciv_guild_object.get_member(self._submitter) or self._bot.get_user(self._submitter)
         return user
 
+    async def is_law(self) -> bool:
+        found = await self._bot.db.fetchval("SELECT law_id FROM legislature_laws WHERE bill_id = $1", self.id)
+
+        if found:
+            return True
+        else:
+            return False
+
+    async def get_emojified_status(self, verbose: bool = True) -> str:
+        status = []
+
+        if not self.voted_on_by_leg:
+            if verbose:
+                return """Legislature: <:yellow:660562049817903116> *(Not Voted On Yet)*
+                          Ministry:    <:yellow:660562049817903116> *(Not Voted On Yet)*
+                          Law:         <:gray:660562063122497569>"""
+            return "<:yellow:660562049817903116><:yellow:660562049817903116><:gray:660562063122497569>"
+        else:
+            if self.passed_leg:
+                if verbose:
+                    status.append("Legislature: <:green:660562089298886656> *(Passed)*")
+                else:
+                    status.append("<:green:660562089298886656>")
+
+                if self.is_vetoable:
+                    if not self.voted_on_by_ministry:
+                        if verbose:
+                            status.append("Ministry: <:yellow:660562049817903116> *(Not Voted On Yet)*")
+                        else:
+                            status.append("<:yellow:660562049817903116>")
+                    else:
+                        if self.passed_ministry:
+                            if verbose:
+                                status.append("Ministry: <:green:660562089298886656> *(Passed)*")
+                            else:
+                                status.append("<:green:660562089298886656>")
+                        else:
+                            if verbose:
+                                status.append("Ministry: <:red:660562078217797647> *(Failed)*")
+                            else:
+                                status.append("<:red:660562078217797647>")
+                else:
+                    if verbose:
+                        status.append("Ministry: <:gray:660562063122497569> *(Not Vetoable)*")
+                    else:
+                        status.append("<:gray:660562063122497569>")
+
+                is_law = await self.is_law()
+
+                if is_law:
+                    if verbose:
+                        status.append("Law: <:green:660562089298886656> *(Active Law)*")
+                    else:
+                        status.append("<:green:660562089298886656>")
+                elif not is_law and ((self.is_vetoable and self.passed_leg and self.passed_ministry) or
+                                     (not self.is_vetoable and self.passed_leg)):
+                    if verbose:
+                        status.append("Law: <:red:660562078217797647> *(Repealed)*")
+                    else:
+                        status.append("<:red:660562078217797647>")  # Repealed
+            else:
+                if verbose:
+                    return """Legislature: <:red:660562078217797647> *(Failed)*
+                              Ministry:    <:gray:660562063122497569> *(Failed in Legislature)*
+                              Law:         <:gray:660562063122497569>"""
+                return "<:red:660562078217797647><:gray:660562063122497569><:gray:660562063122497569>"
+
+        if verbose:
+            return '\n'.join(status)
+        else:
+            return ''.join(status)
+
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str]):
         try:

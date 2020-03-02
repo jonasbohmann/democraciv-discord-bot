@@ -39,8 +39,8 @@ class Moderation(commands.Cog):
             is_alt_chance += 0.1
             factor_details += "Less than 48 hours since registration (+10%)\n"
             if str(member.avatar_url_as(static_format="png")) in default_avatars:
-                is_alt_chance += 0.65
-                factor_details += "Default avatar (+65%)\n"
+                is_alt_chance += 0.55
+                factor_details += "Default avatar (+55%)\n"
             if hours_since <= 24:
                 is_alt_chance += 0.2
                 factor_details += "Less than 24 hours since registration (+20%)\n"
@@ -64,8 +64,8 @@ class Moderation(commands.Cog):
             # If the user didn't download a Discord App, but is accessing Discord through their browser, chances
             # increase that they're an alt
             if isinstance(member.web_status, discord.Status) and member.web_status != discord.Status.offline:
-                factor_details += "Uses Discord Web instead of apps (+10%)\n"
-                is_alt_chance += 0.1
+                factor_details += "Uses Discord Web instead of apps (+5%)\n"
+                is_alt_chance += 0.05
 
         if member.premium_since is not None:
             # If user has Nitro (boosted this guild), it's likely not an alt
@@ -106,8 +106,8 @@ class Moderation(commands.Cog):
                         counter += 1
 
             if counter <= 20:
-                is_alt_chance += 0.65
-                factor_details += "Did not write any messages recently (+65%)\n"
+                is_alt_chance += 0.45
+                factor_details += "Did not write any messages recently (+45%)\n"
 
         return is_alt_chance, factor_details
 

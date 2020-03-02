@@ -28,7 +28,7 @@ class Laws(commands.Cog, name='Law'):
 
             for record in all_laws:
                 law = await Law.convert(MockContext(self.bot), record['law_id'])
-                pretty_laws.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.tiny_link})\n")
+                pretty_laws.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.link})\n")
 
             if not pretty_laws:
                 pretty_laws = ['There are no laws yet.']

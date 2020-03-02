@@ -212,7 +212,7 @@ class LawUtils:
                                                                                                "legislature_sessions"),
                                                                        'speaker')
         query = """SELECT submitter FROM legislature_bills AS b WHERE exists (SELECT 1 FROM legislature_laws l
-                            WHERE l.bill_id = b.id)"""
+                   WHERE l.bill_id = b.id)"""
         amount_of_laws_by_submitter = self.count_rows_from_db_record(await self.bot.db.fetch(query), 'submitter')
 
         # Prettified sorted statistics by discord.Member
@@ -262,7 +262,7 @@ class LawUtils:
 
         for law_id in laws:
             law = await Law.convert(MockContext(self.bot), law_id)
-            found.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.tiny_link})")
+            found.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.link})")
 
         return found
 
@@ -284,6 +284,6 @@ class LawUtils:
 
         for law_id in laws:
             law = await Law.convert(MockContext(self.bot), law_id)
-            pretty_laws.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.tiny_link})")
+            pretty_laws.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.link})")
 
         return pretty_laws

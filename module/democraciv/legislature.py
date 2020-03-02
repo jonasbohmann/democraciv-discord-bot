@@ -5,12 +5,10 @@ import datetime
 
 from util.flow import Flow
 from discord.ext import commands
-
-from util.law_helper import MockContext
 from util.paginator import Pages
 from config import config, links
 from util import utils, mk, exceptions
-from util.converter import Session, SessionStatus, Bill, Motion, Law
+from util.converter import Session, SessionStatus, Bill, Motion
 
 
 # TODO - multiple bills in -leg pass, -m pass, -m veto
@@ -104,44 +102,12 @@ class Legislature(commands.Cog):
         else:
             submitted_by_value = f"*Submitter left Democraciv* (during Session #{bill.session.id})"
 
-        try:
-            law = await Law.from_bill(ctx, bill.id)
-        except exceptions.NotFoundError:
-            law = None
-
-        status = []
-
-        if not bill.voted_on_by_leg:
-            status.append("Legislature: <:yellow:660562049817903116> *(Not Voted On Yet)*")
-        else:
-            if bill.passed_leg:
-                status.append("Legislature: <:green:660562089298886656> *(Passed)*")
-            else:
-                status.append("Legislature: <:red:660562078217797647> *(Failed)*")
-
-        if bill.is_vetoable:
-            if not bill.voted_on_by_ministry:
-                status.append("Ministry: <:yellow:660562049817903116> *(Not Voted On Yet)*")
-            else:
-                if bill.passed_ministry:
-                    status.append("Ministry: <:green:660562089298886656> *(Passed)*")
-                else:
-                    status.append("Ministry: <:red:660562078217797647> *(Failed)*")
-        else:
-            status.append("Ministry: <:gray:660562063122497569> *(Not Vetoable)*")
-
-        if law is not None:
-            status.append("Law: <:green:660562089298886656> *(Active Law)*")
-        elif law is None and ((bill.is_vetoable and bill.passed_leg and bill.passed_ministry) or
-                              (not bill.is_vetoable and bill.passed_leg)):
-            status.append("Law: <:red:660562078217797647> *(Repealed)*")
-
         embed = self.bot.embeds.embed_builder(title=f"Bill Details", description="")
         embed.add_field(name="Name", value=f"[{bill.name}]({bill.link})")
         embed.add_field(name="Description", value=bill.description, inline=False)
         embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
         embed.add_field(name="Vetoable", value=bill.is_vetoable, inline=False)
-        embed.add_field(name="Status", value='\n'.join(status), inline=False)
+        embed.add_field(name="Status", value=await bill.get_emojified_status(verbose=True), inline=False)
         await ctx.send(embed=embed)
 
     @legislature.command(name='motion', aliases=['m'])
@@ -168,8 +134,6 @@ class Legislature(commands.Cog):
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
 
-        # TODO - Update all bills that did not pass from last session
-
         active_leg_session = await self.bot.laws.get_active_leg_session()
 
         if active_leg_session is not None:
@@ -180,6 +144,12 @@ class Legislature(commands.Cog):
             'VALUES ($1, true, $2, $3) RETURNING id', ctx.author.id, 'Submission Period',
             datetime.datetime.utcnow())
 
+        #  Update all bills that did not pass from last session
+        if new_session > 1:
+            last_session = await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = false,"
+                                                     " voted_on_by_leg = true WHERE leg_session = %1 "
+                                                     "AND voted_on_by_leg = false", new_session - 1)
+
         await ctx.send(f":white_check_mark: The **submission period** for session #{new_session} was opened.")
 
         await self.gov_announcements_channel.send(f"The **submission period** for Legislative Session "
@@ -187,7 +157,7 @@ class Legislature(commands.Cog):
                                                   f"to submit bills with `-legislature submit`.")
 
         await self.dm_legislators(f":envelope_with_arrow: The **submission period** for Legislative Session"
-                                  f" #{new_session} has started! Submit your bills with "
+                                  f" #{new_session} has started! Submit your bills and motions with "
                                   f"`-legislature submit` on the Democraciv guild.")
 
     @legislature.command(name='updatesession', aliases=['us'])
@@ -253,40 +223,6 @@ class Legislature(commands.Cog):
                       show_index=False, footer_text=footer)
         await pages.paginate()
 
-    async def get_bill_status(self, bill: Bill) -> str:
-        status = []
-        if not bill.voted_on_by_leg:
-            return "<:yellow:660562049817903116><:yellow:660562049817903116>"
-        else:
-            if bill.passed_leg:
-                status.append("<:green:660562089298886656>")
-
-                try:
-                    law = await Law.from_bill(MockContext(self.bot), bill.id)
-                except exceptions.NotFoundError:
-                    law = None
-
-                if bill.is_vetoable:
-                    if not bill.voted_on_by_ministry:
-                        status.append("<:yellow:660562049817903116>")
-                    else:
-                        if bill.passed_ministry:
-                            status.append("<:green:660562089298886656>")
-                        else:
-                            status.append("<:red:660562078217797647>")
-                else:
-                    status.append("<:gray:660562063122497569>")
-
-                if law is not None:
-                    status.append("<:green:660562089298886656>")  # Is law
-                elif law is None and ((bill.is_vetoable and bill.passed_leg and bill.passed_ministry) or
-                                      (not bill.is_vetoable and bill.passed_leg)):
-                    status.append("<:red:660562078217797647>")  # Repealed
-            else:
-                return "<:red:660562078217797647>"
-
-        return ''.join(status)
-
     @legislature.command(name='session', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def session(self, ctx, session: Session = None):
@@ -329,10 +265,10 @@ class Legislature(commands.Cog):
                 bill = await Bill.convert(ctx, bill_id)
                 if bill.submitter is not None:
                     pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) by "
-                                        f"{bill.submitter.mention} {await self.get_bill_status(bill)}")
+                                        f"{bill.submitter.mention} {await bill.get_emojified_status(verbose=False)}")
                 else:
                     pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) "
-                                        f"{await self.get_bill_status(bill)}")
+                                        f"{await bill.get_emojified_status(verbose=False)}")
         else:
             pretty_bills = ["-"]
 
@@ -574,7 +510,7 @@ class Legislature(commands.Cog):
                                   f"session is still in submission period.")
 
         if bill.voted_on_by_leg:
-            return await ctx.send(f":x: You already passed this bill!")
+            return await ctx.send(f":x: You already voted on this bill!")
 
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to mark "
                                       f"`{bill.name}` (#{bill.id}) as passed from the Legislature?")
@@ -624,7 +560,7 @@ class Legislature(commands.Cog):
     @utils.is_democraciv_guild()
     async def withdraw(self, ctx):
         """Withdraw a bill or motion from the current session"""
-        pass
+        await ctx.send_help(ctx.command)
 
     @withdraw.command(name='bill', aliases=['b'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
