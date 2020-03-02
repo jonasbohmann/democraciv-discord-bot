@@ -2,6 +2,7 @@ import enum
 import typing
 import discord
 
+from config import config
 from datetime import datetime
 from discord.ext import commands
 from discord.ext.commands import BadArgument
@@ -230,65 +231,66 @@ class Bill(commands.Converter):
 
         if not self.voted_on_by_leg:
             if verbose:
-                return """Legislature: <:yellow:660562049817903116> *(Not Voted On Yet)*
-                          Ministry:    <:yellow:660562049817903116> *(Not Voted On Yet)*
-                          Law:         <:gray:660562063122497569>"""
-            return "<:yellow:660562049817903116><:yellow:660562049817903116><:gray:660562063122497569>"
+                return f"""Legislature: {config.LEG_BILL_STATUS_YELLOW} *(Not Voted On Yet)*
+                          Ministry:    {config.LEG_BILL_STATUS_YELLOW} *(Not Voted On Yet)*
+                          Law:         {config.LEG_BILL_STATUS_GRAY}"""
+            else:
+                return f"{config.LEG_BILL_STATUS_YELLOW}{config.LEG_BILL_STATUS_YELLOW}{config.LEG_BILL_STATUS_GRAY}"
         else:
             if self.passed_leg:
                 if verbose:
-                    status.append("Legislature: <:green:660562089298886656> *(Passed)*")
+                    status.append(f"Legislature: {config.LEG_BILL_STATUS_GREEN} *(Passed)*")
                 else:
-                    status.append("<:green:660562089298886656>")
+                    status.append(config.LEG_BILL_STATUS_GREEN)
 
                 if self.is_vetoable:
                     if not self.voted_on_by_ministry:
                         if verbose:
-                            status.append("Ministry: <:yellow:660562049817903116> *(Not Voted On Yet)*")
+                            status.append(f"Ministry: {config.LEG_BILL_STATUS_YELLOW} *(Not Voted On Yet)*")
                         else:
-                            status.append("<:yellow:660562049817903116>")
+                            status.append(config.LEG_BILL_STATUS_YELLOW)
                     else:
                         if self.passed_ministry:
                             if verbose:
-                                status.append("Ministry: <:green:660562089298886656> *(Passed)*")
+                                status.append(f"Ministry: {config.LEG_BILL_STATUS_GREEN} *(Passed)*")
                             else:
-                                status.append("<:green:660562089298886656>")
+                                status.append(config.LEG_BILL_STATUS_GREEN)
                         else:
                             if verbose:
-                                status.append("Ministry: <:red:660562078217797647> *(Failed)*")
+                                status.append(f"Ministry: {config.LEG_BILL_STATUS_RED} *(Failed)*")
                             else:
-                                status.append("<:red:660562078217797647>")
+                                status.append(config.LEG_BILL_STATUS_RED)
                 else:
                     if verbose:
-                        status.append("Ministry: <:gray:660562063122497569> *(Not Vetoable)*")
+                        status.append(f"Ministry: {config.LEG_BILL_STATUS_GRAY} *(Not Vetoable)*")
                     else:
-                        status.append("<:gray:660562063122497569>")
+                        status.append(config.LEG_BILL_STATUS_GRAY)
 
                 is_law = await self.is_law()
 
                 if is_law:
                     if verbose:
-                        status.append("Law: <:green:660562089298886656> *(Active Law)*")
+                        status.append(f"Law: {config.LEG_BILL_STATUS_GREEN} *(Active Law)*")
                     else:
-                        status.append("<:green:660562089298886656>")
+                        status.append(config.LEG_BILL_STATUS_GREEN)
                 elif not is_law and ((self.is_vetoable and self.passed_leg and self.passed_ministry) or
                                      (not self.is_vetoable and self.passed_leg)):
                     if verbose:
-                        status.append("Law: <:red:660562078217797647> *(Repealed)*")
+                        status.append(f"Law: {config.LEG_BILL_STATUS_RED} *(Repealed)*")
                     else:
-                        status.append("<:red:660562078217797647>")  # Repealed
+                        status.append(config.LEG_BILL_STATUS_RED)  # Repealed
                 else:
                     if verbose:
-                        status.append("Law: <:gray:660562063122497569>")
+                        status.append(f"Law: {config.LEG_BILL_STATUS_GRAY}")
                     else:
-                        status.append("<:gray:660562063122497569>")
+                        status.append(config.LEG_BILL_STATUS_GRAY)
 
             else:
                 if verbose:
-                    return """Legislature: <:red:660562078217797647> *(Failed)*
-                              Ministry:    <:gray:660562063122497569> *(Failed in Legislature)*
-                              Law:         <:gray:660562063122497569>"""
-                return "<:red:660562078217797647><:gray:660562063122497569><:gray:660562063122497569>"
+                    return f"""Legislature: {config.LEG_BILL_STATUS_RED} *(Failed)*
+                              Ministry:    {config.LEG_BILL_STATUS_GRAY} *(Failed in Legislature)*
+                              Law:         {config.LEG_BILL_STATUS_GRAY}"""
+                return f"{config.LEG_BILL_STATUS_RED}{config.LEG_BILL_STATUS_GRAY}{config.LEG_BILL_STATUS_GRAY}"
 
         if verbose:
             return '\n'.join(status)

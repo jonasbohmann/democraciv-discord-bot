@@ -139,7 +139,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         pretty_artists = ', '.join(member_spotify.artists)
 
-        embed = self.bot.embeds.embed_builder(title=f"<:spotify:665703093425537046>  {member.name} on Spotify",
+        embed = self.bot.embeds.embed_builder(title=f"{config.SPOTIFY_LOGO}  {member.name} on Spotify",
                                               description="", has_footer=False,
                                               colour=0x36393E, footer=f"Use `{ctx.prefix}lyrics` to get lyrics"
                                                                       f" for a song!")

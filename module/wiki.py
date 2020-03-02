@@ -107,7 +107,7 @@ class Wiki(commands.Cog):
         if not article[0]:
             return await ctx.send(f":x: Couldn't find any article that's related to `{topic}`.")
 
-        embed = self.bot.embeds.embed_builder(title=f"<:fandom:660488383855984640>  {article[0]}",
+        embed = self.bot.embeds.embed_builder(title=f"{config.FANDOM_WIKI_LOGO}  {article[0]}",
                                               description=article[1], has_footer=False)
 
         embed.add_field(name='Link', value=f"{self.percentage_encode_url(article[3])}")
@@ -153,7 +153,7 @@ class Wiki(commands.Cog):
             except KeyError:
                 pass
 
-            embed = self.bot.embeds.embed_builder(title=f"<:wikipedia:660487143856275497>  {_title}",
+            embed = self.bot.embeds.embed_builder(title=f"{config.WIKIPEDIA_LOGO}  {_title}",
                                                   description=_summary_in_2_sentences, has_footer=False)
 
             embed.add_field(name='Link', value=self.percentage_encode_url(_url))

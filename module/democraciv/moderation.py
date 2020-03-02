@@ -2,14 +2,12 @@ import discord
 import datetime
 
 from util.flow import Flow
+from discord.ext import commands
 from util import utils, mk, exceptions
 from config import config, token, links
 
-from discord.ext import commands
-
 
 # TODO add tempmute, tempban
-# TODO utility commnads for when MK is over
 
 class Moderation(commands.Cog):
     """Commands for the Mod Team of this guild."""

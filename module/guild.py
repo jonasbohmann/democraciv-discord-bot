@@ -2,6 +2,8 @@ import discord
 
 import util.utils as utils
 import util.exceptions as exceptions
+
+from config import config
 from util.flow import Flow
 from discord.ext import commands
 
@@ -15,9 +17,9 @@ class Guild(commands.Cog):
     @staticmethod
     def emojiy_settings(boolean) -> str:
         if boolean:
-            return "<:gray_x:683808378501333058><:enabled:683808377989890049>"
+            return f"{config.GUILD_SETTINGS_GRAY_DISABLED}{config.GUILD_SETTINGS_ENABLED}"
         else:
-            return "<:disabled:683808378132365315><:gray_yes:683808378329628680>"
+            return f"{config.GUILD_SETTINGS_DISABLED}{config.GUILD_SETTINGS_GRAY_ENABLED}"
 
     @commands.group(name='guild', case_insensitive=True, invoke_without_command=True)
     @commands.guild_only()

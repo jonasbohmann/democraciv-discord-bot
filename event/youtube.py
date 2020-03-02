@@ -100,7 +100,7 @@ class YouTube:
         _video_url = f'https://youtube.com/watch?v={video_data["id"]}'
 
         embed = self.bot.embeds.embed_builder(
-            title=f"<:youtubeiconred:660897027114401792>  {_channel_title} - Live on YouTube",
+            title=f"{config.YOUTUBE_LOGO_STREAM}  {_channel_title} - Live on YouTube",
             description="", has_footer=False)
         embed.add_field(name="Title", value=f"[{_title}]({_video_url})", inline=False)
         embed.add_field(name="Description", value=self.reduce_youtube_description(_description), inline=False)
@@ -167,7 +167,7 @@ class YouTube:
             video_link = f"https://youtube.com/watch?v={_id}"
 
             embed = self.bot.embeds.embed_builder(
-                title=f"<:youtubeiconwhite:660114810444447774>  {channel} - New YouTube video uploaded",
+                title=f"{config.YOUTUBE_LOGO_UPLOAD}  {channel} - New YouTube video uploaded",
                 description="", has_footer=False)
             embed.add_field(name="Title", value=f"[{title}]({video_link})", inline=False)
             embed.add_field(name="Description", value=self.reduce_youtube_description(description), inline=False)

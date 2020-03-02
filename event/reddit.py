@@ -75,7 +75,7 @@ class Reddit:
                 _thumbnail_url = reddit_post['thumbnail']
 
             embed = self.bot.embeds.embed_builder(
-                title=f"<:reddit:660114002533285888>  New post on r/{self.subreddit}",
+                title=f"{config.REDDIT_LOGO}  New post on r/{self.subreddit}",
                 description="", has_footer=False)
             embed.add_field(name="Thread", value=f"[{_title}]({_comments_link})", inline=False)
             embed.add_field(name="Author", value=f"{_author}", inline=False)

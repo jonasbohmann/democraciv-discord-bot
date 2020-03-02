@@ -1,3 +1,5 @@
+import asyncio
+import re
 import typing
 import asyncpg
 import discord
@@ -19,6 +21,24 @@ class Legislature(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+        # If these custom emoji are not set in config.py, -leg submit will break. Convert to Unicode emoji if that's
+        # the case.
+        async def check_custom_emoji():
+            await asyncio.sleep(5)  # Wait for dciv guild init
+
+            emoji_id = [int(s) for s in re.findall(r'\b\d+\b', config.LEG_SUBMIT_BILL)].pop()
+            emoji1 = self.bot.get_emoji(emoji_id)
+            emoji_id = [int(s) for s in re.findall(r'\b\d+\b', config.LEG_SUBMIT_MOTION)].pop()
+            emoji2 = self.bot.get_emoji(emoji_id)
+
+            if emoji1 is None or emoji2 is None:
+                print("[BOT] Reverting to standard Unicode emojis for -legislature submit as either"
+                      "LEG_SUBMIT_BILL or LEG_SUBMIT_MOTION was not set it config.py")
+                config.LEG_SUBMIT_BILL = "\U0001f1e7"
+                config.LEG_SUBMIT_MOTION = "\U0001f1f2"
+
+        self.bot.loop.create_task(check_custom_emoji())
 
     @property
     def speaker(self) -> typing.Optional[discord.Member]:
@@ -152,7 +172,7 @@ class Legislature(commands.Cog):
         #  Update all bills that did not pass from last session
         if new_session > 1:
             await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = false,"
-                                      " voted_on_by_leg = true WHERE leg_session = %1 "
+                                      " voted_on_by_leg = true WHERE leg_session = $1 "
                                       "AND voted_on_by_leg = false", new_session - 1)
 
         await ctx.send(f":white_check_mark: The **submission period** for session #{new_session} was opened.")
@@ -458,20 +478,20 @@ class Legislature(commands.Cog):
 
         flow = Flow(self.bot, ctx)
 
-        bill_motion_question = await ctx.send(":information_source: Do you want to submit a motion or a bill?"
-                                              " React with <:bill:683370062358642737> for bill, and with "
-                                              "<:motion:683370053508399121> for a motion.")
+        bill_motion_question = await ctx.send(f":information_source: Do you want to submit a motion or a bill?"
+                                              f" React with {config.LEG_SUBMIT_BILL} for bill, and with "
+                                              f"{config.LEG_SUBMIT_MOTION} for a motion.")
 
-        reaction, user = await flow.get_emoji_choice("<:bill:683370062358642737>", "<:motion:683370053508399121>",
+        reaction, user = await flow.get_emoji_choice(config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION,
                                                      bill_motion_question, 200)
 
         if not reaction:
             return
 
-        if str(reaction.emoji) == "<:bill:683370062358642737>":
+        if str(reaction.emoji) == config.LEG_SUBMIT_BILL:
             message, embed = await self.submit_bill(ctx, current_leg_session.id)
 
-        elif str(reaction.emoji) == "<:motion:683370053508399121>":
+        elif str(reaction.emoji) == config.LEG_SUBMIT_MOTION:
             if self.legislator_role not in ctx.author.roles:
                 return await ctx.send(":x: Only Legislators are allowed to submit motions!")
             message, embed = await self.submit_motion(ctx, current_leg_session.id)

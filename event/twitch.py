@@ -85,7 +85,7 @@ class Twitch:
             return
 
         elif twitch_data[0] == self.StreamStatus.LIVE_AND_NOT_ANNOUNCED:
-            embed = self.bot.embeds.embed_builder(title=f"<:twitch:660116652012077080>  {self.streamer} - "
+            embed = self.bot.embeds.embed_builder(title=f"{config.TWITCH_LOGO}  {self.streamer} - "
                                                         f"Live on Twitch",
                                                   description="", has_footer=False)
             embed.add_field(name="Title", value=twitch_data[2], inline=False)

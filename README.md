@@ -8,7 +8,7 @@ Provides useful information, political party & role management and much more.
 ##  Requirements
 
 *  [Python](https://www.python.org/downloads//) 3.6 or newer
-*  [discord.py](https://github.com/Rapptz/discord.py) 1.2.5 or newer
+*  [discord.py](https://github.com/Rapptz/discord.py) 1.3.0 or newer
 *  [PostgreSQL](https://www.postgresql.org/) 9.6 or newer 
 
 **Run `pip install -r requirements.txt` to install all required dependencies.**
@@ -63,6 +63,8 @@ POSTGRESQL_DATABASE = ""
 
 Add the token of your Discord App, your Twitch Helix API key if you enabled the Twitch module, your API key for the 
 YouTube Data v3 API if you enabled YouTube notifications, your TimeZoneDB API Key, and your PostgreSQL configuration like above. 
+
+Once `token.py` is set up, take a look at `config.py` in the same folder and adjust everything to your needs.
 
 After you've done all that, run `client.py`.
 
@@ -172,7 +174,7 @@ for database~~
 
 *  ~~Starboard-like system for the #press channel with weekly summaries to Reddit~~
 *  ~~Add motion support to -legislature withdraw~~
-*  Add utility mod commands to support the process between MKs
+*  ~~Add utility mod commands to support the process between MKs~~
 *  Allow Speaker and Ministry to pass multiple bills in a single command
 *  ~~Add -mergeparties command~~
 *  Wait a certain amount of time for multiple consecutive -legislature pass to bundle messages in #gov-announcements
