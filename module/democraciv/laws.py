@@ -5,6 +5,7 @@ from config import config
 from util import mk, utils
 from util.converter import Law
 from util.flow import Flow
+from util.law_helper import MockContext
 from util.paginator import Pages
 from discord.ext import commands
 
@@ -25,12 +26,11 @@ class Laws(commands.Cog, name='Law'):
 
             pretty_laws = []
 
-            for law in all_laws:
-                details = await self.bot.db.fetchrow("SELECT link, bill_name FROM legislature_bills WHERE id = $1",
-                                                     law['bill_id'])
-                pretty_laws.append(f"Law #{law['law_id']} - [{details['bill_name']}]({details['link']})\n")
+            for law_id in all_laws:
+                law = await Law.convert(MockContext(self.bot), law_id)
+                pretty_laws.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.tiny_link})\n")
 
-            if not pretty_laws or len(pretty_laws) == 0:
+            if not pretty_laws:
                 pretty_laws = ['There are no laws yet.']
 
         pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}",
@@ -68,7 +68,6 @@ class Laws(commands.Cog, name='Law'):
 
         async with ctx.typing():
             # First, search by name
-            # TODO This finds repealed laws
             results = await self.bot.laws.search_law_by_name(' '.join(query))
 
             # If the direct lookup by name didn't match anything, search for similar tag of each word of :param query

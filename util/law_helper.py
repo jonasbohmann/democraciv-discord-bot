@@ -5,7 +5,7 @@ import collections
 
 from bs4 import BeautifulSoup, SoupStrainer
 
-from util.converter import Session, Bill
+from util.converter import Session, Bill, Law
 
 
 class MockContext:
@@ -251,33 +251,20 @@ class LawUtils:
 
     async def search_law_by_name(self, name: str) -> typing.List[str]:
         """Search for laws by their name, returns list with prettified strings of found laws"""
-        bills = await self.bot.db.fetch("SELECT * FROM legislature_bills WHERE bill_name % $1", name.lower())
 
-        found_bills = []
+        query = """SELECT law_id FROM legislature_laws AS l
+                    WHERE exists (SELECT 1 FROM legislature_bills b
+                    WHERE l.bill_id = b.id AND b.bill_name % $1)"""
 
-        for bill in bills:
+        laws = await self.bot.db.fetch(query, name.lower())
 
-            # Only find bills that are laws, i.e. that have passed at least the Legislature
-            if bill['has_passed_leg']:
+        found = []
 
-                # Only find bills that are either not vetoable, or that also passed the Ministry if they are vetoable
-                if bill['is_vetoable'] and bill['has_passed_ministry']:
-                    _id = await self.bot.db.fetchval("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
-                                                     bill['id'])
-                    found_bills.append(f"Law #{_id} - [{bill['bill_name']}]({bill['link']})")
+        for law_id in laws:
+            law = await Law.convert(MockContext(self.bot), law_id)
+            found.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.tiny_link})")
 
-                elif not bill['is_vetoable']:
-                    _id = await self.bot.db.fetchval("SELECT law_id FROM legislature_laws WHERE bill_id = $1",
-                                                     bill['id'])
-                    found_bills.append(f"Law #{_id} - [{bill['bill_name']}]({bill['link']})")
-
-                else:
-                    continue
-
-            else:
-                continue
-
-        return found_bills
+        return found
 
     async def search_law_by_tag(self, tag: str) -> typing.List[str]:
         """Search for laws by their tag(s), returns list with prettified strings of found laws"""
@@ -290,21 +277,13 @@ class LawUtils:
         # few sentence's of content.) and tokenizes those with nltk. Then, every noun from both descriptions is saved
         # into the legislature_tags table with the corresponding law_id.
 
-        found_bills = await self.bot.db.fetch("SELECT id FROM legislature_tags WHERE tag % $1", tag.lower())
-
-        bills = []
-
-        for bill in found_bills:
-            bills.append(bill['id'])
-
-        bills = list(set(bills))
+        found_laws = await self.bot.db.fetch("SELECT id FROM legislature_tags WHERE tag % $1", tag.lower())
+        laws = list(set([law['id'] for law in found_laws]))
 
         pretty_laws = []
 
-        for bill in bills:
-            bill_id = await self.bot.db.fetchval("SELECT bill_id FROM legislature_laws WHERE law_id = $1", bill)
-            details = await self.bot.db.fetchrow("SELECT link, bill_name FROM legislature_bills WHERE id = $1",
-                                                 bill_id)
-            pretty_laws.append(f"Law #{bill} - [{details['bill_name']}]({details['link']})")
+        for law_id in laws:
+            law = await Law.convert(MockContext(self.bot), law_id)
+            pretty_laws.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.tiny_link})")
 
         return pretty_laws

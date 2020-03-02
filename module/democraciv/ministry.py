@@ -104,7 +104,7 @@ class Ministry(commands.Cog):
         embed.add_field(name="Open Bills", value=pretty_bills, inline=False)
         await ctx.send(embed=embed)
 
-    @ministry.group(name='bills', aliases=['b'])
+    @ministry.command(name='bills', aliases=['b'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def bills(self, ctx):
         """See all open bills from the Legislature to vote on"""
@@ -121,7 +121,7 @@ class Ministry(commands.Cog):
                       show_index=False, footer_text=help_description)
         await pages.paginate()
 
-    @ministry.group(name='veto', aliases=['v'])
+    @ministry.command(name='veto', aliases=['v'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
     async def veto(self, ctx, bill_id: Bill):
@@ -162,7 +162,7 @@ class Ministry(commands.Cog):
         elif not reaction:
             await ctx.send(f"Aborted.")
 
-    @ministry.group(name='pass', aliases=['p'])
+    @ministry.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
     async def passbill(self, ctx, bill_id: Bill):

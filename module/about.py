@@ -57,7 +57,8 @@ class About(commands.Cog):
                     if isinstance(c, discord.ext.commands.Group):
                         for co in c.commands:
                             commands_list.append(co)
-                    commands_list.append(c)
+                    else:
+                        commands_list.append(c)
             commands_list.append(cmd)
         return len(commands_list), sorted(commands_list, key=lambda com: com.qualified_name)
 
