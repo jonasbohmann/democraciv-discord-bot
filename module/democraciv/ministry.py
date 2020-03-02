@@ -1,9 +1,8 @@
 import typing
 import discord
 
-
 from util.flow import Flow
-from util.converter import Bill
+from util.converter import Bill, MultipleBills
 from config import config, links
 from util.paginator import Pages
 from discord.ext import commands
@@ -58,12 +57,8 @@ class Ministry(commands.Cog):
 
         if len(open_bills) > 0:
             for bill in open_bills:
-                if bill.submitter is not None:
-                    pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) by "
-                                        f"{bill.submitter.mention} from session #{bill.session.id}")
-                else:
-                    pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) "
-                                        f"from session #{bill.session.id}")
+                pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) "
+                                    f"from Session #{bill.session.id}")
 
         if not pretty_bills:
             return None
@@ -124,8 +119,13 @@ class Ministry(commands.Cog):
     @ministry.command(name='veto', aliases=['v'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
-    async def veto(self, ctx, bill_id: Bill):
+    async def veto(self, ctx, *, bill_id: typing.Union[Bill, MultipleBills]):
         """Veto a bill"""
+
+        if isinstance(bill_id, MultipleBills):
+            for bill in bill_id.bills:
+                await ctx.invoke(ctx.command, bill_id=bill)
+            return
 
         bill = bill_id
 
@@ -165,8 +165,13 @@ class Ministry(commands.Cog):
     @ministry.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
-    async def passbill(self, ctx, bill_id: Bill):
+    async def passbill(self, ctx, *, bill_id: typing.Union[Bill, MultipleBills]):
         """Pass a bill into law"""
+
+        if isinstance(bill_id, MultipleBills):
+            for bill in bill_id.bills:
+                await ctx.invoke(ctx.command, bill_id=bill)
+            return
 
         bill = bill_id
 

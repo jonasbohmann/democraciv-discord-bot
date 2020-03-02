@@ -10,7 +10,7 @@ from discord.ext import commands
 from util.paginator import Pages
 from config import config, links
 from util import utils, mk, exceptions
-from util.converter import Session, SessionStatus, Bill, Motion
+from util.converter import Session, SessionStatus, Bill, Motion, MultipleBills
 
 
 # TODO - multiple bills in -leg pass, -m pass, -m veto
@@ -209,8 +209,8 @@ class Legislature(commands.Cog):
 
         await ctx.send(f":white_check_mark: Session #{active_leg_session.id} is now in **voting period**.")
 
-        await self.gov_announcements_channel.send(f"The **voting period for Legislative "
-                                                  f"Session #{active_leg_session.id}**"
+        await self.gov_announcements_channel.send(f"The **voting period** for Legislative "
+                                                  f"Session #{active_leg_session.id}"
                                                   f" has started! Legislators can vote here: {voting_form}")
 
         await self.dm_legislators(f":ballot_box: The **voting period** for Legislative Session "
@@ -234,8 +234,8 @@ class Legislature(commands.Cog):
                        f" Add the bills that passed this session with `-legislature pass <bill_id>`. Get the "
                        f"bill ids from the list of submitted bills in `-legislature session {active_leg_session.id}`")
 
-        await self.gov_announcements_channel.send(f"{self.legislator_role.mention}, **Legislative Session "
-                                                  f"#{active_leg_session.id} has been closed** by the Cabinet.")
+        await self.gov_announcements_channel.send(f"{self.legislator_role.mention}, Legislative Session "
+                                                  f"#{active_leg_session.id} has been **closed** by the Cabinet.")
 
     async def paginate_all_sessions(self, ctx):
         all_sessions = await self.bot.db.fetch("SELECT id, status FROM legislature_sessions ORDER BY id")
@@ -510,10 +510,15 @@ class Legislature(commands.Cog):
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
-    async def passbill(self, ctx, bill_id: Bill):
+    async def passbill(self, ctx, *, bill_id: typing.Union[Bill, MultipleBills]):
         """Mark a bill as passed from the Legislature.
 
         If the bill is vetoable, it sends the bill to the Ministry. If not, the bill automatically becomes law."""
+
+        if isinstance(bill_id, MultipleBills):
+            for bill in bill_id.bills:
+                await ctx.invoke(ctx.command, bill_id=bill)
+            return
 
         bill = bill_id  # At this point, bill_id is already a Bill object, so calling it ball_id makes no sense
 

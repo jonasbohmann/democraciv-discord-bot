@@ -319,6 +319,31 @@ class Bill(commands.Converter):
                    session=session, submitter=bill['submitter'], bot=ctx.bot)
 
 
+class MultipleBills(commands.Converter):
+    """
+    Represents multiple bills to allow the person doing -legislature pass or -ministry pass/veto passing
+      multiple bills at once.
+
+    """
+
+    def __init__(self, **kwargs):
+        self.bills: typing.List[Bill] = kwargs.get('bills')
+
+    @classmethod
+    async def convert(cls, ctx, argument: str):
+        try:
+            arguments = [int(arg) for arg in argument.split()]
+        except ValueError:
+            raise BadArgument(f":x: At least one of those in {argument} is not a number.")
+
+        bills = [await Bill.convert(ctx, argument) for argument in arguments]
+
+        if not bills:
+            raise NotFoundError(f":x: There are no bills with any of these IDs: {argument}")
+
+        return cls(bills=bills)
+
+
 class Law(commands.Converter):
     """
     Represents a law that was either passed by just the Legislature or by both the Legislature and the Ministry.

@@ -149,6 +149,11 @@ class ErrorHandler(commands.Cog):
                            f" take a look at the help page for this command:")
             return await ctx.send_help(ctx.command)
 
+        elif isinstance(error, commands.BadUnionArgument):
+            await ctx.send(f":x: There was an error with the {error.param.name} argument you provided, "
+                           f" take a look at the help page for this command:")
+            return await ctx.send_help(ctx.command)
+
         elif isinstance(error, commands.CommandOnCooldown):
             return await ctx.send(f":x: You are on cooldown! Try again in {error.retry_after:.2f} seconds.")
 
