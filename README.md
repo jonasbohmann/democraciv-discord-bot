@@ -174,7 +174,7 @@ for database~~
 *  ~~Add motion support to -legislature withdraw~~
 *  Add utility mod commands to support the process between MKs
 *  Allow Speaker and Ministry to pass multiple bills in a single command
-*  Add -mergeparties command 
+*  ~~Add -mergeparties command~~
 *  Wait a certain amount of time for multiple consecutive -legislature pass to bundle messages in #gov-announcements
 *  Refactor & cleanup for 1.0 release
 

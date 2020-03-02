@@ -5,10 +5,12 @@ import datetime
 
 from util.flow import Flow
 from discord.ext import commands
+
+from util.law_helper import MockContext
 from util.paginator import Pages
 from config import config, links
 from util import utils, mk, exceptions
-from util.converter import Session, SessionStatus, Bill, Motion
+from util.converter import Session, SessionStatus, Bill, Motion, Law
 
 
 # TODO - multiple bills in -leg pass, -m pass, -m veto
@@ -92,7 +94,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='bill', aliases=['b'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def bill(self, ctx, bill_id: Bill):
+    async def bill(self, ctx, *, bill_id: Bill):
         """Details about a bill"""
 
         bill = bill_id
@@ -101,6 +103,11 @@ class Legislature(commands.Cog):
             submitted_by_value = f"{bill.submitter.mention} (during Session #{bill.session.id})"
         else:
             submitted_by_value = f"*Submitter left Democraciv* (during Session #{bill.session.id})"
+
+        try:
+            law = await Law.from_bill(ctx, bill.id)
+        except exceptions.NotFoundError:
+            law = None
 
         status = []
 
@@ -112,18 +119,28 @@ class Legislature(commands.Cog):
             else:
                 status.append("Legislature: <:red:660562078217797647> *(Failed)*")
 
-        if not bill.voted_on_by_ministry:
-            status.append("Ministry: <:yellow:660562049817903116> *(Not Voted On Yet)*")
-        else:
-            if bill.passed_ministry:
-                status.append("Ministry: <:green:660562089298886656> *(Passed)*")
+        if bill.is_vetoable:
+            if not bill.voted_on_by_ministry:
+                status.append("Ministry: <:yellow:660562049817903116> *(Not Voted On Yet)*")
             else:
-                status.append("Ministry: <:red:660562078217797647> *(Failed)*")
+                if bill.passed_ministry:
+                    status.append("Ministry: <:green:660562089298886656> *(Passed)*")
+                else:
+                    status.append("Ministry: <:red:660562078217797647> *(Failed)*")
+        else:
+            status.append("Ministry: <:gray:660562063122497569> *(Not Vetoable)*")
+
+        if law is not None:
+            status.append("Law: <:green:660562089298886656> *(Active Law)*")
+        elif law is None and ((bill.is_vetoable and bill.passed_leg and bill.passed_ministry) or
+                              (not bill.is_vetoable and bill.passed_leg)):
+            status.append("Law: <:red:660562078217797647> *(Repealed)*")
 
         embed = self.bot.embeds.embed_builder(title=f"Bill Details", description="")
         embed.add_field(name="Name", value=f"[{bill.name}]({bill.link})")
         embed.add_field(name="Description", value=bill.description, inline=False)
         embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
+        embed.add_field(name="Vetoable", value=bill.is_vetoable, inline=False)
         embed.add_field(name="Status", value='\n'.join(status), inline=False)
         await ctx.send(embed=embed)
 
@@ -150,6 +167,8 @@ class Legislature(commands.Cog):
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
+
+        # TODO - Update all bills that did not pass from last session
 
         active_leg_session = await self.bot.laws.get_active_leg_session()
 
@@ -234,9 +253,7 @@ class Legislature(commands.Cog):
                       show_index=False, footer_text=footer)
         await pages.paginate()
 
-    @staticmethod
-    def get_bill_status(bill: Bill) -> str:
-        # TODO -leg veto is not a thing
+    async def get_bill_status(self, bill: Bill) -> str:
         status = []
         if not bill.voted_on_by_leg:
             return "<:yellow:660562049817903116><:yellow:660562049817903116>"
@@ -244,13 +261,27 @@ class Legislature(commands.Cog):
             if bill.passed_leg:
                 status.append("<:green:660562089298886656>")
 
-                if not bill.voted_on_by_ministry:
-                    status.append("<:yellow:660562049817903116>")
-                else:
-                    if bill.passed_ministry:
-                        status.append("<:green:660562089298886656>")
+                try:
+                    law = await Law.from_bill(MockContext(self.bot), bill.id)
+                except exceptions.NotFoundError:
+                    law = None
+
+                if bill.is_vetoable:
+                    if not bill.voted_on_by_ministry:
+                        status.append("<:yellow:660562049817903116>")
                     else:
-                        status.append("<:red:660562078217797647>")
+                        if bill.passed_ministry:
+                            status.append("<:green:660562089298886656>")
+                        else:
+                            status.append("<:red:660562078217797647>")
+                else:
+                    status.append("<:gray:660562063122497569>")
+
+                if law is not None:
+                    status.append("<:green:660562089298886656>")  # Is law
+                elif law is None and ((bill.is_vetoable and bill.passed_leg and bill.passed_ministry) or
+                                      (not bill.is_vetoable and bill.passed_leg)):
+                    status.append("<:red:660562078217797647>")  # Repealed
             else:
                 return "<:red:660562078217797647>"
 
@@ -298,10 +329,10 @@ class Legislature(commands.Cog):
                 bill = await Bill.convert(ctx, bill_id)
                 if bill.submitter is not None:
                     pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) by "
-                                        f"{bill.submitter.mention} {self.get_bill_status(bill)}")
+                                        f"{bill.submitter.mention} {await self.get_bill_status(bill)}")
                 else:
                     pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) "
-                                        f"{self.get_bill_status(bill)}")
+                                        f"{await self.get_bill_status(bill)}")
         else:
             pretty_bills = ["-"]
 
@@ -317,9 +348,10 @@ class Legislature(commands.Cog):
 
         if session.status != SessionStatus.SUBMISSION_PERIOD:
             # Session is either closed or in Voting Period
-            embed.add_field(name="Voting Started on (UTC)",
-                            value=session.voting_started_on.strftime("%A, %B %d %Y at %H:%M"), inline=False)
-            embed.add_field(name="Vote Form", value=f"[Link]({session.vote_form})", inline=False)
+            if session.voting_started_on is not None:
+                embed.add_field(name="Voting Started on (UTC)",
+                                value=session.voting_started_on.strftime("%A, %B %d %Y at %H:%M"), inline=False)
+                embed.add_field(name="Vote Form", value=f"[Link]({session.vote_form})", inline=False)
 
         if not session.is_active:
             # Session is closed
@@ -345,7 +377,8 @@ class Legislature(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    async def submit_bill(self, ctx, current_leg_session_id: int) -> typing.Optional[typing.Tuple[str, discord.Embed]]:
+    async def submit_bill(self, ctx, current_leg_session_id: int) -> typing.Tuple[typing.Optional[str],
+                                                                                  typing.Optional[discord.Embed]]:
         """Submits a bill to a session that is in Submission Period. Uses the Flow API to get the bill
          details via Discord. Returns the message and formatted Embed that will be sent to
           the Cabinet upon submission."""
@@ -358,7 +391,7 @@ class Legislature(commands.Cog):
         google_docs_url = await flow.get_text_input(150)
 
         if not google_docs_url:
-            return None
+            return None, None
 
         if not self.bot.laws.is_google_doc_link(google_docs_url):
             return await ctx.send(":x: That doesn't look like a Google Docs URL.")
@@ -369,7 +402,7 @@ class Legislature(commands.Cog):
         reaction = await flow.get_yes_no_reaction_confirm(veto_question, 200)
 
         if reaction is None:
-            return None
+            return None, None
 
         is_vetoable = True if reaction else False
 
@@ -389,7 +422,7 @@ class Legislature(commands.Cog):
             if bill_title is None:
                 await ctx.send(":x: Couldn't connect to Google Docs. Make sure that the document can be"
                                " read by anyone and that it's not a published version!")
-                return None
+                return None, None
 
             # Make the Google Docs link smaller to workaround the "embed value cannot be longer than 1024 characters
             # in -legislature session" issue
@@ -398,7 +431,7 @@ class Legislature(commands.Cog):
             if tiny_url is None:
                 await ctx.send(":x: Your bill was not submitted since there was a problem with tinyurl.com. "
                                "Try again in a few minutes.")
-                return None
+                return None, None
 
             try:
                 await self.bot.db.execute(
@@ -408,7 +441,7 @@ class Legislature(commands.Cog):
                     bill_description, tiny_url)
             except asyncpg.UniqueViolationError:
                 await ctx.send(":x: A bill with the same exact Google Docs Document was already submitted!")
-                return None
+                return None, None
 
             message = "Hey! A new **bill** was just submitted."
             embed = self.bot.embeds.embed_builder(title="Bill Submitted", description="", time_stamp=True)
@@ -424,8 +457,8 @@ class Legislature(commands.Cog):
 
         return message, embed
 
-    async def submit_motion(self, ctx, current_leg_session_id: int) -> typing.Optional[
-        typing.Tuple[str, discord.Embed]]:
+    async def submit_motion(self, ctx, current_leg_session_id: int) -> typing.Tuple[typing.Optional[str],
+                                                                                    typing.Optional[discord.Embed]]:
         """Submits a motion to a session that is in Submission Period. Uses the Flow API to get the bill
            details via Discord. Returns the message and formatted Embed that will be sent to
            the Cabinet upon submission."""
@@ -438,7 +471,7 @@ class Legislature(commands.Cog):
         title = await flow.get_text_input(300)
 
         if not title:
-            return None
+            return None, None
 
         await ctx.send(":information_source: Reply with the content of your motion. If your motion is"
                        " inside a Google Docs document, just use a link to that for this.")
@@ -446,7 +479,7 @@ class Legislature(commands.Cog):
         description = await flow.get_text_input(600)
 
         if not description:
-            return None
+            return None, None
 
         async with ctx.typing():
             haste_bin_url = await self.bot.laws.post_to_hastebin(description)
@@ -454,7 +487,7 @@ class Legislature(commands.Cog):
             if not haste_bin_url:
                 await ctx.send(":x: Your motion was not submitted, there was a problem with hastebin.com. "
                                "Try again in a few minutes.")
-                return None
+                return None, None
 
             await self.bot.db.execute(
                 "INSERT INTO legislature_motions (leg_session, title, description, submitter, hastebin) "
@@ -745,7 +778,10 @@ class Legislature(commands.Cog):
             embed.add_field(name="Top Bill Submitters", value=stats[4], inline=False)
             embed.add_field(name="Top Lawmakers", value=stats[6], inline=False)
 
-        await ctx.send(embed=embed)
+        try:
+            await ctx.send(embed=embed)
+        except discord.HTTPException:
+            await ctx.send(":x: There has to be activity in the Legislature first.")
 
 
 def setup(bot):

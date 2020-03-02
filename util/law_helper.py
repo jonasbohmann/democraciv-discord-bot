@@ -123,8 +123,9 @@ class LawUtils:
     async def pass_into_law(self, ctx, bill: Bill) -> bool:
         """Marks a Bill as passed and creates new Law from that Bill."""
 
-        await self.bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
-                                  "true WHERE id = $1", bill.id)
+        if bill.is_vetoable:
+            await self.bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
+                                      "true WHERE id = $1", bill.id)
 
         try:
             law_id = await self.bot.db.fetchval("INSERT INTO legislature_laws (bill_id)"
@@ -141,9 +142,10 @@ class LawUtils:
         _google_docs_description = await self.bot.laws.get_google_docs_description(bill.link)
         _tags = await self.bot.loop.run_in_executor(None, self.bot.laws.generate_law_tags, _google_docs_description,
                                                     bill.description)
-        _tags = [tag.lower() for tag in _tags]
 
-        await self.bot.db.executemany("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2)", law_id, _tags)
+        for tag in _tags:
+            await self.bot.db.execute("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2)", law_id, tag.lower())
+
         return True
 
     @staticmethod
@@ -209,11 +211,9 @@ class LawUtils:
         amount_of_sessions_by_speaker = self.count_rows_from_db_record(await self.bot.db.fetch("SELECT speaker FROM "
                                                                                                "legislature_sessions"),
                                                                        'speaker')
-        amount_of_laws_by_submitter = self.count_rows_from_db_record(await self.bot.db.fetch("SELECT submitter FROM "
-                                                                                             "legislature_bills WHERE"
-                                                                                             " has_passed_leg = true "
-                                                                                             "AND has_passed_ministry "
-                                                                                             "= true"), 'submitter')
+        query = """SELECT submitter FROM legislature_bills AS b WHERE exists (SELECT 1 FROM legislature_laws l
+                            WHERE l.bill_id = b.id)"""
+        amount_of_laws_by_submitter = self.count_rows_from_db_record(await self.bot.db.fetch(query), 'submitter')
 
         # Prettified sorted statistics by discord.Member
         pretty_top_submitter = self.get_pretty_stats(self.sort_dict_by_value(amount_of_bills_by_submitter), 'bills')

@@ -162,10 +162,10 @@ class Session(commands.Converter):
                 raise NotFoundError(f":x: There is no session with ID #{argument}!")
 
             bills = await ctx.bot.db.fetch("SELECT id FROM legislature_bills WHERE leg_session = $1", session['id'])
-            bills = [record['id'] for record in bills]
+            bills = sorted([record['id'] for record in bills])
 
             motions = await ctx.bot.db.fetch("SELECT id FROM legislature_motions WHERE leg_session = $1", session['id'])
-            motions = [record['id'] for record in motions]
+            motions = sorted([record['id'] for record in motions])
 
             return cls(id=session['id'], is_active=session['is_active'],
                        status=SessionStatus.from_str(session['status']),
@@ -241,6 +241,15 @@ class Law(commands.Converter):
         self.id: int = kwargs.get('id')
         self.bill: Bill = kwargs.get('bill')
         self.tags: typing.List[str] = kwargs.get('tags')
+
+    @classmethod
+    async def from_bill(cls, ctx, bill_id: int):
+        law = await ctx.bot.db.fetchval("SELECT law_id FROM legislature_laws WHERE bill_id = $1", bill_id)
+
+        if law is None:
+            raise NotFoundError(f":x: There is no law with associated bill ID #{bill_id}!")
+
+        return cls.convert(ctx, law)
 
     @classmethod
     async def convert(cls, ctx, argument: int):

@@ -63,11 +63,11 @@ class Log(commands.Cog):
 
             if before.clean_content and after.clean_content:
                 embed_fields = {
-                    "Author": [f"{before.author.mention} {before.author.name}#{before.author.discriminator}", False],
+                    "Author": [f"{before.author.mention} {before.author}", False],
                     "Channel": [f"{before.channel.mention}", True],
                     "Jump": [f"[Link]({before.jump_url})", True],
-                    "Before": [f"{before.clean_content}", False],
-                    "After": [f"{after.clean_content}", False]
+                    "Before": [f"{before.content}", False],
+                    "After": [f"{after.content}", False]
                 }
                 await self.log_event(before.guild, ":pencil2:  Message Edited", embed_fields, to_owner=False)
 
@@ -84,7 +84,7 @@ class Log(commands.Cog):
 
         if not await self.bot.checks.is_channel_excluded(message.guild.id, message.channel.id):
             embed_fields = {
-                "Author": [f"{message.author.mention} {message.author.name}#{message.author.discriminator}", True],
+                "Author": [f"{message.author.mention} {message.author}", True],
                 "Channel": [f"{message.channel.mention}", False]
             }
 
@@ -92,7 +92,7 @@ class Log(commands.Cog):
                 # If the deleted message is an embed, sending this new embed will raise an error as
                 # message.clean_content does not work with embeds
                 if len(message.content) <= 1024:
-                    embed_fields['Message'] = [message.clean_content, False]
+                    embed_fields['Message'] = [message.content, False]
 
             await self.log_event(message.guild, ':wastebasket:  Message Deleted', embed_fields, to_owner=False)
 

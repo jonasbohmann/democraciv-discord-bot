@@ -26,8 +26,8 @@ class Laws(commands.Cog, name='Law'):
 
             pretty_laws = []
 
-            for law_id in all_laws:
-                law = await Law.convert(MockContext(self.bot), law_id)
+            for record in all_laws:
+                law = await Law.convert(MockContext(self.bot), record['law_id'])
                 pretty_laws.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.tiny_link})\n")
 
             if not pretty_laws:
@@ -55,8 +55,8 @@ class Laws(commands.Cog, name='Law'):
         else:
             submitted_by_value = f"*Submitter left Democraciv* (during Session #{law.bill.session.id})"
 
-        embed = self.bot.embeds.embed_builder(title=law.bill.name, description=f"Associated Bill: #{law.bill.id}")
-        embed.add_field(name="Link", value=law.bill.link)
+        embed = self.bot.embeds.embed_builder(title="Law Details", description=f"Associated Bill: #{law.bill.id}")
+        embed.add_field(name="Name", value=f"[{law.bill.name}]({law.bill.link})")
         embed.add_field(name="Description", value=law.bill.description, inline=False)
         embed.add_field(name="Submitter", value=submitted_by_value)
         await ctx.send(embed=embed)
@@ -115,7 +115,7 @@ class Laws(commands.Cog, name='Law'):
             return await ctx.send("Aborted.")
 
         elif reaction:
-            await self.bot.db.execute("DELETE FROM legislature_laws WHERE law_id = $1", law_id)
+            await self.bot.db.execute("DELETE FROM legislature_laws WHERE law_id = $1", law.id)
 
             await self.gov_announcements_channel.send(f"Cabinet Member {ctx.author} has removed `{law.bill.name}`"
                                                       f" from the laws of {mk.NATION_NAME}.")
