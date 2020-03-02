@@ -17,7 +17,7 @@ class Elections(commands.Cog, name="Election"):
     async def stv(self, ctx, seats: int, quota: str):
         """Calculate election results of a given .csv file with STV
 
-        Usage:
+        **Usage:**
             Upload a .csv file and add the command as a comment to it like this:
             `-stv <seats> <quota>`, with the quota parameter being "hare" for Hare and "droop" for Droop
         """
@@ -70,27 +70,6 @@ class Elections(commands.Cog, name="Election"):
             embed = self.bot.embeds.embed_builder(title=f"STV Results for {csv.filename}",
                                                   description=f"```glsl\n{results}```", footer=f"ID: {_filename}")
             await ctx.send(embed=embed)
-
-    @stv.error
-    async def stverror(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            if error.param.name == 'seats':
-                await ctx.send(':x: You have to specify the amount of available seats!\n\n**Usage**:\n'
-                               'Upload a .csv file and add the command as a comment to it like this:'
-                               ' `-stv <seats> <quota>`, with the quota parameter being "hare" for Hare'
-                               ' and "droop" for Droop')
-
-            if error.param.name == 'quota':
-                await ctx.send(':x: You have to specify the quota!\n\n**Usage**:\n'
-                               'Upload a .csv file and add the command as a comment to it like this:'
-                               ' `-stv <seats> <quota>`, with the quota parameter being "hare" for Hare '
-                               'and "droop" for Droop')
-
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send(':x: Error!\n\n**Usage**:\n'
-                           'Upload a .csv file and add the command as a comment to it like this:'
-                           ' `-stv <seats> <quota>`, with the quota parameter being "hare" for Hare and '
-                           '"droop" for Droop')
 
 
 def setup(bot):

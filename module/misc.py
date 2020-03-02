@@ -59,7 +59,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
     async def whois(self, ctx, *, member: discord.Member = None):
         """Get detailed information about a member of this guild
 
-            Usage:
+            **Usage:**
              `-whois`
              `-whois @DerJonas`
              `-whois DerJonas`
@@ -123,7 +123,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
     async def spotify(self, ctx, *, member: discord.Member = None):
         """See what someone is listening to on Spotify
 
-            Usage:
+            **Usage:**
              `-spotify`
              `-spotify @DerJonas`
              `-spotify DerJonas`
@@ -266,7 +266,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
     async def random(self, ctx, *arg):
         """Returns a random number or choice
 
-            Usage:
+            **Usage:**
               `-random` will choose a random number between 1-100
               `-random coin` will choose Heads or Tails
               `-random 6` will choose a random number between 1-6

@@ -38,7 +38,7 @@ class Roles(commands.Cog):
     async def roles(self, ctx, role: str = None):
         """List all roles or get/lose a role by specifying the role's name
 
-        **Usage:**
+        ****Usage:****
           `-role` List all available roles
           `-role <role>` Get/Lose a role
         """
@@ -147,7 +147,7 @@ class Roles(commands.Cog):
     async def deleterole(self, ctx, hard: bool, *, role: str):
         """Remove a role from this guild's `-role` list
 
-        Usage:
+        **Usage:**
          `-role delete true <role>` will remove the role **and** delete its Discord role
          `-role delete false <role>` will remove the role but not delete its Discord role
 

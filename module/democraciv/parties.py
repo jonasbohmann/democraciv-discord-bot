@@ -262,7 +262,7 @@ class Party(commands.Cog, name='Political Parties'):
     async def deleteparty(self, ctx, hard: bool, *, party: PoliticalParty):
         """Remove a political party
 
-            Usage:
+            **Usage:**
              `-deleteparty true <party>` will remove the party **and** delete its Discord role
              `-deleteparty false <party>` will remove the party but not delete its Discord role
 

@@ -192,7 +192,7 @@ class Guild(commands.Cog):
         """
         Configure the channels that should be excluded from the logging module on this guild
 
-            Usage:
+            **Usage:**
                 `-guild exclude` to see all excluded channels
                 `-guild exclude <channel>` too add/remove a channel to/from the excluded channels list
         """

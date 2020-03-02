@@ -228,7 +228,7 @@ class Legislature(commands.Cog):
     async def session(self, ctx, session: Session = None):
         """Get details about a legislative session
 
-        Usage:
+        **Usage:**
         `-legislature session` to see details about the last session
         `-legislature session <number>` to see details about a specific session
         `-legislature session all` to see a list of all previous sessions."""

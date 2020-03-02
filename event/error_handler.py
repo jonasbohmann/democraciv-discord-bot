@@ -128,13 +128,20 @@ class ErrorHandler(commands.Cog):
 
         error = getattr(error, 'original', error)
 
+        # This prevents any commands with local handlers being handled here
+        if hasattr(ctx.command, 'on_error'):
+            return
+
         # Anything in ignored will return
         if isinstance(error, ignored):
             return
 
         elif isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(f":x: There was an error with one of the arguments you provided (or not provided),"
-                           f" take a look at the help page for this command:")
+            await ctx.send(f":x: You forgot to give me the `{error.param.name}` argument!")
+            return await ctx.send_help(ctx.command)
+
+        elif isinstance(error, commands.TooManyArguments):
+            await ctx.send(f":x: You gave me too many arguments!")
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.BadArgument):
