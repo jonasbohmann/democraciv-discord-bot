@@ -97,15 +97,20 @@ class Legislature(commands.Cog):
 
         bill = bill_id
 
+        embed = self.bot.embeds.embed_builder(title=bill.name,
+                                              description=f"Submitted during Session #{bill.session.id}",
+                                              has_footer=False)
+        embed.url = bill.link
+
         if bill.submitter is not None:
-            submitted_by_value = f"{bill.submitter.mention} (during Session #{bill.session.id})"
+            embed.set_author(name=bill.submitter.name, icon_url=bill.submitter.avatar_url_as(static_format='png'))
+            # submitted_by_value = f"{bill.submitter.mention} (during Session #{bill.session.id})"
         else:
             submitted_by_value = f"*Submitter left Democraciv* (during Session #{bill.session.id})"
 
-        embed = self.bot.embeds.embed_builder(title=f"Bill Details", description="")
-        embed.add_field(name="Name", value=f"[{bill.name}]({bill.link})")
+        # embed.add_field(name="Name", value=)
         embed.add_field(name="Description", value=bill.description, inline=False)
-        embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
+        # embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
         embed.add_field(name="Vetoable", value=bill.is_vetoable, inline=False)
         embed.add_field(name="Status", value=await bill.get_emojified_status(verbose=True), inline=False)
         await ctx.send(embed=embed)
