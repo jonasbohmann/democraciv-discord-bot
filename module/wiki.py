@@ -6,6 +6,7 @@ from discord.ext import commands
 
 
 class Wiki(commands.Cog):
+    """Search for articles on Wikipedia or the Sid Meier's Civilization Fando."""
 
     def __init__(self, bot):
         self.bot = bot

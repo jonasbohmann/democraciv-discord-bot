@@ -91,8 +91,8 @@ class HelpPaginator(Pages):
         entries = (
             ('<argument>', 'This means the argument is __**required**__.'),
             ('[argument]', 'This means the argument is __**optional**__.'),
-            ('[A|B]', 'This means that it can be __**either A or B**__.'),
-            ('[argument...]', 'This means you can have multiple arguments.\n'
+            # ('[A|B]', 'This means that it can be __**either A or B**__.'),
+            ('[argument...]', 'This means you can have multiple arguments.\n\n'
                               'Now that you know the basics, it should be noted that...\n'
                               '__**You do not type in the brackets!**__')
         )
@@ -140,14 +140,15 @@ class PaginatedHelpCommand(commands.HelpCommand):
 
     def get_command_signature(self, command):
         parent = command.full_parent_name
-        if len(command.aliases) > 0:
-            aliases = '|'.join(command.aliases)
-            fmt = f'[{command.name}|{aliases}]'
-            if parent:
-                fmt = f'{parent} {fmt}'
-            alias = fmt
-        else:
-            alias = command.name if not parent else f'{parent} {command.name}'
+
+        # if len(command.aliases) > 0:
+        #    # aliases = '|'.join(command.aliases)
+        #    # fmt = f'[{command.name}|{aliases}]'
+        #    if parent:
+        #        fmt = f'{parent} {fmt}'
+        #    alias = fmt
+
+        alias = command.name if not parent else f'{parent} {command.name}'
         return f'{alias} {command.signature}'
 
     async def send_bot_help(self, mapping):
@@ -211,6 +212,12 @@ class PaginatedHelpCommand(commands.HelpCommand):
         await self.context.send(embed=embed)
 
     async def send_group_help(self, group):
+        if group.cog_name.lower() == group.name.lower():
+            return await self.send_cog_help(group.cog)
+        else:
+            return await self._send_group_help(group)
+
+    async def _send_group_help(self, group):
         subcommands = group.commands
         if len(subcommands) == 0:
             return await self.send_command_help(group)

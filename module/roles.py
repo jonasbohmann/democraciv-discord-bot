@@ -6,11 +6,9 @@ from config import config
 from util.flow import Flow
 from discord.ext import commands
 
-# TODO move to converter
-
 
 class Roles(commands.Cog):
-    """Self-assignable roles for this guild"""
+    """Self-assignable roles for this guild."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -41,8 +39,8 @@ class Roles(commands.Cog):
         """List all roles or get/lose a role by specifying the role's name
 
         **Usage:**
-          `-roles` List all available roles
-          `-roles` <role> Get/Lose a role
+          `-role` List all available roles
+          `-role <role>` Get/Lose a role
         """
 
         if role:
@@ -58,7 +56,7 @@ class Roles(commands.Cog):
                     embed_message.append(f"{role_object.name}")
 
             if not embed_message:
-                embed_message = ["This guild has no roles."]
+                embed_message = ["This guild has no roles yet."]
 
             embed = self.bot.embeds.embed_builder(title="Roles", description="In order to add or remove a role "
                                                                              "from you, use `-role Role`")

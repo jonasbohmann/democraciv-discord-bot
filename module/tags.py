@@ -12,12 +12,14 @@ from util.converter import Tag, OwnedTag
 
 
 class Tags(commands.Cog, name="Tag"):
-    """Create tags for later retrieval of text, images & links and access them with just the bot's prefix."""
+    """Create tags for later retrieval of text, images & links. Tags are accessed with the bot's prefix.
+       While everyone can create tags on the Democraciv guild, only administrators
+           can create tags on other guilds, like party servers."""
 
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.group(name="tags", aliases=['tag'], invoke_without_command=True, case_insensitive=True)
+    @commands.group(name="tag", aliases=['tags'], invoke_without_command=True, case_insensitive=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def tags(self, ctx):
@@ -74,7 +76,7 @@ class Tags(commands.Cog, name="Tag"):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def _from(self, ctx, member: discord.Member = None):
-        """List someone's tags"""
+        """List the tags that someone made"""
 
         member = member or ctx.author
 
@@ -317,7 +319,7 @@ class Tags(commands.Cog, name="Tag"):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def claim(self, ctx, *, tag: Tag):
-        """Claim a tag if the author left this server"""
+        """Claim a tag if the original tag author left this server"""
 
         if tag.is_global:
             return await ctx.send(":x: Global tags cannot be claimed!")

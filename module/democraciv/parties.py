@@ -11,7 +11,9 @@ from util.exceptions import ForbiddenTask
 
 
 class Party(commands.Cog, name='Political Parties'):
-    """Interact with the political parties of Democraciv"""
+    """Interact with the political parties of Democraciv.
+
+    Note that you can only join and leave parties on the Democraciv guild."""
 
     # TODO - Move all party commands into -party group. Don't allow non-party roles in -members <role>, move that
     #  functionality into -whois <role>
@@ -260,9 +262,9 @@ class Party(commands.Cog, name='Political Parties'):
     async def deleteparty(self, ctx, hard: bool, *, party: PoliticalParty):
         """Remove a political party
 
-                Usage:
-                 `-deleteparty true <party>` will remove the party **and** delete its Discord role
-                 `-deleteparty false <party>` will remove the party but not delete its Discord role
+            Usage:
+             `-deleteparty true <party>` will remove the party **and** delete its Discord role
+             `-deleteparty false <party>` will remove the party but not delete its Discord role
 
         """
 

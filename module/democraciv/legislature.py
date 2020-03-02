@@ -15,7 +15,7 @@ from util.converter import Session, SessionStatus, Bill, Motion
 # TODO - queue new vetos & pass to not spam discord channels
 
 class Legislature(commands.Cog):
-    """Organize and get details about Legislative Sessions and submit bills or motions"""
+    """Allows the Cabinet to organize Legislative Sessions and their submitted bills and motions."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -60,7 +60,7 @@ class Legislature(commands.Cog):
     @commands.group(name='legislature', aliases=['leg'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def legislature(self, ctx):
-        """Dashboard for Legislators"""
+        """Dashboard for Legislators with important links and the status of the current session"""
 
         active_leg_session = await self.bot.laws.get_active_leg_session()
 
@@ -146,9 +146,9 @@ class Legislature(commands.Cog):
 
         #  Update all bills that did not pass from last session
         if new_session > 1:
-            last_session = await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = false,"
-                                                     " voted_on_by_leg = true WHERE leg_session = %1 "
-                                                     "AND voted_on_by_leg = false", new_session - 1)
+            await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = false,"
+                                      " voted_on_by_leg = true WHERE leg_session = %1 "
+                                      "AND voted_on_by_leg = false", new_session - 1)
 
         await ctx.send(f":white_check_mark: The **submission period** for session #{new_session} was opened.")
 
@@ -164,7 +164,7 @@ class Legislature(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def updatesession(self, ctx, voting_form: str):
-        """Changes the current session's status to be open for voting. Needs a Google Forms link as argument."""
+        """Changes the current session's status to be open for voting"""
 
         if not self.bot.laws.is_google_doc_link(voting_form):
             return await ctx.send(":x: That doesn't look like a Google Docs URL.")
@@ -447,7 +447,7 @@ class Legislature(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
     async def submit(self, ctx):
-        """Submit a new bill or motion for the currently active session"""
+        """Submit a new bill or motion to the currently active session"""
 
         if self.speaker is None:
             raise exceptions.NoOneHasRoleError(mk.DemocracivRole.SPEAKER_ROLE.printable_name)
@@ -495,7 +495,9 @@ class Legislature(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def passbill(self, ctx, bill_id: Bill):
-        """Mark a bill as passed from the Legislature"""
+        """Mark a bill as passed from the Legislature.
+
+        If the bill is vetoable, it sends the bill to the Ministry. If not, the bill automatically becomes law."""
 
         bill = bill_id  # At this point, bill_id is already a Bill object, so calling it ball_id makes no sense
 
@@ -559,7 +561,7 @@ class Legislature(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
     async def withdraw(self, ctx):
-        """Withdraw a bill or motion from the current session"""
+        """Withdraw a bill or motion from the current session."""
         await ctx.send_help(ctx.command)
 
     @withdraw.command(name='bill', aliases=['b'])

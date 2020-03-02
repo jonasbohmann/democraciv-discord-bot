@@ -7,7 +7,7 @@ from discord.ext import commands
 
 
 class Guild(commands.Cog):
-    """Configure various features of this bot for this guild"""
+    """Configure various features of this bot for this guild."""
 
     def __init__(self, bot):
         self.bot = bot

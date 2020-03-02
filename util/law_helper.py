@@ -1,9 +1,13 @@
+import datetime
+
+import discord
 import nltk
 import typing
 import asyncpg
 import collections
 
 from bs4 import BeautifulSoup, SoupStrainer
+from discord.ext import tasks
 
 from util.converter import Session, Bill, Law
 
@@ -11,6 +15,37 @@ from util.converter import Session, Bill, Law
 class MockContext:
     def __init__(self, bot):
         self.bot = bot
+
+
+class AnnouncementQueue:
+    def __init__(self, bot):
+        self.bot = bot
+        self._messages: typing.List[typing.Tuple[str, discord.TextChannel]] = []
+        self._last_message = None
+
+    def __del__(self):
+        self._wait.cancel()
+
+    def message_formatting(self):
+        raise NotImplementedError()
+
+    def add_message(self, message: typing.Tuple[str, discord.TextChannel]):
+        if len(self._messages) == 0:
+            self._wait.start()
+
+        self._messages.append(message)
+        self._last_message = datetime.datetime.utcnow()
+
+    async def send_messages(self):
+        for message, channel in self._messages:
+            await channel.send(message)
+            self._messages.remove((message, channel))
+
+    @tasks.loop(minutes=1)
+    async def _wait(self):
+        if datetime.datetime.utcnow() - self._last_message > datetime.timedelta(minutes=10):
+            self._last_message = None
+            await self.send_messages()
 
 
 class LawUtils:

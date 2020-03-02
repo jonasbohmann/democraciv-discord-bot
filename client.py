@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO)
 # List of cogs that will be loaded on startup
 initial_extensions = ['event.logging',
                       'event.error_handler',
-                      'module.about',
+                      'module.meta',
                       'module.time',
                       'module.misc',
                       'module.roles',

@@ -6,8 +6,8 @@ from discord.ext import commands
 from discord.ext.commands import CheckFailure
 
 
-class About(commands.Cog):
-    """Information about this bot"""
+class Meta(commands.Cog):
+    """Commands regarding the bot itself."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -109,4 +109,4 @@ class About(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(About(bot))
+    bot.add_cog(Meta(bot))

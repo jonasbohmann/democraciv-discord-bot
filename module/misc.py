@@ -12,6 +12,7 @@ from util.paginator import Pages
 
 
 class Misc(commands.Cog, name="Miscellaneous"):
+    """Miscellaneous commands. Some useful, some not."""
 
     def __init__(self, bot):
         self.bot = bot

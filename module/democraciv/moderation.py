@@ -12,7 +12,7 @@ from discord.ext import commands
 # TODO utility commnads for when MK is over
 
 class Moderation(commands.Cog):
-    """Commands for the Mod Team"""
+    """Commands for the Mod Team of this guild."""
 
     def __init__(self, bot):
         self.bot = bot

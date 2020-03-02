@@ -7,7 +7,7 @@ from discord.ext import commands
 
 
 class SupremeCourt(commands.Cog, name="Supreme Court"):
-    """Useful information for Supreme Court Justices"""
+    """Useful information about the Supreme Court of this nation."""
 
     def __init__(self, bot):
         self.bot = bot

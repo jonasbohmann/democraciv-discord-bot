@@ -12,7 +12,7 @@ from util import mk, exceptions, utils
 
 
 class Ministry(commands.Cog):
-    """Vote on recently passed bills from the Legislature"""
+    """Allows the Ministry to pass or veto bills from the Legislature."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -70,10 +70,10 @@ class Ministry(commands.Cog):
 
         return pretty_bills
 
-    @commands.group(name='ministry', aliases=['m'], case_insensitive=True, invoke_without_command=True)
+    @commands.group(name='ministry', aliases=['m', 'min'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def ministry(self, ctx):
-        """Dashboard for Ministers"""
+        """Dashboard for Ministers with important links and updates on new bills"""
 
         embed = self.bot.embeds.embed_builder(title=f"The Ministry of {mk.NATION_NAME}", description="")
 

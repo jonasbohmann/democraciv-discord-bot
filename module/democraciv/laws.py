@@ -11,7 +11,7 @@ from discord.ext import commands
 
 
 class Laws(commands.Cog, name='Law'):
-    """Get all active laws in Arabia and search for them by name or keyword"""
+    """List all active laws in Arabia and search for them by name or keyword"""
 
     def __init__(self, bot):
         self.bot = bot
@@ -97,7 +97,9 @@ class Laws(commands.Cog, name='Law'):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def removelaw(self, ctx, law_id: Law):
-        """Remove a law from the laws of this nation"""
+        """Repeal a law
+
+        This will remove the law from both '-laws' and '-laws search'."""
 
         law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
 

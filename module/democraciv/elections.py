@@ -7,7 +7,7 @@ from discord.ext import commands
 
 
 class Elections(commands.Cog, name="Election"):
-    """Calculate election results"""
+    """Calculate election results with various methods."""
 
     def __init__(self, bot):
         self.bot = bot
