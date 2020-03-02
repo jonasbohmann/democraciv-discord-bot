@@ -249,12 +249,7 @@ class Legislature(commands.Cog):
                 # If the motion's description is just a Google Docs link, use that link instead of the Hastebin
                 is_google_docs = self.bot.laws.is_google_doc_link(motion.description) and len(motion.description) <= 100
                 link = motion.description if is_google_docs else motion.link
-
-                if motion.submitter is not None:
-                    pretty_motions.append(f"Motion #{motion.id} - [{motion.title}]({link}) by "
-                                          f"{motion.submitter.mention}")
-                else:
-                    pretty_motions.append(f"Motion #{motion.id} - [{motion.title}]({link})")
+                pretty_motions.append(f"Motion #{motion.id} - [{motion.short_name}]({link})")
         else:
             pretty_motions = ["-"]
 
@@ -263,12 +258,8 @@ class Legislature(commands.Cog):
 
             for bill_id in session.bills:
                 bill = await Bill.convert(ctx, bill_id)
-                if bill.submitter is not None:
-                    pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) by "
-                                        f"{bill.submitter.mention} {await bill.get_emojified_status(verbose=False)}")
-                else:
-                    pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) "
-                                        f"{await bill.get_emojified_status(verbose=False)}")
+                pretty_bills.append(f"Bill #{bill.id} - [{bill.short_name}]({bill.tiny_link}) "
+                                    f"{await bill.get_emojified_status(verbose=False)}")
         else:
             pretty_bills = ["-"]
 

@@ -208,6 +208,15 @@ class Bill(commands.Converter):
         user = self._bot.democraciv_guild_object.get_member(self._submitter) or self._bot.get_user(self._submitter)
         return user
 
+    @property
+    def short_name(self) -> str:
+        length = len(self.name)
+        if length > 35:
+            to_remove = length - 35
+            return self.name[:-to_remove] + '...'
+        else:
+            return self.name
+
     async def is_law(self) -> bool:
         found = await self._bot.db.fetchval("SELECT law_id FROM legislature_laws WHERE bill_id = $1", self.id)
 
@@ -268,6 +277,12 @@ class Bill(commands.Converter):
                         status.append("Law: <:red:660562078217797647> *(Repealed)*")
                     else:
                         status.append("<:red:660562078217797647>")  # Repealed
+                else:
+                    if verbose:
+                        status.append("Law: <:gray:660562063122497569>")
+                    else:
+                        status.append("<:gray:660562063122497569>")
+
             else:
                 if verbose:
                     return """Legislature: <:red:660562078217797647> *(Failed)*
@@ -369,6 +384,15 @@ class Motion(commands.Converter):
     def submitter(self) -> typing.Union[discord.Member, discord.User, None]:
         user = self._bot.democraciv_guild_object.get_member(self._submitter) or self._bot.get_user(self._submitter)
         return user
+
+    @property
+    def short_name(self) -> str:
+        length = len(self.title)
+        if length > 35:
+            to_remove = length - 35
+            return self.title[:-to_remove] + '...'
+        else:
+            return self.title
 
     @classmethod
     async def convert(cls, ctx, argument: int):
