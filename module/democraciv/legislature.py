@@ -226,7 +226,7 @@ class Legislature(commands.Cog):
     @legislature.command(name='session', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def session(self, ctx, session: Session = None):
-        """Get details about a legislative session
+        """Get details about a session from the Legislature
 
         **Usage:**
         `-legislature session` to see details about the last session

@@ -154,26 +154,28 @@ class Session(commands.Converter):
         if isinstance(argument, str):
             if argument.lower() == "all":
                 return argument
+            else:
+                try:
+                    argument = int(argument)
+                except ValueError:
+                    raise BadArgument(f":x: {argument} is neither a number nor 'all'.")
 
-        elif isinstance(argument, int):
-            session = await ctx.bot.db.fetchrow("SELECT * FROM legislature_sessions WHERE id = $1", argument)
+        session = await ctx.bot.db.fetchrow("SELECT * FROM legislature_sessions WHERE id = $1", argument)
 
-            if session is None:
-                raise NotFoundError(f":x: There is no session with ID #{argument}!")
+        if session is None:
+            raise NotFoundError(f":x: There is no session with ID #{argument}!")
 
-            bills = await ctx.bot.db.fetch("SELECT id FROM legislature_bills WHERE leg_session = $1", session['id'])
-            bills = sorted([record['id'] for record in bills])
+        bills = await ctx.bot.db.fetch("SELECT id FROM legislature_bills WHERE leg_session = $1", session['id'])
+        bills = sorted([record['id'] for record in bills])
 
-            motions = await ctx.bot.db.fetch("SELECT id FROM legislature_motions WHERE leg_session = $1", session['id'])
-            motions = sorted([record['id'] for record in motions])
+        motions = await ctx.bot.db.fetch("SELECT id FROM legislature_motions WHERE leg_session = $1", session['id'])
+        motions = sorted([record['id'] for record in motions])
 
-            return cls(id=session['id'], is_active=session['is_active'],
-                       status=SessionStatus.from_str(session['status']),
-                       vote_form=session['vote_form'], opened_on=session['opened_on'],
-                       voting_started_on=session['voting_started_on'], closed_on=session['closed_on'],
-                       speaker=session['speaker'], bills=bills, motions=motions, bot=ctx.bot)
-        else:
-            raise BadArgument(f":x: {argument} is neither a number nor 'all'.")
+        return cls(id=session['id'], is_active=session['is_active'],
+                   status=SessionStatus.from_str(session['status']),
+                   vote_form=session['vote_form'], opened_on=session['opened_on'],
+                   voting_started_on=session['voting_started_on'], closed_on=session['closed_on'],
+                   speaker=session['speaker'], bills=bills, motions=motions, bot=ctx.bot)
 
 
 class Bill(commands.Converter):
