@@ -366,7 +366,7 @@ class Law(commands.Converter):
         if law is None:
             raise NotFoundError(f":x: There is no law with associated bill ID #{bill_id}!")
 
-        return cls.convert(ctx, law)
+        return await cls.convert(ctx, law)
 
     @classmethod
     async def convert(cls, ctx, argument: int):
