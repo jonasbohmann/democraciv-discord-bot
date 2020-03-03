@@ -21,17 +21,16 @@ class Laws(commands.Cog, name='Law'):
         return mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
     async def paginate_all_laws(self, ctx):
-        async with ctx.typing():
-            all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws ORDER BY law_id")
+        all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws ORDER BY law_id")
 
-            pretty_laws = []
+        pretty_laws = []
 
-            for record in all_laws:
-                law = await Law.convert(MockContext(self.bot), record['law_id'])
-                pretty_laws.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.link})\n")
+        for record in all_laws:
+            law = await Law.convert(MockContext(self.bot), record['law_id'])
+            pretty_laws.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.link})\n")
 
-            if not pretty_laws:
-                pretty_laws = ['There are no laws yet.']
+        if not pretty_laws:
+            pretty_laws = ['There are no laws yet.']
 
         pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}",
                       show_index=False, show_amount_of_pages=False,
@@ -50,15 +49,21 @@ class Laws(commands.Cog, name='Law'):
         # If the user did specify a law_id, send details about that law
         law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
 
+        embed = self.bot.embeds.embed_builder(title="Law Details", description="")
+
         if law.bill.submitter is not None:
+            embed.set_author(name=law.bill.submitter.name,
+                             icon_url=law.bill.submitter.avatar_url_as(static_format='png'))
             submitted_by_value = f"{law.bill.submitter.mention} (during Session #{law.bill.session.id})"
         else:
             submitted_by_value = f"*Submitter left Democraciv* (during Session #{law.bill.session.id})"
 
-        embed = self.bot.embeds.embed_builder(title="Law Details", description=f"Associated Bill: #{law.bill.id}")
         embed.add_field(name="Name", value=f"[{law.bill.name}]({law.bill.link})")
         embed.add_field(name="Description", value=law.bill.description, inline=False)
-        embed.add_field(name="Submitter", value=submitted_by_value)
+        embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
+        embed.add_field(name="Law Since (UTC)", value=law.passed_on.strftime("%A, %B %d %Y"), inline=True)
+        embed.add_field(name="Search Tags", value=', '.join(law.tags), inline=False)
+        embed.set_footer(text=f"Associated Bill: #{law.bill.id}", icon_url=config.BOT_ICON_URL)
         await ctx.send(embed=embed)
 
     @law.command(name='search', aliases=['s'])

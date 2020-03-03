@@ -10,7 +10,7 @@ from discord.ext import commands
 from util.paginator import Pages
 from config import config, links
 from util import utils, mk, exceptions
-from util.converter import Session, SessionStatus, Bill, Motion, MultipleBills
+from util.converter import Session, SessionStatus, Bill, Motion, MultipleBills, Law
 
 
 # TODO - multiple bills in -leg pass, -m pass, -m veto
@@ -130,6 +130,11 @@ class Legislature(commands.Cog):
         embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
         embed.add_field(name="Vetoable", value=bill.is_vetoable, inline=False)
         embed.add_field(name="Status", value=await bill.get_emojified_status(verbose=True), inline=False)
+
+        if await bill.is_law():
+            law = await Law.from_bill(ctx, bill.id)
+            embed.set_footer(text=f"Associated Law: #{law.id}", icon_url=config.BOT_ICON_URL)
+
         await ctx.send(embed=embed)
 
     @legislature.command(name='motion', aliases=['m'])
@@ -282,8 +287,10 @@ class Legislature(commands.Cog):
 
             for bill_id in session.bills:
                 bill = await Bill.convert(ctx, bill_id)
-                pretty_bills.append(f"Bill #{bill.id} - [{bill.short_name}]({bill.tiny_link}) "
-                                    f"{await bill.get_emojified_status(verbose=False)}")
+                if await bill.is_law():
+                    pretty_bills.append(f"__Bill #{bill.id}__ - [{bill.short_name}]({bill.tiny_link})")
+                else:
+                    pretty_bills.append(f"Bill #{bill.id} - [{bill.short_name}]({bill.tiny_link})")
         else:
             pretty_bills = ["-"]
 
@@ -326,6 +333,7 @@ class Legislature(commands.Cog):
             too_long_bills = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
             embed.add_field(name="Submitted Bills", value=too_long_bills, inline=False)
 
+        embed.set_footer(text=f"Bills that are underlined are active laws.", icon_url=config.BOT_ICON_URL)
         await ctx.send(embed=embed)
 
     async def submit_bill(self, ctx, current_leg_session_id: int) -> typing.Tuple[typing.Optional[str],

@@ -163,8 +163,9 @@ class LawUtils:
                                       "true WHERE id = $1", bill.id)
 
         try:
-            law_id = await self.bot.db.fetchval("INSERT INTO legislature_laws (bill_id)"
-                                                " VALUES ($1) RETURNING law_id", bill.id)
+            law_id = await self.bot.db.fetchval("INSERT INTO legislature_laws (bill_id, passed_on)"
+                                                " VALUES ($1, $2) RETURNING law_id",
+                                                bill.id, datetime.datetime.utcnow())
         except asyncpg.UniqueViolationError:
             await ctx.send(f":x: This bill is already law!")
             return False
@@ -179,7 +180,8 @@ class LawUtils:
                                                     bill.description)
 
         for tag in _tags:
-            await self.bot.db.execute("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2)", law_id, tag.lower())
+            await self.bot.db.execute("INSERT INTO legislature_tags (id, tag)"
+                                      " VALUES ($1, $2) ON CONFLICT DO NOTHING ", law_id, tag.lower())
 
         return True
 

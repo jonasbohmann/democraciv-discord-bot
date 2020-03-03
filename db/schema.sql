@@ -81,12 +81,14 @@ CREATE TABLE IF NOT EXISTS legislature_bills(
 
 CREATE TABLE IF NOT EXISTS legislature_laws(
     bill_id serial UNIQUE references legislature_bills(id),
-    law_id serial UNIQUE PRIMARY KEY
+    law_id serial UNIQUE PRIMARY KEY,
+    passed_on timestamp WITHOUT TIME ZONE
 );
 
 CREATE TABLE IF NOT EXISTS legislature_tags(
     id serial references legislature_laws(law_id) ON DELETE CASCADE,
-    tag text
+    tag text,
+    UNIQUE (id, tag)
 );
 
 CREATE INDEX ON legislature_tags USING gin (tag gin_trgm_ops);

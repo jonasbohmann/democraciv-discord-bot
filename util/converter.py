@@ -356,6 +356,7 @@ class Law(commands.Converter):
     def __init__(self, **kwargs):
         self.id: int = kwargs.get('id')
         self.bill: Bill = kwargs.get('bill')
+        self.passed_on: datetime = kwargs.get('passed_on')
         self.tags: typing.List[str] = kwargs.get('tags')
 
     @classmethod
@@ -387,7 +388,7 @@ class Law(commands.Converter):
         tags = await ctx.bot.db.fetch("SELECT * FROM legislature_tags WHERE id = $1", law['law_id'])
         tags = [record['tag'] for record in tags]
 
-        return cls(id=law['law_id'], bill=bill, tags=tags)
+        return cls(id=law['law_id'], bill=bill, tags=tags, passed_on=law['passed_on'])
 
 
 class Motion(commands.Converter):
