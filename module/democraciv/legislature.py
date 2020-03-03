@@ -6,7 +6,7 @@ import discord
 import datetime
 
 from util.flow import Flow
-from discord.ext import commands
+from discord.ext import commands, tasks
 from util.paginator import Pages
 from config import config, links
 from util import utils, mk, exceptions
@@ -21,24 +21,32 @@ class Legislature(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.check_emoji.start()
 
+    @tasks.loop(count=1, seconds=5)
+    async def check_emoji(self):
         # If these custom emoji are not set in config.py, -leg submit will break. Convert to Unicode emoji if that's
         # the case.
-        async def check_custom_emoji():
-            await asyncio.sleep(5)  # Wait for dciv guild init
+        def check_custom_emoji(emoji):
+            emoji_id = [int(s) for s in re.findall(r'\b\d+\b', emoji)]
 
-            emoji_id = [int(s) for s in re.findall(r'\b\d+\b', config.LEG_SUBMIT_BILL)].pop()
-            emoji1 = self.bot.get_emoji(emoji_id)
-            emoji_id = [int(s) for s in re.findall(r'\b\d+\b', config.LEG_SUBMIT_MOTION)].pop()
-            emoji2 = self.bot.get_emoji(emoji_id)
+            if emoji_id:
+                emoji_id = emoji_id.pop()
+                emoji = self.bot.get_emoji(emoji_id)
 
-            if emoji1 is None or emoji2 is None:
-                print("[BOT] Reverting to standard Unicode emojis for -legislature submit as either"
-                      "LEG_SUBMIT_BILL or LEG_SUBMIT_MOTION was not set it config.py")
-                config.LEG_SUBMIT_BILL = "\U0001f1e7"
-                config.LEG_SUBMIT_MOTION = "\U0001f1f2"
+                if emoji is not None:
+                    return True
 
-        self.bot.loop.create_task(check_custom_emoji())
+            return False
+
+        await asyncio.sleep(5)
+
+        if not check_custom_emoji(config.LEG_SUBMIT_BILL) or not check_custom_emoji(config.LEG_SUBMIT_MOTION):
+            print("[BOT] Reverting to standard Unicode emojis for -legislature submit as either"
+                  " LEG_SUBMIT_BILL or LEG_SUBMIT_MOTION was not set it config.py")
+            config.LEG_SUBMIT_BILL = "\U0001f1e7"
+            config.LEG_SUBMIT_MOTION = "\U0001f1f2"
+
 
     @property
     def speaker(self) -> typing.Optional[discord.Member]:
