@@ -306,7 +306,7 @@ class Tags(commands.Cog, name="Tag"):
 
         if tag.author is not None:
             embed.add_field(name="Author", value=tag.author.mention, inline=False)
-            embed.set_thumbnail(url=tag.author.avatar_url_as(static_format="png"))
+            embed.set_author(name=tag.author.name, icon_url=tag.author.avatar_url_as(static_format="png"))
 
         embed.add_field(name="Global Tag", value=str(tag.is_global), inline=True)
         embed.add_field(name="Emoji or Media Tag", value=str(self.is_emoji_or_media_url(tag.content)),
