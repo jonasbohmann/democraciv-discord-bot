@@ -47,31 +47,6 @@ class Legislature(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.scheduler = PassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
-        self.check_emoji.start()
-
-    @tasks.loop(count=1, seconds=5)
-    async def check_emoji(self):
-        # If these custom emoji are not set in config.py, -leg submit will break. Convert to Unicode emoji if that's
-        # the case.
-        def check_custom_emoji(emoji):
-            emoji_id = [int(s) for s in re.findall(r'\b\d+\b', emoji)]
-
-            if emoji_id:
-                emoji_id = emoji_id.pop()
-                emoji = self.bot.get_emoji(emoji_id)
-
-                if emoji is not None:
-                    return True
-
-            return False
-
-        await asyncio.sleep(5)
-
-        if not check_custom_emoji(config.LEG_SUBMIT_BILL) or not check_custom_emoji(config.LEG_SUBMIT_MOTION):
-            print("[BOT] Reverting to standard Unicode emojis for -legislature submit as either"
-                  " LEG_SUBMIT_BILL or LEG_SUBMIT_MOTION was not set it config.py")
-            config.LEG_SUBMIT_BILL = "\U0001f1e7"
-            config.LEG_SUBMIT_MOTION = "\U0001f1f2"
 
     @property
     def speaker(self) -> typing.Optional[discord.Member]:

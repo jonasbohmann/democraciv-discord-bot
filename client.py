@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import math
 import discord
@@ -105,11 +106,51 @@ class DemocracivBot(commands.Bot):
         # config.py is invalid
         self.loop.create_task(self.initialize_democraciv_guild())
 
+        self.loop.create_task(self.check_custom_emoji_availability())
+
     async def initialize_aiohttp_session(self):
         """Initialize a shared aiohttp ClientSession to be used for -wikipedia, -leg submit and reddit & twitch requests
         aiohttp needs to have this in an async function, that's why it's separated from __init__()"""
 
         self.session = aiohttp.ClientSession()
+
+    async def check_custom_emoji_availability(self):
+        # If these custom emoji are not set in config.py, -help and -leg submit will break.
+        # Convert to Unicode emoji if that's the case.
+
+        await self.wait_until_ready()
+
+        def check_custom_emoji(emoji):
+            emoji_id = [int(s) for s in re.findall(r'\b\d+\b', emoji)]
+
+            if emoji_id:
+                emoji_id = emoji_id.pop()
+                emoji = self.get_emoji(emoji_id)
+
+                if emoji is not None:
+                    return True
+
+            return False
+
+        emojis = [config.HELP_FIRST,
+                  config.HELP_PREVIOUS,
+                  config.HELP_NEXT,
+                  config.HELP_LAST,
+                  config.HELP_BOT_HELP,
+                  config.LEG_SUBMIT_BILL,
+                  config.LEG_SUBMIT_MOTION]
+
+        emoji_availability = [check_custom_emoji(emoji) for emoji in emojis]
+
+        if False in emoji_availability:
+            print("[BOT] Reverting to standard Unicode emojis for -help as emojis from config.py cannot be seen by me.")
+            config.HELP_FIRST = "\N{BLACK LEFT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}"
+            config.HELP_PREVIOUS = "\N{BLACK LEFT-POINTING TRIANGLE}"
+            config.HELP_NEXT = "\N{BLACK RIGHT-POINTING TRIANGLE}"
+            config.HELP_LAST = "\N{BLACK RIGHT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}"
+            config.HELP_BOT_HELP = "\N{WHITE QUESTION MARK ORNAMENT}"
+            config.LEG_SUBMIT_BILL = "\U0001f1e7"
+            config.LEG_SUBMIT_MOTION = "\U0001f1f2"
 
     async def connect_to_db(self):
         """Attempt to connect to PostgreSQL database with specified credentials from token.py.

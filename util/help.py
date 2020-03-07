@@ -34,7 +34,7 @@ from discord.ext import commands
 class HelpPaginator(Pages):
     def __init__(self, help_command, ctx, entries, *, per_page=4):
         super().__init__(ctx, entries=entries, per_page=per_page)
-        self.reaction_emojis.append(('\N{WHITE QUESTION MARK ORNAMENT}', self.show_bot_help))
+        self.reaction_emojis.append((config.HELP_BOT_HELP, self.show_bot_help))
         self.total = len(entries)
         self.help_command = help_command
         self.prefix = help_command.clean_prefix
@@ -133,10 +133,6 @@ class PaginatedHelpCommand(commands.HelpCommand):
                         commands_list.append(c)
 
         return commands_list
-
-    async def on_help_command_error(self, ctx, error):
-        if isinstance(error, commands.CommandInvokeError):
-            await ctx.send(str(error.original))
 
     def get_command_signature(self, command):
         parent = command.full_parent_name
