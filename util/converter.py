@@ -150,6 +150,15 @@ class Session(commands.Converter):
         user = self._bot.democraciv_guild_object.get_member(self._speaker) or self._bot.get_user(self._speaker)
         return user
 
+    async def start_voting(self, voting_form):
+        await self._bot.db.execute("UPDATE legislature_sessions SET status = 'Voting Period',"
+                                   " voting_started_on = $2, vote_form = $3"
+                                   " WHERE id = $1", self.id, datetime.utcnow(), voting_form)
+
+    async def close(self):
+        await self._bot.db.execute("UPDATE legislature_sessions SET is_active = false, closed_on = $2,"
+                                   " status = 'Closed' WHERE id = $1", self.id, datetime.utcnow())
+
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str]):
         if isinstance(argument, str):
@@ -164,7 +173,7 @@ class Session(commands.Converter):
         session = await ctx.bot.db.fetchrow("SELECT * FROM legislature_sessions WHERE id = $1", argument)
 
         if session is None:
-            raise NotFoundError(f":x: There is no session with ID #{argument}!")
+            raise NotFoundError(f":x: There is no session with ID #{argument}.")
 
         bills = await ctx.bot.db.fetch("SELECT id FROM legislature_bills WHERE leg_session = $1", session['id'])
         bills = sorted([record['id'] for record in bills])

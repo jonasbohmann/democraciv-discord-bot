@@ -240,9 +240,7 @@ class Legislature(commands.Cog):
             return await ctx.send(":x: You can only update a session to be in Voting Period that was previously in the"
                                   "Submission Period!")
 
-        await self.bot.db.execute("UPDATE legislature_sessions SET status = 'Voting Period',"
-                                  " voting_started_on = $2, vote_form = $3"
-                                  " WHERE id = $1", active_leg_session.id, datetime.datetime.utcnow(), voting_form)
+        await active_leg_session.start_voting(voting_form)
 
         await ctx.send(f":white_check_mark: Session #{active_leg_session.id} is now in **voting period**.")
 
@@ -264,8 +262,7 @@ class Legislature(commands.Cog):
         if active_leg_session is None:
             return await ctx.send(f":x: There is no open session!")
 
-        await self.bot.db.execute("UPDATE legislature_sessions SET is_active = false, closed_on = $2,"
-                                  " status = 'Closed' WHERE id = $1", active_leg_session.id, datetime.datetime.utcnow())
+        await active_leg_session.close()
 
         await ctx.send(f":white_check_mark: Session #{active_leg_session.id} was closed."
                        f" Add the bills that passed this session with `-legislature pass <bill_id>`. Get the "
