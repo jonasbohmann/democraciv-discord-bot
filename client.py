@@ -54,7 +54,8 @@ class DemocracivBot(commands.Bot):
         self.start_time = time.time()
 
         # Initialize commands.Bot with prefix, description and disable case_sensitivity
-        super().__init__(command_prefix=config.BOT_PREFIX, description=self.description, case_insensitive=True,
+        super().__init__(command_prefix=commands.when_mentioned_or(config.BOT_PREFIX), description=self.description,
+                         case_insensitive=True,
                          activity=discord.Game(name=config.BOT_PREFIX + 'help | Watching over '
                                                                         'the Democraciv community'))
 
@@ -195,6 +196,11 @@ class DemocracivBot(commands.Bot):
         # Don't process message/command from other bots
         if message.author.bot:
             return
+
+        if self.user.mentioned_in(message) and len(message.content) == 22:
+            await message.channel.send(f"Hey!\nMy prefix is `{config.BOT_PREFIX}`.\n"
+                                       f"Try `{config.BOT_PREFIX}help`, `{config.BOT_PREFIX}commands`"
+                                       f" or `{config.BOT_PREFIX}about` to learn more about me!")
 
         # If, for whatever reason, the current guild does not have an entry in the bot's database, attempt to initialize
         # the default config

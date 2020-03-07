@@ -70,26 +70,35 @@ class Meta(commands.Cog):
         all_commands = []
         hidden_cogs = ('Admin', 'ErrorHandler', 'Log', 'Starboard')
         amounts = 0
+        i = 0
 
         for name, cog in sorted(self.bot.cogs.items()):
             if name in hidden_cogs:
                 continue
 
-            all_commands.append(f"**__{name}__**\n")
+            if i == 0:
+                all_commands.append(f"**__{name}__**\n")
+            else:
+                all_commands.append(f"\n**__{name}__**\n")
+
+            i += 1
 
             amount, cog_cmds = self.collect_all_commands(cog)
             amounts += amount
+
+            commands_list = []
 
             for command in cog_cmds:
                 if not command.hidden:
                     try:
                         if await command.can_run(ctx):
-                            all_commands.append(f"`{command.qualified_name}` ")
+                            commands_list.append(f"`{command.qualified_name}`")
                         else:
-                            all_commands.append(f"*`{command.qualified_name}`* ")
+                            commands_list.append(f"*`{command.qualified_name}`*")
                     except CheckFailure:
-                        all_commands.append(f"*`{command.qualified_name}`* ")
+                        commands_list.append(f"*`{command.qualified_name}`*")
 
+            all_commands.append(' :: '.join(commands_list))
             all_commands.append("\n")
 
         embed = self.bot.embeds.embed_builder(title=f'All Commands ({amounts})',

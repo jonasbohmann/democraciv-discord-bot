@@ -89,8 +89,9 @@ class Misc(commands.Cog, name="Miscellaneous"):
                         value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
         embed.add_field(name='Joined this Guild on',
                         value=f'{(await self.get_member_join_date(member)).strftime("%B %d, %Y")}', inline=True)
-        embed.add_field(name='Join Position', value=await self.get_member_join_position(member, ctx.guild.members)
-                        , inline=True)
+        embed.add_field(name='Join Position',
+                        value=f"{await self.get_member_join_position(member, ctx.guild.members)}/"
+                              f"{len(ctx.guild.members)}", inline=True)
         embed.add_field(name='Roles', value=_get_roles(member.roles), inline=False)
         embed.set_thumbnail(url=member.avatar_url_as(static_format="png"))
         await ctx.send(embed=embed)
