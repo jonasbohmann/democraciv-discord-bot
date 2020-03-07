@@ -7,8 +7,9 @@ import asyncpg
 import collections
 
 from bs4 import BeautifulSoup, SoupStrainer
-from discord.ext import tasks
+from discord.ext import tasks, commands
 
+from util import mk
 from util.converter import Session, Bill, Law
 
 
@@ -18,33 +19,39 @@ class MockContext:
 
 
 class AnnouncementQueue:
-    def __init__(self, bot):
+    def __init__(self, bot, channel):
         self.bot = bot
-        self._messages: typing.List[typing.Tuple[str, discord.TextChannel]] = []
-        self._last_message = None
+        self._channel: mk.DemocracivChannel = channel
+        self._objects: typing.List[typing.Union[Bill, Law, Session]] = []
+        self._last_addition = None
 
     def __del__(self):
         self._wait.cancel()
 
-    def message_formatting(self):
+    @property
+    def channel(self) -> typing.Optional[discord.TextChannel]:
+        return mk.get_democraciv_channel(self.bot, self._channel)
+
+    def get_message(self) -> str:
         raise NotImplementedError()
 
-    def add_message(self, message: typing.Tuple[str, discord.TextChannel]):
-        if len(self._messages) == 0:
+    def add(self, obj: typing.Union[Bill, Law, Session]):
+        if len(self._objects) == 0:
             self._wait.start()
 
-        self._messages.append(message)
-        self._last_message = datetime.datetime.utcnow()
+        self._objects.append(obj)
+        self._last_addition = datetime.datetime.utcnow()
 
     async def send_messages(self):
-        for message, channel in self._messages:
-            await channel.send(message)
-            self._messages.remove((message, channel))
+        message = self.get_message()
+        await self.channel.send(message)
+        self._objects.clear()
+        self._wait.cancel()
 
     @tasks.loop(minutes=1)
     async def _wait(self):
-        if datetime.datetime.utcnow() - self._last_message > datetime.timedelta(minutes=10):
-            self._last_message = None
+        if datetime.datetime.utcnow() - self._last_addition > datetime.timedelta(minutes=10):
+            self._last_addition = None
             await self.send_messages()
 
 
@@ -62,10 +69,10 @@ class LawUtils:
     def is_google_doc_link(link: str) -> bool:
         """Checks whether a link is a valid Google Docs or Google Forms link"""
 
-        valid_google_docs_url_strings = ['https://docs.google.com/', 'https://drive.google.com/',
-                                         'https://forms.gle/', 'https://goo.gl/forms']
+        valid_google_docs_url_strings = ('https://docs.google.com/', 'https://drive.google.com/',
+                                         'https://forms.gle/', 'https://goo.gl/forms')
 
-        if len(link) < 15 or not link.startswith(tuple(valid_google_docs_url_strings)):
+        if len(link) < 15 or not link.startswith(valid_google_docs_url_strings):
             return False
         else:
             return True
@@ -155,20 +162,16 @@ class LawUtils:
 
         return tags
 
-    async def pass_into_law(self, ctx, bill: Bill) -> bool:
+    async def pass_into_law(self, bill: Bill):
         """Marks a Bill as passed and creates new Law from that Bill."""
 
         if bill.is_vetoable:
             await self.bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
                                       "true WHERE id = $1", bill.id)
 
-        try:
-            law_id = await self.bot.db.fetchval("INSERT INTO legislature_laws (bill_id, passed_on)"
-                                                " VALUES ($1, $2) RETURNING law_id",
-                                                bill.id, datetime.datetime.utcnow())
-        except asyncpg.UniqueViolationError:
-            await ctx.send(f":x: This bill is already law!")
-            return False
+        law_id = await self.bot.db.fetchval("INSERT INTO legislature_laws (bill_id, passed_on)"
+                                            " VALUES ($1, $2) RETURNING law_id",
+                                            bill.id, datetime.datetime.utcnow())
 
         # The bot takes the submitter-provided description (from the -legislature submit command) *and* the description
         # from Google Docs (og:description property in HTML, usually the title of the Google Doc and the first
@@ -182,8 +185,6 @@ class LawUtils:
         for tag in _tags:
             await self.bot.db.execute("INSERT INTO legislature_tags (id, tag)"
                                       " VALUES ($1, $2) ON CONFLICT DO NOTHING ", law_id, tag.lower())
-
-        return True
 
     @staticmethod
     def sort_dict_by_value(to_be_sorted: dict) -> dict:

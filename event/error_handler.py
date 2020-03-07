@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 import util.utils as utils
 import util.exceptions as exceptions
@@ -217,6 +218,7 @@ class ErrorHandler(commands.Cog):
             await self.log_error(ctx, error, to_log_channel=False, to_owner=True, to_context=True)
 
         print(f"[BOT] ERROR - Ignoring exception in command '{ctx.command}':")
+        await asyncio.sleep(0.5)  # For some reason the traceback is printed before that ^ so we sleep for a bit
         traceback.print_exception(type(error), error, error.__traceback__)
 
 

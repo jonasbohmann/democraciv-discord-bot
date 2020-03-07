@@ -6,21 +6,47 @@ import discord
 import datetime
 
 from util.flow import Flow
-from discord.ext import commands, tasks
 from util.paginator import Pages
 from config import config, links
 from util import utils, mk, exceptions
+from discord.ext import commands, tasks
+from util.law_helper import AnnouncementQueue
 from util.converter import Session, SessionStatus, Bill, Motion, MultipleBills, Law
 
 
 # TODO - multiple bills in -leg pass, -m pass, -m veto
 # TODO - queue new vetos & pass to not spam discord channels
 
+class PassScheduler(AnnouncementQueue):
+
+    def get_message(self) -> str:
+        message = [f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
+                   f"the following bills were passed by the Legislature.\n"]
+
+        for obj in self._objects:
+            if obj.is_vetoable:
+                if obj.submitter is not None:
+                    message.append(f"-  __**{obj.name}**__(#{obj.id}) by {obj.submitter.name}")
+                else:
+                    message.append(f"-  __**{obj.name}**__ (#{obj.id})")
+
+            else:
+                if obj.submitter is not None:
+                    message.append(f"-  **{obj.name}** (#{obj.id}) by {obj.submitter.name}")
+                else:
+                    message.append(f"-  **{obj.name}** (#{obj.id})")
+
+        message.append("\nAll non-vetoable bills are now laws (marked as __underlined__),"
+                       " the others were sent to the Ministry.")
+        return '\n'.join(message)
+
+
 class Legislature(commands.Cog):
     """Allows the Cabinet to organize Legislative Sessions and their submitted bills and motions."""
 
     def __init__(self, bot):
         self.bot = bot
+        self.scheduler = PassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.check_emoji.start()
 
     @tasks.loop(count=1, seconds=5)
@@ -46,7 +72,6 @@ class Legislature(commands.Cog):
                   " LEG_SUBMIT_BILL or LEG_SUBMIT_MOTION was not set it config.py")
             config.LEG_SUBMIT_BILL = "\U0001f1e7"
             config.LEG_SUBMIT_MOTION = "\U0001f1f2"
-
 
     @property
     def speaker(self) -> typing.Optional[discord.Member]:
@@ -361,7 +386,8 @@ class Legislature(commands.Cog):
             return None, None
 
         if not self.bot.laws.is_google_doc_link(google_docs_url):
-            return await ctx.send(":x: That doesn't look like a Google Docs URL.")
+            await ctx.send(":x: That doesn't look like a Google Docs URL.")
+            return None, None
 
         # Vetoable
         veto_question = await ctx.send(":information_source: Is the Ministry legally allowed to veto (or vote on) "
@@ -522,83 +548,102 @@ class Legislature(commands.Cog):
             except discord.Forbidden:
                 pass
 
+    async def _pass_bill(self, bill: Bill):
+        await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true, voted_on_by_leg = true "
+                                  "WHERE id = $1", bill.id)
+
+        if not bill.is_vetoable:
+            await self.bot.laws.pass_into_law(bill)
+
+        self.scheduler.add(bill)
+
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
-    async def passbill(self, ctx, *, bill_id: typing.Union[Bill, MultipleBills]):
+    async def pass_bill(self, ctx, *, bill_id: typing.Union[Bill, MultipleBills]):
         """Mark a bill as passed from the Legislature.
 
         If the bill is vetoable, it sends the bill to the Ministry. If not, the bill automatically becomes law."""
-
-        if isinstance(bill_id, MultipleBills):
-            for bill in bill_id.bills:
-                await ctx.invoke(ctx.command, bill_id=bill)
-            return
 
         bill = bill_id  # At this point, bill_id is already a Bill object, so calling it ball_id makes no sense
 
         last_leg_session: Session = await self.bot.laws.get_last_leg_session()
 
-        if last_leg_session.id != bill.session.id:
-            return await ctx.send(f":x: You can only mark bills from the most recent "
-                                  f"session of the Legislature as passed.")
+        async def verify_bill(_bill: Bill, last_session: Session) -> typing.Optional[str]:
 
-        if last_leg_session.status == SessionStatus.SUBMISSION_PERIOD:
-            return await ctx.send(f":x: You cannot mark bills as passed while the "
-                                  f"session is still in submission period.")
+            if last_session.id != _bill.session.id:
+                return f"You can only mark bills from the most recent session of the Legislature as passed."
 
-        if bill.voted_on_by_leg:
-            return await ctx.send(f":x: You already voted on this bill!")
+            if last_session.status == SessionStatus.SUBMISSION_PERIOD:
+                return f"You cannot mark bills as passed while the session is still in submission period."
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to mark "
-                                      f"`{bill.name}` (#{bill.id}) as passed from the Legislature?")
+            if _bill.voted_on_by_leg:
+                return f"You already voted on this bill!"
 
         flow = Flow(self.bot, ctx)
-        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
-        if reaction is None:
-            return
+        if isinstance(bill, MultipleBills):
+            error_messages = []
+            for _bill in bill.bills:
+                error = await verify_bill(_bill, last_leg_session)
+                if error:
+                    bill.bills.remove(_bill)
+                    error_messages.append((_bill, error))
 
-        if not reaction:
-            return await ctx.send("Aborted.")
+            if error_messages:
+                error_messages = '\n'.join([f"-  {_bill.name} (#{_bill.id}): {reason}" for _bill, reason in error_messages])
+                await ctx.send(f":warning: The following bills can not be passed.\n```{error_messages}```")
 
-        elif reaction:
-            async with ctx.typing():
-                await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true, voted_on_by_leg = true "
-                                          "WHERE id = $1", bill.id)
+            pretty_bills = '\n'.join([f"-  {_bill.name} (#{_bill.id})" for _bill in bill.bills])
+            are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
+                                          f" to mark the following bills as passed from the Legislature?"
+                                          f"\n```{pretty_bills}```")
 
-                # Bill is vetoable
+            reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+
+            if reaction is None:
+                return
+
+            if not reaction:
+                return await ctx.send("Aborted.")
+
+            elif reaction:
+                for _bill in bill.bills:
+                    await self._pass_bill(_bill)
+                await ctx.send(":white_check_mark: All bills were marked as passed from the Legislature.")
+
+        else:
+            error = await verify_bill(bill, last_leg_session)
+
+            if error:
+                return await ctx.send(f":x: {error}")
+
+            are_you_sure = await ctx.send(f":information_source: Are you sure that you want to mark "
+                                          f"`{bill.name}` (#{bill.id}) as passed from the Legislature?")
+
+            reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+
+            if reaction is None:
+                return
+
+            if not reaction:
+                return await ctx.send("Aborted.")
+
+            elif reaction:
+                await self._pass_bill(bill)
                 if bill.is_vetoable:
-                    await ctx.send(f":white_check_mark: The bill named `{bill.name}` was sent to the "
-                                   f"Ministry for them to vote on it.")
-
-                    await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.EXECUTIVE_CHANNEL).send(
-                        f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.PRIME_MINISTER_ROLE).mention}, "
-                        f"the Legislature has just passed `{bill.name}` (#{bill.id}) hat you need to vote on. "
-                        f"Check `-ministry bills` to get the details.")
-
-                # Bill is not vetoable
+                    await ctx.send(f":white_check_mark: `{bill.name}` was sent to the Ministry.")
                 else:
-                    if await self.bot.laws.pass_into_law(ctx, bill):
-                        # pass_into_law() returned True -> success
-                        await ctx.send(f":white_check_mark: `{bill.name}` was passed into law."
-                                       f" Remember to add it to the Legal Code, too!")
-
-                        await self.gov_announcements_channel.send(
-                            f"The `{bill.name}` ({bill.tiny_link}) was passed into law by the Legislature without "
-                            f"requiring a prior vote on it by the Ministry. It was marked as non-vetoable by the "
-                            f"original submitter {bill.submitter.name}.")
-
-                    else:
-                        # pass_into_law() returned False -> Database Error
-                        await ctx.send(":x: Unexpected error occurred.")
+                    await ctx.send(f":white_check_mark: `{bill.name}` was passed into law."
+                                   f" Remember to add it to the Legal Code!")
 
     @legislature.group(name='withdraw', aliases=['w'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
     async def withdraw(self, ctx):
         """Withdraw a bill or motion from the current session."""
-        await ctx.send_help(ctx.command)
+        if ctx.invoked_subcommand is None:
+            await ctx.send_help(ctx.command)
 
     @withdraw.command(name='bill', aliases=['b'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

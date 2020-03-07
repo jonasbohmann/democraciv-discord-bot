@@ -125,7 +125,7 @@ class Tags(commands.Cog, name="Tag"):
             return
 
         if not reaction:
-            return await ctx.send(":x: Aborted.")
+            return await ctx.send("Aborted.")
 
         elif reaction:
             async with self.bot.db.acquire() as con:

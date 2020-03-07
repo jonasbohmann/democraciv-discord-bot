@@ -52,6 +52,8 @@ class DemocracivRole(PrettyEnum):
     JUSTICE_ROLE = PrettyEnumValue(547530938712719373, 'Justice')
     JUDGE_ROLE = PrettyEnumValue(547530938712719373, 'Judge')
 
+    GOVERNMENT_ROLE = PrettyEnumValue(547530938712719373, 'Arabian Government')
+
 
 class DemocracivChannel(enum.Enum):
     # Moderation

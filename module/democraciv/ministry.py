@@ -196,7 +196,7 @@ class Ministry(commands.Cog):
 
         if reaction:
             async with ctx.typing():
-                if await self.bot.laws.pass_into_law(ctx, bill):
+                if await self.bot.laws.pass_into_law(bill):
                     await ctx.send(":white_check_mark: Passed into law.")
                     await self.gov_announcements_channel.send(
                         f"{self.speaker.mention}, `{bill.name}` ({bill.tiny_link}) was "

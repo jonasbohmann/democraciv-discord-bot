@@ -305,7 +305,8 @@ class Bill(commands.Converter):
         except ValueError:
             bill = await ctx.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE bill_name = $1", argument)
             if bill is None:
-                bill = await ctx.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE link = $1", argument)
+                bill = await ctx.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE link = $1 or tiny_link = $1",
+                                                 argument)
 
         if bill is None:
             raise NotFoundError(f":x: There is no bill with ID #{argument}!")
@@ -334,9 +335,14 @@ class MultipleBills(commands.Converter):
         try:
             arguments = [int(arg) for arg in argument.split()]
         except ValueError:
-            raise BadArgument(f":x: At least one of those in {argument} is not a number.")
+            raise NotFoundError(f":x: At least one of those in {argument} is not a number.")
 
-        bills = [await Bill.convert(ctx, argument) for argument in arguments]
+        bills = []
+        for argument in arguments:
+            try:
+                bills.append(await Bill.convert(ctx, argument))
+            except NotFoundError:
+                continue
 
         if not bills:
             raise NotFoundError(f":x: There are no bills with any of these IDs: {argument}")
