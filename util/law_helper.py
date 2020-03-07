@@ -7,7 +7,7 @@ import asyncpg
 import collections
 
 from bs4 import BeautifulSoup, SoupStrainer
-from discord.ext import tasks, commands
+from discord.ext import tasks
 
 from util import mk
 from util.converter import Session, Bill, Law
@@ -96,51 +96,43 @@ class LawUtils:
     async def get_google_docs_title(self, link: str) -> typing.Optional[str]:
         """Gets title of a Google Docs document"""
 
-        try:
-            async with self.bot.session.get(link) as response:
-                if response.status == 200:
-                    text = await response.read()
+        async with self.bot.session.get(link) as response:
+            if response.status == 200:
+                text = await response.read()
 
-            strainer = SoupStrainer(property="og:title")  # Only parse the title property to save time
-            soup = BeautifulSoup(text, "lxml", parse_only=strainer)  # Use lxml parser to speed things up
+        strainer = SoupStrainer(property="og:title")  # Only parse the title property to save time
+        soup = BeautifulSoup(text, "lxml", parse_only=strainer)  # Use lxml parser to speed things up
 
-            bill_title = soup.find("meta")['content']  # Get title of Google Docs website
+        bill_title = soup.find("meta")['content']  # Get title of Google Docs website
 
-            if bill_title.endswith(' - Google Docs'):
-                bill_title = bill_title[:-14]
+        if bill_title.endswith(' - Google Docs'):
+            bill_title = bill_title[:-14]
 
-            soup.decompose()  # Garbage collection
+        soup.decompose()  # Garbage collection
 
-            return bill_title
-
-        except Exception:
-            return None
+        return bill_title
 
     async def get_google_docs_description(self, link: str) -> typing.Optional[str]:
         """Gets content of 'og:description' tag from HTML of a Google Docs page.
 
             That content includes the document's title and the first few paragraphs of text."""
 
-        try:
-            async with self.bot.session.get(link) as response:
-                if response.status == 200:
-                    text = await response.read()
+        async with self.bot.session.get(link) as response:
+            if response.status == 200:
+                text = await response.read()
 
-            strainer = SoupStrainer(property="og:description")
-            soup = BeautifulSoup(text, "lxml", parse_only=strainer)
+        strainer = SoupStrainer(property="og:description")
+        soup = BeautifulSoup(text, "lxml", parse_only=strainer)
 
-            bill_description = soup.find("meta")['content']
+        bill_description = soup.find("meta")['content']
 
-            # If the description is long enough, Google adds a ... to the end of it
-            if bill_description.endswith('...'):
-                bill_description = bill_description[:-3]
+        # If the description is long enough, Google adds a ... to the end of it
+        if bill_description.endswith('...'):
+            bill_description = bill_description[:-3]
 
-            soup.decompose()  # Garbage collection
+        soup.decompose()  # Garbage collection
 
-            return bill_description
-
-        except Exception:
-            return None
+        return bill_description
 
     @staticmethod
     def generate_law_tags(google_docs_description: str, author_description: str) -> typing.List[str]:
@@ -161,30 +153,6 @@ class LawUtils:
         tags = list(set(tags))
 
         return tags
-
-    async def pass_into_law(self, bill: Bill):
-        """Marks a Bill as passed and creates new Law from that Bill."""
-
-        if bill.is_vetoable:
-            await self.bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
-                                      "true WHERE id = $1", bill.id)
-
-        law_id = await self.bot.db.fetchval("INSERT INTO legislature_laws (bill_id, passed_on)"
-                                            " VALUES ($1, $2) RETURNING law_id",
-                                            bill.id, datetime.datetime.utcnow())
-
-        # The bot takes the submitter-provided description (from the -legislature submit command) *and* the description
-        # from Google Docs (og:description property in HTML, usually the title of the Google Doc and the first
-        # few sentence's of content.) and tokenizes those with nltk. Then, every noun from both descriptions is saved
-        # into the legislature_tags table with the corresponding law_id.
-
-        _google_docs_description = await self.bot.laws.get_google_docs_description(bill.link)
-        _tags = await self.bot.loop.run_in_executor(None, self.bot.laws.generate_law_tags, _google_docs_description,
-                                                    bill.description)
-
-        for tag in _tags:
-            await self.bot.db.execute("INSERT INTO legislature_tags (id, tag)"
-                                      " VALUES ($1, $2) ON CONFLICT DO NOTHING ", law_id, tag.lower())
 
     @staticmethod
     def sort_dict_by_value(to_be_sorted: dict) -> dict:

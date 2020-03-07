@@ -226,6 +226,36 @@ class Bill(commands.Converter):
         else:
             return False
 
+    async def pass_from_legislature(self):
+        await self._bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true, voted_on_by_leg = true "
+                                   "WHERE id = $1", self.id)
+
+    async def veto(self):
+        await self._bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
+                                   "false WHERE id = $1", self.id)
+
+    async def pass_into_law(self):
+        if self.is_vetoable:
+            await self._bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true,"
+                                       " has_passed_ministry = true WHERE id = $1", self.id)
+
+        law_id = await self._bot.db.fetchval("INSERT INTO legislature_laws (bill_id, passed_on)"
+                                             " VALUES ($1, $2) RETURNING law_id",
+                                             self.id, datetime.utcnow())
+
+        # The bot takes the submitter-provided description (from the -legislature submit command) *and* the description
+        # from Google Docs (og:description property in HTML, usually the title of the Google Doc and the first
+        # few sentence's of content.) and tokenizes those with nltk. Then, every noun from both descriptions is saved
+        # into the legislature_tags table with the corresponding law_id.
+
+        _google_docs_description = await self._bot.laws.get_google_docs_description(self.link)
+        _tags = await self._bot.loop.run_in_executor(None, self._bot.laws.generate_law_tags, _google_docs_description,
+                                                     self.description)
+
+        for tag in _tags:
+            await self._bot.db.execute("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                                       law_id, tag.lower())
+
     async def get_emojified_status(self, verbose: bool = True) -> str:
         status = []
 
@@ -364,6 +394,7 @@ class Law(commands.Converter):
         self.bill: Bill = kwargs.get('bill')
         self.passed_on: datetime = kwargs.get('passed_on')
         self.tags: typing.List[str] = kwargs.get('tags')
+        self._bot = kwargs.get('bot')
 
     @classmethod
     async def from_bill(cls, ctx, bill_id: int):
@@ -373,6 +404,9 @@ class Law(commands.Converter):
             raise NotFoundError(f":x: There is no law with associated bill ID #{bill_id}!")
 
         return await cls.convert(ctx, law)
+
+    async def repeal(self):
+        await self._bot.db.execute("DELETE FROM legislature_laws WHERE law_id = $1", self.id)
 
     @classmethod
     async def convert(cls, ctx, argument: int):
@@ -394,7 +428,7 @@ class Law(commands.Converter):
         tags = await ctx.bot.db.fetch("SELECT * FROM legislature_tags WHERE id = $1", law['law_id'])
         tags = [record['tag'] for record in tags]
 
-        return cls(id=law['law_id'], bill=bill, tags=tags, passed_on=law['passed_on'])
+        return cls(id=law['law_id'], bill=bill, tags=tags, passed_on=law['passed_on'], bot=ctx.bot)
 
 
 class Motion(commands.Converter):

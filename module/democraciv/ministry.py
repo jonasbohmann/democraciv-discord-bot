@@ -2,12 +2,46 @@ import typing
 import discord
 
 from util.flow import Flow
-from util.converter import Bill, MultipleBills
 from config import config, links
 from util.paginator import Pages
 from discord.ext import commands
-from util.law_helper import MockContext
+from util.converter import Bill, MultipleBills
+from util.law_helper import MockContext, AnnouncementQueue
 from util import mk, exceptions, utils
+
+
+class LawPassScheduler(AnnouncementQueue):
+
+    def get_message(self) -> str:
+        message = [f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
+                   f"the following bills were **passed into law by the Ministry**.\n"]
+
+        for obj in self._objects:
+            if obj.submitter is not None:
+                message.append(f"-  **{obj.name}** (<{obj.tiny_link}>) by {obj.submitter.name}")
+            else:
+                message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+
+        message.append(f"\nAll new laws were added to `{config.BOT_PREFIX}laws` and can now be found with "
+                       f"`{config.BOT_PREFIX}laws search <query>`. The "
+                       f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE).mention} should add them to "
+                       f"the Legal Code as soon as possible.")
+        return '\n'.join(message)
+
+
+class LawVetoScheduler(AnnouncementQueue):
+
+    def get_message(self) -> str:
+        message = [f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE).mention}, "
+                   f"the following bills were **vetoed by the Ministry**.\n"]
+
+        for obj in self._objects:
+            if obj.submitter is not None:
+                message.append(f"-  **{obj.name}** (<{obj.tiny_link}>) by {obj.submitter.name}")
+            else:
+                message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+
+        return '\n'.join(message)
 
 
 class Ministry(commands.Cog):
@@ -15,6 +49,8 @@ class Ministry(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.pass_scheduler = LawPassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+        self.veto_scheduler = LawVetoScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
     @property
     def prime_minister(self) -> typing.Optional[discord.Member]:
@@ -116,96 +152,143 @@ class Ministry(commands.Cog):
                       show_index=False, footer_text=help_description)
         await pages.paginate()
 
+    @staticmethod
+    async def verify_bill(bill: Bill) -> str:
+        if not bill.is_vetoable:
+            return "The Ministry cannot veto this!"
+
+        if not bill.passed_leg:
+            return "This bill hasn't passed the Legislature yet!"
+
+        if bill.voted_on_by_ministry:
+            return "You already voted on this bill!"
+
     @ministry.command(name='veto', aliases=['v'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
     async def veto(self, ctx, *, bill_id: typing.Union[Bill, MultipleBills]):
         """Veto a bill"""
 
-        if isinstance(bill_id, MultipleBills):
-            for bill in bill_id.bills:
-                await ctx.invoke(ctx.command, bill_id=bill)
-            return
-
         bill = bill_id
-
-        if not bill.is_vetoable:
-            return await ctx.send(f":x: The Ministry cannot veto this!")
-
-        if not bill.passed_leg:
-            return await ctx.send(f":x: This bill hasn't passed the Legislature yet!")
-
-        if bill.voted_on_by_ministry:
-            return await ctx.send(f":x: You already voted on this bill!")
-
         flow = Flow(self.bot, ctx)
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to "
-                                      f"veto `{bill.name}` (#{bill.id}?")
+        if isinstance(bill_id, MultipleBills):
+            error_messages = []
 
-        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+            for _bill in bill.bills:
+                error = await self.verify_bill(_bill)
+                if error:
+                    bill.bills.remove(_bill)
+                    error_messages.append((_bill, error))
 
-        if reaction is None:
-            return
+            if error_messages:
+                error_messages = '\n'.join(
+                    [f"-  {_bill.name} (#{_bill.id}): {reason}" for _bill, reason in error_messages])
+                await ctx.send(f":warning: The following bills can not be vetoed.\n```{error_messages}```")
 
-        if reaction:
-            async with ctx.typing():
-                await self.bot.db.execute(
-                    "UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
-                    "false WHERE id = $1", bill.id)
+            pretty_bills = '\n'.join([f"-  {_bill.name} (#{_bill.id})" for _bill in bill.bills])
+            are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
+                                          f" to veto the following bills?"
+                                          f"\n```{pretty_bills}```")
 
+            reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+
+            if reaction is None:
+                return
+
+            if not reaction:
+                return await ctx.send("Aborted.")
+
+            elif reaction:
+                for _bill in bill.bills:
+                    await _bill.veto()
+                    self.veto_scheduler.add(_bill)
+
+                await ctx.send(":white_check_mark: All bills were vetoed.")
+
+        else:
+            error = await self.verify_bill(bill)
+
+            if error:
+                return await ctx.send(f":x: {error}")
+
+            are_you_sure = await ctx.send(f":information_source: Are you sure that you want to "
+                                          f"veto `{bill.name}` (#{bill.id}?")
+
+            reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+
+            if reaction is None:
+                return
+
+            if not reaction:
+                await ctx.send(f"Aborted.")
+
+            elif reaction:
+                await bill.veto()
                 await ctx.send(f":white_check_mark: `{bill.name}` was vetoed.")
-
-                await self.gov_announcements_channel.send(
-                    f"{self.speaker.mention}, `{bill.name}` ({bill.tiny_link}) was **vetoed** by the Ministry.")
-
-        elif not reaction:
-            await ctx.send(f"Aborted.")
+                self.veto_scheduler.add(bill)
 
     @ministry.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
-    async def passbill(self, ctx, *, bill_id: typing.Union[Bill, MultipleBills]):
+    async def pass_bill(self, ctx, *, bill_id: typing.Union[Bill, MultipleBills]):
         """Pass a bill into law"""
 
-        if isinstance(bill_id, MultipleBills):
-            for bill in bill_id.bills:
-                await ctx.invoke(ctx.command, bill_id=bill)
-            return
-
         bill = bill_id
-
-        if not bill.is_vetoable:
-            return await ctx.send(f":x: The Ministry cannot veto this!")
-
-        if not bill.passed_leg:
-            return await ctx.send(f":x: This bill hasn't passed the Legislature yet!")
-
-        if bill.voted_on_by_ministry:
-            return await ctx.send(f":x: You already voted on this bill!")
-
         flow = Flow(self.bot, ctx)
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to pass `{bill.name}` "
-                                      f"(#{bill.id}) into law?")
+        if isinstance(bill_id, MultipleBills):
+            error_messages = []
 
-        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+            for _bill in bill.bills:
+                error = await self.verify_bill(_bill)
+                if error:
+                    bill.bills.remove(_bill)
+                    error_messages.append((_bill, error))
 
-        if reaction is None:
-            return
+            if error_messages:
+                error_messages = '\n'.join(
+                    [f"-  {_bill.name} (#{_bill.id}): {reason}" for _bill, reason in error_messages])
+                await ctx.send(f":warning: The following bills can not be passed into law.\n```{error_messages}```")
 
-        if reaction:
-            async with ctx.typing():
-                if await self.bot.laws.pass_into_law(bill):
-                    await ctx.send(":white_check_mark: Passed into law.")
-                    await self.gov_announcements_channel.send(
-                        f"{self.speaker.mention}, `{bill.name}` ({bill.tiny_link}) was "
-                        f"**passed into law** by the Ministry.")
-                else:
-                    await ctx.send(":x: Unexpected error occurred.")
+            pretty_bills = '\n'.join([f"-  {_bill.name} (#{_bill.id})" for _bill in bill.bills])
+            are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
+                                          f" to pass the following bills into law?"
+                                          f"\n```{pretty_bills}```")
 
-        elif not reaction:
-            await ctx.send(f"Aborted.")
+            reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+
+            if reaction is None:
+                return
+
+            if not reaction:
+                return await ctx.send("Aborted.")
+
+            elif reaction:
+                for _bill in bill.bills:
+                    await _bill.pass_into_law()
+                    self.pass_scheduler.add(_bill)
+
+                await ctx.send(":white_check_mark: All bills were passed into law.")
+        else:
+
+            are_you_sure = await ctx.send(f":information_source: Are you sure that you want to pass `{bill.name}` "
+                                          f"(#{bill.id}) into law?")
+
+            reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+
+            if reaction is None:
+                return
+
+            if not reaction:
+                await ctx.send(f"Aborted.")
+
+            elif reaction:
+                await bill.pass_into_law()
+                await ctx.send(":white_check_mark: Passed into law.")
+                self.pass_scheduler.add(bill)
+
+
 
 
 def setup(bot):

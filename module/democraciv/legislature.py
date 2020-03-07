@@ -21,20 +21,20 @@ class PassScheduler(AnnouncementQueue):
 
     def get_message(self) -> str:
         message = [f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
-                   f"the following bills were passed by the Legislature.\n"]
+                   f"the following bills were **passed by the Legislature**.\n"]
 
         for obj in self._objects:
             if obj.is_vetoable:
                 if obj.submitter is not None:
-                    message.append(f"-  __**{obj.name}**__(#{obj.id}) by {obj.submitter.name}")
+                    message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>) by {obj.submitter.name}")
                 else:
-                    message.append(f"-  __**{obj.name}**__ (#{obj.id})")
+                    message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>)")
 
             else:
                 if obj.submitter is not None:
-                    message.append(f"-  **{obj.name}** (#{obj.id}) by {obj.submitter.name}")
+                    message.append(f"-  **{obj.name}** (<{obj.tiny_link}>) by {obj.submitter.name}")
                 else:
-                    message.append(f"-  **{obj.name}** (#{obj.id})")
+                    message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
 
         message.append("\nAll non-vetoable bills are now laws (marked as __underlined__),"
                        " the others were sent to the Ministry.")
@@ -548,15 +548,6 @@ class Legislature(commands.Cog):
             except discord.Forbidden:
                 pass
 
-    async def _pass_bill(self, bill: Bill):
-        await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true, voted_on_by_leg = true "
-                                  "WHERE id = $1", bill.id)
-
-        if not bill.is_vetoable:
-            await self.bot.laws.pass_into_law(bill)
-
-        self.scheduler.add(bill)
-
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
@@ -609,7 +600,13 @@ class Legislature(commands.Cog):
 
             elif reaction:
                 for _bill in bill.bills:
-                    await self._pass_bill(_bill)
+                    await _bill.pass_from_legislature()
+
+                    if not _bill.is_vetoable:
+                        await _bill.pass_into_law()
+
+                    self.scheduler.add(_bill)
+
                 await ctx.send(":white_check_mark: All bills were marked as passed from the Legislature.")
 
         else:
@@ -630,12 +627,16 @@ class Legislature(commands.Cog):
                 return await ctx.send("Aborted.")
 
             elif reaction:
-                await self._pass_bill(bill)
-                if bill.is_vetoable:
-                    await ctx.send(f":white_check_mark: `{bill.name}` was sent to the Ministry.")
-                else:
+                await bill.pass_from_legislature()
+
+                if not bill.is_vetoable:
+                    await bill.pass_into_law()
                     await ctx.send(f":white_check_mark: `{bill.name}` was passed into law."
                                    f" Remember to add it to the Legal Code!")
+                else:
+                    await ctx.send(f":white_check_mark: `{bill.name}` was sent to the Ministry.")
+
+                self.scheduler.add(bill)
 
     @legislature.group(name='withdraw', aliases=['w'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
