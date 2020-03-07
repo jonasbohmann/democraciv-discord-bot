@@ -66,7 +66,7 @@ YouTube Data v3 API if you enabled YouTube notifications, your TimeZoneDB API Ke
 
 Once `token.py` is set up, take a look at `config.py` in the same folder and adjust everything to your needs.
 
-After you've done all that, run `client.py`.
+After you've done all that, run `bot.py`.
 
 ####  Database
 

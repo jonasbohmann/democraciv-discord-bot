@@ -41,8 +41,7 @@ initial_extensions = ['event.logging',
                       'module.democraciv.legislature',
                       'module.democraciv.laws',
                       'module.democraciv.ministry',
-                      'module.democraciv.supremecourt'
-                      ]
+                      'module.democraciv.supremecourt']
 
 
 class DemocracivBot(commands.Bot):

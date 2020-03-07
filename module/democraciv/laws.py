@@ -3,8 +3,8 @@ import discord
 
 from config import config
 from util import mk, utils
-from util.converter import Law
 from util.flow import Flow
+from util.converter import Law
 from util.law_helper import MockContext
 from util.paginator import Pages
 from discord.ext import commands

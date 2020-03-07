@@ -1,5 +1,3 @@
-import asyncio
-import re
 import typing
 import asyncpg
 import discord
@@ -8,14 +6,11 @@ import datetime
 from util.flow import Flow
 from util.paginator import Pages
 from config import config, links
+from discord.ext import commands
 from util import utils, mk, exceptions
-from discord.ext import commands, tasks
 from util.law_helper import AnnouncementQueue
 from util.converter import Session, SessionStatus, Bill, Motion, MultipleBills, Law
 
-
-# TODO - multiple bills in -leg pass, -m pass, -m veto
-# TODO - queue new vetos & pass to not spam discord channels
 
 class PassScheduler(AnnouncementQueue):
 
