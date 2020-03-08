@@ -224,7 +224,7 @@ class Party(commands.Cog, name='Political Parties'):
             async with connection.transaction():
                 if is_private:
                     try:
-                        await self.bot.db.execute(
+                        await connection.execute(
                             "INSERT INTO parties (id, discord_invite, is_private, leader) VALUES ($1, $2, $3, $4)",
                             discord_role.id, party_invite, True, leader_role.id)
                     except asyncpg.UniqueViolationError:
@@ -232,15 +232,15 @@ class Party(commands.Cog, name='Political Parties'):
                         return None
                 else:
                     try:
-                        await self.bot.db.execute(
+                        await connection.execute(
                             "INSERT INTO parties (id, discord_invite, is_private) VALUES ($1, $2, $3)",
                             discord_role.id, party_invite, False)
                     except asyncpg.UniqueViolationError:
                         await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
                         return None
 
-                status = await self.bot.db.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
-                                                   discord_role.name.lower(), discord_role.id)
+                status = await connection.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
+                                                  discord_role.name.lower(), discord_role.id)
 
         if status == "INSERT 0 1":
             await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a new party.')
@@ -276,8 +276,8 @@ class Party(commands.Cog, name='Political Parties'):
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
-                await self.bot.db.execute("DELETE FROM party_alias WHERE party_id = $1", party.role.id)
-                await self.bot.db.execute("DELETE FROM parties WHERE id = $1", party.role.id)
+                await connection.execute("DELETE FROM party_alias WHERE party_id = $1", party.role.id)
+                await connection.execute("DELETE FROM parties WHERE id = $1", party.role.id)
 
         await ctx.send(f':white_check_mark: `{party.role.name}` and all its aliases were deleted.')
 
@@ -311,8 +311,8 @@ class Party(commands.Cog, name='Political Parties'):
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
-                status = await self.bot.db.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
-                                                   alias.lower(), party.role.id)
+                status = await connection.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
+                                                  alias.lower(), party.role.id)
 
         if status == "INSERT 0 1":
             await ctx.send(f':white_check_mark: Alias `{alias}` for party '
@@ -398,8 +398,8 @@ class Party(commands.Cog, name='Political Parties'):
         for party in to_be_merged:
             async with self.bot.db.acquire() as connection:
                 async with connection.transaction():
-                    await self.bot.db.execute("DELETE FROM party_alias WHERE party_id = $1", party.role.id)
-                    await self.bot.db.execute("DELETE FROM parties WHERE id = $1", party.role.id)
+                    await connection.execute("DELETE FROM party_alias WHERE party_id = $1", party.role.id)
+                    await connection.execute("DELETE FROM parties WHERE id = $1", party.role.id)
 
             await party.role.delete()
 

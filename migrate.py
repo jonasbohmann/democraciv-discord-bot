@@ -18,107 +18,109 @@ async def get_db():
 async def main():
     db = await get_db()
 
-    # Add defaults to guild
-    await db.execute("ALTER TABLE guilds ALTER welcome SET DEFAULT false;")
-    await db.execute("ALTER TABLE guilds ALTER logging SET DEFAULT false;")
-    await db.execute("ALTER TABLE guilds ALTER defaultrole SET DEFAULT false;")
-    await db.execute("ALTER TABLE guilds ALTER logging_excluded SET DEFAULT ARRAY[0];")
-    print("Added defaults to guilds table.")
+    async with db.acquire() as connection:
+        async with connection.transaction():
+            # Add defaults to guild
+            await connection.execute("ALTER TABLE guilds ALTER welcome SET DEFAULT false;")
+            await connection.execute("ALTER TABLE guilds ALTER logging SET DEFAULT false;")
+            await connection.execute("ALTER TABLE guilds ALTER defaultrole SET DEFAULT false;")
+            await connection.execute("ALTER TABLE guilds ALTER logging_excluded SET DEFAULT ARRAY[0];")
+            print("Added defaults to guilds table.")
 
-    # Fix parties new column names
-    await db.execute("ALTER TABLE parties RENAME COLUMN discord TO discord_invite;")
-    await db.execute("ALTER TABLE parties RENAME COLUMN private TO is_private;")
-    await db.execute("ALTER TABLE parties ALTER COLUMN is_private SET DEFAULT false;")
-    print("Renamed columns in parties table.")
+            # Fix parties new column names
+            await connection.execute("ALTER TABLE parties RENAME COLUMN discord TO discord_invite;")
+            await connection.execute("ALTER TABLE parties RENAME COLUMN private TO is_private;")
+            await connection.execute("ALTER TABLE parties ALTER COLUMN is_private SET DEFAULT false;")
+            print("Renamed columns in parties table.")
 
-    # Fix legislature_session
-    await db.execute("""DO $$ BEGIN
-                        CREATE TYPE session_status AS ENUM ('Submission Period', 'Voting Period', 'Closed');
-                    EXCEPTION
-                        WHEN duplicate_object THEN null;
-                    END $$;""")
+            # Fix legislature_session
+            await connection.execute("""DO $$ BEGIN
+                                CREATE TYPE session_status AS ENUM ('Submission Period', 'Voting Period', 'Closed');
+                            EXCEPTION
+                                WHEN duplicate_object THEN null;
+                            END $$;""")
 
-    last_leg_session = await db.fetchval("SELECT MAX(id) from legislature_sessions;")
-    await db.execute("""CREATE SEQUENCE legislature_sessions_seq START WITH $1;
-                        ALTER TABLE legislature_sessions ALTER COLUMN (
-                        id SET DEFAULT nextval('legislature_sessions_seq')
-                        );
-                        ALTER SEQUENCE legislature_sessions_seq OWNED BY legislature_sessions.id;""",
-                     last_leg_session + 1)
-    await db.execute("ALTER TABLE legislature_sessions ALTER COLUMN status SET DATA TYPE session_status;")
-    await db.execute(
-        "ALTER TABLE legislature_sessions ALTER COLUMN status SET DEFAULT 'Submission Period'::session_status;")
-    await db.execute("ALTER TABLE legislature_sessions RENAME COLUMN start_unixtime TO opened_on;")
-    await db.execute("ALTER TABLE legislature_sessions RENAME COLUMN voting_start_unixtime TO voting_started_on;")
-    await db.execute("ALTER TABLE legislature_sessions RENAME COLUMN end_unixtime TO closed_on;")
-
-    # backup
-    all_sessions = await db.fetch("SELECT * from legislature_sessions")
-    pickle.dump(all_sessions, 'all_sess')
-
-    await db.execute("ALTER TABLE legislature_sessions ALTER COLUMN opened_on SET DATA TYPE timestamp "
-                     "WITHOUT TIME ZONE USING to_timestamp(opened_on);")
-    await db.execute("ALTER TABLE legislature_sessions ALTER COLUMN voting_started_on SET DATA TYPE "
-                     "timestamp WITHOUT TIME ZONE USING to_timestamp(opened_on);")
-    await db.execute("ALTER TABLE legislature_sessions ALTER COLUMN closed_on SET DATA TYPE timestamp "
-                     "WITHOUT TIME ZONE USING to_timestamp(opened_on);")
-
-    print("Added serial and converted unixtime -> timestamp in legislature_sessions.")
-
-    # legislature_bills
-    await db.execute("ALTER TABLE legislature_bills ALTER COLUMN voted_on_by_leg SET DEFAULT false;")
-    await db.execute("ALTER TABLE legislature_bills ALTER COLUMN has_passed_leg SET DEFAULT false;")
-    await db.execute("ALTER TABLE legislature_bills ALTER COLUMN voted_on_by_ministry SET DEFAULT false;")
-    await db.execute("ALTER TABLE legislature_bills ALTER COLUMN has_passed_ministry SET DEFAULT false;")
-    last_bill = await db.fetchval("SELECT MAX(id) from legislature_bills;")
-    await db.execute("""CREATE SEQUENCE legislature_bills_seq START WITH $1;
-                            ALTER TABLE legislature_bills ALTER COLUMN (
-                            id SET DEFAULT nextval('legislature_bills_seq')
-                            );
-                            ALTER SEQUENCE legislature_bills_seq OWNED BY legislature_bills.id;""",
-                     last_bill + 1)
-
-    print("Added serial and new defaults to legislature_bills.")
-
-    # legislature_laws
-    last_law = await db.fetchval("SELECT MAX(law_id) from legislature_laws;")
-    await db.execute("""CREATE SEQUENCE legislature_laws_seq START WITH $1;
-                                ALTER TABLE legislature_laws ALTER COLUMN (
-                                law_id SET DEFAULT nextval('legislature_laws_seq')
+            last_leg_session = await connection.fetchval("SELECT MAX(id) from legislature_sessions;")
+            await connection.execute("""CREATE SEQUENCE legislature_sessions_seq START WITH $1;
+                                ALTER TABLE legislature_sessions ALTER COLUMN (
+                                id SET DEFAULT nextval('legislature_sessions_seq')
                                 );
-                                ALTER SEQUENCE legislature_laws_seq OWNED BY legislature_laws.law_id;""",
-                     last_law + 1)
-    await db.execute("ALTER TABLE legislature_laws ADD COLUMN passed_on timestamp WITHOUT TIME ZONE;")
+                                ALTER SEQUENCE legislature_sessions_seq OWNED BY legislature_sessions.id;""",
+                             last_leg_session + 1)
+            await connection.execute("ALTER TABLE legislature_sessions ALTER COLUMN status SET DATA TYPE session_status;")
+            await connection.execute(
+                "ALTER TABLE legislature_sessions ALTER COLUMN status SET DEFAULT 'Submission Period'::session_status;")
+            await connection.execute("ALTER TABLE legislature_sessions RENAME COLUMN start_unixtime TO opened_on;")
+            await connection.execute("ALTER TABLE legislature_sessions RENAME COLUMN voting_start_unixtime TO voting_started_on;")
+            await connection.execute("ALTER TABLE legislature_sessions RENAME COLUMN end_unixtime TO closed_on;")
 
-    print("Added serial and passed_on column to legislature_laws.")
+            # backup
+            all_sessions = await connection.fetch("SELECT * from legislature_sessions")
+            pickle.dump(all_sessions, 'all_sess')
 
-    # legislature_tags
-    await db.execute("ALTER TABLE legislature_tags ADD UNIQUE (id, tag);")
+            await connection.execute("ALTER TABLE legislature_sessions ALTER COLUMN opened_on SET DATA TYPE timestamp "
+                             "WITHOUT TIME ZONE USING to_timestamp(opened_on);")
+            await connection.execute("ALTER TABLE legislature_sessions ALTER COLUMN voting_started_on SET DATA TYPE "
+                             "timestamp WITHOUT TIME ZONE USING to_timestamp(opened_on);")
+            await connection.execute("ALTER TABLE legislature_sessions ALTER COLUMN closed_on SET DATA TYPE timestamp "
+                             "WITHOUT TIME ZONE USING to_timestamp(opened_on);")
 
-    print("Added unqiue constraint to legislature_tags.")
+            print("Added serial and converted unixtime -> timestamp in legislature_sessions.")
 
-    # legislature_motions
-    last_motion = await db.fetchval("SELECT MAX(id) from legislature_motions;")
-    await db.execute("""CREATE SEQUENCE legislature_motions_seq START WITH $1;
-                                   ALTER TABLE legislature_motions ALTER COLUMN (
-                                   id SET DEFAULT nextval('legislature_motions_seq')
-                                   );
-                                   ALTER SEQUENCE legislature_motions_seq OWNED BY legislature_motions.id;""",
-                     last_motion + 1)
+            # legislature_bills
+            await connection.execute("ALTER TABLE legislature_bills ALTER COLUMN voted_on_by_leg SET DEFAULT false;")
+            await connection.execute("ALTER TABLE legislature_bills ALTER COLUMN has_passed_leg SET DEFAULT false;")
+            await connection.execute("ALTER TABLE legislature_bills ALTER COLUMN voted_on_by_ministry SET DEFAULT false;")
+            await connection.execute("ALTER TABLE legislature_bills ALTER COLUMN has_passed_ministry SET DEFAULT false;")
+            last_bill = await connection.fetchval("SELECT MAX(id) from legislature_bills;")
+            await connection.execute("""CREATE SEQUENCE legislature_bills_seq START WITH $1;
+                                    ALTER TABLE legislature_bills ALTER COLUMN (
+                                    id SET DEFAULT nextval('legislature_bills_seq')
+                                    );
+                                    ALTER SEQUENCE legislature_bills_seq OWNED BY legislature_bills.id;""",
+                             last_bill + 1)
 
-    print("Added serial to legislature_motions.")
+            print("Added serial and new defaults to legislature_bills.")
 
-    # tags
-    await db.execute("ALTER TABLE guild_tags ALTER COLUMN global SET DEFAULT false;")
-    await db.execute("ALTER TABLE guild_tags_alias ADD COLUMN global bool;")
-    await db.execute("ALTER TABLE guild_tags_alias ALTER COLUMN global SET DEFAULT false;")
+            # legislature_laws
+            last_law = await connection.fetchval("SELECT MAX(law_id) from legislature_laws;")
+            await connection.execute("""CREATE SEQUENCE legislature_laws_seq START WITH $1;
+                                        ALTER TABLE legislature_laws ALTER COLUMN (
+                                        law_id SET DEFAULT nextval('legislature_laws_seq')
+                                        );
+                                        ALTER SEQUENCE legislature_laws_seq OWNED BY legislature_laws.law_id;""",
+                             last_law + 1)
+            await connection.execute("ALTER TABLE legislature_laws ADD COLUMN passed_on timestamp WITHOUT TIME ZONE;")
 
-    tags = await db.fetch("SELECT * FROM guild_tags")
+            print("Added serial and passed_on column to legislature_laws.")
 
-    for tag in tags:
-        await db.execute("UPDATE guild_tags_alias SET global = $1 WHERE tag_id = $2", tag['global'], tag['id'])
+            # legislature_tags
+            await connection.execute("ALTER TABLE legislature_tags ADD UNIQUE (id, tag);")
 
-    print("Added global column to guild_tags_alias and set new defaults.")
+            print("Added unqiue constraint to legislature_tags.")
+
+            # legislature_motions
+            last_motion = await connection.fetchval("SELECT MAX(id) from legislature_motions;")
+            await connection.execute("""CREATE SEQUENCE legislature_motions_seq START WITH $1;
+                                           ALTER TABLE legislature_motions ALTER COLUMN (
+                                           id SET DEFAULT nextval('legislature_motions_seq')
+                                           );
+                                           ALTER SEQUENCE legislature_motions_seq OWNED BY legislature_motions.id;""",
+                             last_motion + 1)
+
+            print("Added serial to legislature_motions.")
+
+            # tags
+            await connection.execute("ALTER TABLE guild_tags ALTER COLUMN global SET DEFAULT false;")
+            await connection.execute("ALTER TABLE guild_tags_alias ADD COLUMN global bool;")
+            await connection.execute("ALTER TABLE guild_tags_alias ALTER COLUMN global SET DEFAULT false;")
+
+            tags = await connection.fetch("SELECT * FROM guild_tags")
+
+            for tag in tags:
+                await connection.execute("UPDATE guild_tags_alias SET global = $1 WHERE tag_id = $2", tag['global'], tag['id'])
+
+            print("Added global column to guild_tags_alias and set new defaults.")
 
 
 if __name__ == '__main__':

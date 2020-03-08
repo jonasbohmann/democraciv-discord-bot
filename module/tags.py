@@ -130,9 +130,9 @@ class Tags(commands.Cog, name="Tag"):
         elif reaction:
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
-                    status = await self.bot.db.execute("INSERT INTO guild_tags_alias (alias, tag_id, guild_id, global)"
-                                                       " VALUES ($1, $2, $3, $4)", alias.lower(), tag.id,
-                                                       ctx.guild.id, tag.is_global)
+                    status = await con.execute("INSERT INTO guild_tags_alias (alias, tag_id, guild_id, global)"
+                                               " VALUES ($1, $2, $3, $4)", alias.lower(), tag.id,
+                                               ctx.guild.id, tag.is_global)
 
         if status == "INSERT 0 1":
             await ctx.send(f':white_check_mark: Added the alias `{config.BOT_PREFIX}{alias}` to'
@@ -168,14 +168,11 @@ class Tags(commands.Cog, name="Tag"):
         elif reaction:
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
-                    try:
-                        await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE alias = $1 AND tag_id = $2",
-                                                  alias.invoked_with, alias.id)
-                        await ctx.send(f":white_check_mark: Successfully removed the alias "
-                                       f"`{config.BOT_PREFIX}{alias.invoked_with}` from "
-                                       f"`{config.BOT_PREFIX}{alias.name}`.")
-                    except Exception:
-                        raise
+                    await con.execute("DELETE FROM guild_tags_alias WHERE alias = $1 AND tag_id = $2",
+                                      alias.invoked_with, alias.id)
+                    await ctx.send(f":white_check_mark: Successfully removed the alias "
+                                   f"`{config.BOT_PREFIX}{alias.invoked_with}` from "
+                                   f"`{config.BOT_PREFIX}{alias.name}`.")
 
     async def validate_tag_name(self, ctx, tag_name: str) -> bool:
         tag_name = tag_name.lower()
@@ -274,18 +271,15 @@ class Tags(commands.Cog, name="Tag"):
         elif reaction:
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
-                    try:
-                        _id = await self.bot.db.fetchval("INSERT INTO guild_tags (guild_id, name, content, title,"
-                                                         " global, author) VALUES "
-                                                         "($1, $2, $3, $4, $5, $6) RETURNING id",
-                                                         ctx.guild.id, name.lower(), content, title, is_global,
-                                                         ctx.author.id)
-                        await self.bot.db.execute("INSERT INTO guild_tags_alias (tag_id, alias, guild_id, global)"
-                                                  " VALUES ($1, $2, $3, $4)", _id, name.lower(),
-                                                  ctx.guild.id, is_global)
-                        await ctx.send(f":white_check_mark: The `{config.BOT_PREFIX}{name}` tag was added.")
-                    except Exception:
-                        raise
+                    _id = await con.fetchval("INSERT INTO guild_tags (guild_id, name, content, title,"
+                                             " global, author) VALUES "
+                                             "($1, $2, $3, $4, $5, $6) RETURNING id",
+                                             ctx.guild.id, name.lower(), content, title, is_global,
+                                             ctx.author.id)
+                    await con.execute("INSERT INTO guild_tags_alias (tag_id, alias, guild_id, global)"
+                                      " VALUES ($1, $2, $3, $4)", _id, name.lower(),
+                                      ctx.guild.id, is_global)
+                    await ctx.send(f":white_check_mark: The `{config.BOT_PREFIX}{name}` tag was added.")
 
     @commands.command(name="addtag", hidden=True)
     async def oldaddtagwarning(self, ctx):
@@ -411,13 +405,10 @@ class Tags(commands.Cog, name="Tag"):
         elif reaction:
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
-                    try:
-                        await self.bot.db.execute("DELETE FROM guild_tags_alias WHERE tag_id = $1", tag.id)
-                        await self.bot.db.execute("DELETE FROM guild_tags WHERE name = $1 AND guild_id = $2",
-                                                  tag.name, ctx.guild.id)
-                        await ctx.send(f":white_check_mark: `{config.BOT_PREFIX}{tag.name}` was removed.")
-                    except Exception:
-                        raise
+                    await con.execute("DELETE FROM guild_tags_alias WHERE tag_id = $1", tag.id)
+                    await con.execute("DELETE FROM guild_tags WHERE name = $1 AND guild_id = $2",
+                                      tag.name, ctx.guild.id)
+                    await ctx.send(f":white_check_mark: `{config.BOT_PREFIX}{tag.name}` was removed.")
 
     @staticmethod
     def is_emoji_or_media_url(tag_content: str) -> bool:
