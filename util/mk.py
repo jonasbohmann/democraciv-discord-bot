@@ -33,26 +33,26 @@ class PrettyEnum(enum.Enum):
 
 class DemocracivRole(PrettyEnum):
     # Moderation
-    MODERATION_ROLE = PrettyEnumValue(547530938712719373, 'Moderation')
+    MODERATION_ROLE = PrettyEnumValue(319663296728924160, 'Moderation')
 
     # Executive
     MINISTER_ROLE = PrettyEnumValue(639438027852087297, 'Minister')
     GOVERNOR_ROLE = PrettyEnumValue(639438794239639573, 'Governor')
     EXECUTIVE_PROXY_ROLE = PrettyEnumValue(643190277494013962, 'Executive Proxy')
-    PRIME_MINISTER_ROLE = PrettyEnumValue(547530938712719373, 'Prime Minister')
-    LT_PRIME_MINISTER_ROLE = PrettyEnumValue(547530938712719373, 'Lieutenant Prime Minister')
+    PRIME_MINISTER_ROLE = PrettyEnumValue(639438159498838016, 'Prime Minister')
+    LT_PRIME_MINISTER_ROLE = PrettyEnumValue(646677815755931659, 'Lieutenant Prime Minister')
 
     # Legislature
-    SPEAKER_ROLE = PrettyEnumValue(547530938712719373, 'Speaker of the Legislature')
-    VICE_SPEAKER_ROLE = PrettyEnumValue(547530938712719373, 'Vice-Speaker of the Legislature')
-    LEGISLATOR_ROLE = PrettyEnumValue(547530938712719373, 'Legislator')
+    SPEAKER_ROLE = PrettyEnumValue(639438304705642506, 'Speaker of the Legislature')
+    VICE_SPEAKER_ROLE = PrettyEnumValue(639439805729734656, 'Vice-Speaker of the Legislature')
+    LEGISLATOR_ROLE = PrettyEnumValue(639438268601204737, 'Legislator')
 
     # Courts
-    CHIEF_JUSTICE_ROLE = PrettyEnumValue(547530938712719373, 'Chief Justice')
-    JUSTICE_ROLE = PrettyEnumValue(547530938712719373, 'Justice')
-    JUDGE_ROLE = PrettyEnumValue(547530938712719373, 'Judge')
+    CHIEF_JUSTICE_ROLE = PrettyEnumValue(639442447721562122, 'Chief Justice')
+    JUSTICE_ROLE = PrettyEnumValue(639438578304417792, 'Justice')
+    JUDGE_ROLE = PrettyEnumValue(668544161884143657, 'Judge')
 
-    GOVERNMENT_ROLE = PrettyEnumValue(547530938712719373, 'Arabian Government')
+    GOVERNMENT_ROLE = PrettyEnumValue(641077467204943916, 'Arabian Government')
 
 
 class DemocracivChannel(enum.Enum):
@@ -62,7 +62,7 @@ class DemocracivChannel(enum.Enum):
     MODERATION_NOTIFICATIONS_CHANNEL = 661201604493443092
 
     # Government
-    GOV_ANNOUNCEMENTS_CHANNEL = 679860112105668633
+    GOV_ANNOUNCEMENTS_CHANNEL = 647469752767479809
 
     # Executive
     EXECUTIVE_CHANNEL = 637051136955777049
