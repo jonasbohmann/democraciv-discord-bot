@@ -267,7 +267,7 @@ class LawUtils:
         found = []
 
         for law_id in laws:
-            law = await Law.convert(MockContext(self.bot), law_id)
+            law = await Law.convert(MockContext(self.bot), law_id['law_id'])
             found.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.link})")
 
         return found
