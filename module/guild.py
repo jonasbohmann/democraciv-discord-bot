@@ -23,7 +23,6 @@ class Guild(commands.Cog):
 
     @commands.group(name='guild', case_insensitive=True, invoke_without_command=True)
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
     async def guild(self, ctx):
         """Summary of this guild's configuration"""
 
