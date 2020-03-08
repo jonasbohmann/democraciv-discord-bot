@@ -1,5 +1,6 @@
 import discord
 
+from util.exceptions import DemocracivBotException
 from util.help import PaginatedHelpCommand
 from config import config
 from discord.ext import commands
@@ -95,7 +96,7 @@ class Meta(commands.Cog):
                             commands_list.append(f"`{command.qualified_name}`")
                         else:
                             commands_list.append(f"*`{command.qualified_name}`*")
-                    except CheckFailure:
+                    except (CheckFailure, DemocracivBotException):
                         commands_list.append(f"*`{command.qualified_name}`*")
 
             all_commands.append(' :: '.join(commands_list))
