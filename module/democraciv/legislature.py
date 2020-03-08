@@ -21,15 +21,15 @@ class PassScheduler(AnnouncementQueue):
         for obj in self._objects:
             if obj.is_vetoable:
                 if obj.submitter is not None:
-                    message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>) by {obj.submitter.name}")
-                else:
-                    message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>)")
-
-            else:
-                if obj.submitter is not None:
                     message.append(f"-  **{obj.name}** (<{obj.tiny_link}>) by {obj.submitter.name}")
                 else:
                     message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+
+            else:
+                if obj.submitter is not None:
+                    message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>) by {obj.submitter.name}")
+                else:
+                    message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>)")
 
         message.append("\nAll non-vetoable bills are now laws (marked as __underlined__),"
                        " the others were sent to the Ministry.")
