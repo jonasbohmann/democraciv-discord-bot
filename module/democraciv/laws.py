@@ -58,6 +58,9 @@ class Laws(commands.Cog, name='Law'):
         else:
             submitted_by_value = f"*Submitter left Democraciv* (during Session #{law.bill.session.id})"
 
+        if law.passed_on is None:
+            law.passed_on = law.bill.session.closed_on
+
         embed.add_field(name="Name", value=f"[{law.bill.name}]({law.bill.link})")
         embed.add_field(name="Description", value=law.bill.description, inline=False)
         embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
