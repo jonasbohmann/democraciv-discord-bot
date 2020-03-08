@@ -113,6 +113,11 @@ async def main():
     await db.execute("ALTER TABLE guild_tags_alias ADD COLUMN global bool;")
     await db.execute("ALTER TABLE guild_tags_alias ALTER COLUMN global SET DEFAULT false;")
 
+    tags = await db.fetch("SELECT * FROM guild_tags")
+
+    for tag in tags:
+        await db.execute("UPDATE guild_tags_alias SET global = $1 WHERE tag_id = $2", tag['global'], tag['id'])
+
     print("Added global column to guild_tags_alias and set new defaults.")
 
 
