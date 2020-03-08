@@ -41,12 +41,13 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
         else:
             justices = [justice.mention for justice in self.justice_role.members]
 
+        justices = justices or ['-']
+
+        judges = ([justice.mention for justice in self.judge_role.members])
+        judges = judges or ['-']
+
         embed.add_field(name="Supreme Court Justices", value='\n'.join(justices), inline=False)
-
-        embed.add_field(name="Appeals Court Judges",
-                        value='\n'.join([justice.mention for justice in self.judge_role.members]),
-                        inline=False)
-
+        embed.add_field(name="Appeals Court Judges", value='\n'.join(judges), inline=False)
         embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
                                             f"[Legal Code]({links.laws})\n"
                                             f"[Submit a new Case]({links.sue})\n"

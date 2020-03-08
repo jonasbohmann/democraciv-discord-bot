@@ -271,6 +271,10 @@ class Ministry(commands.Cog):
 
                 await ctx.send(":white_check_mark: All bills were passed into law.")
         else:
+            error = await self.verify_bill(bill)
+
+            if error:
+                return await ctx.send(f":x: {error}")
 
             are_you_sure = await ctx.send(f":information_source: Are you sure that you want to pass `{bill.name}` "
                                           f"(#{bill.id}) into law?")
