@@ -1,6 +1,7 @@
 import discord
 import datetime
 
+from util.exceptions import ForbiddenTask
 from util.flow import Flow
 from discord.ext import commands
 from util import utils, mk, exceptions
@@ -189,6 +190,9 @@ class Moderation(commands.Cog):
         if not content:
             return
 
+        if len(content) > 2048:
+            return await ctx.send(":x: Text cannot be more than 2048 characters.")
+
         pretty_anon = "Yes" if is_anon else "No"
 
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to send this report?"
@@ -200,12 +204,10 @@ class Moderation(commands.Cog):
             return
 
         if reaction:
-            embed = self.bot.embeds.embed_builder(title=":exclamation: New Report", description="")
+            embed = self.bot.embeds.embed_builder(title=":exclamation: New Report", description=content)
 
             if not is_anon:
                 embed.add_field(name="From", value=f"{ctx.author} ({ctx.author.id})")
-
-            embed.add_field(name="Content", value=content, inline=False)
 
             await mk.get_democraciv_channel(self.bot,
                                             mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
@@ -348,7 +350,7 @@ class Moderation(commands.Cog):
         try:
             deleted = await ctx.channel.purge(limit=amount, check=check)
         except discord.Forbidden:
-            raise exceptions.ForbiddenError(detail=":x: I'm missing Administrator permissions to do this!")
+            raise exceptions.ForbiddenError(task=ForbiddenTask.MESSAGE_DELETE)
 
         await ctx.send(f':white_check_mark: Deleted **{len(deleted)}** messages.', delete_after=5)
 

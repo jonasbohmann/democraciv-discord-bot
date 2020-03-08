@@ -235,6 +235,9 @@ class Bill(commands.Converter):
         else:
             return False
 
+    async def withdraw(self):
+        await self._bot.db.execute("DELETE FROM legislature_bills WHERE id = $1", self.id)
+
     async def pass_from_legislature(self):
         await self._bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true, voted_on_by_leg = true "
                                    "WHERE id = $1", self.id)
@@ -470,6 +473,9 @@ class Motion(commands.Converter):
             return self.title[:-to_remove] + '...'
         else:
             return self.title
+
+    async def withdraw(self):
+        await self._bot.db.execute("DELETE FROM legislature_motions WHERE id = $1", self.id)
 
     @classmethod
     async def convert(cls, ctx, argument: int):

@@ -206,7 +206,7 @@ class Legislature(commands.Cog):
         if active_leg_session is None:
             return await ctx.send(":x: There is no open session!")
 
-        if active_leg_session.status != SessionStatus.SUBMISSION_PERIOD:
+        if active_leg_session.status is not SessionStatus.SUBMISSION_PERIOD:
             return await ctx.send(":x: You can only update a session to be in Voting Period that was previously in the"
                                   "Submission Period!")
 
@@ -304,7 +304,7 @@ class Legislature(commands.Cog):
         embed.add_field(name="Status", value=session.status.value, inline=True)
         embed.add_field(name="Opened on (UTC)", value=session.opened_on.strftime("%A, %B %d %Y at %H:%M"), inline=False)
 
-        if session.status != SessionStatus.SUBMISSION_PERIOD:
+        if session.status is not SessionStatus.SUBMISSION_PERIOD:
             # Session is either closed or in Voting Period
             if session.voting_started_on is not None:
                 embed.add_field(name="Voting Started on (UTC)",
@@ -481,7 +481,7 @@ class Legislature(commands.Cog):
         if current_leg_session is None:
             return await ctx.send(":x: There is no active session!")
 
-        if current_leg_session.status != SessionStatus.SUBMISSION_PERIOD:
+        if current_leg_session.status is not SessionStatus.SUBMISSION_PERIOD:
             return await ctx.send(f":x: The submission period for session #{current_leg_session.id} is already over!")
 
         flow = Flow(self.bot, ctx)
@@ -532,7 +532,7 @@ class Legislature(commands.Cog):
             if last_session.id != _bill.session.id:
                 return f"You can only mark bills from the most recent session of the Legislature as passed."
 
-            if last_session.status == SessionStatus.SUBMISSION_PERIOD:
+            if last_session.status is SessionStatus.SUBMISSION_PERIOD:
                 return f"You cannot mark bills as passed while the session is still in submission period."
 
             if _bill.voted_on_by_leg:
@@ -637,7 +637,7 @@ class Legislature(commands.Cog):
 
         if self.speaker_role not in ctx.author.roles and self.vice_speaker_role not in ctx.author.roles:
             if ctx.author.id == bill.submitter.id:
-                if last_leg_session.status == SessionStatus.SUBMISSION_PERIOD:
+                if last_leg_session.status is SessionStatus.SUBMISSION_PERIOD:
                     allowed = True
                 else:
                     return await ctx.send(f":x: The original submitter can only withdraw "
@@ -665,7 +665,7 @@ class Legislature(commands.Cog):
 
         elif reaction:
             try:
-                await self.bot.db.execute("DELETE FROM legislature_bills WHERE id = $1", bill.id)
+                await bill.withdraw()
             except asyncpg.ForeignKeyViolationError:
                 return await ctx.send(":x: This bill is already a law and cannot be withdrawn.")
 
@@ -703,7 +703,7 @@ class Legislature(commands.Cog):
 
         if self.speaker_role not in ctx.author.roles and self.vice_speaker_role not in ctx.author.roles:
             if ctx.author.id == motion.submitter.id:
-                if last_leg_session.status == SessionStatus.SUBMISSION_PERIOD:
+                if last_leg_session.status is SessionStatus.SUBMISSION_PERIOD:
                     allowed = True
                 else:
                     return await ctx.send(f":x: The original submitter can only withdraw "
@@ -730,7 +730,7 @@ class Legislature(commands.Cog):
             return await ctx.send("Aborted.")
 
         elif reaction:
-            await self.bot.db.execute("DELETE FROM legislature_motions WHERE id = $1", motion.id)
+            await motion.withdraw()
             await ctx.send(f":white_check_mark: `{motion.title}` (#{motion.id}) was withdrawn "
                            f"from session #{last_leg_session.id}.")
 

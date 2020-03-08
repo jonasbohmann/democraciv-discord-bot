@@ -289,7 +289,5 @@ class Ministry(commands.Cog):
                 self.pass_scheduler.add(bill)
 
 
-
-
 def setup(bot):
     bot.add_cog(Ministry(bot))

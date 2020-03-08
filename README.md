@@ -35,7 +35,7 @@ for new uploads and new live broadcasts from the Democraciv YouTube channel
 ##  Installation
 
 *As some features are implemented in a way to fit the very specific needs and use cases of the Democraciv Discord, it is not recommended 
-to run the bot yourself as you might run into unexpected errors. Instead, invite the bot to your server with this
+to run the bot yourself as you might run into unexpected errors. Instead, invite the bot to your server with this 
  [link](https://discordapp.com/oauth2/authorize?client_id=486971089222631455&scope=bot&permissions=2081418487).*
 
 After installing all the dependencies, create a `token.py` in the config folder.
