@@ -213,7 +213,7 @@ class Ministry(commands.Cog):
                 return await ctx.send(f":x: {error}")
 
             are_you_sure = await ctx.send(f":information_source: Are you sure that you want to "
-                                          f"veto `{bill.name}` (#{bill.id}?")
+                                          f"veto `{bill.name}` (#{bill.id})?")
 
             reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 

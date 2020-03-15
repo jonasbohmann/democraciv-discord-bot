@@ -507,13 +507,13 @@ class Legislature(commands.Cog):
         if message is None:
             return
 
-        # Send DM to Cabinet after everything is done
-        if self.speaker_role not in ctx.author.roles and self.vice_speaker_role not in ctx.author.roles:
-            try:
+        try:
+            if self.speaker is not None:
                 await self.speaker.send(content=message, embed=embed)
+            if self.vice_speaker is not None:
                 await self.vice_speaker.send(content=message, embed=embed)
-            except discord.Forbidden:
-                pass
+        except discord.Forbidden:
+            pass
 
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
