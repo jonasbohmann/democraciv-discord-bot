@@ -1,9 +1,9 @@
-import datetime
-
-import discord
+import copy
 import nltk
 import typing
+import discord
 import asyncpg
+import datetime
 import collections
 
 from bs4 import BeautifulSoup, SoupStrainer
@@ -24,9 +24,11 @@ class AnnouncementQueue:
         self._channel: mk.DemocracivChannel = channel
         self._objects: typing.List[typing.Union[Bill, Law, Session]] = []
         self._last_addition = None
+        self._task = None
 
     def __del__(self):
-        self._wait.cancel()
+        if self._task is not None:
+            self._task.cancel()
 
     @property
     def channel(self) -> typing.Optional[discord.TextChannel]:
@@ -37,7 +39,8 @@ class AnnouncementQueue:
 
     def add(self, obj: typing.Union[Bill, Law, Session]):
         if len(self._objects) == 0:
-            self._wait.start()
+            self._task = copy.copy(self._wait)
+            self._task.start()
 
         self._objects.append(obj)
         self._last_addition = datetime.datetime.utcnow()
@@ -46,9 +49,9 @@ class AnnouncementQueue:
         message = self.get_message()
         await self.channel.send(message)
         self._objects.clear()
-        self._wait.cancel()
+        self._task.cancel()
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(seconds=10)
     async def _wait(self):
         if datetime.datetime.utcnow() - self._last_addition > datetime.timedelta(minutes=10):
             self._last_addition = None

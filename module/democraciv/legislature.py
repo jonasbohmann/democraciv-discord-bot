@@ -270,6 +270,9 @@ class Legislature(commands.Cog):
         elif session is None:
             session = await self.bot.laws.get_last_leg_session()
 
+            if session is None:
+                return await ctx.send(":x: There hasn't been any session yet.")
+
         if len(session.motions) > 0:
             pretty_motions = []
             for motion_id in session.motions:
