@@ -16,7 +16,7 @@ DEMOCRACIV_GUILD_ID = 208984105310879744  # Democraciv
 STARBOARD_ENABLED = True
 STARBOARD_CHANNEL = 680565146133069873  # The Discord channel for the starboard
 STARBOARD_REDDIT_SUMMARY_ENABLED = True  # Toggle weekly posts to r/REDDIT_SUBREDDIT with last week's starboard
-STARBOARD_MIN_STARS = 6  # How many star reactions does a message need to be added to the starboard
+STARBOARD_MIN_STARS = 5  # How many star reactions does a message need to be added to the starboard
 STARBOARD_MAX_AGE = 7  # Messages older than 7 days won't be allowed into the starboard
 STARBOARD_STAR_EMOJI = "\U00002b50"
 

@@ -379,6 +379,8 @@ class MultipleBills(commands.Converter):
         except ValueError:
             raise NotFoundError(f":x: At least one of those in {argument} is not a number.")
 
+        arguments = list(set(arguments))
+
         bills = []
         for argument in arguments:
             try:

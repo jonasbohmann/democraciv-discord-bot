@@ -145,12 +145,12 @@ class ErrorHandler(commands.Cog):
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.BadArgument):
-            await ctx.send(f":x: There was an error with one of the arguments you provided (or not provided),"
+            await ctx.send(f":x: There was an error with one of the arguments you provided,"
                            f" take a look at the help page for this command:")
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.BadUnionArgument):
-            await ctx.send(f":x: There was an error with the {error.param.name} argument you provided, "
+            await ctx.send(f":x: There was an error with the {error.param.name} argument you provided,"
                            f" take a look at the help page for this command:")
             return await ctx.send_help(ctx.command)
 

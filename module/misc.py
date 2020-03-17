@@ -72,7 +72,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
                 if not role.is_default():
                     string += f'{role.mention}, '
             if string == '':
-                return 'None'
+                return '-'
             else:
                 return string[:-2]
 

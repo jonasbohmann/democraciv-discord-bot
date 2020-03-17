@@ -518,6 +518,17 @@ class Legislature(commands.Cog):
         except discord.Forbidden:
             pass
 
+    @staticmethod
+    async def verify_bill(_bill: Bill, last_session: Session) -> typing.Optional[str]:
+        if last_session.id != _bill.session.id:
+            return f"You can only mark bills from the most recent session of the Legislature as passed."
+
+        if last_session.status is SessionStatus.SUBMISSION_PERIOD:
+            return f"You cannot mark bills as passed while the session is still in submission period."
+
+        if _bill.voted_on_by_leg:
+            return f"You already voted on this bill!"
+
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
@@ -527,38 +538,34 @@ class Legislature(commands.Cog):
         If the bill is vetoable, it sends the bill to the Ministry. If not, the bill automatically becomes law."""
 
         bill = bill_id  # At this point, bill_id is already a Bill object, so calling it ball_id makes no sense
-
         last_leg_session: Session = await self.bot.laws.get_last_leg_session()
-
-        async def verify_bill(_bill: Bill, last_session: Session) -> typing.Optional[str]:
-
-            if last_session.id != _bill.session.id:
-                return f"You can only mark bills from the most recent session of the Legislature as passed."
-
-            if last_session.status is SessionStatus.SUBMISSION_PERIOD:
-                return f"You cannot mark bills as passed while the session is still in submission period."
-
-            if _bill.voted_on_by_leg:
-                return f"You already voted on this bill!"
-
         flow = Flow(self.bot, ctx)
 
+        # Speaker wants to pass multiple bills
         if isinstance(bill, MultipleBills):
             error_messages = []
+
+            # Check if every bill the Speaker gave us can be passed
             for _bill in bill.bills:
-                error = await verify_bill(_bill, last_leg_session)
+                error = await self.verify_bill(_bill, last_leg_session)
                 if error:
-                    bill.bills.remove(_bill)
                     error_messages.append((_bill, error))
 
-            if error_messages:
-                error_messages = '\n'.join([f"-  {_bill.name} (#{_bill.id}): {reason}" for _bill, reason in error_messages])
-                await ctx.send(f":warning: The following bills can not be passed.\n```{error_messages}```")
+            # Remove bills that did not pass verify_bill from MultipleBills.bills list
+            bill.bills[:] = [b for b in bill.bills if b not in list(map(list, zip(*error_messages)))[0]]
 
-            pretty_bills = '\n'.join([f"-  {_bill.name} (#{_bill.id})" for _bill in bill.bills])
+            if error_messages:
+                error_messages = '\n'.join([f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
+                await ctx.send(f":warning: The following bills can not be passed.\n{error_messages}")
+
+            # If all bills failed verify_bills, return
+            if not bill.bills:
+                return
+
+            pretty_bills = '\n'.join([f"-  **{_bill.name}** (#{_bill.id})" for _bill in bill.bills])
             are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
                                           f" to mark the following bills as passed from the Legislature?"
-                                          f"\n```{pretty_bills}```")
+                                          f"\n{pretty_bills}")
 
             reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
@@ -569,18 +576,20 @@ class Legislature(commands.Cog):
                 return await ctx.send("Aborted.")
 
             elif reaction:
-                for _bill in bill.bills:
-                    await _bill.pass_from_legislature()
+                async with ctx.typing():
+                    for _bill in bill.bills:
+                        await _bill.pass_from_legislature()
 
-                    if not _bill.is_vetoable:
-                        await _bill.pass_into_law()
+                        if not _bill.is_vetoable:
+                            await _bill.pass_into_law()
 
-                    self.scheduler.add(_bill)
+                        self.scheduler.add(_bill)
 
-                await ctx.send(":white_check_mark: All bills were marked as passed from the Legislature.")
+                    await ctx.send(":white_check_mark: All bills were marked as passed from the Legislature.")
 
+        # Speaker wants to pass only 1 bill
         else:
-            error = await verify_bill(bill, last_leg_session)
+            error = await self.verify_bill(bill, last_leg_session)
 
             if error:
                 return await ctx.send(f":x: {error}")

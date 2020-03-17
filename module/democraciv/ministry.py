@@ -178,18 +178,24 @@ class Ministry(commands.Cog):
             for _bill in bill.bills:
                 error = await self.verify_bill(_bill)
                 if error:
-                    bill.bills.remove(_bill)
                     error_messages.append((_bill, error))
+
+            # Remove bills that did not pass verify_bill from MultipleBills.bills list
+            bill.bills[:] = [b for b in bill.bills if b not in list(map(list, zip(*error_messages)))[0]]
 
             if error_messages:
                 error_messages = '\n'.join(
-                    [f"-  {_bill.name} (#{_bill.id}): {reason}" for _bill, reason in error_messages])
-                await ctx.send(f":warning: The following bills can not be vetoed.\n```{error_messages}```")
+                    [f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
+                await ctx.send(f":warning: The following bills can not be vetoed.\n{error_messages}")
 
-            pretty_bills = '\n'.join([f"-  {_bill.name} (#{_bill.id})" for _bill in bill.bills])
+            # If all bills failed verify_bills, return
+            if not bill.bills:
+                return
+
+            pretty_bills = '\n'.join([f"-  **{_bill.name}** (#{_bill.id})" for _bill in bill.bills])
             are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
                                           f" to veto the following bills?"
-                                          f"\n```{pretty_bills}```")
+                                          f"\n{pretty_bills}")
 
             reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
@@ -200,11 +206,12 @@ class Ministry(commands.Cog):
                 return await ctx.send("Aborted.")
 
             elif reaction:
-                for _bill in bill.bills:
-                    await _bill.veto()
-                    self.veto_scheduler.add(_bill)
+                async with ctx.typing():
+                    for _bill in bill.bills:
+                        await _bill.veto()
+                        self.veto_scheduler.add(_bill)
 
-                await ctx.send(":white_check_mark: All bills were vetoed.")
+                    await ctx.send(":white_check_mark: All bills were vetoed.")
 
         else:
             error = await self.verify_bill(bill)
@@ -242,19 +249,26 @@ class Ministry(commands.Cog):
 
             for _bill in bill.bills:
                 error = await self.verify_bill(_bill)
+
                 if error:
-                    bill.bills.remove(_bill)
                     error_messages.append((_bill, error))
+
+            # Remove bills that did not pass verify_bill from MultipleBills.bills list
+            bill.bills[:] = [b for b in bill.bills if b not in list(map(list, zip(*error_messages)))[0]]
 
             if error_messages:
                 error_messages = '\n'.join(
-                    [f"-  {_bill.name} (#{_bill.id}): {reason}" for _bill, reason in error_messages])
-                await ctx.send(f":warning: The following bills can not be passed into law.\n```{error_messages}```")
+                    [f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
+                await ctx.send(f":warning: The following bills can not be passed into law:\n{error_messages}")
 
-            pretty_bills = '\n'.join([f"-  {_bill.name} (#{_bill.id})" for _bill in bill.bills])
+            # If all bills failed verify_bills, return
+            if not bill.bills:
+                return
+
+            pretty_bills = '\n'.join([f"-  **{_bill.name}** (#{_bill.id})" for _bill in bill.bills])
             are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
                                           f" to pass the following bills into law?"
-                                          f"\n```{pretty_bills}```")
+                                          f"\n{pretty_bills}")
 
             reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
@@ -265,11 +279,12 @@ class Ministry(commands.Cog):
                 return await ctx.send("Aborted.")
 
             elif reaction:
-                for _bill in bill.bills:
-                    await _bill.pass_into_law()
-                    self.pass_scheduler.add(_bill)
+                async with ctx.typing():
+                    for _bill in bill.bills:
+                        await _bill.pass_into_law()
+                        self.pass_scheduler.add(_bill)
 
-                await ctx.send(":white_check_mark: All bills were passed into law.")
+                    await ctx.send(":white_check_mark: All bills were passed into law.")
         else:
             error = await self.verify_bill(bill)
 
@@ -289,7 +304,7 @@ class Ministry(commands.Cog):
 
             elif reaction:
                 await bill.pass_into_law()
-                await ctx.send(":white_check_mark: Passed into law.")
+                await ctx.send(f":white_check_mark: `{bill.name}` was passed into law.")
                 self.pass_scheduler.add(bill)
 
 
