@@ -140,16 +140,16 @@ class Log(commands.Cog):
                                                               member.guild.id)).format(member=member.mention)
                 await welcome_channel.send(welcome_message)
 
-            if await self.bot.checks.is_default_role_enabled(member.guild.id):
-                default_role = await self.bot.db.fetchval("SELECT defaultrole_role FROM guilds WHERE id = $1",
-                                                          member.guild.id)
-                default_role = member.guild.get_role(default_role)
+        if await self.bot.checks.is_default_role_enabled(member.guild.id):
+            default_role = await self.bot.db.fetchval("SELECT defaultrole_role FROM guilds WHERE id = $1",
+                                                      member.guild.id)
+            default_role = member.guild.get_role(default_role)
 
-                if default_role is not None:
-                    try:
-                        await member.add_roles(default_role)
-                    except discord.Forbidden:
-                        raise exceptions.ForbiddenError(ForbiddenTask.ADD_ROLE, default_role.name)
+            if default_role is not None:
+                try:
+                    await member.add_roles(default_role)
+                except discord.Forbidden:
+                    raise exceptions.ForbiddenError(ForbiddenTask.ADD_ROLE, default_role.name)
 
         if not await self.bot.checks.is_logging_enabled(member.guild.id):
             return
