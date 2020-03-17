@@ -335,7 +335,7 @@ class Moderation(commands.Cog):
 
     @commands.command(name="clear")
     @commands.guild_only()
-    @commands.has_permissions(manage_messages=True)
+    @commands.has_guild_permissions(manage_messages=True)
     async def clear(self, ctx, amount: int, target: discord.Member = None):
         """Purge an amount of messages in the current channel"""
         if amount > 500 or amount < 0:
@@ -356,7 +356,7 @@ class Moderation(commands.Cog):
 
     @commands.command(name='mute')
     @commands.guild_only()
-    @commands.has_permissions(manage_roles=True)
+    @commands.has_guild_permissions(manage_roles=True)
     async def mute(self, ctx, member: discord.Member, *, reason: str = None):
         """Mute a member"""
 
@@ -402,7 +402,7 @@ class Moderation(commands.Cog):
 
     @commands.command(name='unmute')
     @commands.guild_only()
-    @commands.has_permissions(manage_roles=True)
+    @commands.has_guild_permissions(manage_roles=True)
     async def unmute(self, ctx, member: discord.Member):
         """Unmute a member"""
 

@@ -96,6 +96,11 @@ class Misc(commands.Cog, name="Miscellaneous"):
         embed.set_thumbnail(url=member.avatar_url_as(static_format="png"))
         await ctx.send(embed=embed)
 
+    @whois.error
+    async def whois_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            return
+
     @commands.command(name='avatar')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
@@ -109,6 +114,11 @@ class Misc(commands.Cog, name="Miscellaneous"):
                                               description=f"[Link]({avatar_png})", has_footer=False)
         embed.set_image(url=str(avatar_png))
         await ctx.send(embed=embed)
+
+    @avatar.error
+    async def avatar_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            return
 
     @staticmethod
     def get_spotify_connection(member: discord.Member):
@@ -150,6 +160,11 @@ class Misc(commands.Cog, name="Miscellaneous"):
         embed.add_field(name="Album", value=member_spotify.album, inline=True)
         embed.set_thumbnail(url=member_spotify.album_cover_url)
         await ctx.send(embed=embed)
+
+    @spotify.error
+    async def spotify_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            return
 
     @commands.command(name='veterans')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -365,6 +380,11 @@ class Misc(commands.Cog, name="Miscellaneous"):
                                                                                          f"the vibe check!")
         embed.set_image(url=image)
         await ctx.send(embed=embed)
+
+    @vibecheck.error
+    async def vibecheck_error(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            return
 
     @commands.command(name='invite')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
