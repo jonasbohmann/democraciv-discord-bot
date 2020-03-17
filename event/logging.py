@@ -300,7 +300,7 @@ class Log(commands.Cog):
 
         embed_fields = {
             "Role": [role.name, True],
-            "Creation Date": [datetime.datetime.strftime(role.created_at, "%d.%m.%Y, %H:%M:%S"), True],
+            "Created On": [datetime.datetime.strftime(role.created_at, "%B %d, %Y"), True],
             "ID": [role.id, False]
         }
 

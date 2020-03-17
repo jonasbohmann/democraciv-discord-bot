@@ -223,8 +223,7 @@ class Guild(commands.Cog):
             embed = self.bot.embeds.embed_builder(title=f"Logging-Excluded Channels on {ctx.guild.name}",
                                                   description=help_description)
             embed.add_field(name="Currently Excluded Channels", value=current_excluded_channels_by_name)
-            await ctx.send(embed=embed)
-            return
+            return await ctx.send(embed=embed)
 
         else:
             try:
@@ -245,9 +244,6 @@ class Guild(commands.Cog):
                     return await ctx.send(f":white_check_mark: {channel_object.mention} is no longer excluded from"
                                           f" showing up in {current_logging_channel.mention}!")
 
-                else:
-                    return await ctx.send(f":x: Unexpected error occurred.")
-
             # Add channel
             add_status = await self.bot.db.execute("UPDATE guilds SET logging_excluded = array_append(logging_excluded,"
                                                    " $2) WHERE id = $1"
@@ -256,10 +252,6 @@ class Guild(commands.Cog):
             if add_status == "UPDATE 1":
                 await ctx.send(f":white_check_mark: Excluded channel {channel_object.mention} from showing up in "
                                f"{current_logging_channel.mention}!")
-            else:
-                await ctx.send(f":x: Unexpected error occurred.")
-
-            return
 
     @guild.command(name='defaultrole')
     @commands.guild_only()

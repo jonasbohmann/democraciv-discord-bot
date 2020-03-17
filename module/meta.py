@@ -23,7 +23,7 @@ class Meta(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def about(self, ctx):
         """About this bot"""
-        invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(2081418487))
+        invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
 
         embed = self.bot.embeds.embed_builder(title='About This Bot', description=f"[Invite this bot to your"
                                                                                   f" Discord Guild.]({invite_url})")
@@ -113,7 +113,7 @@ class Meta(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def addme(self, ctx):
         """Invite this bot to your Discord server"""
-        invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(2081418487))
+        invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
         embed = self.bot.embeds.embed_builder(title='Add this bot to your own Discord server', description=invite_url)
         await ctx.send(embed=embed)
 
