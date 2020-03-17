@@ -106,13 +106,13 @@ You can configure everything else that is YouTube related in the `config.py`.
 
 
 ##  Modules
-You can add and remove modules by adding or removing them from `initial_extensions` in `client.py`.
+You can add and remove modules by adding or removing them from `initial_extensions` in `bot.py`.
 
 Module | Description 
 ------------ | ------------- |
-module.about | Commands regarding the bot itself |
 module.admin | Debug commands for the developer |
 module.misc | Miscellaneous commands | 
+module.meta | Commands regarding the bot itself |
 module.tags | Tags: Users can save text for later retrieval to command-like tags | 
 module.guild | Configure various functions of this bot for your guild |
 module.roles | Add or remove roles from you |
