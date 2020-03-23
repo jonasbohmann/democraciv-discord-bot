@@ -93,8 +93,7 @@ class Ministry(commands.Cog):
 
         if len(open_bills) > 0:
             for bill in open_bills:
-                pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link}) "
-                                    f"from Session #{bill.session.id}")
+                pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link})")
 
         if not pretty_bills:
             return None
@@ -180,10 +179,10 @@ class Ministry(commands.Cog):
                 if error:
                     error_messages.append((_bill, error))
 
-            # Remove bills that did not pass verify_bill from MultipleBills.bills list
-            bill.bills[:] = [b for b in bill.bills if b not in list(map(list, zip(*error_messages)))[0]]
-
             if error_messages:
+                # Remove bills that did not pass verify_bill from MultipleBills.bills list
+                bill.bills[:] = [b for b in bill.bills if b not in list(map(list, zip(*error_messages)))[0]]
+
                 error_messages = '\n'.join(
                     [f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
                 await ctx.send(f":warning: The following bills can not be vetoed.\n{error_messages}")
@@ -253,10 +252,10 @@ class Ministry(commands.Cog):
                 if error:
                     error_messages.append((_bill, error))
 
-            # Remove bills that did not pass verify_bill from MultipleBills.bills list
-            bill.bills[:] = [b for b in bill.bills if b not in list(map(list, zip(*error_messages)))[0]]
-
             if error_messages:
+                # Remove bills that did not pass verify_bill from MultipleBills.bills list
+                bill.bills[:] = [b for b in bill.bills if b not in list(map(list, zip(*error_messages)))[0]]
+
                 error_messages = '\n'.join(
                     [f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
                 await ctx.send(f":warning: The following bills can not be passed into law:\n{error_messages}")

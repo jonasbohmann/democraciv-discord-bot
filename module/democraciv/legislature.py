@@ -551,10 +551,10 @@ class Legislature(commands.Cog):
                 if error:
                     error_messages.append((_bill, error))
 
-            # Remove bills that did not pass verify_bill from MultipleBills.bills list
-            bill.bills[:] = [b for b in bill.bills if b not in list(map(list, zip(*error_messages)))[0]]
-
             if error_messages:
+                # Remove bills that did not pass verify_bill from MultipleBills.bills list
+                bill.bills[:] = [b for b in bill.bills if b not in list(map(list, zip(*error_messages)))[0]]
+
                 error_messages = '\n'.join([f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
                 await ctx.send(f":warning: The following bills can not be passed.\n{error_messages}")
 
