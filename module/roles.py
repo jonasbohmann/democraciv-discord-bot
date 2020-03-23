@@ -35,7 +35,7 @@ class Roles(commands.Cog):
     @commands.group(name='role', aliases=['roles'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def roles(self, ctx, role: str = None):
+    async def roles(self, ctx, *, role: str = None):
         """List all roles or get/lose a role by specifying the role's name
 
         ****Usage:****
