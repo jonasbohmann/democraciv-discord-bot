@@ -44,7 +44,7 @@ class Roles(commands.Cog):
         """
 
         if role:
-            await self.togglerole(ctx, role)
+            await self.toggle_role(ctx, role)
 
         else:
             available_roles = await self.get_roles(ctx)
@@ -63,7 +63,7 @@ class Roles(commands.Cog):
             embed.add_field(name="Available Roles", value='\n'.join(embed_message))
             await ctx.send(embed=embed)
 
-    async def togglerole(self, ctx, role: str):
+    async def toggle_role(self, ctx, role: str):
         """Assigns or removes a role from someone"""
 
         available_roles = await self.get_roles(ctx)

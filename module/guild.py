@@ -21,10 +21,10 @@ class Guild(commands.Cog):
         else:
             return f"{config.GUILD_SETTINGS_DISABLED}{config.GUILD_SETTINGS_GRAY_ENABLED}"
 
-    @commands.group(name='guild', case_insensitive=True, invoke_without_command=True)
+    @commands.group(name='guild', aliases=['server'], case_insensitive=True, invoke_without_command=True)
     @commands.guild_only()
     async def guild(self, ctx):
-        """Summary of this guild's configuration"""
+        """Statistics and information about this guild"""
 
         is_welcome_enabled = await self.bot.checks.is_welcome_message_enabled(ctx.guild.id)
         is_welcome_enabled = self.emojiy_settings(is_welcome_enabled)

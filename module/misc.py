@@ -220,8 +220,12 @@ class Misc(commands.Cog, name="Miscellaneous"):
     @commands.command()
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def lyrics(self, ctx, *, query: str = None):
-        """Find lyrics for a song. Leave 'query' blank to get the lyrics for
-        the song you're listening to on Spotify right now"""
+        """Find lyrics for a song
+
+        **Usage:**
+            `-lyrics` to get the lyrics to the song you're currently listening to on Spotify
+            `-lyrics <song>` to get the lyrics for a specific song
+        """
 
         if query is None:
             now_playing = self.get_spotify_connection(ctx.author)
