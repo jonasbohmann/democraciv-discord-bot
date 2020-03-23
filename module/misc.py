@@ -275,7 +275,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         if tiny_url is None:
             return await ctx.send(":x: tinyurl.com returned an error!")
 
-        await ctx.send(tiny_url)
+        await ctx.send(f"<{tiny_url}>")
 
     @commands.command(name='random')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

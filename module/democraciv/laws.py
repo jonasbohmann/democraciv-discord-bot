@@ -168,7 +168,7 @@ class Laws(commands.Cog, name='Law'):
                                       new_link, tiny_url, law.bill.id)
 
             await self.gov_announcements_channel.send(f"Cabinet Member {ctx.author} has amended `{law.bill.name}`. The"
-                                                      f"new link for this law is: {tiny_url}")
+                                                      f"new link for this law is: <{tiny_url}>")
 
             return await ctx.send(f":white_check_mark: Changed the link to `{law.bill.id}` #{law.id}).")
 
