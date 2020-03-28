@@ -32,7 +32,7 @@ class Meta(commands.Cog):
         embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=True)
         embed.add_field(name='Guilds', value=str(len(self.bot.guilds)), inline=True)
         embed.add_field(name='Users', value=str(len(self.bot.users)), inline=True)
-        embed.add_field(name='Prefix', value=config.BOT_PREFIX, inline=True)
+        embed.add_field(name='Prefix', value=f"`{config.BOT_PREFIX}`", inline=True)
         embed.add_field(name='Uptime', value=self.bot.uptime, inline=True)
         embed.add_field(name='Ping', value=(str(self.bot.ping) + 'ms'), inline=True)
         embed.add_field(name="Source Code", value="[Link](https://github.com/jonasbohmann/democraciv-discord-bot)",

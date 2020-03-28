@@ -128,12 +128,10 @@ class Moderation(commands.Cog):
             return
 
         if mod_role in message.role_mentions:
-            embed = self.bot.embeds.embed_builder(title=f":pushpin: New Request in #{message.channel.name}",
-                                                  description=f"[Jump to message.]"
-                                                              f"({message.jump_url}"
-                                                              f")")
-            embed.add_field(name="From", value=message.author.mention)
-            embed.add_field(name="Request", value=message.content, inline=False)
+            embed = self.bot.embeds.embed_builder(title=f":pushpin:  New Request in #{message.channel.name}",
+                                                  description=message.content)
+            embed.set_author(name=message.author.name, icon_url=message.author.avatar_url_as(static_format='png'))
+            embed.add_field(name="Original", value=f"[Jump!]({message.jump_url})")
             await mk.get_democraciv_channel(self.bot,
                                             mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(embed=embed)
 

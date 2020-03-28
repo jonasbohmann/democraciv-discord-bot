@@ -103,10 +103,22 @@ class LawUtils:
             if response.status == 200:
                 text = await response.read()
 
+        if not text:
+            return None
+
         strainer = SoupStrainer(property="og:title")  # Only parse the title property to save time
         soup = BeautifulSoup(text, "lxml", parse_only=strainer)  # Use lxml parser to speed things up
 
-        bill_title = soup.find("meta")['content']  # Get title of Google Docs website
+        if soup is None:
+            return None
+
+        try:
+            bill_title = soup.find("meta")['content']  # Get title of Google Docs website
+        except KeyError:
+            return None
+
+        if bill_title is None:
+            return None
 
         if bill_title.endswith(' - Google Docs'):
             bill_title = bill_title[:-14]
@@ -124,10 +136,22 @@ class LawUtils:
             if response.status == 200:
                 text = await response.read()
 
+        if not text:
+            return None
+
         strainer = SoupStrainer(property="og:description")
         soup = BeautifulSoup(text, "lxml", parse_only=strainer)
 
-        bill_description = soup.find("meta")['content']
+        if soup is None:
+            return None
+
+        try:
+            bill_description = soup.find("meta")['content']
+        except KeyError:
+            return None
+
+        if bill_description is None:
+            return None
 
         # If the description is long enough, Google adds a ... to the end of it
         if bill_description.endswith('...'):
