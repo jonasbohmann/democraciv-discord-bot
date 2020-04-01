@@ -537,7 +537,8 @@ class Moderation(commands.Cog):
         propaganda_channel = discord.utils.get(self.bot.democraciv_guild_object.text_channels, name="propaganda")
 
         if propaganda_channel is not None:
-            await propaganda_channel.edit(name=f"mk{mk.MARK}-propaganda", category=government_category)
+            await propaganda_channel.edit(name=f"mk{mk.MARK}-propaganda", category=government_category,
+                                          overwrites={everyone_role: everyone_perms, archives_role: archive_perms})
 
         await government_category.edit(name=f"MK{mk.MARK} Archives", position=6)
         await ctx.send(":white_check_mark: Done.")
