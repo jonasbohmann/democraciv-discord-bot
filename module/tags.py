@@ -420,8 +420,10 @@ class Tags(commands.Cog, name="Tag"):
         url_endings = ('.jpeg', '.jpg', '.avi', '.png', '.gif', '.webp', '.mp4', '.mp3', '.bmp', '.img',
                        '.svg', '.mov', '.flv', '.wmv')
 
-        if url_pattern.match(tag_content) and (tag_content.endswith(url_endings) or any(s in tag_content for
-                                                                                        s in ['youtube', 'youtu.be'])):
+        if url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings)
+                                               or any(s in tag_content for
+                                                      s in ['youtube', 'youtu.be', 'tenor.com',
+                                                            'gph.is', 'giphy.com'])):
             return True
 
         elif emoji_pattern.match(tag_content):
