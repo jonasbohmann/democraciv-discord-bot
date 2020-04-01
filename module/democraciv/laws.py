@@ -21,16 +21,17 @@ class Laws(commands.Cog, name='Law'):
         return mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
     async def paginate_all_laws(self, ctx):
-        all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws ORDER BY law_id")
+        async with ctx.typing():
+            all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws ORDER BY law_id")
 
-        pretty_laws = []
+            pretty_laws = []
 
-        for record in all_laws:
-            law = await Law.convert(MockContext(self.bot), record['law_id'])
-            pretty_laws.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.link})\n")
+            for record in all_laws:
+                law = await Law.convert(MockContext(self.bot), record['law_id'])
+                pretty_laws.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.link})\n")
 
-        if not pretty_laws:
-            pretty_laws = ['There are no laws yet.']
+            if not pretty_laws:
+                pretty_laws = ['There are no laws yet.']
 
         pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}",
                       show_index=False, show_amount_of_pages=True,
@@ -76,24 +77,25 @@ class Laws(commands.Cog, name='Law'):
 
         async with ctx.typing():
             # First, search by name
-            results = await self.bot.laws.search_law_by_name(' '.join(query))
+            # results = await self.bot.laws.search_law_by_name(' '.join(query))
 
             # If the direct lookup by name didn't match anything, search for similar tag of each word of :param query
-            if not results:
-                results = []
-                for substring in query:
-                    result = await self.bot.laws.search_law_by_tag(substring)
-                    if result:
-                        results.append(result)
+            # if not results:
 
-                # As LawUtils.search_by_tag() returns a list of matches, put all elements of all sublists
-                # into the results list
-                results = [item for sublist in results for item in sublist]
+            results = []
+            for substring in query:
+                result = await self.bot.laws.search_law_by_tag(substring)
+                if result:
+                    results.append(result)
 
-                # Eliminate duplicate results
-                results = list(set(results))
+            # As LawUtils.search_by_tag() returns a list of matches, put all elements of all sublists
+            # into the results list
+            results = [item for sublist in results for item in sublist]
 
-            if not results or len(results) == 0 or results[0] == []:
+            # Eliminate duplicate results
+            results = list(set(results))
+
+            if not results or results[0] == []:
                 results = ['Nothing found.']
 
         pages = Pages(ctx=ctx, entries=results, show_entry_count=False, title=f"Search Results for '{' '.join(query)}'",
