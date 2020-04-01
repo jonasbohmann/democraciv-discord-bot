@@ -680,7 +680,7 @@ class Legislature(commands.Cog):
         if not allowed:
             return await ctx.send(":x: Only the Cabinet and the original submitter of this bill can withdraw it!")
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to withdraw the **bill** "
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to withdraw the bill "
                                       f"`{bill.name}` (#{bill.id}) from session #{last_leg_session.id}?")
 
         flow = Flow(self.bot, ctx)
@@ -746,7 +746,7 @@ class Legislature(commands.Cog):
         if not allowed:
             return await ctx.send(":x: Only the Cabinet and the original submitter of this motion can withdraw it!")
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to withdraw the **motion**"
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to withdraw the motion"
                                       f" `{motion.title}` (#{motion.id}) from session #{last_leg_session.id}?")
 
         flow = Flow(self.bot, ctx)
@@ -790,10 +790,23 @@ class Legislature(commands.Cog):
         if await bill.is_law() or bill.passed_ministry:
             return await ctx.send(":x: This bill is already law.")
 
-        await bill.pass_into_law(override=True)
-        self.override_scheduler.add(bill)
-        await ctx.send(f":white_check_mark: The Ministry's veto of `{bill.name}` was overridden and the bill was passed"
-                       f"into law.")
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to override the Ministry's veto"
+                                      f" of `{bill.name}` (#{bill.name})?")
+
+        flow = Flow(self.bot, ctx)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+
+        if reaction is None:
+            return
+
+        if not reaction:
+            return await ctx.send("Aborted.")
+
+        elif reaction:
+            await bill.pass_into_law(override=True)
+            self.override_scheduler.add(bill)
+            await ctx.send(f":white_check_mark: The Ministry's veto of `{bill.name}` was overridden and "
+                           f"the bill was passed into law.")
 
     @legislature.command(name='stats')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
