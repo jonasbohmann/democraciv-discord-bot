@@ -1,3 +1,4 @@
+import discord
 from discord.ext import commands
 
 from config import config
@@ -20,6 +21,16 @@ class ANewDawn(commands.Cog, name="A New Dawn"):
 
         for message in messages:
             await message.add_reaction("\U0001f329")
+
+    @commands.command(name='excommunicate')
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    @utils.has_any_democraciv_role(mk.DemocracivRole.COUNCIL_OF_SAGES, mk.DemocracivRole.SUPREME_LEADER,
+                                   mk.DemocracivRole.WES_ROLE, mk.DemocracivRole.QI_ROLE)
+    async def excommunicate(self, ctx, *, person: discord.Member):
+        """Heretic!"""
+        role = ctx.guild.get_role(694972373824307341)
+        await ctx.send(f"\U0001f329 {person.display_name} is a heretic, get him!")
+        await person.add_roles(role)
 
 
 def setup(bot):
