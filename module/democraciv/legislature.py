@@ -266,7 +266,7 @@ class Legislature(commands.Cog):
 
         pages = Pages(ctx=ctx, entries=pretty_sessions, show_entry_count=False,
                       title=f"All Sessions of the {mk.NATION_ADJECTIVE} Legislature",
-                      show_index=False, footer_text=footer)
+                      show_index=False, footer_text=footer, show_amount_of_pages=True)
         await pages.paginate()
 
     @legislature.command(name='session', aliases=['s'])

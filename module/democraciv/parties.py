@@ -269,16 +269,16 @@ class Party(commands.Cog, name='Political Parties'):
 
         """
 
+        async with self.bot.db.acquire() as connection:
+            async with connection.transaction():
+                await connection.execute("DELETE FROM party_alias WHERE party_id = $1", party.role.id)
+                await connection.execute("DELETE FROM parties WHERE id = $1", party.role.id)
+
         if hard:
             try:
                 await party.role.delete()
             except discord.Forbidden:
                 raise exceptions.ForbiddenError(ForbiddenTask.DELETE_ROLE, detail=party.role.name)
-
-        async with self.bot.db.acquire() as connection:
-            async with connection.transaction():
-                await connection.execute("DELETE FROM party_alias WHERE party_id = $1", party.role.id)
-                await connection.execute("DELETE FROM parties WHERE id = $1", party.role.id)
 
         await ctx.send(f':white_check_mark: `{party.role.name}` and all its aliases were deleted.')
 
