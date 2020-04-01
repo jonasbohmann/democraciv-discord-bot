@@ -246,8 +246,8 @@ class Bill(commands.Converter):
         await self._bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
                                    "false WHERE id = $1", self.id)
 
-    async def pass_into_law(self):
-        if self.is_vetoable:
+    async def pass_into_law(self, override: bool = False):
+        if self.is_vetoable and not override:
             await self._bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true,"
                                        " has_passed_ministry = true WHERE id = $1", self.id)
 

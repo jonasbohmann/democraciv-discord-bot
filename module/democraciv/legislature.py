@@ -36,12 +36,29 @@ class PassScheduler(AnnouncementQueue):
         return '\n'.join(message)
 
 
+class OverrideScheduler(AnnouncementQueue):
+
+    def get_message(self) -> str:
+        message = [f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
+                   f"the Ministry's **veto of the following bills were overridden** by the Legislature.\n"]
+
+        for obj in self._objects:
+            if obj.submitter is not None:
+                message.append(f"-  **{obj.name}** (<{obj.tiny_link}>) by {obj.submitter.name}")
+            else:
+                message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+
+        message.append("\nAll of the above bills were thus passed into law.")
+        return '\n'.join(message)
+
+
 class Legislature(commands.Cog):
     """Allows the Cabinet to organize Legislative Sessions and their submitted bills and motions."""
 
     def __init__(self, bot):
         self.bot = bot
         self.scheduler = PassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+        self.override_scheduler = OverrideScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
     @property
     def speaker(self) -> typing.Optional[discord.Member]:
@@ -755,6 +772,28 @@ class Legislature(commands.Cog):
                     await self.vice_speaker.send(msg)
                 except discord.Forbidden:
                     pass
+
+    @legislature.command(name='override', aliases=['ov'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    async def override(self, ctx, bill_id: Bill):
+        """Override a vetoed bill"""
+
+        bill = bill_id
+
+        if not bill.passed_leg:
+            return await ctx.send(":x: This bill did not pass the Legislature.")
+
+        if not bill.voted_on_by_ministry:
+            return await ctx.send(":x: The Ministry did not vote on this bill yet.")
+
+        if await bill.is_law() or bill.passed_ministry:
+            return await ctx.send(":x: This bill is already law.")
+
+        await bill.pass_into_law(override=True)
+        self.override_scheduler.add(bill)
+        await ctx.send(f":white_check_mark: The Ministry's veto of `{bill.name}` was overridden and the bill was passed"
+                       f"into law.")
 
     @legislature.command(name='stats')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
