@@ -131,6 +131,27 @@ class Flow:
         else:
             return text.content
 
+    async def get_tag_content(self, timeout: int) -> typing.Optional[str]:
+        """Waits for a reply by the original user in the original channel and returns reply as string.
+
+           Returns None if the user did nothing.
+
+           Uploaded images are allowed."""
+
+        try:
+            message = await self.bot.wait_for('message',
+                                              check=self.bot.checks.wait_for_message_check(self.ctx),
+                                              timeout=timeout)
+        except asyncio.TimeoutError:
+            await self.ctx.send("Aborted.")
+            return None
+
+        if not message.content:
+            if message.attachments:
+                return message.attachments[0].url
+        else:
+            return message.content
+
     async def get_new_role(self, timeout: int) -> typing.Union[discord.Role, str, None]:
         """Waits for a reply by the original user in the original channel and coverts reply to a role object
            reaction has been added by the original user.

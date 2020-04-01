@@ -55,10 +55,10 @@ class Tags(commands.Cog, name="Tag"):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def local(self, ctx):
-        """List only the tags that were made on this guild"""
+        """List all non-global tags on this guild"""
 
-        all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 ORDER BY uses desc",
-                                           ctx.guild.id)
+        all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 AND global = false "
+                                           "ORDER BY uses desc", ctx.guild.id)
 
         pretty_tags = []
 
@@ -218,7 +218,7 @@ class Tags(commands.Cog, name="Tag"):
 
         flow = Flow(self.bot, ctx)
 
-        await ctx.send(":information_source: Reply with the name of the tag. This will be used to access the"
+        await ctx.send(":information_source: Reply with the **name** of the tag. This will be used to access the"
                        " tag via the bot's prefix.")
 
         name = await flow.get_text_input(300)
@@ -229,14 +229,14 @@ class Tags(commands.Cog, name="Tag"):
         if not await self.validate_tag_name(ctx, name.lower()):
             return
 
-        await ctx.send(":information_source: Reply with the full title of the tag.")
+        await ctx.send(":information_source: Reply with the **title** of the tag.")
         title = await flow.get_text_input(300)
 
         if title is None:
             return
 
-        await ctx.send(":information_source: Reply with the content of the tag.")
-        content = await flow.get_text_input(300)
+        await ctx.send(":information_source: Reply with the **content** of the tag.")
+        content = await flow.get_tag_content(300)
 
         if content is None:
             return
@@ -296,14 +296,14 @@ class Tags(commands.Cog, name="Tag"):
         pretty_aliases = (', '.join([f"`{ctx.prefix}{alias}`" for alias in tag.aliases])) or 'None'
 
         embed = self.bot.embeds.embed_builder(title="Tag Info", description="")
-        embed.add_field(name="Name", value=tag.title, inline=False)
+        embed.add_field(name="Title", value=tag.title, inline=False)
 
         if tag.author is not None:
             embed.add_field(name="Author", value=tag.author.mention, inline=False)
             embed.set_author(name=tag.author.name, icon_url=tag.author.avatar_url_as(static_format="png"))
 
         embed.add_field(name="Global Tag", value=str(tag.is_global), inline=True)
-        embed.add_field(name="Emoji or Media Tag", value=str(self.is_emoji_or_media_url(tag.content)),
+        embed.add_field(name="Embedded Tag", value=str(not self.is_emoji_or_media_url(tag.content)),
                         inline=True)
         embed.add_field(name="Uses", value=str(tag.uses), inline=False)
         embed.add_field(name="Aliases", value=pretty_aliases, inline=False)
@@ -326,7 +326,7 @@ class Tags(commands.Cog, name="Tag"):
 
         await self.bot.db.execute("UPDATE guild_tags SET author = $1 WHERE id = $2", ctx.author.id, tag.id)
 
-        return await ctx.send(f":white_check_mark: You now own `{ctx.prefix}{tag.name}`.")
+        return await ctx.send(f":white_check_mark: You now own `{config.BOT_PREFIX}{tag.name}`.")
 
     @tags.command(name="raw")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -374,13 +374,13 @@ class Tags(commands.Cog, name="Tag"):
             # Local -> Global
             await self.bot.db.execute("UPDATE guild_tags SET global = true WHERE id = $1", tag.id)
             await self.bot.db.execute("UPDATE guild_tags_alias SET global = true WHERE tag_id = $1", tag.id)
-            await ctx.send(f":white_check_mark: `{ctx.prefix}{tag.name}` is now a global tag. ")
+            await ctx.send(f":white_check_mark: `{config.BOT_PREFIX}{tag.name}` is now a global tag. ")
 
         else:
             # Global -> Local
             await self.bot.db.execute("UPDATE guild_tags SET global = false WHERE id = $1", tag.id)
             await self.bot.db.execute("UPDATE guild_tags_alias SET global = false WHERE tag_id = $1", tag.id)
-            await ctx.send(f":white_check_mark: `{ctx.prefix}{tag.name}` is now a local tag.")
+            await ctx.send(f":white_check_mark: `{config.BOT_PREFIX}{tag.name}` is now a local tag.")
 
     @tags.command(name="remove", aliases=['delete'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

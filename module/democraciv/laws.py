@@ -33,7 +33,7 @@ class Laws(commands.Cog, name='Law'):
             pretty_laws = ['There are no laws yet.']
 
         pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}",
-                      show_index=False, show_amount_of_pages=False,
+                      show_index=False, show_amount_of_pages=True,
                       footer_text=f"Use {self.bot.commands_prefix}law <id> to get more details about a law.", )
         await pages.paginate()
 
