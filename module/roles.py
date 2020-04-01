@@ -103,7 +103,7 @@ class Roles(commands.Cog):
     async def addrole(self, ctx):
         """Add a role to this guild's `-role` list"""
 
-        await ctx.send(":information_source: Answer with the name of the role you want to create:")
+        await ctx.send(":information_source: Reply with the name of the role you want to create.")
 
         flow = Flow(self.bot, ctx)
         role_name = await flow.get_new_role(240)
@@ -124,7 +124,7 @@ class Roles(commands.Cog):
                 f":white_check_mark: I'll use the **pre-existing role** named "
                 f"`{discord_role.name}` for this.")
 
-        await ctx.send(":information_source: Answer with a short message the user should see when they get the role.")
+        await ctx.send(":information_source: Reply with a short message the user should see when they get the role.")
 
         role_join_message = await flow.get_text_input(300)
 

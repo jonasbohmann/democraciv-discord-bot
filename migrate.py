@@ -22,7 +22,7 @@ async def main():
             await connection.execute("ALTER TABLE guilds ALTER welcome SET DEFAULT false;")
             await connection.execute("ALTER TABLE guilds ALTER logging SET DEFAULT false;")
             await connection.execute("ALTER TABLE guilds ALTER defaultrole SET DEFAULT false;")
-            await connection.execute("ALTER TABLE guilds ALTER logging_excluded SET DEFAULT ARRAY[0];")
+            await connection.execute("ALTER TABLE guilds ALTER logging_excluded SET DEFAULT '{}';")
             print("Added defaults to guilds table.")
 
             # Fix parties new column names

@@ -97,7 +97,7 @@ class Guild(commands.Cog):
 
                 # Get new welcome channel
                 await ctx.send(
-                    ":information_source: Answer with the name of the channel the welcome module should use:")
+                    ":information_source: Reply with the name of the channel the welcome module should use.")
 
                 channel_object = await flow.get_new_channel(240)
 
@@ -112,9 +112,9 @@ class Guild(commands.Cog):
 
                 # Get new welcome message
                 await ctx.send(
-                    f":information_source: Answer with the message that should be sent to {channel_object.mention} "
-                    f"every time a new member joins.\n\nWrite '{{member}}' "
-                    f"to make the Bot mention the user!")
+                    f":information_source: Reply with the message that should be sent to {channel_object.mention} "
+                    f"every time a new member joins.\n\nWrite `{{member}}` "
+                    f"to make the Bot mention the user.")
 
                 welcome_message = await flow.get_text_input(300)
 
@@ -123,7 +123,7 @@ class Guild(commands.Cog):
                                                        ctx.guild.id, welcome_message)
 
                     if status == "UPDATE 1":
-                        await ctx.send(f":white_check_mark: Set welcome message to '{welcome_message}'.")
+                        await ctx.send(f":white_check_mark: Welcome message was set.")
 
             elif not reaction:
                 await self.bot.db.execute("UPDATE guilds SET welcome = false WHERE id = $1", ctx.guild.id)
@@ -169,7 +169,7 @@ class Guild(commands.Cog):
                 await ctx.send(":white_check_mark: Enabled the logging module.")
 
                 await ctx.send(
-                    ":information_source: Answer with the name of the channel the logging module should use:")
+                    ":information_source: Reply with the name of the channel the logging module should use.")
 
                 channel_object = await flow.get_new_channel(240)
 
@@ -296,8 +296,8 @@ class Guild(commands.Cog):
                 await ctx.send(":white_check_mark: Enabled the default role.")
 
                 await ctx.send(
-                    ":information_source: What's the name of the role that every "
-                    "new member should get once they join?")
+                    ":information_source: Reply with the name of the role that every "
+                    "new member should get once they join.")
 
                 new_default_role = await flow.get_new_role(240)
 

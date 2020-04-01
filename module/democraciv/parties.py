@@ -284,25 +284,12 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='addalias')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
-    async def addalias(self, ctx):
+    async def addalias(self, ctx, *, party: PoliticalParty):
         """Add a new alias to a political party"""
-
-        await ctx.send(":information_source: Reply with the name of the party that the new alias should belong to:")
 
         flow = Flow(self.bot, ctx)
 
-        party_name = await flow.get_text_input(240)
-
-        if not party_name:
-            return
-
-        # Check if party role already exists
-        try:
-            party = await PoliticalParty.convert(ctx, party_name)
-        except exceptions.PartyNotFoundError:
-            raise exceptions.RoleNotFoundError(party_name)
-
-        await ctx.send(f":information_source: Reply with the alias for `{party.role.name}`:")
+        await ctx.send(f":information_source: Reply with the new alias for `{party.role.name}`.")
 
         alias = await flow.get_text_input(240)
 
@@ -328,7 +315,7 @@ class Party(commands.Cog, name='Political Parties'):
         try:
             await PoliticalParty.convert(ctx, alias)
         except exceptions.PartyNotFoundError:
-            return await ctx.send(f":x: {alias} is not an alias of any party.")
+            return await ctx.send(f":x: `{alias}` is not an alias of any party.")
 
         await self.bot.db.execute("DELETE FROM party_alias WHERE alias = $1", alias.lower())
         await ctx.send(f':white_check_mark: Alias `{alias}` was deleted.')
@@ -356,7 +343,7 @@ class Party(commands.Cog, name='Political Parties'):
         to_be_merged = []
 
         for i in range(1, amount_of_parties + 1):
-            await ctx.send(f":information_source: What's the name or alias political party #{i}?")
+            await ctx.send(f":information_source: What's the name or alias for political party #{i}?")
 
             name = await flow.get_text_input(120)
 
