@@ -197,7 +197,8 @@ class Party(commands.Cog, name='Political Parties'):
 
         is_private = False
         private_question = await ctx.send(
-            "Should this new party be private? React with :white_check_mark: if yes, or with :x: if not.")
+            "Should this new party be **public**, i.e. join-able by everyone? "
+            "React with :white_check_mark: if yes, or with :x: if not.")
 
         reaction = await flow.get_yes_no_reaction_confirm(private_question, 240)
 
@@ -205,6 +206,9 @@ class Party(commands.Cog, name='Political Parties'):
             return None
 
         if reaction:
+            is_private = False
+
+        elif not reaction:
             is_private = True
 
             await ctx.send(":information_source: Reply with the name of the party's leader.")
@@ -216,9 +220,6 @@ class Party(commands.Cog, name='Political Parties'):
                     leader_role = await commands.MemberConverter().convert(ctx, leader)
                 except commands.BadArgument:
                     raise exceptions.MemberNotFoundError(leader)
-
-        elif not reaction:
-            is_private = False
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
