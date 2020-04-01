@@ -28,9 +28,13 @@ class ANewDawn(commands.Cog, name="A New Dawn"):
                                    mk.DemocracivRole.WES_ROLE, mk.DemocracivRole.QI_ROLE)
     async def excommunicate(self, ctx, *, person: discord.Member):
         """Heretic!"""
+        believer = ctx.guild.get_role(694958914030141441)
         role = ctx.guild.get_role(694972373824307341)
+        channel = ctx.guild.get_channel(694974887424426115)
         await ctx.send(f"\U0001f329 {person.display_name} is a heretic, get him!")
         await person.add_roles(role)
+        await person.remove_roles(believer)
+        await channel.send(f"{person.display_name} has been banished to the dungeon.")
 
 
 def setup(bot):
