@@ -48,7 +48,7 @@ class OverrideScheduler(AnnouncementQueue):
             else:
                 message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
 
-        message.append("\nAll of the above bills were thus passed into law.")
+        message.append("\nAll of the above bills are now law.")
         return '\n'.join(message)
 
 
