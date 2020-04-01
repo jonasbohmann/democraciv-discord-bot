@@ -74,7 +74,7 @@ class ANewDawn(commands.Cog, name="A New Dawn"):
             await channel.edit(name=f"{channel.name[4:]}", category=government_category)
 
         # Give government roles back
-        def give_role(person, role):
+        async def give_role(person, role):
             member = await commands.MemberConverter().convert(ctx, person)
             _role = await commands.RoleConverter().convert(ctx, role)
             if member is None or _role is None:
@@ -107,7 +107,7 @@ class ANewDawn(commands.Cog, name="A New Dawn"):
 
         for person in arab_gov:
             try:
-                give_role(person, "Arabian Government")
+                await give_role(person, "Arabian Government")
             except Exception:
                 continue
 
@@ -120,7 +120,7 @@ class ANewDawn(commands.Cog, name="A New Dawn"):
 
         for person in legislator:
             try:
-                give_role(person, "Legislator")
+                await give_role(person, "Legislator")
             except Exception:
                 continue
 
@@ -132,7 +132,7 @@ class ANewDawn(commands.Cog, name="A New Dawn"):
 
         for person in minister:
             try:
-                give_role(person, "Minister")
+                await give_role(person, "Minister")
             except Exception:
                 continue
 
@@ -143,7 +143,7 @@ class ANewDawn(commands.Cog, name="A New Dawn"):
 
         for person in comms:
             try:
-                give_role(person, "Department of Communications")
+                await give_role(person, "Department of Communications")
             except Exception:
                 continue
 
@@ -153,7 +153,7 @@ class ANewDawn(commands.Cog, name="A New Dawn"):
 
         for person in war:
             try:
-                give_role(person, "Arabian Committee on War and Security")
+                await give_role(person, "Arabian Committee on War and Security")
             except Exception:
                 continue
 
