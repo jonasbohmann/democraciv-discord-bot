@@ -22,22 +22,40 @@ class Twitch:
         self.bot = bot
         self.streamer = config.TWITCH_CHANNEL
         self.twitch_API_url = "https://api.twitch.tv/helix/streams?user_login=" + self.streamer
-        self.twitch_API_token = token.TWITCH_API_KEY
+        self.twitch_oauth_token = token.TWITCH_OAUTH_APP_ACCESS_TOKEN
 
-        if self.twitch_API_token:
+        if self.twitch_oauth_token:
             self.twitch_task.start()
 
     def __del__(self):
         self.twitch_task.cancel()
+
+    async def refresh_twitch_oauth_token(self):
+        """Gets a new app access_token for the Twitch Helix API"""
+
+        post_data = {"client_id": token.TWITCH_CLIENT_ID, "client_secret": token.TWITCH_CLIENT_SECRET,
+                     "grant_type": "client_credentials"}
+
+        async with self.bot.session.post("https://id.twitch.tv/oauth2/token", data=post_data) as response:
+            if response.status == 200:
+                r = await response.json()
+                self.twitch_oauth_token = r['access_token']
+                print(f"[BOT] - New Twitch Helix OAuth App Access Token received. Please add it to token.py."
+                      f"\n{self.twitch_oauth_token}")
+                await self.bot.owner.send("New Twitch Helix OAuth App Access Token received. "
+                                          "See logs and replace in token.py")
 
     async def check_twitch_livestream(self) -> typing.Union[StreamStatus, typing.List]:
         """Checks if a streamer is live and returns the corresponding StreamStatus. If a stream has not yet been
         announced, also returns relevant stream data."""
 
         async with self.bot.session.get(self.twitch_API_url,
-                                        headers={'Client-ID': self.twitch_API_token}) as response:
+                                        headers={'Authorization': f"Bearer {self.twitch_oauth_token}"}) as response:
             if response.status == 200:
                 twitch = await response.json()
+            elif response.status == 401:
+                await self.refresh_twitch_oauth_token()
+                return self.StreamStatus.OFFLINE
             else:
                 return self.StreamStatus.OFFLINE
 

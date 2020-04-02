@@ -54,6 +54,11 @@ REDDIT_CLIENT_ID = ""
 REDDIT_CLIENT_SECRET = ""
 REDDIT_REFRESH_TOKEN = ""
 
+# Twitch Config
+TWITCH_CLIENT_ID = ""
+TWITCH_CLIENT_SECRET = ""
+TWITCH_OAUTH_APP_ACCESS_TOKEN = ""
+
 # PostgreSQL config
 POSTGRESQL_USER = ""
 POSTGRESQL_PASSWORD = ""
@@ -61,7 +66,7 @@ POSTGRESQL_HOST = ""
 POSTGRESQL_DATABASE = ""
 ```
 
-Add the token of your Discord App, your Twitch Helix API key if you enabled the Twitch module, your API key for the 
+Add the token of your Discord App, your Twitch Helix API authorization if you enabled the Twitch module, your API key for the 
 YouTube Data v3 API if you enabled YouTube notifications, your TimeZoneDB API Key, and your PostgreSQL configuration like above. 
 
 Once `token.py` is set up, take a look at `config.py` in the same folder and adjust everything to your needs.
@@ -79,8 +84,15 @@ You only need to create an empty database, the bot will then fill that with tabl
 
 ####  Twitch 
 
-If you want to use the Twitch announcements feature, you have to get an API key from [here](https://dev.twitch.tv/console/apps)
-and add it to the `token.py` in the config folder.
+If you want to use the Twitch announcements feature, you have to create an app [here](https://dev.twitch.tv/console/apps). 
+Then, copy its Client ID and the Client Secret and add it to the `token.py` in the config folder. It's recommended to also
+[obtain an OAuth app access token](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth#oauth-client-credentials-flow)
+ and add it to `token.py` too. While the bot will obtain the app access token itself (if not provided) via the
+Client ID and Client Secret, the token will not persist bot restarts, resulting in useless API requests to the Twitch API for 
+a new token. 
+
+App Access Tokens expire after around 58 days. If that happens, the bot will obtain a new one and notify you to replace that new token
+in `token.py`.
 
 You can configure everything else that is Twitch related in the `config.py`.
 
