@@ -56,8 +56,8 @@ class DemocracivBot(commands.Bot):
         # Initialize commands.Bot with prefix, description and disable case_sensitivity
         super().__init__(command_prefix=commands.when_mentioned_or(config.BOT_PREFIX), description=self.description,
                          case_insensitive=True,
-                         activity=discord.Game(name=config.BOT_PREFIX + 'help | Watching over '
-                                                                        'the Democraciv community'))
+                         activity=discord.Game(name=f"{config.BOT_PREFIX}help | {config.BOT_PREFIX}commands |"
+                                                    f" {config.BOT_PREFIX}about"))
 
         # Set up aiohttp.ClientSession() for usage in wikipedia, reddit & twitch API calls
         self.session = None
@@ -65,7 +65,8 @@ class DemocracivBot(commands.Bot):
 
         # PostgreSQL database connection
         self.db_ready = False
-        self.db = self.loop.create_task(self.connect_to_db())
+        self.db = None
+        self.loop.create_task(self.connect_to_db())
 
         self.embeds = EmbedUtils()
         self.checks = CheckUtils(self)
@@ -142,7 +143,8 @@ class DemocracivBot(commands.Bot):
         emoji_availability = [check_custom_emoji(emoji) for emoji in emojis]
 
         if False in emoji_availability:
-            print("[BOT] Reverting to standard Unicode emojis for -help as emojis from config.py cannot be seen by me.")
+            print("[BOT] Reverting to standard Unicode emojis for Paginator and -leg submit"
+                  " as at least one emoji from config.py cannot be seen/used by me or does not exist.")
             config.HELP_FIRST = "\N{BLACK LEFT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}"
             config.HELP_PREVIOUS = "\N{BLACK LEFT-POINTING TRIANGLE}"
             config.HELP_NEXT = "\N{BLACK RIGHT-POINTING TRIANGLE}"
