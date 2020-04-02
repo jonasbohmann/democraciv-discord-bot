@@ -45,7 +45,6 @@ The file should look like this:
 ```
 # Token
 TOKEN = ""
-TWITCH_API_KEY = ""
 TIMEZONEDB_API_KEY = ""
 YOUTUBE_DATA_V3_API_KEY = ""
 
@@ -85,7 +84,7 @@ You only need to create an empty database, the bot will then fill that with tabl
 ####  Twitch 
 
 If you want to use the Twitch announcements feature, you have to create an app [here](https://dev.twitch.tv/console/apps). 
-Then, copy its Client ID and the Client Secret and add it to the `token.py` in the config folder. It's recommended to also
+Then, copy its Client ID and the Client Secret and add it to the `token.py` in the config folder. It's strongly recommended to also
 [obtain an OAuth app access token](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth#oauth-client-credentials-flow)
  and add it to `token.py` too. While the bot will obtain the app access token itself (if not provided) via the
 Client ID and Client Secret, the token will not persist bot restarts, resulting in useless API requests to the Twitch API for 
@@ -94,7 +93,7 @@ a new token.
 App Access Tokens expire after around 58 days. If that happens, the bot will obtain a new one and notify you to replace that new token
 in `token.py`.
 
-You can configure everything else that is Twitch related in the `config.py`.
+You can configure everything else that is Twitch related in `config.py`.
 
 
 ####  Reddit 
@@ -106,7 +105,7 @@ If you want to make the bot post the weekly Starboard to a subreddit, you do hav
 a **refresh token** (not application token!) of your reddit app. Follow this [guide](https://github.com/reddit-archive/reddit/wiki/OAuth2) on how to get these. 
 Make sure your refresh token has the `submit` scope.
 
-You can configure everything else that is Reddit related in the `config.py`.
+You can configure everything else that is Reddit related in `config.py`.
 
 
 ####  YouTube 
@@ -114,7 +113,7 @@ You can configure everything else that is Reddit related in the `config.py`.
 Notifications for new video uploads and livestreams from a YouTube channel are enabled by default, but can be disabled in the `config.py`. You'll need
 an API key for the YouTube Data v3 API from Google. [This](https://developers.google.com/youtube/v3) has more information on how to get one.
 
-You can configure everything else that is YouTube related in the `config.py`.
+You can configure everything else that is YouTube related in `config.py`.
 
 
 ##  Modules
