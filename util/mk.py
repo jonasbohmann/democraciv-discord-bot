@@ -54,11 +54,6 @@ class DemocracivRole(PrettyEnum):
 
     GOVERNMENT_ROLE = PrettyEnumValue(641077467204943916, 'Arabian Government')
 
-    COUNCIL_OF_SAGES = PrettyEnumValue(694953789815521290, 'Council of Sages')
-    SUPREME_LEADER = PrettyEnumValue(694954211741401310, 'Supreme Leader')
-    WES_ROLE = PrettyEnumValue(694962133737275422, 'Holy Commander of the Arabian Holy Revolutionary Guard')
-    QI_ROLE = PrettyEnumValue(694964085074296933, 'Holy Director of Faith and Heresy')
-
 
 class DemocracivChannel(enum.Enum):
     # Moderation
