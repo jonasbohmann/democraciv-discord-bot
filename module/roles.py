@@ -91,7 +91,7 @@ class Roles(commands.Cog):
                     except discord.Forbidden:
                         raise exceptions.ForbiddenError(exceptions.ForbiddenTask.REMOVE_ROLE, discord_role.name)
 
-                    await ctx.send(f":white_check_mark: The '{discord_role.name}' role was removed from you.")
+                    await ctx.send(f":white_check_mark: The `{discord_role.name}` role was removed from you.")
                 else:
                     await ctx.send(f":x: You are not allowed remove this role from you! "
                                    f"If you're trying to leave a political party, use `-leave {discord_role.name}`.")
