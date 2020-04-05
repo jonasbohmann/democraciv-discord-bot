@@ -25,6 +25,7 @@ DEALINGS IN THE SOFTWARE.
 import re
 import asyncio
 import discord
+from discord.embeds import EmptyEmbed
 
 from config import config
 from discord.ext.commands import Paginator as CommandPaginator
@@ -62,7 +63,7 @@ class Pages:
 
     def __init__(self, ctx, *, entries, per_page=12, show_entry_count=True, title=None, show_index=True,
                  footer_text=config.BOT_NAME, colour=0x7f0000, title_url=None, thumbnail=None,
-                 show_amount_of_pages=False):
+                 show_amount_of_pages=False, author_icon=EmptyEmbed):
         self.bot = ctx.bot
         self.entries = entries
         self.message = ctx.message
@@ -72,6 +73,7 @@ class Pages:
         self.show_index = show_index
         self.footer = footer_text
         self.title = title
+        self.icon = author_icon
         self.embed = discord.Embed(colour=colour)
 
         pages, left_over = divmod(len(self.entries), self.per_page)
@@ -119,31 +121,6 @@ class Pages:
             if not self.permissions.read_message_history:
                 raise CannotPaginate(':x: Bot does not have Read Message History permission.')
 
-    def check_emoji(self):
-        # If these custom emoji are not set in config.py, -help will break. Convert to Unicode emoji if that's
-        # the case.
-        def check_custom_emoji(emoji):
-            emoji_id = [int(s) for s in re.findall(r'\b\d+\b', emoji)]
-
-            if emoji_id:
-                emoji_id = emoji_id.pop()
-                emoji = self.bot.get_emoji(emoji_id)
-
-                if emoji is not None:
-                    return True
-
-            return False
-
-        if not check_custom_emoji(config.HELP_LAST) or not check_custom_emoji(config.HELP_BOT_HELP)\
-                or not check_custom_emoji(config.HELP_PREVIOUS) or not check_custom_emoji(config.HELP_NEXT)\
-                or not check_custom_emoji(config.HELP_FIRST):
-            print("[BOT] Reverting to standard Unicode emojis for -help as emojis from config.py cannot be seen by me.")
-            config.HELP_FIRST = "\N{BLACK LEFT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}"
-            config.HELP_PREVIOUS = "\N{BLACK LEFT-POINTING TRIANGLE}"
-            config.HELP_NEXT = "\N{BLACK RIGHT-POINTING TRIANGLE}"
-            config.HELP_LAST = "\N{BLACK RIGHT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}"
-            config.HELP_BOT_HELP = "\N{WHITE QUESTION MARK ORNAMENT}"
-
     def get_page(self, page):
         base = (page - 1) * self.per_page
         return self.entries[base:base + self.per_page]
@@ -170,15 +147,13 @@ class Pages:
             else:
                 text = f'Page {page}/{self.maximum_pages}'
 
-            self.embed.set_footer(text=text, icon_url=config.BOT_ICON_URL)
-
         self.embed.title = self.title
         self.embed.description = '\n'.join(p)
         self.embed.set_footer(text=self.footer, icon_url=config.BOT_ICON_URL)
 
         if self.maximum_pages:
             if self.show_amount_of_pages:
-                self.embed.set_author(name=f'Page {page}/{self.maximum_pages}')
+                self.embed.set_author(icon_url=self.icon, name=f'Page {page}/{self.maximum_pages}')
 
     async def show_page(self, page, *, first=False):
         self.current_page = page

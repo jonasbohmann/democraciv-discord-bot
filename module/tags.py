@@ -47,8 +47,8 @@ class Tags(commands.Cog, name="Tag"):
         if len(pretty_tags) < 2:
             pretty_tags = ['There are no tags on this guild.']
 
-        pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"All Tags in {ctx.guild.name}"
-                      , show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
+        pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"All Tags in {ctx.guild.name}",
+                      show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
         await pages.paginate()
 
     @tags.command(name="local", aliases=['l'])
@@ -65,7 +65,7 @@ class Tags(commands.Cog, name="Tag"):
         for record in all_tags:
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
 
-        if not len(pretty_tags):
+        if not pretty_tags:
             pretty_tags = ['There are no local tags on this guild.']
 
         pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"Local Tags in {ctx.guild.name}"
@@ -92,8 +92,9 @@ class Tags(commands.Cog, name="Tag"):
         if not len(pretty_tags):
             pretty_tags = ['This person hasn\'t made any tags yet.']
 
-        pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"{member.name}'s Tags"
-                      , show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
+        pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"{member.name}'s Tags",
+                      show_index=False, show_amount_of_pages=True,
+                      author_icon=member.avatar_url_as(static_format="png"))
         await pages.paginate()
 
     @tags.command(name="addalias")
@@ -137,8 +138,6 @@ class Tags(commands.Cog, name="Tag"):
         if status == "INSERT 0 1":
             await ctx.send(f':white_check_mark: Added the alias `{config.BOT_PREFIX}{alias}` to'
                            f'`{config.BOT_PREFIX}{tag.name}`.')
-        else:
-            await ctx.send(":x: Unexpected database error occurred.")
 
     @tags.command(name="removealias", aliases=['deletealias'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -207,6 +206,10 @@ class Tags(commands.Cog, name="Tag"):
             await ctx.send(":x: A tag or alias with that name already exists on this guild!")
             return False
 
+        if len(tag_name) > 50:
+            await ctx.send(":x: The name cannot be longer than 50 characters.")
+            return False
+
         return True
 
     @tags.command(name="add", aliases=['make', 'create'])
@@ -235,11 +238,17 @@ class Tags(commands.Cog, name="Tag"):
         if title is None:
             return
 
+        if len(title) > 256:
+            return await ctx.send(":x: The title cannot be longer than 256 characters.")
+
         await ctx.send(":information_source: Reply with the **content** of the tag.")
         content = await flow.get_tag_content(300)
 
         if content is None:
             return
+
+        if len(content) > 2048:
+            return await ctx.send(":x: The content cannot be longer than 2048 characters.")
 
         is_global = False
 
@@ -283,9 +292,8 @@ class Tags(commands.Cog, name="Tag"):
 
     @commands.command(name="addtag", hidden=True)
     async def oldaddtagwarning(self, ctx):
-        await ctx.send("This was moved to `-tag add` :)\nTag creators can now remove their own "
-                       "tags with `-tag remove <tagname>` and "
-                       "`-tag info <tagname>` is new too! :)\nSee `-help Tag` for more info.")
+        await ctx.send("This was moved to `-tag add` :)\nA bunch of new commands for tags were added as well, see"
+                       " `-help Tag` for more info.")
 
     @tags.command(name="info", aliases=['about'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -301,6 +309,10 @@ class Tags(commands.Cog, name="Tag"):
         if tag.author is not None:
             embed.add_field(name="Author", value=tag.author.mention, inline=False)
             embed.set_author(name=tag.author.name, icon_url=tag.author.avatar_url_as(static_format="png"))
+        else:
+            embed.add_field(name="Author", value=f"*The author of this tag left this server."
+                                                 f" You can claim this tag to make it yours with* "
+                                                 f"`{config.BOT_PREFIX}tag claim {tag.name}`*!*", inline=False)
 
         embed.add_field(name="Global Tag", value=str(tag.is_global), inline=True)
         embed.add_field(name="Embedded Tag", value=str(not self.is_emoji_or_media_url(tag.content)),
@@ -353,15 +365,33 @@ class Tags(commands.Cog, name="Tag"):
         if new_title is None:
             return
 
+        if len(new_title) > 256:
+            return await ctx.send(":x: The title cannot be longer than 256 characters.")
+
         await ctx.send(":information_source: Reply with the updated **content** of this tag.")
         new_content = await flow.get_text_input(300)
 
         if new_content is None:
             return
 
-        await self.bot.db.execute("UPDATE guild_tags SET content = $1, title = $3 WHERE id = $2", new_content,
-                                  tag.id, new_title)
-        await ctx.send(":white_check_mark: Your tag was edited.")
+        if len(new_content) > 2048:
+            return await ctx.send(":x: The content cannot be longer than 2048 characters.")
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to edit your "
+                                      f"`{config.BOT_PREFIX}{tag.name}` tag?")
+
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+
+        if reaction is None:
+            return
+
+        if not reaction:
+            return await ctx.send("Aborted.")
+
+        else:
+            await self.bot.db.execute("UPDATE guild_tags SET content = $1, title = $3 WHERE id = $2", new_content,
+                                      tag.id, new_title)
+            await ctx.send(":white_check_mark: Your tag was edited.")
 
     @tags.command(name="toggleglobal")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
