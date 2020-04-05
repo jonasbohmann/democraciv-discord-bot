@@ -29,16 +29,16 @@ class Elections(commands.Cog, name="Election"):
             quota = 1
 
         else:
-            return await ctx.send(f":x: Invalid quota, type 'hare' for Hare and 'droop' for Droop!")
+            return await ctx.send(f":x: Invalid quota, write 'hare' for Hare and 'droop' for Droop.")
 
         try:
             csv = ctx.message.attachments[0]
         except IndexError:
-            await ctx.send(f":x: You have to upload a .csv file to use this command!")
+            await ctx.send(f":x: You have to upload a .csv file to use this command.")
             return
 
         if not csv.filename.endswith('.csv'):
-            await ctx.send(f":x: You have to upload a valid .csv file to use this command!")
+            await ctx.send(f":x: You have to upload a valid .csv file for this command to work.")
             return
 
         _filename = f"{uuid.uuid4()}.csv"

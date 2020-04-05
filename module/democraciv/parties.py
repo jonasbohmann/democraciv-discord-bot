@@ -4,7 +4,7 @@ import asyncpg
 
 from util.flow import Flow
 from discord.ext import commands
-from config import config, links
+from config import config
 from util import utils, exceptions, mk
 from util.converter import PoliticalParty
 from util.exceptions import ForbiddenTask
@@ -75,12 +75,6 @@ class Party(commands.Cog, name='Political Parties'):
 
         else:
             return await ctx.send(f':x: You are already part of {party.role.name}!')
-
-    @commands.command(name='form')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def form(self, ctx):
-        """Form a political party"""
-        await ctx.send(f"You can fill out this form with all the details to form a political party:\n{links.formparty}")
 
     @commands.command(name='leave')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -211,42 +205,33 @@ class Party(commands.Cog, name='Political Parties'):
         elif not reaction:
             is_private = True
 
-            await ctx.send(":information_source: Reply with the name of the party's leader.")
+        await ctx.send(":information_source: Reply with the name of the party's leader.")
+        leader = await flow.get_text_input(240)
 
-            leader = await flow.get_text_input(240)
-
-            if leader:
-                try:
-                    leader_role = await commands.MemberConverter().convert(ctx, leader)
-                except commands.BadArgument:
-                    raise exceptions.MemberNotFoundError(leader)
+        if leader:
+            try:
+                leader_member = await commands.MemberConverter().convert(ctx, leader)
+            except commands.BadArgument:
+                raise exceptions.MemberNotFoundError(leader)
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
-                if is_private:
-                    try:
-                        await connection.execute(
-                            "INSERT INTO parties (id, discord_invite, is_private, leader) VALUES ($1, $2, $3, $4)",
-                            discord_role.id, party_invite, True, leader_role.id)
-                    except asyncpg.UniqueViolationError:
-                        await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
-                        return None
-                else:
-                    try:
-                        await connection.execute(
-                            "INSERT INTO parties (id, discord_invite, is_private) VALUES ($1, $2, $3)",
-                            discord_role.id, party_invite, False)
-                    except asyncpg.UniqueViolationError:
-                        await ctx.send(f":x: A party named `{discord_role.name}` already exists!")
-                        return None
+                try:
+                    await connection.execute(
+                        "INSERT INTO parties (id, discord_invite, is_private, leader) VALUES ($1, $2, $3, $4)",
+                        discord_role.id, party_invite, is_private, leader_member.id)
 
-                status = await connection.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
-                                                  discord_role.name.lower(), discord_role.id)
+                    await connection.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
+                                             discord_role.name.lower(), discord_role.id)
 
-        if status == "INSERT 0 1":
-            await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a new party.')
-        else:
-            await ctx.send(":x: Unexpected database error occurred.")
+                    await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a new party.')
+
+                except asyncpg.UniqueViolationError:
+                    await connection.execute(
+                        "UPDATE parties SET discord_invite = $2, is_private = $3, leader = $4 WHERE id = $1",
+                        discord_role.id, party_invite, is_private, leader_member.id)
+
+                    await ctx.send(f':white_check_mark: `{discord_role.name}` was updated.')
 
         return await PoliticalParty.convert(ctx, discord_role.id)
 
