@@ -268,7 +268,7 @@ class DemocracivBot(commands.Bot):
 
         await self.process_commands(message)
 
-    @tasks.loop(hours=24)
+    @tasks.loop(hours=12)
     async def daily_db_backup(self):
         """This task makes a backup of the bot's PostgreSQL database every 24hours and uploads
         that backup to the #backup channel to the Democraciv Discord guild."""

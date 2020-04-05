@@ -165,13 +165,17 @@ class Ministry(commands.Cog):
     @ministry.command(name='veto', aliases=['v'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
-    async def veto(self, ctx, *, bill_id: typing.Union[Bill, MultipleBills]):
-        """Veto a bill"""
+    async def veto(self, ctx, *, bill_ids: typing.Union[Bill, MultipleBills]):
+        """Veto a bill
 
-        bill = bill_id
+        **Example:**
+            `-ministry veto 12` will veto Bill #12
+            `-ministry veto 45 46 49 51 52` will veto all those bills"""
+
+        bill = bill_ids
         flow = Flow(self.bot, ctx)
 
-        if isinstance(bill_id, MultipleBills):
+        if isinstance(bill, MultipleBills):
             error_messages = []
 
             for _bill in bill.bills:
@@ -237,13 +241,17 @@ class Ministry(commands.Cog):
     @ministry.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
-    async def pass_bill(self, ctx, *, bill_id: typing.Union[Bill, MultipleBills]):
-        """Pass a bill into law"""
+    async def pass_bill(self, ctx, *, bill_ids: typing.Union[Bill, MultipleBills]):
+        """Pass a bill into law
 
-        bill = bill_id
+        **Example:**
+            `-ministry pass 12` will pass Bill #12 into law
+            `-ministry pass 45 46 49 51 52` will pass all those bills into law"""
+
+        bill = bill_ids
         flow = Flow(self.bot, ctx)
 
-        if isinstance(bill_id, MultipleBills):
+        if isinstance(bill, MultipleBills):
             error_messages = []
 
             for _bill in bill.bills:

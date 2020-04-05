@@ -5,9 +5,32 @@ from config import config
 from util import mk, utils
 from util.flow import Flow
 from util.converter import Law
-from util.law_helper import MockContext
+from util.law_helper import MockContext, AnnouncementQueue
 from util.paginator import Pages
 from discord.ext import commands
+
+
+class RepealScheduler(AnnouncementQueue):
+
+    def get_message(self) -> str:
+        message = [f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
+                   f"the following laws were **repealed**.\n"]
+
+        for obj in self._objects:
+            message.append(f"-  **{obj.bill.name}** (<{obj.bill.tiny_link}>)")
+
+        return '\n'.join(message)
+
+
+class AmendScheduler(AnnouncementQueue):
+
+    def get_message(self) -> str:
+        message = [f"The links to the following laws were changed by the Cabinet.\n"]
+
+        for obj in self._objects:
+            message.append(f"-  **{obj.bill.name}** (<{obj.bill.tiny_link}>)")
+
+        return '\n'.join(message)
 
 
 class Laws(commands.Cog, name='Law'):
@@ -15,6 +38,8 @@ class Laws(commands.Cog, name='Law'):
 
     def __init__(self, bot):
         self.bot = bot
+        self.repeal_scheduler = RepealScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+        self.amend_scheduler = AmendScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
     @property
     def gov_announcements_channel(self) -> typing.Optional[discord.TextChannel]:
@@ -41,7 +66,11 @@ class Laws(commands.Cog, name='Law'):
     @commands.group(name='law', aliases=['laws'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def law(self, ctx, law_id: Law = None):
-        """List all laws or get details about a specific law"""
+        """List all laws or get details about a specific law
+
+        **Usage:**
+            `-law` will list every law in our nation
+            `-law 48` will give you detailed information about Law #48"""
 
         # If no ID was specified, list all existing laws
         if not law_id:
@@ -103,18 +132,19 @@ class Laws(commands.Cog, name='Law'):
                                                     f"details about a law.")
         await pages.paginate()
 
-    @law.command(name='remove', aliases=['r, repeal'])
+    @law.command(name='repeal', aliases=['r, remove', 'delete'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def removelaw(self, ctx, law_id: Law):
-        """Repeal a law
+        """Repeal a law to remove it from `-laws`
 
-        This will remove the law from both '-laws' and '-laws search'."""
+        **Example:**
+            `-law removelaw 24`"""
 
         law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove `{law.bill.name}`"
-                                      f" (#{law.id}) from the laws of {mk.NATION_NAME}?")
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to repeal `{law.bill.name}`"
+                                      f" (#{law.id})?")
 
         flow = Flow(self.bot, ctx)
 
@@ -128,18 +158,19 @@ class Laws(commands.Cog, name='Law'):
 
         elif reaction:
             await self.bot.db.execute("DELETE FROM legislature_laws WHERE law_id = $1", law.id)
-
-            await self.gov_announcements_channel.send(f"Cabinet Member {ctx.author} has removed `{law.bill.name}`"
-                                                      f" from the laws of {mk.NATION_NAME}.")
-
-            return await ctx.send(f":white_check_mark: `{law.bill.name}` was removed from "
-                                  f"the laws of {mk.NATION_NAME}.")
+            self.repeal_scheduler.add(law)
+            return await ctx.send(f":white_check_mark: `{law.bill.name}` was repealed.")
 
     @law.command(name='updatelink', aliases=['ul', 'amend'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def updatelink(self, ctx, law_id: Law, new_link: str):
-        """Update the link to a law. Useful for applying amendments to laws."""
+        """Update the link to a law.
+        Useful for applying amendments to laws if the current Speaker does not own the law's Google Doc.
+
+        **Example**:
+            `-law updatelink 16 https://docs.google.com/1/d/ajgh3egfdjfnjdf`
+        """
 
         if not self.bot.laws.is_google_doc_link(new_link):
             return await ctx.send(f":x: This does not look like a Google Docs link: `{new_link}`")
@@ -168,11 +199,8 @@ class Laws(commands.Cog, name='Law'):
 
             await self.bot.db.execute("UPDATE legislature_bills SET link = $1, tiny_link = $2 WHERE id = $3",
                                       new_link, tiny_url, law.bill.id)
-
-            await self.gov_announcements_channel.send(f"Cabinet Member {ctx.author} has amended `{law.bill.name}`. The"
-                                                      f" new link to this law is: <{tiny_url}>")
-
-            return await ctx.send(f":white_check_mark: The link to `{law.bill.name}` (#{law.id}) was changed.")
+            self.amend_scheduler.add(law)
+            return await ctx.send(f":white_check_mark: The link to `{law.bill.name}` was changed.")
 
 
 def setup(bot):

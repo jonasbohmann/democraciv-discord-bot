@@ -213,7 +213,12 @@ class Legislature(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def updatesession(self, ctx, voting_form: str):
-        """Changes the current session's status to be open for voting"""
+        """Changes the current session's status to be open for voting
+
+        **Example:**
+            `-leg updatesession https://forms.gle/asf8an3`
+
+        """
 
         if not self.bot.laws.is_google_doc_link(voting_form):
             return await ctx.send(":x: That doesn't look like a Google Docs URL.")
@@ -269,6 +274,21 @@ class Legislature(commands.Cog):
                       show_index=False, footer_text=footer, show_amount_of_pages=True)
         await pages.paginate()
 
+    @staticmethod
+    def format_session_times(session: Session) -> str:
+        formatted_time = [f"**Opened**: {session.opened_on.strftime('%A, %B %d %Y at %H:%M')}"]
+
+        if session.status is not SessionStatus.SUBMISSION_PERIOD:
+            # Session is either closed or in Voting Period
+            if session.voting_started_on is not None:
+                formatted_time.append(f"**Voting Started**: {session.voting_started_on.strftime('%A, %B %d %Y at %H:%M')}")
+
+        if not session.is_active:
+            # Session is closed
+            formatted_time.append(f"**Ended**: {session.closed_on.strftime('%A, %B %d %Y at %H:%M')}")
+
+        return '\n'.join(formatted_time)
+
     @legislature.command(name='session', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def session(self, ctx, session: Session = None):
@@ -322,19 +342,10 @@ class Legislature(commands.Cog):
             embed.add_field(name="Opened by", value="*Person left Democraciv*")
 
         embed.add_field(name="Status", value=session.status.value, inline=True)
-        embed.add_field(name="Opened on (UTC)", value=session.opened_on.strftime("%A, %B %d %Y at %H:%M"), inline=False)
+        embed.add_field(name="Date", value=self.format_session_times(session), inline=False)
 
-        if session.status is not SessionStatus.SUBMISSION_PERIOD:
-            # Session is either closed or in Voting Period
-            if session.voting_started_on is not None:
-                embed.add_field(name="Voting Started on (UTC)",
-                                value=session.voting_started_on.strftime("%A, %B %d %Y at %H:%M"), inline=False)
-                embed.add_field(name="Vote Form", value=f"[Link]({session.vote_form})", inline=False)
-
-        if not session.is_active:
-            # Session is closed
-            embed.add_field(name="Ended on (UTC)",
-                            value=session.closed_on.strftime("%A, %B %d %Y at %H:%M"), inline=False)
+        if session.vote_form:
+            embed.add_field(name="Vote Form", value=f"[Link]({session.vote_form})", inline=False)
 
         pretty_motions = '\n'.join(pretty_motions)
         pretty_bills = '\n'.join(pretty_bills)
@@ -353,7 +364,8 @@ class Legislature(commands.Cog):
             too_long_bills = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
             embed.add_field(name="Submitted Bills", value=too_long_bills, inline=False)
 
-        embed.set_footer(text=f"Bills that are underlined are active laws.", icon_url=config.BOT_ICON_URL)
+        embed.set_footer(text=f"Bills that are underlined are active laws. All times are in UTC.",
+                         icon_url=config.BOT_ICON_URL)
         await ctx.send(embed=embed)
 
     async def submit_bill(self, ctx, current_leg_session_id: int) -> typing.Tuple[typing.Optional[str],
@@ -549,12 +561,16 @@ class Legislature(commands.Cog):
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
-    async def pass_bill(self, ctx, *, bill_id: typing.Union[Bill, MultipleBills]):
+    async def pass_bill(self, ctx, *, bill_ids: typing.Union[Bill, MultipleBills]):
         """Mark a bill as passed from the Legislature.
 
-        If the bill is vetoable, it sends the bill to the Ministry. If not, the bill automatically becomes law."""
+        If the bill is vetoable, it sends the bill to the Ministry. If not, the bill automatically becomes law.
 
-        bill = bill_id  # At this point, bill_id is already a Bill object, so calling it ball_id makes no sense
+        **Example:**
+            `-leg pass 12` will mark Bill #12 as passed from the Legislature
+            `-leg pass 45 46 49 51 52` will mark all those bills as passed"""
+
+        bill = bill_ids  # At this point, bill_id is already a Bill object, so calling it ball_id makes no sense
         last_leg_session: Session = await self.bot.laws.get_last_leg_session()
         flow = Flow(self.bot, ctx)
 
@@ -706,8 +722,10 @@ class Legislature(commands.Cog):
                       f"from the current session."
 
                 try:
-                    await self.speaker.send(msg)
-                    await self.vice_speaker.send(msg)
+                    if self.speaker is not None:
+                        await self.speaker.send(msg)
+                    if self.vice_speaker is not None:
+                        await self.vice_speaker.send(msg)
                 except discord.Forbidden:
                     pass
 
@@ -768,8 +786,10 @@ class Legislature(commands.Cog):
                       f" `{motion.title}` (#{motion.id}) from the current session."
 
                 try:
-                    await self.speaker.send(msg)
-                    await self.vice_speaker.send(msg)
+                    if self.speaker is not None:
+                        await self.speaker.send(msg)
+                    if self.vice_speaker is not None:
+                        await self.vice_speaker.send(msg)
                 except discord.Forbidden:
                     pass
 

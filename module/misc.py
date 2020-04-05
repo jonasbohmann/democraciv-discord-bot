@@ -31,16 +31,18 @@ class Misc(commands.Cog, name="Miscellaneous"):
         if user.guild.id == self.bot.democraciv_guild_object.id:
             original_position = await self.bot.db.fetchval("SELECT join_position FROM original_join_dates "
                                                            "WHERE member = $1", user.id)
+            all_members = await self.bot.db.fetchval("SELECT max(join_position) FROM original_join_dates")
+
             if original_position:
-                return original_position
+                return original_position, all_members
 
         joins = tuple(sorted(members, key=operator.attrgetter("joined_at")))
         if None in joins:
-            return None
+            return None, None
         for key, elem in enumerate(joins):
             if elem == user:
-                return key + 1
-        return None
+                return key + 1, len(members)
+        return None, None
 
     @commands.command(name='say')
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
@@ -81,6 +83,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         #   https:/github.com/Rapptz/RoboDanny/
 
         member = member or ctx.author
+        join_pos, max_members = await self.get_member_join_position(member, ctx.guild.members)
 
         embed = self.bot.embeds.embed_builder(title="User Information", description="")
         embed.add_field(name="User", value=f"{member} {member.mention}", inline=False)
@@ -89,9 +92,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
                         value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
         embed.add_field(name='Joined this Guild on',
                         value=f'{(await self.get_member_join_date(member)).strftime("%B %d, %Y")}', inline=True)
-        embed.add_field(name='Join Position',
-                        value=f"{await self.get_member_join_position(member, ctx.guild.members)}/"
-                              f"{len(ctx.guild.members)}", inline=True)
+        embed.add_field(name='Join Position', value=f"{join_pos}/{max_members}", inline=True)
         embed.add_field(name='Roles', value=_get_roles(member.roles), inline=False)
         embed.set_thumbnail(url=member.avatar_url_as(static_format="png"))
         await ctx.send(embed=embed)
@@ -332,7 +333,10 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         elif len(arg) == 1:
             start = 1
-            end = int(arg[0])
+            try:
+                end = int(arg[0])
+            except ValueError:
+                return await ctx.send_help(ctx.command)
         else:
             start = 1
             end = 100
