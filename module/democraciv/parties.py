@@ -5,7 +5,7 @@ from discord import NotFound, HTTPException
 
 from util.flow import Flow
 from discord.ext import commands
-from config import config
+from config import config, links
 from util import utils, exceptions, mk
 from util.converter import PoliticalParty
 from util.exceptions import ForbiddenTask
@@ -61,7 +61,7 @@ class Party(commands.Cog, name='Political Parties'):
 
         embed = self.bot.embeds.embed_builder(title=party.role.name,
                                               description=f"[Platform and Description]"
-                                                          f"(https://reddit.com/r/wiki/parties)",
+                                                          f"({links.parties})",
                                               has_footer=False)
 
         if invite:
