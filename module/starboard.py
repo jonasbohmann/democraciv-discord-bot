@@ -1,19 +1,17 @@
 import typing
-import aiohttp
 import asyncpg
 import discord
 import asyncio
 import datetime
 import itertools
 
+from util import mk
 from config import config, token
 from discord.ext import commands, tasks
 
-from util import mk
-
 
 class Starboard(commands.Cog):
-    """The Starboard. If a message on the Democraciv Guild has at least 4 :star: reactions,
+    """The Starboard. If a message on the Democraciv Guild has at least n :star: reactions,
     it will be posted to the Starboard channel and in a weekly summary to the subreddit every Saturday."""
 
     def __init__(self, bot):
@@ -39,39 +37,6 @@ class Starboard(commands.Cog):
 
     def __del__(self):
         self.weekly_starboard_to_reddit_task.cancel()
-
-    async def refresh_reddit_bearer_token(self):
-        """Gets a new access_token for the Reddit API with a refresh token that was previously acquired by following
-         this guide: https://github.com/reddit-archive/reddit/wiki/OAuth2"""
-
-        auth = aiohttp.BasicAuth(login=token.REDDIT_CLIENT_ID, password=token.REDDIT_CLIENT_SECRET)
-        post_data = {"grant_type": "refresh_token", "refresh_token": token.REDDIT_REFRESH_TOKEN}
-        headers = {"User-Agent": f"democraciv-discord-bot {config.BOT_VERSION} by DerJonas - u/Jovanos"}
-
-        async with self.bot.session.post("https://www.reddit.com/api/v1/access_token",
-                                         data=post_data, auth=auth, headers=headers) as response:
-            if response.status == 200:
-                r = await response.json()
-                self.bearer_token = r['access_token']
-
-    async def post_to_reddit(self, data: dict) -> bool:
-        """Submits weekly starboard to r/Democraciv"""
-
-        await self.refresh_reddit_bearer_token()
-
-        headers = {"Authorization": f"bearer {self.bearer_token}",
-                   "User-Agent": f"democraciv-discord-bot {config.BOT_VERSION} by DerJonas - u/Jovanos"}
-
-        try:
-            async with self.bot.session.post("https://oauth.reddit.com/api/submit", data=data,
-                                             headers=headers) as response:
-                if response.status != 200:
-                    print(f"[BOT] ERROR - Error while posting Starboard to Reddit, got status {response.status}.")
-                    return False
-                return True
-        except Exception as e:
-            print(f"[BOT] ERROR - Error while posting Starboard to Reddit: {e}")
-            return False
 
     @staticmethod
     def group_starred_messages_by_day(starred_messages: typing.List[asyncpg.Record]) -> typing.List[
@@ -183,7 +148,7 @@ class Starboard(commands.Cog):
             "ad": False
         }
 
-        if await self.post_to_reddit(data):
+        if await self.bot.reddit_api.post_to_reddit(data):
             await self.bot.db.execute("UPDATE starboard_entries SET is_posted_to_reddit = true "
                                       "WHERE starboard_message_created_at >= $1 AND starboard_message_created_at < $2",
                                       start_of_last_week, today)

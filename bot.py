@@ -15,6 +15,7 @@ from config import config, token
 import util.exceptions as exceptions
 from util.law_helper import LawUtils
 from discord.ext import commands, tasks
+from util.reddit_api import RedditAPIWrapper
 from util.utils import CheckUtils, EmbedUtils
 
 logging.basicConfig(level=logging.INFO)
@@ -97,6 +98,8 @@ class DemocracivBot(commands.Bot):
         self.loop.create_task(self.initialize_democraciv_guild())
 
         self.loop.create_task(self.check_custom_emoji_availability())
+
+        self.reddit_api = RedditAPIWrapper(self)
 
     async def initialize_aiohttp_session(self):
         """Initialize a shared aiohttp ClientSession to be used for -wikipedia, -leg submit and reddit & twitch requests
