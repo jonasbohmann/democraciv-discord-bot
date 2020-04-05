@@ -11,12 +11,8 @@ import datetime
 import traceback
 import discord.utils
 
-import util.exceptions as exceptions
-
-from event.twitch import Twitch
-from event.reddit import Reddit
 from config import config, token
-from event.youtube import YouTube
+import util.exceptions as exceptions
 from util.law_helper import LawUtils
 from discord.ext import commands, tasks
 from util.utils import CheckUtils, EmbedUtils
@@ -26,6 +22,9 @@ logging.basicConfig(level=logging.INFO)
 # List of cogs that will be loaded on startup
 initial_extensions = ['event.logging',
                       'event.error_handler',
+                      'event.reddit',
+                      'event.youtube',
+                      'event.twitch',
                       'module.meta',
                       'module.time',
                       'module.misc',
@@ -54,8 +53,8 @@ class DemocracivBot(commands.Bot):
         self.start_time = time.time()
 
         # Initialize commands.Bot with prefix, description and disable case_sensitivity
-        super().__init__(command_prefix=commands.when_mentioned_or(config.BOT_PREFIX), description=self.description,
-                         case_insensitive=True,
+        super().__init__(command_prefix=commands.when_mentioned_or(config.BOT_PREFIX),
+                         description=self.description, case_insensitive=True,
                          activity=discord.Game(name=f"{config.BOT_PREFIX}help | {config.BOT_PREFIX}commands |"
                                                     f" {config.BOT_PREFIX}about"))
 
@@ -87,15 +86,6 @@ class DemocracivBot(commands.Bot):
             except Exception:
                 print(f'[BOT] Failed to load module {extension}.')
                 traceback.print_exc()
-
-        if config.TWITCH_ENABLED:
-            Twitch(self)
-
-        if config.REDDIT_ENABLED:
-            Reddit(self)
-
-        if config.YOUTUBE_ENABLED:
-            YouTube(self)
 
         if config.DATABASE_DAILY_BACKUP_ENABLED:
             self.daily_db_backup.start()

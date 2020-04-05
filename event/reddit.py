@@ -5,17 +5,17 @@ import asyncio
 import util.exceptions as exceptions
 
 from config import config
-from discord.ext import tasks
+from discord.ext import tasks, commands
 
 
-class Reddit:
+class Reddit(commands.Cog):
     """Announcements for new posts on a subreddit. Does not need any API key or tokens."""
 
     def __init__(self, bot):
         self.bot = bot
         self.subreddit = config.REDDIT_SUBREDDIT
 
-        if self.subreddit and config.REDDIT_ANNOUNCEMENT_CHANNEL:
+        if config.REDDIT_ENABLED and self.subreddit and config.REDDIT_ANNOUNCEMENT_CHANNEL:
             self.reddit_task.start()
 
     def __del__(self):
@@ -93,3 +93,8 @@ class Reddit:
         # Delay first run of task until Democraciv Guild has been found
         if self.bot.democraciv_guild_object is None:
             await asyncio.sleep(5)
+
+
+def setup(bot):
+    if config.REDDIT_ENABLED:
+        bot.add_cog(Reddit(bot))

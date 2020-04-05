@@ -2,11 +2,11 @@ import typing
 import asyncio
 
 from util import exceptions
-from discord.ext import tasks
+from discord.ext import tasks, commands
 from config import config, token
 
 
-class YouTube:
+class YouTube(commands.Cog):
     """Announcements for new video uploads and live broadcasts from a YouTube Channel.
     Needs a valid YouTube Data V3 API key for the requests."""
 
@@ -16,7 +16,7 @@ class YouTube:
         self.api_key = token.YOUTUBE_DATA_V3_API_KEY
         self.header = {'Accept': 'application/json'}
 
-        if self.api_key:
+        if config.YOUTUBE_ENABLED and self.api_key:
             if config.YOUTUBE_VIDEO_UPLOADS_ENABLED:
                 self.youtube_upload_tasks.start()
             if config.YOUTUBE_LIVESTREAM_ENABLED:
@@ -190,3 +190,8 @@ class YouTube:
         # Delay first run of task until Democraciv Guild has been found
         if self.bot.democraciv_guild_object is None:
             await asyncio.sleep(5)
+
+
+def setup(bot):
+    if config.YOUTUBE_ENABLED:
+        bot.add_cog(YouTube(bot))

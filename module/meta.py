@@ -69,7 +69,7 @@ class Meta(commands.Cog):
         """List all commands"""
 
         all_commands = []
-        hidden_cogs = ('Admin', 'ErrorHandler', 'Log', 'Starboard')
+        hidden_cogs = ('Admin', 'ErrorHandler', 'Log', 'Starboard', 'Reddit', 'YouTube', 'Twitch')
         amounts = 0
         i = 0
 

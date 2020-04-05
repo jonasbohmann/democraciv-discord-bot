@@ -1,16 +1,15 @@
 import enum
-import asyncio
-
 import typing
+import asyncio
 
 import util.exceptions as exceptions
 
 from util import mk
-from discord.ext import tasks
+from discord.ext import tasks, commands
 from config import config, token, links
 
 
-class Twitch:
+class Twitch(commands.Cog):
     """Announcements for new live streams on Twitch."""
 
     class StreamStatus(enum.Enum):
@@ -24,7 +23,7 @@ class Twitch:
         self.twitch_API_url = "https://api.twitch.tv/helix/streams?user_login=" + self.streamer
         self.twitch_oauth_token = token.TWITCH_OAUTH_APP_ACCESS_TOKEN
 
-        if self.twitch_oauth_token:
+        if config.TWITCH_ENABLED and self.twitch_oauth_token:
             self.twitch_task.start()
 
     def __del__(self):
@@ -220,3 +219,8 @@ class Twitch:
                                 "645394491133394966/01-twitch-logo.jpg")
 
         await moderation_channel.send(content='@here', embed=embed)
+
+
+def setup(bot):
+    if config.TWITCH_ENABLED:
+        bot.add_cog(Twitch(bot))
