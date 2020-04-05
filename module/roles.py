@@ -176,9 +176,6 @@ class Roles(commands.Cog):
                         await ctx.send(f":white_check_mark: Removed the role `{role}` but did **not** delete its "
                                        f"Discord role.")
 
-                else:
-                    await ctx.send(":x: Unexpected database error occurred.")
-
 
 def setup(bot):
     bot.add_cog(Roles(bot))
