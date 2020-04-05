@@ -1,6 +1,7 @@
 import typing
 import discord
 import asyncpg
+from discord import NotFound, HTTPException
 
 from util.flow import Flow
 from discord.ext import commands
@@ -43,6 +44,37 @@ class Party(commands.Cog, name='Political Parties'):
             print(error_string)
 
         return parties_and_members
+
+    @commands.command(name='party')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.is_democraciv_guild()
+    async def party(self, ctx, *, party: PoliticalParty):
+        """Detailed information about a single political party"""
+
+        invite = None
+
+        if party.discord_invite:
+            try:
+                invite = await self.bot.fetch_invite(party.discord_invite)
+            except (NotFound, HTTPException):
+                pass
+
+        embed = self.bot.embeds.embed_builder(title=party.role.name,
+                                              description=f"[Platform and Description]"
+                                                          f"(https://reddit.com/r/wiki/parties)",
+                                              has_footer=False)
+
+        if invite:
+            embed.set_thumbnail(invite.guild.icon_url_as(static_format='png'))
+
+        if party.leader:
+            embed.add_field(name="Leader", value=party.leader.mention)
+
+        if party.discord_invite:
+            embed.add_field(name="Server", value=party.discord_invite)
+        embed.add_field(name=f"Members ({len(party.role.members)})",
+                        value=', '.join([m.mention for m in party.role.members]) or 'None', inline=False)
+        await ctx.send(embed=embed)
 
     @commands.command(name='join')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -97,7 +129,7 @@ class Party(commands.Cog, name='Political Parties'):
         else:
             return await ctx.send(f':x: You are not part of {party.role.name}!')
 
-    @commands.command(name='members')
+    @commands.command(name='members', aliases=['rank', 'ranks', 'ranking'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def members(self, ctx, *, party: str = None):
         """Get the current political party ranking or a list of all party members on the Democraciv guild"""

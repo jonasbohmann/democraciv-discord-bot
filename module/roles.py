@@ -38,7 +38,7 @@ class Roles(commands.Cog):
     async def roles(self, ctx, *, role: str = None):
         """List all roles or get/lose a role by specifying the role's name
 
-        ****Usage:****
+        **Usage:**
           `-role` List all available roles
           `-role <role>` Get/Lose a role
         """
