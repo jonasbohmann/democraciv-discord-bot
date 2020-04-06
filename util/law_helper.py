@@ -174,7 +174,7 @@ class LawUtils:
 
         # Add all nouns to list
         tags = [word for (word, pos) in nltk.pos_tag(tokenized_docs_description) +
-                nltk.pos_tag(tokenized_author_description) if is_noun(pos)]
+                nltk.pos_tag(tokenized_author_description) if is_noun(pos) and len(word) >= 3]
 
         # Eliminate duplicate tags
         tags = list(set(tags))
@@ -307,7 +307,7 @@ class LawUtils:
 
         # The bot takes the submitter-provided description (from the -legislature submit command) *and* the description
         # from Google Docs (og:description property in HTML, usually the title of the Google Doc and the first
-        # few sentence's of content.) and tokenizes those with nltk. Then, every noun from both descriptions is saved
+        # few sentences of content.) and tokenizes those with nltk. Then, every noun from both descriptions is saved
         # into the legislature_tags table with the corresponding law_id.
 
         found_laws = await self.bot.db.fetch("SELECT id FROM legislature_tags WHERE tag % $1", tag.lower())
