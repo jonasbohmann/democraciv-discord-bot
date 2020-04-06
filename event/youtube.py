@@ -166,16 +166,17 @@ class YouTube(commands.Cog):
             thumbnail_url = youtube_video['snippet']['thumbnails']['high']['url']
             video_link = f"https://youtube.com/watch?v={_id}"
 
-            data = {
-                "kind": "link",
-                "nsfw": False,
-                "sr": config.REDDIT_SUBREDDIT,
-                "title": title,
-                "spoiler": False,
-                "url": video_link
-            }
+            if config.YOUTUBE_VIDEO_UPLOADS_TO_REDDIT:
+                data = {
+                    "kind": "link",
+                    "nsfw": False,
+                    "sr": config.REDDIT_SUBREDDIT,
+                    "title": title,
+                    "spoiler": False,
+                    "url": video_link
+                }
 
-            await self.bot.reddit_api.post_to_reddit(data)
+                await self.bot.reddit_api.post_to_reddit(data)
 
             embed = self.bot.embeds.embed_builder(
                 title=f"{config.YOUTUBE_LOGO_UPLOAD}  {channel} - New YouTube video uploaded",

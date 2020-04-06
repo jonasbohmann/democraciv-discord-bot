@@ -58,10 +58,15 @@ TWITCH_ENABLED = True
 TWITCH_CHANNEL = 'democraciv'  # The twitch.tv streamer that the bot should check for live streams
 TWITCH_ANNOUNCEMENT_CHANNEL = 209432307730350080  # The Discord Channel in which the bot will post Twitch notifications
 TWITCH_EVERYONE_PING_ON_ANNOUNCEMENT = True
+TWITCH_ANNOUNCEMENT_TO_REDDIT = True  # Announces live streams on r/REDDIT_SUBREDDIT as well. Reddit client id,
+                                      # client secret and refresh token need to be provided in token.py for this to work
+
 
 # YouTube Notifications
 YOUTUBE_ENABLED = True
 YOUTUBE_VIDEO_UPLOADS_ENABLED = True
+YOUTUBE_VIDEO_UPLOADS_TO_REDDIT = True  # Announces new YouTube uploads on r/REDDIT_SUBREDDIT. Reddit client id, client
+                                        # secret and refresh token need to be provided in token.py for this to work
 YOUTUBE_LIVESTREAM_ENABLED = False
 YOUTUBE_EVERYONE_PING_ON_STREAM = False
 YOUTUBE_CHANNEL_ID = 'UC-NukxPakwQIvx73VjtIPnw'  # The channel ID of the YouTuber's channel

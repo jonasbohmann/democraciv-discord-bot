@@ -114,17 +114,18 @@ class Twitch(commands.Cog):
             else:
                 await channel.send(f'{self.streamer} is live on Twitch!', embed=embed)
 
-            data = {
-                "kind": "link",
-                "nsfw": False,
-                "sr": config.REDDIT_SUBREDDIT,
-                "title": f"{self.streamer} is live on Twitch - {twitch_data[2]} ",
-                "spoiler": False,
-                "resubmit": True,
-                "url": f"https://twitch.tv/{self.streamer}"
-            }
+            if config.TWITCH_ANNOUNCEMENT_TO_REDDIT:
+                data = {
+                    "kind": "link",
+                    "nsfw": False,
+                    "sr": config.REDDIT_SUBREDDIT,
+                    "title": f"{self.streamer} is live on Twitch - {twitch_data[2]} ",
+                    "spoiler": False,
+                    "resubmit": True,
+                    "url": f"https://twitch.tv/{self.streamer}"
+                }
 
-            await self.bot.reddit_api.post_to_reddit(data)
+                await self.bot.reddit_api.post_to_reddit(data)
 
             # Send reminder about streaming rules to executive channel
             await self.streaming_rules_reminder()

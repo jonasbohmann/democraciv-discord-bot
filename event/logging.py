@@ -129,7 +129,7 @@ class Log(commands.Cog):
             position = await self.bot.db.fetchval("SELECT MAX(join_position) FROM original_join_dates")
             await self.bot.db.execute("INSERT INTO original_join_dates (member, join_date, join_position) "
                                       "VALUES ($1, $2, $3) "
-                                      "ON CONFLICT DO NOTHING", member.id, joined_on, position)
+                                      "ON CONFLICT DO NOTHING", member.id, joined_on, position + 1)
 
         welcome_channel = await utils.get_welcome_channel(self.bot, member.guild)
 

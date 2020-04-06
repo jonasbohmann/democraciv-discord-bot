@@ -103,7 +103,7 @@ Twitch Notification module, we don't need to register an API key for Reddit.
 
 If you want to make the bot post the weekly Starboard to a subreddit, you do have to provide the client ID, client secret and 
 a **refresh token** (not application token!) of your reddit app. Follow this [guide](https://github.com/reddit-archive/reddit/wiki/OAuth2) on how to get these. 
-Make sure your refresh token has the `submit` scope.
+Make sure your refresh token has the `submit` scope. 
 
 You can configure everything else that is Reddit related in `config.py`.
 
@@ -198,4 +198,4 @@ Join the [Democraciv Discord Server](https://discord.gg/AK7dYMG) to see the bot 
 
 ---
 
-Contact @DerJonas#8109 on Discord if you have any questions left.
+Contact @DerJonas#8036 on Discord if you have any questions left.
