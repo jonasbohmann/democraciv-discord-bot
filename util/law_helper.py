@@ -297,7 +297,7 @@ class LawUtils:
             law = await Law.convert(MockContext(self.bot), law_id['law_id'])
             found.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.link})")
 
-        return found
+        return list(set(found))
 
     async def search_law_by_tag(self, tag: str) -> typing.List[str]:
         """Search for laws by their tag(s), returns list with prettified strings of found laws"""

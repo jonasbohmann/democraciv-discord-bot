@@ -110,16 +110,15 @@ class Laws(commands.Cog, name='Law'):
             results = await self.bot.laws.search_law_by_name(' '.join(query))
 
             # Then, search by tag
-
             for substring in query:
+                if len(substring) < 3:
+                    continue
+
                 result = await self.bot.laws.search_law_by_tag(substring)
                 if result:
                     results.extend(result)
 
-            # Eliminate duplicate results
-            results = list(set(results))
-
-            if not results or results[0] == []:
+            if not results:
                 results = ['Nothing found.']
 
         pages = Pages(ctx=ctx, entries=results, show_entry_count=False, title=f"Search Results for '{' '.join(query)}'",
