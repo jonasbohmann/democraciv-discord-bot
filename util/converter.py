@@ -345,13 +345,12 @@ class Bill(commands.Converter):
             argument = int(argument)
             bill = await ctx.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE id = $1", argument)
         except ValueError:
-            bill = await ctx.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE bill_name = $1", argument)
-            if bill is None:
-                bill = await ctx.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE link = $1 or tiny_link = $1",
-                                                 argument)
+            bill = await ctx.bot.db.fetchrow("SELECT * FROM legislature_bills WHERE"
+                                             " lower(bill_name) = $2 or link = $1 or tiny_link = $1", argument,
+                                             argument.lower())
 
         if bill is None:
-            raise NotFoundError(f":x: There is no bill with ID #{argument}!")
+            raise NotFoundError(f":x: There is no bill that matches `{argument}`.")
 
         session = await Session.convert(ctx, bill['leg_session'])
 
@@ -401,6 +400,8 @@ class Law(commands.Converter):
 
     The lookup strategy for the converter is as follows (in order):
         1. Lookup by ID.
+        2. Lookup by bill name (Google Docs Title).
+        3. Lookup by Google Docs URL.
     """
 
     def __init__(self, **kwargs):
@@ -422,14 +423,31 @@ class Law(commands.Converter):
     async def repeal(self):
         await self._bot.db.execute("DELETE FROM legislature_laws WHERE law_id = $1", self.id)
 
+    async def amend(self, new_link: str):
+        tiny_url = await self._bot.laws.post_to_tinyurl(new_link)
+
+        if tiny_url is None:
+            raise DemocracivBotException(":x: tinyurl.com returned an error, the link was not updated."
+                                         " Try again in a few minutes.")
+
+        await self._bot.db.execute("UPDATE legislature_bills SET link = $1, tiny_link = $2 WHERE id = $3",
+                                   new_link, tiny_url, self.id)
+
     @classmethod
-    async def convert(cls, ctx, argument: int):
+    async def convert(cls, ctx, argument: typing.Union[int, str]):
         try:
             argument = int(argument)
+            law = await ctx.bot.db.fetchrow("SELECT * FROM legislature_laws WHERE law_id = $1", argument)
         except ValueError:
-            raise BadArgument(f":x: {argument} is not a number.")
+            query = """SELECT law_id FROM legislature_laws AS l
+                       WHERE exists (SELECT 1 FROM legislature_bills b
+                       WHERE l.bill_id = b.id AND (lower(b.bill_name) = $2 OR b.link = $1 OR b.tiny_link = $1))"""
+            law_id = await ctx.bot.db.fetchval(query, argument, argument.lower())
 
-        law = await ctx.bot.db.fetchrow("SELECT * FROM legislature_laws WHERE law_id = $1", argument)
+            if law_id:
+                law = await ctx.bot.db.fetchrow("SELECT * FROM legislature_laws WHERE law_id = $1", law_id)
+            else:
+                law = None
 
         if law is None:
             raise NotFoundError(f":x: There is no law with ID #{argument}!")
@@ -540,7 +558,7 @@ class PoliticalParty(commands.Converter):
             party_id = argument
 
         elif isinstance(argument, str):
-            if argument.lower() == "independent" or argument.lower() == "ind":
+            if argument.lower() in ("independent", "independant", "ind", "ind."):
                 return cls(role=discord.utils.get(ctx.bot.democraciv_guild_object.roles, name="Independent"),
                            is_private=False, bot=ctx.bot)
 

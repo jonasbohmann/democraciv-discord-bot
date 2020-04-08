@@ -3,6 +3,7 @@ import discord
 
 from config import config
 from util import mk, utils
+from util.exceptions import DemocracivBotException
 from util.flow import Flow
 from util.converter import Law
 from util.law_helper import MockContext, AnnouncementQueue
@@ -151,7 +152,7 @@ class Laws(commands.Cog, name='Law'):
             return await ctx.send("Aborted.")
 
         elif reaction:
-            await self.bot.db.execute("DELETE FROM legislature_laws WHERE law_id = $1", law.id)
+            await law.repeal()
             self.repeal_scheduler.add(law)
             return await ctx.send(f":white_check_mark: `{law.bill.name}` was repealed.")
 
@@ -185,14 +186,11 @@ class Laws(commands.Cog, name='Law'):
             return await ctx.send("Aborted.")
 
         elif reaction:
-            tiny_url = await self.bot.laws.post_to_tinyurl(new_link)
+            try:
+                await law.amend(new_link)
+            except DemocracivBotException as e:
+                return await ctx.send(e.message)
 
-            if tiny_url is None:
-                return await ctx.send(":x: tinyurl.com returned an error, the link was not updated."
-                                      " Try again in a few minutes.")
-
-            await self.bot.db.execute("UPDATE legislature_bills SET link = $1, tiny_link = $2 WHERE id = $3",
-                                      new_link, tiny_url, law.bill.id)
             self.amend_scheduler.add(law)
             return await ctx.send(f":white_check_mark: The link to `{law.bill.name}` was changed.")
 
