@@ -199,10 +199,10 @@ class DemocracivBot(commands.Bot):
             if dciv_guild is None:
                 raise exceptions.GuildNotFoundError(config.DEMOCRACIV_GUILD_ID)
 
-            config.DEMOCRACIV_GUILD_ID = dciv_guild.id
-            self.democraciv_guild_id = dciv_guild.id
+        config.DEMOCRACIV_GUILD_ID = dciv_guild.id
+        self.democraciv_guild_id = dciv_guild.id
 
-            print(f"[BOT] Using '{dciv_guild.name}' as Democraciv guild.")
+        print(f"[BOT] Using '{dciv_guild.name}' as Democraciv guild.")
 
     @property
     def uptime(self):
