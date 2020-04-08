@@ -11,8 +11,10 @@ import datetime
 import traceback
 import discord.utils
 
-from config import config, token
 import util.exceptions as exceptions
+
+from typing import Optional
+from config import config, token
 from util.law_helper import LawUtils
 from discord.ext import commands, tasks
 from util.reddit_api import RedditAPIWrapper
@@ -74,7 +76,7 @@ class DemocracivBot(commands.Bot):
 
         # Attributes will be "initialized" in on_ready as they need a connection to Discord
         self.owner = None
-        self.democraciv_guild_object = None
+        self.democraciv_guild_id = None
 
         # Cache initialized guilds to limit database queries
         self.cached_initialized_guilds = []
@@ -185,21 +187,22 @@ class DemocracivBot(commands.Bot):
 
         await self.wait_until_ready()
 
-        self.democraciv_guild_object = self.get_guild(config.DEMOCRACIV_GUILD_ID)
+        dciv_guild = self.get_guild(config.DEMOCRACIV_GUILD_ID)
 
-        if self.democraciv_guild_object is None:
+        if dciv_guild is None:
 
             print("[BOT] Couldn't find guild with ID specified in config.py 'DEMOCRACIV_GUILD_ID'.\n"
                   "      I will use the first guild that I can see to be used for my Democraciv-specific features.")
 
-            self.democraciv_guild_object = self.guilds[0]
+            dciv_guild = self.guilds[0]
 
-            if self.democraciv_guild_object is None:
+            if dciv_guild is None:
                 raise exceptions.GuildNotFoundError(config.DEMOCRACIV_GUILD_ID)
 
-            config.DEMOCRACIV_GUILD_ID = self.democraciv_guild_object.id
+            config.DEMOCRACIV_GUILD_ID = dciv_guild.id
+            self.democraciv_guild_id = dciv_guild.id
 
-            print(f"[BOT] Using '{self.democraciv_guild_object.name}' as Democraciv guild.")
+            print(f"[BOT] Using '{dciv_guild.name}' as Democraciv guild.")
 
     @property
     def uptime(self):
@@ -209,6 +212,10 @@ class DemocracivBot(commands.Bot):
     @property
     def ping(self):
         return math.floor(self.latency * 1000)
+
+    @property
+    def democraciv_guild_object(self) -> Optional[discord.Guild]:
+        return self.get_guild(self.democraciv_guild_id)
 
     async def close_bot(self):
         """Closes the aiohttp ClientSession, the connection pool to the PostgreSQL database and the bot itself."""
