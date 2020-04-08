@@ -1,3 +1,4 @@
+import re
 import typing
 import discord
 import asyncpg
@@ -58,6 +59,9 @@ class Party(commands.Cog, name='Political Parties'):
                 invite = await self.bot.fetch_invite(party.discord_invite)
             except (NotFound, HTTPException):
                 pass
+            invite_value = party.discord_invite
+        else:
+            invite_value = "*This party does not have a Discord server.*"
 
         embed = self.bot.embeds.embed_builder(title=party.role.name,
                                               description=f"[Platform and Description]"
@@ -68,12 +72,13 @@ class Party(commands.Cog, name='Political Parties'):
             embed.set_thumbnail(url=invite.guild.icon_url_as(format='png'))
 
         if party.leader:
-            embed.add_field(name="Leader", value=party.leader.mention)
+            embed.add_field(name="Leader or Representative", value=party.leader.mention)
 
-        if party.discord_invite:
-            embed.add_field(name="Server", value=party.discord_invite)
+        embed.add_field(name="Server", value=invite_value)
+        embed.add_field(name="Aliases", value=', '.join([f"`{alias}`" for alias in party.aliases]), inline=False)
         embed.add_field(name=f"Members ({len(party.role.members)})",
                         value=', '.join([m.mention for m in party.role.members]) or 'None', inline=False)
+
         await ctx.send(embed=embed)
 
     @commands.command(name='join')
@@ -82,31 +87,31 @@ class Party(commands.Cog, name='Political Parties'):
     async def join(self, ctx, *, party: PoliticalParty):
         """Join a political party"""
 
-        if party.role not in ctx.message.author.roles:
+        if party.role in ctx.author.roles:
+            return await ctx.send(f':x: You are already part of {party.role.name}.')
 
-            if party.is_private:
-                if party.leader is None:
-                    msg = f':x: {party.role.name} is invite-only. Ask the party leader for an invitation.'
-                else:
-                    msg = f':x: {party.role.name} is invite-only. Ask {party.leader.mention} for an invitation.'
-
-                return await ctx.send(msg)
-
-            try:
-                await ctx.message.author.add_roles(party.role)
-            except discord.Forbidden:
-                raise exceptions.ForbiddenError(ForbiddenTask.ADD_ROLE, party.role.name)
-
-            if party.role.name == 'Independent':
-                await ctx.send(f':white_check_mark: You are now an {party.role.name}!')
-
+        if party.is_private:
+            if party.leader is None:
+                msg = f':x: {party.role.name} is invite-only. Ask the party leader for an invitation.'
             else:
-                await ctx.send(
-                    f':white_check_mark: You\'ve joined {party.role.name}! Now head to their Discord Server and '
-                    f'introduce yourself: {party.discord_invite}')
+                msg = f':x: {party.role.name} is invite-only. Ask {party.leader.mention} for an invitation.'
 
-        else:
-            return await ctx.send(f':x: You are already part of {party.role.name}!')
+            return await ctx.send(msg)
+
+        try:
+            await ctx.author.add_roles(party.role)
+        except discord.Forbidden:
+            raise exceptions.ForbiddenError(ForbiddenTask.ADD_ROLE, party.role.name)
+
+        if party.role.name == 'Independent':
+            return await ctx.send(f':white_check_mark: You are now an {party.role.name}.')
+
+        message = f":white_check_mark: You've joined {party.role.name}!"
+
+        if party.discord_invite:
+            message = f"{message} Now head to their Discord Server and introduce yourself: {party.discord_invite}"
+
+        await ctx.send(message)
 
     @commands.command(name='leave')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -114,20 +119,19 @@ class Party(commands.Cog, name='Political Parties'):
     async def leave(self, ctx, *, party: PoliticalParty):
         """Leave a political party"""
 
-        if party.role in ctx.message.author.roles:
-            try:
-                await ctx.message.author.remove_roles(party.role)
-            except discord.Forbidden:
-                raise exceptions.ForbiddenError(ForbiddenTask.REMOVE_ROLE, detail=party.role.name)
+        if party.role not in ctx.author.roles:
+            return await ctx.send(f':x: You are not part of {party.role.name}.')
 
-            if party.role.name == 'Independent':
-                msg = f':white_check_mark: You are no longer an {party.role.name}!'
-            else:
-                msg = f':white_check_mark: You left {party.role.name}!'
-            await ctx.send(msg)
+        try:
+            await ctx.author.remove_roles(party.role)
+        except discord.Forbidden:
+            raise exceptions.ForbiddenError(ForbiddenTask.REMOVE_ROLE, detail=party.role.name)
 
+        if party.role.name == 'Independent':
+            msg = f':white_check_mark: You are no longer an {party.role.name}.'
         else:
-            return await ctx.send(f':x: You are not part of {party.role.name}!')
+            msg = f':white_check_mark: You left {party.role.name}.'
+        await ctx.send(msg)
 
     @commands.command(name='members', aliases=['rank', 'ranks', 'ranking'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -210,21 +214,24 @@ class Party(commands.Cog, name='Political Parties'):
         else:
             discord_role = role_name
 
-            await ctx.send(
-                f":white_check_mark: I'll use the **pre-existing role** named "
-                f"'{discord_role.name}' for the new party.")
+            await ctx.send(f":white_check_mark: I'll use the **pre-existing role**"
+                           f" `{discord_role.name}` for the new party.")
 
-        await ctx.send(":information_source: Reply with the invite link to the party's Discord guild.")
+        await ctx.send(":information_source: Reply with the invite link to the party's Discord server. "
+                       "If they don't have one, just reply with gibberish.")
 
         party_invite = await flow.get_text_input(300)
 
         if not party_invite:
             return None
 
+        discord_invite_pattern = re.compile("(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
+        if not discord_invite_pattern.match(party_invite):
+            party_invite = None
+
         is_private = False
-        private_question = await ctx.send(
-            "Should this new party be **public**, i.e. join-able by everyone? "
-            "React with :white_check_mark: if yes, or with :x: if not.")
+        private_question = await ctx.send("Should this new party be **public**, i.e. join-able by everyone? "
+                                          "React with :white_check_mark: if yes, or with :x: if not.")
 
         reaction = await flow.get_yes_no_reaction_confirm(private_question, 240)
 
@@ -339,18 +346,6 @@ class Party(commands.Cog, name='Political Parties'):
 
         await self.bot.db.execute("DELETE FROM party_alias WHERE alias = $1", alias.lower())
         await ctx.send(f':white_check_mark: Alias `{alias}` was deleted.')
-
-    @commands.command(name='listaliases')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def listaliases(self, ctx, *, party: PoliticalParty):
-        """List all aliases of a given party"""
-
-        if not party.aliases:
-            return await ctx.send(f":x: There are no aliases for `{party.role.name}`.")
-
-        embed = self.bot.embeds.embed_builder(title=f'Aliases of {party.role.name}',
-                                              description='\n'.join(party.aliases))
-        await ctx.send(embed=embed)
 
     @commands.command(name='mergeparty', aliases=['mergeparties'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
