@@ -52,6 +52,18 @@ class Guild(commands.Cog):
         embed.set_thumbnail(url=ctx.guild.icon_url_as(format='png'))
         await ctx.send(embed=embed)
 
+    @commands.Cog.listener(name="on_member_join")
+    async def welcome_message_listener(self, member):
+        if not await self.bot.checks.is_welcome_message_enabled(member.guild.id):
+            return
+
+        welcome_channel = await utils.get_welcome_channel(self.bot, member.guild)
+
+        if welcome_channel is not None:
+            welcome_message = (await self.bot.db.fetchval("SELECT welcome_message FROM guilds WHERE id = $1",
+                                                          member.guild.id)).replace("{member}", f"{member.mention}")
+            await welcome_channel.send(welcome_message)
+
     @guild.command(name='welcome')
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
@@ -70,6 +82,8 @@ class Guild(commands.Cog):
 
         if not current_welcome_message:
             current_welcome_message = "This guild currently has no welcome message."
+        elif len(current_welcome_message) > 1024:
+            current_welcome_message = "*The welcome message is too long to fit in here.*"
 
         embed = self.bot.embeds.embed_builder(title=f":wave:  Welcome Module for {ctx.guild.name}",
                                               description="React with the :gear: emoji to change "
@@ -96,8 +110,7 @@ class Guild(commands.Cog):
                 await ctx.send(":white_check_mark: Enabled the welcome module.")
 
                 # Get new welcome channel
-                await ctx.send(
-                    ":information_source: Reply with the name of the channel the welcome module should use.")
+                await ctx.send(":information_source: Reply with the name of the channel the welcome module should use.")
 
                 channel_object = await flow.get_new_channel(240)
 
@@ -156,8 +169,8 @@ class Guild(commands.Cog):
 
         if await flow.gear_reaction_confirm(info_embed, 300):
 
-            status_question = await ctx.send(
-                "React with :white_check_mark: to enable the logging module, or with :x: to disable the logging module.")
+            status_question = await ctx.send("React with :white_check_mark: to enable the logging module, "
+                                             "or with :x: to disable the logging module.")
 
             reaction = await flow.get_yes_no_reaction_confirm(status_question, 240)
 
@@ -167,9 +180,7 @@ class Guild(commands.Cog):
             if reaction:
                 await self.bot.db.execute("UPDATE guilds SET logging = true WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Enabled the logging module.")
-
-                await ctx.send(
-                    ":information_source: Reply with the name of the channel the logging module should use.")
+                await ctx.send(":information_source: Reply with the name of the channel the logging module should use.")
 
                 channel_object = await flow.get_new_channel(240)
 
@@ -202,12 +213,12 @@ class Guild(commands.Cog):
         if current_logging_channel is None:
             return await ctx.send(":x: This guild currently has no logging channel. Please set one with `-guild logs`.")
 
-        help_description = "Add/Remove a channel to the excluded channels with:\n`-guild exclude [channel_name]`\n"
+        help_description = "Add or remove a channel to the excluded channels with:\n`-guild exclude [channel_name]`\n"
 
         excluded_channels = await self.bot.db.fetchval("SELECT logging_excluded FROM guilds WHERE id = $1",
                                                        ctx.guild.id)
         if not channel:
-            current_excluded_channels_by_name = ""
+            current_excluded_channels_by_name = []
 
             if excluded_channels is None:
                 return await ctx.send("There are no from logging excluded channels on this guild.")
@@ -215,14 +226,16 @@ class Guild(commands.Cog):
             for channel in excluded_channels:
                 channel = self.bot.get_channel(channel)
                 if channel is not None:
-                    current_excluded_channels_by_name += f"{channel.mention}\n"
+                    current_excluded_channels_by_name.append(channel.mention)
 
-            if current_excluded_channels_by_name == "":
+            if not current_excluded_channels_by_name:
                 current_excluded_channels_by_name = "There are no from logging excluded channels on this guild."
+            else:
+                current_excluded_channels_by_name = '\n'.join(current_excluded_channels_by_name)
 
             embed = self.bot.embeds.embed_builder(title=f"Logging-Excluded Channels on {ctx.guild.name}",
                                                   description=help_description)
-            embed.add_field(name="Currently Excluded Channels", value=current_excluded_channels_by_name)
+            embed.add_field(name="Excluded Channels", value=current_excluded_channels_by_name)
             return await ctx.send(embed=embed)
 
         else:
@@ -242,16 +255,29 @@ class Guild(commands.Cog):
 
                 if remove_status == "UPDATE 1":
                     return await ctx.send(f":white_check_mark: {channel_object.mention} is no longer excluded from"
-                                          f" showing up in {current_logging_channel.mention}!")
+                                          f" showing up in {current_logging_channel.mention}.")
 
             # Add channel
             add_status = await self.bot.db.execute("UPDATE guilds SET logging_excluded = array_append(logging_excluded,"
-                                                   " $2) WHERE id = $1"
-                                                   , ctx.guild.id, channel_object.id)
+                                                   " $2) WHERE id = $1", ctx.guild.id, channel_object.id)
 
             if add_status == "UPDATE 1":
                 await ctx.send(f":white_check_mark: Excluded channel {channel_object.mention} from showing up in "
-                               f"{current_logging_channel.mention}!")
+                               f"{current_logging_channel.mention}.")
+
+    @commands.Cog.listener(name="on_member_join")
+    async def default_role_listener(self, member):
+        if not await self.bot.checks.is_default_role_enabled(member.guild.id):
+            return
+
+        default_role = await self.bot.db.fetchval("SELECT defaultrole_role FROM guilds WHERE id = $1", member.guild.id)
+        default_role = member.guild.get_role(default_role)
+
+        if default_role is not None:
+            try:
+                await member.add_roles(default_role)
+            except discord.Forbidden:
+                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.ADD_ROLE, default_role.name)
 
     @guild.command(name='defaultrole')
     @commands.guild_only()

@@ -1,11 +1,9 @@
 import discord
 import datetime
-
 import util.utils as utils
 
 from discord.ext import commands
 from util import exceptions
-from util.exceptions import ForbiddenTask
 
 
 class Log(commands.Cog):
@@ -124,32 +122,6 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
-        if member.guild.id == self.bot.democraciv_guild_object.id:
-            joined_on = member.joined_at or datetime.datetime.utcnow()
-            position = await self.bot.db.fetchval("SELECT MAX(join_position) FROM original_join_dates")
-            await self.bot.db.execute("INSERT INTO original_join_dates (member, join_date, join_position) "
-                                      "VALUES ($1, $2, $3) "
-                                      "ON CONFLICT DO NOTHING", member.id, joined_on, position + 1)
-
-        welcome_channel = await utils.get_welcome_channel(self.bot, member.guild)
-
-        if welcome_channel is not None:
-            if await self.bot.checks.is_welcome_message_enabled(member.guild.id):
-                welcome_message = (await self.bot.db.fetchval("SELECT welcome_message FROM guilds WHERE id = $1",
-                                                              member.guild.id)).replace("{member}", f"{member.mention}")
-                await welcome_channel.send(welcome_message)
-
-        if await self.bot.checks.is_default_role_enabled(member.guild.id):
-            default_role = await self.bot.db.fetchval("SELECT defaultrole_role FROM guilds WHERE id = $1",
-                                                      member.guild.id)
-            default_role = member.guild.get_role(default_role)
-
-            if default_role is not None:
-                try:
-                    await member.add_roles(default_role)
-                except discord.Forbidden:
-                    raise exceptions.ForbiddenError(ForbiddenTask.ADD_ROLE, default_role.name)
-
         if not await self.bot.checks.is_logging_enabled(member.guild.id):
             return
 

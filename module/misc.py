@@ -18,6 +18,17 @@ class Misc(commands.Cog, name="Miscellaneous"):
         self.bot = bot
         self.cached_sorted_veterans_on_democraciv = []
 
+    @commands.Cog.listener(name="on_member_join")
+    async def original_join_position_listener(self, member):
+        if member.guild.id != self.bot.democraciv_guild_object.id:
+            return
+
+        joined_on = member.joined_at or datetime.datetime.utcnow()
+        position = await self.bot.db.fetchval("SELECT MAX(join_position) FROM original_join_dates")
+
+        await self.bot.db.execute("INSERT INTO original_join_dates (member, join_date, join_position) "
+                                  "VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", member.id, joined_on, position + 1)
+
     async def get_member_join_date(self, member: discord.Member) -> datetime.datetime:
         if member.guild.id == self.bot.democraciv_guild_object.id:
             original_date = await self.bot.db.fetchval("SELECT join_date FROM original_join_dates WHERE member = $1",
