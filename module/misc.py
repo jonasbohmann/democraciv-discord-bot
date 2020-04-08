@@ -197,7 +197,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
                 # Veterans can only be human, exclude bot accounts
                 for member in guild_members_without_bots:
-                    join_position = await self.get_member_join_position(member, guild_members_without_bots)
+                    join_position, max_members = await self.get_member_join_position(member, guild_members_without_bots)
 
                     if join_position <= 15:
                         first_15_members.append((member, join_position))
