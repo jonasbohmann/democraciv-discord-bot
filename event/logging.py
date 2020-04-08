@@ -135,9 +135,8 @@ class Log(commands.Cog):
 
         if welcome_channel is not None:
             if await self.bot.checks.is_welcome_message_enabled(member.guild.id):
-                # Apparently this doesn't raise an error if {member} is not in welcome_message
                 welcome_message = (await self.bot.db.fetchval("SELECT welcome_message FROM guilds WHERE id = $1",
-                                                              member.guild.id)).format(member=member.mention)
+                                                              member.guild.id)).replace("{member}", f"{member.mention}")
                 await welcome_channel.send(welcome_message)
 
         if await self.bot.checks.is_default_role_enabled(member.guild.id):
