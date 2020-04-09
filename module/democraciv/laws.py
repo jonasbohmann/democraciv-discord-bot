@@ -41,6 +41,8 @@ class Laws(commands.Cog, name='Law'):
         self.bot = bot
         self.repeal_scheduler = RepealScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.amend_scheduler = AmendScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+        self.illegal_tags = ('act', 'the', 'author', 'authors', 'date',
+                             'name', 'bill', 'law', 'and', 'd/m/y', 'type', 'description')
 
     @property
     def gov_announcements_channel(self) -> typing.Optional[discord.TextChannel]:
@@ -105,26 +107,28 @@ class Laws(commands.Cog, name='Law'):
     async def search(self, ctx, *query: str):
         """Search for laws by their name or description"""
 
+        name = ' '.join(query)
+
         async with ctx.typing():
 
-            # First, search by name
-            results = await self.bot.laws.search_law_by_name(' '.join(query))
+            # First, search by name similarity
+            results = await self.bot.laws.search_law_by_name(name)
 
-            # Then, search by tag
+            # Then, search by tag similarity
             for substring in query:
-                if len(substring) < 3:
+                if len(substring) < 3 or substring in self.illegal_tags:
                     continue
 
                 result = await self.bot.laws.search_law_by_tag(substring)
                 if result:
-                    results.extend(result)
+                    results.update(result)
 
             if not results:
                 results = ['Nothing found.']
 
-        pages = Pages(ctx=ctx, entries=results, show_entry_count=False, title=f"Search Results for '{' '.join(query)}'",
-                      show_index=False, footer_text=f"Use {self.bot.commands_prefix}law <id> to get more "
-                                                    f"details about a law.")
+        pages = Pages(ctx=ctx, entries=list(results), show_entry_count=False,
+                      title=f"Search Results for '{name}'", show_index=False,
+                      footer_text=f"Use {self.bot.commands_prefix}law <id> to get more details about a law.")
         await pages.paginate()
 
     @law.command(name='repeal', aliases=['r, remove', 'delete'])

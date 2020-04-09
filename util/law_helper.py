@@ -6,8 +6,8 @@ import asyncpg
 import datetime
 import collections
 
-from bs4 import BeautifulSoup, SoupStrainer
 from discord.ext import tasks
+from bs4 import BeautifulSoup, SoupStrainer
 
 from util import mk
 from util.converter import Session, Bill, Law
@@ -63,6 +63,8 @@ class LawUtils:
 
     def __init__(self, bot):
         self.bot = bot
+        self.illegal_tags = ('act', 'the', 'author', 'authors', 'date',
+                             'name', 'bill', 'law', 'and', 'd/m/y', 'type', 'description')
 
         # The natural language processor module nltk used for legislature_tags needs extra data to work
         nltk.download('punkt')
@@ -161,8 +163,7 @@ class LawUtils:
 
         return bill_description
 
-    @staticmethod
-    def generate_law_tags(google_docs_description: str, author_description: str) -> typing.List[str]:
+    def generate_law_tags(self, google_docs_description: str, author_description: str) -> typing.List[str]:
         """Generates tags from all nouns of submitter-provided description and the Google Docs description"""
 
         # Function to check if token is noun
@@ -174,7 +175,9 @@ class LawUtils:
 
         # Add all nouns to list
         tags = [word for (word, pos) in nltk.pos_tag(tokenized_docs_description) +
-                nltk.pos_tag(tokenized_author_description) if is_noun(pos) and len(word) >= 3]
+                nltk.pos_tag(tokenized_author_description) if is_noun(pos) and
+                len(word) >= 3 and
+                word.lower() not in self.illegal_tags]
 
         # Eliminate duplicate tags
         tags = list(set(tags))
@@ -282,24 +285,33 @@ class LawUtils:
 
         return tiny_url
 
-    async def search_law_by_name(self, name: str) -> typing.List[str]:
+    async def update_pg_trgm_similarity_threshold(self, threshold: float = 0.3, connection=None):
+        # I couldn't figure out how to make the setting persist in all sessions from the connection pool, so
+        # we just set it every time per connection
+
+        con = connection or self.bot.db
+        await con.execute(f"SET pg_trgm.similarity_threshold = {threshold}")
+
+    async def search_law_by_name(self, name: str) -> typing.Dict[str, None]:
         """Search for laws by their name, returns list with prettified strings of found laws"""
 
-        query = """SELECT law_id FROM legislature_laws AS l
-                    WHERE exists (SELECT 1 FROM legislature_bills b
-                    WHERE l.bill_id = b.id AND b.bill_name % $1)"""
+        query = """SELECT DISTINCT law_id FROM legislature_laws AS l
+                   WHERE exists (SELECT 1 FROM legislature_bills b
+                   WHERE l.bill_id = b.id AND lower(b.bill_name) % $1 ORDER BY lower(b.bill_name) <-> $1);"""
 
-        laws = await self.bot.db.fetch(query, name.lower())
+        async with self.bot.db.acquire() as con:
+            await self.update_pg_trgm_similarity_threshold(0.3, connection=con)
+            laws = await con.fetch(query, name.lower())
 
-        found = []
+        found = dict()
 
         for law_id in laws:
             law = await Law.convert(MockContext(self.bot), law_id['law_id'])
-            found.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.link})")
+            found[f"Law #{law.id} - [{law.bill.name}]({law.bill.link})"] = None
 
-        return list(set(found))
+        return found
 
-    async def search_law_by_tag(self, tag: str) -> typing.List[str]:
+    async def search_law_by_tag(self, tag: str) -> typing.Dict[str, None]:
         """Search for laws by their tag(s), returns list with prettified strings of found laws"""
 
         # Once a bill is passed into law, the bot automatically generates tags for it to allow for easier and faster
@@ -310,13 +322,17 @@ class LawUtils:
         # few sentences of content.) and tokenizes those with nltk. Then, every noun from both descriptions is saved
         # into the legislature_tags table with the corresponding law_id.
 
-        found_laws = await self.bot.db.fetch("SELECT id FROM legislature_tags WHERE tag % $1", tag.lower())
-        laws = list(set([law['id'] for law in found_laws]))
+        async with self.bot.db.acquire() as con:
+            await self.update_pg_trgm_similarity_threshold(0.5, connection=con)
 
-        pretty_laws = []
+            found_laws = await con.fetch("SELECT id FROM legislature_tags WHERE tag % $1 ORDER BY tag <-> $1",
+                                         tag.lower())
 
-        for law_id in laws:
-            law = await Law.convert(MockContext(self.bot), law_id)
-            pretty_laws.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.link})")
+        # Abuse dict as ordered set
+        pretty_laws = dict()
+
+        for law_id in found_laws:
+            law = await Law.convert(MockContext(self.bot), law_id['id'])
+            pretty_laws[f"Law #{law.id} - [{law.bill.name}]({law.bill.link})"] = None
 
         return pretty_laws

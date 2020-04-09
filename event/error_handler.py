@@ -49,7 +49,8 @@ class ErrorHandler(commands.Cog):
                 await self.bot.owner.send(embed=embed)
             else:
                 await self.bot.owner.send(embed=embed)
-                await self.bot.owner.send(f'```py\n{pretty_traceback}```')
+                if len(pretty_traceback) <= 2000:
+                    await self.bot.owner.send(f'```py\n{pretty_traceback}```')
 
     @staticmethod
     def format_permissions(missing_perms: list) -> str:
