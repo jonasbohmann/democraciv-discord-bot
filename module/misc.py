@@ -24,10 +24,9 @@ class Misc(commands.Cog, name="Miscellaneous"):
             return
 
         joined_on = member.joined_at or datetime.datetime.utcnow()
-        position = await self.bot.db.fetchval("SELECT MAX(join_position) FROM original_join_dates")
 
-        await self.bot.db.execute("INSERT INTO original_join_dates (member, join_date, join_position) "
-                                  "VALUES ($1, $2, $3) ON CONFLICT DO NOTHING", member.id, joined_on, position + 1)
+        await self.bot.db.execute("INSERT INTO original_join_dates (member, join_date) "
+                                  "VALUES ($1, $2) ON CONFLICT DO NOTHING", member.id, joined_on)
 
     async def get_member_join_date(self, member: discord.Member) -> datetime.datetime:
         if member.guild.id == self.bot.democraciv_guild_object.id:

@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS guild_tags_alias(
 CREATE TABLE IF NOT EXISTS original_join_dates(
     member bigint UNIQUE,
     join_date timestamp WITHOUT TIME ZONE,
-    join_position int UNIQUE
+    join_position serial UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS starboard_entries(
