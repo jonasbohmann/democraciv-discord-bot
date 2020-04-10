@@ -1,5 +1,6 @@
 import typing
 import discord
+from discord.ext.commands import Greedy
 
 from config import config
 from util import mk, utils
@@ -134,16 +135,22 @@ class Laws(commands.Cog, name='Law'):
     @law.command(name='repeal', aliases=['r, remove', 'delete'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
-    async def removelaw(self, ctx, law_id: Law):
-        """Repeal a law to remove it from `-laws`
+    async def removelaw(self, ctx, law_ids: Greedy[Law]):
+        """Repeal one or multiple laws
 
         **Example:**
-            `-law removelaw 24`"""
+            `-law removelaw 24` will repeal law #24
+            `-law removelaw 56 57 58 12 13` will repeal all those laws"""
 
-        law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
+        if not law_ids:
+            return await ctx.send_help(ctx.command)
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to repeal `{law.bill.name}`"
-                                      f" (#{law.id})?")
+        laws = law_ids  # At this point, law_id is already a Law object, so calling it law_id makes no sense
+
+        pretty_laws = '\n'.join([f"-  **{_law.bill.name}** (#{_law.id})" for _law in laws])
+
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want repeal the following laws?"
+                                      f"\n{pretty_laws}")
 
         flow = Flow(self.bot, ctx)
 
@@ -156,15 +163,18 @@ class Laws(commands.Cog, name='Law'):
             return await ctx.send("Aborted.")
 
         elif reaction:
-            await law.repeal()
-            self.repeal_scheduler.add(law)
-            return await ctx.send(f":white_check_mark: `{law.bill.name}` was repealed.")
+            for law in laws:
+                await law.repeal()
+                self.repeal_scheduler.add(law)
+
+            return await ctx.send(f":white_check_mark: All laws were repealed.")
 
     @law.command(name='updatelink', aliases=['ul', 'amend'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def updatelink(self, ctx, law_id: Law, new_link: str):
         """Update the link to a law.
+
         Useful for applying amendments to laws if the current Speaker does not own the law's Google Doc.
 
         **Example**:

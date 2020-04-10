@@ -662,7 +662,7 @@ class Legislature(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
     async def withdraw(self, ctx):
-        """Withdraw a bill or motion from the current session."""
+        """Withdraw one or multiple bills or motions from the current session"""
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
@@ -740,7 +740,7 @@ class Legislature(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
     async def withdrawbill(self, ctx, bill_ids: Greedy[Bill]):
-        """Withdraw a bill from the current session
+        """Withdraw one or multiple bills from the current session
 
         The Speaker and Vice-Speaker can withdraw every submitted bill during both the Submission Period and the Voting Period.
            The original submitter of the bill can only withdraw their own bill during the Submission Period.
@@ -758,7 +758,7 @@ class Legislature(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
     async def withdrawmotion(self, ctx, motion_ids: Greedy[Motion]):
-        """Withdraw a motion from the current session
+        """Withdraw one or multiple motions from the current session
 
         The Speaker and Vice-Speaker can withdraw every submitted motion during both the Submission Period and the Voting Period.
            The original submitter of the motion can only withdraw their own motio during the Submission Period.
@@ -776,7 +776,7 @@ class Legislature(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def override(self, ctx, bill_ids: Greedy[Bill]):
-        """Override the veto of a bill to pass it into law
+        """Override the veto of one or multiple bills to pass them into law
 
          **Examples:**
             `-legislature override 56`
