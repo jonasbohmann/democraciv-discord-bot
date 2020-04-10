@@ -775,22 +775,48 @@ class Legislature(commands.Cog):
     @legislature.command(name='override', aliases=['ov'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
-    async def override(self, ctx, bill_id: Bill):
-        """Override a vetoed bill"""
+    async def override(self, ctx, bill_ids: Greedy[Bill]):
+        """Override the veto of a bill to pass it into law
 
-        bill = bill_id
+         **Examples:**
+            `-legislature override 56`
+            `-legislature override 12 13 14 15 16`"""
 
-        if not bill.passed_leg:
-            return await ctx.send(":x: This bill did not pass the Legislature.")
+        if not bill_ids:
+            return await ctx.send_help(ctx.command)
 
-        if not bill.voted_on_by_ministry:
-            return await ctx.send(":x: The Ministry did not vote on this bill yet.")
+        bills = bill_ids
 
-        if await bill.is_law() or bill.passed_ministry:
-            return await ctx.send(":x: This bill is already law.")
+        def verify_bill(bill_to_verify) -> str:
+            if not bill_to_verify.passed_leg:
+                return "This bill did not pass the Legislature."
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to override the Ministry's veto"
-                                      f" of `{bill.name}` (#{bill.name})?")
+            if not bill_to_verify.voted_on_by_ministry:
+                return "The Ministry did not vote on this bill yet."
+
+            if await bill_to_verify.is_law() or bill_to_verify.passed_ministry:
+                return "This bill is already law."
+
+        unverified_bills = []
+
+        for bill in bills:
+            error = verify_bill(bill)
+            if error:
+                unverified_bills.append((bill, error))
+
+        if unverified_bills:
+            bills = [b for b in bills if b not in list(map(list, zip(*unverified_bills)))[0]]
+
+            error_messages = '\n'.join(
+                [f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in unverified_bills])
+            await ctx.send(f":warning: The vetos of the following bills can not be overridden.\n{error_messages}")
+
+        if not bills:
+            return
+
+        pretty_objects = '\n'.join([f"-  **{_bill.name}** (#{_bill.id})" for _bill in bills])
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
+                                      f" to override the Ministry's veto of the following bills?\n{pretty_objects}")
 
         flow = Flow(self.bot, ctx)
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
@@ -802,10 +828,11 @@ class Legislature(commands.Cog):
             return await ctx.send("Aborted.")
 
         elif reaction:
-            await bill.pass_into_law(override=True)
-            self.override_scheduler.add(bill)
-            await ctx.send(f":white_check_mark: The Ministry's veto of `{bill.name}` was overridden and "
-                           f"the bill was passed into law.")
+            for bill in bills:
+                await bill.pass_into_law(override=True)
+                self.override_scheduler.add(bill)
+
+            await ctx.send(f":white_check_mark: The vetos of all bills were overridden.")
 
     @legislature.command(name='stats')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
