@@ -82,14 +82,14 @@ class Laws(commands.Cog, name='Law'):
         # If the user did specify a law_id, send details about that law
         law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
 
-        embed = self.bot.embeds.embed_builder(title="Law Details", description="")
+        embed = self.bot.embeds.embed_builder(title=f"Law #{law.id}", description="")
 
         if law.bill.submitter is not None:
             embed.set_author(name=law.bill.submitter.name,
                              icon_url=law.bill.submitter.avatar_url_as(static_format='png'))
-            submitted_by_value = f"{law.bill.submitter.mention} (during Session #{law.bill.session.id})"
+            submitted_by_value = f"During Session #{law.bill.session.id} by {law.bill.submitter.mention}"
         else:
-            submitted_by_value = f"*Submitter left Democraciv* (during Session #{law.bill.session.id})"
+            submitted_by_value = f"During Session #{law.bill.session.id} by *Person left Democraciv*"
 
         if law.passed_on is None:
             law.passed_on = law.bill.session.closed_on
@@ -97,9 +97,9 @@ class Laws(commands.Cog, name='Law'):
         embed.add_field(name="Name", value=f"[{law.bill.name}]({law.bill.link})")
         embed.add_field(name="Description", value=law.bill.description, inline=False)
         embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
-        embed.add_field(name="Law Since (UTC)", value=law.passed_on.strftime("%A, %B %d %Y"), inline=True)
+        embed.add_field(name="Law Since", value=law.passed_on.strftime("%A, %B %d %Y"), inline=True)
         embed.add_field(name="Search Tags", value=', '.join(law.tags), inline=False)
-        embed.set_footer(text=f"Associated Bill: #{law.bill.id}", icon_url=config.BOT_ICON_URL)
+        embed.set_footer(text=f"All dates are in UTC. Associated Bill: #{law.bill.id}", icon_url=config.BOT_ICON_URL)
         await ctx.send(embed=embed)
 
     @law.command(name='search', aliases=['s'])

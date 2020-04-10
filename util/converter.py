@@ -273,9 +273,9 @@ class Bill(commands.Converter):
 
         if not self.voted_on_by_leg:
             if verbose:
-                return f"""Legislature: {config.LEG_BILL_STATUS_YELLOW} *(Not Voted On Yet)*
-                          Ministry:    {config.LEG_BILL_STATUS_YELLOW} *(Not Voted On Yet)*
-                          Law:         {config.LEG_BILL_STATUS_GRAY}"""
+                return f"Legislature: {config.LEG_BILL_STATUS_YELLOW} *(Not Voted On Yet)*\n" \
+                       f"Ministry: {config.LEG_BILL_STATUS_YELLOW} *(Not Voted On Yet)*\n" \
+                       f"Law: {config.LEG_BILL_STATUS_GRAY}\n"
             else:
                 return f"{config.LEG_BILL_STATUS_YELLOW}{config.LEG_BILL_STATUS_YELLOW}{config.LEG_BILL_STATUS_GRAY}"
         else:
@@ -299,7 +299,7 @@ class Bill(commands.Converter):
                                 status.append(config.LEG_BILL_STATUS_GREEN)
                         else:
                             if verbose:
-                                status.append(f"Ministry: {config.LEG_BILL_STATUS_RED} *(Failed)*")
+                                status.append(f"Ministry: {config.LEG_BILL_STATUS_RED} *(Vetoed)*")
                             else:
                                 status.append(config.LEG_BILL_STATUS_RED)
                 else:
@@ -311,10 +311,17 @@ class Bill(commands.Converter):
                 is_law = await self.is_law()
 
                 if is_law:
-                    if verbose:
-                        status.append(f"Law: {config.LEG_BILL_STATUS_GREEN} *(Active Law)*")
+                    if self.voted_on_by_ministry and not self.passed_ministry:
+                        if verbose:
+                            status.append(f"Law: {config.LEG_BILL_STATUS_GREEN} *(Active Law due"
+                                          f" to Legislature Override of Veto)*")
+                        else:
+                            status.append(config.LEG_BILL_STATUS_GREEN)
                     else:
-                        status.append(config.LEG_BILL_STATUS_GREEN)
+                        if verbose:
+                            status.append(f"Law: {config.LEG_BILL_STATUS_GREEN} *(Active Law)*")
+                        else:
+                            status.append(config.LEG_BILL_STATUS_GREEN)
                 elif not is_law and ((self.is_vetoable and self.passed_leg and self.passed_ministry) or
                                      (not self.is_vetoable and self.passed_leg)):
                     if verbose:
@@ -329,9 +336,9 @@ class Bill(commands.Converter):
 
             else:
                 if verbose:
-                    return f"""Legislature: {config.LEG_BILL_STATUS_RED} *(Failed)*
-                              Ministry:    {config.LEG_BILL_STATUS_GRAY} *(Failed in Legislature)*
-                              Law:         {config.LEG_BILL_STATUS_GRAY}"""
+                    return f"Legislature: {config.LEG_BILL_STATUS_RED} *(Failed)*\n" \
+                           f"Ministry: {config.LEG_BILL_STATUS_GRAY} *(Failed in Legislature)*\n" \
+                           f"Law: {config.LEG_BILL_STATUS_GRAY}"
                 return f"{config.LEG_BILL_STATUS_RED}{config.LEG_BILL_STATUS_GRAY}{config.LEG_BILL_STATUS_GRAY}"
 
         if verbose:

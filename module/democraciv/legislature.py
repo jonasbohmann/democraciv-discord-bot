@@ -137,13 +137,13 @@ class Legislature(commands.Cog):
 
         bill = bill_id
 
-        embed = self.bot.embeds.embed_builder(title="Bill Details", description="", has_footer=False)
+        embed = self.bot.embeds.embed_builder(title=f"Bill #{bill.id}", description="", has_footer=False)
 
         if bill.submitter is not None:
             embed.set_author(name=bill.submitter.name, icon_url=bill.submitter.avatar_url_as(static_format='png'))
-            submitted_by_value = f"{bill.submitter.mention} (during Session #{bill.session.id})"
+            submitted_by_value = f"During Session #{bill.session.id} by {bill.submitter.mention}"
         else:
-            submitted_by_value = f"*Submitter left Democraciv* (during Session #{bill.session.id})"
+            submitted_by_value = f"During Session #{bill.session.id} by *Person left Democraciv*"
 
         embed.add_field(name="Name", value=f"[{bill.name}]({bill.link})")
         embed.add_field(name="Description", value=bill.description, inline=False)
@@ -164,7 +164,7 @@ class Legislature(commands.Cog):
 
         motion = motion_id
 
-        embed = self.bot.embeds.embed_builder(title="Motion Details", description="", has_footer=False)
+        embed = self.bot.embeds.embed_builder(title=f"Motion #{motion.id}", description="", has_footer=False)
 
         if motion.submitter is not None:
             embed.set_author(name=motion.submitter.name, icon_url=motion.submitter.avatar_url_as(static_format='png'))
@@ -511,10 +511,10 @@ class Legislature(commands.Cog):
         current_leg_session: Session = await self.bot.laws.get_active_leg_session()
 
         if current_leg_session is None:
-            return await ctx.send(":x: There is no active session!")
+            return await ctx.send(":x: There is no active session.")
 
         if current_leg_session.status is not SessionStatus.SUBMISSION_PERIOD:
-            return await ctx.send(f":x: The submission period for session #{current_leg_session.id} is already over!")
+            return await ctx.send(f":x: The submission period for session #{current_leg_session.id} is already over.")
 
         flow = Flow(self.bot, ctx)
 
