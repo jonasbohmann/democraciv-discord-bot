@@ -484,6 +484,7 @@ class Motion(commands.Converter):
         self.session: Session = kwargs.get('session')
         self.description: str = kwargs.get('description')
         self.link: str = kwargs.get('link')
+        self.name: str = self.title  # compatibility
         self._submitter: int = kwargs.get('submitter')
         self._bot = kwargs.get('bot')
 

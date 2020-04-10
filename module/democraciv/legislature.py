@@ -3,6 +3,8 @@ import asyncpg
 import discord
 import datetime
 
+from discord.ext.commands import Greedy
+
 from util.flow import Flow
 from util.paginator import Pages
 from config import config, links
@@ -96,6 +98,11 @@ class Legislature(commands.Cog):
                 await legislator.send(message)
             except discord.Forbidden:
                 await self.bot.owner.send(f"Failed to DM {legislator}.")
+
+    def is_cabinet(self, member: discord.Member) -> bool:
+        if self.speaker_role in member.roles or self.vice_speaker_role in member.roles:
+            return True
+        return False
 
     @commands.group(name='legislature', aliases=['leg'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -659,46 +666,57 @@ class Legislature(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(ctx.command)
 
-    @withdraw.command(name='bill', aliases=['b'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.is_democraciv_guild()
-    async def withdrawbill(self, ctx, bill_id: Bill):
-        """Withdraw a bill from the current session"""
+    async def withdraw_objects(self, ctx, objects: typing.List[typing.Union[Bill, Motion]]):
 
-        bill = bill_id  # At this point, bill_id is already a Bill object, so calling it ball_id makes no sense
+        if isinstance(objects[0], Bill):
+            obj_name = "bill"
+        else:
+            obj_name = "motion"
 
         last_leg_session = await self.bot.laws.get_last_leg_session()
 
-        if last_leg_session.id != bill.session.id:
-            return await ctx.send(f":x: This bill was not submitted in the last session of the Legislature!")
+        def verify_object(to_verify) -> str:
+            if last_leg_session.id != to_verify.session.id:
+                return f"This {obj_name} was not submitted in the last session of the Legislature."
 
-        if bill.voted_on_by_leg:
-            return await ctx.send(f":x: This bill was already voted on by the Legislature!")
+            if isinstance(to_verify, Bill) and to_verify.voted_on_by_leg:
+                return f"This {obj_name} was already voted on by the Legislature."
 
-        # The Speaker and Vice-Speaker can withdraw every submitted bill during both the Submission Period and the
-        # Voting Period.
-        # The original submitter of the bill can only withdraw their own bill during the Submission Period.
-
-        is_cabinet = False
-
-        if self.speaker_role not in ctx.author.roles and self.vice_speaker_role not in ctx.author.roles:
-            if ctx.author.id == bill.submitter.id:
-                if last_leg_session.status is SessionStatus.SUBMISSION_PERIOD:
-                    allowed = True
+            if not self.is_cabinet(ctx.author):
+                if ctx.author.id == to_verify.submitter.id:
+                    if last_leg_session.status is SessionStatus.SUBMISSION_PERIOD:
+                        allowed = True
+                    else:
+                        return f"The original submitter can only withdraw {obj_name}s during the Submission Period."
                 else:
-                    return await ctx.send(f":x: The original submitter can only withdraw "
-                                          f"bills during the Submission Period!")
+                    allowed = False
             else:
-                allowed = False
-        else:
-            is_cabinet = True
-            allowed = True
+                allowed = True
 
-        if not allowed:
-            return await ctx.send(":x: Only the Cabinet and the original submitter of this bill can withdraw it!")
+            if not allowed:
+                return f"Only the Cabinet and the original submitter of this {obj_name} can withdraw it."
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to withdraw the bill "
-                                      f"`{bill.name}` (#{bill.id}) from session #{last_leg_session.id}?")
+        unverified_objects = []
+
+        for obj in objects:
+            error = verify_object(obj)
+            if error:
+                unverified_objects.append((obj, error))
+
+        if unverified_objects:
+            objects = [o for o in objects if o not in list(map(list, zip(*unverified_objects)))[0]]
+
+            error_messages = '\n'.join(
+                [f"-  **{_object.name}** (#{_object.id}): _{reason}_" for _object, reason in unverified_objects])
+            await ctx.send(f":warning: The following motions can not be withdrawn by you.\n{error_messages}")
+
+        if not objects:
+            return
+
+        pretty_objects = '\n'.join([f"-  **{_object.name}** (#{_object.id})" for _object in objects])
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
+                                      f" to withdraw the following {obj_name}s from Session #{last_leg_session.id}"
+                                      f"\n{pretty_objects}")
 
         flow = Flow(self.bot, ctx)
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
@@ -710,89 +728,49 @@ class Legislature(commands.Cog):
             return await ctx.send("Aborted.")
 
         elif reaction:
-            try:
-                await bill.withdraw()
-            except asyncpg.ForeignKeyViolationError:
-                return await ctx.send(":x: This bill is already a law and cannot be withdrawn.")
-
-            await ctx.send(f":white_check_mark: `{bill.name}` (#{bill.id}) was withdrawn "
-                           f"from session #{last_leg_session.id}.")
-
-            if not is_cabinet:
-                msg = f"**Bill Withdrawn**\n{ctx.author.name} has withdrawn their bill `{bill.name}` (#{bill.id}) " \
-                      f"from the current session."
-
+            for obj in objects:
                 try:
-                    if self.speaker is not None:
-                        await self.speaker.send(msg)
-                    if self.vice_speaker is not None:
-                        await self.vice_speaker.send(msg)
-                except discord.Forbidden:
-                    pass
+                    await obj.withdraw()
+                except asyncpg.ForeignKeyViolationError:
+                    await ctx.send(f":warning: Bill #{obj.id} is already a law and cannot be withdrawn.")
+
+            await ctx.send(f":white_check_mark: All {obj_name}s were withdrawn.")
+
+    @withdraw.command(name='bill', aliases=['b'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.is_democraciv_guild()
+    async def withdrawbill(self, ctx, bill_ids: Greedy[Bill]):
+        """Withdraw a bill from the current session
+
+        The Speaker and Vice-Speaker can withdraw every submitted bill during both the Submission Period and the Voting Period.
+           The original submitter of the bill can only withdraw their own bill during the Submission Period.
+
+        **Examples:**
+            `-legislature withdraw bill 56` will withdraw bill #56
+            `-legislature withdraw bill 12 13 14 15 16` will withdraw all those bills"""
+
+        if not bill_ids:
+            return await ctx.send_help(ctx.command)
+
+        await self.withdraw_objects(ctx, bill_ids)
 
     @withdraw.command(name='motion', aliases=['m'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.is_democraciv_guild()
-    async def withdrawmotion(self, ctx, motion_id: Motion):
-        """Withdraw a motion from the current session"""
+    async def withdrawmotion(self, ctx, motion_ids: Greedy[Motion]):
+        """Withdraw a motion from the current session
 
-        motion = motion_id
+        The Speaker and Vice-Speaker can withdraw every submitted motion during both the Submission Period and the Voting Period.
+           The original submitter of the motion can only withdraw their own motio during the Submission Period.
 
-        last_leg_session = await self.bot.laws.get_last_leg_session()
+        **Examples:**
+            `-legislature withdraw motion 56` will withdraw motion #56
+            `-legislature withdraw motion 12 13 14 15 16` will withdraw all those motions"""
 
-        if last_leg_session.id != motion.session.id:
-            return await ctx.send(f":x: This motion was not submitted in the last session of the Legislature!")
+        if not motion_ids:
+            return await ctx.send_help(ctx.command)
 
-        # The Speaker and Vice-Speaker can withdraw every submitted motion during both the Submission Period and the
-        # Voting Period.
-        # The original submitter of the bill can only withdraw their own bill during the Submission Period.
-
-        is_cabinet = False
-
-        if self.speaker_role not in ctx.author.roles and self.vice_speaker_role not in ctx.author.roles:
-            if ctx.author.id == motion.submitter.id:
-                if last_leg_session.status is SessionStatus.SUBMISSION_PERIOD:
-                    allowed = True
-                else:
-                    return await ctx.send(f":x: The original submitter can only withdraw "
-                                          f"motions during the Submission Period!")
-            else:
-                allowed = False
-        else:
-            is_cabinet = True
-            allowed = True
-
-        if not allowed:
-            return await ctx.send(":x: Only the Cabinet and the original submitter of this motion can withdraw it!")
-
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to withdraw the motion"
-                                      f" `{motion.title}` (#{motion.id}) from session #{last_leg_session.id}?")
-
-        flow = Flow(self.bot, ctx)
-        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
-
-        if reaction is None:
-            return
-
-        if not reaction:
-            return await ctx.send("Aborted.")
-
-        elif reaction:
-            await motion.withdraw()
-            await ctx.send(f":white_check_mark: `{motion.title}` (#{motion.id}) was withdrawn "
-                           f"from session #{last_leg_session.id}.")
-
-            if not is_cabinet:
-                msg = f"**Motion Withdrawn**\n{ctx.author.name} has withdrawn their motion" \
-                      f" `{motion.title}` (#{motion.id}) from the current session."
-
-                try:
-                    if self.speaker is not None:
-                        await self.speaker.send(msg)
-                    if self.vice_speaker is not None:
-                        await self.vice_speaker.send(msg)
-                except discord.Forbidden:
-                    pass
+        await self.withdraw_objects(ctx, motion_ids)
 
     @legislature.command(name='override', aliases=['ov'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
