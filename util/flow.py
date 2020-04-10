@@ -28,7 +28,7 @@ class Flow:
                                                          timeout=timeout)
         except asyncio.TimeoutError:
             await self.ctx.send("Aborted.")
-            return None
+            return None, None
 
         else:
             return reaction, user

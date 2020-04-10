@@ -190,7 +190,7 @@ class Legislature(commands.Cog):
 
         new_session = await self.bot.db.fetchval(
             'INSERT INTO legislature_sessions (speaker, is_active, status, opened_on)'
-            'VALUES ($1, true, $2, $3) RETURNING id', ctx.author.id, 'Submission Period',
+            'VALUES ($1, true, $2, $3) RETURNING id', ctx.author.id, SessionStatus.SUBMISSION_PERIOD,
             datetime.datetime.utcnow())
 
         #  Update all bills that did not pass from last session

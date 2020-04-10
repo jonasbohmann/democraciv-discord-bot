@@ -47,7 +47,7 @@ class TestLawHelper(unittest.TestCase):
     def test_generate_law_tags(self):
         description1 = "elections are a mystery to the people of arabia"
         description2 = "bill title - this is a noun and another noun yet again"
-        tags = ['elections', 'mystery', 'people', 'arabia', 'bill', 'noun']
+        tags = ['elections', 'mystery', 'people', 'arabia', 'noun']
 
         self.assertCountEqual(self.laws.generate_law_tags(description1, description2), tags)
 
