@@ -352,6 +352,33 @@ class Moderation(commands.Cog):
 
         await ctx.send(f':white_check_mark: Deleted **{len(deleted)}** messages.', delete_after=5)
 
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild: discord.Guild):
+        muted_role = discord.utils.get(guild.roles, name="Muted")
+
+        if muted_role is None:
+            try:
+                muted_role = await guild.create_role(name="Muted")
+                for channel in guild.text_channels:
+                    try:
+                        await channel.set_permissions(muted_role, send_messages=False)
+                    except discord.HTTPException:
+                        continue
+            except discord.Forbidden:
+                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE)
+
+    @commands.Cog.listener()
+    async def on_guild_channel_create(self, channel):
+        muted_role = discord.utils.get(channel.guild.roles, name="Muted")
+
+        if muted_role is None:
+            try:
+                muted_role = await channel.guild.create_role(name="Muted")
+            except discord.Forbidden:
+                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE)
+
+        await channel.set_permissions(muted_role, send_messages=False)
+
     @commands.command(name='mute')
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
@@ -363,7 +390,7 @@ class Moderation(commands.Cog):
         if muted_role is None:
             try:
                 muted_role = await ctx.guild.create_role(name="Muted")
-                for channel in ctx.guild.channels:
+                for channel in ctx.guild.text_channels:
                     await channel.set_permissions(muted_role, send_messages=False)
             except discord.Forbidden:
                 raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE)
