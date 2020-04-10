@@ -100,7 +100,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         embed.add_field(name="ID", value=member.id, inline=False)
         embed.add_field(name='Discord Registration',
                         value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
-        embed.add_field(name='Joined this Guild on',
+        embed.add_field(name='Joined this Guild',
                         value=f'{(await self.get_member_join_date(member)).strftime("%B %d, %Y")}', inline=True)
         embed.add_field(name='Join Position', value=f"{join_pos}/{max_members}", inline=True)
         embed.add_field(name='Roles', value=_get_roles(member.roles), inline=False)

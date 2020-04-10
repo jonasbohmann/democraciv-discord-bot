@@ -91,7 +91,8 @@ CREATE TABLE IF NOT EXISTS legislature_tags(
     UNIQUE (id, tag)
 );
 
-CREATE INDEX ON legislature_tags USING gin (tag gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS legislature_tags_tag_trgm_idx ON legislature_tags USING gin (tag gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS legislature_bills_name_lower_idx ON legislature_bills (LOWER(bill_name));
 
 CREATE TABLE IF NOT EXISTS legislature_motions(
     id serial UNIQUE PRIMARY KEY,
@@ -122,6 +123,10 @@ CREATE TABLE IF NOT EXISTS guild_tags_alias(
     global bool DEFAULT FALSE,
     UNIQUE (guild_id, alias)
 );
+
+CREATE INDEX IF NOT EXISTS guild_tags_alias_alias_idx ON guild_tags_alias (alias);
+CREATE UNIQUE INDEX IF NOT EXISTS guild_tags_alias_alias_guild_id_idx ON guild_tags_alias (alias, guild_id);
+
 
 CREATE TABLE IF NOT EXISTS original_join_dates(
     member bigint UNIQUE,
