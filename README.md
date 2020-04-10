@@ -1,5 +1,5 @@
 ##  democraciv-discord-bot
- [![Discord](https://discordapp.com/api/guilds/208984105310879744/embed.png)](http://discord.gg/j7sZ3tD) ![Python Version](https://img.shields.io/badge/python-3.6%20%7C%203.7%20%7C%203.8-blue) [![Build Status](https://travis-ci.com/jonasbohmann/democraciv-discord-bot.svg?branch=master)](https://travis-ci.com/jonasbohmann/democraciv-discord-bot)
+ [![Discord](https://discordapp.com/api/guilds/208984105310879744/embed.png)](http://discord.gg/j7sZ3tD) ![Python Version](https://img.shields.io/badge/python-3.7%20%7C%203.8-blue) [![Build Status](https://travis-ci.com/jonasbohmann/democraciv-discord-bot.svg?branch=master)](https://travis-ci.com/jonasbohmann/democraciv-discord-bot)
 
 General-purpose Discord Bot with unique features designed for the r/Democraciv Discord. 
 
@@ -7,7 +7,7 @@ Provides useful information, political party & role management and much more.
 
 ##  Requirements
 
-*  [Python](https://www.python.org/downloads//) 3.6 or newer
+*  [Python](https://www.python.org/downloads//) 3.7 or newer
 *  [discord.py](https://github.com/Rapptz/discord.py) 1.3.0 or newer
 *  [PostgreSQL](https://www.postgresql.org/) 9.6 or newer 
 
