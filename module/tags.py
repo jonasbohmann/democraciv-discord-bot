@@ -1,3 +1,4 @@
+import enum
 import re
 import discord
 
@@ -9,6 +10,14 @@ from util.flow import Flow
 from discord.ext import commands
 from util.paginator import Pages
 from util.converter import Tag, OwnedTag
+
+
+class TagContentType(enum.Enum):
+    TEXT = 1
+    IMAGE = 2
+    INVITE = 3
+    CUSTOM_EMOJI = 4
+    YOUTUBE_TENOR_GIPHY = 5
 
 
 class Tags(commands.Cog, name="Tag"):
@@ -306,6 +315,11 @@ class Tags(commands.Cog, name="Tag"):
         embed = self.bot.embeds.embed_builder(title="Tag Info", description="")
         embed.add_field(name="Title", value=tag.title, inline=False)
 
+        tag_content_type = self.is_emoji_or_media_url(tag.content)
+        is_embedded = "Yes" if tag_content_type is TagContentType.TEXT or \
+                               tag_content_type is TagContentType.IMAGE else "No"
+        is_global = "Yes" if tag.is_global else "No"
+
         if tag.author is not None:
             embed.add_field(name="Author", value=tag.author.mention, inline=False)
             embed.set_author(name=tag.author.name, icon_url=tag.author.avatar_url_as(static_format="png"))
@@ -314,9 +328,8 @@ class Tags(commands.Cog, name="Tag"):
                                                  f" You can claim this tag to make it yours with* "
                                                  f"`{config.BOT_PREFIX}tag claim {tag.name}`*!*", inline=False)
 
-        embed.add_field(name="Global Tag", value=str(tag.is_global), inline=True)
-        embed.add_field(name="Embedded Tag", value=str(not self.is_emoji_or_media_url(tag.content)),
-                        inline=True)
+        embed.add_field(name="Global Tag", value=is_global, inline=True)
+        embed.add_field(name="Embedded Tag", value=is_embedded, inline=True)
         embed.add_field(name="Uses", value=str(tag.uses), inline=False)
         embed.add_field(name="Aliases", value=pretty_aliases, inline=False)
         await ctx.send(embed=embed)
@@ -441,7 +454,7 @@ class Tags(commands.Cog, name="Tag"):
                     await ctx.send(f":white_check_mark: `{config.BOT_PREFIX}{tag.name}` was removed.")
 
     @staticmethod
-    def is_emoji_or_media_url(tag_content: str) -> bool:
+    def is_emoji_or_media_url(tag_content: str) -> TagContentType:
         emoji_pattern = re.compile("<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>")
         discord_invite_pattern = re.compile("(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
 
@@ -450,19 +463,20 @@ class Tags(commands.Cog, name="Tag"):
         url_endings = ('.jpeg', '.jpg', '.avi', '.png', '.gif', '.webp', '.mp4', '.mp3', '.bmp', '.img',
                        '.svg', '.mov', '.flv', '.wmv')
 
-        if url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings)
-                                               or any(s in tag_content for
-                                                      s in ['youtube', 'youtu.be', 'tenor.com',
-                                                            'gph.is', 'giphy.com'])):
-            return True
+        if url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings)):
+            return TagContentType.IMAGE
+
+        elif url_pattern.match(tag_content) and any(s in tag_content for s in
+                                                    ['youtube', 'youtu.be', 'tenor.com', 'gph.is', 'giphy.com']):
+            return TagContentType.YOUTUBE_TENOR_GIPHY
 
         elif emoji_pattern.match(tag_content):
-            return True
+            return TagContentType.CUSTOM_EMOJI
 
         elif discord_invite_pattern.match(tag_content):
-            return True
+            return TagContentType.INVITE
 
-        return False
+        return TagContentType.TEXT
 
     async def resolve_tag_name(self, query: str, guild: discord.Guild):
         tag_id = await self.bot.db.fetchval("SELECT tag_id FROM guild_tags_alias WHERE global = true AND alias = $1",
@@ -510,7 +524,14 @@ class Tags(commands.Cog, name="Tag"):
         if tag_details is None:
             return
 
-        if self.is_emoji_or_media_url(tag_details['content']):
+        tag_content_type = self.is_emoji_or_media_url(tag_details['content'])
+
+        if tag_content_type is TagContentType.IMAGE:
+            embed = discord.Embed()
+            embed.set_image(url=tag_details['content'])
+            return await message.channel.send(embed=embed)
+
+        elif tag_content_type is not TagContentType.TEXT:
             return await message.channel.send(discord.utils.escape_mentions(tag_details['content']))
 
         embed = self.bot.embeds.embed_builder(title=tag_details['title'], description=tag_details['content'],

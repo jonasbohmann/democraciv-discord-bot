@@ -145,10 +145,12 @@ class Legislature(commands.Cog):
         else:
             submitted_by_value = f"During Session #{bill.session.id} by *Person left Democraciv*"
 
+        is_vetoable = "Yes" if bill.is_vetoable else "No"
+
         embed.add_field(name="Name", value=f"[{bill.name}]({bill.link})")
         embed.add_field(name="Description", value=bill.description, inline=False)
         embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
-        embed.add_field(name="Vetoable", value=bill.is_vetoable, inline=False)
+        embed.add_field(name="Vetoable", value=is_vetoable, inline=False)
         embed.add_field(name="Status", value=await bill.get_emojified_status(verbose=True), inline=False)
 
         if await bill.is_law():
