@@ -191,9 +191,8 @@ class Legislature(commands.Cog):
             return await ctx.send(f":x: There is still an open session, close session #{active_leg_session.id} first!")
 
         new_session = await self.bot.db.fetchval(
-            'INSERT INTO legislature_sessions (speaker, is_active, status, opened_on)'
-            'VALUES ($1, true, $2, $3) RETURNING id', ctx.author.id, SessionStatus.SUBMISSION_PERIOD,
-            datetime.datetime.utcnow())
+            'INSERT INTO legislature_sessions (speaker, is_active, opened_on)'
+            'VALUES ($1, true, $2) RETURNING id', ctx.author.id, datetime.datetime.utcnow())
 
         #  Update all bills that did not pass from last session
         if new_session > 1:
@@ -415,7 +414,7 @@ class Legislature(commands.Cog):
 
             if bill_title is None:
                 await ctx.send(":x: Couldn't connect to Google Docs. Make sure that the document can be"
-                               " read by anyone and that it's not a published version!")
+                               " read by anyone and that it's not a published version.")
                 return None, None
 
             # Make the Google Docs link smaller to workaround the "embed value cannot be longer than 1024 characters
@@ -479,7 +478,7 @@ class Legislature(commands.Cog):
             haste_bin_url = await self.bot.laws.post_to_hastebin(description)
 
             if not haste_bin_url:
-                await ctx.send(":x: Your motion was not submitted, there was a problem with hastebin.com. "
+                await ctx.send(":x: Your motion was not submitted, there was a problem with mystb.in. "
                                "Try again in a few minutes.")
                 return None, None
 

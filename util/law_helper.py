@@ -116,7 +116,7 @@ class LawUtils:
 
         try:
             bill_title = soup.find("meta")['content']  # Get title of Google Docs website
-        except KeyError:
+        except (KeyError, TypeError):
             return None
 
         if bill_title is None:
@@ -149,7 +149,7 @@ class LawUtils:
 
         try:
             bill_description = soup.find("meta")['content']
-        except KeyError:
+        except (KeyError, TypeError):
             return None
 
         if bill_description is None:
