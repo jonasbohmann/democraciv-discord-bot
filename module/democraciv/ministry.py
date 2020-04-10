@@ -2,10 +2,11 @@ import typing
 import discord
 
 from util.flow import Flow
+from util.converter import Bill
 from config import config, links
 from util.paginator import Pages
 from discord.ext import commands
-from util.converter import Bill, MultipleBills
+from discord.ext.commands import Greedy
 from util.law_helper import MockContext, AnnouncementQueue
 from util import mk, exceptions, utils
 
@@ -165,154 +166,111 @@ class Ministry(commands.Cog):
     @ministry.command(name='veto', aliases=['v'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
-    async def veto(self, ctx, *, bill_ids: typing.Union[Bill, MultipleBills]):
-        """Veto a bill
+    async def veto(self, ctx, *, bill_ids: Greedy[Bill]):
+        """Veto one or multiple bills
 
         **Example:**
             `-ministry veto 12` will veto Bill #12
             `-ministry veto 45 46 49 51 52` will veto all those bills"""
 
-        bill = bill_ids
+        if not bill_ids:
+            return await ctx.send_help(ctx.command)
+
+        bills = bill_ids
         flow = Flow(self.bot, ctx)
 
-        if isinstance(bill, MultipleBills):
-            error_messages = []
+        error_messages = []
 
-            for _bill in bill.bills:
-                error = await self.verify_bill(_bill)
-                if error:
-                    error_messages.append((_bill, error))
-
-            if error_messages:
-                # Remove bills that did not pass verify_bill from MultipleBills.bills list
-                bill.bills[:] = [b for b in bill.bills if b not in list(map(list, zip(*error_messages)))[0]]
-
-                error_messages = '\n'.join(
-                    [f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
-                await ctx.send(f":warning: The following bills can not be vetoed.\n{error_messages}")
-
-            # If all bills failed verify_bills, return
-            if not bill.bills:
-                return
-
-            pretty_bills = '\n'.join([f"-  **{_bill.name}** (#{_bill.id})" for _bill in bill.bills])
-            are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
-                                          f" to veto the following bills?"
-                                          f"\n{pretty_bills}")
-
-            reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
-
-            if reaction is None:
-                return
-
-            if not reaction:
-                return await ctx.send("Aborted.")
-
-            elif reaction:
-                async with ctx.typing():
-                    for _bill in bill.bills:
-                        await _bill.veto()
-                        self.veto_scheduler.add(_bill)
-
-                    await ctx.send(":white_check_mark: All bills were vetoed.")
-
-        else:
-            error = await self.verify_bill(bill)
-
+        for _bill in bills:
+            error = await self.verify_bill(_bill)
             if error:
-                return await ctx.send(f":x: {error}")
+                error_messages.append((_bill, error))
 
-            are_you_sure = await ctx.send(f":information_source: Are you sure that you want to "
-                                          f"veto `{bill.name}` (#{bill.id})?")
+        if error_messages:
+            # Remove bills that did not pass verify_bill from bills list
+            bills[:] = [b for b in bills if b not in list(map(list, zip(*error_messages)))[0]]
 
-            reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+            error_messages = '\n'.join(
+                [f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
+            await ctx.send(f":warning: The following bills can not be vetoed.\n{error_messages}")
 
-            if reaction is None:
-                return
+        # If all bills failed verify_bills, return
+        if not bills:
+            return
 
-            if not reaction:
-                await ctx.send(f"Aborted.")
+        pretty_bills = '\n'.join([f"-  **{_bill.name}** (#{_bill.id})" for _bill in bills])
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
+                                      f" to veto the following bills?"
+                                      f"\n{pretty_bills}")
 
-            elif reaction:
-                await bill.veto()
-                await ctx.send(f":white_check_mark: `{bill.name}` was vetoed.")
-                self.veto_scheduler.add(bill)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+
+        if reaction is None:
+            return
+
+        if not reaction:
+            return await ctx.send("Aborted.")
+
+        elif reaction:
+            async with ctx.typing():
+                for _bill in bills:
+                    await _bill.veto()
+                    self.veto_scheduler.add(_bill)
+
+                await ctx.send(":white_check_mark: All bills were vetoed.")
 
     @ministry.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
-    async def pass_bill(self, ctx, *, bill_ids: typing.Union[Bill, MultipleBills]):
-        """Pass a bill into law
+    async def pass_bill(self, ctx, *, bill_ids: Greedy[Bill]):
+        """Pass one or multiple bills into law
 
         **Example:**
             `-ministry pass 12` will pass Bill #12 into law
             `-ministry pass 45 46 49 51 52` will pass all those bills into law"""
 
-        bill = bill_ids
+        bills = bill_ids
         flow = Flow(self.bot, ctx)
 
-        if isinstance(bill, MultipleBills):
-            error_messages = []
+        error_messages = []
 
-            for _bill in bill.bills:
-                error = await self.verify_bill(_bill)
-
-                if error:
-                    error_messages.append((_bill, error))
-
-            if error_messages:
-                # Remove bills that did not pass verify_bill from MultipleBills.bills list
-                bill.bills[:] = [b for b in bill.bills if b not in list(map(list, zip(*error_messages)))[0]]
-
-                error_messages = '\n'.join(
-                    [f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
-                await ctx.send(f":warning: The following bills can not be passed into law:\n{error_messages}")
-
-            # If all bills failed verify_bills, return
-            if not bill.bills:
-                return
-
-            pretty_bills = '\n'.join([f"-  **{_bill.name}** (#{_bill.id})" for _bill in bill.bills])
-            are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
-                                          f" to pass the following bills into law?"
-                                          f"\n{pretty_bills}")
-
-            reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
-
-            if reaction is None:
-                return
-
-            if not reaction:
-                return await ctx.send("Aborted.")
-
-            elif reaction:
-                async with ctx.typing():
-                    for _bill in bill.bills:
-                        await _bill.pass_into_law()
-                        self.pass_scheduler.add(_bill)
-
-                    await ctx.send(":white_check_mark: All bills were passed into law.")
-        else:
+        for bill in bills:
             error = await self.verify_bill(bill)
-
             if error:
-                return await ctx.send(f":x: {error}")
+                error_messages.append((bill, error))
 
-            are_you_sure = await ctx.send(f":information_source: Are you sure that you want to pass `{bill.name}` "
-                                          f"(#{bill.id}) into law?")
+        if error_messages:
+            # Remove bills that did not pass verify_bill from bills list
+            bills = [b for b in bills if b not in list(map(list, zip(*error_messages)))[0]]
 
-            reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+            error_messages = '\n'.join(
+                [f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
+            await ctx.send(f":warning: The following bills can not be passed into law.\n{error_messages}")
 
-            if reaction is None:
-                return
+        # If all bills failed verify_bills, return
+        if not bills:
+            return
 
-            if not reaction:
-                await ctx.send(f"Aborted.")
+        pretty_bills = '\n'.join([f"-  **{_bill.name}** (#{_bill.id})" for _bill in bills])
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want "
+                                      f"to pass the following bills into law?"
+                                      f"\n{pretty_bills}")
 
-            elif reaction:
-                await bill.pass_into_law()
-                await ctx.send(f":white_check_mark: `{bill.name}` was passed into law.")
-                self.pass_scheduler.add(bill)
+        reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
+
+        if reaction is None:
+            return
+
+        if not reaction:
+            return await ctx.send("Aborted.")
+
+        elif reaction:
+            async with ctx.typing():
+                for bill in bills:
+                    await bill.pass_into_law()
+                    self.pass_scheduler.add(bill)
+
+                await ctx.send(":white_check_mark: All bills were passed into law.")
 
 
 def setup(bot):
