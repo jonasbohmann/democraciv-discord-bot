@@ -4,9 +4,7 @@ from config import config, token
 
 
 class Time(commands.Cog):
-    """Get the current time in various timezones.
-
-    Shows both 12 and 24-hour formatting."""
+    """Get the current time in various timezones. Shows both 12 and 24-hour formatting."""
 
     def __init__(self, bot):
         self.bot = bot

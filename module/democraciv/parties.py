@@ -48,7 +48,6 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='party')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.is_democraciv_guild()
     async def party(self, ctx, *, party: PoliticalParty):
         """Detailed information about a single political party"""
 
@@ -75,7 +74,7 @@ class Party(commands.Cog, name='Political Parties'):
             embed.add_field(name="Leader or Representative", value=party.leader.mention)
 
         embed.add_field(name="Server", value=invite_value)
-        embed.add_field(name="Aliases", value=', '.join([f"`{alias}`" for alias in party.aliases]), inline=False)
+        embed.add_field(name="Aliases", value=', '.join(party.aliases), inline=False)
         embed.add_field(name=f"Members ({len(party.role.members)})",
                         value=', '.join([m.mention for m in party.role.members]) or 'None', inline=False)
 

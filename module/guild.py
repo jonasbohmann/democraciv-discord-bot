@@ -329,7 +329,7 @@ class Guild(commands.Cog):
 
                 if isinstance(new_default_role, str):
                     await ctx.send(
-                        f":white_check_mark: I will **create a new role** on this guild named '{new_default_role}'"
+                        f":white_check_mark: I will **create a new role** on this guild named `{new_default_role}`"
                         f" for the default role.")
                     try:
                         new_default_role_object = await ctx.guild.create_role(name=new_default_role)
@@ -341,7 +341,7 @@ class Guild(commands.Cog):
 
                     await ctx.send(
                         f":white_check_mark: I'll use the **pre-existing role** named "
-                        f"'{new_default_role_object.name}' for the default role.")
+                        f"`{new_default_role_object.name}` for the default role.")
 
                 status = await self.bot.db.execute("UPDATE guilds SET defaultrole_role = $2 WHERE id = $1",
                                                    ctx.guild.id, new_default_role_object.id)

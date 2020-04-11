@@ -2,7 +2,7 @@ import typing
 import asyncpg
 import discord
 import datetime
-
+import functools
 
 from util.flow import Flow
 from util.paginator import Pages
@@ -12,6 +12,23 @@ from discord.ext.commands import Greedy
 from util import utils, mk, exceptions
 from util.law_helper import AnnouncementQueue
 from util.converter import Session, SessionStatus, Bill, Motion, Law
+
+
+class SubmitCooldown:
+    def __init__(self, rate: int, per: float, bucket: commands.BucketType):
+        self.bypass_roles = [mk.DemocracivRole.SPEAKER_ROLE.value, mk.DemocracivRole.VICE_SPEAKER_ROLE.value]
+        self.default_mapping = commands.CooldownMapping.from_cooldown(rate, per, bucket)
+
+    def __call__(self, ctx):
+        getter = functools.partial(discord.utils.get, ctx.author.roles)
+        if any(getter(id=role) is not None for role in self.bypass_roles):
+            return True
+        else:
+            bucket = self.default_mapping.get_bucket(ctx.message)
+        retry_after = bucket.update_rate_limit()
+        if retry_after:
+            raise commands.CommandOnCooldown(bucket, retry_after)
+        return True
 
 
 class PassScheduler(AnnouncementQueue):
@@ -508,7 +525,7 @@ class Legislature(commands.Cog):
         return message, embed
 
     @legislature.command(name='submit')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.check(SubmitCooldown(1, 60, commands.BucketType.user))
     @utils.is_democraciv_guild()
     async def submit(self, ctx):
         """Submit a new bill or motion to the currently active session"""
@@ -558,7 +575,7 @@ class Legislature(commands.Cog):
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
-    async def pass_bill(self, ctx, *, bill_ids: Greedy[Bill]):
+    async def pass_bill(self, ctx, bill_ids: Greedy[Bill]):
         """Mark one or multiple bills as passed from the Legislature
 
         If the bill is vetoable, it sends the bill to the Ministry. If not, the bill automatically becomes law.
@@ -653,7 +670,7 @@ class Legislature(commands.Cog):
                 return f"This {obj_name} was already voted on by the Legislature."
 
             if not self.is_cabinet(ctx.author):
-                if ctx.author.id == to_verify.submitter.id:
+                if to_verify.submitter is not None and ctx.author.id == to_verify.submitter.id:
                     if last_leg_session.status is SessionStatus.SUBMISSION_PERIOD:
                         allowed = True
                     else:
@@ -685,7 +702,7 @@ class Legislature(commands.Cog):
 
         pretty_objects = '\n'.join([f"-  **{_object.name}** (#{_object.id})" for _object in objects])
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
-                                      f" to withdraw the following {obj_name}s from Session #{last_leg_session.id}"
+                                      f" to withdraw the following {obj_name}s from Session #{last_leg_session.id}?"
                                       f"\n{pretty_objects}")
 
         flow = Flow(self.bot, ctx)

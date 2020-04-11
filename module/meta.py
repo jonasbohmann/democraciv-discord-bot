@@ -52,7 +52,7 @@ class Meta(commands.Cog):
         end = time.perf_counter()
         duration = (end - start) * 1000
         embed = self.bot.embeds.embed_builder(title=":ping_pong:  Pong!",
-                                              description=f"Ping: {duration:.0f}ms\nWebsocket: {self.bot.ping}ms",
+                                              description=f"REST API: {duration:.0f}ms\nWebsocket: {self.bot.ping}ms",
                                               has_footer=False)
         await message.edit(content=None, embed=embed)
 

@@ -27,7 +27,7 @@ class RepealScheduler(AnnouncementQueue):
 class AmendScheduler(AnnouncementQueue):
 
     def get_message(self) -> str:
-        message = [f"The links to the following laws were changed by the Cabinet.\n"]
+        message = ["The links to the following laws were changed by the Cabinet.\n"]
 
         for obj in self._objects:
             message.append(f"-  **{obj.bill.name}** (<{obj.bill.tiny_link}>)")
@@ -69,7 +69,7 @@ class Laws(commands.Cog, name='Law'):
 
     @commands.group(name='law', aliases=['laws'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def law(self, ctx, law_id: Law = None):
+    async def law(self, ctx, *, law_id: Law = None):
         """List all laws or get details about a specific law
 
         **Usage:**
@@ -173,7 +173,7 @@ class Laws(commands.Cog, name='Law'):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def updatelink(self, ctx, law_id: Law, new_link: str):
-        """Update the link to a law.
+        """Update the link to a law
 
         Useful for applying amendments to laws if the current Speaker does not own the law's Google Doc.
 
@@ -206,7 +206,7 @@ class Laws(commands.Cog, name='Law'):
                 return await ctx.send(e.message)
 
             self.amend_scheduler.add(law)
-            return await ctx.send(f":white_check_mark: The link to `{law.bill.name}` was changed.")
+            await ctx.send(f":white_check_mark: The link to `{law.bill.name}` was changed.")
 
 
 def setup(bot):

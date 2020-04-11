@@ -166,7 +166,7 @@ class Ministry(commands.Cog):
     @ministry.command(name='veto', aliases=['v'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
-    async def veto(self, ctx, *, bill_ids: Greedy[Bill]):
+    async def veto(self, ctx, bill_ids: Greedy[Bill]):
         """Veto one or multiple bills
 
         **Example:**
@@ -222,7 +222,7 @@ class Ministry(commands.Cog):
     @ministry.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
-    async def pass_bill(self, ctx, *, bill_ids: Greedy[Bill]):
+    async def pass_bill(self, ctx, bill_ids: Greedy[Bill]):
         """Pass one or multiple bills into law
 
         **Example:**
