@@ -144,7 +144,7 @@ class Roles(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(administrator=True)
     @commands.guild_only()
-    async def deleterole(self, ctx, hard: bool, *, role: str):
+    async def deleterole(self, ctx, hard: typing.Optional[bool] = False, *, role: str):
         """Remove a role from this guild's `-role` list
 
         **Usage:**

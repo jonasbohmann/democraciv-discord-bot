@@ -284,7 +284,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.command(name='deleteparty')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
-    async def deleteparty(self, ctx, hard: bool, *, party: PoliticalParty):
+    async def deleteparty(self, ctx, hard: typing.Optional[bool] = False, *, party: PoliticalParty):
         """Remove a political party
 
             **Usage:**
