@@ -260,7 +260,8 @@ class Moderation(commands.Cog):
     async def hub(self, ctx):
         """Link to the Moderation Hub"""
         link = token.MOD_HUB or 'https://hastebin.com/afijavahox.coffeescript'
-        embed = self.bot.embeds.embed_builder(title="Moderation Hub", description=f"[Link]({link})")
+        embed = self.bot.embeds.embed_builder(title="Moderation Hub", description=f"[Link]({link})",
+                                              has_footer=False)
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='registry')
@@ -268,7 +269,8 @@ class Moderation(commands.Cog):
     async def registry(self, ctx):
         """Link to the Democraciv Registry"""
         link = token.REGISTRY or 'https://hastebin.com/afijavahox.coffeescript'
-        embed = self.bot.embeds.embed_builder(title="Democraciv Registry", description=f"[Link]({link})")
+        embed = self.bot.embeds.embed_builder(title="Democraciv Registry", description=f"[Link]({link})",
+                                              has_footer=False)
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='drive', aliases=['googledrive', 'gdrive'])
@@ -276,7 +278,8 @@ class Moderation(commands.Cog):
     async def gdrive(self, ctx):
         """Link to the Google Drive for MK6"""
         link = token.MK6_DRIVE or 'https://hastebin.com/afijavahox.coffeescript'
-        embed = self.bot.embeds.embed_builder(title="Google Drive for MK6", description=f"[Link]({link})")
+        embed = self.bot.embeds.embed_builder(title="Google Drive for MK6", description=f"[Link]({link})",
+                                              has_footer=False)
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='elections', aliases=['election', 'pins', 'electiontool', 'pintool'])
@@ -284,15 +287,15 @@ class Moderation(commands.Cog):
     async def electiontool(self, ctx):
         """Link to DerJonas' Election Tool"""
         link = token.PIN_TOOL or 'https://hastebin.com/afijavahox.coffeescript'
-        embed = self.bot.embeds.embed_builder(title="DerJonas' Election Tool", description=f"[Link]({link})")
+        embed = self.bot.embeds.embed_builder(title="DerJonas' Election Tool", description=f"[Link]({link})",
+                                              has_footer=False)
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='quire', aliases=['q'])
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def quire(self, ctx):
         """Quire Project Management"""
-        embed = self.bot.embeds.embed_builder(title='Quire',
-                                              description=links.quire)
+        embed = self.bot.embeds.embed_builder(title='Quire', description=links.quire, has_footer=False)
         await ctx.send(embed=embed)
 
     @commands.command(name='kick')

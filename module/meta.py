@@ -1,3 +1,4 @@
+import time
 import discord
 
 from util.exceptions import DemocracivBotException
@@ -46,8 +47,14 @@ class Meta(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def ping(self, ctx):
         """Pong!"""
-        embed = self.bot.embeds.embed_builder(title='Ping', description=(str(self.bot.ping) + 'ms'))
-        await ctx.send(embed=embed)
+        start = time.perf_counter()
+        message = await ctx.send(":arrows_counterclockwise: Ping...")
+        end = time.perf_counter()
+        duration = (end - start) * 1000
+        embed = self.bot.embeds.embed_builder(title=":ping_pong:  Pong!",
+                                              description=f"Ping: {duration:.0f}ms\nWebsocket: {self.bot.ping}ms",
+                                              has_footer=False)
+        await message.edit(content=None, embed=embed)
 
     @staticmethod
     def collect_all_commands(cog):

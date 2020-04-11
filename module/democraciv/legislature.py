@@ -757,7 +757,7 @@ class Legislature(commands.Cog):
 
         bills = bill_ids
 
-        def verify_bill(bill_to_verify) -> str:
+        async def verify_bill(bill_to_verify) -> str:
             if not bill_to_verify.passed_leg:
                 return "This bill did not pass the Legislature."
 
@@ -770,7 +770,7 @@ class Legislature(commands.Cog):
         unverified_bills = []
 
         for bill in bills:
-            error = verify_bill(bill)
+            error = await verify_bill(bill)
             if error:
                 unverified_bills.append((bill, error))
 
