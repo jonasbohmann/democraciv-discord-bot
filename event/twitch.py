@@ -119,7 +119,7 @@ class Twitch(commands.Cog):
                     "kind": "link",
                     "nsfw": False,
                     "sr": config.REDDIT_SUBREDDIT,
-                    "title": f"{self.streamer} is live on Twitch - {twitch_data[2]} ",
+                    "title": f"{self.streamer} is live on Twitch: {twitch_data[2]}",
                     "spoiler": False,
                     "resubmit": True,
                     "url": f"https://twitch.tv/{self.streamer}"

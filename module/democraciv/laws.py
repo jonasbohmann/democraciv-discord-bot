@@ -130,6 +130,8 @@ class Laws(commands.Cog, name='Law'):
         pages = Pages(ctx=ctx, entries=list(results), show_entry_count=False,
                       title=f"Search Results for '{name}'", show_index=False, show_amount_of_pages=True,
                       footer_text=f"Use {self.bot.commands_prefix}law <id> to get more details about a law.")
+        if pages.maximum_pages == 1:
+            pages.show_amount_of_pages = False
         await pages.paginate()
 
     @law.command(name='repeal', aliases=['r, remove', 'delete'])

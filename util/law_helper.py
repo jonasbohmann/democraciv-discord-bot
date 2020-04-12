@@ -37,6 +37,45 @@ class AnnouncementQueue:
     def get_message(self) -> str:
         raise NotImplementedError()
 
+    """
+    def split_message(self, message: str) -> typing.List[str]:
+
+        lines = message.splitlines(keepends=True)
+        x = len(lines)
+
+        amount_of_messages, left_over = divmod(x, 1980)
+
+        if left_over:
+            amount_of_messages += 1
+
+        substrings = []
+
+        for _ in range(amount_of_messages):
+            stripped = message[:2000]
+            substrings.append(stripped)
+            x = len(message)
+            message = message[-(x - 2000):]
+
+        return substrings
+
+    def wrong_split_message(self, message: str) -> typing.List[str]:
+
+        amount_of_messages, left_over = divmod(len(message), 2000)
+
+        if left_over:
+            amount_of_messages += 1
+
+        substrings = []
+
+        for _ in range(amount_of_messages):
+            stripped = message[:2000]
+            substrings.append(stripped)
+            x = len(message)
+            message = message[-(x-2000):]
+
+        return substrings
+    """
+
     def add(self, obj: typing.Union[Bill, Law, Session]):
         if len(self._objects) == 0:
             self._task = copy.copy(self._wait)
@@ -47,13 +86,20 @@ class AnnouncementQueue:
 
     async def send_messages(self):
         message = self.get_message()
+
+        # if len(message) > 2000:
+        #    split_messages = self.split_message(message)
+        #    for msg in split_messages:
+        #        await self.channel.send(msg)
+        # else:
         await self.channel.send(message)
         self._objects.clear()
         self._task.cancel()
 
-    @tasks.loop(seconds=10)
+    @tasks.loop(seconds=30)
     async def _wait(self):
-        if datetime.datetime.utcnow() - self._last_addition > datetime.timedelta(minutes=10):
+        if self._last_addition is not None and \
+                datetime.datetime.utcnow() - self._last_addition > datetime.timedelta(minutes=10):
             self._last_addition = None
             await self.send_messages()
 

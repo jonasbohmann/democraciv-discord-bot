@@ -134,11 +134,10 @@ class Pages:
 
     def prepare_embed(self, entries, page, *, first=False):
         p = []
-        if self.show_index:
-            for index, entry in enumerate(entries, 1 + ((page - 1) * self.per_page)):
+        for index, entry in enumerate(entries, 1 + ((page - 1) * self.per_page)):
+            if self.show_index:
                 p.append(f'{index}. {entry}')
-        else:
-            for index, entry in enumerate(entries, 1 + ((page - 1) * self.per_page)):
+            else:
                 p.append(f'{entry}')
 
         if self.maximum_pages > 1:

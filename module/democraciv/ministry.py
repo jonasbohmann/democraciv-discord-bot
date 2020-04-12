@@ -1,5 +1,6 @@
 import typing
 import discord
+import asyncio
 
 from util.flow import Flow
 from util.converter import Bill
@@ -267,6 +268,7 @@ class Ministry(commands.Cog):
         elif reaction:
             async with ctx.typing():
                 for bill in bills:
+                    await asyncio.sleep(5)  # Sleep to avoid too many automated requests to Google Docs
                     await bill.pass_into_law()
                     self.pass_scheduler.add(bill)
 

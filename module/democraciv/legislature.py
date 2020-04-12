@@ -1,6 +1,7 @@
 import typing
 import asyncpg
 import discord
+import asyncio
 import datetime
 import functools
 
@@ -15,6 +16,7 @@ from util.converter import Session, SessionStatus, Bill, Motion, Law
 
 
 class SubmitCooldown:
+
     def __init__(self, rate: int, per: float, bucket: commands.BucketType):
         self.bypass_roles = [mk.DemocracivRole.SPEAKER_ROLE.value, mk.DemocracivRole.VICE_SPEAKER_ROLE.value]
         self.default_mapping = commands.CooldownMapping.from_cooldown(rate, per, bucket)
@@ -534,7 +536,7 @@ class Legislature(commands.Cog):
         return message, embed
 
     @legislature.command(name='submit')
-    @commands.check(SubmitCooldown(1, 60, commands.BucketType.user))
+    @commands.check(SubmitCooldown(1, 300, commands.BucketType.user))
     @utils.is_democraciv_guild()
     async def submit(self, ctx):
         """Submit a new bill or motion to the currently active session"""
@@ -648,6 +650,7 @@ class Legislature(commands.Cog):
                     await _bill.pass_from_legislature()
 
                     if not _bill.is_vetoable:
+                        await asyncio.sleep(5)  # Sleep to avoid too many automated requests to Google Docs
                         await _bill.pass_into_law()
 
                     self.scheduler.add(_bill)
