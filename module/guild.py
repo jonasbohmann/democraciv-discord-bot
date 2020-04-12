@@ -347,7 +347,7 @@ class Guild(commands.Cog):
                                                    ctx.guild.id, new_default_role_object.id)
 
                 if status == "UPDATE 1":
-                    await ctx.send(f":white_check_mark: Set the default role to '{new_default_role_object.name}'.")
+                    await ctx.send(f":white_check_mark: Set the default role to `{new_default_role_object.name}`.")
 
             elif not reaction:
                 await self.bot.db.execute("UPDATE guilds SET defaultrole = false WHERE id = $1", ctx.guild.id)

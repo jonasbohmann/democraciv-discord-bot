@@ -289,9 +289,18 @@ class Legislature(commands.Cog):
                                                   f"#{active_leg_session.id} has been **closed** by the Cabinet.")
 
     async def paginate_all_sessions(self, ctx):
-        all_sessions = await self.bot.db.fetch("SELECT id, status FROM legislature_sessions ORDER BY id")
+        all_sessions = await self.bot.db.fetch("SELECT id, opened_on, closed_on FROM legislature_sessions ORDER BY id")
+        pretty_sessions = []
 
-        pretty_sessions = [f"**Session #{record['id']}**  - {record['status']}" for record in all_sessions]
+        for record in all_sessions:
+            opened_on = record['opened_on'].strftime("%b %d")
+
+            if record['closed_on']:
+                closed_on = record['closed_on'].strftime("%b %d %Y")
+                pretty_sessions.append(f"**Session #{record['id']}**  - {opened_on} to {closed_on}")
+            else:
+                pretty_sessions.append(f"**Session #{record['id']}**  - {opened_on}")
+
         footer = f"Use {ctx.prefix}legislature session <number> to get more details about a session."
 
         pages = Pages(ctx=ctx, entries=pretty_sessions, show_entry_count=False,

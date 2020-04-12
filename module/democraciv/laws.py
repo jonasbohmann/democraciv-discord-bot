@@ -1,15 +1,15 @@
 import typing
 import discord
-from discord.ext.commands import Greedy
 
 from config import config
 from util import mk, utils
-from util.exceptions import DemocracivBotException
+from discord.ext.commands import Greedy
 from util.flow import Flow
 from util.converter import Law
-from util.law_helper import MockContext, AnnouncementQueue
 from util.paginator import Pages
 from discord.ext import commands
+from util.exceptions import DemocracivBotException
+from util.law_helper import MockContext, AnnouncementQueue
 
 
 class RepealScheduler(AnnouncementQueue):
@@ -128,7 +128,7 @@ class Laws(commands.Cog, name='Law'):
                 results = ['Nothing found.']
 
         pages = Pages(ctx=ctx, entries=list(results), show_entry_count=False,
-                      title=f"Search Results for '{name}'", show_index=False,
+                      title=f"Search Results for '{name}'", show_index=False, show_amount_of_pages=True,
                       footer_text=f"Use {self.bot.commands_prefix}law <id> to get more details about a law.")
         await pages.paginate()
 
