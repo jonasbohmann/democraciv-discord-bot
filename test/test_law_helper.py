@@ -1,5 +1,4 @@
 import asyncio
-import aiohttp
 import unittest
 
 from util.law_helper import LawUtils
@@ -51,41 +50,3 @@ class TestLawHelper(unittest.TestCase):
 
         self.assertCountEqual(self.laws.generate_law_tags(description1, description2), tags)
 
-    @async_test
-    async def test_get_google_docs_title(self):
-        bot = MockBot(aiohttp.ClientSession())
-        self.laws = LawUtils(bot)
-
-        actual_title = await self.laws.get_google_docs_title(link='https://docs.google.com/document/d/1deWktyhCDWl'
-                                                                  'mC88C2eP7vjpH6sP6NuJ7KfrXX8kcO-s/edit')
-        self.assertEqual(actual_title, 'Public Democraciv MK6 Constitution ', 'Google Docs Title do not match')
-
-    @async_test
-    async def test_get_google_docs_description(self):
-        bot = MockBot(aiohttp.ClientSession())
-        self.laws = LawUtils(bot)
-
-        actual_description = await self.laws.get_google_docs_description(
-            link='https://docs.google.com/document/d/1deWktyhCDWlmC88C2eP7vjpH6sP6NuJ7KfrXX8kcO-s/edit')
-
-        self.assertEqual(actual_description, 'The Constitution of Arabia  Preamble - We the People of Arabia,'
-                                             ' for the purpose of a more perfect nation, to establish justice, protect'
-                                             ' the freedoms of the People, provide for the common defence and insure'
-                                             ' domestic tranquility, do ordain and establish this Constitution of the '
-                                             'People of Arabia.  A', 'Google Docs Descriptions do not match')
-
-    @async_test
-    async def test_post_to_hastebin(self):
-        bot = MockBot(aiohttp.ClientSession())
-        self.laws = LawUtils(bot)
-
-        post = await self.laws.post_to_hastebin(text="Lorem ipsum dolor sit amet, consetetur sadipscing elitr, "
-                                                     "sed diam nonumy eirmod tempor invidunt ut labore et dolore "
-                                                     "magna aliquyam erat, sed diam voluptua. At vero eos et accusam "
-                                                     "et justo duo dolores et ea rebum. Stet clita kasd gubergren, no"
-                                                     " sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum"
-                                                     " dolor sit amet, consetetur sadipscing elitr, sed diam nonumy "
-                                                     "eirmod tempor invidunt ut labore et dolore magna aliquyam erat,"
-                                                     " sed diam voluptua.")
-
-        self.assertIsNotNone(post, 'Posting to Hastebin.com failed')

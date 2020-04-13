@@ -273,9 +273,8 @@ class Legislature(commands.Cog):
 
         await active_leg_session.close()
 
-        await ctx.send(f":white_check_mark: Session #{active_leg_session.id} was closed."
-                       f" Add the bills that passed this session with `-legislature pass <bill_id>`. Get the "
-                       f"bill ids from the list of submitted bills in `-legislature session {active_leg_session.id}`")
+        await ctx.send(f":white_check_mark: Session #{active_leg_session.id} was closed. "
+                       f"Check `-help legislature pass` on what to do next.")
 
         await self.gov_announcements_channel.send(f"{self.legislator_role.mention}, Legislative Session "
                                                   f"#{active_leg_session.id} has been **closed** by the Cabinet.")
@@ -435,12 +434,15 @@ class Legislature(commands.Cog):
             bill_description = "-"
 
         async with ctx.typing():
-            bill_title = await self.bot.laws.get_google_docs_title(google_docs_url)
+            google_meta_info = await self.bot.laws.get_google_docs_meta_data(google_docs_url)
 
-            if bill_title is None:
+            if google_meta_info is None:
                 await ctx.send(":x: Couldn't connect to Google Docs. Make sure that the document can be"
                                " read by anyone and that it's not a published version.")
                 return None, None
+
+            bill_title = google_meta_info["title"]
+            google_description = google_meta_info["description"]
 
             # Make the Google Docs link smaller to workaround the "embed value cannot be longer than 1024 characters
             # in -legislature session" issue
@@ -454,9 +456,9 @@ class Legislature(commands.Cog):
             try:
                 await self.bot.db.execute(
                     "INSERT INTO legislature_bills (leg_session, link, bill_name, submitter, is_vetoable, "
-                    "description, tiny_link) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+                    "description, tiny_link, google_docs_description) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
                     current_leg_session_id, google_docs_url, bill_title, ctx.author.id, is_vetoable,
-                    bill_description, tiny_url)
+                    bill_description, tiny_url, google_description)
             except asyncpg.UniqueViolationError:
                 await ctx.send(":x: A bill with the same exact Google Docs Document was already submitted!")
                 return None, None
@@ -640,7 +642,6 @@ class Legislature(commands.Cog):
                     await _bill.pass_from_legislature()
 
                     if not _bill.is_vetoable:
-                        await asyncio.sleep(5)  # Sleep to avoid too many automated requests to Google Docs
                         await _bill.pass_into_law()
 
                     self.scheduler.add(_bill)

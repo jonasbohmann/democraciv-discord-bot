@@ -27,7 +27,7 @@ class Meta(commands.Cog):
         invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
 
         embed = self.bot.embeds.embed_builder(title='About This Bot', description=f"[Invite this bot to your"
-                                                                                  f" Discord Guild.]({invite_url})")
+                                                                                  f" Discord Server.]({invite_url})")
         embed.add_field(name='Author', value=str(self.bot.owner), inline=True)
         embed.add_field(name='Version', value=config.BOT_VERSION, inline=True)
         embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=True)

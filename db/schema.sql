@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS legislature_bills(
     tiny_link text UNIQUE,
     bill_name text,
     description text,
+    google_docs_description text,
     submitter bigint,
     is_vetoable bool,
     voted_on_by_leg bool DEFAULT FALSE,

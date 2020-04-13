@@ -205,6 +205,7 @@ class Bill(commands.Converter):
         self.link: str = kwargs.get('link')
         self.tiny_link: str = kwargs.get('tiny_link')
         self.description: str = kwargs.get('description')
+        self.google_docs_description: str = kwargs.get('google_docs_description')
         self.is_vetoable: bool = kwargs.get('is_vetoable')
         self.voted_on_by_leg: bool = kwargs.get('voted_on_by_leg')
         self.passed_leg: bool = kwargs.get('passed_leg')
@@ -260,9 +261,8 @@ class Bill(commands.Converter):
         # few sentence's of content.) and tokenizes those with nltk. Then, every noun from both descriptions is saved
         # into the legislature_tags table with the corresponding law_id.
 
-        _google_docs_description = await self._bot.laws.get_google_docs_description(self.link)
-        _tags = await self._bot.loop.run_in_executor(None, self._bot.laws.generate_law_tags, _google_docs_description,
-                                                     self.description)
+        _tags = await self._bot.loop.run_in_executor(None, self._bot.laws.generate_law_tags,
+                                                     self.google_docs_description, self.description)
 
         for tag in _tags:
             await self._bot.db.execute("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING",
@@ -365,7 +365,8 @@ class Bill(commands.Converter):
                    description=bill['description'], is_vetoable=bill['is_vetoable'],
                    voted_on_by_leg=bill['voted_on_by_leg'], passed_leg=bill['has_passed_leg'],
                    voted_on_by_ministry=bill['voted_on_by_ministry'], passed_ministry=bill['has_passed_ministry'],
-                   session=session, submitter=bill['submitter'], bot=ctx.bot)
+                   session=session, submitter=bill['submitter'],
+                   google_docs_description=bill['google_docs_description'], bot=ctx.bot)
 
 
 class Law(commands.Converter):

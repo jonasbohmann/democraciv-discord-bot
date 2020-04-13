@@ -198,8 +198,8 @@ class Twitch(commands.Cog):
                               f"Democraciv MK{mk.MARK}, where we play as {mk.NATION_NAME} in {mk.CIV_GAME}.\n\n"
                               f"Democraciv is a community on Reddit dedicated to play a single-player game of"
                               f" {mk.CIV_GAME} with a simulated, model government. We have a Legislature, a Supreme "
-                              f"Court and an executive branch, those wo can be seen playing the game here."
-                              f"\n\nDemocraciv: https://old.reddit.com/r/democraciv/```", inline=False)
+                              f"Court and an executive branch, those who can be seen playing the game here."
+                              f"\n\nDemocraciv: https://reddit.com/r/democraciv/```", inline=False)
 
         embed.add_field(name="Add some tags", value="Add some variations of `Democraciv`, `Civ 5`, `Game Politics`, "
                                                     "`Game Roleplay`, `Civ Politics`, `Civ Roleplay`,"

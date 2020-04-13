@@ -109,7 +109,7 @@ class Starboard(commands.Cog):
             markdown.append("\n\n&nbsp;\n\n")
 
         outro = """\n\n &nbsp; \n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) and this is 
-        an automated service. Contact u/Jovanos (DerJonas#8109 on Discord) for further questions or bug reports.* """
+        an automated service. Contact u/Jovanos (DerJonas#8036 on Discord) for further questions or bug reports.* """
         markdown.append(outro)
 
         return "\n\n".join(markdown)

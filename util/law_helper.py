@@ -123,7 +123,7 @@ class LawUtils:
 
         return None
 
-    async def get_google_docs_title(self, link: str) -> typing.Optional[str]:
+    async def get_google_docs_meta_data(self, link: str) -> typing.Optional[typing.Dict[str, str]]:
         """Gets title of a Google Docs document"""
 
         async with self.bot.session.get(link) as response:
@@ -133,60 +133,32 @@ class LawUtils:
         if not text:
             return None
 
-        strainer = SoupStrainer(property="og:title")  # Only parse the title property to save time
+        strainer = SoupStrainer(property=["og:title", "og:description"])
         soup = BeautifulSoup(text, "lxml", parse_only=strainer)  # Use lxml parser to speed things up
 
         if soup is None:
             return None
 
-        try:
-            bill_title = soup.find("meta")['content']  # Get title of Google Docs website
-        except (KeyError, TypeError):
-            return None
+        meta_tags = soup.find_all("meta")
 
-        if bill_title is None:
-            return None
-
-        if bill_title.endswith(' - Google Docs'):
-            bill_title = bill_title[:-14]
-
-        soup.decompose()  # Garbage collection
-
-        return bill_title
-
-    async def get_google_docs_description(self, link: str) -> typing.Optional[str]:
-        """Gets content of 'og:description' tag from HTML of a Google Docs page.
-
-            That content includes the document's title and the first few paragraphs of text."""
-
-        async with self.bot.session.get(link) as response:
-            if response.status == 200:
-                text = await response.read()
-
-        if not text:
-            return None
-
-        strainer = SoupStrainer(property="og:description")
-        soup = BeautifulSoup(text, "lxml", parse_only=strainer)
-
-        if soup is None:
+        if not meta_tags:
             return None
 
         try:
-            bill_description = soup.find("meta")['content']
-        except (KeyError, TypeError):
+            title = meta_tags[0]['content']
+            description = meta_tags[1]['content']
+        except (IndexError, KeyError):
             return None
 
-        if bill_description is None:
-            return None
+        if title.endswith(' - Google Docs'):
+            title = title[:-14]
 
-        # If the description is long enough, Google adds a ... to the end of it
-        if bill_description.endswith('...'):
-            bill_description = bill_description[:-3]
+        if description.endswith('...'):
+            description = description[:-3]
 
         soup.decompose()  # Garbage collection
 
-        return bill_description
+        return {'title': title, 'description': description}
 
     def generate_law_tags(self, google_docs_description: str, author_description: str) -> typing.List[str]:
         """Generates tags from all nouns of submitter-provided description and the Google Docs description"""

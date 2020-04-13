@@ -7,7 +7,7 @@ from util.flow import Flow
 from discord.ext import commands
 
 
-class Roles(commands.Cog):
+class Roles(commands.Cog, name="Selfrole"):
     """Self-assignable roles for this guild."""
 
     def __init__(self, bot):
