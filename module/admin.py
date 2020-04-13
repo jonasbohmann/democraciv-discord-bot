@@ -1,6 +1,7 @@
 import io
 import discord
 
+from util.converter import Law
 from discord.ext import commands
 from jishaku.cog import JishakuBase, jsk
 from jishaku.metacog import GroupCogMeta
@@ -29,6 +30,13 @@ class Admin(JishakuBase, metaclass=GroupCogMeta, command_parent=jsk, command_att
             await ctx.send('Output was too long!', file=discord.File(fp, 'results.txt'))
         else:
             await ctx.send(result)
+
+    @commands.command(name='addlawtag', aliases=['lt', 'alt'])
+    @commands.is_owner()
+    async def lawtag(self, ctx, law: Law, tag: str):
+        """Add a search tag to a law to be used in `-laws search`"""
+        await self.bot.db.execute("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2)", law.id, tag.lower())
+        await ctx.send(f":white_check_mark: `{tag}` was added as a search tag to `{law.bill.name}` (#{law.id})")
 
 
 def setup(bot):

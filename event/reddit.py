@@ -30,9 +30,9 @@ class Reddit(commands.Cog):
 
         return None
 
-    @tasks.loop(seconds=30)
+    @tasks.loop(seconds=60)
     async def reddit_task(self):
-        """Checks every 30 seconds if the 5 newest reddit posts of a subreddit are new. If at least one is, send
+        """Checks every 60 seconds if the 5 newest reddit posts of a subreddit are new. If at least one is, send
         announcement to the specified Discord channel."""
 
         try:

@@ -210,12 +210,6 @@ class Legislature(commands.Cog):
             'INSERT INTO legislature_sessions (speaker, is_active, opened_on)'
             'VALUES ($1, true, $2) RETURNING id', ctx.author.id, datetime.datetime.utcnow())
 
-        #  Update all bills that did not pass from last session
-        if new_session > 1:
-            await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = false,"
-                                      " voted_on_by_leg = true WHERE leg_session = $1 "
-                                      "AND voted_on_by_leg = false", new_session - 1)
-
         await ctx.send(f":white_check_mark: The **submission period** for session #{new_session} was opened.")
 
         await self.gov_announcements_channel.send(f"The **submission period** for Legislative Session "
@@ -272,6 +266,11 @@ class Legislature(commands.Cog):
             return await ctx.send(f":x: There is no open session!")
 
         await active_leg_session.close()
+
+        #  Update all bills that did not pass
+        await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = false,"
+                                  " voted_on_by_leg = true WHERE leg_session = $1 "
+                                  "AND voted_on_by_leg = false", active_leg_session.id)
 
         await ctx.send(f":white_check_mark: Session #{active_leg_session.id} was closed. "
                        f"Check `-help legislature pass` on what to do next.")
@@ -378,14 +377,16 @@ class Legislature(commands.Cog):
         if len(pretty_motions) <= 1024:
             embed.add_field(name="Submitted Motions", value=pretty_motions, inline=False)
         else:
-            haste_bin_url = await self.bot.laws.post_to_hastebin(pretty_motions)
+            async with ctx.typing():
+                haste_bin_url = await self.bot.laws.post_to_hastebin(pretty_motions)
             too_long_motions = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
             embed.add_field(name="Submitted Motions", value=too_long_motions, inline=False)
 
         if len(pretty_bills) <= 1024:
             embed.add_field(name="Submitted Bills", value=pretty_bills, inline=False)
         else:
-            haste_bin_url = await self.bot.laws.post_to_hastebin(pretty_bills)
+            async with ctx.typing():
+                haste_bin_url = await self.bot.laws.post_to_hastebin(pretty_bills)
             too_long_bills = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
             embed.add_field(name="Submitted Bills", value=too_long_bills, inline=False)
 
@@ -598,10 +599,10 @@ class Legislature(commands.Cog):
             if last_session.id != _bill.session.id:
                 return f"You can only mark bills from the most recent session of the Legislature as passed."
 
-            if last_session.status is SessionStatus.SUBMISSION_PERIOD:
-                return f"You cannot mark bills as passed while the session is still in submission period."
+            if last_session.status is not SessionStatus.CLOSED:
+                return f"You cannot mark bills as passed while their session is still in Submission or Voting Period."
 
-            if _bill.voted_on_by_leg:
+            if _bill.passed_leg:
                 return f"You already voted on this bill!"
 
         error_messages = []
