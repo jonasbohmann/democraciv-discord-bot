@@ -145,6 +145,8 @@ class Ministry(commands.Cog):
 
         pages = Pages(ctx=ctx, entries=pretty_bills, show_entry_count=False, title="Open Bills to Vote On",
                       show_index=False, footer_text=help_description, show_amount_of_pages=True)
+        if pages.maximum_pages == 1:
+            pages.show_amount_of_pages = False
         await pages.paginate()
 
     @staticmethod
