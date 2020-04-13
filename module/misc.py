@@ -1,7 +1,8 @@
-import datetime
+import typing
 import random
 import discord
 import operator
+import datetime
 
 import util.exceptions as exceptions
 
@@ -9,6 +10,7 @@ from config import config
 from util import utils, mk
 from discord.ext import commands
 from util.paginator import Pages
+from util.converter import CaseInsensitiveRole, PoliticalParty
 
 
 class Misc(commands.Cog, name="Miscellaneous"):
@@ -68,7 +70,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
     @commands.command(name='whois')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def whois(self, ctx, *, member: discord.Member = None):
+    async def whois(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveRole, PoliticalParty] = None):
         """Get detailed information about a member of this guild
 
             **Usage:**
@@ -91,6 +93,12 @@ class Misc(commands.Cog, name="Miscellaneous"):
         # Thanks to:
         #   https:/github.com/Der-Eddy/discord_bot
         #   https:/github.com/Rapptz/RoboDanny/
+
+        if isinstance(member, discord.Role):
+            return await self.role_info(ctx, member)
+
+        elif isinstance(member, PoliticalParty):
+            return await self.role_info(ctx, member.role)
 
         member = member or ctx.author
         join_pos, max_members = await self.get_member_join_position(member, ctx.guild.members)
@@ -291,6 +299,34 @@ class Misc(commands.Cog, name="Miscellaneous"):
             return await ctx.send(":x: tinyurl.com returned an error!")
 
         await ctx.send(f"<{tiny_url}>")
+
+    @commands.command(name='roleinfo', aliases=['whohas'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    async def whohas(self, ctx, role: typing.Union[discord.Role, CaseInsensitiveRole, PoliticalParty]):
+        """Detailed information about a role"""
+
+        if isinstance(role, PoliticalParty):
+            role = role.role
+
+        await self.role_info(ctx, role)
+
+    async def role_info(self, ctx, role: discord.Role):
+        if role.guild.id != ctx.guild.id:
+            description = ":warning:  This role is from the Democraciv server, not from this one!"
+        else:
+            description = ""
+
+        embed = self.bot.embeds.embed_builder(title="Role Information", description=description,
+                                              colour=role.colour, has_footer=False)
+        embed.add_field(name="Role", value=f"{role.name} {role.mention}", inline=False)
+        embed.add_field(name="ID", value=role.id, inline=False)
+        embed.add_field(name="Creation Date", value=role.created_at.strftime("%B %d, %Y"), inline=True)
+        embed.add_field(name="Colour", value=str(role.colour), inline=True)
+        embed.add_field(name=f"Members ({len(role.members)})",
+                        value=', '.join([member.mention for member in role.members]) or '-',
+                        inline=False)
+        await ctx.send(embed=embed)
 
     @commands.command(name='random')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

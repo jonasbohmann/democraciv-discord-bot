@@ -26,6 +26,22 @@ class SessionStatus(enum.Enum):
             raise NotImplementedError
 
 
+class CaseInsensitiveRole(commands.Converter):
+    async def convert(self, ctx, argument):
+        arg = argument.lower()
+        role = discord.utils.find(lambda r: r.name.lower() == arg, ctx.guild.roles)
+
+        if role:
+            return role
+
+        role = discord.utils.find(lambda r: r.name.lower() == arg, ctx.bot.democraciv_guild_object.roles)
+
+        if role:
+            return role
+
+        raise BadArgument(f":x: There is no role named `{argument}` on this or the Democraciv guild.")
+
+
 class Tag(commands.Converter):
     """
     Represents a Tag. Can be global or local.

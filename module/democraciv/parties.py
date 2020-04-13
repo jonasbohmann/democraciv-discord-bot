@@ -132,68 +132,41 @@ class Party(commands.Cog, name='Political Parties'):
             msg = f':white_check_mark: You left {party.role.name}.'
         await ctx.send(msg)
 
-    @commands.command(name='members', aliases=['rank', 'ranks', 'ranking'])
+    @commands.command(name='ranking', aliases=['rank', 'ranks', 'members', 'member'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def members(self, ctx, *, party: str = None):
-        """Get the current political party ranking or a list of all party members on the Democraciv guild"""
+    async def members(self, ctx):
+        """Ranking of political parties by their amount of members"""
 
-        # Show Ranking
-        if party is None:
-            party_list_embed_content = []
+        party_list_embed_content = []
 
-            sorted_parties_and_members = sorted(await self.collect_parties_and_members(), key=lambda x: x[1],
-                                                reverse=True)
+        sorted_parties_and_members = sorted(await self.collect_parties_and_members(), key=lambda x: x[1],
+                                            reverse=True)
 
-            for party in sorted_parties_and_members:
-                if party[0] == 'Independent':
-                    continue
-                if party[1] == 1:
-                    party_list_embed_content.append(f'**{party[0]}**\n{party[1]} member')
-                else:
-                    party_list_embed_content.append(f'**{party[0]}**\n{party[1]} members')
+        for party in sorted_parties_and_members:
+            if party[0] == 'Independent':
+                continue
+            if party[1] == 1:
+                party_list_embed_content.append(f'**{party[0]}**\n{party[1]} member')
+            else:
+                party_list_embed_content.append(f'**{party[0]}**\n{party[1]} members')
 
-            # Append Independents to message
-            independent_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name='Independent')
+        # Append Independents to message
+        independent_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name='Independent')
 
-            if independent_role is not None:
-                if len(independent_role.members) == 1:
-                    party_list_embed_content.append(f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n'
-                                                    f'{len(independent_role.members)} citizen')
-                else:
-                    party_list_embed_content.append(f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n'
-                                                    f'{len(independent_role.members)} citizens')
-            if len(party_list_embed_content) == 0:
-                party_list_embed_content = ['There are no political parties yet.']
+        if independent_role is not None:
+            if len(independent_role.members) == 1:
+                party_list_embed_content.append(f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n'
+                                                f'{len(independent_role.members)} citizen')
+            else:
+                party_list_embed_content.append(f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n'
+                                                f'{len(independent_role.members)} citizens')
+        if len(party_list_embed_content) == 0:
+            party_list_embed_content = ['There are no political parties yet.']
 
-            embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in {mk.NATION_NAME}',
-                                                  description='\n\n'.join(party_list_embed_content), colour=0x7f0000)
-
-            return await ctx.send(embed=embed)
-
-        # Show member names of single party
-        elif party:
-            try:
-                political_party = await PoliticalParty.convert(ctx, party)
-                role = political_party.role
-            except exceptions.PartyNotFoundError:
-                # '-members <role>' is often used for non-party roles so we allow this by catching PartyNotFoundError
-                role = discord.utils.get(self.bot.democraciv_guild_object.roles, name=party)
-
-            if role is None:
-                if ctx.guild.id != self.bot.democraciv_guild_object.id:
-                    return await ctx.send(":x: This command uses the roles and members from the Democraciv guild,"
-                                          " not the ones from this guild!")
-                raise exceptions.RoleNotFoundError(party)
-
-            list_of_members = [member.name for member in role.members]
-
-            if len(list_of_members) == 0:
-                list_of_members = ['No members.']
-
-            title = 'Independent Citizens' if party == 'Independent' else f'Members of {role.name}'
-
-            embed = self.bot.embeds.embed_builder(title=title, description='\n'.join(list_of_members), colour=0x7f0000)
-            return await ctx.send(embed=embed)
+        embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in {mk.NATION_NAME}',
+                                              description="",colour=0x7f0000)
+        embed.description = f"[Party Platforms]({links.parties})\n\n" + '\n\n'.join(party_list_embed_content)
+        return await ctx.send(embed=embed)
 
     async def create_new_party(self, ctx) -> typing.Optional[PoliticalParty]:
         await ctx.send(":information_source: Reply with the name of the new party you want to create.")
