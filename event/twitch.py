@@ -224,7 +224,7 @@ class Twitch(commands.Cog):
                               f" [here]({links.gswiki}).",
                         inline=False)
 
-        embed.add_field(name="Upload the save-game to Google Drive", value="Once a ministers sends you the save-game, "
+        embed.add_field(name="Upload the save-game to Google Drive", value="Once a minister sends you the save-game, "
                                                                            "upload it to our Google Drive under "
                                                                            "'Drive/Game/Savegames'.", inline=False)
 

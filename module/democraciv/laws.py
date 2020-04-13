@@ -141,8 +141,8 @@ class Laws(commands.Cog, name='Law'):
         """Repeal one or multiple laws
 
         **Example:**
-            `-law removelaw 24` will repeal law #24
-            `-law removelaw 56 57 58 12 13` will repeal all those laws"""
+            `-law repeal 24` will repeal law #24
+            `-law repeal 56 57 58 12 13` will repeal all those laws"""
 
         if not law_ids:
             return await ctx.send_help(ctx.command)

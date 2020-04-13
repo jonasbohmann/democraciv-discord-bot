@@ -37,44 +37,23 @@ class AnnouncementQueue:
     def get_message(self) -> str:
         raise NotImplementedError()
 
-    """
     def split_message(self, message: str) -> typing.List[str]:
-
         lines = message.splitlines(keepends=True)
-        x = len(lines)
+        split_into_2000 = dict()
+        index = 0
 
-        amount_of_messages, left_over = divmod(x, 1980)
+        for paragraph in lines:
+            try:
+                split_into_2000[index]
+            except KeyError:
+                split_into_2000[index] = ""
 
-        if left_over:
-            amount_of_messages += 1
+            split_into_2000[index] = split_into_2000[index] + ''.join(paragraph)
 
-        substrings = []
+            if (len(''.join(split_into_2000[index]))) > 1900:
+                index += 1
 
-        for _ in range(amount_of_messages):
-            stripped = message[:2000]
-            substrings.append(stripped)
-            x = len(message)
-            message = message[-(x - 2000):]
-
-        return substrings
-
-    def wrong_split_message(self, message: str) -> typing.List[str]:
-
-        amount_of_messages, left_over = divmod(len(message), 2000)
-
-        if left_over:
-            amount_of_messages += 1
-
-        substrings = []
-
-        for _ in range(amount_of_messages):
-            stripped = message[:2000]
-            substrings.append(stripped)
-            x = len(message)
-            message = message[-(x-2000):]
-
-        return substrings
-    """
+        return list(split_into_2000.values())
 
     def add(self, obj: typing.Union[Bill, Law, Session]):
         if len(self._objects) == 0:
@@ -87,12 +66,12 @@ class AnnouncementQueue:
     async def send_messages(self):
         message = self.get_message()
 
-        # if len(message) > 2000:
-        #    split_messages = self.split_message(message)
-        #    for msg in split_messages:
-        #        await self.channel.send(msg)
-        # else:
-        await self.channel.send(message)
+        if len(message) > 2000:
+            split_messages = self.split_message(message)
+            for msg in split_messages:
+                await self.channel.send(msg)
+        else:
+            await self.channel.send(message)
         self._objects.clear()
         self._task.cancel()
 

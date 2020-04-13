@@ -19,10 +19,7 @@ class LawPassScheduler(AnnouncementQueue):
                    f"the following bills were **passed into law by the Ministry**.\n"]
 
         for obj in self._objects:
-            if obj.submitter is not None:
-                message.append(f"-  **{obj.name}** (<{obj.tiny_link}>) by {obj.submitter.name}")
-            else:
-                message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+            message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
 
         message.append(f"\nAll new laws were added to `{config.BOT_PREFIX}laws` and can now be found with "
                        f"`{config.BOT_PREFIX}laws search <query>`. The "
@@ -38,10 +35,7 @@ class LawVetoScheduler(AnnouncementQueue):
                    f"the following bills were **vetoed by the Ministry**.\n"]
 
         for obj in self._objects:
-            if obj.submitter is not None:
-                message.append(f"-  **{obj.name}** (<{obj.tiny_link}>) by {obj.submitter.name}")
-            else:
-                message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+            message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
 
         return '\n'.join(message)
 
