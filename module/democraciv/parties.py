@@ -17,8 +17,7 @@ class Party(commands.Cog, name='Political Parties'):
 
     Note that you can only join and leave parties on the Democraciv guild."""
 
-    # TODO - Move all party commands into -party group. Don't allow non-party roles in -members <role>, move that
-    #  functionality into -whois <role>
+    # TODO - Move all party commands into -party group.
 
     def __init__(self, bot):
         self.bot = bot

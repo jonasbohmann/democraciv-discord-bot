@@ -25,7 +25,7 @@ for new uploads and new live broadcasts from the Democraciv YouTube channel
 *  Starboard: A starboard on Discord _and_ weekly posts to r/Democraciv with last week's starboard as a sort of "summary" of newsworthy Discord messages to our subreddit
 *  Smart Wikipedia and Sid Meier's Civilization Wikia queries
 *  Welcome messages & default roles
-*  Self-assignable role management
+*  Selfroles  
 *  Help command that automatically scales
 *  Gets the current time in over 400 timezones
 *  Moderation commands 

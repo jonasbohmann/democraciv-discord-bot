@@ -300,10 +300,10 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         await ctx.send(f"<{tiny_url}>")
 
-    @commands.command(name='roleinfo', aliases=['whohas'])
+    @commands.command(name='whohas', aliases=['roleinfo'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def whohas(self, ctx, role: typing.Union[discord.Role, CaseInsensitiveRole, PoliticalParty]):
+    async def whohas(self, ctx, *, role: typing.Union[discord.Role, CaseInsensitiveRole, PoliticalParty]):
         """Detailed information about a role"""
 
         if isinstance(role, PoliticalParty):

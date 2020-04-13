@@ -70,7 +70,6 @@ class HelpPaginator(Pages):
         messages = [f'{emoji} {func.__doc__}' for emoji, func in self.reaction_emojis]
         self.embed.clear_fields()
         self.embed.add_field(name='What are these reactions for?', value='\n'.join(messages), inline=False)
-
         self.embed.set_footer(text=f'We were on page {self.current_page} before this message.',
                               icon_url=config.BOT_ICON_URL)
         await self.message.edit(embed=self.embed)
