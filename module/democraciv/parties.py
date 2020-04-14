@@ -29,19 +29,20 @@ class Party(commands.Cog, name='Political Parties'):
         parties = await self.bot.db.fetch("SELECT id FROM parties")
         parties = [record['id'] for record in parties]
 
-        error_string = "[DATABASE] The following ids were added as a party but have no role on the Democraciv guild: "
+        error_string = []
 
         for party in parties:
             role = self.bot.democraciv_guild_object.get_role(party)
 
             if role is None:
-                error_string += f'{str(party)}, '
+                error_string.append(str(party))
                 continue
 
             parties_and_members.append((role.name, len(role.members)))
 
-        if len(error_string) > 95:
-            print(error_string)
+        if error_string:
+            print("[DATABASE] The following ids were added as a party but have no role on the Democraciv guild: ")
+            print(', '.join(error_string))
 
         return parties_and_members
 

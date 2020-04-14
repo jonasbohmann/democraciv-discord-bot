@@ -70,7 +70,8 @@ class Misc(commands.Cog, name="Miscellaneous"):
     @commands.command(name='whois')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def whois(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveRole, PoliticalParty] = None):
+    async def whois(self, ctx, *,
+                    member: typing.Union[discord.Member, discord.Role, CaseInsensitiveRole, PoliticalParty] = None):
         """Get detailed information about a member of this guild
 
             **Usage:**
@@ -91,8 +92,8 @@ class Misc(commands.Cog, name="Miscellaneous"):
                 return string[:-2]
 
         # Thanks to:
-        #   https:/github.com/Der-Eddy/discord_bot
-        #   https:/github.com/Rapptz/RoboDanny/
+        #   https://github.com/Der-Eddy/discord_bot
+        #   https://github.com/Rapptz/RoboDanny/
 
         if isinstance(member, discord.Role):
             return await self.role_info(ctx, member)
@@ -312,14 +313,19 @@ class Misc(commands.Cog, name="Miscellaneous"):
         await self.role_info(ctx, role)
 
     async def role_info(self, ctx, role: discord.Role):
+        if role is None:
+            return await ctx.send(":x: `role` is neither a role on this server, nor on the Democraciv server.")
+
         if role.guild.id != ctx.guild.id:
             description = ":warning:  This role is from the Democraciv server, not from this one!"
+            role_name = role.name
         else:
             description = ""
+            role_name = f"{role.name} {role.mention}"
 
         embed = self.bot.embeds.embed_builder(title="Role Information", description=description,
                                               colour=role.colour, has_footer=False)
-        embed.add_field(name="Role", value=f"{role.name} {role.mention}", inline=False)
+        embed.add_field(name="Role", value=role_name, inline=False)
         embed.add_field(name="ID", value=role.id, inline=False)
         embed.add_field(name="Creation Date", value=role.created_at.strftime("%B %d, %Y"), inline=True)
         embed.add_field(name="Colour", value=str(role.colour), inline=True)
