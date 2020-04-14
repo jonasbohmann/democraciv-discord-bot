@@ -1,6 +1,5 @@
 import typing
 import discord
-import asyncio
 
 from util.flow import Flow
 from util.converter import Bill

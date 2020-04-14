@@ -1,9 +1,7 @@
 import typing
 import asyncpg
 import discord
-import asyncio
 import datetime
-import functools
 
 from util.flow import Flow
 from util.paginator import Pages
@@ -13,24 +11,6 @@ from discord.ext.commands import Greedy
 from util import utils, mk, exceptions
 from util.law_helper import AnnouncementQueue
 from util.converter import Session, SessionStatus, Bill, Motion, Law
-
-
-class SubmitCooldown:
-
-    def __init__(self, rate: int, per: float, bucket: commands.BucketType):
-        self.bypass_roles = [mk.DemocracivRole.SPEAKER_ROLE.value, mk.DemocracivRole.VICE_SPEAKER_ROLE.value]
-        self.default_mapping = commands.CooldownMapping.from_cooldown(rate, per, bucket)
-
-    def __call__(self, ctx):
-        getter = functools.partial(discord.utils.get, ctx.author.roles)
-        if any(getter(id=role) is not None for role in self.bypass_roles):
-            return True
-        else:
-            bucket = self.default_mapping.get_bucket(ctx.message)
-        retry_after = bucket.update_rate_limit()
-        if retry_after:
-            raise commands.CommandOnCooldown(bucket, retry_after)
-        return True
 
 
 class PassScheduler(AnnouncementQueue):
@@ -529,7 +509,8 @@ class Legislature(commands.Cog):
         return message, embed
 
     @legislature.command(name='submit')
-    @commands.check(SubmitCooldown(1, 300, commands.BucketType.user))
+    @commands.cooldown(1, 60, commands.BucketType.user)
+    @commands.max_concurrency(1, per=commands.BucketType.guild, wait=True)
     @utils.is_democraciv_guild()
     async def submit(self, ctx):
         """Submit a new bill or motion to the currently active session"""

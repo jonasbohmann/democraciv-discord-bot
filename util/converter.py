@@ -1,5 +1,5 @@
-import enum
 import re
+import enum
 import typing
 import discord
 
