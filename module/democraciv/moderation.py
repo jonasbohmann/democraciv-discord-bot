@@ -525,18 +525,26 @@ class Moderation(commands.Cog):
 
         await ctx.send(f":white_check_mark: {name} was banned.")
 
-    @ban.error
-    async def banerror(self, ctx, error):
-        if isinstance(error, commands.BadArgument):
-            await ctx.send(":x: I couldn't find that person.")
-
     @commands.command(name='unban')
     @commands.guild_only()
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
-    async def unban(self, ctx, user: discord.User, *, reason: str = None):
+    async def unban(self, ctx, user: str, *, reason: str = None):
         """Unban a user"""
+
+        try:
+            user_object = await commands.UserConverter().convert(ctx, user)
+            user_id = user_object.id
+        except commands.BadArgument:
+            try:
+                user_id = int(user)
+            except ValueError:
+                user_id = None
+            user_object = None
+
+        if user_id is None:
+            return await ctx.send(":x: I couldn't find that person.")
 
         if reason:
             if len(reason) > 400:
@@ -547,18 +555,18 @@ class Moderation(commands.Cog):
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with no specified reason."
 
         try:
-            await ctx.guild.unban(discord.Object(id=user.id), reason=formatted_reason)
+            await ctx.guild.unban(discord.Object(id=user_id), reason=formatted_reason)
         except discord.Forbidden:
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_BAN)
         except discord.HTTPException:
             return await ctx.send(":x: That person is not banned.")
 
-        await ctx.send(f":white_check_mark: {user} was unbanned.")
+        if user_object:
+            name = str(user_object)
+        else:
+            name = f"The Discord user with ID `{user_id}`"
 
-    @unban.error
-    async def unbanerror(self, ctx, error):
-        if isinstance(error, commands.BadArgument):
-            await ctx.send(":x: I couldn't find that person.")
+        await ctx.send(f":white_check_mark: {name} was unbanned.")
 
     @commands.command(name='archiveoldgov')
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
