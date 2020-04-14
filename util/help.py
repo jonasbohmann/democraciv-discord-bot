@@ -207,10 +207,9 @@ class PaginatedHelpCommand(commands.HelpCommand):
         await self.context.send(embed=embed)
 
     async def send_group_help(self, group):
-        if group.cog_name.lower() == group.name.lower():
-            return await self.send_cog_help(group.cog)
-        else:
-            return await self._send_group_help(group)
+        # The end user doesn't know the difference between a Group and a Command. To avoid confusion, just show them
+        # the whole cog
+        await self.send_cog_help(group.cog)
 
     async def _send_group_help(self, group):
         subcommands = group.commands

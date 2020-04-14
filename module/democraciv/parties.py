@@ -13,9 +13,8 @@ from util.exceptions import ForbiddenTask
 
 
 class Party(commands.Cog, name='Political Parties'):
-    """Interact with the political parties of Democraciv.
-
-    Note that you can only join and leave parties on the Democraciv server."""
+    """Interact with the political parties of Democraciv. Note that you can only join and
+    leave parties on the Democraciv server."""
 
     # TODO - Move all party commands into -party group.
 

@@ -1,3 +1,26 @@
+# Some parts of this were adapted from R.Danny's starboard. Credit goes to Rapptz:
+"""The MIT License (MIT)
+
+Copyright (c) 2015 Rapptz
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE."""
+
 import typing
 import asyncpg
 import discord
@@ -376,6 +399,107 @@ class Starboard(commands.Cog):
         await self.bot.db.execute("DELETE FROM starboard_entries WHERE starboard_message_id = ANY($1::bigint[]);",
                                   messages)
 
+    @commands.group(name='star', aliases=['starboard', 'stars'], case_insensitive=True,
+                    invoke_without_command=True, hidden=True)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    async def starboard(self, ctx):
+        """The Starboard Group command"""
+        if ctx.invoked_subcommand is None:
+            return await ctx.send_help(ctx.command.cog)
+
+    @starboard.command(name='stats')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    async def starboardstats(self, ctx):
+        """Statistics about our Starboard"""
+
+        total_starred_messages = await self.bot.db.fetchval("SELECT COUNT(*) FROM starboard_entries")
+        total_stars = await self.bot.db.fetchval("SELECT COUNT(*) FROM starboard_starrers INNER JOIN starboard_entries "
+                                                 "entry ON entry.id = starboard_starrers.entry_id;")
+
+        embed = self.bot.embeds.embed_builder(title='Starboard Stats',
+                                              description=f'So far, there are {total_starred_messages} messages starred'
+                                                          f' with a total of {total_stars} stars.',
+                                              colour=0xFFAC33,
+                                              has_footer=False)
+
+        # this big query fetches 3 things:
+        # top 3 starred posts (Type 3)
+        # top 3 most starred authors  (Type 1)
+        # top 3 star givers (Type 2)
+        query = """WITH t AS (
+                       SELECT
+                           entry.author_id AS entry_author_id,
+                           starboard_starrers.starrer_id,
+                           entry.starboard_message_id
+                       FROM starboard_starrers
+                       INNER JOIN starboard_entries entry
+                       ON entry.id = starboard_starrers.entry_id
+                   )
+                   (
+                       SELECT t.entry_author_id AS "ID", 1 AS "Type", COUNT(*) AS "Stars"
+                       FROM t
+                       WHERE t.entry_author_id IS NOT NULL
+                       GROUP BY t.entry_author_id
+                       ORDER BY "Stars" DESC
+                       LIMIT 3
+                   )
+                   UNION ALL
+                   (
+                       SELECT t.starrer_id AS "ID", 2 AS "Type", COUNT(*) AS "Stars"
+                       FROM t
+                       GROUP BY t.starrer_id
+                       ORDER BY "Stars" DESC
+                       LIMIT 3
+                   )
+                   UNION ALL
+                   (
+                       SELECT t.starboard_message_id AS "ID", 3 AS "Type", COUNT(*) AS "Stars"
+                       FROM t
+                       WHERE t.starboard_message_id IS NOT NULL
+                       GROUP BY t.starboard_message_id
+                       ORDER BY "Stars" DESC
+                       LIMIT 3
+                   );"""
+
+        def records_to_value(records, fmt=None, default='None!'):
+            if not records:
+                return default
+
+            emoji = 0x1f947  # :first_place:
+            fmt = fmt or (lambda o: o)
+            return '\n'.join(
+                f'{chr(emoji + i)}    {fmt(r["ID"])} ({r["Stars"]} stars)' for i, r in enumerate(records))
+
+        records = await self.bot.db.fetch(query)
+        starred_posts = [r for r in records if r['Type'] == 3]
+        starred_posts_with_link = []
+
+        for post in starred_posts:
+            record = await self.bot.db.fetchval("SELECT message_jump_url FROM starboard_entries "
+                                                "WHERE starboard_message_id = $1", post['ID'])
+            starred_posts_with_link.append({"ID": f"[Jump to Message]({record})", "Stars": post['Stars']})
+
+        embed.add_field(name='Top Starred Messages', value=records_to_value(starred_posts_with_link), inline=False)
+
+        to_mention = lambda o: f'<@{o}>'
+
+        star_receivers = [r for r in records if r['Type'] == 1]
+        value = records_to_value(star_receivers, to_mention, default='No one!')
+        embed.add_field(name='Top Star Receivers', value=value, inline=False)
+
+        star_givers = [r for r in records if r['Type'] == 2]
+        value = records_to_value(star_givers, to_mention, default='No one!')
+        embed.add_field(name='Top Star Givers', value=value, inline=False)
+
+        if self.starboard_channel is not None:
+            embed.set_footer(text='Collecting stars since', icon_url="https://cdn.discordapp.com/attachments/"
+                                                                     "639549494693724170/679824104190115911/star.png")
+            embed.timestamp = self.starboard_channel.created_at
+        await ctx.send(embed=embed)
+
 
 def setup(bot):
-    bot.add_cog(Starboard(bot))
+    if config.STARBOARD_ENABLED:
+        bot.add_cog(Starboard(bot))
