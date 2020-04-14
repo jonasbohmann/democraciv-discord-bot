@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS guilds(
     logging_channel bigint,
     logging_excluded bigint[] DEFAULT '{}',
     defaultrole bool DEFAULT FALSE,
-    defaultrole_role bigint
+    defaultrole_role bigint,
+    tag_creation_allowed bool DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS roles(

@@ -65,18 +65,20 @@ def has_any_democraciv_role(*roles: mk.DemocracivRole):
 
 
 def tag_check():
-    """Commands check decorator. On the Democraciv Guild, anyone can create tags and remove and edit their own tags. On
-    all other guilds (i.e. party guilds), only Administrators can create tags."""
+    """Check to see if tag creation is allowed by everyone or just Administrators."""
 
-    def check(ctx):
-        if config.DEMOCRACIV_GUILD_ID != ctx.guild.id:
+    async def check(ctx):
+        is_allowed = await ctx.bot.checks.is_tag_creation_allowed(ctx.guild.id)
+
+        if is_allowed:
+            return True
+        else:
             if ctx.author.guild_permissions.administrator:
                 return True
             else:
-                raise exceptions.TagCheckError(message=":x: Only Administrators can add or "
-                                                       "remove tags on this server!")
-        else:
-            return True
+                raise exceptions.TagCheckError(message=":x: Only Administrators can add or remove tags on this server."
+                                                       " Administrators can change this setting in "
+                                                       f"`{config.BOT_PREFIX}server tagcreation`.")
 
     return commands.check(check)
 
@@ -184,6 +186,15 @@ class CheckUtils:
         else:
             return return_bool
 
+    async def is_tag_creation_allowed(self, guild_id: int) -> bool:
+        """Returns true if everyone is allowed to make tags on this guild."""
+        return_bool = await self.bot.db.fetchval("SELECT tag_creation_allowed FROM guilds WHERE id = $1", guild_id)
+
+        if return_bool is None:
+            return False
+        else:
+            return return_bool
+
     async def is_guild_initialized(self, guild_id: int) -> bool:
         """Returns true if the guild has an entry in the bot's database."""
         return_bool = await self.bot.db.fetchval("SELECT id FROM guilds WHERE id = $1", guild_id)
@@ -192,6 +203,8 @@ class CheckUtils:
             return False
         else:
             return True
+
+
 
     async def is_channel_excluded(self, guild_id: int, channel_id: int) -> bool:
         """Returns true if the channel is excluded from logging. This is used for the Starboard too."""

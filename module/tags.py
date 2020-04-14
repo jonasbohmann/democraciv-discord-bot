@@ -21,9 +21,8 @@ class TagContentType(enum.Enum):
 
 
 class Tags(commands.Cog):
-    """Create tags for later retrieval of text, images & links. Tags are accessed with the bot's prefix.
-       While everyone can create tags on the Democraciv server, only administrators
-           can create tags on other servers, like party servers."""
+    """Create tags for later retrieval of text, images & links. Tags are accessed with the bot's prefix. Server
+    administrators can change who is allowed to create tags on their server with `-server tagcreation`."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -77,8 +76,8 @@ class Tags(commands.Cog):
         if not pretty_tags:
             pretty_tags = ['There are no local tags on this server.']
 
-        pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"Local Tags in {ctx.guild.name}"
-                      , show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
+        pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"Local Tags in {ctx.guild.name}",
+                      show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
         await pages.paginate()
 
     @tags.command(name="from")

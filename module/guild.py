@@ -27,14 +27,10 @@ class Guild(commands.Cog, name="Server"):
     async def guild(self, ctx):
         """Statistics and information about this server"""
 
-        is_welcome_enabled = await self.bot.checks.is_welcome_message_enabled(ctx.guild.id)
-        is_welcome_enabled = self.emojiy_settings(is_welcome_enabled)
-
-        is_logging_enabled = await self.bot.checks.is_logging_enabled(ctx.guild.id)
-        is_logging_enabled = self.emojiy_settings(is_logging_enabled)
-
-        is_default_role_enabled = await self.bot.checks.is_default_role_enabled(ctx.guild.id)
-        is_default_role_enabled = self.emojiy_settings(is_default_role_enabled)
+        is_welcome_enabled = self.emojiy_settings(await self.bot.checks.is_welcome_message_enabled(ctx.guild.id))
+        is_logging_enabled = self.emojiy_settings(await self.bot.checks.is_logging_enabled(ctx.guild.id))
+        is_default_role_enabled = self.emojiy_settings(await self.bot.checks.is_default_role_enabled(ctx.guild.id))
+        is_tag_creation_allowed = self.emojiy_settings(await self.bot.checks.is_tag_creation_allowed(ctx.guild.id))
 
         excluded_channels = await self.bot.db.fetchval("SELECT logging_excluded FROM guilds WHERE id = $1",
                                                        ctx.guild.id)
@@ -45,10 +41,12 @@ class Guild(commands.Cog, name="Server"):
                                                           f"how to configure me for this server.", has_footer=False)
         embed.add_field(name="Settings", value=f"{is_welcome_enabled} Welcome Messages\n"
                                                f"{is_logging_enabled} Logging ({excluded_channels} excluded channels)\n"
-                                               f"{is_default_role_enabled} Default Roles")
+                                               f"{is_default_role_enabled} Default Roles\n"
+                                               f"{is_tag_creation_allowed} Tag Creation by Everyone")
         embed.add_field(name="Statistics", value=f"{ctx.guild.member_count} members\n"
                                                  f"{len(ctx.guild.text_channels)} text channels\n"
-                                                 f"{len(ctx.guild.roles)} roles")
+                                                 f"{len(ctx.guild.roles)} roles\n"
+                                                 f"{len(ctx.guild.emojis)} custom emojis")
         embed.set_footer(text=f"Server was created on {ctx.guild.created_at.strftime('%A, %B %d %Y')}")
         embed.set_thumbnail(url=ctx.guild.icon_url_as(format='png'))
         await ctx.send(embed=embed)
@@ -69,7 +67,7 @@ class Guild(commands.Cog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
     async def welcome(self, ctx):
-        """Configure a welcome message that every new member will see once they join this server"""
+        """Add a welcome message that every new member will see once they join this server"""
 
         is_welcome_enabled = await self.bot.checks.is_welcome_message_enabled(ctx.guild.id)
         current_welcome_channel = await utils.get_welcome_channel(self.bot, ctx.guild)
@@ -147,7 +145,7 @@ class Guild(commands.Cog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
     async def logs(self, ctx):
-        """Configure the logging module that logs every server event to a specified channel"""
+        """Log important events like message edits & deletions and more to a specific channel"""
 
         is_logging_enabled = await self.bot.checks.is_logging_enabled(ctx.guild.id)
         current_logging_channel = await utils.get_logging_channel(self.bot, ctx.guild)
@@ -202,8 +200,8 @@ class Guild(commands.Cog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
     async def exclude(self, ctx, channel: str = None):
-        """
-        Configure the channels that should be excluded from the logging module on this server
+        """Exclude message edits & deletions in a channel from showing up in your server's log channel
+
 
             **Usage:**
                 `-server exclude` to see all excluded channels
@@ -285,7 +283,7 @@ class Guild(commands.Cog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
     async def defaultrole(self, ctx):
-        """Configure a default role that every new member will get once they join this server"""
+        """Give every new member a specific role once they join this server"""
 
         is_default_role_enabled = await self.bot.checks.is_default_role_enabled(ctx.guild.id)
 
@@ -354,6 +352,47 @@ class Guild(commands.Cog, name="Server"):
             elif not reaction:
                 await self.bot.db.execute("UPDATE guilds SET defaultrole = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Disabled the default role.")
+
+    @guild.command(name='tagcreation')
+    @commands.guild_only()
+    @commands.has_permissions(administrator=True)
+    async def tagcreation(self, ctx):
+        """Allow everyone to make tags on this server, or just Administrators"""
+
+        is_allowed = await self.bot.checks.is_tag_creation_allowed(ctx.guild.id)
+
+        pretty_is_allowed = "Only Administrators" if not is_allowed else "Everyone"
+
+        embed = self.bot.embeds.embed_builder(title=f":pencil:  Tag Creation On {ctx.guild.name}",
+                                              description="React with the :gear: emoji to change this setting.")
+        embed.add_field(name="Allowed Tag Creators", value=pretty_is_allowed)
+
+        info_embed = await ctx.send(embed=embed)
+        flow = Flow(self.bot, ctx)
+
+        if await flow.gear_reaction_confirm(info_embed, 300):
+            everyone = "\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467"
+            only_admins = "\U0001f46e"
+
+            status_question = await ctx.send(f":information_source: Who should be able to create new tags "
+                                             f"on this server with `-tag add`, "
+                                             f"**everyone** or **just the Administrators** of this server?\n\n"
+                                             f"React with {everyone} for everyone, or with {only_admins} for just "
+                                             f"Administrators.")
+
+            reaction, user = await flow.get_emoji_choice(everyone, only_admins, status_question, 240)
+
+            if reaction is None:
+                return
+
+            if str(reaction) == everyone:
+                await self.bot.db.execute("UPDATE guilds SET tag_creation_allowed = true WHERE id = $1", ctx.guild.id)
+                await ctx.send(":white_check_mark: Everyone can now make tags with `-tag add` on this server.")
+
+            elif str(reaction) == only_admins:
+                await self.bot.db.execute("UPDATE guilds SET tag_creation_allowed = false WHERE id = $1", ctx.guild.id)
+                await ctx.send(":white_check_mark: Only Administrators can now make"
+                               " tags with `tag -add` on this server.")
 
 
 def setup(bot):
