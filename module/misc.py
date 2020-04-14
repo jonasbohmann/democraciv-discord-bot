@@ -4,10 +4,7 @@ import discord
 import operator
 import datetime
 
-import util.exceptions as exceptions
-
 from config import config
-from util import utils, mk
 from discord.ext import commands
 from util.paginator import Pages
 from util.converter import CaseInsensitiveRole, PoliticalParty
@@ -56,17 +53,6 @@ class Misc(commands.Cog, name="Miscellaneous"):
                 return key + 1, len(members)
         return None, None
 
-    @commands.command(name='say')
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
-    async def say(self, ctx, *, content: str):
-        """Make the bot say something"""
-        try:
-            await ctx.message.delete()
-        except discord.Forbidden:
-            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MESSAGE_DELETE, content)
-
-        await ctx.send(content)
-
     @commands.command(name='whois')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
@@ -74,7 +60,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
                     member: typing.Union[discord.Member, discord.Role, CaseInsensitiveRole, PoliticalParty] = None):
         """Get detailed information about a member of this guild
 
-            **Usage:**
+            **Example:**
              `-whois`
              `-whois @DerJonas`
              `-whois DerJonas`
@@ -125,7 +111,14 @@ class Misc(commands.Cog, name="Miscellaneous"):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def avatar(self, ctx, *, member: discord.Member = None):
-        """Get a members's avatar in detail"""
+        """Get a members's avatar in detail
+
+        **Example:**
+             `-avatar`
+             `-avatar @DerJonas`
+             `-avatar DerJonas`
+             `-avatar DerJonas#8109`
+        """
 
         member = member or ctx.author
         avatar_png: discord.Asset = member.avatar_url_as(static_format="png", size=4096)
@@ -154,7 +147,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
     async def spotify(self, ctx, *, member: discord.Member = None):
         """See what someone is listening to on Spotify
 
-            **Usage:**
+            **Example:**
              `-spotify`
              `-spotify @DerJonas`
              `-spotify DerJonas`
@@ -291,13 +284,13 @@ class Misc(commands.Cog, name="Miscellaneous"):
     async def tinyurl(self, ctx, url: str):
         """Shorten a link with tinyurl"""
         if len(url) <= 3:
-            await ctx.send(":x: That doesn't look like a valid URL!")
+            await ctx.send(":x: That doesn't look like a valid URL.")
             return
 
         tiny_url = await self.bot.laws.post_to_tinyurl(url)
 
         if tiny_url is None:
-            return await ctx.send(":x: tinyurl.com returned an error!")
+            return await ctx.send(":x: tinyurl.com returned an error, try again in a few minutes.")
 
         await ctx.send(f"<{tiny_url}>")
 
@@ -337,12 +330,12 @@ class Misc(commands.Cog, name="Miscellaneous"):
     @commands.command(name='random')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def random(self, ctx, *arg):
-        """Returns a random number or choice
+        """Get a random number or make the bot choose between something
 
-            **Usage:**
+            **Example:**
               `-random` will choose a random number between 1-100
-              `-random coin` will choose Heads or Tails
               `-random 6` will choose a random number between 1-6
+              `-random coin` will choose Heads or Tails
               `-random choice England Rome` will choose between "England" and "Rome"
             """
 

@@ -101,7 +101,7 @@ class Roles(commands.Cog, name="Selfrole"):
     @commands.has_permissions(administrator=True)
     @commands.guild_only()
     async def addrole(self, ctx):
-        """Add a role to this guild's `-role` list"""
+        """Add a role to this server's `-role` list"""
 
         await ctx.send(":information_source: Reply with the name of the role you want to create.")
 
@@ -145,7 +145,7 @@ class Roles(commands.Cog, name="Selfrole"):
     @commands.has_permissions(administrator=True)
     @commands.guild_only()
     async def deleterole(self, ctx, hard: typing.Optional[bool] = False, *, role: str):
-        """Remove a role from this guild's `-role` list
+        """Remove a role from this server's `-role` list
 
         **Usage:**
          `-role delete true <role>` will remove the role **and** delete its Discord role

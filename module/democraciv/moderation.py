@@ -238,6 +238,17 @@ class Moderation(commands.Cog):
         await ctx.send(':wave: Restarting...')
         await self.bot.close_bot()
 
+    @commands.command(name='say')
+    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    async def say(self, ctx, *, content: str):
+        """Make the bot say something"""
+        try:
+            await ctx.message.delete()
+        except discord.Forbidden:
+            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MESSAGE_DELETE, content)
+
+        await ctx.send(content)
+
     @commands.command(name='alt')
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def alt(self, ctx, member: discord.Member, check_messages: bool = False):

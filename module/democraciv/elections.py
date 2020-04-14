@@ -15,7 +15,7 @@ class Elections(commands.Cog, name="Election"):
     @commands.command(name="stv")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def stv(self, ctx, seats: int, quota: str):
-        """Calculate election results of a given .csv file with STV
+        """Calculate election results with STV
 
         **Usage:**
             Upload a .csv file and add the command as a comment to it like this:
