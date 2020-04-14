@@ -86,11 +86,8 @@ class Log(commands.Cog):
                 "Channel": [f"{message.channel.mention}", False]
             }
 
-            if not message.embeds:
-                # If the deleted message is an embed, sending this new embed will raise an error as
-                # message.clean_content does not work with embeds
-                if len(message.content) <= 1024:
-                    embed_fields['Message'] = [message.content, False]
+            if message.content and len(message.content) <= 1024:
+                embed_fields['Message'] = [message.content, False]
 
             await self.log_event(message.guild, ':wastebasket:  Message Deleted', embed_fields, to_owner=False)
 

@@ -91,12 +91,12 @@ class ForbiddenError(DemocracivBotException):
     def __init__(self, task: ForbiddenTask = None, detail: str = None):
 
         if task == ForbiddenTask.ADD_ROLE:
-            self.message = f":x: Either the `{detail}` role is higher than my role, or I'm missing Administrator " \
-                           f"permissions to give you the role!"
+            self.message = f":x: Either the `{detail}` role is higher than my top role, or I'm missing the " \
+                           f"required permissions to give you the role."
 
         elif task == ForbiddenTask.REMOVE_ROLE:
-            self.message = f":x: Either the `{detail}` role is higher than my role, or I'm missing Administrator " \
-                           f"permissions to remove the role from you!"
+            self.message = f":x: Either the `{detail}` role is higher than my top role, or I'm missing " \
+                           f"required permissions to remove the role from you."
 
         elif task == ForbiddenTask.CREATE_ROLE:
             self.message = f":x: I'm missing the required permissions to create the `{detail}` role."

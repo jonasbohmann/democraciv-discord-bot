@@ -318,19 +318,22 @@ class Moderation(commands.Cog):
             return await ctx.send(":x: You aren't allowed to kick someone with a higher role than yours.")
 
         if reason:
+            if len(reason) > 400:
+                return await ctx.send(":x: The reason cannot be longer that 400 characters.")
+
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
         else:
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with no specified reason."
 
         try:
+            await member.send(f":boot: You were **kicked** from {ctx.guild.name}.")
+        except discord.Forbidden:
+            pass
+
+        try:
             await ctx.guild.kick(member, reason=formatted_reason)
         except discord.Forbidden:
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_KICK)
-
-        try:
-            await member.send(f":no_entry: You were kicked from {ctx.guild.name}.")
-        except discord.Forbidden:
-            pass
 
         await ctx.send(f":white_check_mark: {member} was kicked.")
 
@@ -340,8 +343,7 @@ class Moderation(commands.Cog):
     async def clear(self, ctx, amount: int, target: discord.Member = None):
         """Purge an amount of messages in the current channel"""
         if amount > 500 or amount < 0:
-            await ctx.send(":x: Invalid amount, maximum is 500.")
-            return
+            return await ctx.send(":x: Invalid amount! The maximum is 500.")
 
         def check(message):
             if target:
@@ -368,7 +370,7 @@ class Moderation(commands.Cog):
                     except discord.HTTPException:
                         continue
             except discord.Forbidden:
-                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE)
+                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted")
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
@@ -378,7 +380,7 @@ class Moderation(commands.Cog):
             try:
                 muted_role = await channel.guild.create_role(name="Muted")
             except discord.Forbidden:
-                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE)
+                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted")
 
         await channel.set_permissions(muted_role, send_messages=False)
 
@@ -396,12 +398,18 @@ class Moderation(commands.Cog):
                 for channel in ctx.guild.text_channels:
                     await channel.set_permissions(muted_role, send_messages=False)
             except discord.Forbidden:
-                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE)
+                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted")
 
         if muted_role is None:
             raise exceptions.RoleNotFoundError("Muted")
 
+        if muted_role in member.roles:
+            return await ctx.send(f":x: {member} is already muted.")
+
         if reason:
+            if len(reason) > 400:
+                return await ctx.send(":x: The reason cannot be longer that 400 characters.")
+
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
         else:
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with no specified reason."
@@ -419,10 +427,10 @@ class Moderation(commands.Cog):
         try:
             await member.add_roles(muted_role, reason=formatted_reason)
         except discord.Forbidden:
-            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.ADD_ROLE)
+            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.ADD_ROLE, detail="Muted")
 
         try:
-            await member.send(f":shushing_face: You were **muted** in {ctx.guild.name}.")
+            await member.send(f":zipper_mouth: You were **muted** in {ctx.guild.name}.")
         except discord.Forbidden:
             pass
 
@@ -439,13 +447,16 @@ class Moderation(commands.Cog):
         if muted_role is None:
             raise exceptions.RoleNotFoundError("Muted")
 
+        if muted_role not in member.roles:
+            return await ctx.send(f":x: {member} is not muted.")
+
         try:
             await member.remove_roles(muted_role, reason=f"Action requested by {ctx.author}.")
         except discord.Forbidden:
-            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.REMOVE_ROLE)
+            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.REMOVE_ROLE, detail="Muted")
 
         try:
-            await member.send(f":shushing_face: You were **unmuted** in {ctx.guild.name}.")
+            await member.send(f":innocent: You were **unmuted** in {ctx.guild.name}.")
         except discord.Forbidden:
             pass
 
@@ -487,9 +498,18 @@ class Moderation(commands.Cog):
             return await ctx.send(":x: You aren't allowed to ban someone with a higher role than yours.")
 
         if reason:
+            if len(reason) > 400:
+                return await ctx.send(":x: The reason cannot be longer that 400 characters.")
+
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
         else:
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with no specified reason."
+
+        if member_object:
+            try:
+                await member_object.send(f":no_entry: You were **banned** from {ctx.guild.name}.")
+            except discord.Forbidden:
+                pass
 
         try:
             await ctx.guild.ban(discord.Object(id=member_id), reason=formatted_reason, delete_message_days=0)
@@ -499,12 +519,11 @@ class Moderation(commands.Cog):
             return await ctx.send(":x: I couldn't find that person.")
 
         if member_object:
-            try:
-                await member_object.send(f":no_entry: You were banned from {ctx.guild.name}.")
-            except discord.Forbidden:
-                pass
+            name = str(member_object)
+        else:
+            name = f"The Discord user with ID `{member_id}`"
 
-        await ctx.send(f":white_check_mark: {member} was banned.")
+        await ctx.send(f":white_check_mark: {name} was banned.")
 
     @ban.error
     async def banerror(self, ctx, error):
@@ -516,22 +535,25 @@ class Moderation(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
-    async def unban(self, ctx, member: discord.User, *, reason: str = None):
-        """Unban a member"""
+    async def unban(self, ctx, user: discord.User, *, reason: str = None):
+        """Unban a user"""
 
         if reason:
+            if len(reason) > 400:
+                return await ctx.send(":x: The reason cannot be longer that 400 characters.")
+
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
         else:
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with no specified reason."
 
         try:
-            await ctx.guild.unban(discord.Object(id=member.id), reason=formatted_reason)
+            await ctx.guild.unban(discord.Object(id=user.id), reason=formatted_reason)
         except discord.Forbidden:
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_BAN)
         except discord.HTTPException:
             return await ctx.send(":x: That person is not banned.")
 
-        await ctx.send(f":white_check_mark: {member} was unbanned.")
+        await ctx.send(f":white_check_mark: {user} was unbanned.")
 
     @unban.error
     async def unbanerror(self, ctx, error):

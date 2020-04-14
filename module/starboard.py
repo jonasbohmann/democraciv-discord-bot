@@ -361,14 +361,14 @@ class Starboard(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_message_delete(self, payload):
-        if self.starboard_channel.id != payload.channel_id:
+        if self.starboard_channel and self.starboard_channel.id != payload.channel_id:
             return
 
         await self.bot.db.execute("DELETE FROM starboard_entries WHERE starboard_message_id = $1", payload.message_id)
 
     @commands.Cog.listener()
     async def on_raw_bulk_message_delete(self, payload):
-        if self.starboard_channel.id != payload.channel_id:
+        if self.starboard_channel and self.starboard_channel.id != payload.channel_id:
             return
 
         messages = list(payload.message_ids)
