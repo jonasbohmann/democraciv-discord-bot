@@ -85,7 +85,7 @@ class CaseInsensitiveRole(commands.Converter):
         if role:
             return role
 
-        raise BadArgument(f":x: There is no role named `{argument}` on this or the Democraciv guild.")
+        raise BadArgument(f":x: There is no role named `{argument}` on this or the Democraciv server.")
 
 
 class Tag(commands.Converter):
@@ -172,7 +172,7 @@ class OwnedTag(Tag):
 
         if tag_details['global'] and tag_details['guild_id'] != ctx.guild.id:
             raise TagError(f":x: Global tags can only be edited or removed on "
-                           f"the guild they were originally created on!")
+                           f"the server they were originally created on!")
 
         if tag_details['author'] != ctx.author.id and not ctx.author.guild_permissions.administrator:
             raise TagError(f":x: This isn't your tag!")

@@ -20,10 +20,10 @@ class TagContentType(enum.Enum):
     YOUTUBE_TENOR_GIPHY = 5
 
 
-class Tags(commands.Cog, name="Tag"):
+class Tags(commands.Cog):
     """Create tags for later retrieval of text, images & links. Tags are accessed with the bot's prefix.
-       While everyone can create tags on the Democraciv guild, only administrators
-           can create tags on other guilds, like party servers."""
+       While everyone can create tags on the Democraciv server, only administrators
+           can create tags on other servers, like party servers."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -32,7 +32,7 @@ class Tags(commands.Cog, name="Tag"):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def tags(self, ctx):
-        """List all tags on this guild"""
+        """List all tags on this server"""
 
         global_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE global = true ORDER BY uses desc")
         all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 AND global = false"
@@ -54,7 +54,7 @@ class Tags(commands.Cog, name="Tag"):
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
 
         if len(pretty_tags) < 2:
-            pretty_tags = ['There are no tags on this guild.']
+            pretty_tags = ['There are no tags on this server.']
 
         pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"All Tags in {ctx.guild.name}",
                       show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
@@ -64,7 +64,7 @@ class Tags(commands.Cog, name="Tag"):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def local(self, ctx):
-        """List all non-global tags on this guild"""
+        """List all non-global tags on this server"""
 
         all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 AND global = false "
                                            "ORDER BY uses desc", ctx.guild.id)
@@ -75,7 +75,7 @@ class Tags(commands.Cog, name="Tag"):
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
 
         if not pretty_tags:
-            pretty_tags = ['There are no local tags on this guild.']
+            pretty_tags = ['There are no local tags on this server.']
 
         pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"Local Tags in {ctx.guild.name}"
                       , show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
@@ -226,7 +226,7 @@ class Tags(commands.Cog, name="Tag"):
     @commands.guild_only()
     @utils.tag_check()
     async def addtag(self, ctx):
-        """Add a tag for this guild"""
+        """Add a tag for this server"""
 
         flow = Flow(self.bot, ctx)
 

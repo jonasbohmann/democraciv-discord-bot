@@ -230,8 +230,8 @@ class Log(commands.Cog):
         embed = self.bot.embeds.embed_builder(title=':two_hearts: Hey there!',
                                               description=f"Thanks for inviting me!\n\nYou can check "
                                                           f"`-help` to get some more information "
-                                                          f"about me.\n\nUse the `-guild` command to "
-                                                          f"configure me for this guild.\n\nIf you "
+                                                          f"about me.\n\nUse the `-server` command to "
+                                                          f"configure me for this server.\n\nIf you "
                                                           f"have any questions or suggestions, "
                                                           f"send a DM to {self.bot.owner.mention}!")
 

@@ -8,8 +8,8 @@ from util.flow import Flow
 from discord.ext import commands
 
 
-class Guild(commands.Cog):
-    """Configure various features of this bot for this guild."""
+class Guild(commands.Cog, name="Server"):
+    """Configure various features of this bot for this server."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -21,10 +21,11 @@ class Guild(commands.Cog):
         else:
             return f"{config.GUILD_SETTINGS_DISABLED}{config.GUILD_SETTINGS_GRAY_ENABLED}"
 
-    @commands.group(name='guild', aliases=['server'], case_insensitive=True, invoke_without_command=True)
+    @commands.group(name='server', aliases=['settings', 'guild', 'config'], case_insensitive=True,
+                    invoke_without_command=True)
     @commands.guild_only()
     async def guild(self, ctx):
-        """Statistics and information about this guild"""
+        """Statistics and information about this server"""
 
         is_welcome_enabled = await self.bot.checks.is_welcome_message_enabled(ctx.guild.id)
         is_welcome_enabled = self.emojiy_settings(is_welcome_enabled)
@@ -40,15 +41,15 @@ class Guild(commands.Cog):
         excluded_channels = len(excluded_channels) if excluded_channels is not None else 0
 
         embed = self.bot.embeds.embed_builder(title=ctx.guild.name,
-                                              description=f"Check `{ctx.prefix}help Guild` for help on "
-                                                          f"how to configure me for this guild.", has_footer=False)
+                                              description=f"Check `{ctx.prefix}help server` for help on "
+                                                          f"how to configure me for this server.", has_footer=False)
         embed.add_field(name="Settings", value=f"{is_welcome_enabled} Welcome Messages\n"
                                                f"{is_logging_enabled} Logging ({excluded_channels} excluded channels)\n"
                                                f"{is_default_role_enabled} Default Roles")
         embed.add_field(name="Statistics", value=f"{ctx.guild.member_count} members\n"
                                                  f"{len(ctx.guild.text_channels)} text channels\n"
                                                  f"{len(ctx.guild.roles)} roles")
-        embed.set_footer(text=f"Guild was created on {ctx.guild.created_at.strftime('%A, %B %d %Y')}")
+        embed.set_footer(text=f"Server was created on {ctx.guild.created_at.strftime('%A, %B %d %Y')}")
         embed.set_thumbnail(url=ctx.guild.icon_url_as(format='png'))
         await ctx.send(embed=embed)
 
@@ -68,7 +69,7 @@ class Guild(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
     async def welcome(self, ctx):
-        """Configure a welcome message that every new member will see once they join this guild"""
+        """Configure a welcome message that every new member will see once they join this server"""
 
         is_welcome_enabled = await self.bot.checks.is_welcome_message_enabled(ctx.guild.id)
         current_welcome_channel = await utils.get_welcome_channel(self.bot, ctx.guild)
@@ -76,12 +77,12 @@ class Guild(commands.Cog):
                                                              ctx.guild.id)
 
         if current_welcome_channel is None:
-            current_welcome_channel = "This guild currently has no welcome channel."
+            current_welcome_channel = "This server has no welcome channel."
         else:
             current_welcome_channel = current_welcome_channel.mention
 
         if not current_welcome_message:
-            current_welcome_message = "This guild currently has no welcome message."
+            current_welcome_message = "This server has no welcome message."
         elif len(current_welcome_message) > 1024:
             current_welcome_message = "*The welcome message is too long to fit in here.*"
 
@@ -146,13 +147,13 @@ class Guild(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
     async def logs(self, ctx):
-        """Configure the logging module that logs every guild event to a specified channel"""
+        """Configure the logging module that logs every server event to a specified channel"""
 
         is_logging_enabled = await self.bot.checks.is_logging_enabled(ctx.guild.id)
         current_logging_channel = await utils.get_logging_channel(self.bot, ctx.guild)
 
         if current_logging_channel is None:
-            current_logging_channel = "This guild currently has no logging channel."
+            current_logging_channel = "This server has no logging channel."
         else:
             current_logging_channel = current_logging_channel.mention
 
@@ -202,18 +203,19 @@ class Guild(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def exclude(self, ctx, channel: str = None):
         """
-        Configure the channels that should be excluded from the logging module on this guild
+        Configure the channels that should be excluded from the logging module on this server
 
             **Usage:**
-                `-guild exclude` to see all excluded channels
-                `-guild exclude <channel>` too add/remove a channel to/from the excluded channels list
+                `-server exclude` to see all excluded channels
+                `-server exclude <channel>` too add/remove a channel to/from the excluded channels list
         """
         current_logging_channel = await utils.get_logging_channel(self.bot, ctx.guild)
 
         if current_logging_channel is None:
-            return await ctx.send(":x: This guild currently has no logging channel. Please set one with `-guild logs`.")
+            return await ctx.send(":x: This server currently has no logging channel."
+                                  " Please set one with `-server logs`.")
 
-        help_description = "Add or remove a channel to the excluded channels with:\n`-guild exclude [channel_name]`\n"
+        help_description = "Add or remove a channel to the excluded channels with:\n`-server exclude [channel_name]`\n"
 
         excluded_channels = await self.bot.db.fetchval("SELECT logging_excluded FROM guilds WHERE id = $1",
                                                        ctx.guild.id)
@@ -283,7 +285,7 @@ class Guild(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
     async def defaultrole(self, ctx):
-        """Configure a default role that every new member will get once they join this guild"""
+        """Configure a default role that every new member will get once they join this server"""
 
         is_default_role_enabled = await self.bot.checks.is_default_role_enabled(ctx.guild.id)
 
@@ -293,7 +295,7 @@ class Guild(commands.Cog):
         current_default_role = ctx.guild.get_role(current_default_role)
 
         if current_default_role is None:
-            current_default_role = "This guild currently has no default role."
+            current_default_role = "This server has no default role."
         else:
             current_default_role = current_default_role.mention
 
@@ -329,7 +331,7 @@ class Guild(commands.Cog):
 
                 if isinstance(new_default_role, str):
                     await ctx.send(
-                        f":white_check_mark: I will **create a new role** on this guild named `{new_default_role}`"
+                        f":white_check_mark: I will **create a new role** on this server named `{new_default_role}`"
                         f" for the default role.")
                     try:
                         new_default_role_object = await ctx.guild.create_role(name=new_default_role)

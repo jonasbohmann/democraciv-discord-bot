@@ -31,7 +31,7 @@ class Meta(commands.Cog):
         embed.add_field(name='Author', value=str(self.bot.owner), inline=True)
         embed.add_field(name='Version', value=config.BOT_VERSION, inline=True)
         embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=True)
-        embed.add_field(name='Guilds', value=str(len(self.bot.guilds)), inline=True)
+        embed.add_field(name='Servers', value=str(len(self.bot.guilds)), inline=True)
         embed.add_field(name='Users', value=str(len(self.bot.users)), inline=True)
         embed.add_field(name='Prefix', value=f"`{config.BOT_PREFIX}`", inline=True)
         embed.add_field(name='Uptime', value=self.bot.uptime, inline=True)

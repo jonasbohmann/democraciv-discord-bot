@@ -11,7 +11,7 @@ from discord.ext import commands, tasks
 
 
 class Starboard(commands.Cog):
-    """The Starboard. If a message on the Democraciv Guild has at least n :star: reactions,
+    """The Starboard. If a message on the Democraciv Server has at least n :star: reactions,
     it will be posted to the Starboard channel and in a weekly summary to the subreddit every Saturday."""
 
     def __init__(self, bot):

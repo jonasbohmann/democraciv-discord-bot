@@ -74,7 +74,7 @@ def tag_check():
                 return True
             else:
                 raise exceptions.TagCheckError(message=":x: Only Administrators can add or "
-                                                       "remove tags on this guild!")
+                                                       "remove tags on this server!")
         else:
             return True
 

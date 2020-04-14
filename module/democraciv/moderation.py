@@ -10,7 +10,7 @@ from util.converter import UnbanConverter, BanConverter
 
 
 class Moderation(commands.Cog):
-    """Commands for the Mod Team of this guild."""
+    """Commands for the Mod Team of this server."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -147,7 +147,8 @@ class Moderation(commands.Cog):
         if chance >= 0.2:
             embed = self.bot.embeds.embed_builder(title="Possible Alt Account Joined", description="")
             embed.add_field(name="Member", value=f"{member.mention} ({member.id})", inline=False)
-            embed.add_field(name="Chance", value=f"There is a {(chance * 100):.2f}% chance that {member} is an alt.",
+            embed.add_field(name="Chance",
+                            value=f"There is a **{(chance * 100):.0f}%** chance that {member} is an alt.",
                             inline=False)
             if details:
                 embed.add_field(name="Factors", value=details, inline=False)
@@ -260,7 +261,7 @@ class Moderation(commands.Cog):
                                                                                           "and should always be taken"
                                                                                           " with a grain of salt.")
         embed.add_field(name="Target", value=f"{member.mention} ({member.id})", inline=False)
-        embed.add_field(name="Result", value=f"There is a {(chance * 100):.2f}% chance that {member} is an alt.")
+        embed.add_field(name="Result", value=f"There is a **{(chance * 100):.0f}%** chance that {member} is an alt.")
 
         if details:
             embed.add_field(name="Factors", value=details, inline=False)
@@ -481,7 +482,7 @@ class Moderation(commands.Cog):
     async def ban(self, ctx, member: BanConverter, *, reason: str = None):
         """Ban a member
 
-        If you want to ban a user that is not in this guild, use the user's ID instead.
+        If you want to ban a user that is not in this server, use the user's ID instead.
 
         **Example:**
             `-ban @Das` ban by mention

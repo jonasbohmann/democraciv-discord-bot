@@ -15,7 +15,7 @@ from util.exceptions import ForbiddenTask
 class Party(commands.Cog, name='Political Parties'):
     """Interact with the political parties of Democraciv.
 
-    Note that you can only join and leave parties on the Democraciv guild."""
+    Note that you can only join and leave parties on the Democraciv server."""
 
     # TODO - Move all party commands into -party group.
 
@@ -23,7 +23,7 @@ class Party(commands.Cog, name='Political Parties'):
         self.bot = bot
 
     async def collect_parties_and_members(self) -> typing.List[typing.Tuple[str, int]]:
-        """Returns all parties with a role on the Democraciv guild and their amount of members for -members."""
+        """Returns all parties with a role on the Democraciv server and their amount of members for -members."""
         parties_and_members = []
 
         parties = await self.bot.db.fetch("SELECT id FROM parties")
@@ -176,7 +176,7 @@ class Party(commands.Cog, name='Political Parties'):
 
         if isinstance(role_name, str):
             await ctx.send(
-                f":white_check_mark: I will **create a new role** on this guild named `{role_name}`"
+                f":white_check_mark: I will **create a new role** on this server named `{role_name}`"
                 f" for the new party.")
             try:
                 discord_role = await ctx.guild.create_role(name=role_name)

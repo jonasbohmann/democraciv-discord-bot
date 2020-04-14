@@ -218,7 +218,7 @@ class Legislature(commands.Cog):
 
         await self.dm_legislators(f":envelope_with_arrow: The **submission period** for Legislative Session"
                                   f" #{new_session} has started! Submit your bills and motions with "
-                                  f"`-legislature submit` on the Democraciv guild.")
+                                  f"`-legislature submit` on the Democraciv server.")
 
     @legislature.command(name='updatesession', aliases=['us'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

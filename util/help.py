@@ -42,7 +42,7 @@ class HelpPaginator(Pages):
 
     def get_bot_page(self, page):
         cog, description, commands = self.entries[page - 1]
-        self.title = f'{cog} Commands'
+        self.title = str(cog)
         self.description = description
         return commands
 
@@ -188,7 +188,7 @@ class PaginatedHelpCommand(commands.HelpCommand):
 
         entries = await self.filter_commands(all_commands, sort=True, key=key)
         pages = HelpPaginator(self, self.context, entries)
-        pages.title = f'{cog.qualified_name} Commands'
+        pages.title = cog.qualified_name
         pages.description = cog.description
 
         await pages.paginate()

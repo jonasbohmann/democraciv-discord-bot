@@ -7,8 +7,8 @@ from util.flow import Flow
 from discord.ext import commands
 
 
-class Roles(commands.Cog, name="Selfrole"):
-    """Self-assignable roles for this guild."""
+class Roles(commands.Cog, name="Selfroles"):
+    """Self-assignable roles for this server."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -56,7 +56,7 @@ class Roles(commands.Cog, name="Selfrole"):
                     embed_message.append(f"{role_object.name}")
 
             if not embed_message:
-                embed_message = ["This guild has no roles yet."]
+                embed_message = ["This server has no roles yet."]
 
             embed = self.bot.embeds.embed_builder(title="Roles", description="In order to add or remove a role "
                                                                              "from you, use `-role Role`")
@@ -110,7 +110,7 @@ class Roles(commands.Cog, name="Selfrole"):
 
         if isinstance(role_name, str):
             await ctx.send(
-                f":white_check_mark: I will **create a new role** on this guild named `{role_name}`"
+                f":white_check_mark: I will **create a new role** on this server named `{role_name}`"
                 f" for this.")
             try:
                 discord_role = await ctx.guild.create_role(name=role_name)

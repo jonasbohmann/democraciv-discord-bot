@@ -58,7 +58,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
     @commands.guild_only()
     async def whois(self, ctx, *,
                     member: typing.Union[discord.Member, discord.Role, CaseInsensitiveRole, PoliticalParty] = None):
-        """Get detailed information about a member of this guild
+        """Get detailed information about a member of this server
 
             **Example:**
              `-whois`
@@ -95,7 +95,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         embed.add_field(name="ID", value=member.id, inline=False)
         embed.add_field(name='Discord Registration',
                         value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
-        embed.add_field(name='Joined this Guild',
+        embed.add_field(name='Joined',
                         value=f'{(await self.get_member_join_date(member)).strftime("%B %d, %Y")}', inline=True)
         embed.add_field(name='Join Position', value=f"{join_pos}/{max_members}", inline=True)
         embed.add_field(name='Roles', value=_get_roles(member.roles), inline=False)
@@ -183,7 +183,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def veterans(self, ctx):
-        """List the first 15 members who joined this guild"""
+        """List the first 15 members who joined this server"""
 
         sorted_first_15_members = []
 
@@ -222,7 +222,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
                     self.cached_sorted_veterans_on_democraciv = sorted_first_15_members
 
         # Send veterans
-        message = "These are the first 15 people who joined this guild.\nBot accounts are not counted.\n\n"
+        message = "These are the first 15 people who joined this server.\nBot accounts are not counted.\n\n"
 
         for veteran in sorted_first_15_members:
             message += f"{veteran[1]}. {str(veteran[0])}\n"
@@ -442,7 +442,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
     @commands.command(name='invite')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def invite(self, ctx):
-        """Get an active invite link to this guild"""
+        """Get an active invite link to this server"""
         invite = await ctx.channel.create_invite(max_age=0, unique=False)
         await ctx.send(invite.url)
 
