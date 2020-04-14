@@ -86,7 +86,7 @@ class Guild(commands.Cog, name="Server"):
 
         embed = self.bot.embeds.embed_builder(title=f":wave:  Welcome Module for {ctx.guild.name}",
                                               description="React with the :gear: emoji to change "
-                                                          "the settings of this module.")
+                                                          "the settings of this module.", has_footer=False)
         embed.add_field(name="Enabled", value=str(is_welcome_enabled))
         embed.add_field(name="Channel", value=current_welcome_channel)
         embed.add_field(name="Message", value=current_welcome_message, inline=False)
@@ -157,7 +157,7 @@ class Guild(commands.Cog, name="Server"):
 
         embed = self.bot.embeds.embed_builder(title=f":spy:  Logging Module for {ctx.guild.name}",
                                               description="React with the :gear: emoji to change the "
-                                                          "settings of this module.")
+                                                          "settings of this module.", has_footer=False)
 
         embed.add_field(name="Enabled", value=str(is_logging_enabled))
         embed.add_field(name="Channel", value=current_logging_channel)
@@ -299,7 +299,8 @@ class Guild(commands.Cog, name="Server"):
 
         embed = self.bot.embeds.embed_builder(title=f":partying_face:  Default Role for {ctx.guild.name}",
                                               description="React with the :gear: emoji to change the settings"
-                                                          " of this module.")
+                                                          " of this module.",
+                                              has_footer=False)
         embed.add_field(name="Enabled", value=str(is_default_role_enabled))
         embed.add_field(name="Role", value=current_default_role)
 
@@ -364,7 +365,8 @@ class Guild(commands.Cog, name="Server"):
         pretty_is_allowed = "Only Administrators" if not is_allowed else "Everyone"
 
         embed = self.bot.embeds.embed_builder(title=f":pencil:  Tag Creation On {ctx.guild.name}",
-                                              description="React with the :gear: emoji to change this setting.")
+                                              description="React with the :gear: emoji to change this setting.",
+                                              has_footer=False)
         embed.add_field(name="Allowed Tag Creators", value=pretty_is_allowed)
 
         info_embed = await ctx.send(embed=embed)
