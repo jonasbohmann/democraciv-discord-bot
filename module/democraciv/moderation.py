@@ -1,14 +1,13 @@
 import discord
 import datetime
 
-from util.exceptions import ForbiddenTask
 from util.flow import Flow
 from discord.ext import commands
 from util import utils, mk, exceptions
 from config import config, token, links
+from util.exceptions import ForbiddenTask
+from util.converter import UnbanConverter, BanConverter
 
-
-# TODO add tempmute, tempban
 
 class Moderation(commands.Cog):
     """Commands for the Mod Team of this guild."""
@@ -159,7 +158,9 @@ class Moderation(commands.Cog):
     @commands.command(name='report')
     @commands.dm_only()
     async def report(self, ctx):
-        """Report something to Moderation"""
+        """Report something to the Democraciv Moderation
+
+         This command only works in DMs with me."""
 
         flow = Flow(self.bot, ctx)
 
@@ -312,7 +313,7 @@ class Moderation(commands.Cog):
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_KICK)
 
         if member == ctx.guild.me:
-            return await ctx.send(":x: You can't kick me.")
+            return await ctx.send(":x: I can't kick myself.")
 
         if member.top_role >= ctx.author.top_role:
             return await ctx.send(":x: You aren't allowed to kick someone with a higher role than yours.")
@@ -466,20 +467,26 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
-    async def ban(self, ctx, member: str, *, reason: str = None):
+    async def ban(self, ctx, member: BanConverter, *, reason: str = None):
         """Ban a member
 
-        If you want to ban a user that is not in this guild, use the user's ID: `-ban <id>`."""
+        If you want to ban a user that is not in this guild, use the user's ID instead.
 
-        try:
-            member_object = await commands.MemberConverter().convert(ctx, member)
-            member_id = member_object.id
-        except commands.BadArgument:
-            try:
-                member_id = int(member)
-            except ValueError:
-                member_id = None
+        **Example:**
+            `-ban @Das` ban by mention
+            `-ban Queen Das` ban by nickname
+            `-ban darthspectrum` ban by username
+            `-ban darthspectrum#4924` ban by username#discriminator
+            `-ban 561280863464062977` ban by ID"""
+
+        if isinstance(member, discord.Member):
+            member_object = member
+            member_id = member.id
+        elif isinstance(member, int):
             member_object = None
+            member_id = member
+        else:
+            return await ctx.send(":x: I couldn't find that person.")
 
         if member_id is None:
             return await ctx.send(":x: I couldn't find that person.")
@@ -492,7 +499,7 @@ class Moderation(commands.Cog):
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_BAN)
 
         if member_object == ctx.guild.me:
-            return await ctx.send(":x: You can't ban me.")
+            return await ctx.send(":x: I can't ban myself.")
 
         if member_object is not None and member_object.top_role >= ctx.author.top_role:
             return await ctx.send(":x: You aren't allowed to ban someone with a higher role than yours.")
@@ -525,23 +532,25 @@ class Moderation(commands.Cog):
 
         await ctx.send(f":white_check_mark: {name} was banned.")
 
+    @ban.error
+    async def banerror(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            await ctx.send(":x: I couldn't find that person.")
+
     @commands.command(name='unban')
     @commands.guild_only()
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
-    async def unban(self, ctx, user: str, *, reason: str = None):
-        """Unban a user"""
+    async def unban(self, ctx, user: UnbanConverter, *, reason: str = None):
+        """Unban a user
 
-        try:
-            user_object = await commands.UserConverter().convert(ctx, user)
-            user_id = user_object.id
-        except commands.BadArgument:
-            try:
-                user_id = int(user)
-            except ValueError:
-                user_id = None
-            user_object = None
+        **Example:**
+            `-unban darthspectrum` unban by Discord username
+            `-unban 561280863464062977` unban by Discord ID"""
+
+        user_object = user
+        user_id = user.id
 
         if user_id is None:
             return await ctx.send(":x: I couldn't find that person.")
@@ -567,6 +576,11 @@ class Moderation(commands.Cog):
             name = f"The Discord user with ID `{user_id}`"
 
         await ctx.send(f":white_check_mark: {name} was unbanned.")
+
+    @unban.error
+    async def unbanerror(self, ctx, error):
+        if isinstance(error, commands.BadArgument):
+            await ctx.send(":x: I couldn't find that person.")
 
     @commands.command(name='archiveoldgov')
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)

@@ -1,4 +1,5 @@
 import enum
+import re
 import typing
 import discord
 
@@ -24,6 +25,51 @@ class SessionStatus(enum.Enum):
             return SessionStatus.CLOSED
         else:
             raise NotImplementedError
+
+
+class BanConverter(commands.Converter):
+    async def convert(self, ctx, argument):
+        member = None
+
+        try:
+            member = await commands.MemberConverter().convert(ctx, argument)
+        except commands.BadArgument:
+            id_regex = re.compile(r'([0-9]{15,21})$')
+            if id_regex.match(argument):
+                member = int(argument)
+
+        if member:
+            return member
+        else:
+            raise BadArgument(":x: I couldn't find that person.")
+
+
+class UnbanConverter(commands.Converter):
+    async def convert(self, ctx, argument):
+        user = None
+
+        def find_by_name(ban_entry):
+            return ban_entry.user.name.lower() == argument.lower()
+
+        def find_by_id(ban_entry):
+            return ban_entry.user.id == argument
+
+        try:
+            user = await commands.UserConverter().convert(ctx, argument)
+        except commands.BadArgument:
+            try:
+                argument = int(argument, base=10)
+                ban = discord.utils.find(find_by_id, await ctx.guild.bans())
+            except ValueError:
+                ban = discord.utils.find(find_by_name, await ctx.guild.bans())
+
+            if ban:
+                user = ban.user
+
+        if user:
+            return user
+        else:
+            raise BadArgument(":x: I couldn't find that person.")
 
 
 class CaseInsensitiveRole(commands.Converter):

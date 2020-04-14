@@ -327,7 +327,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
                                               colour=role.colour, has_footer=False)
         embed.add_field(name="Role", value=role_name, inline=False)
         embed.add_field(name="ID", value=role.id, inline=False)
-        embed.add_field(name="Creation Date", value=role.created_at.strftime("%B %d, %Y"), inline=True)
+        embed.add_field(name="Created on", value=role.created_at.strftime("%B %d, %Y"), inline=True)
         embed.add_field(name="Colour", value=str(role.colour), inline=True)
         embed.add_field(name=f"Members ({len(role.members)})",
                         value=', '.join([member.mention for member in role.members]) or '-',
