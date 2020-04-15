@@ -509,8 +509,8 @@ class Legislature(commands.Cog):
         return message, embed
 
     @legislature.command(name='submit')
-    @commands.cooldown(1, 60, commands.BucketType.user)
-    @commands.max_concurrency(1, per=commands.BucketType.guild, wait=True)
+    @commands.cooldown(1, 180, commands.BucketType.user)
+    @commands.max_concurrency(1, per=commands.BucketType.guild, wait=False)
     @utils.is_democraciv_guild()
     async def submit(self, ctx):
         """Submit a new bill or motion to the currently active session"""

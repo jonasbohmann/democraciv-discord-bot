@@ -133,7 +133,8 @@ class DemocracivBot(commands.Bot):
                   config.HELP_LAST,
                   config.HELP_BOT_HELP,
                   config.LEG_SUBMIT_BILL,
-                  config.LEG_SUBMIT_MOTION]
+                  config.LEG_SUBMIT_MOTION,
+                  config.GUILD_SETTINGS_GEAR]
 
         emoji_availability = [check_custom_emoji(emoji) for emoji in emojis]
 
@@ -147,6 +148,7 @@ class DemocracivBot(commands.Bot):
             config.HELP_BOT_HELP = "\N{WHITE QUESTION MARK ORNAMENT}"
             config.LEG_SUBMIT_BILL = "\U0001f1e7"
             config.LEG_SUBMIT_MOTION = "\U0001f1f2"
+            config.GUILD_SETTINGS_GEAR = "\U00002699"
 
     async def connect_to_db(self):
         """Attempt to connect to PostgreSQL database with specified credentials from token.py.

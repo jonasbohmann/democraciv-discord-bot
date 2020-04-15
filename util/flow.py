@@ -4,6 +4,8 @@ import discord
 
 from discord.ext import commands
 
+from config import config
+
 
 class Flow:
     """The Flow class helps with user input that require the bot to wait for replies or reactions."""
@@ -37,7 +39,7 @@ class Flow:
         """Adds the :gear: emoji to the message and returns whether it has been clicked by the
            original user in the specified time"""
 
-        await message.add_reaction("\U00002699")
+        await message.add_reaction(config.GUILD_SETTINGS_GEAR)
 
         try:
             await self.ctx.bot.wait_for('reaction_add',

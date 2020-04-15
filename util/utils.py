@@ -155,7 +155,7 @@ class CheckUtils:
 
         def check(reaction, user):
             return user == ctx.author and reaction.message.id == original_message.id \
-                   and str(reaction.emoji) == "\U00002699"
+                   and str(reaction.emoji) == config.GUILD_SETTINGS_GEAR
 
         return check
 

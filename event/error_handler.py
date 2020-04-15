@@ -158,6 +158,9 @@ class ErrorHandler(commands.Cog):
         elif isinstance(error, commands.CommandOnCooldown):
             return await ctx.send(f":x: You are on cooldown! Try again in {error.retry_after:.2f} seconds.")
 
+        elif isinstance(error, commands.MaxConcurrencyReached):
+            return await ctx.send(f":x: This command is already being used right now, try again later.")
+
         elif isinstance(error, commands.MissingPermissions):
             return await ctx.send(f":x: You need '{self.format_permissions(error.missing_perms)}' permission(s) to use"
                                   f" this command.")

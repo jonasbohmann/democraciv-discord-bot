@@ -121,7 +121,10 @@ class Moderation(commands.Cog):
         if message.author.bot:
             return
 
-        mod_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE)
+        try:
+            mod_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE)
+        except exceptions.RoleNotFoundError:
+            return
 
         if mod_role is None:
             return
@@ -295,7 +298,7 @@ class Moderation(commands.Cog):
                                               has_footer=False)
         await self.safe_send_mod_links(ctx, embed)
 
-    @commands.command(name='elections', aliases=['election', 'pins', 'electiontool', 'pintool'])
+    @commands.command(name='pin', aliases=['pins', 'electiontool', 'pintool'])
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def electiontool(self, ctx):
         """Link to DerJonas' Election Tool"""

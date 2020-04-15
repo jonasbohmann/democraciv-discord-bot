@@ -123,16 +123,7 @@ class LawUtils:
 
         return None
 
-    async def get_google_docs_meta_data(self, link: str) -> typing.Optional[typing.Dict[str, str]]:
-        """Gets title of a Google Docs document"""
-
-        async with self.bot.session.get(link) as response:
-            if response.status == 200:
-                text = await response.read()
-
-        if not text:
-            return None
-
+    def scrape_google_docs_html(self, text: str):
         strainer = SoupStrainer(property=["og:title", "og:description"])
         soup = BeautifulSoup(text, "lxml", parse_only=strainer)  # Use lxml parser to speed things up
 
@@ -157,8 +148,19 @@ class LawUtils:
             description = description[:-3]
 
         soup.decompose()  # Garbage collection
-
         return {'title': title, 'description': description}
+
+    async def get_google_docs_meta_data(self, link: str) -> typing.Optional[typing.Dict[str, str]]:
+        """Gets title of a Google Docs document"""
+
+        async with self.bot.session.get(link) as response:
+            if response.status == 200:
+                text = await response.read()
+
+        if not text:
+            return None
+
+        return await self.bot.loop.run_in_executor(None, self.scrape_google_docs_html, text)
 
     def generate_law_tags(self, google_docs_description: str, author_description: str) -> typing.List[str]:
         """Generates tags from all nouns of submitter-provided description and the Google Docs description"""

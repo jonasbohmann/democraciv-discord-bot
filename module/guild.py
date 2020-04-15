@@ -16,10 +16,12 @@ class Guild(commands.Cog, name="Server"):
 
     @staticmethod
     def emojiy_settings(boolean) -> str:
+        # Thanks to Dutchy for the custom emojis used here
+
         if boolean:
-            return f"{config.GUILD_SETTINGS_GRAY_DISABLED}{config.GUILD_SETTINGS_ENABLED}"
+            return f"{config.GUILD_SETTINGS_GRAY_DISABLED}{config.GUILD_SETTINGS_ENABLED}\u200b"
         else:
-            return f"{config.GUILD_SETTINGS_DISABLED}{config.GUILD_SETTINGS_GRAY_ENABLED}"
+            return f"{config.GUILD_SETTINGS_DISABLED}{config.GUILD_SETTINGS_GRAY_ENABLED}\u200b"
 
     @commands.group(name='server', aliases=['settings', 'guild', 'config'], case_insensitive=True,
                     invoke_without_command=True)
@@ -41,7 +43,7 @@ class Guild(commands.Cog, name="Server"):
                                                           f"how to configure me for this server.", has_footer=False)
         embed.add_field(name="Settings", value=f"{is_welcome_enabled} Welcome Messages\n"
                                                f"{is_logging_enabled} Logging ({excluded_channels} excluded channels)\n"
-                                               f"{is_default_role_enabled} Default Roles\n"
+                                               f"{is_default_role_enabled} Default Role\n"
                                                f"{is_tag_creation_allowed} Tag Creation by Everyone")
         embed.add_field(name="Statistics", value=f"{ctx.guild.member_count} members\n"
                                                  f"{len(ctx.guild.text_channels)} text channels\n"
@@ -75,21 +77,21 @@ class Guild(commands.Cog, name="Server"):
                                                              ctx.guild.id)
 
         if current_welcome_channel is None:
-            current_welcome_channel = "This server has no welcome channel."
+            current_welcome_channel = "-"
         else:
             current_welcome_channel = current_welcome_channel.mention
 
         if not current_welcome_message:
-            current_welcome_message = "This server has no welcome message."
+            current_welcome_message = "-"
         elif len(current_welcome_message) > 1024:
             current_welcome_message = "*The welcome message is too long to fit in here.*"
 
-        embed = self.bot.embeds.embed_builder(title=f":wave:  Welcome Module for {ctx.guild.name}",
-                                              description="React with the :gear: emoji to change "
-                                                          "the settings of this module.", has_footer=False)
-        embed.add_field(name="Enabled", value=str(is_welcome_enabled))
-        embed.add_field(name="Channel", value=current_welcome_channel)
-        embed.add_field(name="Message", value=current_welcome_message, inline=False)
+        embed = self.bot.embeds.embed_builder(title=f":wave:  Welcome Messages on {ctx.guild.name}",
+                                              description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to change"
+                                                          f" these settings.", has_footer=False)
+        embed.add_field(name="Enabled", value=self.emojiy_settings(is_welcome_enabled))
+        embed.add_field(name="Welcome Channel", value=current_welcome_channel)
+        embed.add_field(name="Welcome Message", value=current_welcome_message, inline=False)
 
         info_embed = await ctx.send(embed=embed)
 
@@ -97,7 +99,8 @@ class Guild(commands.Cog, name="Server"):
 
         if await flow.gear_reaction_confirm(info_embed, 300):
             status_question = await ctx.send(
-                "React with :white_check_mark: to enable the welcome module, or with :x: to disable the welcome module.")
+                "React with :white_check_mark: to enable welcome messages,"
+                " or with :x: to disable welcome messages.")
 
             reaction = await flow.get_yes_no_reaction_confirm(status_question, 240)
 
@@ -106,10 +109,10 @@ class Guild(commands.Cog, name="Server"):
 
             if reaction:
                 await self.bot.db.execute("UPDATE guilds SET welcome = true WHERE id = $1", ctx.guild.id)
-                await ctx.send(":white_check_mark: Enabled the welcome module.")
+                await ctx.send(":white_check_mark: Enabled welcome messages.")
 
                 # Get new welcome channel
-                await ctx.send(":information_source: Reply with the name of the channel the welcome module should use.")
+                await ctx.send(":information_source: Reply with the name of the welcome channel.")
 
                 channel_object = await flow.get_new_channel(240)
 
@@ -139,9 +142,9 @@ class Guild(commands.Cog, name="Server"):
 
             elif not reaction:
                 await self.bot.db.execute("UPDATE guilds SET welcome = false WHERE id = $1", ctx.guild.id)
-                await ctx.send(":white_check_mark: Disabled the welcome module.")
+                await ctx.send(":white_check_mark: Welcome messages were disabled.")
 
-    @guild.command(name='logs')
+    @guild.command(name='logs', aliases=['log', 'logging'])
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
     async def logs(self, ctx):
@@ -151,16 +154,16 @@ class Guild(commands.Cog, name="Server"):
         current_logging_channel = await utils.get_logging_channel(self.bot, ctx.guild)
 
         if current_logging_channel is None:
-            current_logging_channel = "This server has no logging channel."
+            current_logging_channel = "-"
         else:
             current_logging_channel = current_logging_channel.mention
 
-        embed = self.bot.embeds.embed_builder(title=f":spy:  Logging Module for {ctx.guild.name}",
-                                              description="React with the :gear: emoji to change the "
-                                                          "settings of this module.", has_footer=False)
+        embed = self.bot.embeds.embed_builder(title=f":spy:  Event Logging on {ctx.guild.name}",
+                                              description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji "
+                                                          f"to change these settings.", has_footer=False)
 
-        embed.add_field(name="Enabled", value=str(is_logging_enabled))
-        embed.add_field(name="Channel", value=current_logging_channel)
+        embed.add_field(name="Enabled", value=self.emojiy_settings(is_logging_enabled))
+        embed.add_field(name="Log Channel", value=current_logging_channel)
 
         info_embed = await ctx.send(embed=embed)
 
@@ -168,8 +171,8 @@ class Guild(commands.Cog, name="Server"):
 
         if await flow.gear_reaction_confirm(info_embed, 300):
 
-            status_question = await ctx.send("React with :white_check_mark: to enable the logging module, "
-                                             "or with :x: to disable the logging module.")
+            status_question = await ctx.send("React with :white_check_mark: to enable logging, "
+                                             "or with :x: to disable logging.")
 
             reaction = await flow.get_yes_no_reaction_confirm(status_question, 240)
 
@@ -178,8 +181,9 @@ class Guild(commands.Cog, name="Server"):
 
             if reaction:
                 await self.bot.db.execute("UPDATE guilds SET logging = true WHERE id = $1", ctx.guild.id)
-                await ctx.send(":white_check_mark: Enabled the logging module.")
-                await ctx.send(":information_source: Reply with the name of the channel the logging module should use.")
+                await ctx.send(":white_check_mark: Event logging was enabled.")
+                await ctx.send(":information_source: Reply with the name of the channel"
+                               " that I should use to log all events to.")
 
                 channel_object = await flow.get_new_channel(240)
 
@@ -194,7 +198,7 @@ class Guild(commands.Cog, name="Server"):
 
             elif not reaction:
                 await self.bot.db.execute("UPDATE guilds SET logging = false WHERE id = $1", ctx.guild.id)
-                await ctx.send(":white_check_mark: Disabled the logging module.")
+                await ctx.send(":white_check_mark: Event logging was disabled.")
 
     @guild.command(name='exclude')
     @commands.guild_only()
@@ -221,7 +225,7 @@ class Guild(commands.Cog, name="Server"):
             current_excluded_channels_by_name = []
 
             if excluded_channels is None:
-                return await ctx.send("There are no from logging excluded channels on this guild.")
+                return await ctx.send("There are no from logging excluded channels on this server.")
 
             for channel in excluded_channels:
                 channel = self.bot.get_channel(channel)
@@ -229,12 +233,12 @@ class Guild(commands.Cog, name="Server"):
                     current_excluded_channels_by_name.append(channel.mention)
 
             if not current_excluded_channels_by_name:
-                current_excluded_channels_by_name = "There are no from logging excluded channels on this guild."
+                current_excluded_channels_by_name = "There are no from logging excluded channels on this server."
             else:
                 current_excluded_channels_by_name = '\n'.join(current_excluded_channels_by_name)
 
             embed = self.bot.embeds.embed_builder(title=f"Logging-Excluded Channels on {ctx.guild.name}",
-                                                  description=help_description)
+                                                  description=help_description, has_footer=False)
             embed.add_field(name="Excluded Channels", value=current_excluded_channels_by_name)
             return await ctx.send(embed=embed)
 
@@ -293,16 +297,16 @@ class Guild(commands.Cog, name="Server"):
         current_default_role = ctx.guild.get_role(current_default_role)
 
         if current_default_role is None:
-            current_default_role = "This server has no default role."
+            current_default_role = "-"
         else:
             current_default_role = current_default_role.mention
 
-        embed = self.bot.embeds.embed_builder(title=f":partying_face:  Default Role for {ctx.guild.name}",
-                                              description="React with the :gear: emoji to change the settings"
-                                                          " of this module.",
+        embed = self.bot.embeds.embed_builder(title=f":partying_face:  Default Role on {ctx.guild.name}",
+                                              description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to"
+                                                          f" change these settings.",
                                               has_footer=False)
-        embed.add_field(name="Enabled", value=str(is_default_role_enabled))
-        embed.add_field(name="Role", value=current_default_role)
+        embed.add_field(name="Enabled", value=self.emojiy_settings(is_default_role_enabled))
+        embed.add_field(name="Default Role", value=current_default_role)
 
         info_embed = await ctx.send(embed=embed)
 
@@ -364,8 +368,9 @@ class Guild(commands.Cog, name="Server"):
 
         pretty_is_allowed = "Only Administrators" if not is_allowed else "Everyone"
 
-        embed = self.bot.embeds.embed_builder(title=f":pencil:  Tag Creation On {ctx.guild.name}",
-                                              description="React with the :gear: emoji to change this setting.",
+        embed = self.bot.embeds.embed_builder(title=f":pencil:  Tag Creation on {ctx.guild.name}",
+                                              description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji"
+                                                          f" to change this setting.",
                                               has_footer=False)
         embed.add_field(name="Allowed Tag Creators", value=pretty_is_allowed)
 
