@@ -189,7 +189,7 @@ for database~~
 *  ~~Allow Speaker and Ministry to pass multiple bills in a single command~~
 *  ~~Add -mergeparties command~~
 *  ~~Wait a certain amount of time for multiple consecutive -legislature pass to bundle messages in #gov-announcements~~
-*  Refactor & cleanup for 1.0 release
+*  ~~Refactor & cleanup for 1.0 release~~
 
 
 
