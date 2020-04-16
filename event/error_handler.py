@@ -16,19 +16,12 @@ class ErrorHandler(commands.Cog):
         if ctx.guild is None:
             return
 
-        log_channel = await utils.get_logging_channel(self.bot, ctx.guild)
-
         embed = self.bot.embeds.embed_builder(title=':x:  Command Error', description="", time_stamp=True)
 
         embed.add_field(name='Error', value=f"{error.__class__.__name__}: {error}", inline=False)
         embed.add_field(name='Channel', value=ctx.channel.mention, inline=True)
         embed.add_field(name='Context', value=f"[Jump]({ctx.message.jump_url})", inline=True)
         embed.add_field(name='Caused by', value=ctx.message.clean_content, inline=False)
-
-        if to_log_channel:
-            if await self.bot.checks.is_logging_enabled(ctx.guild.id):
-                if log_channel is not None:
-                    await log_channel.send(embed=embed)
 
         if to_context:
             local_embed = self.bot.embeds.embed_builder(title=":warning:  Unexpected Error occurred",
@@ -38,6 +31,13 @@ class ErrorHandler(commands.Cog):
                                                                     f"\n\n```{error.__class__.__name__}:"
                                                                     f" {error}```", has_footer=False)
             await ctx.send(embed=local_embed)
+
+        if to_log_channel:
+            log_channel = await utils.get_logging_channel(self.bot, ctx.guild)
+
+            if await self.bot.checks.is_logging_enabled(ctx.guild.id):
+                if log_channel is not None:
+                    await log_channel.send(embed=embed)
 
         if to_owner:
             embed.add_field(name='Guild', value=ctx.guild.name, inline=False)
@@ -159,6 +159,7 @@ class ErrorHandler(commands.Cog):
             return await ctx.send(f":x: You are on cooldown! Try again in {error.retry_after:.2f} seconds.")
 
         elif isinstance(error, commands.MaxConcurrencyReached):
+            await ctx.command.reset_cooldown(ctx)
             return await ctx.send(f":x: This command is already being used right now, try again later.")
 
         elif isinstance(error, commands.MissingPermissions):
@@ -211,8 +212,8 @@ class ErrorHandler(commands.Cog):
 
         # This includes all exceptions declared in util.exceptions.py
         elif isinstance(error, exceptions.DemocracivBotException):
-            await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
-            return await ctx.send(error.message)
+            await ctx.send(error.message)
+            return await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
 
         elif isinstance(error, exceptions.TagCheckError):
             return await ctx.send(error.message)

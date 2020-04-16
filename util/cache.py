@@ -6,6 +6,8 @@ class Cache:
         self.bot = bot
         self.guild_config = None
         self.bot.loop.create_task(self.update_guild_config_cache())
+        self.allowed_guild_settings = ("welcome", "welcome_message", "welcome_channel", "logging", "logging_channel",
+                                       "logging_excluded", "defaultrole", "defaultrole_role", "tag_creation_allowed")
 
     async def verify_guild_config_cache(self, message):
         if message.guild is None:
@@ -47,6 +49,9 @@ class Cache:
         print("[CACHE] Guild config cache was updated.")
 
     async def get_guild_config_cache(self, guild_id: int, setting: str):
+        if setting not in self.allowed_guild_settings:
+            raise Exception("illegal setting")
+
         try:
             cached = self.guild_config[guild_id][setting]
         except (TypeError, KeyError) as e:
@@ -55,8 +60,7 @@ class Cache:
             cached = None
 
         if cached is None:
-            fetched = await self.bot.db.fetchval("SELECT $2 FROM guilds WHERE id = $1", guild_id, setting)
-
-            return fetched
+            # fetch from database
+            return await self.bot.db.fetchval(f"SELECT {setting} FROM guilds WHERE id = $1", guild_id)
         else:
             return cached
