@@ -469,7 +469,7 @@ class Law(commands.Converter):
                                          " Try again in a few minutes.")
 
         await self._bot.db.execute("UPDATE legislature_bills SET link = $1, tiny_link = $2 WHERE id = $3",
-                                   new_link, tiny_url, self.id)
+                                   new_link, tiny_url, self.bill.id)
 
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str]):

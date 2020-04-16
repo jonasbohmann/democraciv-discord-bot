@@ -211,6 +211,7 @@ class Laws(commands.Cog, name='Law'):
             except DemocracivBotException as e:
                 return await ctx.send(e.message)
 
+            law = await Law.convert(ctx, law.id)
             self.amend_scheduler.add(law)
             await ctx.send(f":white_check_mark: The link to `{law.bill.name}` was changed.")
 
