@@ -14,6 +14,7 @@ import discord.utils
 import util.exceptions as exceptions
 
 from typing import Optional
+from util.cache import Cache
 from config import config, token
 from util.law_helper import LawUtils
 from discord.ext import commands, tasks
@@ -73,13 +74,11 @@ class DemocracivBot(commands.Bot):
         self.embeds = EmbedUtils()
         self.checks = CheckUtils(self)
         self.laws = LawUtils(self)
+        self.cache = Cache(self)
 
         # Attributes will be "initialized" in on_ready as they need a connection to Discord
         self.owner = None
         self.democraciv_guild_id = None
-
-        # Cache initialized guilds to limit database queries
-        self.cached_initialized_guilds = []
 
         # Load the bot's cogs from ./event and ./module
         for extension in initial_extensions:
@@ -248,28 +247,7 @@ class DemocracivBot(commands.Bot):
                                            f" or `{config.BOT_PREFIX}about` to learn more about me!")
                 break
 
-        # If, for whatever reason, the current guild does not have an entry in the bot's database, attempt to initialize
-        # the default config
-        if message.guild is not None:
-            if message.guild.id not in self.cached_initialized_guilds:
-                if not await self.checks.is_guild_initialized(message.guild.id):
-                    print(f"[DATABASE] Guild {message.guild.name} ({message.guild.id}) was not initialized. "
-                          f"Adding default entry to database... ")
-                    try:
-                        await self.db.execute("INSERT INTO guilds (id) VALUES ($1)", message.guild.id)
-                    except Exception:
-                        await self.owner.send(
-                            f":x: Fatal database error occurred while initializing new guild "
-                            f"{message.guild.name} ({message.guild.id})")
-                        print(
-                            f"[DATABASE] Fatal error while initializing new guild {message.guild.name} "
-                            f"({message.guild.id})")
-                        return
-
-                    print(f"[DATABASE] Successfully initialized guild {message.guild.name} ({message.guild.id})")
-
-                self.cached_initialized_guilds.append(message.guild.id)
-
+        await self.cache.verify_guild_config_cache(message)
         await self.process_commands(message)
 
     @tasks.loop(hours=12)

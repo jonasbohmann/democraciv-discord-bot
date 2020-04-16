@@ -9,7 +9,7 @@ class TestEmbedUtils(unittest.TestCase):
 
     def setUp(self):
         self.embed_utils = EmbedUtils()
-        self.embed = discord.Embed(title="Test Embed", description="Test Description", colour=0x7f0000)
+        self.embed = discord.Embed(title="Test Embed", description="Test Description", colour=config.BOT_EMBED_COLOUR)
 
     def test_embed_builder_title(self):
         self.assertEqual(self.embed_utils.embed_builder(title="Test Embed", description="").title, self.embed.title,

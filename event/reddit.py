@@ -76,7 +76,7 @@ class Reddit(commands.Cog):
 
             embed = self.bot.embeds.embed_builder(
                 title=f"{config.REDDIT_LOGO}  New post on r/{self.subreddit}",
-                description="", has_footer=False)
+                description="", has_footer=False, colour=0xff2d1c)
             embed.add_field(name="Thread", value=f"[{_title}]({_comments_link})", inline=False)
             embed.add_field(name="Author", value=f"{_author}", inline=False)
 

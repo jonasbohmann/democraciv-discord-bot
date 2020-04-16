@@ -84,15 +84,17 @@ def tag_check():
 
 
 async def get_logging_channel(bot, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
-    logging_channel = await bot.db.fetchval("SELECT logging_channel FROM guilds WHERE id = $1",
-                                            guild.id)
-    return guild.get_channel(logging_channel)
+    channel = await bot.cache.get_guild_config_cache(guild.id, 'logging_channel')
+
+    if channel:
+        return guild.get_channel(channel)
 
 
 async def get_welcome_channel(bot, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
-    welcome_channel = await bot.db.fetchval("SELECT welcome_channel FROM guilds WHERE id = $1",
-                                            guild.id)
-    return guild.get_channel(welcome_channel)
+    channel = await bot.cache.get_guild_config_cache(guild.id, 'welcome_channel')
+
+    if channel:
+        return guild.get_channel(channel)
 
 
 class EmbedUtils:
@@ -101,7 +103,7 @@ class EmbedUtils:
     def __init__(self):
         self.footer_text = config.BOT_NAME
         self.footer_icon = config.BOT_ICON_URL
-        self.embed_colour = 0x7f0000
+        self.embed_colour = config.BOT_EMBED_COLOUR
 
     def embed_builder(self, title: str, description: str, time_stamp: bool = None,
                       has_footer: bool = True, footer: str = None, colour: int = None):
@@ -161,39 +163,28 @@ class CheckUtils:
 
     async def is_logging_enabled(self, guild_id: int) -> bool:
         """Returns true if logging is enabled for this guild."""
-        return_bool = await self.bot.db.fetchval("SELECT logging FROM guilds WHERE id = $1", guild_id)
-
-        if return_bool is None:
-            return False
-        else:
-            return return_bool
+        return await self.bot.cache.get_guild_config_cache(guild_id, 'logging')
 
     async def is_welcome_message_enabled(self, guild_id: int) -> bool:
         """Returns true if welcome messages are enabled for this guild."""
-        return_bool = await self.bot.db.fetchval("SELECT welcome FROM guilds WHERE id = $1", guild_id)
-
-        if return_bool is None:
-            return False
-        else:
-            return return_bool
+        return await self.bot.cache.get_guild_config_cache(guild_id, 'welcome')
 
     async def is_default_role_enabled(self, guild_id: int) -> bool:
         """Returns true if a default role is enabled for this guild."""
-        return_bool = await self.bot.db.fetchval("SELECT defaultrole FROM guilds WHERE id = $1", guild_id)
-
-        if return_bool is None:
-            return False
-        else:
-            return return_bool
+        return await self.bot.cache.get_guild_config_cache(guild_id, 'defaultrole')
 
     async def is_tag_creation_allowed(self, guild_id: int) -> bool:
         """Returns true if everyone is allowed to make tags on this guild."""
-        return_bool = await self.bot.db.fetchval("SELECT tag_creation_allowed FROM guilds WHERE id = $1", guild_id)
+        return await self.bot.cache.get_guild_config_cache(guild_id, 'tag_creation_allowed')
 
-        if return_bool is None:
-            return False
+    async def is_channel_excluded(self, guild_id: int, channel_id: int) -> bool:
+        """Returns true if the channel is excluded from logging. This is used for the Starboard too."""
+        excluded_channels = await self.bot.cache.get_guild_config_cache(guild_id, 'logging_excluded')
+
+        if excluded_channels is not None:
+            return channel_id in excluded_channels
         else:
-            return return_bool
+            return False
 
     async def is_guild_initialized(self, guild_id: int) -> bool:
         """Returns true if the guild has an entry in the bot's database."""
@@ -203,15 +194,3 @@ class CheckUtils:
             return False
         else:
             return True
-
-
-
-    async def is_channel_excluded(self, guild_id: int, channel_id: int) -> bool:
-        """Returns true if the channel is excluded from logging. This is used for the Starboard too."""
-        excluded_channels = await self.bot.db.fetchval("SELECT logging_excluded FROM guilds WHERE id = $1"
-                                                       , guild_id)
-
-        if excluded_channels is not None:
-            return channel_id in excluded_channels
-        else:
-            return False

@@ -8,6 +8,7 @@ BOT_COMMAND_COOLDOWN = 2.0  # In seconds
 BOT_DESCRIPTION = 'Discord Bot for the r/Democraciv community.'
 BOT_VERSION = '0.17.5'
 BOT_ICON_URL = 'https://cdn.discordapp.com/attachments/585502938571604056/586310405618532362/final_pride2.png'
+BOT_EMBED_COLOUR = 0  # in hex as int
 DEMOCRACIV_GUILD_ID = 208984105310879744  # Democraciv
 # DEMOCRACIV_GUILD_ID = 653946455337467904  # Democraciv Bot Support
 # DEMOCRACIV_GUILD_ID = 232108753477042187  # Test Server

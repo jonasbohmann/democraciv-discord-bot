@@ -104,7 +104,7 @@ class Twitch(commands.Cog):
         elif twitch_data[0] == self.StreamStatus.LIVE_AND_NOT_ANNOUNCED:
             embed = self.bot.embeds.embed_builder(title=f"{config.TWITCH_LOGO}  {self.streamer} - "
                                                         f"Live on Twitch",
-                                                  description="", has_footer=False)
+                                                  description="", has_footer=False, colour=0x984efc)
             embed.add_field(name="Title", value=twitch_data[2], inline=False)
             embed.add_field(name="Link", value=f"https://twitch.tv/{self.streamer}", inline=False)
             embed.set_image(url=twitch_data[3])

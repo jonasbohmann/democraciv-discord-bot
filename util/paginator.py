@@ -62,7 +62,7 @@ class Pages:
     """
 
     def __init__(self, ctx, *, entries, per_page=12, show_entry_count=True, title=None, show_index=True,
-                 footer_text=config.BOT_NAME, colour=0x7f0000, title_url=None, thumbnail=None,
+                 footer_text=config.BOT_NAME, colour=config.BOT_EMBED_COLOUR, title_url=None, thumbnail=None,
                  show_amount_of_pages=False, author_icon=EmptyEmbed):
         self.bot = ctx.bot
         self.entries = entries

@@ -180,7 +180,7 @@ class YouTube(commands.Cog):
 
             embed = self.bot.embeds.embed_builder(
                 title=f"{config.YOUTUBE_LOGO_UPLOAD}  {channel} - New YouTube video uploaded",
-                description="", has_footer=False)
+                description="", has_footer=False, colour=0xff001b)
             embed.add_field(name="Title", value=f"[{title}]({video_link})", inline=False)
             embed.add_field(name="Description", value=self.reduce_youtube_description(description), inline=False)
             embed.set_image(url=thumbnail_url)

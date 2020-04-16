@@ -144,6 +144,8 @@ class Guild(commands.Cog, name="Server"):
                 await self.bot.db.execute("UPDATE guilds SET welcome = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Welcome messages were disabled.")
 
+            await self.bot.cache.update_guild_config_cache()
+
     @guild.command(name='logs', aliases=['log', 'logging'])
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
@@ -199,6 +201,8 @@ class Guild(commands.Cog, name="Server"):
             elif not reaction:
                 await self.bot.db.execute("UPDATE guilds SET logging = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Event logging was disabled.")
+
+            await self.bot.cache.update_guild_config_cache()
 
     @guild.command(name='exclude')
     @commands.guild_only()
@@ -258,6 +262,7 @@ class Guild(commands.Cog, name="Server"):
                     ctx.guild.id, channel_object.id)
 
                 if remove_status == "UPDATE 1":
+                    await self.bot.cache.update_guild_config_cache()
                     return await ctx.send(f":white_check_mark: {channel_object.mention} is no longer excluded from"
                                           f" showing up in {current_logging_channel.mention}.")
 
@@ -268,6 +273,7 @@ class Guild(commands.Cog, name="Server"):
             if add_status == "UPDATE 1":
                 await ctx.send(f":white_check_mark: Excluded channel {channel_object.mention} from showing up in "
                                f"{current_logging_channel.mention}.")
+                await self.bot.cache.update_guild_config_cache()
 
     @commands.Cog.listener(name="on_member_join")
     async def default_role_listener(self, member):
@@ -358,6 +364,8 @@ class Guild(commands.Cog, name="Server"):
                 await self.bot.db.execute("UPDATE guilds SET defaultrole = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Disabled the default role.")
 
+            await self.bot.cache.update_guild_config_cache()
+
     @guild.command(name='tagcreation')
     @commands.guild_only()
     @commands.has_permissions(administrator=True)
@@ -400,6 +408,8 @@ class Guild(commands.Cog, name="Server"):
                 await self.bot.db.execute("UPDATE guilds SET tag_creation_allowed = false WHERE id = $1", ctx.guild.id)
                 await ctx.send(":white_check_mark: Only Administrators can now make"
                                " tags with `tag -add` on this server.")
+
+            await self.bot.cache.update_guild_config_cache()
 
 
 def setup(bot):

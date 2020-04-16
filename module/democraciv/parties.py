@@ -73,7 +73,10 @@ class Party(commands.Cog, name='Political Parties'):
             embed.add_field(name="Leader or Representative", value=party.leader.mention)
 
         embed.add_field(name="Server", value=invite_value)
-        embed.add_field(name="Aliases", value=', '.join(party.aliases), inline=False)
+
+        if party.aliases is not None:
+            embed.add_field(name="Aliases", value=', '.join(party.aliases) or '-', inline=False)
+
         embed.add_field(name=f"Members ({len(party.role.members)})",
                         value=', '.join([m.mention for m in party.role.members]) or '-', inline=False)
 
@@ -163,7 +166,7 @@ class Party(commands.Cog, name='Political Parties'):
             party_list_embed_content = ['There are no political parties yet.']
 
         embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in {mk.NATION_NAME}',
-                                              description="",colour=0x7f0000)
+                                              description="")
         embed.description = f"[Party Platforms]({links.parties})\n\n" + '\n\n'.join(party_list_embed_content)
         return await ctx.send(embed=embed)
 
