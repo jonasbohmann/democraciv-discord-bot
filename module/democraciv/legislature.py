@@ -515,6 +515,9 @@ class Legislature(commands.Cog):
     async def submit(self, ctx):
         """Submit a new bill or motion to the currently active session"""
 
+        if self.is_cabinet(ctx.author):
+            ctx.command.reset_cooldown(ctx)
+
         if self.speaker is None:
             raise exceptions.NoOneHasRoleError(mk.DemocracivRole.SPEAKER_ROLE.printable_name)
 
@@ -534,6 +537,8 @@ class Legislature(commands.Cog):
 
         reaction, user = await flow.get_emoji_choice(config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION,
                                                      bill_motion_question, 200)
+
+        message = embed = None
 
         if not reaction:
             return
