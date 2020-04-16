@@ -57,10 +57,8 @@ class Cache:
         except (TypeError, KeyError) as e:
             await self.bot.owner.send(f":x: Error in Cache.get_guild_config_cache({guild_id}, {setting})"
                                       f"\n{e.__class__.__name__}: {e}")
-            cached = None
 
-        if cached is None:
-            # fetch from database
+            # f-string sql query is bad practice
             return await self.bot.db.fetchval(f"SELECT {setting} FROM guilds WHERE id = $1", guild_id)
-        else:
-            return cached
+
+        return cached
