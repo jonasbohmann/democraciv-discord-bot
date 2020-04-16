@@ -21,8 +21,7 @@ class TagContentType(enum.Enum):
 
 
 class Tags(commands.Cog):
-    """Create tags for later retrieval of text, images & links. Tags are accessed with the bot's prefix. Server
-    administrators can change who is allowed to create tags on their server with `-server tagcreation`."""
+    """Create tags for later retrieval of text, images & links. Tags are accessed with the bot's prefix. Server administrators can change who is allowed to create tags on their server with `-server tagcreation`."""
 
     def __init__(self, bot):
         self.bot = bot

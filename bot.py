@@ -241,10 +241,12 @@ class DemocracivBot(commands.Bot):
         if message.author.bot:
             return
 
-        if self.user.mentioned_in(message) and len(message.content) == 22:
-            await message.channel.send(f"Hey!\nMy prefix is `{config.BOT_PREFIX}`.\n"
-                                       f"Try `{config.BOT_PREFIX}help`, `{config.BOT_PREFIX}commands`"
-                                       f" or `{config.BOT_PREFIX}about` to learn more about me!")
+        for user in message.mentions:
+            if user.id == self.user.id and len(message.content) in (20, 21, 22):
+                await message.channel.send(f"Hey! :wave:\nMy prefix is: `{config.BOT_PREFIX}`\n"
+                                           f"Try `{config.BOT_PREFIX}help`, `{config.BOT_PREFIX}commands`"
+                                           f" or `{config.BOT_PREFIX}about` to learn more about me!")
+                break
 
         # If, for whatever reason, the current guild does not have an entry in the bot's database, attempt to initialize
         # the default config

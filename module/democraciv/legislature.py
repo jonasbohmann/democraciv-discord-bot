@@ -449,7 +449,7 @@ class Legislature(commands.Cog):
             embed.add_field(name="Title", value=bill_title, inline=False)
             embed.add_field(name="Author", value=ctx.message.author.name, inline=False)
             embed.add_field(name="Session", value=current_leg_session_id)
-            embed.add_field(name="Ministry Veto Allowed", value=is_vetoable)
+            embed.add_field(name="Ministry Veto Allowed", value="Yes" if is_vetoable else "No")
             embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow(), inline=False)
             embed.add_field(name="URL", value=google_docs_url, inline=False)
 

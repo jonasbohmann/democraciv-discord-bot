@@ -9,7 +9,7 @@ from util.converter import Law
 from util.paginator import Pages
 from discord.ext import commands
 from util.exceptions import DemocracivBotException
-from util.law_helper import MockContext, AnnouncementQueue
+from util.law_helper import AnnouncementQueue
 
 
 class RepealScheduler(AnnouncementQueue):
@@ -36,7 +36,7 @@ class AmendScheduler(AnnouncementQueue):
 
 
 class Laws(commands.Cog, name='Law'):
-    """List all active laws in Arabia and search for them by name or keyword"""
+    """List all active laws in Arabia and search for them by name or keyword."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -51,13 +51,17 @@ class Laws(commands.Cog, name='Law'):
 
     async def paginate_all_laws(self, ctx):
         async with ctx.typing():
-            all_laws = await self.bot.db.fetch("SELECT * FROM legislature_laws ORDER BY law_id")
+            query = """SELECT legislature_laws.law_id, legislature_bills.bill_name, legislature_bills.link 
+                       FROM legislature_laws JOIN legislature_bills
+                       ON legislature_laws.bill_id = legislature_bills.id ORDER BY legislature_laws.law_id;
+                    """
+
+            all_laws = await self.bot.db.fetch(query)
 
             pretty_laws = []
 
             for record in all_laws:
-                law = await Law.convert(MockContext(self.bot), record['law_id'])
-                pretty_laws.append(f"Law #{law.id} - [{law.bill.name}]({law.bill.link})\n")
+                pretty_laws.append(f"Law #{record['law_id']} - [{record['bill_name']}]({record['link']})\n")
 
             if not pretty_laws:
                 pretty_laws = ['There are no laws yet.']

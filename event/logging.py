@@ -2,8 +2,8 @@ import discord
 import datetime
 import util.utils as utils
 
+from config import config
 from discord.ext import commands
-from util import exceptions
 
 
 class Log(commands.Cog):
@@ -225,15 +225,14 @@ class Log(commands.Cog):
 
         # Alert owner of this bot that the bot was invited to some place
         await self.bot.owner.send(f":warning:  I was added to {guild.name} ({guild.id}).")
+        p = config.BOT_PREFIX
+
+        introduction_message = f"Thanks for inviting me!\n\nYou can check `{p}help` or `{p}commands` to get more " \
+                               f"information about me.\n\nUse the `{p}server` command to configure me for this server."\
+                               f"\n\nIf you have any questions or suggestions, send a DM to {self.bot.owner.mention}!"
 
         # Send introduction message to random guild channel
-        embed = self.bot.embeds.embed_builder(title=':two_hearts: Hey there!',
-                                              description=f"Thanks for inviting me!\n\nYou can check "
-                                                          f"`-help` to get some more information "
-                                                          f"about me.\n\nUse the `-server` command to "
-                                                          f"configure me for this server.\n\nIf you "
-                                                          f"have any questions or suggestions, "
-                                                          f"send a DM to {self.bot.owner.mention}!")
+        embed = self.bot.embeds.embed_builder(title=':two_hearts: Hey there!', description=introduction_message)
 
         # Add new guild to database
         await self.bot.db.execute("INSERT INTO guilds (id) VALUES ($1) ON CONFLICT DO NOTHING ", guild.id)

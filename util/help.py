@@ -28,6 +28,7 @@ import discord
 
 from config import config
 from util.paginator import Pages
+from util import mk
 from discord.ext import commands
 
 
@@ -40,7 +41,34 @@ class HelpPaginator(Pages):
         self.prefix = help_command.clean_prefix
         self.is_bot = False
 
+    def show_introduction(self):
+        p = config.BOT_PREFIX
+        invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
+
+        introduction_message = f"Hey, thanks for using me!\n\nI'm the Democraciv Bot," \
+                               f" and was designed specifically " \
+                               f"for the [Discord server](https://discord.gg/AK7dYMG) of" \
+                               f" the [r/Democraciv](https://reddit.com/r/democraciv)" \
+                               f" community.\n\n**__Democraciv__**\nWe're playing {mk.CIV_GAME}" \
+                               f" with an elected, democratic government consisting of real players." \
+                               f" There's a lot of role-play around the game as well, there's the press, political " \
+                               f"parties, banks, intrigue and drama.\n\n\n**__Bot__**\nThis is my help command," \
+                               f" which will list every command and a short explanation on what it does. Note" \
+                               f" that I will only list the commands that _you_ are allowed to use on _this_ server." \
+                               f" All my commands are organized into different categories, and these categories all" \
+                               f" have their own page here.\n\nIf you're still unsure how a specific" \
+                               f" command works, try `{p}help <command>`. Some commands have examples " \
+                               f"on their help page.\n\nIf you want to add me to your own Discord Server," \
+                               f" invite me with this [link]({invite_url}).\n\n\n\n:point_down:" \
+                               f" Use these buttons below to navigate between the pages."
+        self.title = "Welcome to the Democraciv Bot"
+        self.description = introduction_message
+        return []
+
     def get_bot_page(self, page):
+        if self.is_bot and page == 0:
+            return self.show_introduction()
+
         cog, description, commands = self.entries[page - 1]
         self.title = str(cog)
         self.description = description
@@ -51,15 +79,19 @@ class HelpPaginator(Pages):
         self.embed.description = self.description
         self.embed.title = self.title
 
-        self.embed.set_footer(text=f'Use "{self.prefix}help command" for more info on a command.',
-                              icon_url=config.BOT_ICON_URL)
+        if page != 0:
+            self.embed.set_footer(text=f'Use "{self.prefix}help command" for more info on a command.',
+                                  icon_url=config.BOT_ICON_URL)
 
         for entry in entries:
             signature = f'**__{entry.qualified_name} {entry.signature}__**'
             self.embed.add_field(name=signature, value=entry.short_doc or "No help given", inline=False)
 
-        if self.maximum_pages:
+        if self.maximum_pages and page != 0:
             self.embed.set_author(name=f'Page {page}/{self.maximum_pages} ({self.total} commands)')
+        elif page == 0 and self.is_bot:
+            self.embed.set_author(icon_url=self.bot.owner.avatar_url_as(static_format="png"),
+                                  name=self.bot.owner)
 
     async def show_help(self):
         """shows this message"""
@@ -92,7 +124,6 @@ class HelpPaginator(Pages):
             ('[argument]', 'This means the argument is __**optional**__.'),
             # ('[A|B]', 'This means that it can be __**either A or B**__.'),
             ('[argument...]', 'This means you can have multiple arguments.\n\n'
-                              'Now that you know the basics, it should be noted that...\n'
                               '__**You do not type in the brackets!**__')
         )
 
@@ -110,6 +141,36 @@ class HelpPaginator(Pages):
             await self.show_current_page()
 
         self.bot.loop.create_task(go_back_to_current_page())
+
+    async def paginate(self):
+        """Actually paginate the entries and run the interactive loop if necessary."""
+        page = 0 if self.is_bot else 1
+        first_page = self.show_page(page, first=True)
+
+        if not self.paginating:
+            await first_page
+        else:
+            # allow us to react to reactions right away if we're paginating
+            self.bot.loop.create_task(first_page)
+
+        while self.paginating:
+            try:
+                payload = await self.bot.wait_for('raw_reaction_add', check=self.react_check, timeout=120.0)
+            except asyncio.TimeoutError:
+                self.paginating = False
+                try:
+                    await self.message.clear_reactions()
+                except:
+                    pass
+                finally:
+                    break
+
+            try:
+                await self.message.remove_reaction(payload.emoji, discord.Object(id=payload.user_id))
+            except:
+                pass  # can't remove it so don't bother doing so
+
+            await self.match()
 
 
 class PaginatedHelpCommand(commands.HelpCommand):
