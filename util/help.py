@@ -51,15 +51,19 @@ class HelpPaginator(Pages):
                                f" the [r/Democraciv](https://reddit.com/r/democraciv)" \
                                f" community.\n\n**__Democraciv__**\nWe're playing {mk.CIV_GAME}" \
                                f" with an elected, democratic government consisting of real players." \
-                               f" There's a lot of role-play around the game as well, there's the press, political " \
-                               f"parties, banks, intrigue and drama.\n\n\n**__Bot__**\nThis is my help command," \
+                               f" There's a lot of role-play around the game, there's the press, political " \
+                               f"parties, banks, intrigue and drama.\n\n\n**__Bot__**\nMy purpose is to make sure the" \
+                               f" day-to-day on our Discord runs as smooth as possible. I am deeply integrated into" \
+                               f" some processes of the Government and I keep track of a lot of information. See " \
+                               f"[this](https://github.com/jonasbohmann/democraciv-discord-bot/blob/master/README.md)" \
+                               f" for a complete list of all my features. \n\nThis is my help command," \
                                f" which will list every command and a short explanation on what it does. Note" \
                                f" that I will only list the commands that _you_ are allowed to use on _this_ server." \
                                f" All my commands are organized into different categories, and these categories all" \
                                f" have their own page here.\n\nIf you're still unsure how a specific" \
                                f" command works, try `{p}help <command>`. Some commands have examples " \
                                f"on their help page.\n\nIf you want to add me to your own Discord Server," \
-                               f" invite me with this [link]({invite_url}).\n\n\n\n:point_down:" \
+                               f" invite me [here]({invite_url}).\n\n\n:point_down:" \
                                f" Use these buttons below to navigate between the pages."
         self.title = "Welcome to the Democraciv Bot"
         self.description = introduction_message

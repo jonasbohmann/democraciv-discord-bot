@@ -14,23 +14,28 @@ Provides useful information, political party & role management and much more.
 **Run `pip install -r requirements.txt` to install all required dependencies.**
 
 ##  Features
-*  Announcements for live streams on twitch.tv/democraciv, for new posts from reddit.com/r/democraciv and 
-for new uploads and new live broadcasts from the Democraciv YouTube channel
+*  Announcements to both our Discord and our subreddit for:
+    - live streams on twitch.tv/democraciv
+    - live streams on the Democraciv YouTube channel
+    - new video uploads from the Democraciv YouTube channel
+    - new posts on reddit.com/r/democraciv *(only to Discord obviously)*
 *  Helps the Speaker of the Legislature with legislative sessions and submissions (bills & motions)
-*  Supports the Prime Minister with vetoes by keeping them up-to-date with passed bills from the Legislature
-*  Keeps track of all legislative sessions, ministry vetoes and laws that passed both Legislature & Executive
-*  Search for active laws by name or by automatically generated tags
+*  Supports the Executive with vetoes by keeping them up-to-date with passed bills from the Legislature
+*  Keeps track of all legislative sessions, bills, motions, ministry vetoes and laws
+*  Users can search for active laws by their name or by automatically generated tags
 *  Join and leave political parties and see their members and ranking
-*  Tags: Users can save text for later retrieval to command-like tags
+*  Tags: Users can save text and images for later retrieval to command-like tags
 *  Starboard: A starboard on Discord _and_ weekly posts to r/Democraciv with last week's starboard as a sort of "summary" of newsworthy Discord messages to our subreddit
+*  Built-in STV calculator
 *  Smart Wikipedia and Sid Meier's Civilization Wikia queries
 *  Welcome messages & default roles
-*  Selfroles  
-*  Help command that automatically scales
+*  Selfroles (self-assignable roles) 
+*  Detailed help command with examples of command usage
 *  Gets the current time in over 400 timezones
 *  Moderation commands 
 *  Alt detection
 *  Event logging 
+
 
 ##  Installation
 

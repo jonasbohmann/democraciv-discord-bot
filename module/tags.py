@@ -297,11 +297,6 @@ class Tags(commands.Cog):
                                       ctx.guild.id, is_global)
                     await ctx.send(f":white_check_mark: The `{config.BOT_PREFIX}{name}` tag was added.")
 
-    @commands.command(name="addtag", hidden=True)
-    async def oldaddtagwarning(self, ctx):
-        await ctx.send("This was moved to `-tag add` :)\nA bunch of new commands for tags were added as well, see"
-                       " `-help Tag` for more info.")
-
     @tags.command(name="info", aliases=['about'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()

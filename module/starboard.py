@@ -470,7 +470,7 @@ class Starboard(commands.Cog):
             emoji = 0x1f947  # :first_place:
             fmt = fmt or (lambda o: o)
             return '\n'.join(
-                f'{chr(emoji + i)}    {fmt(r["ID"])} ({r["Stars"]} stars)' for i, r in enumerate(records))
+                f'{chr(emoji + i)} {fmt(r["ID"])} ({r["Stars"]} stars)' for i, r in enumerate(records))
 
         records = await self.bot.db.fetch(query)
         starred_posts = [r for r in records if r['Type'] == 3]
