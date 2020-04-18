@@ -326,6 +326,13 @@ class Bill(commands.Converter):
         _tags = await self._bot.loop.run_in_executor(None, self._bot.laws.generate_law_tags,
                                                      self.google_docs_description, self.description)
 
+        name_abbreviation = "".join(c[0].lower() for c in self.name.split())
+
+        if self.name.lower().startswith("the"):
+            _tags.append(name_abbreviation[1:])
+
+        _tags.append(name_abbreviation)
+
         for tag in _tags:
             await self._bot.db.execute("INSERT INTO legislature_tags (id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING",
                                        law_id, tag.lower())
