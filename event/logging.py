@@ -236,6 +236,7 @@ class Log(commands.Cog):
 
         # Add new guild to database
         await self.bot.db.execute("INSERT INTO guilds (id) VALUES ($1) ON CONFLICT DO NOTHING ", guild.id)
+        await self.bot.cache.update_guild_config_cache()
 
         try:
             await introduction_channel.send(embed=embed)
