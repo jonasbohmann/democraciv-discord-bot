@@ -333,10 +333,11 @@ class Misc(commands.Cog, name="Miscellaneous"):
         """Get a random number or make the bot choose between something
 
             **Example:**
-              `-random` will choose a random number between 1-100
-              `-random 6` will choose a random number between 1-6
+              `-random` will choose a random number between 1 and 100
+              `-random 6` will choose a random number between 1 and 6
+              `-random 50 200` will choose a random number between 50 and 200
               `-random coin` will choose Heads or Tails
-              `-random choice England Rome` will choose between "England" and "Rome"
+              `-random choice "England" "Rome"` will choose between England and Rome
             """
 
         """
@@ -367,11 +368,11 @@ class Misc(commands.Cog, name="Miscellaneous"):
             start = 1
             end = 100
 
-        elif arg[0] == 'flip' or arg[0] == 'coin':
+        elif arg[0].lower() in ('flip', 'coin', 'coinflip'):
             coin = ['Heads', 'Tails']
-            return await ctx.send(f':arrows_counterclockwise: {random.choice(coin)}')
+            return await ctx.send(f':arrows_counterclockwise: **{random.choice(coin)}**')
 
-        elif arg[0] == 'choice':
+        elif arg[0].lower() == 'choice':
             choices = list(arg)
             choices.pop(0)
             return await ctx.send(f':tada: The winner is: `{random.choice(choices)}`')
@@ -382,12 +383,20 @@ class Misc(commands.Cog, name="Miscellaneous"):
                 end = int(arg[0])
             except ValueError:
                 return await ctx.send_help(ctx.command)
+
+        elif len(arg) == 2:
+            try:
+                start = int(arg[0])
+                end = int(arg[1])
+            except ValueError:
+                return await ctx.send_help(ctx.command)
+
         else:
             start = 1
             end = 100
 
         await ctx.send(
-            f'**:arrows_counterclockwise:** Random number ({start} - {end}): {random.randint(start, end)}')
+            f'**:arrows_counterclockwise:** Random number ({start} - {end}): **{random.randint(start, end)}**')
 
     @commands.command(name='vibecheck', hidden=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

@@ -52,6 +52,9 @@ class Party(commands.Cog, name='Political Parties'):
 
         invite = None
 
+        if party.role is None:
+            return await ctx.send(":x: This party was removed.")
+
         if party.discord_invite:
             try:
                 invite = await self.bot.fetch_invite(party.discord_invite)

@@ -410,7 +410,6 @@ class Starboard(commands.Cog):
 
     @starboard.command(name='stats')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @commands.guild_only()
     async def starboardstats(self, ctx):
         """Statistics about our Starboard"""
 

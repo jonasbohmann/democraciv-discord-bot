@@ -92,9 +92,9 @@ class Laws(commands.Cog, name='Law'):
         if law.bill.submitter is not None:
             embed.set_author(name=law.bill.submitter.name,
                              icon_url=law.bill.submitter.avatar_url_as(static_format='png'))
-            submitted_by_value = f"During Session #{law.bill.session.id} by {law.bill.submitter.mention}"
+            submitted_by_value = f"{law.bill.submitter.mention} (during Session #{law.bill.session.id})"
         else:
-            submitted_by_value = f"During Session #{law.bill.session.id} by *Person left Democraciv*"
+            submitted_by_value = f"*Person left Democraciv* (during Session #{law.bill.session.id})"
 
         if law.passed_on is None:
             law.passed_on = law.bill.session.closed_on

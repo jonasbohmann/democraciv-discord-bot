@@ -137,9 +137,9 @@ class Legislature(commands.Cog):
 
         if bill.submitter is not None:
             embed.set_author(name=bill.submitter.name, icon_url=bill.submitter.avatar_url_as(static_format='png'))
-            submitted_by_value = f"During Session #{bill.session.id} by {bill.submitter.mention}"
+            submitted_by_value = f"{bill.submitter.mention} (during Session #{bill.session.id})"
         else:
-            submitted_by_value = f"During Session #{bill.session.id} by *Person left Democraciv*"
+            submitted_by_value = f"*Person left Democraciv* (during Session #{bill.session.id})"
 
         is_vetoable = "Yes" if bill.is_vetoable else "No"
 
@@ -168,9 +168,9 @@ class Legislature(commands.Cog):
             embed.set_author(name=motion.submitter.name, icon_url=motion.submitter.avatar_url_as(static_format='png'))
             submitted_by_value = f"{motion.submitter.mention} (during Session #{motion.session.id})"
         else:
-            submitted_by_value = f"*Submitter left Democraciv* (during Session #{motion.session.id})"
+            submitted_by_value = f"*Person left Democraciv* (during Session #{motion.session.id})"
 
-        embed.add_field(name="Name", value=f"[{motion.title}]({motion.link})")
+        embed.add_field(name="Title", value=f"[{motion.title}]({motion.link})")
         embed.add_field(name="Content", value=motion.description, inline=False)
         embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
         await ctx.send(embed=embed)
