@@ -143,7 +143,7 @@ class Tags(commands.Cog):
                                                ctx.guild.id, tag.is_global)
 
         if status == "INSERT 0 1":
-            await ctx.send(f':white_check_mark: Added the alias `{config.BOT_PREFIX}{alias}` to'
+            await ctx.send(f':white_check_mark: Added the alias `{config.BOT_PREFIX}{alias}` to '
                            f'`{config.BOT_PREFIX}{tag.name}`.')
 
     @tags.command(name="removealias", aliases=['deletealias'])
