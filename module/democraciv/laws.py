@@ -117,19 +117,25 @@ class Laws(commands.Cog, name='Law'):
         async with ctx.typing():
 
             # First, search by name similarity
-            results = await self.bot.laws.search_law_by_name(name)
+            async with self.bot.db.acquire() as con:
+                # Set word similarity threshold to 0.3 for search by name
+                await self.bot.laws.update_pg_trgm_similarity_threshold(0.3, connection=con)
+                results = await self.bot.laws.search_law_by_name(name, connection=con)
 
-            # Then, search by tag similarity
-            for substring in query:
-                if len(substring) < 3 or substring in self.illegal_tags:
-                    continue
+                # Set word similarity threshold to 0.5 for search by tag
+                await self.bot.laws.update_pg_trgm_similarity_threshold(0.5, connection=con)
 
-                result = await self.bot.laws.search_law_by_tag(substring)
-                if result:
-                    results.update(result)
+                # Then, search by tag similarity
+                for substring in query:
+                    if len(substring) < 3 or substring in self.illegal_tags:
+                        continue
 
-            if not results:
-                results = ['Nothing found.']
+                    result = await self.bot.laws.search_law_by_tag(substring, connection=con)
+                    if result:
+                        results.update(result)
+
+                if not results:
+                    results = ['Nothing found.']
 
         pages = Pages(ctx=ctx, entries=list(results), show_entry_count=False,
                       title=f"Search Results for '{name}'", show_index=False, show_amount_of_pages=True,

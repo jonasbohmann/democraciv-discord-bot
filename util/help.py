@@ -136,6 +136,9 @@ class HelpPaginator(Pages):
         for name, value in entries:
             self.embed.add_field(name=name, value=value, inline=False)
 
+        if self.is_bot and self.current_page == 0:
+            self.current_page = 1
+
         self.embed.set_footer(text=f'We were on page {self.current_page} before this message.',
                               icon_url=config.BOT_ICON_URL)
         await self.message.edit(embed=self.embed)

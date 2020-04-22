@@ -392,6 +392,7 @@ class Legislature(commands.Cog):
 
         if not self.bot.laws.is_google_doc_link(google_docs_url):
             await ctx.send(":x: That doesn't look like a Google Docs URL.")
+            ctx.command.reset_cooldown(ctx)
             return None, None
 
         # Vetoable
@@ -420,6 +421,7 @@ class Legislature(commands.Cog):
             if google_meta_info is None:
                 await ctx.send(":x: Couldn't connect to Google Docs. Make sure that the document can be"
                                " read by anyone and that it's not a published version.")
+                ctx.command.reset_cooldown(ctx)
                 return None, None
 
             bill_title = google_meta_info["title"]

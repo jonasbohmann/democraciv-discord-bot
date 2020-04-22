@@ -291,16 +291,16 @@ class LawUtils:
         con = connection or self.bot.db
         await con.execute(f"SET pg_trgm.similarity_threshold = {threshold}")
 
-    async def search_law_by_name(self, name: str) -> typing.Dict[str, None]:
+    async def search_law_by_name(self, name: str, connection=None) -> typing.Dict[str, None]:
         """Search for laws by their name, returns list with prettified strings of found laws"""
+
+        con = connection or self.bot.db
 
         query = """SELECT DISTINCT law_id FROM legislature_laws AS l
                    WHERE exists (SELECT 1 FROM legislature_bills b
                    WHERE l.bill_id = b.id AND lower(b.bill_name) % $1 ORDER BY lower(b.bill_name) <-> $1);"""
 
-        async with self.bot.db.acquire() as con:
-            await self.update_pg_trgm_similarity_threshold(0.3, connection=con)
-            laws = await con.fetch(query, name.lower())
+        laws = await con.fetch(query, name.lower())
 
         found = dict()
 
@@ -310,7 +310,7 @@ class LawUtils:
 
         return found
 
-    async def search_law_by_tag(self, tag: str) -> typing.Dict[str, None]:
+    async def search_law_by_tag(self, tag: str, connection=None) -> typing.Dict[str, None]:
         """Search for laws by their tag(s), returns list with prettified strings of found laws"""
 
         # Once a bill is passed into law, the bot automatically generates tags for it to allow for easier and faster
@@ -321,11 +321,10 @@ class LawUtils:
         # few sentences of content.) and tokenizes those with nltk. Then, every noun from both descriptions is saved
         # into the legislature_tags table with the corresponding law_id.
 
-        async with self.bot.db.acquire() as con:
-            await self.update_pg_trgm_similarity_threshold(0.5, connection=con)
+        con = connection or self.bot.db
 
-            found_laws = await con.fetch("SELECT id FROM legislature_tags WHERE tag % $1 ORDER BY tag <-> $1",
-                                         tag.lower())
+        found_laws = await con.fetch("SELECT id FROM legislature_tags WHERE tag % $1 ORDER BY tag <-> $1",
+                                     tag.lower())
 
         # Abuse dict as ordered set
         pretty_laws = dict()
