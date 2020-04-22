@@ -195,6 +195,9 @@ class Pages:
 
     async def previous_page(self):
         """goes to the previous page"""
+        if self.current_page == 0:
+            return
+
         await self.checked_show_page(self.current_page - 1)
 
     async def show_current_page(self):
