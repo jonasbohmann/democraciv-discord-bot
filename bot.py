@@ -218,16 +218,16 @@ class DemocracivBot(commands.Bot):
     def democraciv_guild_object(self) -> Optional[discord.Guild]:
         return self.get_guild(self.democraciv_guild_id)
 
-    async def close_bot(self):
+    async def close(self):
         """Closes the aiohttp ClientSession, the connection pool to the PostgreSQL database and the bot itself."""
         await self.session.close()
         await self.db.close()
-        await self.close()
+        await super().close()
 
     async def on_ready(self):
         if not self.db_ready:
             print("[DATABASE] Fatal error while connecting to database. Closing bot...")
-            return await self.close_bot()
+            return await self.close()
 
         print(f"[BOT] Logged in as {self.user.name} with discord.py {discord.__version__}")
         print("------------------------------------------------------------")
@@ -294,4 +294,4 @@ if __name__ == '__main__':
     try:
         dciv.run(token.TOKEN)
     except KeyboardInterrupt:
-        asyncio.create_task(dciv.close_bot())
+        asyncio.create_task(dciv.close())

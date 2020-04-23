@@ -32,14 +32,15 @@ class Roles(commands.Cog, name="Selfroles"):
         else:
             return ctx.guild.get_role(role_id['role_id'])
 
-    @commands.group(name='role', aliases=['roles'], case_insensitive=True, invoke_without_command=True)
+    @commands.group(name='role', aliases=['roles', 'selfrole', 'selfroles'], case_insensitive=True,
+                    invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def roles(self, ctx, *, role: str = None):
-        """List all roles or get/lose a role by specifying the role's name
+        """List all roles on this server or get/lose a role by specifying the role's name
 
         **Usage:**
-          `-role` List all available roles
+          `-role` List all available roles on this server
           `-role <role>` Get/Lose a role
         """
 
@@ -56,10 +57,11 @@ class Roles(commands.Cog, name="Selfroles"):
                     embed_message.append(f"{role_object.name}")
 
             if not embed_message:
-                embed_message = ["This server has no roles yet."]
+                embed_message = ["This server has no selfroles yet."]
 
-            embed = self.bot.embeds.embed_builder(title="Roles", description="In order to add or remove a role "
-                                                                             "from you, use `-role Role`")
+            embed = self.bot.embeds.embed_builder(title=f"Selfroles in {ctx.guild.name}",
+                                                  description=f"In order to add or remove a role from you,"
+                                                              f" use `{config.BOT_PREFIX}role <role>`")
             embed.add_field(name="Available Roles", value='\n'.join(embed_message))
             await ctx.send(embed=embed)
 

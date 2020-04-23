@@ -240,7 +240,7 @@ class Moderation(commands.Cog):
     async def restart(self, ctx):
         """Restarts the bot"""
         await ctx.send(':wave: Restarting...')
-        await self.bot.close_bot()
+        await self.bot.close()
 
     @commands.command(name='say')
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
