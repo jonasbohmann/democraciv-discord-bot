@@ -453,11 +453,14 @@ class Tags(commands.Cog):
 
         url_pattern = re.compile(
             "((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*")
-        url_endings = ('.jpeg', '.jpg', '.avi', '.png', '.gif', '.webp', '.mp4', '.mp3', '.bmp', '.img',
-                       '.svg', '.mov', '.flv', '.wmv')
+        url_endings_image = ('.jpeg', '.jpg', '.png', '.gif', '.webp', '.bmp', '.img', '.svg')
+        url_endings_video = ('.avi', '.mp4', '.mp3', '.mov', '.flv', '.wmv')
 
-        if url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings)):
+        if url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings_image)):
             return TagContentType.IMAGE
+
+        elif url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings_video)):
+            return TagContentType.YOUTUBE_TENOR_GIPHY
 
         elif url_pattern.match(tag_content) and any(s in tag_content for s in
                                                     ['youtube', 'youtu.be', 'tenor.com', 'gph.is', 'giphy.com']):
