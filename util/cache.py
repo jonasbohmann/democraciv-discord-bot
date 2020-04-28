@@ -55,8 +55,9 @@ class Cache:
         try:
             cached = self.guild_config[guild_id][setting]
         except (TypeError, KeyError) as e:
-            await self.bot.owner.send(f":x: Error in Cache.get_guild_config_cache({guild_id}, {setting})"
-                                      f"\n{e.__class__.__name__}: {e}")
+            print(f"[CACHE] Error in Cache.get_guild_config_cache({guild_id}, {setting})."
+                  f" Possible race condition on_guild_join"
+                  f"\n{e.__class__.__name__}: {e}")
 
             # f-string sql query is bad practice
             return await self.bot.db.fetchval(f"SELECT {setting} FROM guilds WHERE id = $1", guild_id)
