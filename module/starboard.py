@@ -131,7 +131,7 @@ class Starboard(commands.Cog):
 
             markdown.append("\n\n&nbsp;\n\n")
 
-        outro = """\n\n &nbsp; \n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) and this is 
+        outro = """\n\n &nbsp; \n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) and this is
         an automated service. Contact u/Jovanos (DerJonas#8036 on Discord) for further questions or bug reports.* """
         markdown.append(outro)
 
@@ -283,7 +283,7 @@ class Starboard(commands.Cog):
     async def star_message(self, message: discord.Message, starrer: discord.Member):
         """Star a message"""
 
-        query = """INSERT INTO starboard_entries (author_id, message_id, message_content, channel_id, guild_id, 
+        query = """INSERT INTO starboard_entries (author_id, message_id, message_content, channel_id, guild_id,
                    message_creation_date, message_jump_url, message_image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                    ON CONFLICT DO NOTHING RETURNING id"""
 

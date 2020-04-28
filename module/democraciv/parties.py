@@ -232,22 +232,17 @@ class Party(commands.Cog, name='Political Parties'):
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
-                try:
-                    await connection.execute(
-                        "INSERT INTO parties (id, discord_invite, is_private, leader) VALUES ($1, $2, $3, $4)",
-                        discord_role.id, party_invite, is_private, leader_member.id)
+                await connection.execute(
+                    "INSERT INTO parties (id, discord_invite, is_private, leader) VALUES ($1, $2, $3, $4)"
+                    "ON CONFLICT (id) DO UPDATE SET discord_invite = $2, is_private = $3,"
+                    " leader = $4 WHERE parties.id = $1",
+                    discord_role.id, party_invite, is_private, leader_member.id)
 
-                    await connection.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
-                                             discord_role.name.lower(), discord_role.id)
+                await connection.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)"
+                                         " ON CONFLICT DO NOTHING ",
+                                         discord_role.name.lower(), discord_role.id)
 
-                    await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a new party.')
-
-                except asyncpg.UniqueViolationError:
-                    await connection.execute(
-                        "UPDATE parties SET discord_invite = $2, is_private = $3, leader = $4 WHERE id = $1",
-                        discord_role.id, party_invite, is_private, leader_member.id)
-
-                    await ctx.send(f':white_check_mark: `{discord_role.name}` was updated.')
+                await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a new party.')
 
         return await PoliticalParty.convert(ctx, discord_role.id)
 
@@ -349,7 +344,7 @@ class Party(commands.Cog, name='Political Parties'):
 
             to_be_merged.append(party)
 
-        members_to_merge = list(set([member for party in to_be_merged for member in party.role.members]))
+        members_to_merge = {member for party in to_be_merged for member in party.role.members}
         pretty_parties = [f"`{party.role.name}`" for party in to_be_merged]
 
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to merge"
@@ -368,19 +363,24 @@ class Party(commands.Cog, name='Political Parties'):
         except exceptions.DemocracivBotException as e:
             return await ctx.send(f"{e.message}\n:x: Party creation failed, old parties were not deleted.")
 
-        if new_party is None:
+        if new_party is None or new_party.role is None:
             return await ctx.send(":x: Party creation failed, old parties were not deleted.")
 
-        for member in members_to_merge:
-            await member.add_roles(new_party.role)
+        async with ctx.typing():
+            for member in members_to_merge:
+                await member.add_roles(new_party.role)
 
-        for party in to_be_merged:
-            async with self.bot.db.acquire() as connection:
-                async with connection.transaction():
-                    await connection.execute("DELETE FROM party_alias WHERE party_id = $1", party.role.id)
-                    await connection.execute("DELETE FROM parties WHERE id = $1", party.role.id)
+            for party in to_be_merged:
+                # In case the merger keeps the name and thus role of an old party
+                if party.role.id == new_party.role.id:
+                    continue
 
-            await party.role.delete()
+                async with self.bot.db.acquire() as connection:
+                    async with connection.transaction():
+                        await connection.execute("DELETE FROM party_alias WHERE party_id = $1", party.role.id)
+                        await connection.execute("DELETE FROM parties WHERE id = $1", party.role.id)
+
+                await party.role.delete()
 
         await ctx.send(":white_check_mark: The old parties were deleted and"
                        " all their members have now the role of the new party.")

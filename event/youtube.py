@@ -41,7 +41,7 @@ class YouTube(commands.Cog):
         API key."""
 
         async with self.bot.session.get(f"https://www.googleapis.com/youtube/v3/search?"
-                                        f"part=snippet&channelId={self.youtube_channel}" 
+                                        f"part=snippet&channelId={self.youtube_channel}"
                                         f"&type=video&eventType=live&maxResults=1&key={self.api_key}",
                                         headers=self.header) as response:
             if response.status == 200:

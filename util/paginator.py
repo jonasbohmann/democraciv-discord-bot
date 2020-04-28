@@ -22,11 +22,10 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 """
 
-import re
 import asyncio
 import discord
-from discord.embeds import EmptyEmbed
 
+from discord.embeds import EmptyEmbed
 from config import config
 from discord.ext.commands import Paginator as CommandPaginator
 
