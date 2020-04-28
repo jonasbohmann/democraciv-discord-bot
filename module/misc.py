@@ -1,3 +1,4 @@
+import io
 import typing
 import random
 import discord
@@ -447,6 +448,57 @@ class Misc(commands.Cog, name="Miscellaneous"):
     async def vibecheck_error(self, ctx, error):
         if isinstance(error, commands.BadArgument):
             return
+
+    @commands.command(hidden=True, aliases=['doggo', 'doggos'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def dog(self, ctx):
+        """Just for Tay: A random image of a dog"""
+
+        """The MIT License (MIT)
+
+        Copyright (c) 2015 Rapptz
+        
+        Permission is hereby granted, free of charge, to any person obtaining a
+        copy of this software and associated documentation files (the "Software"),
+        to deal in the Software without restriction, including without limitation
+        the rights to use, copy, modify, merge, publish, distribute, sublicense,
+        and/or sell copies of the Software, and to permit persons to whom the
+        Software is furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in
+        all copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+        FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+        DEALINGS IN THE SOFTWARE."""
+
+        async with self.bot.session.get('https://random.dog/woof') as resp:
+            if resp.status != 200:
+                return await ctx.send(':x: No dog found :(')
+
+            filename = await resp.text()
+            url = f'https://random.dog/{filename}'
+            filesize = ctx.guild.filesize_limit if ctx.guild else 8388608
+            if filename.endswith(('.mp4', '.webm')):
+                async with ctx.typing():
+                    async with self.bot.session.get(url) as other:
+                        if other.status != 200:
+                            return await ctx.send(':x: Could not download dog video :(')
+
+                        if int(other.headers['Content-Length']) >= filesize:
+                            return await ctx.send(f':x: Video was too big to upload, watch it here instead: {url}')
+
+                        fp = io.BytesIO(await other.read())
+                        await ctx.send(file=discord.File(fp, filename=filename))
+            else:
+                embed = self.bot.embeds.embed_builder(title="Random Dog", description="", has_footer=False)
+                embed.set_image(url=url)
+                embed.set_footer(text="Just for Taylor.")
+                await ctx.send(embed=embed)
 
     @commands.command(name='invite')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

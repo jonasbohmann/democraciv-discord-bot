@@ -187,11 +187,15 @@ class Twitch(commands.Cog):
                                                           " Remember to export the Twitch "
                                                           "VOD to YouTube.")
 
-        embed.add_field(name="Export to YouTube", value="Go to our [channel](https://www.twitch.tv/democraciv/manager),"
-                                                        " select the last stream and hit 'Export'.", inline=False)
+        embed.add_field(name="Export to YouTube",
+                        value="Go to our [channel](https://www.twitch.tv/democraciv/manager),"
+                              " select the last stream and hit 'Export'.",
+                        inline=False)
 
-        embed.add_field(name="Set the title", value=f"Use this formatting for the title `Democraciv MK{mk.MARK} - "
-                                                    f"Game Session X: Turns A-B`.", inline=False)
+        embed.add_field(name="Set the title",
+                        value=f"Use this formatting for the title `Democraciv MK{mk.MARK} - "
+                              f"Game Session X: Turns A-B`.",
+                        inline=False)
 
         embed.add_field(name="Set the description",
                         value=f"Use this formatting for the description: ```This is the Xth game session of "
@@ -199,20 +203,30 @@ class Twitch(commands.Cog):
                               f"Democraciv is a community on Reddit dedicated to play a single-player game of"
                               f" {mk.CIV_GAME} with a simulated, model government. We have a Legislature, a Supreme "
                               f"Court and an executive branch, those who can be seen playing the game here."
-                              f"\n\nDemocraciv: https://reddit.com/r/democraciv/```", inline=False)
+                              f"\n\nDemocraciv: https://reddit.com/r/democraciv/```",
+                        inline=False)
 
-        embed.add_field(name="Add some tags", value="Add some variations of `Democraciv`, `Civ 5`, `Game Politics`, "
-                                                    "`Game Roleplay`, `Civ Politics`, `Civ Roleplay`,"
-                                                    " `Reddit roleplay`, `Discord roleplay`, `parliament` "
-                                                    "or whatever comes to your mind.", inline=False)
+        embed.add_field(name="Add some tags",
+                        value=f"Add some variations of `Democraciv`, `Civ {mk.CIV_GAME}`, `Game Politics`, "
+                              f"`Game Roleplay`, `Civ Politics`, `Civ Roleplay`,"
+                              f" `Reddit roleplay`, `Discord roleplay`, `parliament` "
+                              f"or whatever comes to your mind.",
+                        inline=False)
 
-        embed.add_field(name="Set the visibility", value="Set the visibility of the VOD to 'Public' and hit"
-                                                         " 'Start export'.", inline=False)
+        embed.add_field(name="Set the visibility",
+                        value="Set the visibility of the VOD to 'Public' and hit 'Start export'.",
+                        inline=False)
+
+        embed.add_field(name="Update the stream title",
+                        value="Edit the title of our stream on Twitch for the next game"
+                              " session by incrementing the number.",
+                        inline=False)
 
         embed.add_field(name="Add the new video to the playlist",
                         value=f"Don't forget this part! After the Twitch VOD was exported to YouTube, head over "
                               f"[here](https://studio.youtube.com/channel/UC-NukxPakwQIvx73VjtIPnw/videos/) "
-                              f"and add the new video to the playlist named 'MK{mk.MARK} Game Sessions'.", inline=False)
+                              f"and add the new video to the playlist named 'MK{mk.MARK} Game Sessions'.",
+                        inline=False)
 
         embed.add_field(name="Adjust description & tags on YouTube",
                         value="Twitch automatically adds a paragraph about Twitch to the end of the exported video's "
@@ -220,13 +234,14 @@ class Twitch(commands.Cog):
                         inline=False)
 
         embed.add_field(name="Add Game Session to Wiki",
-                        value=f"Add an entry for this new game session"
-                              f" [here]({links.gswiki}).",
+                        value=f"Add an entry for this new game session [here]({links.gswiki}).",
                         inline=False)
 
-        embed.add_field(name="Upload the save-game to Google Drive", value="Once a minister sends you the save-game, "
-                                                                           "upload it to our Google Drive under "
-                                                                           "'Drive/Game/Savegames'.", inline=False)
+        embed.add_field(name="Upload the save-game to Google Drive",
+                        value="Once a minister sends you the save-game, "
+                              "upload it to our Google Drive under "
+                              "'Drive/Game/Savegames'.",
+                        inline=False)
 
         embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/423938725525979146/"
                                 "645394491133394966/01-twitch-logo.jpg")
