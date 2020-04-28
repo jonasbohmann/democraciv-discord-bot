@@ -307,6 +307,16 @@ class Moderation(commands.Cog):
                                               has_footer=False)
         await self.safe_send_mod_links(ctx, embed)
 
+    @commands.command(name='modguidelines', aliases=['modguideline', 'mod', 'mods', 'modprocedure', 'modprocedures'])
+    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    async def modguidelines(self, ctx):
+        """Link to the Democraciv Moderation Guidelines"""
+        link = token.MOD_GUIDELINES or 'https://hastebin.com/afijavahox.coffeescript'
+        embed = self.bot.embeds.embed_builder(title="Democraciv Moderation Guidelines & Procedures",
+                                              description=f"[Link]({link})",
+                                              has_footer=False)
+        await self.safe_send_mod_links(ctx, embed)
+
     @commands.command(name='quire', aliases=['q'])
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def quire(self, ctx):
