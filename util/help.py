@@ -277,6 +277,9 @@ class PaginatedHelpCommand(commands.HelpCommand):
     async def send_group_help(self, group):
         # The end user doesn't know the difference between a Group and a Command. To avoid confusion, just show them
         # the whole cog
+        if group == self.context.bot.get_command("legislature withdraw"):
+            return await self._send_group_help(group)
+
         await self.send_cog_help(group.cog)
 
     async def _send_group_help(self, group):
