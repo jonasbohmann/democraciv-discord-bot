@@ -643,6 +643,8 @@ class Legislature(commands.Cog):
     async def withdraw(self, ctx):
         """Withdraw one or multiple bills or motions from the current session"""
         if ctx.invoked_subcommand is None:
+            await ctx.send(":x: You have to tell me whether you want to withdraw motions or bills!"
+                           " Take a look at the help page:")
             await ctx.send_help(ctx.command)
 
     async def withdraw_objects(self, ctx, objects: typing.List[typing.Union[Bill, Motion]]):

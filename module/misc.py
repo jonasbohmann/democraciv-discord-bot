@@ -383,14 +383,14 @@ class Misc(commands.Cog, name="Miscellaneous"):
             try:
                 end = int(arg[0])
             except ValueError:
-                return await ctx.send_help(ctx.command)
+                raise commands.BadArgument()
 
         elif len(arg) == 2:
             try:
                 start = int(arg[0])
                 end = int(arg[1])
             except ValueError:
-                return await ctx.send_help(ctx.command)
+                raise commands.BadArgument()
 
         else:
             start = 1
