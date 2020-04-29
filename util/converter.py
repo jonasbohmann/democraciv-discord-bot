@@ -105,17 +105,36 @@ class UnbanConverter(commands.Converter):
 class CaseInsensitiveRole(commands.Converter):
     async def convert(self, ctx, argument):
         arg = argument.lower()
-        role = discord.utils.find(lambda r: r.name.lower() == arg, ctx.guild.roles)
+
+        def predicate(r):
+            return r.name.lower() == arg
+
+        role = discord.utils.find(predicate, ctx.guild.roles)
 
         if role:
             return role
 
-        role = discord.utils.find(lambda r: r.name.lower() == arg, ctx.bot.democraciv_guild_object.roles)
+        role = discord.utils.find(predicate, ctx.bot.democraciv_guild_object.roles)
 
         if role:
             return role
 
         raise BadArgument(f":x: There is no role named `{argument}` on this or the Democraciv server.")
+
+
+class CaseInsensitiveMember(commands.MemberConverter):
+    async def convert(self, ctx, argument):
+        arg = argument.lower()
+
+        def predicate(m):
+            return m.name.lower() == arg or (m.nick and m.nick.lower() == arg)
+
+        member = discord.utils.find(predicate, ctx.guild.members)
+
+        if member:
+            return member
+
+        raise BadArgument()
 
 
 class Tag(commands.Converter):

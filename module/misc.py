@@ -8,7 +8,7 @@ import datetime
 from config import config
 from discord.ext import commands
 from util.paginator import Pages
-from util.converter import CaseInsensitiveRole, PoliticalParty
+from util.converter import CaseInsensitiveRole, PoliticalParty, CaseInsensitiveMember
 
 
 class Misc(commands.Cog, name="Miscellaneous"):
@@ -58,13 +58,16 @@ class Misc(commands.Cog, name="Miscellaneous"):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def whois(self, ctx, *,
-                    member: typing.Union[discord.Member, discord.Role, CaseInsensitiveRole, PoliticalParty] = None):
+                    member: typing.Union[discord.Member, CaseInsensitiveMember,
+                                         discord.Role, CaseInsensitiveRole, PoliticalParty] = None):
         """Get detailed information about a member of this server
 
             **Example:**
              `-whois`
+             `-whois Jonas - u/Jovanos`
              `-whois @DerJonas`
              `-whois DerJonas`
+             `-whois deRjoNAS`
              `-whois DerJonas#8109`
         """
 
