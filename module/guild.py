@@ -67,7 +67,7 @@ class Guild(commands.Cog, name="Server"):
 
     @guild.command(name='welcome')
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
+    @commands.has_permissions(manage_guild=True)
     async def welcome(self, ctx):
         """Add a welcome message that every new member will see once they join this server"""
 
@@ -148,7 +148,7 @@ class Guild(commands.Cog, name="Server"):
 
     @guild.command(name='logs', aliases=['log', 'logging'])
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
+    @commands.has_permissions(manage_guild=True)
     async def logs(self, ctx):
         """Log important events like message edits & deletions and more to a specific channel"""
 
@@ -206,7 +206,7 @@ class Guild(commands.Cog, name="Server"):
 
     @guild.command(name='exclude')
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
+    @commands.has_permissions(manage_guild=True)
     async def exclude(self, ctx, channel: str = None):
         """Exclude message edits & deletions in a channel from showing up in your server's log channel
 
@@ -291,7 +291,7 @@ class Guild(commands.Cog, name="Server"):
 
     @guild.command(name='defaultrole')
     @commands.guild_only()
-    @commands.has_permissions(administrator=True)
+    @commands.has_permissions(manage_guild=True)
     async def defaultrole(self, ctx):
         """Give every new member a specific role once they join this server"""
 
