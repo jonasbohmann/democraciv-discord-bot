@@ -27,6 +27,36 @@ class SessionStatus(enum.Enum):
             raise NotImplementedError
 
 
+class Selfrole(commands.Converter):
+    def __init__(self, **kwargs):
+        self.join_message = kwargs.get('join_message')
+        self._guild = kwargs.get('guild')
+        self._role = kwargs.get('role')
+        self._bot = kwargs.get('bot')
+
+    @property
+    def guild(self) -> typing.Optional[discord.Guild]:
+        return self._bot.get_guild(self._guild)
+
+    @property
+    def role(self) -> typing.Optional[discord.Role]:
+        return self.guild.get_role(self._role)
+
+    @classmethod
+    async def convert(cls, ctx, argument):
+        role_record = await ctx.bot.db.fetchrow("SELECT * FROM roles WHERE guild_id = $1 AND role_name = $2",
+                                                ctx.guild.id, argument.lower())
+
+        if role_record:
+            return cls(join_message=role_record['join_message'], role=role_record['role_id'],
+                       guild=role_record['guild_id'], bot=ctx.bot)
+
+        else:
+            raise NotFoundError(f":x: There is no selfrole on this server that matches `{argument}`. "
+                                f"If you're trying to join or leave a political party,"
+                                f" check `{ctx.prefix}help Political Parties`")
+
+
 class BanConverter(commands.Converter):
     async def convert(self, ctx, argument):
         member = None
