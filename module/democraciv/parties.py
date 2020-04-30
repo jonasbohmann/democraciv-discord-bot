@@ -137,7 +137,7 @@ class Party(commands.Cog, name='Political Parties'):
             msg = f':white_check_mark: You left {party.role.name}.'
         await ctx.send(msg)
 
-    @commands.command(name='ranking', aliases=['rank', 'ranks', 'members', 'member'])
+    @commands.command(name='ranking', aliases=['rank', 'ranks', 'members', 'member', 'rankings'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def members(self, ctx):
         """Ranking of political parties by their amount of members"""
@@ -224,11 +224,13 @@ class Party(commands.Cog, name='Political Parties'):
         await ctx.send(":information_source: Reply with the name of the party's leader.")
         leader = await flow.get_text_input(240)
 
-        if leader:
-            try:
-                leader_member = await commands.MemberConverter().convert(ctx, leader)
-            except commands.BadArgument:
-                raise exceptions.MemberNotFoundError(leader)
+        if not leader:
+            return
+
+        try:
+            leader_member = await commands.MemberConverter().convert(ctx, leader)
+        except commands.BadArgument:
+            raise exceptions.MemberNotFoundError(leader)
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
@@ -242,7 +244,8 @@ class Party(commands.Cog, name='Political Parties'):
                                          " ON CONFLICT DO NOTHING ",
                                          discord_role.name.lower(), discord_role.id)
 
-                await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a new party.')
+                await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a new party or its '
+                               f'properties were updated if it already existed.')
 
         return await PoliticalParty.convert(ctx, discord_role.id)
 

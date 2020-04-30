@@ -108,13 +108,12 @@ class Roles(commands.Cog, name="Selfroles"):
         if not role_join_message:
             return
 
-        try:
-            await self.bot.db.execute("INSERT INTO roles (guild_id, role_id, join_message) VALUES ($1, $2, $3)",
-                                      ctx.guild.id, discord_role.id, role_join_message)
-        except asyncpg.UniqueViolationError:
-            return await ctx.send(":x: This role was already added as a selfrole.")
+        await self.bot.db.execute("INSERT INTO roles (guild_id, role_id, join_message) VALUES ($1, $2, $3) "
+                                  "ON CONFLICT (guild_id, role_id) DO UPDATE set join_message = $3",
+                                  ctx.guild.id, discord_role.id, role_join_message)
 
-        await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a selfrole.')
+        await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a selfrole or its join message was '
+                       f'updated in case the selfrole already existed.')
 
     @roles.command(name='delete', aliases=['remove'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
