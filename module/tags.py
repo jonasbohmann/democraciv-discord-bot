@@ -523,7 +523,7 @@ class Tags(commands.Cog):
         tag_content_type = self.is_emoji_or_media_url(tag_details['content'])
 
         if tag_content_type is TagContentType.IMAGE:
-            embed = discord.Embed(colour=0x36393E)
+            embed = discord.Embed(colour=0x2F3136)
             embed.set_image(url=tag_details['content'])
             return await message.channel.send(embed=embed)
 

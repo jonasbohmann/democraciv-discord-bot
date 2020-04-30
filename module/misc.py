@@ -169,7 +169,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         embed = self.bot.embeds.embed_builder(title=f"{config.SPOTIFY_LOGO}  {member.name} on Spotify",
                                               description="", has_footer=False,
-                                              colour=0x36393E, footer=f"Use `{ctx.prefix}lyrics` to get lyrics"
+                                              colour=0x2F3136, footer=f"Use `{ctx.prefix}lyrics` to get lyrics"
                                                                       f" for a song!")
         embed.add_field(name="Song", value=f"[{member_spotify.title}](https://open.spotify.com/"
                                            f"track/{member_spotify.track_id})", inline=False)
@@ -269,7 +269,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
             if len(lyrics['lyrics']) <= 2048:
                 embed = self.bot.embeds.embed_builder(title=f"{lyrics['title']} by {lyrics['author']}",
-                                                      description=lyrics['lyrics'], colour=0x36393E)
+                                                      description=lyrics['lyrics'], colour=0x2F3136)
                 embed.url = lyrics['links']['genius']
                 embed.set_thumbnail(url=lyrics['thumbnail']['genius'])
                 return await ctx.send(embed=embed)
@@ -277,7 +277,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
             pages = Pages(ctx=ctx, entries=lyrics['lyrics'].splitlines(), show_entry_count=False,
                           title=f"{lyrics['title']} by {lyrics['author']}", show_index=False,
                           title_url=lyrics['links']['genius'], thumbnail=lyrics['thumbnail']['genius'], per_page=20,
-                          colour=0x36393E, show_amount_of_pages=True)
+                          colour=0x2F3136, show_amount_of_pages=True)
         except KeyError:
             return await ctx.send(f":x: Couldn't find anything that matches `{query}`.")
 
