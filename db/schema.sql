@@ -16,10 +16,8 @@ CREATE TABLE IF NOT EXISTS guilds(
 CREATE TABLE IF NOT EXISTS roles(
     guild_id bigint references guilds(id),
     role_id bigint,
-    role_name text,
     join_message text,
-    UNIQUE (guild_id, role_id),
-    UNIQUE (guild_id, role_name)
+    UNIQUE (guild_id, role_id)
 );
 
 CREATE TABLE IF NOT EXISTS reddit_posts(

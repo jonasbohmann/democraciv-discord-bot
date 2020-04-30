@@ -89,8 +89,7 @@ class Roles(commands.Cog, name="Selfroles"):
 
         if isinstance(role_name, str):
             await ctx.send(
-                f":white_check_mark: I will **create a new role** on this server named `{role_name}`"
-                f" for this.")
+                f":white_check_mark: I will **create a new role** on this server named `{role_name}` for this.")
             try:
                 discord_role = await ctx.guild.create_role(name=role_name)
             except discord.Forbidden:
@@ -100,8 +99,7 @@ class Roles(commands.Cog, name="Selfroles"):
             discord_role = role_name
 
             await ctx.send(
-                f":white_check_mark: I'll use the **pre-existing role** named "
-                f"`{discord_role.name}` for this.")
+                f":white_check_mark: I'll use the **pre-existing role** named `{discord_role.name}` for this.")
 
         await ctx.send(":information_source: Reply with a short message the user should see when they get the role.")
 
@@ -111,9 +109,8 @@ class Roles(commands.Cog, name="Selfroles"):
             return
 
         try:
-            await self.bot.db.execute("INSERT INTO roles (guild_id, role_id, role_name, join_message) "
-                                      "VALUES ($1, $2, $3, $4)", ctx.guild.id, discord_role.id,
-                                      discord_role.name.lower(), role_join_message)
+            await self.bot.db.execute("INSERT INTO roles (guild_id, role_id, join_message) VALUES ($1, $2, $3)",
+                                      ctx.guild.id, discord_role.id, role_join_message)
         except asyncpg.UniqueViolationError:
             return await ctx.send(":x: This role was already added as a selfrole.")
 
@@ -150,8 +147,8 @@ class Roles(commands.Cog, name="Selfroles"):
             await ctx.send(f":white_check_mark: The `{role}` selfrole and its Discord role were deleted.")
 
         else:
-            await ctx.send(f":white_check_mark: The `{role}` selfrole was deleted from the `-roles` list but "
-                           f"its Discord role still exists.")
+            await ctx.send(f":white_check_mark: The `{role}` selfrole was removed from the `-roles` list but "
+                           f"I did not delete its Discord role.")
 
 
 def setup(bot):

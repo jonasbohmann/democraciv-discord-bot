@@ -44,8 +44,20 @@ class Selfrole(commands.Converter):
 
     @classmethod
     async def convert(cls, ctx, argument):
-        role_record = await ctx.bot.db.fetchrow("SELECT * FROM roles WHERE guild_id = $1 AND role_name = $2",
-                                                ctx.guild.id, argument.lower())
+        arg = argument.lower()
+
+        def predicate(r):
+            return r.name.lower() == arg
+
+        role = discord.utils.find(predicate, ctx.guild.roles)
+
+        if not role:
+            raise NotFoundError(f":x: There is no selfrole on this server that matches `{argument}`. "
+                                f"If you're trying to join or leave a political party,"
+                                f" check `{ctx.prefix}help Political Parties`")
+
+        role_record = await ctx.bot.db.fetchrow("SELECT * FROM roles WHERE guild_id = $1 AND role_id = $2",
+                                                ctx.guild.id, role.id)
 
         if role_record:
             return cls(join_message=role_record['join_message'], role=role_record['role_id'],
