@@ -107,7 +107,7 @@ class Ministry(commands.Cog):
         if pretty_bills is None:
             pretty_bills = 'There are no new bills to vote on.'
         else:
-            pretty_bills = f"You can vote on new bills, check `{ctx.prefix}ministry bills`."
+            pretty_bills = f":mailbox:  You can vote on new bills, check `{ctx.prefix}ministry bills`."
 
         minister_value = []
 

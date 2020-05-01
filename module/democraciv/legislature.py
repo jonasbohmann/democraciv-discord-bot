@@ -120,8 +120,8 @@ class Legislature(commands.Cog):
 
         embed.add_field(name="Legislative Cabinet", value='\n'.join(speaker_value))
         embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
-                                            f"[Docket]({links.legislativedocket})\n"
                                             f"[Legal Code]({links.laws})\n"
+                                            f"[Legislative Docket]({links.legislativedocket})\n"
                                             f"[Legislative Procedures]({links.legislativeprocedures})", inline=True)
         embed.add_field(name="Current Session", value=current_session_value, inline=False)
         await ctx.send(embed=embed)
