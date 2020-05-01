@@ -1,5 +1,6 @@
-import enum
 import re
+import enum
+import typing
 import discord
 
 import util.utils as utils
@@ -84,7 +85,7 @@ class Tags(commands.Cog):
     @tags.command(name="from")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def _from(self, ctx, member: discord.Member = None):
+    async def _from(self, ctx, member: typing.Union[discord.Member, discord.User] = None):
         """List the tags that someone made"""
 
         member = member or ctx.author
@@ -315,10 +316,17 @@ class Tags(commands.Cog):
                                tag_content_type is TagContentType.IMAGE else "No"
         is_global = "Yes" if tag.is_global else "No"
 
-        if tag.author is not None:
+        if isinstance(tag.author, discord.Member):
             embed.add_field(name="Author", value=tag.author.mention, inline=False)
             embed.set_author(name=tag.author.name, icon_url=tag.author.avatar_url_as(static_format="png"))
-        else:
+
+        elif isinstance(tag.author, discord.User):
+            embed.add_field(name="Author", value=f"*The author of this tag left this server.*\n"
+                                                 f"*You can claim this tag to make it yours with*\n"
+                                                 f"`{config.BOT_PREFIX}tag claim {tag.name}`", inline=False)
+            embed.set_author(name=tag.author.name, icon_url=tag.author.avatar_url_as(static_format="png"))
+
+        elif tag.author is None:
             embed.add_field(name="Author", value=f"*The author of this tag left this server.*\n"
                                                  f"*You can claim this tag to make it yours with*\n"
                                                  f"`{config.BOT_PREFIX}tag claim {tag.name}`", inline=False)
