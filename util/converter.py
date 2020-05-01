@@ -177,7 +177,14 @@ class Tag(commands.Converter):
 
     @property
     def author(self) -> typing.Union[discord.Member, discord.User, None]:
-        user = self.guild.get_member(self._author) or self._bot.get_user(self._author) or None
+        user = None
+
+        if self.guild:
+            user = self.guild.get_member(self._author)
+
+        if user is None:
+            user = self._bot.get_user(self._author)
+
         return user
 
     @property

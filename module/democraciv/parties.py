@@ -202,8 +202,8 @@ class Party(commands.Cog, name='Political Parties'):
         if not party_invite:
             return None
 
-        discord_invite_pattern = re.compile("(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
-        if not discord_invite_pattern.match(party_invite):
+        discord_invite_pattern = re.compile(r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
+        if not discord_invite_pattern.fullmatch(party_invite):
             party_invite = None
 
         is_private = False

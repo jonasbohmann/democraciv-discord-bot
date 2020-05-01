@@ -18,6 +18,8 @@ class TagContentType(enum.Enum):
     INVITE = 3
     CUSTOM_EMOJI = 4
     YOUTUBE_TENOR_GIPHY = 5
+    VIDEO = 6
+    PARTIAL_IMAGE = 7
 
 
 class Tags(commands.Cog):
@@ -317,9 +319,9 @@ class Tags(commands.Cog):
             embed.add_field(name="Author", value=tag.author.mention, inline=False)
             embed.set_author(name=tag.author.name, icon_url=tag.author.avatar_url_as(static_format="png"))
         else:
-            embed.add_field(name="Author", value=f"*The author of this tag left this server."
-                                                 f" You can claim this tag to make it yours with* "
-                                                 f"`{config.BOT_PREFIX}tag claim {tag.name}`*!*", inline=False)
+            embed.add_field(name="Author", value=f"*The author of this tag left this server.*\n"
+                                                 f"*You can claim this tag to make it yours with*\n"
+                                                 f"`{config.BOT_PREFIX}tag claim {tag.name}`", inline=False)
 
         embed.add_field(name="Global Tag", value=is_global, inline=True)
         embed.add_field(name="Embedded Tag", value=is_embedded, inline=True)
@@ -448,25 +450,28 @@ class Tags(commands.Cog):
 
     @staticmethod
     def is_emoji_or_media_url(tag_content: str) -> TagContentType:
-        emoji_pattern = re.compile("<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>")
-        discord_invite_pattern = re.compile("(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
-
+        emoji_pattern = re.compile(r"<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>")
+        discord_invite_pattern = re.compile(r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
         url_pattern = re.compile(
-            "((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*")
+            r"((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*")
+
         url_endings_image = ('.jpeg', '.jpg', '.png', '.gif', '.webp', '.bmp', '.img', '.svg')
         url_endings_video = ('.avi', '.mp4', '.mp3', '.mov', '.flv', '.wmv')
 
-        if url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings_image)):
+        if url_pattern.fullmatch(tag_content) and (tag_content.lower().endswith(url_endings_image)):
             return TagContentType.IMAGE
 
+        elif url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings_image)):
+            return TagContentType.PARTIAL_IMAGE
+
         elif url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings_video)):
-            return TagContentType.YOUTUBE_TENOR_GIPHY
+            return TagContentType.VIDEO
 
         elif url_pattern.match(tag_content) and any(s in tag_content for s in
                                                     ['youtube', 'youtu.be', 'tenor.com', 'gph.is', 'giphy.com']):
             return TagContentType.YOUTUBE_TENOR_GIPHY
 
-        elif emoji_pattern.match(tag_content):
+        elif emoji_pattern.fullmatch(tag_content):
             return TagContentType.CUSTOM_EMOJI
 
         elif discord_invite_pattern.match(tag_content):
@@ -525,7 +530,11 @@ class Tags(commands.Cog):
         if tag_content_type is TagContentType.IMAGE:
             embed = discord.Embed(colour=0x2F3136)
             embed.set_image(url=tag_details['content'])
-            return await message.channel.send(embed=embed)
+
+            try:
+                return await message.channel.send(embed=embed)
+            except discord.HTTPException:
+                return await message.channel.send(discord.utils.escape_mentions(tag_details['content']))
 
         elif tag_content_type is not TagContentType.TEXT:
             return await message.channel.send(discord.utils.escape_mentions(tag_details['content']))
