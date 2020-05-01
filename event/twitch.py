@@ -49,7 +49,8 @@ class Twitch(commands.Cog):
         announced, also returns relevant stream data."""
 
         async with self.bot.session.get(self.twitch_API_url,
-                                        headers={'Authorization': f"Bearer {self.twitch_oauth_token}"}) as response:
+                                        headers={'Authorization': f"Bearer {self.twitch_oauth_token}",
+                                                 'Client-ID': token.TWITCH_CLIENT_ID}) as response:
             if response.status == 200:
                 twitch = await response.json()
             elif response.status == 401:
