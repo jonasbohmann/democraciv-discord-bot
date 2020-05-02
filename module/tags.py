@@ -385,7 +385,7 @@ class Tags(commands.Cog):
             return await ctx.send(":x: The title cannot be longer than 256 characters.")
 
         await ctx.send(":information_source: Reply with the updated **content** of this tag.")
-        new_content = await flow.get_text_input(300)
+        new_content = await flow.get_tag_content(300)
 
         if new_content is None:
             return
