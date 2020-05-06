@@ -409,6 +409,40 @@ class Tags(commands.Cog):
                                       tag.id, new_title)
             await ctx.send(":white_check_mark: Your tag was edited.")
 
+    @tags.command(name="search", aliases=['s'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    async def search(self, ctx, *, query: str):
+
+        if len(query) < 3:
+            return await ctx.send(":x: The query to search for must be at least 3 characters.")
+
+        db_query = """SELECT tag_id FROM guild_tags_alias
+                      WHERE (global = true AND alias % $1) OR (alias % $1 AND guild_id = $2)
+                      ORDER BY similarity(alias, $1)
+                      LIMIT 20
+                    """
+
+        tags = await self.bot.db.fetch(db_query, query.lower(), ctx.guild.id)
+        pretty_names = dict()  # Abuse dict as ordered set since you can't use DISTINCT in above SQL query
+
+        if not tags:
+            pretty_names['Nothing found.'] = None
+
+        else:
+            for record in tags:
+                details = await self.bot.db.fetchrow("SELECT name, title from guild_tags WHERE id = $1", record['tag_id'])
+                if details:
+                    pretty_names[f"`{config.BOT_PREFIX}{details['name']}`  {details['title']}"] = None
+
+        pages = Pages(ctx=ctx, entries=list(pretty_names), show_entry_count=False,
+                      title=f"Tag Search Results for '{query}'", show_index=False, show_amount_of_pages=True)
+
+        if pages.maximum_pages == 1:
+            pages.show_amount_of_pages = False
+
+        await pages.paginate()
+
     @tags.command(name="toggleglobal")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
