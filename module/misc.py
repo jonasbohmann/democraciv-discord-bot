@@ -108,13 +108,13 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
     @whois.error
     async def whois_error(self, ctx, error):
-        if isinstance(error, commands.BadArgument):
+        if isinstance(error, commands.BadUnionArgument):
             return
 
     @commands.command(name='avatar')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def avatar(self, ctx, *, member: discord.Member = None):
+    async def avatar(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember] = None):
         """Get a members's avatar in detail
 
         **Example:**
@@ -134,7 +134,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
     @avatar.error
     async def avatar_error(self, ctx, error):
-        if isinstance(error, commands.BadArgument):
+        if isinstance(error, commands.BadUnionArgument):
             return
 
     @staticmethod
@@ -148,7 +148,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
     @commands.command(name='spotify')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def spotify(self, ctx, *, member: discord.Member = None):
+    async def spotify(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember] = None):
         """See what someone is listening to on Spotify
 
             **Example:**
@@ -180,7 +180,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
     @spotify.error
     async def spotify_error(self, ctx, error):
-        if isinstance(error, commands.BadArgument):
+        if isinstance(error, commands.BadUnionArgument):
             return
 
     @commands.command(name='veterans')
@@ -241,7 +241,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         **Usage:**
             `-lyrics` to get the lyrics to the song you're currently listening to on Spotify
-            `-lyrics <song>` to get the lyrics for a specific song
+            `-lyrics <query>` to search for lyrics that match your query
         """
 
         if query is None:
@@ -405,7 +405,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
     @commands.command(name='vibecheck', hidden=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def vibecheck(self, ctx, *, member: discord.Member = None):
+    async def vibecheck(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember] = None):
         """vibecheck"""
 
         member = member or ctx.author

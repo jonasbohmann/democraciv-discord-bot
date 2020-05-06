@@ -10,7 +10,7 @@ from config import config
 from util.flow import Flow
 from discord.ext import commands
 from util.paginator import Pages
-from util.converter import Tag, OwnedTag
+from util.converter import Tag, OwnedTag, CaseInsensitiveMember
 
 
 class TagContentType(enum.Enum):
@@ -85,7 +85,7 @@ class Tags(commands.Cog):
     @tags.command(name="from")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def _from(self, ctx, member: typing.Union[discord.Member, discord.User] = None):
+    async def _from(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
         """List the tags that someone made"""
 
         member = member or ctx.author
@@ -413,6 +413,7 @@ class Tags(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def search(self, ctx, *, query: str):
+        """Search for a global or local tag on this server"""
 
         if len(query) < 3:
             return await ctx.send(":x: The query to search for must be at least 3 characters.")

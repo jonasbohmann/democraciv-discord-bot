@@ -130,7 +130,9 @@ class ErrorHandler(commands.Cog):
         error = getattr(error, 'original', error)
 
         # This prevents any commands with local handlers being handled here
-        if hasattr(ctx.command, 'on_error') and isinstance(error, commands.BadArgument):
+        if hasattr(ctx.command, 'on_error') and (isinstance(error, commands.BadArgument) or
+                                                 isinstance(error, commands.BadUnionArgument)):
+
             return
 
         # Anything in ignored will return

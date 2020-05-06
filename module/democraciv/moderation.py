@@ -1,12 +1,14 @@
+import typing
 import discord
 import datetime
+
 
 from util.flow import Flow
 from discord.ext import commands
 from util import utils, mk, exceptions
 from config import config, token, links
 from util.exceptions import ForbiddenTask
-from util.converter import UnbanConverter, BanConverter
+from util.converter import UnbanConverter, BanConverter, CaseInsensitiveMember
 
 
 class Moderation(commands.Cog):
@@ -255,7 +257,7 @@ class Moderation(commands.Cog):
 
     @commands.command(name='alt')
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
-    async def alt(self, ctx, member: discord.Member, check_messages: bool = False):
+    async def alt(self, ctx, member: typing.Union[discord.Member, CaseInsensitiveMember], check_messages: bool = False):
         """Check if someone is an alt"""
         async with ctx.typing():
             chance, details = await self.calculate_alt_chance(member, check_messages)
@@ -328,7 +330,7 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @commands.bot_has_permissions(kick_members=True)
     @commands.has_permissions(kick_members=True)
-    async def kick(self, ctx, member: discord.Member, *, reason: str = None):
+    async def kick(self, ctx, member: typing.Union[discord.Member, CaseInsensitiveMember], *, reason: str = None):
         """Kick a member"""
         if member == ctx.author:
             return await ctx.send(":x: You can't kick yourself.")
@@ -363,10 +365,15 @@ class Moderation(commands.Cog):
 
         await ctx.send(f":white_check_mark: {member} was kicked.")
 
+    @kick.error
+    async def kickerror(self, ctx, error):
+        if isinstance(error, commands.BadUnionArgument):
+            await ctx.send(":x: I couldn't find that person.")
+
     @commands.command(name="clear")
     @commands.guild_only()
     @commands.has_guild_permissions(manage_messages=True)
-    async def clear(self, ctx, amount: int, target: discord.Member = None):
+    async def clear(self, ctx, amount: int, target: typing.Union[discord.Member, CaseInsensitiveMember] = None):
         """Purge an amount of messages in the current channel"""
         if amount > 500 or amount < 0:
             return await ctx.send(":x: Invalid amount! The maximum is 500.")
@@ -413,7 +420,7 @@ class Moderation(commands.Cog):
     @commands.command(name='mute')
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
-    async def mute(self, ctx, member: discord.Member, *, reason: str = None):
+    async def mute(self, ctx, member: typing.Union[discord.Member, CaseInsensitiveMember], *, reason: str = None):
         """Mute a member"""
 
         muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
@@ -443,10 +450,6 @@ class Moderation(commands.Cog):
         if member == ctx.author:
             return await ctx.send(":x: You can't mute yourself.")
 
-        if member == self.bot.owner:
-            #  :)
-            raise exceptions.ForbiddenError()
-
         if member == ctx.guild.me:
             return await ctx.send(":x: You can't mute me.")
 
@@ -462,10 +465,15 @@ class Moderation(commands.Cog):
 
         await ctx.send(f":white_check_mark: {member} was muted.")
 
+    @mute.error
+    async def muteerror(self, ctx, error):
+        if isinstance(error, commands.BadUnionArgument):
+            await ctx.send(":x: I couldn't find that person.")
+
     @commands.command(name='unmute')
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
-    async def unmute(self, ctx, member: discord.Member):
+    async def unmute(self, ctx, member: typing.Union[discord.Member, CaseInsensitiveMember]):
         """Unmute a member"""
 
         muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
@@ -487,6 +495,11 @@ class Moderation(commands.Cog):
             pass
 
         await ctx.send(f":white_check_mark: {member} was unmuted.")
+
+    @unmute.error
+    async def unmuteerror(self, ctx, error):
+        if isinstance(error, commands.BadUnionArgument):
+            await ctx.send(":x: I couldn't find that person.")
 
     @commands.command(name='ban')
     @commands.guild_only()
