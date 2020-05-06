@@ -77,7 +77,7 @@ class ErrorHandler(commands.Cog):
         FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
         DEALINGS IN THE SOFTWARE.
         """
-        missing = [perm.replace('_', ' ').replace('guild', 'server').title() for perm in missing_perms]
+        missing = [f"`{perm.replace('_', ' ').replace('guild', 'server').title()}`" for perm in missing_perms]
 
         if len(missing) > 2:
             fmt = '{}, and {}'.format(", ".join(missing[:-1]), missing[-1])
@@ -112,9 +112,9 @@ class ErrorHandler(commands.Cog):
         DEALINGS IN THE SOFTWARE.
         """
         if isinstance(missing_roles[0], mk.DemocracivRole):
-            missing = ["'{}'".format(role.printable_name) for role in missing_roles]
+            missing = [f"`{role.printable_name}`" for role in missing_roles]
         else:
-            missing = ["'{}'".format(role) for role in missing_roles]
+            missing = [f"`{role}`" for role in missing_roles]
 
         if len(missing) > 2:
             fmt = '{}, or {}'.format(", ".join(missing[:-1]), missing[-1])
@@ -165,11 +165,11 @@ class ErrorHandler(commands.Cog):
             return await ctx.send(f":x: This command is already being used right now, try again later.")
 
         elif isinstance(error, commands.MissingPermissions):
-            return await ctx.send(f":x: You need '{self.format_permissions(error.missing_perms)}' permission(s) to use"
+            return await ctx.send(f":x: You need {self.format_permissions(error.missing_perms)} permission(s) to use"
                                   f" this command.")
 
         elif isinstance(error, commands.MissingRole):
-            return await ctx.send(f":x: You need the '{error.missing_role}' role in order to use this command.")
+            return await ctx.send(f":x: You need the `{error.missing_role}` role in order to use this command.")
 
         elif isinstance(error, commands.MissingAnyRole):
             return await ctx.send(f":x: You need at least one of these roles in order to use this command: "
@@ -177,12 +177,12 @@ class ErrorHandler(commands.Cog):
 
         elif isinstance(error, commands.BotMissingPermissions):
             await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
-            return await ctx.send(f":x: I don't have '{self.format_permissions(error.missing_perms)}' permission(s)"
+            return await ctx.send(f":x: I don't have {self.format_permissions(error.missing_perms)} permission(s)"
                                   f" to perform this action for you.")
 
         elif isinstance(error, commands.BotMissingRole):
             await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
-            return await ctx.send(f":x: I need the '{error.missing_role}' role in order to perform this"
+            return await ctx.send(f":x: I need the `{error.missing_role}` role in order to perform this"
                                   f" action for you.")
 
         elif isinstance(error, commands.BotMissingAnyRole):
@@ -191,10 +191,10 @@ class ErrorHandler(commands.Cog):
                                   f"{self.format_roles(error.missing_roles)}")
 
         elif isinstance(error, commands.NoPrivateMessage):
-            return await ctx.send(":x: This command cannot be used in DMs!")
+            return await ctx.send(":x: This command cannot be used in DMs.")
 
         elif isinstance(error, commands.PrivateMessageOnly):
-            return await ctx.send(":x: This command can only be used in DMs!")
+            return await ctx.send(":x: This command can only be used in DMs.")
 
         elif isinstance(error, exceptions.PartyNotFoundError):
             await ctx.send(f":x: There is no political party named `{error.party}`.")
