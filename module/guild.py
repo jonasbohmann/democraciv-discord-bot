@@ -50,7 +50,7 @@ class Guild(commands.Cog, name="Server"):
                                                  f"{len(ctx.guild.roles)} roles\n"
                                                  f"{len(ctx.guild.emojis)} custom emojis")
         embed.set_footer(text=f"Server was created on {ctx.guild.created_at.strftime('%A, %B %d %Y')}")
-        embed.set_thumbnail(url=ctx.guild.icon_url_as(format='png'))
+        embed.set_thumbnail(url=ctx.guild.icon_url_as(static_format='png'))
         await ctx.send(embed=embed)
 
     @commands.Cog.listener(name="on_member_join")

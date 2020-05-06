@@ -200,7 +200,7 @@ class Starboard(commands.Cog):
         embed.set_footer(text=footer_text, icon_url="https://cdn.discordapp.com/attachments/"
                                                     "639549494693724170/679824104190115911/star.png")
         embed.timestamp = message.created_at
-        embed.set_author(name=message.author.display_name, icon_url=message.author.avatar_url_as(format='png'))
+        embed.set_author(name=message.author.display_name, icon_url=message.author.avatar_url_as(static_format='png'))
         embed.add_field(name="Original", value=f"[Jump]({message.jump_url})", inline=False)
 
         if message.embeds:
@@ -425,7 +425,7 @@ class Starboard(commands.Cog):
                                               description='',
                                               colour=0xFFAC33,
                                               has_footer=False)
-        embed.set_author(name=member.display_name, icon_url=member.avatar_url_as(format='png'))
+        embed.set_author(name=member.display_name, icon_url=member.avatar_url_as(static_format='png'))
 
         # this query calculates
         # 1 - stars received,
@@ -468,17 +468,16 @@ class Starboard(commands.Cog):
         given = records[1]['Stars']
         top_three = records[2:]
         top_three_with_link = []
+
         for post in top_three:
             record = await self.bot.db.fetchval("SELECT message_jump_url FROM starboard_entries "
                                                 "WHERE starboard_message_id = $1", post['ID'])
             top_three_with_link.append({"ID": f"[Jump to Message]({record})", "Stars": post['Stars']})
 
-        # this query calculates how many of our messages were starred
-        query = """SELECT COUNT(*) FROM starboard_entries WHERE guild_id=$1 AND author_id=$2;"""
-        record = await self.bot.db.fetchrow(query, self.bot.democraciv_guild_object.id, member.id)
-        messages_starred = record[0]
+        query = """SELECT COUNT(*) FROM starboard_entries WHERE starboard_message_id IS NOT NULL AND author_id = $1;"""
+        messages_starred = await self.bot.db.fetchval(query, member.id)
 
-        embed.add_field(name='Messages Starred', value=messages_starred)
+        embed.add_field(name='Messages on the Starboard', value=messages_starred)
         embed.add_field(name='Stars Received', value=received)
         embed.add_field(name='Stars Given', value=given)
 

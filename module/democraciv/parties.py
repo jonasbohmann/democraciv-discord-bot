@@ -70,7 +70,7 @@ class Party(commands.Cog, name='Political Parties'):
                                               has_footer=False)
 
         if invite:
-            embed.set_thumbnail(url=invite.guild.icon_url_as(format='png'))
+            embed.set_thumbnail(url=invite.guild.icon_url_as(static_format='png'))
 
         if party.leader:
             embed.add_field(name="Leader or Representative", value=party.leader.mention)
