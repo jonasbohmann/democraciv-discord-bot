@@ -826,10 +826,10 @@ class Legislature(commands.Cog):
             embed = self.bot.embeds.embed_builder(title=f"Statistics for the {mk.NATION_ADJECTIVE} Legislature",
                                                   description="")
 
-            general_value = f"Total Amount of Legislative Sessions: {stats[0]}\n" \
-                            f"Total Amount of Submitted Bills: {stats[1]}\n" \
-                            f"Total Amount of Submitted Motions: {stats[3]}\n" \
-                            f"Total Amount of Laws: {stats[2]}"
+            general_value = f"Legislative Sessions: {stats[0]}\n" \
+                            f"Submitted Bills: {stats[1]}\n" \
+                            f"Submitted Motions: {stats[3]}\n" \
+                            f"Active Laws: {stats[2]}"
 
             embed.add_field(name="General Statistics", value=general_value)
             embed.add_field(name="Top Speakers or Vice-Speakers of the Legislature ", value=stats[5], inline=False)

@@ -139,8 +139,7 @@ class Ministry(commands.Cog):
         if pretty_bills is None:
             pretty_bills = ['There are no new bills to vote on.']
 
-        help_description = f"Use {self.bot.commands_prefix}ministry veto <bill_id> to veto a bill, or " \
-                           f"{self.bot.commands_prefix}ministry pass <bill_id> to pass a bill into law."
+        help_description = f"Use '{config.BOT_PREFIX}help ministry' to learn how to pass and veto bills."
 
         pages = Pages(ctx=ctx, entries=pretty_bills, show_entry_count=False, title="Open Bills to Vote On",
                       show_index=False, footer_text=help_description, show_amount_of_pages=True)
