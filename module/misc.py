@@ -534,7 +534,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
             if response.status != 200:
                 return await ctx.send(':x: No cat found :(')
 
-            js = await resp.json()
+            js = await response.json()
 
             embed = self.bot.embeds.embed_builder(title="Random Cat", description="", has_footer=False)
             embed.set_image(url=js[0]['url'])
