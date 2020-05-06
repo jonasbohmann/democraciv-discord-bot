@@ -32,6 +32,8 @@ from util import mk
 from config import config, token
 from discord.ext import commands, tasks
 
+from util.converter import CaseInsensitiveMember
+
 
 class Starboard(commands.Cog):
     """The Starboard. If a message on the Democraciv Server has at least n :star: reactions,
@@ -408,11 +410,83 @@ class Starboard(commands.Cog):
         if ctx.invoked_subcommand is None:
             return await ctx.send_help(ctx.command.cog)
 
-    @starboard.command(name='stats')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def starboardstats(self, ctx):
-        """Statistics about our Starboard"""
+    @staticmethod
+    def records_to_value(records, fmt=None, default='-'):
+        if not records:
+            return default
 
+        emoji = 0x1f947  # :first_place:
+        fmt = fmt or (lambda o: o)
+        return '\n'.join(
+            f'{chr(emoji + i)} {fmt(r["ID"])} ({r["Stars"]} stars)' for i, r in enumerate(records))
+
+    async def star_member_stats(self, ctx, member):
+        embed = self.bot.embeds.embed_builder(title='',
+                                              description='',
+                                              colour=0xFFAC33,
+                                              has_footer=False)
+        embed.set_author(name=member.display_name, icon_url=member.avatar_url_as(format='png'))
+
+        # this query calculates
+        # 1 - stars received,
+        # 2 - stars given
+        # The rest are the top 3 starred posts
+
+        query = """WITH t AS (
+                       SELECT entry.author_id AS entry_author_id,
+                              starboard_starrers.starrer_id,
+                              entry.starboard_message_id
+                       FROM starboard_starrers
+                       INNER JOIN starboard_entries entry
+                       ON entry.id=starboard_starrers.entry_id
+                       WHERE entry.guild_id=$1
+                   )
+                   (
+                       SELECT '0'::bigint AS "ID", COUNT(*) AS "Stars"
+                       FROM t
+                       WHERE t.entry_author_id=$2
+                   )
+                   UNION ALL
+                   (
+                       SELECT '0'::bigint AS "ID", COUNT(*) AS "Stars"
+                       FROM t
+                       WHERE t.starrer_id=$2
+                   )
+                   UNION ALL
+                   (
+                       SELECT t.starboard_message_id AS "ID", COUNT(*) AS "Stars"
+                       FROM t
+                       WHERE t.entry_author_id=$2
+                       GROUP BY t.starboard_message_id
+                       ORDER BY "Stars" DESC
+                       LIMIT 3
+                   )
+                """
+
+        records = await self.bot.db.fetch(query, self.bot.democraciv_guild_object.id, member.id)
+        received = records[0]['Stars']
+        given = records[1]['Stars']
+        top_three = records[2:]
+        top_three_with_link = []
+        for post in top_three:
+            record = await self.bot.db.fetchval("SELECT message_jump_url FROM starboard_entries "
+                                                "WHERE starboard_message_id = $1", post['ID'])
+            top_three_with_link.append({"ID": f"[Jump to Message]({record})", "Stars": post['Stars']})
+
+        # this query calculates how many of our messages were starred
+        query = """SELECT COUNT(*) FROM starboard_entries WHERE guild_id=$1 AND author_id=$2;"""
+        record = await self.bot.db.fetchrow(query, self.bot.democraciv_guild_object.id, member.id)
+        messages_starred = record[0]
+
+        embed.add_field(name='Messages Starred', value=messages_starred)
+        embed.add_field(name='Stars Received', value=received)
+        embed.add_field(name='Stars Given', value=given)
+
+        embed.add_field(name='Top Starred Posts', value=self.records_to_value(top_three_with_link), inline=False)
+
+        await ctx.send(embed=embed)
+
+    async def star_overall_stats(self, ctx):
         total_starred_messages = await self.bot.db.fetchval("SELECT COUNT(*) FROM starboard_entries")
         total_stars = await self.bot.db.fetchval("SELECT COUNT(*) FROM starboard_starrers INNER JOIN starboard_entries "
                                                  "entry ON entry.id = starboard_starrers.entry_id;")
@@ -428,48 +502,39 @@ class Starboard(commands.Cog):
         # top 3 most starred authors  (Type 1)
         # top 3 star givers (Type 2)
         query = """WITH t AS (
-                       SELECT
-                           entry.author_id AS entry_author_id,
-                           starboard_starrers.starrer_id,
-                           entry.starboard_message_id
-                       FROM starboard_starrers
-                       INNER JOIN starboard_entries entry
-                       ON entry.id = starboard_starrers.entry_id
-                   )
-                   (
-                       SELECT t.entry_author_id AS "ID", 1 AS "Type", COUNT(*) AS "Stars"
-                       FROM t
-                       WHERE t.entry_author_id IS NOT NULL
-                       GROUP BY t.entry_author_id
-                       ORDER BY "Stars" DESC
-                       LIMIT 3
-                   )
-                   UNION ALL
-                   (
-                       SELECT t.starrer_id AS "ID", 2 AS "Type", COUNT(*) AS "Stars"
-                       FROM t
-                       GROUP BY t.starrer_id
-                       ORDER BY "Stars" DESC
-                       LIMIT 3
-                   )
-                   UNION ALL
-                   (
-                       SELECT t.starboard_message_id AS "ID", 3 AS "Type", COUNT(*) AS "Stars"
-                       FROM t
-                       WHERE t.starboard_message_id IS NOT NULL
-                       GROUP BY t.starboard_message_id
-                       ORDER BY "Stars" DESC
-                       LIMIT 3
-                   );"""
-
-        def records_to_value(records, fmt=None, default='None!'):
-            if not records:
-                return default
-
-            emoji = 0x1f947  # :first_place:
-            fmt = fmt or (lambda o: o)
-            return '\n'.join(
-                f'{chr(emoji + i)} {fmt(r["ID"])} ({r["Stars"]} stars)' for i, r in enumerate(records))
+                               SELECT
+                                   entry.author_id AS entry_author_id,
+                                   starboard_starrers.starrer_id,
+                                   entry.starboard_message_id
+                               FROM starboard_starrers
+                               INNER JOIN starboard_entries entry
+                               ON entry.id = starboard_starrers.entry_id
+                           )
+                           (
+                               SELECT t.entry_author_id AS "ID", 1 AS "Type", COUNT(*) AS "Stars"
+                               FROM t
+                               WHERE t.entry_author_id IS NOT NULL
+                               GROUP BY t.entry_author_id
+                               ORDER BY "Stars" DESC
+                               LIMIT 3
+                           )
+                           UNION ALL
+                           (
+                               SELECT t.starrer_id AS "ID", 2 AS "Type", COUNT(*) AS "Stars"
+                               FROM t
+                               GROUP BY t.starrer_id
+                               ORDER BY "Stars" DESC
+                               LIMIT 3
+                           )
+                           UNION ALL
+                           (
+                               SELECT t.starboard_message_id AS "ID", 3 AS "Type", COUNT(*) AS "Stars"
+                               FROM t
+                               WHERE t.starboard_message_id IS NOT NULL
+                               GROUP BY t.starboard_message_id
+                               ORDER BY "Stars" DESC
+                               LIMIT 3
+                           );"""
 
         records = await self.bot.db.fetch(query)
         starred_posts = [r for r in records if r['Type'] == 3]
@@ -480,16 +545,16 @@ class Starboard(commands.Cog):
                                                 "WHERE starboard_message_id = $1", post['ID'])
             starred_posts_with_link.append({"ID": f"[Jump to Message]({record})", "Stars": post['Stars']})
 
-        embed.add_field(name='Top Starred Messages', value=records_to_value(starred_posts_with_link), inline=False)
+        embed.add_field(name='Top Starred Messages', value=self.records_to_value(starred_posts_with_link), inline=False)
 
         to_mention = lambda o: f'<@{o}>'
 
         star_receivers = [r for r in records if r['Type'] == 1]
-        value = records_to_value(star_receivers, to_mention, default='No one!')
+        value = self.records_to_value(star_receivers, to_mention, default='No one!')
         embed.add_field(name='Top Star Receivers', value=value, inline=False)
 
         star_givers = [r for r in records if r['Type'] == 2]
-        value = records_to_value(star_givers, to_mention, default='No one!')
+        value = self.records_to_value(star_givers, to_mention, default='No one!')
         embed.add_field(name='Top Star Givers', value=value, inline=False)
 
         if self.starboard_channel is not None:
@@ -497,6 +562,19 @@ class Starboard(commands.Cog):
                                                                      "639549494693724170/679824104190115911/star.png")
             embed.timestamp = self.starboard_channel.created_at
         await ctx.send(embed=embed)
+
+    @starboard.command(name='stats')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def starboardstats(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
+        """Statistics about our Starboard
+
+        **Usage:**
+             `-star stats` for statistics on the general starboard usage
+             `-star stats <member>` for statistics on the starboard usage of a specific member"""
+        if member is None:
+            await self.star_overall_stats(ctx)
+        else:
+            await self.star_member_stats(ctx, member)
 
 
 def setup(bot):
