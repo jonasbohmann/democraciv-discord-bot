@@ -346,7 +346,7 @@ class Moderation(commands.Cog):
 
         if reason:
             if len(reason) > 400:
-                return await ctx.send(":x: The reason cannot be longer that 400 characters.")
+                return await ctx.send(":x: The reason cannot be longer than 400 characters.")
 
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
         else:
@@ -440,7 +440,7 @@ class Moderation(commands.Cog):
 
         if reason:
             if len(reason) > 400:
-                return await ctx.send(":x: The reason cannot be longer that 400 characters.")
+                return await ctx.send(":x: The reason cannot be longer than 400 characters.")
 
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
         else:
@@ -543,7 +543,7 @@ class Moderation(commands.Cog):
 
         if reason:
             if len(reason) > 400:
-                return await ctx.send(":x: The reason cannot be longer that 400 characters.")
+                return await ctx.send(":x: The reason cannot be longer than 400 characters.")
 
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
         else:
@@ -594,7 +594,7 @@ class Moderation(commands.Cog):
 
         if reason:
             if len(reason) > 400:
-                return await ctx.send(":x: The reason cannot be longer that 400 characters.")
+                return await ctx.send(":x: The reason cannot be longer than 400 characters.")
 
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with reason: {reason}"
         else:

@@ -564,6 +564,10 @@ class Legislature(commands.Cog):
         except discord.Forbidden:
             pass
 
+    @submit.error
+    async def submit_error(self, ctx, error):
+        ctx.command.reset_cooldown(ctx)
+
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)

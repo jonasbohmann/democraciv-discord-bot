@@ -309,12 +309,17 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         await self.role_info(ctx, role)
 
+    @whohas.error
+    async def whohas_error(self, ctx, error):
+        if isinstance(error, commands.BadUnionArgument):
+            return
+
     async def role_info(self, ctx, role: discord.Role):
         if role is None:
             return await ctx.send(":x: `role` is neither a role on this server, nor on the Democraciv server.")
 
         if role.guild.id != ctx.guild.id:
-            description = ":warning:  This role is from the Democraciv server, not from this one!"
+            description = ":warning:  This role is from the Democraciv server, not from this server!"
             role_name = role.name
         else:
             description = ""
@@ -510,25 +515,25 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         """The MIT License (MIT)
 
-                Copyright (c) 2015 Rapptz
+        Copyright (c) 2015 Rapptz
 
-                Permission is hereby granted, free of charge, to any person obtaining a
-                copy of this software and associated documentation files (the "Software"),
-                to deal in the Software without restriction, including without limitation
-                the rights to use, copy, modify, merge, publish, distribute, sublicense,
-                and/or sell copies of the Software, and to permit persons to whom the
-                Software is furnished to do so, subject to the following conditions:
+        Permission is hereby granted, free of charge, to any person obtaining a
+        copy of this software and associated documentation files (the "Software"),
+        to deal in the Software without restriction, including without limitation
+        the rights to use, copy, modify, merge, publish, distribute, sublicense,
+        and/or sell copies of the Software, and to permit persons to whom the
+        Software is furnished to do so, subject to the following conditions:
 
-                The above copyright notice and this permission notice shall be included in
-                all copies or substantial portions of the Software.
+        The above copyright notice and this permission notice shall be included in
+        all copies or substantial portions of the Software.
 
-                THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-                OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-                FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-                AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-                LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-                FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-                DEALINGS IN THE SOFTWARE."""
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+        FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+        DEALINGS IN THE SOFTWARE."""
 
         async with self.bot.session.get('https://api.thecatapi.com/v1/images/search') as response:
             if response.status != 200:

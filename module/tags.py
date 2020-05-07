@@ -43,13 +43,13 @@ class Tags(commands.Cog):
         pretty_tags = []
 
         if global_tags:
-            pretty_tags = ['**Global Tags**']
+            pretty_tags = ['**__Global Tags__**']
 
         for record in global_tags:
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
 
         if all_tags:
-            pretty_tags.append('\n**Local Tags**')
+            pretty_tags.append('\n**__Local Tags__**')
 
         for record in all_tags:
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
@@ -99,7 +99,7 @@ class Tags(commands.Cog):
         for record in all_tags:
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
 
-        if not len(pretty_tags):
+        if not pretty_tags:
             pretty_tags = ['This person hasn\'t made any tags yet.']
 
         pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"{member.name}'s Tags",
@@ -126,9 +126,8 @@ class Tags(commands.Cog):
         if not await self.validate_tag_name(ctx, alias.lower()):
             return
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to add the alias "
-                                      f"`{config.BOT_PREFIX}{alias}` to "
-                                      f"`{config.BOT_PREFIX}{tag.name}`?")
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to add the "
+                                      f"`{config.BOT_PREFIX}{alias}` alias to `{config.BOT_PREFIX}{tag.name}`?")
 
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
 
@@ -146,7 +145,7 @@ class Tags(commands.Cog):
                                                ctx.guild.id, tag.is_global)
 
         if status == "INSERT 0 1":
-            await ctx.send(f':white_check_mark: Added the alias `{config.BOT_PREFIX}{alias}` to '
+            await ctx.send(f':white_check_mark: The `{config.BOT_PREFIX}{alias}` alias was added to '
                            f'`{config.BOT_PREFIX}{tag.name}`.')
 
     @tags.command(name="removealias", aliases=['deletealias'])
