@@ -276,12 +276,16 @@ class Pages:
 class AlternativePages(Pages):
 
     def __init__(self, *args, **kwargs):
-        self.a_title = kwargs.pop('a_title', discord.Embed.Empty)
-        self.a_icon = kwargs.pop('a_icon', discord.Embed.Empty)
+        self.a_title = kwargs.pop('a_title', "")
+        self.a_icon = kwargs.pop('a_icon', EmptyEmbed)
+        self.a_thumbnail = kwargs.pop('a_thumbnail', EmptyEmbed)
         super().__init__(*args, **kwargs)
 
     def prepare_embed(self, entries, page, *, first=False):
         super().prepare_embed(entries, page, first=first)
+
+        if self.a_thumbnail:
+            self.embed.set_thumbnail(url=self.a_thumbnail)
 
         if self.maximum_pages > 1 and self.show_amount_of_pages:
             self.embed.set_footer(text=f'Page {page}/{self.maximum_pages}')

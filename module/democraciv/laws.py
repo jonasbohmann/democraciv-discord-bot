@@ -61,14 +61,20 @@ class Laws(commands.Cog, name='Law'):
             pretty_laws = []
 
             for record in all_laws:
-                pretty_laws.append(f"Law #{record['law_id']} - [{record['bill_name']}]({record['link']})\n")
+                pretty_laws.append(f"Law #{record['law_id']} - [{record['bill_name']}]({record['link']})")
 
             if not pretty_laws:
-                pretty_laws = ['There are no laws yet.']
+                embed = self.bot.embeds.embed_builder(title="There are no laws yet.",
+                                                      description="",
+                                                      has_footer=False)
+                return await ctx.send(embed=embed)
 
-        pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}",
-                      show_index=False, show_amount_of_pages=True,
-                      footer_text=f"Use {self.bot.commands_prefix}law <id> to get more details about a law.")
+        thumbnail = mk.NATION_FLAG_URL or self.bot.democraciv_guild_object.icon_url_as(static_format='png')
+
+        pages = AlternativePages(ctx=ctx, entries=pretty_laws, show_entry_count=False,
+                                 title=f"All Laws in {mk.NATION_NAME}", per_page=14,
+                                 show_index=False, show_amount_of_pages=True,
+                                 a_thumbnail=thumbnail)
         await pages.paginate()
 
     @commands.group(name='law', aliases=['laws'], case_insensitive=True, invoke_without_command=True)
@@ -101,9 +107,8 @@ class Laws(commands.Cog, name='Law'):
 
         embed.add_field(name="Name", value=f"[{law.bill.name}]({law.bill.link})")
         embed.add_field(name="Description", value=law.bill.description, inline=False)
-        embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
-        embed.add_field(name="Law Since", value=law.passed_on.strftime("%A, %B %d %Y"), inline=True)
-        embed.add_field(name="Search Tags", value=', '.join(law.tags), inline=False)
+        embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
+        embed.add_field(name="Law Since", value=law.passed_on.strftime("%A, %B %d %Y"), inline=False)
         embed.set_footer(text=f"All dates are in UTC. Associated Bill: #{law.bill.id}", icon_url=config.BOT_ICON_URL)
         await ctx.send(embed=embed)
 

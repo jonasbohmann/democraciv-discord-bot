@@ -107,7 +107,7 @@ class Ministry(commands.Cog):
         if pretty_bills is None:
             pretty_bills = 'There are no new bills to vote on.'
         else:
-            pretty_bills = f":mailbox:  You can vote on new bills, check `{ctx.prefix}ministry bills`."
+            pretty_bills = f"You can vote on new bills, check `{ctx.prefix}ministry bills`."
 
         minister_value = []
 
@@ -137,7 +137,10 @@ class Ministry(commands.Cog):
         pretty_bills = await self.get_pretty_vetos()
 
         if pretty_bills is None:
-            pretty_bills = ['There are no new bills to vote on.']
+            embed = self.bot.embeds.embed_builder(title="There are no new bills to vote on.",
+                                                  description="",
+                                                  has_footer=False)
+            return await ctx.send(embed=embed)
 
         help_description = f"Use '{config.BOT_PREFIX}help ministry' to learn how to pass and veto bills."
 

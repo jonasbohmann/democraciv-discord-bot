@@ -338,11 +338,12 @@ class Legislature(commands.Cog):
             else:
                 pretty_sessions.append(f"**Session #{record['id']}**  - {opened_on}")
 
-        footer = f"Use {ctx.prefix}legislature session <number> to get more details about a session."
+        thumbnail = mk.NATION_FLAG_URL or self.bot.democraciv_guild_object.icon_url_as(static_format='png')
 
-        pages = Pages(ctx=ctx, entries=pretty_sessions, show_entry_count=False,
-                      title=f"All Sessions of the {mk.NATION_ADJECTIVE} Legislature",
-                      show_index=False, footer_text=footer, show_amount_of_pages=True)
+        pages = AlternativePages(ctx=ctx, entries=pretty_sessions, show_entry_count=False,
+                                 title=f"All Sessions of the {mk.NATION_ADJECTIVE} Legislature",
+                                 show_index=False, show_amount_of_pages=True,
+                                 a_thumbnail=thumbnail)
         await pages.paginate()
 
     @staticmethod

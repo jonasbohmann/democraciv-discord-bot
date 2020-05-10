@@ -9,7 +9,7 @@ from util import mk
 from config import config
 from util.flow import Flow
 from discord.ext import commands
-from util.paginator import Pages
+from util.paginator import Pages, AlternativePages
 from util.converter import Tag, OwnedTag, CaseInsensitiveMember
 
 
@@ -49,16 +49,21 @@ class Tags(commands.Cog):
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
 
         if all_tags:
-            pretty_tags.append('\n**__Local Tags__**')
+            pretty_tags.append('\n\n**__Local Tags__**')
 
         for record in all_tags:
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
 
         if len(pretty_tags) < 2:
-            pretty_tags = ['There are no tags on this server.']
+            embed = self.bot.embeds.embed_builder(title="There are no tags on this server.",
+                                                  description="",
+                                                  has_footer=False)
+            return await ctx.send(embed=embed)
 
-        pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"All Tags in {ctx.guild.name}",
-                      show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
+        pages = AlternativePages(ctx=ctx, entries=pretty_tags, show_entry_count=True,
+                                 a_title=f"All Tags in {ctx.guild.name}",
+                                 a_icon=ctx.guild.icon_url_as(static_format='png'),
+                                 show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
     @tags.command(name="local", aliases=['l'])
@@ -70,19 +75,24 @@ class Tags(commands.Cog):
         all_tags = await self.bot.db.fetch("SELECT * FROM guild_tags WHERE guild_id = $1 AND global = false "
                                            "ORDER BY uses desc", ctx.guild.id)
 
+        if not all_tags:
+            embed = self.bot.embeds.embed_builder(title="There are no local tags on this server.",
+                                                  description="",
+                                                  has_footer=False)
+            return await ctx.send(embed=embed)
+
         pretty_tags = []
 
         for record in all_tags:
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
 
-        if not pretty_tags:
-            pretty_tags = ['There are no local tags on this server.']
-
-        pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"Local Tags in {ctx.guild.name}",
-                      show_index=False, footer_text=config.BOT_NAME, show_amount_of_pages=True)
+        pages = AlternativePages(ctx=ctx, entries=pretty_tags, show_entry_count=True,
+                                 a_title=f"Local Tags in {ctx.guild.name}",
+                                 a_icon=ctx.guild.icon_url_as(static_format='png'),
+                                 show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
-    @tags.command(name="from")
+    @tags.command(name="from", aliases=['f'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def _from(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
@@ -94,17 +104,21 @@ class Tags(commands.Cog):
                                            " ORDER BY uses desc",
                                            member.id, ctx.guild.id)
 
+        if not all_tags:
+            embed = self.bot.embeds.embed_builder(title=f"{member} hasn't made any tags on this server yet.",
+                                                  description="",
+                                                  has_footer=False)
+            return await ctx.send(embed=embed)
+
         pretty_tags = []
 
         for record in all_tags:
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
 
-        if not pretty_tags:
-            pretty_tags = ['This person hasn\'t made any tags yet.']
-
-        pages = Pages(ctx=ctx, entries=pretty_tags, show_entry_count=True, title=f"{member.name}'s Tags",
-                      show_index=False, show_amount_of_pages=True,
-                      author_icon=member.avatar_url_as(static_format="png"))
+        pages = AlternativePages(ctx=ctx, entries=pretty_tags, show_entry_count=True,
+                                 a_title=f"Tags from {member.display_name}",
+                                 show_index=False, show_amount_of_pages=True,
+                                 a_icon=member.avatar_url_as(static_format="png"))
         await pages.paginate()
 
     @tags.command(name="addalias")
@@ -343,13 +357,13 @@ class Tags(commands.Cog):
         """Claim a tag if the original tag author left this server"""
 
         if tag.is_global:
-            return await ctx.send(":x: Global tags cannot be claimed!")
+            return await ctx.send(":x: Global tags cannot be claimed.")
 
         if tag.author == ctx.author:
             return await ctx.send(":x: You already own this tag.")
 
         if isinstance(tag.author, discord.Member):
-            return await ctx.send(":x: The tag's owner is still in this guild!")
+            return await ctx.send(":x: The tag's owner is still in this guild.")
 
         await self.bot.db.execute("UPDATE guild_tags SET author = $1 WHERE id = $2", ctx.author.id, tag.id)
 
@@ -431,15 +445,15 @@ class Tags(commands.Cog):
 
         else:
             for record in tags:
-                details = await self.bot.db.fetchrow("SELECT name, title from guild_tags WHERE id = $1", record['tag_id'])
+                details = await self.bot.db.fetchrow("SELECT name, title from guild_tags WHERE id = $1",
+                                                     record['tag_id'])
                 if details:
                     pretty_names[f"`{config.BOT_PREFIX}{details['name']}`  {details['title']}"] = None
 
-        pages = Pages(ctx=ctx, entries=list(pretty_names), show_entry_count=False,
-                      title=f"Search Results for '{query}'", show_index=False, show_amount_of_pages=True)
-
-        if pages.maximum_pages == 1:
-            pages.show_amount_of_pages = False
+        pages = AlternativePages(ctx=ctx, entries=list(pretty_names), show_entry_count=False,
+                                 a_title=f"Tags matching '{query}'",
+                                 a_icon=ctx.guild.icon_url_as(static_format='png'),
+                                 show_index=False, show_amount_of_pages=True)
 
         await pages.paginate()
 
