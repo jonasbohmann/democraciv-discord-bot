@@ -126,10 +126,39 @@ class Legislature(commands.Cog):
         embed.add_field(name="Current Session", value=current_session_value, inline=False)
         await ctx.send(embed=embed)
 
+    async def paginate_all_bills(self, ctx):
+        async with ctx.typing():
+            query = """SELECT id FROM legislature_bills ORDER BY id;"""
+
+            all_bills = await self.bot.db.fetch(query)
+
+            if not all_bills:
+                embed = self.bot.embeds.embed_builder(title="No one has submitted any bills yet.",
+                                                      description="",
+                                                      has_footer=False)
+                return await ctx.send(embed=embed)
+
+            pretty = []
+
+            for record in all_bills:
+                _bill = await Bill.convert(ctx, record['id'])
+                pretty.append(f"Bill #{_bill.id} - [{_bill.name}]({_bill.link}) "
+                              f"{await _bill.get_emojified_status(verbose=False)}")
+
+        thumbnail = mk.NATION_FLAG_URL or self.bot.democraciv_guild_object.icon_url_as(static_format='png')
+
+        pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=8,
+                                 title=f"All Submitted Bills", a_thumbnail=thumbnail,
+                                 show_index=False, show_amount_of_pages=True)
+        await pages.paginate()
+
     @legislature.group(name='bill', aliases=['b', 'bills'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def bill(self, ctx, *, bill_id: Bill):
+    async def bill(self, ctx, *, bill_id: Bill = None):
         """Details about a bill"""
+
+        if bill_id is None:
+            return await self.paginate_all_bills(ctx)
 
         bill = bill_id
 
@@ -178,7 +207,7 @@ class Legislature(commands.Cog):
             pretty.append(f"Bill #{_bill.id} - [{_bill.name}]({_bill.link}) "
                           f"{await _bill.get_emojified_status(verbose=False)}")
 
-        pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=6,
+        pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=8,
                                  a_title=f"Bills from {member.display_name}",
                                  show_index=False, show_amount_of_pages=True,
                                  a_icon=member.avatar_url_as(static_format='png'))
@@ -189,10 +218,38 @@ class Legislature(commands.Cog):
         if isinstance(error, commands.BadUnionArgument):
             return
 
+    async def paginate_all_motions(self, ctx):
+        async with ctx.typing():
+            query = """SELECT id, title, hastebin FROM legislature_motions ORDER BY id;"""
+
+            all_motions = await self.bot.db.fetch(query)
+
+            if not all_motions:
+                embed = self.bot.embeds.embed_builder(title="No one has submitted any motions yet.",
+                                                      description="",
+                                                      has_footer=False)
+                return await ctx.send(embed=embed)
+
+            pretty = []
+
+            for record in all_motions:
+                pretty.append(f"Motion #{record['id']} - [{record['title']}]({record['hastebin']})")
+
+        thumbnail = mk.NATION_FLAG_URL or self.bot.democraciv_guild_object.icon_url_as(static_format='png')
+
+        pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=14,
+                                 title=f"All Submitted Motions",
+                                 show_index=False, show_amount_of_pages=True,
+                                 a_thumbnail=thumbnail)
+        await pages.paginate()
+
     @legislature.group(name='motion', aliases=['m', 'motions'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def motion(self, ctx, motion_id: Motion):
+    async def motion(self, ctx, motion_id: Motion = None):
         """Details about a motion"""
+
+        if motion_id is None:
+            return await self.paginate_all_motions(ctx)
 
         motion = motion_id
 
@@ -216,7 +273,7 @@ class Legislature(commands.Cog):
 
         member = member or ctx.author
 
-        motions_from_person = await self.bot.db.fetch("SELECT id FROM legislature_motions "
+        motions_from_person = await self.bot.db.fetch("SELECT id, title, hastebin FROM legislature_motions "
                                                       "WHERE submitter = $1 ORDER BY id;", member.id)
 
         if not motions_from_person:
@@ -228,8 +285,7 @@ class Legislature(commands.Cog):
         pretty = []
 
         for record in motions_from_person:
-            _motion = await Motion.convert(ctx, record['id'])
-            pretty.append(f"Motion #{_motion.id}__ - [{_motion.name}]({_motion.link})")
+            pretty.append(f"Motion #{record['id']} - [{record['title']}]({record['hastebin']})")
 
         pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False,
                                  a_title=f"Motions from {member.display_name}",
