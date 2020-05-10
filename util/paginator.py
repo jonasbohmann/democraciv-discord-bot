@@ -273,6 +273,24 @@ class Pages:
             await self.match()
 
 
+class AlternativePages(Pages):
+
+    def __init__(self, *args, **kwargs):
+        self.a_title = kwargs.pop('a_title', discord.Embed.Empty)
+        self.a_icon = kwargs.pop('a_icon', discord.Embed.Empty)
+        super().__init__(*args, **kwargs)
+
+    def prepare_embed(self, entries, page, *, first=False):
+        super().prepare_embed(entries, page, first=first)
+
+        if self.maximum_pages > 1 and self.show_amount_of_pages:
+            self.embed.set_footer(text=f'Page {page}/{self.maximum_pages}')
+        else:
+            self.embed.set_footer(text=EmptyEmbed, icon_url=EmptyEmbed)
+
+        self.embed.set_author(icon_url=self.a_icon, name=self.a_title)
+
+
 class FieldPages(Pages):
     """Similar to Pages except entries should be a list of
     tuples having (key, value) to show as embed fields instead.

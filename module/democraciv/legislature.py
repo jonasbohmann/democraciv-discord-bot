@@ -175,6 +175,8 @@ class Legislature(commands.Cog):
         embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
         await ctx.send(embed=embed)
 
+
+
     @legislature.command(name='opensession', aliases=['os'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)

@@ -6,7 +6,7 @@ from util import mk, utils
 from discord.ext.commands import Greedy
 from util.flow import Flow
 from util.converter import Law, CaseInsensitiveMember
-from util.paginator import Pages
+from util.paginator import Pages, AlternativePages
 from discord.ext import commands
 from util.exceptions import DemocracivBotException
 from util.law_helper import AnnouncementQueue
@@ -133,11 +133,10 @@ class Laws(commands.Cog, name='Law'):
         for record in laws_from_person:
             pretty_laws.append(f"Law #{record['law_id']} - [{record['bill_name']}]({record['link']})")
 
-        pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"{member.name}'s Laws",
-                      show_index=False, show_amount_of_pages=True,
-                      footer_text=f"Use {self.bot.commands_prefix}law <id> to get more details about a law.",
-                      author_icon=member.avatar_url_as(static_format='png'))
-
+        pages = AlternativePages(ctx=ctx, entries=pretty_laws, show_entry_count=False,
+                                 a_title=f"Laws from {member.display_name}",
+                                 show_index=False, show_amount_of_pages=True,
+                                 a_icon=member.avatar_url_as(static_format='png'))
         await pages.paginate()
 
     @_from.error
