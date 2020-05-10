@@ -4,13 +4,13 @@ import discord
 import datetime
 
 from util.flow import Flow
-from util.paginator import Pages
+from util.paginator import Pages, AlternativePages
 from config import config, links
 from discord.ext import commands
 from discord.ext.commands import Greedy
 from util import utils, mk, exceptions
 from util.law_helper import AnnouncementQueue
-from util.converter import Session, SessionStatus, Bill, Motion, Law
+from util.converter import Session, SessionStatus, Bill, Motion, Law, CaseInsensitiveMember
 
 
 class PassScheduler(AnnouncementQueue):
@@ -126,7 +126,7 @@ class Legislature(commands.Cog):
         embed.add_field(name="Current Session", value=current_session_value, inline=False)
         await ctx.send(embed=embed)
 
-    @legislature.command(name='bill', aliases=['b'])
+    @legislature.group(name='bill', aliases=['b', 'bills'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def bill(self, ctx, *, bill_id: Bill):
         """Details about a bill"""
@@ -155,7 +155,41 @@ class Legislature(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @legislature.command(name='motion', aliases=['m'])
+    @bill.command(name='from', aliases=['f'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def b_from(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
+        """List all bills that a specific person submitted"""
+
+        member = member or ctx.author
+
+        bills_from_person = await self.bot.db.fetch("SELECT id FROM legislature_bills "
+                                                    "WHERE submitter = $1 ORDER BY id;", member.id)
+
+        if not bills_from_person:
+            embed = self.bot.embeds.embed_builder(title=f"{member} hasn't submitted any bills yet.",
+                                                  description="",
+                                                  has_footer=False)
+            return await ctx.send(embed=embed)
+
+        pretty = []
+
+        for record in bills_from_person:
+            _bill = await Bill.convert(ctx, record['id'])
+            pretty.append(f"Bill #{_bill.id} - [{_bill.name}]({_bill.link}) "
+                          f"{await _bill.get_emojified_status(verbose=False)}")
+
+        pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=6,
+                                 a_title=f"Bills from {member.display_name}",
+                                 show_index=False, show_amount_of_pages=True,
+                                 a_icon=member.avatar_url_as(static_format='png'))
+        await pages.paginate()
+
+    @b_from.error
+    async def bfrom_error(self, ctx, error):
+        if isinstance(error, commands.BadUnionArgument):
+            return
+
+    @legislature.group(name='motion', aliases=['m', 'motions'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def motion(self, ctx, motion_id: Motion):
         """Details about a motion"""
@@ -175,7 +209,38 @@ class Legislature(commands.Cog):
         embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
         await ctx.send(embed=embed)
 
+    @motion.command(name='from', aliases=['f'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def m_from(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
+        """List all motions that a specific person submitted"""
 
+        member = member or ctx.author
+
+        motions_from_person = await self.bot.db.fetch("SELECT id FROM legislature_motions "
+                                                      "WHERE submitter = $1 ORDER BY id;", member.id)
+
+        if not motions_from_person:
+            embed = self.bot.embeds.embed_builder(title=f"{member} hasn't submitted any motions yet.",
+                                                  description="",
+                                                  has_footer=False)
+            return await ctx.send(embed=embed)
+
+        pretty = []
+
+        for record in motions_from_person:
+            _motion = await Motion.convert(ctx, record['id'])
+            pretty.append(f"Motion #{_motion.id}__ - [{_motion.name}]({_motion.link})")
+
+        pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False,
+                                 a_title=f"Motions from {member.display_name}",
+                                 show_index=False, show_amount_of_pages=True,
+                                 a_icon=member.avatar_url_as(static_format='png'))
+        await pages.paginate()
+
+    @m_from.error
+    async def mfrom_error(self, ctx, error):
+        if isinstance(error, commands.BadUnionArgument):
+            return
 
     @legislature.command(name='opensession', aliases=['os'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -287,7 +352,8 @@ class Legislature(commands.Cog):
         if session.status is not SessionStatus.SUBMISSION_PERIOD:
             # Session is either closed or in Voting Period
             if session.voting_started_on is not None:
-                formatted_time.append(f"**Voting Started**: {session.voting_started_on.strftime('%A, %B %d %Y at %H:%M')}")
+                formatted_time.append(
+                    f"**Voting Started**: {session.voting_started_on.strftime('%A, %B %d %Y at %H:%M')}")
 
         if not session.is_active:
             # Session is closed
@@ -611,7 +677,8 @@ class Legislature(commands.Cog):
             # Remove bills that did not pass verify_bill from MultipleBills.bills list
             bills = [b for b in bills if b not in list(map(list, zip(*error_messages)))[0]]
 
-            error_messages = '\n'.join([f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
+            error_messages = '\n'.join(
+                [f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
             await ctx.send(f":warning: The following bills can not be passed.\n{error_messages}")
 
         # If all bills failed verify_bills, return
