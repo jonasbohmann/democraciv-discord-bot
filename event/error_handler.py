@@ -196,6 +196,9 @@ class ErrorHandler(commands.Cog):
         elif isinstance(error, commands.PrivateMessageOnly):
             return await ctx.send(":x: This command can only be used in DMs.")
 
+        elif isinstance(error, commands.DisabledCommand):
+            return await ctx.send(":x: This command has been disabled.")
+
         elif isinstance(error, exceptions.PartyNotFoundError):
             await ctx.send(f":x: There is no political party named `{error.party}`.")
 
