@@ -60,7 +60,7 @@ class Starboard(commands.Cog):
             else:
                 self.weekly_starboard_to_reddit_task.start()
 
-    def __del__(self):
+    def cog_unload(self):
         self.weekly_starboard_to_reddit_task.cancel()
 
     @staticmethod

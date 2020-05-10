@@ -18,7 +18,7 @@ class Reddit(commands.Cog):
         if config.REDDIT_ENABLED and self.subreddit and config.REDDIT_ANNOUNCEMENT_CHANNEL:
             self.reddit_task.start()
 
-    def __del__(self):
+    def cog_unload(self):
         self.reddit_task.cancel()
 
     async def get_newest_reddit_post(self) -> typing.Optional[typing.Mapping]:

@@ -26,7 +26,7 @@ class Twitch(commands.Cog):
         if config.TWITCH_ENABLED and self.twitch_oauth_token:
             self.twitch_task.start()
 
-    def __del__(self):
+    def cog_unload(self):
         self.twitch_task.cancel()
 
     async def refresh_twitch_oauth_token(self):

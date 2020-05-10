@@ -22,7 +22,7 @@ class YouTube(commands.Cog):
             if config.YOUTUBE_LIVESTREAM_ENABLED:
                 self.youtube_stream_task.start()
 
-    def __del__(self):
+    def cog_unload(self):
         self.youtube_upload_tasks.cancel()
         self.youtube_stream_task.cancel()
 
