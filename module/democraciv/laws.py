@@ -5,7 +5,7 @@ from config import config
 from util import mk, utils
 from discord.ext.commands import Greedy
 from util.flow import Flow
-from util.converter import Law
+from util.converter import Law, CaseInsensitiveMember
 from util.paginator import Pages
 from discord.ext import commands
 from util.exceptions import DemocracivBotException
@@ -68,7 +68,7 @@ class Laws(commands.Cog, name='Law'):
 
         pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"All Laws in {mk.NATION_NAME}",
                       show_index=False, show_amount_of_pages=True,
-                      footer_text=f"Use {self.bot.commands_prefix}law <id> to get more details about a law.", )
+                      footer_text=f"Use {self.bot.commands_prefix}law <id> to get more details about a law.")
         await pages.paginate()
 
     @commands.group(name='law', aliases=['laws'], case_insensitive=True, invoke_without_command=True)
@@ -107,12 +107,53 @@ class Laws(commands.Cog, name='Law'):
         embed.set_footer(text=f"All dates are in UTC. Associated Bill: #{law.bill.id}", icon_url=config.BOT_ICON_URL)
         await ctx.send(embed=embed)
 
+    @law.command(name='from', aliases=['f'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def _from(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
+        """List the laws a specific person authored"""
+
+        member = member or ctx.author
+
+        query = """SELECT legislature_laws.law_id, legislature_bills.bill_name, legislature_bills.link 
+                   FROM legislature_laws JOIN legislature_bills
+                   ON legislature_laws.bill_id = legislature_bills.id WHERE legislature_bills.submitter = $1
+                   ORDER BY legislature_laws.law_id;
+                """
+
+        laws_from_person = await self.bot.db.fetch(query, member.id)
+
+        if not laws_from_person:
+            embed = self.bot.embeds.embed_builder(title=f"{member} hasn't made any laws yet.",
+                                                  description="",
+                                                  has_footer=False)
+            return await ctx.send(embed=embed)
+
+        pretty_laws = []
+
+        for record in laws_from_person:
+            pretty_laws.append(f"Law #{record['law_id']} - [{record['bill_name']}]({record['link']})")
+
+        pages = Pages(ctx=ctx, entries=pretty_laws, show_entry_count=False, title=f"{member.name}'s Laws",
+                      show_index=False, show_amount_of_pages=True,
+                      footer_text=f"Use {self.bot.commands_prefix}law <id> to get more details about a law.",
+                      author_icon=member.avatar_url_as(static_format='png'))
+
+        await pages.paginate()
+
+    @_from.error
+    async def from_error(self, ctx, error):
+        if isinstance(error, commands.BadUnionArgument):
+            return
+
     @law.command(name='search', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def search(self, ctx, *query: str):
         """Search for laws by their name or description"""
 
         name = ' '.join(query)
+
+        if len(name) < 3:
+            return await ctx.send(":x: The query to search for must be at least 3 characters.")
 
         async with ctx.typing():
 

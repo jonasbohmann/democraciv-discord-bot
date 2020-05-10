@@ -436,7 +436,7 @@ class Tags(commands.Cog):
                     pretty_names[f"`{config.BOT_PREFIX}{details['name']}`  {details['title']}"] = None
 
         pages = Pages(ctx=ctx, entries=list(pretty_names), show_entry_count=False,
-                      title=f"Tag Search Results for '{query}'", show_index=False, show_amount_of_pages=True)
+                      title=f"Search Results for '{query}'", show_index=False, show_amount_of_pages=True)
 
         if pages.maximum_pages == 1:
             pages.show_amount_of_pages = False
