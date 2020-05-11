@@ -155,7 +155,7 @@ class Legislature(commands.Cog):
     @legislature.group(name='bill', aliases=['b', 'bills'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def bill(self, ctx, *, bill_id: Bill = None):
-        """Details about a bill"""
+        """List all bills or get details about a single bill"""
 
         if bill_id is None:
             return await self.paginate_all_bills(ctx)
@@ -246,7 +246,7 @@ class Legislature(commands.Cog):
     @legislature.group(name='motion', aliases=['m', 'motions'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def motion(self, ctx, motion_id: Motion = None):
-        """Details about a motion"""
+        """List all motions or get details about a single motion"""
 
         if motion_id is None:
             return await self.paginate_all_motions(ctx)

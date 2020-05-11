@@ -61,6 +61,8 @@ class Meta(commands.Cog):
             if isinstance(cmd, discord.ext.commands.Group):
                 for c in cmd.commands:
                     if isinstance(c, discord.ext.commands.Group):
+                        if c.qualified_name != "legislature withdraw":  # hacky :(
+                            commands_list.append(c)
                         for co in c.commands:
                             commands_list.append(co)
                     else:

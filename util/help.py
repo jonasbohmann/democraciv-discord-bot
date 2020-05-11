@@ -190,16 +190,19 @@ class PaginatedHelpCommand(commands.HelpCommand):
 
     @staticmethod
     def get_subcommands_too(commands_list: list):
+        # ugly workaround since discord.py returns aliases in walk_commands()
+        cmds = dict().fromkeys(commands_list)
+
         for cmd in commands_list:
             if isinstance(cmd, discord.ext.commands.Group):
                 for c in cmd.commands:
                     if isinstance(c, discord.ext.commands.Group):
                         for co in c.commands:
-                            commands_list.append(co)
-                    else:
-                        commands_list.append(c)
+                            cmds[co] = None
+                    if c.qualified_name != "legislature withdraw":  # hacky :(
+                        cmds[c] = None
 
-        return commands_list
+        return list(cmds)
 
     def get_command_signature(self, command):
         parent = command.full_parent_name
