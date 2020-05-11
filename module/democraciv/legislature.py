@@ -381,6 +381,50 @@ class Legislature(commands.Cog):
         await self.gov_announcements_channel.send(f"{self.legislator_role.mention}, Legislative Session "
                                                   f"#{active_leg_session.id} has been **closed** by the Cabinet.")
 
+    @legislature.command(name='exportsession', aliases=['es'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def exportsession(self, ctx, session: Session):
+        """Export a session's bills and motions for Google Spreadsheets"""
+        if isinstance(session, str):
+            return
+
+        b_ids = list()
+        b_hyperlinks = list()
+
+        m_ids = list()
+        m_hyperlinks = list()
+
+        async with ctx.typing():
+
+            for bill_id in session.bills:
+                bill = await Bill.convert(ctx, bill_id)
+                b_ids.append(f"Bill #{bill.id}")
+                b_hyperlinks.append(f'=HYPERLINK("{bill.link}"; "{bill.name}")')
+
+            for motion_id in session.motions:
+                motion = await Motion.convert(ctx, motion_id)
+                m_ids.append(f"Motion #{motion.id}")
+                m_hyperlinks.append(f'=HYPERLINK("{motion.link}"; "{motion.name}")')
+
+            exported = [
+                f"Export of Legislative Session {session.id} -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n",
+                f"Xth Session - {session.opened_on.strftime('%B %d %Y')} (Bot Session {session.id})\n\n"
+                "----- Submitted Bills -----\n"]
+            exported.extend(b_ids)
+            exported.append("\n")
+            exported.extend(b_hyperlinks)
+            exported.append("\n\n----- Submitted Motions -----\n")
+            exported.extend(m_ids)
+            exported.append("\n")
+            exported.extend(m_hyperlinks)
+            ex = '\n'.join(exported)
+
+            link = await self.bot.laws.post_to_hastebin(ex)
+            text = f"**__Export of Legislative Session #{session.id}__**\nSee the video below to see how to speed up " \
+                   f"your Speaker duties with this command.\n\n**Export:** <{link}>\n\n" \
+                   "https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662/howtoexport.mp4"
+            await ctx.send(text)
+
     async def paginate_all_sessions(self, ctx):
         all_sessions = await self.bot.db.fetch("SELECT id, opened_on, closed_on FROM legislature_sessions ORDER BY id")
         pretty_sessions = []

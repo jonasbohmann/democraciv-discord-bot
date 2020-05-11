@@ -1,5 +1,6 @@
 import typing
 import discord
+import datetime
 
 from config import config
 from util import mk, utils
@@ -111,6 +112,26 @@ class Laws(commands.Cog, name='Law'):
         embed.add_field(name="Law Since", value=law.passed_on.strftime("%A, %B %d %Y"), inline=False)
         embed.set_footer(text=f"All dates are in UTC. Associated Bill: #{law.bill.id}", icon_url=config.BOT_ICON_URL)
         await ctx.send(embed=embed)
+
+    @law.command(name='export', aliases=['e'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def exportlaws(self, ctx):
+        """Export all active laws"""
+        query = """SELECT legislature_laws.law_id, legislature_bills.bill_name, legislature_bills.link 
+                   FROM legislature_laws JOIN legislature_bills
+                   ON legislature_laws.bill_id = legislature_bills.id ORDER BY legislature_laws.law_id;
+                """
+
+        async with ctx.typing():
+            all_laws = await self.bot.db.fetch(query)
+
+            pretty_laws = [f"All Active Laws in {mk.NATION_NAME} -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n"]
+
+            for record in all_laws:
+                pretty_laws.append(f"Law {record['law_id']} - {record['bill_name']}   ({record['link']})\n")
+
+            link = await self.bot.laws.post_to_hastebin('\n'.join(pretty_laws))
+            await ctx.send(f"<{link}>")
 
     @law.command(name='from', aliases=['f'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
