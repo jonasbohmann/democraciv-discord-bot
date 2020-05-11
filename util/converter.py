@@ -666,7 +666,7 @@ class PoliticalParty(commands.Converter):
 
         try:
             invite = await self._bot.fetch_invite(self.discord_invite)
-            return invite.guild.icon_url_as(static_format='png')
+            return invite.guild.icon_url_as(format='png')
         except (discord.NotFound, discord.HTTPException):
             return None
 
