@@ -418,6 +418,24 @@ class Legislature(commands.Cog):
 
         return '\n'.join(formatted_time)
 
+    def split_embed_fields(self, things: str) -> typing.Dict[int, str]:
+        lines = things.splitlines(keepends=True)
+        split_into_1024 = dict()
+        index = 0
+
+        for paragraph in lines:
+            try:
+                split_into_1024[index]
+            except KeyError:
+                split_into_1024[index] = ""
+
+            split_into_1024[index] = split_into_1024[index] + ''.join(paragraph)
+
+            if (len(''.join(split_into_1024[index]))) > 924:
+                index += 1
+
+        return split_into_1024
+
     @legislature.command(name='session', aliases=['s'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def session(self, ctx, session: Session = None):
@@ -482,18 +500,24 @@ class Legislature(commands.Cog):
         if len(pretty_motions) <= 1024:
             embed.add_field(name="Submitted Motions", value=pretty_motions, inline=False)
         else:
-            async with ctx.typing():
-                haste_bin_url = await self.bot.laws.post_to_hastebin(pretty_motions)
-            too_long_motions = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
-            embed.add_field(name="Submitted Motions", value=too_long_motions, inline=False)
+            fields = self.split_embed_fields(pretty_motions)
+
+            for index in fields:
+                if index == 0:
+                    embed.add_field(name="Submitted Motions", value=fields[index], inline=False)
+                else:
+                    embed.add_field(name="Submitted Motions (cont.)", value=fields[index], inline=False)
 
         if len(pretty_bills) <= 1024:
             embed.add_field(name="Submitted Bills", value=pretty_bills, inline=False)
         else:
-            async with ctx.typing():
-                haste_bin_url = await self.bot.laws.post_to_hastebin(pretty_bills)
-            too_long_bills = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
-            embed.add_field(name="Submitted Bills", value=too_long_bills, inline=False)
+            fields = self.split_embed_fields(pretty_bills)
+
+            for index in fields:
+                if index == 0:
+                    embed.add_field(name="Submitted Bills", value=fields[index], inline=False)
+                else:
+                    embed.add_field(name="Submitted Bills (cont.)", value=fields[index], inline=False)
 
         embed.set_footer(text=f"Bills that are underlined are active laws. All times are in UTC.",
                          icon_url=config.BOT_ICON_URL)
