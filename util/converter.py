@@ -660,6 +660,16 @@ class PoliticalParty(commands.Converter):
     def role(self) -> typing.Optional[discord.Role]:
         return self._bot.democraciv_guild_object.get_role(self._id)
 
+    async def get_logo(self):
+        if not self.discord_invite:
+            return None
+
+        try:
+            invite = await self._bot.fetch_invite(self.discord_invite)
+            return invite.guild.icon_url_as(static_format='png')
+        except (discord.NotFound, discord.HTTPException):
+            return None
+
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str]):
         if isinstance(argument, int):

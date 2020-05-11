@@ -50,27 +50,19 @@ class Party(commands.Cog, name='Political Parties'):
     async def party(self, ctx, *, party: PoliticalParty):
         """Detailed information about a single political party"""
 
-        invite = None
-
         if party.role is None:
             return await ctx.send(":x: This party was removed.")
 
-        if party.discord_invite:
-            try:
-                invite = await self.bot.fetch_invite(party.discord_invite)
-            except (NotFound, HTTPException):
-                pass
-            invite_value = party.discord_invite
-        else:
-            invite_value = "*This party does not have a Discord server.*"
+        invite_value = party.discord_invite if party.discord_invite else "*This party does not have a Discord server.*"
+        thumbnail = await party.get_logo()
 
         embed = self.bot.embeds.embed_builder(title=party.role.name,
                                               description=f"[Platform and Description]"
                                                           f"({links.parties})",
                                               has_footer=False)
 
-        if invite:
-            embed.set_thumbnail(url=invite.guild.icon_url_as(static_format='png'))
+        if thumbnail:
+            embed.set_thumbnail(url=thumbnail)
 
         if party.leader:
             embed.add_field(name="Leader or Representative", value=party.leader.mention)

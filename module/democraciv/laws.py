@@ -2,11 +2,13 @@ import typing
 import discord
 import datetime
 
+from discord.embeds import EmptyEmbed
+
 from config import config
 from util import mk, utils
 from discord.ext.commands import Greedy
 from util.flow import Flow
-from util.converter import Law, CaseInsensitiveMember
+from util.converter import Law, CaseInsensitiveMember, PoliticalParty
 from util.paginator import Pages, AlternativePages
 from discord.ext import commands
 from util.exceptions import DemocracivBotException
@@ -135,23 +137,33 @@ class Laws(commands.Cog, name='Law'):
 
     @law.command(name='from', aliases=['f'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def _from(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
-        """List the laws a specific person authored"""
+    async def _from(self, ctx, *, member_or_party: typing.Union[discord.Member, CaseInsensitiveMember, discord.User, PoliticalParty] = None):
+        """List the laws a specific person or Political Party authored"""
 
-        member = member or ctx.author
+        member = member_or_party or ctx.author
+
+        if isinstance(member, PoliticalParty):
+            name = member.role.name
+            members = [m.id for m in member.role.members]
+        else:
+            name = member.display_name
+            members = [member.id]
 
         query = """SELECT legislature_laws.law_id, legislature_bills.bill_name, legislature_bills.link 
                    FROM legislature_laws JOIN legislature_bills
-                   ON legislature_laws.bill_id = legislature_bills.id WHERE legislature_bills.submitter = $1
+                   ON legislature_laws.bill_id = legislature_bills.id WHERE legislature_bills.submitter = ANY($1::bigint[])
                    ORDER BY legislature_laws.law_id;
                 """
 
-        laws_from_person = await self.bot.db.fetch(query, member.id)
+        laws_from_person = await self.bot.db.fetch(query, members)
 
         if not laws_from_person:
-            embed = self.bot.embeds.embed_builder(title=f"{member} hasn't made any laws yet.",
-                                                  description="",
-                                                  has_footer=False)
+            if isinstance(member, PoliticalParty):
+                title = f"No member of {name} has made a law yet."
+            else:
+                title = f"{name} hasn't made any laws yet."
+
+            embed = self.bot.embeds.embed_builder(title=title, description="", has_footer=False)
             return await ctx.send(embed=embed)
 
         pretty_laws = []
@@ -159,10 +171,16 @@ class Laws(commands.Cog, name='Law'):
         for record in laws_from_person:
             pretty_laws.append(f"Law #{record['law_id']} - [{record['bill_name']}]({record['link']})")
 
+        if isinstance(member, PoliticalParty):
+            a_title = f"Laws from Members of {name}"
+            a_icon = await member.get_logo() or EmptyEmbed
+        else:
+            a_title = f"Laws from {name}"
+            a_icon = member.avatar_url_as(static_format='png')
+
         pages = AlternativePages(ctx=ctx, entries=pretty_laws, show_entry_count=False,
-                                 a_title=f"Laws from {member.display_name}",
-                                 show_index=False, show_amount_of_pages=True,
-                                 a_icon=member.avatar_url_as(static_format='png'))
+                                 a_title=a_title, show_index=False, show_amount_of_pages=True,
+                                 a_icon=a_icon)
         await pages.paginate()
 
     @_from.error

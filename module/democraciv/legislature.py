@@ -3,6 +3,8 @@ import asyncpg
 import discord
 import datetime
 
+from discord.embeds import EmptyEmbed
+
 from util.flow import Flow
 from util.paginator import Pages, AlternativePages
 from config import config, links
@@ -10,7 +12,7 @@ from discord.ext import commands
 from discord.ext.commands import Greedy
 from util import utils, mk, exceptions
 from util.law_helper import AnnouncementQueue
-from util.converter import Session, SessionStatus, Bill, Motion, Law, CaseInsensitiveMember
+from util.converter import Session, SessionStatus, Bill, Motion, Law, CaseInsensitiveMember, PoliticalParty
 
 
 class PassScheduler(AnnouncementQueue):
@@ -186,18 +188,28 @@ class Legislature(commands.Cog):
 
     @bill.command(name='from', aliases=['f'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def b_from(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
-        """List all bills that a specific person submitted"""
+    async def b_from(self, ctx, *, member_or_party: typing.Union[discord.Member, CaseInsensitiveMember, discord.User, PoliticalParty] = None):
+        """List all bills that a specific person or Political Party submitted"""
 
-        member = member or ctx.author
+        member = member_or_party or ctx.author
+
+        if isinstance(member, PoliticalParty):
+            name = member.role.name
+            members = [m.id for m in member.role.members]
+        else:
+            name = member.display_name
+            members = [member.id]
 
         bills_from_person = await self.bot.db.fetch("SELECT id FROM legislature_bills "
-                                                    "WHERE submitter = $1 ORDER BY id;", member.id)
+                                                    "WHERE submitter = ANY($1::bigint[]) ORDER BY id;", members)
 
         if not bills_from_person:
-            embed = self.bot.embeds.embed_builder(title=f"{member} hasn't submitted any bills yet.",
-                                                  description="",
-                                                  has_footer=False)
+            if isinstance(member, PoliticalParty):
+                title = f"No member of {name} has submitted a bill yet."
+            else:
+                title = f"{name} hasn't submitted any bills yet."
+
+            embed = self.bot.embeds.embed_builder(title=title, description="", has_footer=False)
             return await ctx.send(embed=embed)
 
         pretty = []
@@ -207,10 +219,15 @@ class Legislature(commands.Cog):
             pretty.append(f"Bill #{_bill.id} - [{_bill.name}]({_bill.link}) "
                           f"{await _bill.get_emojified_status(verbose=False)}")
 
+        if isinstance(member, PoliticalParty):
+            a_title = f"Bills from Members of {name}"
+            a_icon = await member.get_logo() or EmptyEmbed
+        else:
+            a_title = f"Bills from {name}"
+            a_icon = member.avatar_url_as(static_format='png')
+
         pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=8,
-                                 a_title=f"Bills from {member.display_name}",
-                                 show_index=False, show_amount_of_pages=True,
-                                 a_icon=member.avatar_url_as(static_format='png'))
+                                 a_title=a_title, show_index=False, show_amount_of_pages=True, a_icon=a_icon)
         await pages.paginate()
 
     @b_from.error
@@ -268,18 +285,28 @@ class Legislature(commands.Cog):
 
     @motion.command(name='from', aliases=['f'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def m_from(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
-        """List all motions that a specific person submitted"""
+    async def m_from(self, ctx, *, member_or_party: typing.Union[discord.Member, CaseInsensitiveMember, discord.User, PoliticalParty] = None):
+        """List all motions that a specific person or Political Party submitted"""
 
-        member = member or ctx.author
+        member = member_or_party or ctx.author
+
+        if isinstance(member, PoliticalParty):
+            name = member.role.name
+            members = [m.id for m in member.role.members]
+        else:
+            name = member.display_name
+            members = [member.id]
 
         motions_from_person = await self.bot.db.fetch("SELECT id, title, hastebin FROM legislature_motions "
-                                                      "WHERE submitter = $1 ORDER BY id;", member.id)
+                                                      "WHERE submitter = ANY($1::bigint[]) ORDER BY id;", members)
 
         if not motions_from_person:
-            embed = self.bot.embeds.embed_builder(title=f"{member} hasn't submitted any motions yet.",
-                                                  description="",
-                                                  has_footer=False)
+            if isinstance(member, PoliticalParty):
+                title = f"No member of {name} has submitted a motion yet."
+            else:
+                title = f"{name} hasn't submitted any motions yet."
+
+            embed = self.bot.embeds.embed_builder(title=title, description="", has_footer=False)
             return await ctx.send(embed=embed)
 
         pretty = []
@@ -287,10 +314,15 @@ class Legislature(commands.Cog):
         for record in motions_from_person:
             pretty.append(f"Motion #{record['id']} - [{record['title']}]({record['hastebin']})")
 
+        if isinstance(member, PoliticalParty):
+            a_title = f"Motions from Members of {name}"
+            a_icon = await member.get_logo() or EmptyEmbed
+        else:
+            a_title = f"Motions from {member.display_name}"
+            a_icon = member.avatar_url_as(static_format='png')
+
         pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False,
-                                 a_title=f"Motions from {member.display_name}",
-                                 show_index=False, show_amount_of_pages=True,
-                                 a_icon=member.avatar_url_as(static_format='png'))
+                                 a_title=a_title, show_index=False, show_amount_of_pages=True, a_icon=a_icon)
         await pages.paginate()
 
     @m_from.error
