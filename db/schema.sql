@@ -68,8 +68,8 @@ CREATE TABLE IF NOT EXISTS legislature_sessions(
 CREATE TABLE IF NOT EXISTS legislature_bills(
     id serial UNIQUE PRIMARY KEY,
     leg_session serial references legislature_sessions(id),
-    link text UNIQUE,
-    tiny_link text UNIQUE,
+    link text,
+    tiny_link text,
     bill_name text,
     description text,
     google_docs_description text,

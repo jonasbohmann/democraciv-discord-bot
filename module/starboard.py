@@ -139,11 +139,30 @@ class Starboard(commands.Cog):
 
         return "\n\n".join(markdown)
 
+    async def has_posted_to_reddit_today(self) -> bool:
+        async with self.bot.session.get(f"https://www.reddit.com/user/{token.REDDIT_USERNAME}.json?limit=5") as resp:
+            if resp.status == 200:
+                json_data = await resp.json()
+
+            for post in json_data['data']['children']:
+                try:
+                    if post['data']['title'].startswith("Weekly Discord News"):
+                        time = datetime.date.fromtimestamp(post['data']['created_utc'])
+                        if time == datetime.date.today():
+                            return True
+                except KeyError:
+                    continue
+
+        return False
+
     @tasks.loop(hours=24)
     async def weekly_starboard_to_reddit_task(self):
         """If today is Monday, post all entries of last week's starboard to r/Democraciv"""
 
         if datetime.datetime.utcnow().weekday() != 0:
+            return
+
+        if await self.has_posted_to_reddit_today():
             return
 
         new_starred_messages = await self.get_starred_from_last_week()
@@ -558,7 +577,8 @@ class Starboard(commands.Cog):
 
     @starboard.command(name='stats')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def starboardstats(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
+    async def starboardstats(self, ctx, *,
+                             member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
         """Statistics about our Starboard
 
         **Usage:**
