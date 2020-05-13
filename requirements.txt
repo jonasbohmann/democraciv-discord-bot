@@ -5,5 +5,5 @@ psutil
 nltk
 lxml
 bs4
-oauth2client=4.1.3
-google-api-python-client=1.8.3
+oauth2client==4.1.3
+google-api-python-client==1.8.3
