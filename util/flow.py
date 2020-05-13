@@ -29,7 +29,7 @@ class Flow:
                                                                                                        message),
                                                          timeout=timeout)
         except asyncio.TimeoutError:
-            await self.ctx.send("Aborted.")
+            await self.ctx.send(":zzz: You took too long to react.")
             return None, None
 
         else:
@@ -71,7 +71,7 @@ class Flow:
                                                                                                        message),
                                                          timeout=timeout)
         except asyncio.TimeoutError:
-            await self.ctx.send("Aborted.")
+            await self.ctx.send(":zzz: You took too long to react.")
             return None
 
         else:
@@ -96,11 +96,11 @@ class Flow:
             channel = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(self.ctx),
                                               timeout=timeout)
         except asyncio.TimeoutError:
-            await self.ctx.send("Aborted.")
+            await self.ctx.send(":zzz: You took too long to reply.")
             return None
 
         if not channel.content:
-            await self.ctx.send("Aborted.")
+            await self.ctx.send(":x: You didn't reply with text.")
             return None
 
         try:
@@ -123,11 +123,11 @@ class Flow:
                                            check=self.bot.checks.wait_for_message_check(self.ctx),
                                            timeout=timeout)
         except asyncio.TimeoutError:
-            await self.ctx.send("Aborted.")
+            await self.ctx.send(":zzz: You took too long to reply.")
             return None
 
         if not text.content:
-            await self.ctx.send("Aborted.")
+            await self.ctx.send(":x: You didn't reply with text.")
             return None
 
         else:
@@ -145,7 +145,7 @@ class Flow:
                                               check=self.bot.checks.wait_for_message_check(self.ctx),
                                               timeout=timeout)
         except asyncio.TimeoutError:
-            await self.ctx.send("Aborted.")
+            await self.ctx.send(":zzz: You took too long to reply.")
             return None
 
         if not message.content:
@@ -166,11 +166,11 @@ class Flow:
             role = await self.bot.wait_for('message', check=self.bot.checks.wait_for_message_check(self.ctx),
                                            timeout=timeout)
         except asyncio.TimeoutError:
-            await self.ctx.send("Aborted.")
+            await self.ctx.send(":zzz: You took too long to reply.")
             return None
 
         if not role.content:
-            await self.ctx.send("Aborted.")
+            await self.ctx.send(":x: You didn't reply with text.")
             return None
 
         try:

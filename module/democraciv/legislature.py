@@ -415,7 +415,7 @@ class Legislature(commands.Cog):
         await self.gov_announcements_channel.send(f"{self.legislator_role.mention}, Legislative Session "
                                                   f"#{active_leg_session.id} has been **closed** by the Cabinet.")
 
-    @legislature.command(name='exportsession', aliases=['es'])
+    @legislature.command(name='exportsession', aliases=['es', 'ex', 'export'])
     @commands.cooldown(1, 300, commands.BucketType.user)
     async def exportsession(self, ctx, session: Session = None):
         """Export a session's bills and motions for Google Spreadsheets and generate the Google Forms voting form"""
@@ -469,12 +469,14 @@ class Legislature(commands.Cog):
         question = await ctx.send(f":information_source: Do you want to generate the Google Forms"
                                   f" voting form for Legislative Session #{session.id} as well?")
 
-        reaction = await flow.get_yes_no_reaction_confirm(question, 20)
+        reaction = await flow.get_yes_no_reaction_confirm(question, 10)
 
         if reaction is None:
+            ctx.command.reset_cooldown(ctx)
             return
 
         elif not reaction:
+            ctx.command.reset_cooldown(ctx)
             return
 
         elif reaction:
@@ -831,6 +833,7 @@ class Legislature(commands.Cog):
             message, embed = await self.submit_bill(ctx, current_leg_session.id)
 
         elif str(reaction.emoji) == config.LEG_SUBMIT_MOTION:
+            ctx.command.reset_cooldown(ctx)
             if self.legislator_role not in ctx.author.roles:
                 return await ctx.send(":x: Only Legislators are allowed to submit motions!")
             message, embed = await self.submit_motion(ctx, current_leg_session.id)
