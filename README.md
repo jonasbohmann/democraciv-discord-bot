@@ -22,6 +22,7 @@ Provides useful information, political party & role management and much more.
 *  Helps the Speaker of the Legislature with legislative sessions and submissions (bills & motions)
 *  Supports the Executive with vetoes by keeping them up-to-date with passed bills from the Legislature
 *  Keeps track of all legislative sessions, bills, motions, ministry vetoes and laws
+*  Generates the voting form as a Google Form for legislative sessions
 *  Users can search for active laws by their name or by automatically generated tags
 *  Join and leave political parties and see their members and ranking
 *  Tags: Users can save text and images for later retrieval to command-like tags
@@ -121,6 +122,22 @@ an API key for the YouTube Data v3 API from Google. [This](https://developers.go
 
 You can configure everything else that is YouTube related in `config.py`.
 
+
+#### Google Cloud Platform
+
+The Bot uses the Google Apps Script API to remotely execute the Apps Script that generates the voting form as a Google Form for
+legislative sessions. You need to create a Google Cloud Platform project and then create OAuth credentials for that project. Download the credentials as JSON from your Google Cloud Platform Console
+and put that file to the filepath that is specified as `GOOGLE_CLOUD_PLATFORM_CLIENT_SECRETS_FILE` in `config.py`. The file in `GOOGLE_CLOUD_PLATFORM_CLIENT_OAUTH_CREDENTIALS_FILE` 
+will be created by the bot itself. The first time this is run, **it will open your web browser** to create OAuth Access Tokens based on your Google Account.
+ 
+The Apps Script must be in the same Google Cloud Platform project as the OAuth credentials for the caller. 
+
+This setup is a bit more complex than the other APIs. Follow these guides: 
+
+*   [Google Cloud Platform](https://console.cloud.google.com/)
+*   [Google Apps Script API](https://developers.google.com/apps-script/api/concepts)
+*   [Python Quickstart](https://developers.google.com/apps-script/api/quickstart/python)
+*   [REST Reference](https://developers.google.com/apps-script/api/reference/rest)
 
 ##  Modules
 You can add and remove modules by adding or removing them from `initial_extensions` in `bot.py`.
