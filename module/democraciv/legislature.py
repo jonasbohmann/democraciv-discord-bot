@@ -3,14 +3,13 @@ import asyncpg
 import discord
 import datetime
 
-from discord.embeds import EmptyEmbed
-
 from util.flow import Flow
-from util.paginator import Pages, AlternativePages
 from config import config, links
 from discord.ext import commands
-from discord.ext.commands import Greedy
+from discord.embeds import EmptyEmbed
 from util import utils, mk, exceptions
+from discord.ext.commands import Greedy
+from util.paginator import AlternativePages
 from util.law_helper import AnnouncementQueue
 from util.converter import Session, SessionStatus, Bill, Motion, Law, CaseInsensitiveMember, PoliticalParty
 
@@ -188,7 +187,8 @@ class Legislature(commands.Cog):
 
     @bill.command(name='from', aliases=['f'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def b_from(self, ctx, *, member_or_party: typing.Union[discord.Member, CaseInsensitiveMember, discord.User, PoliticalParty] = None):
+    async def b_from(self, ctx, *, member_or_party: typing.Union[
+        discord.Member, CaseInsensitiveMember, discord.User, PoliticalParty] = None):
         """List all bills that a specific person or Political Party submitted"""
 
         member = member_or_party or ctx.author
@@ -220,7 +220,7 @@ class Legislature(commands.Cog):
                           f"{await _bill.get_emojified_status(verbose=False)}")
 
         if isinstance(member, PoliticalParty):
-            a_title = f"Bills from Members of {name}"
+            a_title = f"Bills from members of {name}"
             a_icon = await member.get_logo() or EmptyEmbed
         else:
             a_title = f"Bills from {name}"
@@ -285,7 +285,8 @@ class Legislature(commands.Cog):
 
     @motion.command(name='from', aliases=['f'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def m_from(self, ctx, *, member_or_party: typing.Union[discord.Member, CaseInsensitiveMember, discord.User, PoliticalParty] = None):
+    async def m_from(self, ctx, *, member_or_party: typing.Union[
+        discord.Member, CaseInsensitiveMember, discord.User, PoliticalParty] = None):
         """List all motions that a specific person or Political Party submitted"""
 
         member = member_or_party or ctx.author
@@ -315,7 +316,7 @@ class Legislature(commands.Cog):
             pretty.append(f"Motion #{record['id']} - [{record['title']}]({record['hastebin']})")
 
         if isinstance(member, PoliticalParty):
-            a_title = f"Motions from Members of {name}"
+            a_title = f"Motions from members of {name}"
             a_icon = await member.get_logo() or EmptyEmbed
         else:
             a_title = f"Motions from {member.display_name}"
@@ -372,11 +373,12 @@ class Legislature(commands.Cog):
         active_leg_session: Session = await self.bot.laws.get_active_leg_session()
 
         if active_leg_session is None:
-            return await ctx.send(":x: There is no open session!")
+            return await ctx.send(":x: There is no open session.")
 
-        if active_leg_session.status is not SessionStatus.SUBMISSION_PERIOD:
-            return await ctx.send(":x: You can only update a session to be in Voting Period that was previously in the"
-                                  "Submission Period!")
+        if active_leg_session.status is SessionStatus.VOTING_PERIOD:
+            return await ctx.send(":x: This session is already in the Voting Period.")
+        elif active_leg_session.status is SessionStatus.CLOSED:
+            return await ctx.send(":x: This session is closed.")
 
         await active_leg_session.start_voting(voting_form)
 
@@ -398,7 +400,7 @@ class Legislature(commands.Cog):
         active_leg_session = await self.bot.laws.get_active_leg_session()
 
         if active_leg_session is None:
-            return await ctx.send(f":x: There is no open session!")
+            return await ctx.send(f":x: There is no open session.")
 
         await active_leg_session.close()
 
@@ -414,19 +416,23 @@ class Legislature(commands.Cog):
                                                   f"#{active_leg_session.id} has been **closed** by the Cabinet.")
 
     @legislature.command(name='exportsession', aliases=['es'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def exportsession(self, ctx, session: Session):
-        """Export a session's bills and motions for Google Spreadsheets"""
+    @commands.cooldown(1, 300, commands.BucketType.user)
+    async def exportsession(self, ctx, session: Session = None):
+        """Export a session's bills and motions for Google Spreadsheets and generate the Google Forms voting form"""
         if isinstance(session, str):
             return
 
-        b_ids = list()
-        b_hyperlinks = list()
+        session = session or await self.bot.laws.get_last_leg_session()
 
-        m_ids = list()
-        m_hyperlinks = list()
+        if session is None:
+            return await ctx.send(":x: There hasn't been a session yet.")
 
         async with ctx.typing():
+            b_ids = list()
+            b_hyperlinks = list()
+
+            m_ids = list()
+            m_hyperlinks = list()
 
             for bill_id in session.bills:
                 bill = await Bill.convert(ctx, bill_id)
@@ -442,6 +448,7 @@ class Legislature(commands.Cog):
                 f"Export of Legislative Session {session.id} -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n",
                 f"Xth Session - {session.opened_on.strftime('%B %d %Y')} (Bot Session {session.id})\n\n"
                 "----- Submitted Bills -----\n"]
+
             exported.extend(b_ids)
             exported.append("\n")
             exported.extend(b_hyperlinks)
@@ -456,6 +463,56 @@ class Legislature(commands.Cog):
                    f"your Speaker duties with this command.\n\n**Export:** <{link}>\n\n" \
                    "https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662/howtoexport.mp4"
             await ctx.send(text)
+
+        flow = Flow(self.bot, ctx)
+
+        question = await ctx.send(f":information_source: Do you want to generate the Google Forms"
+                                  f" voting form for Legislative Session #{session.id} as well?")
+
+        reaction = await flow.get_yes_no_reaction_confirm(question, 20)
+
+        if reaction is None:
+            return
+
+        elif not reaction:
+            return
+
+        elif reaction:
+            await ctx.send(f":white_check_mark: I will generate the voting form for Legislative Session #{session.id}."
+                           f"\n:arrows_counterclockwise: This may take a few minutes...")
+
+            async with ctx.typing():
+                bills = {b.name: b.link for b in [await Bill.convert(ctx, _b) for _b in session.bills]}
+                motions = {m.name: m.link for m in [await Motion.convert(ctx, _m) for _m in session.motions]}
+
+                result = await self.bot.google_api.run_apps_script(script_id="MME1GytLY6YguX02rrXqPiGqnXKElby-M",
+                                                                   function="generate_form",
+                                                                   parameters=[session.id, bills, motions])
+                if not result['done']:
+                    return await ctx.send(":x: There was an error while generating the form.")
+
+            embed = self.bot.embeds.embed_builder(title=f"Voting Form for Legislative Session #{session.id}",
+                                                  description="Remember to double check to make sure the "
+                                                              "form is correct.\n\nNote that you may have to adjust "
+                                                              "the form to comply with this nation's laws.\n"
+                                                              "This comes with no guarantees of a form's valid "
+                                                              "legal status.")
+
+            embed.add_field(name="Link to the Voting Form",
+                            value=result['response']['result']['view'],
+                            inline=False)
+
+            embed.add_field(name="Shortened Link to Voting Form",
+                            value=result['response']['result']['short-view'],
+                            inline=False)
+
+            embed.add_field(name="Edit Link to Voting Form",
+                            value="I have DMed you the edit link for this form.",
+                            inline=False)
+
+            await ctx.author.send(f"Edit Link for the Voting Form for Legislative Session #{session.id}:"
+                                  f" <{result['response']['result']['edit']}>")
+            await ctx.send(embed=embed)
 
     async def paginate_all_sessions(self, ctx):
         all_sessions = await self.bot.db.fetch("SELECT id, opened_on, closed_on FROM legislature_sessions ORDER BY id")

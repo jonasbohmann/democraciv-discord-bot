@@ -6,7 +6,7 @@ BOT_NAME = 'Democraciv Bot'
 BOT_PREFIX = '-'
 BOT_COMMAND_COOLDOWN = 2.0  # In seconds
 BOT_DESCRIPTION = 'Discord Bot for the r/Democraciv community.'
-BOT_VERSION = '1.1.0'
+BOT_VERSION = '1.1.1'
 BOT_ICON_URL = 'https://cdn.discordapp.com/attachments/585502938571604056/586310405618532362/final_pride2.png'
 BOT_EMBED_COLOUR = 0x1b1c20  # in hex as int
 DEMOCRACIV_GUILD_ID = 208984105310879744  # Democraciv
@@ -74,3 +74,8 @@ YOUTUBE_EVERYONE_PING_ON_STREAM = False
 YOUTUBE_CHANNEL_ID = 'UC-NukxPakwQIvx73VjtIPnw'  # The channel ID of the YouTuber's channel
 YOUTUBE_CHANNEL_UPLOADS_PLAYLIST = 'UU-NukxPakwQIvx73VjtIPnw'  # The playlist ID of the YouTuber's 'Uploads' playlist
 YOUTUBE_ANNOUNCEMENT_CHANNEL = 209432307730350080  # The Discord Channel for YouTube notifications
+
+# Google Cloud Platform Configuration
+GOOGLE_CLOUD_PLATFORM_CLIENT_SECRETS_FILE = "config/google_cloud_platform_client_secret.json"
+GOOGLE_CLOUD_PLATFORM_CLIENT_OAUTH_CREDENTIALS_FILE = "config/google_cloud_platform_oauth2_credentials.json"
+GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES = ['https://www.googleapis.com/auth/forms']

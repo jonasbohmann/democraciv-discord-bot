@@ -137,3 +137,5 @@ migrate.sql
 /db/backup/*
 /db/stv/*
 core
+config/google_cloud_platform_client_secret.json
+config/google_cloud_platform_oauth2_credentials.json

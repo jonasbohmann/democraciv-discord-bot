@@ -172,7 +172,7 @@ class Laws(commands.Cog, name='Law'):
             pretty_laws.append(f"Law #{record['law_id']} - [{record['bill_name']}]({record['link']})")
 
         if isinstance(member, PoliticalParty):
-            a_title = f"Laws from Members of {name}"
+            a_title = f"Laws from members of {name}"
             a_icon = await member.get_logo() or EmptyEmbed
         else:
             a_title = f"Laws from {name}"
