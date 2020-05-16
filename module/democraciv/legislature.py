@@ -469,7 +469,7 @@ class Legislature(commands.Cog):
         question = await ctx.send(f":information_source: Do you want me to generate the Google Forms"
                                   f" voting form for Legislative Session #{session.id} as well?")
 
-        reaction = await flow.get_continue_confirm(question, ":white_check_mark:", 20)
+        reaction = await flow.get_continue_confirm(question, "\U00002705", 20)
 
         if reaction is None:
             ctx.command.reset_cooldown(ctx)
@@ -480,6 +480,16 @@ class Legislature(commands.Cog):
             return
 
         elif reaction:
+            await ctx.send(":information_source: Reply with an **edit** link to an **empty** Google Forms "
+                           "form you created. I will then fill that form to make it the voting form. "
+                           "Create a Form here: <https://forms.new>")
+
+            form_url = await flow.get_private_text_input(120)
+
+            if not self.bot.laws.is_google_doc_link(form_url):
+                ctx.command.reset_cooldown(ctx)
+                return await ctx.send(":x: That doesn't look like a Google Forms URL.")
+
             await ctx.send(f":white_check_mark: I will generate the voting form for Legislative Session #{session.id}."
                            f"\n:arrows_counterclockwise: This may take a few minutes...")
 
@@ -489,16 +499,31 @@ class Legislature(commands.Cog):
 
                 result = await self.bot.google_api.run_apps_script(script_id="MME1GytLY6YguX02rrXqPiGqnXKElby-M",
                                                                    function="generate_form",
-                                                                   parameters=[session.id, bills, motions])
-                if not result['done']:
+                                                                   parameters=[form_url, session.id, bills, motions])
+
+                if result is None or not result['done']:
+                    ctx.command.reset_cooldown(ctx)
                     return await ctx.send(":x: There was an error while generating the form.")
+
+                if 'error' in result:
+                    ctx.command.reset_cooldown(ctx)
+
+                    error_msg = "Exception: No item with the given ID could be found, or you do" \
+                                " not have permission to access it."
+
+                    if result['error']['details'][0]['errorMessage'] == error_msg:
+                        return await ctx.send(":x: I cannot access that Google Forms form. Are you sure that you "
+                                              "gave me an edit link?")
+                    else:
+                        return await ctx.send(":x: There was an error while generating the form.")
 
             embed = self.bot.embeds.embed_builder(title=f"Generated Voting Form for Legislative Session #{session.id}",
                                                   description="Remember to double check the form to make sure it's "
                                                               "correct.\n\nNote that you may have to adjust "
                                                               "the form to comply with this nation's laws.\n"
                                                               "This comes with no guarantees of a form's valid "
-                                                              "legal status.")
+                                                              "legal status.\n\nRemember to change the edit link you "
+                                                              "gave me above to not be public.")
 
             embed.add_field(name="Link to the Voting Form",
                             value=result['response']['result']['view'],
@@ -508,12 +533,6 @@ class Legislature(commands.Cog):
                             value=result['response']['result']['short-view'],
                             inline=False)
 
-            embed.add_field(name="Edit Link to the Voting Form",
-                            value="I have DMed you the edit link for this form.",
-                            inline=False)
-
-            await ctx.author.send(f"Edit Link for the Voting Form for Legislative Session #{session.id}:"
-                                  f" <{result['response']['result']['edit']}>")
             await ctx.send(embed=embed)
 
     async def paginate_all_sessions(self, ctx):

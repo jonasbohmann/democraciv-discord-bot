@@ -135,6 +135,33 @@ class Flow:
         else:
             return text.content
 
+    async def get_private_text_input(self, timeout: int) -> typing.Optional[str]:
+        """Waits for a reply by the original user in the original channel and returns reply as string.
+
+           Returns None if the user did nothing.
+
+           Also deletes the original message."""
+
+        try:
+            text = await self.bot.wait_for('message',
+                                           check=self.bot.checks.wait_for_message_check(self.ctx),
+                                           timeout=timeout)
+        except asyncio.TimeoutError:
+            await self.ctx.send(":zzz: You took too long to reply.")
+            return None
+
+        if not text.content:
+            await self.ctx.send(":x: You didn't reply with text.")
+            return None
+
+        else:
+            try:
+                await text.delete()
+            except Exception:
+                pass
+
+            return text.content
+
     async def get_tag_content(self, timeout: int) -> typing.Optional[str]:
         """Waits for a reply by the original user in the original channel and returns reply as string.
 
