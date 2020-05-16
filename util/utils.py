@@ -151,13 +151,13 @@ class CheckUtils:
 
         return check
 
-    def wait_for_gear_reaction_check(self, ctx, original_message: discord.Message):
+    def wait_for_specific_emoji_reaction_check(self, ctx, original_message: discord.Message, emoji):
         """Wrapper function for a client.wait_for('reaction_add') check.
             Also checks if reaction.emoji == ⚙"""
 
         def check(reaction, user):
             return user == ctx.author and reaction.message.id == original_message.id \
-                   and str(reaction.emoji) == config.GUILD_SETTINGS_GEAR
+                   and str(reaction.emoji) == emoji
 
         return check
 

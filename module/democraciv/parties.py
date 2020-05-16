@@ -172,6 +172,8 @@ class Party(commands.Cog, name='Political Parties'):
         role_name = await flow.get_new_role(240)
 
         if isinstance(role_name, str):
+            is_updated = False
+
             await ctx.send(
                 f":white_check_mark: I will **create a new role** on this server named `{role_name}`"
                 f" for the new party.")
@@ -181,10 +183,22 @@ class Party(commands.Cog, name='Political Parties'):
                 raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE, role_name)
 
         else:
+            is_updated = True
             discord_role = role_name
 
             await ctx.send(f":white_check_mark: I'll use the **pre-existing role**"
                            f" `{discord_role.name}` for the new party.")
+
+        await ctx.send(":information_source: Reply with the name of the party's leader or representative.")
+        leader = await flow.get_text_input(240)
+
+        if not leader:
+            return
+
+        try:
+            leader_member = await commands.MemberConverter().convert(ctx, leader)
+        except commands.BadArgument:
+            raise exceptions.MemberNotFoundError(leader)
 
         await ctx.send(":information_source: Reply with the invite link to the party's Discord server. "
                        "If they don't have one, just reply with gibberish.")
@@ -213,17 +227,6 @@ class Party(commands.Cog, name='Political Parties'):
         elif not reaction:
             is_private = True
 
-        await ctx.send(":information_source: Reply with the name of the party's leader.")
-        leader = await flow.get_text_input(240)
-
-        if not leader:
-            return
-
-        try:
-            leader_member = await commands.MemberConverter().convert(ctx, leader)
-        except commands.BadArgument:
-            raise exceptions.MemberNotFoundError(leader)
-
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
                 await connection.execute(
@@ -236,8 +239,11 @@ class Party(commands.Cog, name='Political Parties'):
                                          " ON CONFLICT DO NOTHING ",
                                          discord_role.name.lower(), discord_role.id)
 
-                await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a new party or its '
-                               f'properties were updated if it already existed.')
+                if not is_updated:
+                    await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a new party.')
+                else:
+                    await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a new party or its '
+                                   f'properties were updated if it already existed.')
 
         return await PoliticalParty.convert(ctx, discord_role.id)
 
@@ -245,7 +251,7 @@ class Party(commands.Cog, name='Political Parties'):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def addparty(self, ctx):
-        """Add a new political party"""
+        """Add a new political party or edit an existing one"""
         await self.create_new_party(ctx)
 
     @commands.command(name='deleteparty')
@@ -298,8 +304,6 @@ class Party(commands.Cog, name='Political Parties'):
         if status == "INSERT 0 1":
             await ctx.send(f':white_check_mark: Alias `{alias}` for party '
                            f'`{party.role.name}` was added.')
-        else:
-            await ctx.send(":x: Unexpected database error occurred.")
 
     @commands.command(name='deletealias', aliases=['removealias'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

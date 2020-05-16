@@ -39,12 +39,14 @@ class Flow:
         """Adds the :gear: emoji to the message and returns whether it has been clicked by the
            original user in the specified time"""
 
-        await message.add_reaction(config.GUILD_SETTINGS_GEAR)
+        return await self.get_continue_confirm(message, config.GUILD_SETTINGS_GEAR, timeout)
+
+    async def get_continue_confirm(self, message: discord.Message, emoji, timeout: int):
+        await message.add_reaction(emoji)
 
         try:
             await self.ctx.bot.wait_for('reaction_add',
-                                        check=self.bot.checks.
-                                        wait_for_gear_reaction_check(self.ctx, message),
+                                        check=self.bot.checks.wait_for_specific_emoji_reaction_check(self.ctx, message, emoji),
                                         timeout=timeout)
 
         except asyncio.TimeoutError:

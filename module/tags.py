@@ -428,9 +428,6 @@ class Tags(commands.Cog):
     async def search(self, ctx, *, query: str):
         """Search for a global or local tag on this server"""
 
-        if len(query) < 3:
-            return await ctx.send(":x: The query to search for must be at least 3 characters.")
-
         db_query = """SELECT tag_id FROM guild_tags_alias
                       WHERE (global = true AND alias % $1) OR (alias % $1 AND guild_id = $2)
                       ORDER BY similarity(alias, $1)

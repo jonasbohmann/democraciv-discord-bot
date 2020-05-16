@@ -466,10 +466,10 @@ class Legislature(commands.Cog):
 
         flow = Flow(self.bot, ctx)
 
-        question = await ctx.send(f":information_source: Do you want to generate the Google Forms"
+        question = await ctx.send(f":information_source: Do you want me to generate the Google Forms"
                                   f" voting form for Legislative Session #{session.id} as well?")
 
-        reaction = await flow.get_yes_no_reaction_confirm(question, 10)
+        reaction = await flow.get_continue_confirm(question, ":white_check_mark:", 20)
 
         if reaction is None:
             ctx.command.reset_cooldown(ctx)
@@ -493,9 +493,9 @@ class Legislature(commands.Cog):
                 if not result['done']:
                     return await ctx.send(":x: There was an error while generating the form.")
 
-            embed = self.bot.embeds.embed_builder(title=f"Voting Form for Legislative Session #{session.id}",
-                                                  description="Remember to double check to make sure the "
-                                                              "form is correct.\n\nNote that you may have to adjust "
+            embed = self.bot.embeds.embed_builder(title=f"Generated Voting Form for Legislative Session #{session.id}",
+                                                  description="Remember to double check the form to make sure it's "
+                                                              "correct.\n\nNote that you may have to adjust "
                                                               "the form to comply with this nation's laws.\n"
                                                               "This comes with no guarantees of a form's valid "
                                                               "legal status.")
@@ -504,11 +504,11 @@ class Legislature(commands.Cog):
                             value=result['response']['result']['view'],
                             inline=False)
 
-            embed.add_field(name="Shortened Link to Voting Form",
+            embed.add_field(name="Shortened Link to the Voting Form",
                             value=result['response']['result']['short-view'],
                             inline=False)
 
-            embed.add_field(name="Edit Link to Voting Form",
+            embed.add_field(name="Edit Link to the Voting Form",
                             value="I have DMed you the edit link for this form.",
                             inline=False)
 
