@@ -54,7 +54,7 @@ class Selfrole(commands.Converter):
         if not role:
             raise NotFoundError(f":x: There is no selfrole on this server that matches `{argument}`. "
                                 f"If you're trying to join or leave a political party,"
-                                f" check `{ctx.prefix}help Political Parties`")
+                                f" check `{config.BOT_PREFIX}help Political Parties`")
 
         role_record = await ctx.bot.db.fetchrow("SELECT * FROM roles WHERE guild_id = $1 AND role_id = $2",
                                                 ctx.guild.id, role.id)
@@ -66,7 +66,7 @@ class Selfrole(commands.Converter):
         else:
             raise NotFoundError(f":x: There is no selfrole on this server that matches `{argument}`. "
                                 f"If you're trying to join or leave a political party,"
-                                f" check `{ctx.prefix}help Political Parties`")
+                                f" check `{config.BOT_PREFIX}help Political Parties`")
 
 
 class BanConverter(commands.Converter):

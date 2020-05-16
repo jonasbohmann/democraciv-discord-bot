@@ -39,7 +39,7 @@ class Guild(commands.Cog, name="Server"):
         excluded_channels = len(excluded_channels) if excluded_channels is not None else 0
 
         embed = self.bot.embeds.embed_builder(title=ctx.guild.name,
-                                              description=f"Check `{ctx.prefix}help server` for help on "
+                                              description=f"Check `{config.BOT_PREFIX}help server` for help on "
                                                           f"how to configure me for this server.", has_footer=False)
         embed.add_field(name="Settings", value=f"{is_welcome_enabled} Welcome Messages\n"
                                                f"{is_logging_enabled} Logging ({excluded_channels} excluded channels)\n"

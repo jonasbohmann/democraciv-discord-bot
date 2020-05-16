@@ -1,6 +1,4 @@
 import typing
-
-import asyncpg
 import discord
 import util.exceptions as exceptions
 

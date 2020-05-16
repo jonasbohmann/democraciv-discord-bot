@@ -7,7 +7,7 @@ import datetime
 
 from config import config
 from discord.ext import commands
-from util.paginator import Pages
+from util.paginator import AlternativePages
 from util.converter import CaseInsensitiveRole, PoliticalParty, CaseInsensitiveMember
 
 
@@ -169,7 +169,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         embed = self.bot.embeds.embed_builder(title=f"{config.SPOTIFY_LOGO}  {member.name} on Spotify",
                                               description="", has_footer=False,
-                                              colour=0x2F3136, footer=f"Use `{ctx.prefix}lyrics` to get lyrics"
+                                              colour=0x2F3136, footer=f"Use `{config.BOT_PREFIX}lyrics` to get lyrics"
                                                                       f" for a song!")
         embed.add_field(name="Song", value=f"[{member_spotify.title}](https://open.spotify.com/"
                                            f"track/{member_spotify.track_id})", inline=False)
@@ -274,10 +274,10 @@ class Misc(commands.Cog, name="Miscellaneous"):
                 embed.set_thumbnail(url=lyrics['thumbnail']['genius'])
                 return await ctx.send(embed=embed)
 
-            pages = Pages(ctx=ctx, entries=lyrics['lyrics'].splitlines(), show_entry_count=False,
-                          title=f"{lyrics['title']} by {lyrics['author']}", show_index=False,
-                          title_url=lyrics['links']['genius'], thumbnail=lyrics['thumbnail']['genius'], per_page=20,
-                          colour=0x2F3136, show_amount_of_pages=True)
+            pages = AlternativePages(ctx=ctx, entries=lyrics['lyrics'].splitlines(), show_entry_count=False,
+                                     title=f"{lyrics['title']} by {lyrics['author']}", show_index=False,
+                                     title_url=lyrics['links']['genius'], thumbnail=lyrics['thumbnail']['genius'],
+                                     per_page=20, colour=0x2F3136, show_amount_of_pages=True)
         except KeyError:
             return await ctx.send(f":x: Couldn't find anything that matches `{query}`.")
 

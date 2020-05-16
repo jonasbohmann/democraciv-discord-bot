@@ -330,7 +330,7 @@ class Moderation(commands.Cog):
     @commands.bot_has_permissions(kick_members=True)
     @commands.has_permissions(kick_members=True)
     async def kick(self, ctx, member: typing.Union[discord.Member, CaseInsensitiveMember], *, reason: str = None):
-        """Kick a member"""
+        """Kick someone"""
         if member == ctx.author:
             return await ctx.send(":x: You can't kick yourself.")
 
@@ -420,7 +420,7 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
     async def mute(self, ctx, member: typing.Union[discord.Member, CaseInsensitiveMember], *, reason: str = None):
-        """Mute a member"""
+        """Mute someone"""
 
         muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
 
@@ -473,7 +473,7 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
     async def unmute(self, ctx, member: typing.Union[discord.Member, CaseInsensitiveMember]):
-        """Unmute a member"""
+        """Unmute someone"""
 
         muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
 
@@ -505,7 +505,7 @@ class Moderation(commands.Cog):
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     async def ban(self, ctx, member: BanConverter, *, reason: str = None):
-        """Ban a member
+        """Ban someone
 
         If you want to ban a user that is not in this server, use the user's ID instead.
 
@@ -580,7 +580,7 @@ class Moderation(commands.Cog):
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     async def unban(self, ctx, user: UnbanConverter, *, reason: str = None):
-        """Unban a user
+        """Unban someone
 
         **Example:**
             `-unban darthspectrum` unban by Discord username

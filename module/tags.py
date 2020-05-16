@@ -173,7 +173,7 @@ class Tags(commands.Cog):
 
         if alias.invoked_with == alias.name:
             return await ctx.send(f":x: That is not an alias, but the tag's name. "
-                                  f"Try {ctx.prefix}tag delete {alias.invoked_with} instead!")
+                                  f"Try {config.BOT_PREFIX}tag delete {alias.invoked_with} instead!")
 
         are_you_sure = await ctx.send(f":information_source: Are you sure that you want to remove the alias "
                                       f"`{config.BOT_PREFIX}{alias.invoked_with}` "
@@ -319,7 +319,7 @@ class Tags(commands.Cog):
     async def taginfo(self, ctx, *, tag: Tag):
         """Info about a tag"""
 
-        pretty_aliases = (', '.join([f"`{ctx.prefix}{alias}`" for alias in tag.aliases])) or 'None'
+        pretty_aliases = (', '.join([f"`{config.BOT_PREFIX}{alias}`" for alias in tag.aliases])) or 'None'
 
         embed = self.bot.embeds.embed_builder(title="Tag Info", description="")
         embed.add_field(name="Title", value=tag.title, inline=False)
