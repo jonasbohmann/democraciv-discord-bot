@@ -1,14 +1,15 @@
+import datetime
 import typing
 import discord
 
 from util.flow import Flow
+from discord.ext import commands
 from util.converter import Bill
 from config import config, links
-from util.paginator import Pages
-from discord.ext import commands
-from discord.ext.commands import Greedy
-from util.law_helper import MockContext, AnnouncementQueue
 from util import mk, exceptions, utils
+from discord.ext.commands import Greedy
+from util.paginator import AlternativePages
+from util.law_helper import AnnouncementQueue
 
 
 class LawPassScheduler(AnnouncementQueue):
@@ -72,26 +73,39 @@ class Ministry(commands.Cog):
     def gov_announcements_channel(self) -> typing.Optional[discord.TextChannel]:
         return mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
-    async def get_open_vetos(self) -> typing.List[Bill]:
-        """Gets all bills that passed the Legislature, are vetoable and were not yet voted on by the Ministry"""
-        open_bills = await self.bot.db.fetch('SELECT id FROM legislature_bills WHERE has_passed_leg = true'
-                                             ' AND is_vetoable = true AND voted_on_by_ministry = false'
-                                             ' AND has_passed_ministry = false ORDER BY id')
-
-        return [await Bill.convert(MockContext(self.bot), record['id']) for record in open_bills]
-
     async def get_pretty_vetos(self) -> typing.Optional[typing.List[str]]:
-        """Prettifies a list of Bill objects of open vetoes into list of strings"""
-        open_bills = await self.get_open_vetos()
+        """Gets all bills that passed the Legislature, are vetoable and were not yet voted on by the Ministry"""
+
+        open_bills = await self.bot.db.fetch('SELECT id, bill_name, link, tiny_link FROM legislature_bills '
+                                             'WHERE has_passed_leg = true '
+                                             'AND is_vetoable = true AND voted_on_by_ministry = false '
+                                             'AND has_passed_ministry = false ORDER BY id')
+
+        if not open_bills:
+            return None
 
         pretty_bills = []
+        b_ids = []
+        b_hyperlinks = []
 
-        if len(open_bills) > 0:
-            for bill in open_bills:
-                pretty_bills.append(f"Bill #{bill.id} - [{bill.name}]({bill.tiny_link})")
+        for record in open_bills:
+            b_ids.append(f"Bill #{record['id']}")
+            b_hyperlinks.append(f"=HYPERLINK(\"{record['link']}\"; \"{record['bill_name']}\")")
+            pretty_bills.append(f"Bill #{record['id']} - [{record['bill_name']}]({record['tiny_link']})")
 
-        if not pretty_bills:
-            return None
+        exported = [
+            f"Export of Vetoable Bills -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n",
+            "----- Vetoable Bills -----\n"]
+
+        exported.extend(b_ids)
+        exported.append("\n")
+        exported.extend(b_hyperlinks)
+
+        link = await self.bot.laws.post_to_hastebin('\n'.join(exported))
+
+        if link:
+            pretty_bills.insert(0, f"[View this list in Google Spreadsheets formatting for"
+                                   f" easy copy & pasting]({link})\n")
 
         return pretty_bills
 
@@ -142,12 +156,8 @@ class Ministry(commands.Cog):
                                                   has_footer=False)
             return await ctx.send(embed=embed)
 
-        help_description = f"Use '{config.BOT_PREFIX}help ministry' to learn how to pass and veto bills."
-
-        pages = Pages(ctx=ctx, entries=pretty_bills, show_entry_count=False, title="Open Bills to Vote On",
-                      show_index=False, footer_text=help_description, show_amount_of_pages=True)
-        if pages.maximum_pages == 1:
-            pages.show_amount_of_pages = False
+        pages = AlternativePages(ctx=ctx, entries=pretty_bills, show_entry_count=False, title="Open Bills to Vote On",
+                                 show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
     @staticmethod

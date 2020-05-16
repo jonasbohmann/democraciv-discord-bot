@@ -456,9 +456,8 @@ class Legislature(commands.Cog):
             exported.extend(m_ids)
             exported.append("\n")
             exported.extend(m_hyperlinks)
-            ex = '\n'.join(exported)
 
-            link = await self.bot.laws.post_to_hastebin(ex)
+            link = await self.bot.laws.post_to_hastebin('\n'.join(exported))
             text = f"**__Export of Legislative Session #{session.id}__**\nSee the video below to see how to speed up " \
                    f"your Speaker duties with this command.\n\n**Export:** <{link}>\n\n" \
                    "https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662/howtoexport.mp4"
