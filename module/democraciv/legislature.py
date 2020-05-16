@@ -675,6 +675,19 @@ class Legislature(commands.Cog):
                 else:
                     embed.add_field(name="Submitted Bills (cont.)", value=fields[index], inline=False)
 
+        if len(embed) > 6000:
+            for _ in embed.fields:
+                embed.remove_field(4)
+
+            async with ctx.typing():
+                haste_bin_url = await self.bot.laws.post_to_hastebin(pretty_motions)
+                too_long = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
+                embed.add_field(name="Submitted Motions", value=too_long, inline=False)
+
+                haste_bin_url = await self.bot.laws.post_to_hastebin(pretty_bills)
+                too_long_ = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
+                embed.add_field(name="Submitted Bills", value=too_long_, inline=False)
+
         embed.set_footer(text=f"Bills that are underlined are active laws. All times are in UTC.",
                          icon_url=config.BOT_ICON_URL)
         await ctx.send(embed=embed)
