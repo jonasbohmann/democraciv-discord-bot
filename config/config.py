@@ -78,4 +78,5 @@ YOUTUBE_ANNOUNCEMENT_CHANNEL = 209432307730350080  # The Discord Channel for You
 # Google Cloud Platform Configuration
 GOOGLE_CLOUD_PLATFORM_CLIENT_SECRETS_FILE = "config/google_cloud_platform_client_secret.json"
 GOOGLE_CLOUD_PLATFORM_CLIENT_OAUTH_CREDENTIALS_FILE = "config/google_cloud_platform_oauth2_credentials.json"
-GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES = ['https://www.googleapis.com/auth/forms']
+GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES = ['https://www.googleapis.com/auth/forms',
+                                      'https://www.googleapis.com/auth/documents']

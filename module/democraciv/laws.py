@@ -114,25 +114,78 @@ class Laws(commands.Cog, name='Law'):
         embed.set_footer(text=f"All dates are in UTC. Associated Bill: #{law.bill.id}", icon_url=config.BOT_ICON_URL)
         await ctx.send(embed=embed)
 
-    @law.command(name='export', aliases=['e'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @law.command(name='export', aliases=['e', 'exp', 'ex', 'generate', 'generatelegalcode'])
+    @commands.cooldown(1, 300, commands.BucketType.user)
     async def exportlaws(self, ctx):
-        """Export all active laws"""
+        """Generate a Legal Code as a Google Docs document from the list of active laws"""
+
+        flow = Flow(self.bot, ctx)
+
         query = """SELECT legislature_laws.law_id, legislature_bills.bill_name, legislature_bills.link 
                    FROM legislature_laws JOIN legislature_bills
                    ON legislature_laws.bill_id = legislature_bills.id ORDER BY legislature_laws.law_id;
                 """
 
+        await ctx.send(":information_source: Reply with an **edit** link to a Google Docs "
+                       "document you created. I will then fill that document to make it an up-to-date Legal Code.\n"
+                       ":warning: Note that I will replace the entire content of your Google Docs document if it "
+                       "isn't empty.")
+
+        doc_url = await flow.get_private_text_input(120)
+
+        if not doc_url:
+            return
+
+        if not self.bot.laws.is_google_doc_link(doc_url):
+            ctx.command.reset_cooldown(ctx)
+            return await ctx.send(":x: That doesn't look like a Google Docs URL.")
+
+        await ctx.send(f":white_check_mark: I will generate an up-to-date Legal Code."
+                       f"\n:arrows_counterclockwise: This may take a few minutes...")
+
         async with ctx.typing():
             all_laws = await self.bot.db.fetch(query)
-
-            pretty_laws = [f"All Active Laws in {mk.NATION_NAME} -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n"]
+            ugly_laws = []
 
             for record in all_laws:
-                pretty_laws.append(f"Law {record['law_id']} - {record['bill_name']}   ({record['link']})\n")
+                ugly_laws.append({'id': record['law_id'], 'name': record['bill_name'], 'link': record['link']})
 
-            link = await self.bot.laws.post_to_hastebin('\n'.join(pretty_laws))
-            await ctx.send(f"<{link}>")
+            date = datetime.datetime.utcnow().strftime("%B %d, %Y")
+
+            result = await self.bot.google_api.run_apps_script(script_id="MMV-pGVACMhaf_DjTn8jfEGqnXKElby-M",
+                                                               function="generate_legal_code",
+                                                               parameters=[doc_url,
+                                                                           {'name': mk.NATION_NAME, 'date': date},
+                                                                           ugly_laws])
+
+        if result is None or not result['done']:
+            ctx.command.reset_cooldown(ctx)
+            return await ctx.send(":x: There was an error while generating the document.")
+
+        if 'error' in result:
+            ctx.command.reset_cooldown(ctx)
+
+            error_msg = ("Exception: No item with the given ID could be found,"
+                         " or you do not have permission to access it.", "Action not allowed")
+
+            if result['error']['details'][0]['errorMessage'] in error_msg:
+                return await ctx.send(":x: I cannot access that Google Docs document. Are you sure that you "
+                                      "gave me an edit link?")
+            else:
+                return await ctx.send(":x: There was an error while generating the document.")
+
+        embed = self.bot.embeds.embed_builder(title=f"Generated Legal Code",
+                                              description="This Legal Code is not guaranteed to be correct. Its "
+                                                          f"content is based entirely on the list of Laws "
+                                                          f"in `{config.BOT_PREFIX}laws`."
+                                                          "\n\nRemember to change the edit link you "
+                                                          "gave me earlier to not be public.")
+
+        embed.add_field(name="Link to the Legal Code",
+                        value=result['response']['result']['view'],
+                        inline=False)
+
+        await ctx.send(embed=embed)
 
     @law.command(name='from', aliases=['f'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

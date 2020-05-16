@@ -525,7 +525,7 @@ class Legislature(commands.Cog):
                                                               "the form to comply with this nation's laws.\n"
                                                               "This comes with no guarantees of a form's valid "
                                                               "legal status.\n\nRemember to change the edit link you "
-                                                              "gave me above to not be public.")
+                                                              "gave me earlier to not be public.")
 
             embed.add_field(name="Link to the Voting Form",
                             value=result['response']['result']['view'],
