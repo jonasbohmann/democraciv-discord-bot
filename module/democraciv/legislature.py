@@ -485,6 +485,9 @@ class Legislature(commands.Cog):
 
             form_url = await flow.get_private_text_input(120)
 
+            if not form_url:
+                return
+
             if not self.bot.laws.is_google_doc_link(form_url):
                 ctx.command.reset_cooldown(ctx)
                 return await ctx.send(":x: That doesn't look like a Google Forms URL.")

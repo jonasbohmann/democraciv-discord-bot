@@ -2,17 +2,16 @@ import typing
 import discord
 import datetime
 
-from discord.embeds import EmptyEmbed
-
 from config import config
 from util import mk, utils
-from discord.ext.commands import Greedy
 from util.flow import Flow
-from util.converter import Law, CaseInsensitiveMember, PoliticalParty
-from util.paginator import Pages, AlternativePages
 from discord.ext import commands
-from util.exceptions import DemocracivBotException
+from discord.embeds import EmptyEmbed
+from discord.ext.commands import Greedy
+from util.paginator import AlternativePages
 from util.law_helper import AnnouncementQueue
+from util.exceptions import DemocracivBotException
+from util.converter import Law, CaseInsensitiveMember, PoliticalParty
 
 
 class RepealScheduler(AnnouncementQueue):
@@ -137,7 +136,8 @@ class Laws(commands.Cog, name='Law'):
 
     @law.command(name='from', aliases=['f'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def _from(self, ctx, *, member_or_party: typing.Union[discord.Member, CaseInsensitiveMember, discord.User, PoliticalParty] = None):
+    async def _from(self, ctx, *, member_or_party: typing.Union[
+        discord.Member, CaseInsensitiveMember, discord.User, PoliticalParty] = None):
         """List the laws a specific person or Political Party authored"""
 
         member = member_or_party or ctx.author
@@ -221,11 +221,8 @@ class Laws(commands.Cog, name='Law'):
                 if not results:
                     results = ['Nothing found.']
 
-        pages = Pages(ctx=ctx, entries=list(results), show_entry_count=False,
-                      title=f"Search Results for '{name}'", show_index=False, show_amount_of_pages=True,
-                      footer_text=f"Use {self.bot.commands_prefix}law <id> to get more details about a law.")
-        if pages.maximum_pages == 1:
-            pages.show_amount_of_pages = False
+        pages = AlternativePages(ctx=ctx, entries=list(results), show_entry_count=False,
+                                 title=f"Search Results for '{name}'", show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
     @law.command(name='repeal', aliases=['r, remove', 'delete'])
