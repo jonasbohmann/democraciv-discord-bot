@@ -1,6 +1,3 @@
-import io
-import discord
-
 from util.converter import Law
 from discord.ext import commands
 from jishaku.cog import JishakuBase, jsk
@@ -26,12 +23,12 @@ class Admin(JishakuBase, metaclass=GroupCogMeta, command_parent=jsk, command_att
         result = f'```{result}```'
 
         if len(result) > 2000:
-            fp = io.BytesIO(result.encode('utf-8'))
-            await ctx.send('Output was too long!', file=discord.File(fp, 'results.txt'))
+            link = await self.bot.laws.post_to_hastebin(result)
+            await ctx.send(f'<{link}>')
         else:
             await ctx.send(result)
 
-    @commands.command(name='addlawtag', aliases=['lt', 'alt'])
+    @commands.command(name='addlawtag', aliases=['lt'])
     @commands.is_owner()
     async def lawtag(self, ctx, law: Law, tag: str):
         """Add a search tag to a law to be used in `-laws search`"""

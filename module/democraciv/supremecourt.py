@@ -27,7 +27,8 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
     def judge_role(self) -> typing.Optional[discord.Role]:
         return mk.get_democraciv_role(self.bot, mk.DemocracivRole.JUDGE_ROLE)
 
-    @commands.group(name='court', aliases=['sc', 'courts'], case_insensitive=True, invoke_without_command=True)
+    @commands.group(name='court', aliases=['sc', 'courts', 'j', 'judicial'], case_insensitive=True,
+                    invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def court(self, ctx):
         """Dashboard for Supreme Court Justices"""

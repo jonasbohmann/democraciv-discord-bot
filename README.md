@@ -23,6 +23,7 @@ Provides useful information, political party & role management and much more.
 *  Supports the Executive with vetoes by keeping them up-to-date with passed bills from the Legislature
 *  Keeps track of all legislative sessions, bills, motions, ministry vetoes and laws
 *  Generates the voting form as a Google Form for legislative sessions
+*  Generates an up-to-date Legal Code based on the active laws as a Google Docs document
 *  Users can search for active laws by their name or by automatically generated tags
 *  Join and leave political parties and see their members and ranking
 *  Tags: Users can save text and images for later retrieval to command-like tags

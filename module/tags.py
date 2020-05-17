@@ -29,7 +29,7 @@ class Tags(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.group(name="tag", aliases=['tags'], invoke_without_command=True, case_insensitive=True)
+    @commands.group(name="tag", aliases=['tags', 't'], invoke_without_command=True, case_insensitive=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def tags(self, ctx):
