@@ -134,6 +134,7 @@ class Laws(commands.Cog, name='Law'):
         doc_url = await flow.get_private_text_input(120)
 
         if not doc_url:
+            ctx.command.reset_cooldown(ctx)
             return
 
         if not self.bot.laws.is_google_doc_link(doc_url):
@@ -150,7 +151,7 @@ class Laws(commands.Cog, name='Law'):
             for record in all_laws:
                 ugly_laws.append({'id': record['law_id'], 'name': record['bill_name'], 'link': record['link']})
 
-            date = datetime.datetime.utcnow().strftime("%B %d, %Y")
+            date = datetime.datetime.utcnow().strftime("%B %d, %Y at %H:%M")
 
             result = await self.bot.google_api.run_apps_script(script_id="MMV-pGVACMhaf_DjTn8jfEGqnXKElby-M",
                                                                function="generate_legal_code",
@@ -160,7 +161,8 @@ class Laws(commands.Cog, name='Law'):
 
         if result is None or not result['done']:
             ctx.command.reset_cooldown(ctx)
-            return await ctx.send(":x: There was an error while generating the document.")
+            return await ctx.send(":x: There was an error while generating the document. Are you sure that you "
+                                  "gave me an edit link?")
 
         if 'error' in result:
             ctx.command.reset_cooldown(ctx)
@@ -172,7 +174,8 @@ class Laws(commands.Cog, name='Law'):
                 return await ctx.send(":x: I cannot access that Google Docs document. Are you sure that you "
                                       "gave me an edit link?")
             else:
-                return await ctx.send(":x: There was an error while generating the document.")
+                return await ctx.send(":x: There was an error while generating the document. Are you sure that you "
+                                      "gave me an edit link?")
 
         embed = self.bot.embeds.embed_builder(title=f"Generated Legal Code",
                                               description="This Legal Code is not guaranteed to be correct. Its "
@@ -186,6 +189,10 @@ class Laws(commands.Cog, name='Law'):
                         inline=False)
 
         await ctx.send(embed=embed)
+
+    @exportlaws.error
+    async def export_error(self, ctx, error):
+        ctx.command.reset_cooldown(ctx)
 
     @law.command(name='from', aliases=['f'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

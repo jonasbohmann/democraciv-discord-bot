@@ -470,11 +470,7 @@ class Legislature(commands.Cog):
 
         reaction = await flow.get_continue_confirm(question, "\U00002705", 20)
 
-        if reaction is None:
-            ctx.command.reset_cooldown(ctx)
-            return
-
-        elif not reaction:
+        if not reaction:
             ctx.command.reset_cooldown(ctx)
             return
 
@@ -486,6 +482,7 @@ class Legislature(commands.Cog):
             form_url = await flow.get_private_text_input(120)
 
             if not form_url:
+                ctx.command.reset_cooldown(ctx)
                 return
 
             if not self.bot.laws.is_google_doc_link(form_url):
@@ -536,6 +533,10 @@ class Legislature(commands.Cog):
                             inline=False)
 
             await ctx.send(embed=embed)
+
+    @exportsession.error
+    async def export_error(self, ctx, error):
+        ctx.command.reset_cooldown(ctx)
 
     async def paginate_all_sessions(self, ctx):
         all_sessions = await self.bot.db.fetch("SELECT id, opened_on, closed_on FROM legislature_sessions ORDER BY id")
