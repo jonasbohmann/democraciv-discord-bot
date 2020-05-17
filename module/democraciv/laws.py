@@ -190,10 +190,6 @@ class Laws(commands.Cog, name='Law'):
 
         await ctx.send(embed=embed)
 
-    @exportlaws.error
-    async def export_error(self, ctx, error):
-        ctx.command.reset_cooldown(ctx)
-
     @law.command(name='from', aliases=['f'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def _from(self, ctx, *, member_or_party: typing.Union[

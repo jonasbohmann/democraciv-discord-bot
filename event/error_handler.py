@@ -126,6 +126,7 @@ class ErrorHandler(commands.Cog):
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         ignored = commands.CommandNotFound
+        ctx.command.reset_cooldown(ctx)
 
         error = getattr(error, 'original', error)
 
@@ -161,7 +162,6 @@ class ErrorHandler(commands.Cog):
             return await ctx.send(f":x: You are on cooldown! Try again in {error.retry_after:.2f} seconds.")
 
         elif isinstance(error, commands.MaxConcurrencyReached):
-            ctx.command.reset_cooldown(ctx)
             return await ctx.send(f":x: This command is already being used right now, try again later.")
 
         elif isinstance(error, commands.MissingPermissions):

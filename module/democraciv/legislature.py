@@ -534,10 +534,6 @@ class Legislature(commands.Cog):
 
             await ctx.send(embed=embed)
 
-    @exportsession.error
-    async def export_error(self, ctx, error):
-        ctx.command.reset_cooldown(ctx)
-
     async def paginate_all_sessions(self, ctx):
         all_sessions = await self.bot.db.fetch("SELECT id, opened_on, closed_on FROM legislature_sessions ORDER BY id")
         pretty_sessions = []
@@ -883,10 +879,6 @@ class Legislature(commands.Cog):
                 await self.vice_speaker.send(content=message, embed=embed)
         except discord.Forbidden:
             pass
-
-    @submit.error
-    async def submit_error(self, ctx, error):
-        ctx.command.reset_cooldown(ctx)
 
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
