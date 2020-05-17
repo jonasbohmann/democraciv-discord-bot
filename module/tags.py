@@ -363,7 +363,7 @@ class Tags(commands.Cog):
             return await ctx.send(":x: You already own this tag.")
 
         if isinstance(tag.author, discord.Member):
-            return await ctx.send(":x: The tag's owner is still in this guild.")
+            return await ctx.send(":x: The owner of this tag is still in this server.")
 
         await self.bot.db.execute("UPDATE guild_tags SET author = $1 WHERE id = $2", ctx.author.id, tag.id)
 
