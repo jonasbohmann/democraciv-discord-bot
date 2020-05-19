@@ -52,6 +52,9 @@ class Cache:
         if setting not in self.allowed_guild_settings:
             raise Exception("illegal setting")
 
+        if not self.bot.is_ready():
+            await self.bot.wait_until_ready()
+
         try:
             cached = self.guild_config[guild_id][setting]
         except (TypeError, KeyError) as e:
