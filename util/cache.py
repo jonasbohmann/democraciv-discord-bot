@@ -55,6 +55,9 @@ class Cache:
         if not self.bot.is_ready():
             await self.bot.wait_until_ready()
 
+        if self.guild_config is None:
+            await asyncio.sleep(5)
+
         try:
             cached = self.guild_config[guild_id][setting]
         except (TypeError, KeyError) as e:
