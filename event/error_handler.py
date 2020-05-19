@@ -125,19 +125,17 @@ class ErrorHandler(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
-        ignored = commands.CommandNotFound
-        ctx.command.reset_cooldown(ctx)
-
         error = getattr(error, 'original', error)
 
-        # This prevents any commands with local handlers being handled here
-        if hasattr(ctx.command, 'on_error') and (isinstance(error, commands.BadArgument) or
-                                                 isinstance(error, commands.BadUnionArgument)):
+        if ctx.command is not None:
+            ctx.command.reset_cooldown(ctx)
 
+        # This prevents any commands with local handlers being handled here
+        if hasattr(ctx.command, 'on_error') and (isinstance(error, (commands.BadArgument, commands.BadUnionArgument))):
             return
 
         # Anything in ignored will return
-        if isinstance(error, ignored):
+        if isinstance(error, commands.CommandNotFound):
             return
 
         elif isinstance(error, commands.MissingRequiredArgument):
