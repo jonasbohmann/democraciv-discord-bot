@@ -73,7 +73,8 @@ class Party(commands.Cog, name='Political Parties'):
             embed.add_field(name="Aliases", value=', '.join(party.aliases) or '-', inline=False)
 
         embed.add_field(name=f"Members ({len(party.role.members)})",
-                        value=', '.join([m.mention for m in party.role.members]) or '-', inline=False)
+                        value='\n'.join([f"{member.mention} {member}" for member in party.role.members]) or '-',
+                        inline=False)
 
         await ctx.send(embed=embed)
 
