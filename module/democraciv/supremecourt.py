@@ -27,6 +27,27 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
     def judge_role(self) -> typing.Optional[discord.Role]:
         return mk.get_democraciv_role(self.bot, mk.DemocracivRole.JUDGE_ROLE)
 
+    def get_justices(self):
+        try:
+            _justices = self.justice_role
+        except exceptions.RoleNotFoundError:
+            return None
+
+        if isinstance(self.chief, discord.Member):
+            justices = [justice.mention for justice in _justices.members if justice.id != self.chief.id]
+            justices.insert(0, f"{self.chief.mention} (Chief Justice)")
+            return justices
+        else:
+            return [justice.mention for justice in _justices.members]
+
+    def get_judges(self):
+        try:
+            _judges = self.judge_role
+        except exceptions.RoleNotFoundError:
+            return None
+
+        return [judge.mention for judge in _judges.members]
+
     @commands.group(name='court', aliases=['sc', 'courts', 'j', 'judicial'], case_insensitive=True,
                     invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -35,17 +56,8 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
 
         embed = self.bot.embeds.embed_builder(title=f"Courts of {mk.NATION_NAME}", description="")
 
-        if isinstance(self.chief, discord.Member):
-            justices = [justice.mention for justice in self.justice_role.members if justice.id != self.chief.id]
-            justices.insert(0, f"{self.chief.mention} (Chief Justice)")
-
-        else:
-            justices = [justice.mention for justice in self.justice_role.members]
-
-        justices = justices or ['-']
-
-        judges = ([justice.mention for justice in self.judge_role.members])
-        judges = judges or ['-']
+        justices = self.get_justices() or ['-']
+        judges = self.get_judges() or ['-']
 
         embed.add_field(name="Supreme Court Justices", value='\n'.join(justices), inline=False)
         embed.add_field(name="Appeals Court Judges", value='\n'.join(judges), inline=False)

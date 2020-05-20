@@ -43,7 +43,6 @@ class Starboard(commands.Cog):
         self.bot = bot
         self.star_emoji = config.STARBOARD_STAR_EMOJI
         self.star_threshold = config.STARBOARD_MIN_STARS
-        self.bearer_token = None
 
         if config.STARBOARD_ENABLED and config.STARBOARD_REDDIT_SUMMARY_ENABLED:
             if not config.REDDIT_SUBREDDIT:
@@ -140,7 +139,7 @@ class Starboard(commands.Cog):
         return "\n\n".join(markdown)
 
     async def has_posted_to_reddit_today(self) -> bool:
-        async with self.bot.session.get(f"https://www.reddit.com/user/{token.REDDIT_USERNAME}.json?limit=5") as resp:
+        async with self.bot.session.get(f"https://www.reddit.com/user/{token.REDDIT_USERNAME}.json?limit=15") as resp:
             if resp.status == 200:
                 json_data = await resp.json()
 

@@ -39,7 +39,7 @@ class NoOneHasRoleError(DemocracivBotException):
 
     def __init__(self, role: str):
         self.role = role
-        self.message = f":x: No one on this server has the role named `{role}`!"
+        self.message = f":x: No one on this server has the role named `{role}`."
 
 
 class NotDemocracivGuildError(DemocracivBotException):
@@ -53,7 +53,7 @@ class GuildNotFoundError(DemocracivBotException):
     """Raised when the bot tries to use a bot.get(guild) or similar query with a non-existing guild"""
 
     def __init__(self, name):
-        self.message = f":x: Couldn't find a serer named/with the ID `{name}` that I am in!"
+        self.message = f":x: Couldn't find a serer named/with the ID `{name}` that I am in."
 
 
 class TagCheckError(commands.CheckFailure):

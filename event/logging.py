@@ -16,7 +16,7 @@ class Log(commands.Cog):
         if guild is None:
             return
 
-        embed = self.bot.embeds.embed_builder(title=title, description="", time_stamp=True)
+        embed = self.bot.embeds.embed_builder(title=title, description="", has_footer=False)
 
         for field in fields:
             embed.add_field(name=field, value=fields[field][0], inline=fields[field][1])
@@ -30,16 +30,13 @@ class Log(commands.Cog):
         if log_channel is not None:
             await log_channel.send(embed=embed)
 
-        # Send event embed to author DM
         if to_owner:
             embed.add_field(name='Guild', value=f"{guild.name} ({guild.id})", inline=False)
             await self.bot.owner.send(embed=embed)
 
-    # -- Message Events --
-
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
-        if isinstance(before.channel, discord.DMChannel):
+        if before.guild is None:
             return
 
         if not await self.bot.checks.is_logging_enabled(before.guild.id):
@@ -47,7 +44,6 @@ class Log(commands.Cog):
 
         if not await self.bot.checks.is_channel_excluded(before.guild.id, before.channel.id):
             if not before.clean_content or not after.clean_content:
-                # Removing this throws a http 400 bad request exception
                 return
 
             if before.content == after.content:
@@ -59,22 +55,18 @@ class Log(commands.Cog):
             if len(before.content) > 1024 or len(after.content) > 1024:
                 return
 
-            if before.clean_content and after.clean_content:
-                embed_fields = {
-                    "Author": [f"{before.author.mention} {before.author}", False],
-                    "Channel": [f"{before.channel.mention}", True],
-                    "Jump": [f"[Link]({before.jump_url})", True],
-                    "Before": [f"{before.content}", False],
-                    "After": [f"{after.content}", False]
-                }
-                await self.log_event(before.guild, ":pencil2:  Message Edited", embed_fields, to_owner=False)
-
-        else:
-            return
+            embed_fields = {
+                "Author": [f"{before.author.mention} {before.author}", False],
+                "Channel": [f"{before.channel.mention}", True],
+                "Jump": [f"[Link]({before.jump_url})", True],
+                "Before": [f"{before.content}", False],
+                "After": [f"{after.content}", False]
+            }
+            await self.log_event(before.guild, ":pencil2:  Message Edited", embed_fields)
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
-        if isinstance(message.channel, discord.DMChannel):
+        if message.guild is None:
             return
 
         if not await self.bot.checks.is_logging_enabled(message.guild.id):
@@ -89,10 +81,7 @@ class Log(commands.Cog):
             if message.content and len(message.content) <= 1024:
                 embed_fields['Message'] = [message.content, False]
 
-            await self.log_event(message.guild, ':wastebasket:  Message Deleted', embed_fields, to_owner=False)
-
-        else:
-            return
+            await self.log_event(message.guild, ':wastebasket:  Message Deleted', embed_fields)
 
     @commands.Cog.listener()
     async def on_raw_bulk_message_delete(self, payload):
@@ -109,13 +98,7 @@ class Log(commands.Cog):
                 "Channel": [f"{channel.mention}", True]
             }
 
-            await self.log_event(guild, ':wastebasket: :wastebasket:  Bulk of Messages Deleted', embed_fields,
-                                 to_owner=False)
-
-        else:
-            return
-
-    # -- Member Events --
+            await self.log_event(guild, ':wastebasket: :wastebasket:  Bulk of Messages Deleted', embed_fields)
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -128,8 +111,7 @@ class Log(commands.Cog):
         }
 
         await self.log_event(member.guild, ':tada:  Member Joined', embed_fields,
-                             thumbnail=member.avatar_url_as(static_format="png"),
-                             to_owner=False)
+                             thumbnail=member.avatar_url_as(static_format="png"))
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
@@ -141,8 +123,7 @@ class Log(commands.Cog):
         }
 
         await self.log_event(member.guild, ':no_pedestrians:  Member Left', embed_fields,
-                             thumbnail=member.avatar_url_as(static_format="png"),
-                             to_owner=False)
+                             thumbnail=member.avatar_url_as(static_format="png"))
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
@@ -158,14 +139,17 @@ class Log(commands.Cog):
             }
 
             await self.log_event(before.guild, ':arrows_counterclockwise:  Nickname Changed', embed_fields,
-                                 thumbnail=before.avatar_url_as(static_format="png"), to_owner=False)
+                                 thumbnail=before.avatar_url_as(static_format="png"))
 
         elif before.roles != after.roles:
 
             if len(before.roles) < len(after.roles):
+                given_role = "*invalid role*"
+
                 for x in after.roles:
                     if x not in before.roles:
                         given_role = x.name
+                        break
 
                 embed_fields = {
                     "Member": [f"{before.mention} {before}", False],
@@ -173,12 +157,15 @@ class Log(commands.Cog):
                 }
 
                 await self.log_event(before.guild, ':sunglasses:  Role given to Member', embed_fields,
-                                     thumbnail=before.avatar_url_as(static_format="png"), to_owner=False)
+                                     thumbnail=before.avatar_url_as(static_format="png"))
 
             elif len(before.roles) > len(after.roles):
+                removed_role = "*invalid role*"
+
                 for x in before.roles:
                     if x not in after.roles:
                         removed_role = x.name
+                        break
 
                 embed_fields = {
                     "Member": [f"{before.mention} {before}", False],
@@ -186,10 +173,7 @@ class Log(commands.Cog):
                 }
 
                 await self.log_event(before.guild, ':zipper_mouth:  Role removed from Member', embed_fields,
-                                     thumbnail=before.avatar_url_as(static_format="png"), to_owner=False)
-
-            else:
-                return
+                                     thumbnail=before.avatar_url_as(static_format="png"))
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
@@ -256,7 +240,7 @@ class Log(commands.Cog):
                 "ID": [role.id, False]
             }
 
-            await self.log_event(role.guild, ':new:  Role Created', embed_fields, to_owner=False)
+            await self.log_event(role.guild, ':new:  Role Created', embed_fields)
 
         except TypeError:
             return
@@ -272,7 +256,7 @@ class Log(commands.Cog):
             "ID": [role.id, False]
         }
 
-        await self.log_event(role.guild, ':exclamation:  Role Deleted', embed_fields, to_owner=False)
+        await self.log_event(role.guild, ':exclamation:  Role Deleted', embed_fields)
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
@@ -284,7 +268,7 @@ class Log(commands.Cog):
             "Category": [channel.category, True]
         }
 
-        await self.log_event(channel.guild, ':new:  Channel Created', embed_fields, to_owner=False)
+        await self.log_event(channel.guild, ':new:  Channel Created', embed_fields)
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
@@ -296,7 +280,10 @@ class Log(commands.Cog):
             "Category": [channel.category, True]
         }
 
-        await self.log_event(channel.guild, ':exclamation:  Channel Deleted', embed_fields, to_owner=False)
+        await self.log_event(channel.guild, ':exclamation:  Channel Deleted', embed_fields)
+
+    async def on_guild_remove(self, guild):
+        await self.bot.owner.send(f":warning:  I was removed from {guild.name} ({guild.id}).")
 
 
 def setup(bot):

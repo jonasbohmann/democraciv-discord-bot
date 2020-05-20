@@ -105,7 +105,7 @@ class EmbedUtils:
         self.footer_icon = config.BOT_ICON_URL
         self.embed_colour = config.BOT_EMBED_COLOUR
 
-    def embed_builder(self, title: str, description: str, time_stamp: bool = None,
+    def embed_builder(self, title: str = "", description: str = "", time_stamp: bool = None,
                       has_footer: bool = True, footer: str = None, colour: int = None) -> discord.Embed:
         """Creates discord.Embed object and adds the bot's signature footer to it as well as a UTC timestamp if
          required."""

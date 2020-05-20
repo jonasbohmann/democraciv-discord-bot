@@ -384,7 +384,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         elif arg[0].lower() == 'choice':
             choices = list(arg)
             choices.pop(0)
-            return await ctx.send(f':tada: The winner is: `{random.choice(choices)}`')
+            return await ctx.send(f':tada: **{random.choice(choices)}**')
 
         elif len(arg) == 1:
             start = 1
@@ -404,8 +404,12 @@ class Misc(commands.Cog, name="Miscellaneous"):
             start = 1
             end = 100
 
-        await ctx.send(
-            f'**:arrows_counterclockwise:** Random number ({start} - {end}): **{random.randint(start, end)}**')
+        try:
+            result = random.randint(start, end)
+        except Exception:
+            raise commands.BadArgument()
+
+        await ctx.send(f':arrows_counterclockwise: Random number ({start} - {end}):- **{result}**')
 
     @commands.command(name='vibecheck', hidden=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

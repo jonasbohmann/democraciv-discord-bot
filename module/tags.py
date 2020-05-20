@@ -226,7 +226,7 @@ class Tags(commands.Cog):
                                               ctx.guild.id, tag_name)
 
         if len(found_alias) > 0:
-            await ctx.send(":x: A tag or alias with that name already exists on this guild!")
+            await ctx.send(":x: A tag or alias with that name already exists on this server.")
             return False
 
         if len(tag_name) > 50:
