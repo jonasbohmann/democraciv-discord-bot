@@ -332,7 +332,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         embed.add_field(name="Created on", value=role.created_at.strftime("%B %d, %Y"), inline=True)
         embed.add_field(name="Colour", value=str(role.colour), inline=True)
         embed.add_field(name=f"Members ({len(role.members)})",
-                        value=', '.join([member.mention for member in role.members]) or '-',
+                        value='\n'.join([f"{member.mention} {member}" for member in role.members]) or '-',
                         inline=False)
         await ctx.send(embed=embed)
 
@@ -384,7 +384,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         elif arg[0].lower() == 'choice':
             choices = list(arg)
             choices.pop(0)
-            return await ctx.send(f':tada: **{random.choice(choices)}**')
+            return await ctx.send(f':tada: The winner is: **{random.choice(choices)}**')
 
         elif len(arg) == 1:
             start = 1
@@ -409,7 +409,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         except Exception:
             raise commands.BadArgument()
 
-        await ctx.send(f':arrows_counterclockwise: Random number ({start} - {end}):- **{result}**')
+        await ctx.send(f':arrows_counterclockwise: Random number ({start} - {end}): **{result}**')
 
     @commands.command(name='vibecheck', hidden=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
