@@ -50,7 +50,9 @@ class Meta(commands.Cog):
         end = time.perf_counter()
         duration = (end - start) * 1000
         embed = self.bot.embeds.embed_builder(title=":ping_pong:  Pong!",
-                                              description=f"REST API: {duration:.0f}ms\nWebsocket: {self.bot.ping}ms",
+                                              description=f"REST API: {duration:.0f}ms\n"
+                                                          f"Websocket: {self.bot.ping}ms\n"
+                                                          f"[Discord Status](https://status.discord.com/)",
                                               has_footer=False)
         await message.edit(content=None, embed=embed)
 

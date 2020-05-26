@@ -25,6 +25,7 @@ DEALINGS IN THE SOFTWARE.
 import asyncio
 import itertools
 import discord
+from discord.embeds import EmptyEmbed
 
 from config import config
 from util.paginator import Pages
@@ -74,7 +75,7 @@ class HelpPaginator(Pages):
             return self.show_introduction()
 
         cog, description, commands = self.entries[page - 1]
-        self.title = str(cog)
+        self.title = f"{cog} | Help"
         self.description = description
         return commands
 
@@ -83,19 +84,21 @@ class HelpPaginator(Pages):
         self.embed.description = self.description
         self.embed.title = self.title
 
-        if page != 0:
-            self.embed.set_footer(text=f'Use "{self.prefix}help command" for more info on a command.',
-                                  icon_url=config.BOT_ICON_URL)
+        if page == 0 and self.is_bot:
+            self.embed.set_author(icon_url=self.bot.owner.avatar_url_as(static_format="png"), name=self.bot.owner)
+        elif page != 0:
+            self.embed.set_author(name="", icon_url=EmptyEmbed)
 
         for entry in entries:
-            signature = f'**__{entry.qualified_name} {entry.signature}__**'
+            if entry.signature:
+                signature = f'**`{config.BOT_PREFIX}{entry.qualified_name} {entry.signature}`**'
+            else:
+                signature = f'**`{config.BOT_PREFIX}{entry.qualified_name}`**'
+
             self.embed.add_field(name=signature, value=entry.short_doc or "No help given", inline=False)
 
         if self.maximum_pages and page != 0:
-            self.embed.set_author(name=f'Page {page}/{self.maximum_pages} ({self.total} commands)')
-        elif page == 0 and self.is_bot:
-            self.embed.set_author(icon_url=self.bot.owner.avatar_url_as(static_format="png"),
-                                  name=self.bot.owner)
+            self.embed.set_footer(text=f'Page {page}/{self.maximum_pages} ({self.total} commands)')
 
     async def show_help(self):
         """shows this message"""
@@ -139,8 +142,7 @@ class HelpPaginator(Pages):
         if self.is_bot and self.current_page == 0:
             self.current_page = 1
 
-        self.embed.set_footer(text=f'We were on page {self.current_page} before this message.',
-                              icon_url=config.BOT_ICON_URL)
+        self.embed.set_footer(text=f'We were on page {self.current_page} before this message.')
         await self.message.edit(embed=self.embed)
 
         async def go_back_to_current_page():
@@ -215,7 +217,8 @@ class PaginatedHelpCommand(commands.HelpCommand):
         #    alias = fmt
 
         alias = command.name if not parent else f'{parent} {command.name}'
-        return f'{alias} {command.signature}'
+
+        return f'{config.BOT_PREFIX}{alias} {command.signature}'
 
     async def send_bot_help(self, mapping):
         def key(c):
@@ -259,13 +262,14 @@ class PaginatedHelpCommand(commands.HelpCommand):
 
         entries = await self.filter_commands(all_commands, sort=True, key=key)
         pages = HelpPaginator(self, self.context, entries)
-        pages.title = cog.qualified_name
+        pages.title = f"{cog.qualified_name} | Help"
         pages.description = cog.description
 
         await pages.paginate()
 
     def common_command_formatting(self, page_or_embed, command):
         page_or_embed.title = self.get_command_signature(command)
+
         if command.description:
             page_or_embed.description = f'{command.description}\n\n{command.help}'
         else:

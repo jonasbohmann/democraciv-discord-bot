@@ -429,7 +429,8 @@ class Tags(commands.Cog):
         """Search for a global or local tag on this server"""
 
         db_query = """SELECT tag_id FROM guild_tags_alias
-                      WHERE (global = true AND alias % $1) OR (alias % $1 AND guild_id = $2)
+                      WHERE (global = true AND alias LIKE '%' || $1 || '%') OR 
+                            (alias LIKE '%' || $1 || '%' AND guild_id = $2)
                       ORDER BY similarity(alias, $1)
                       LIMIT 20
                     """
