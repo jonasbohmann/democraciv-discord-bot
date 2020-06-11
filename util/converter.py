@@ -239,11 +239,11 @@ class OwnedTag(Tag):
         tag_details = await ctx.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1", tag_id)
 
         if tag_details['global'] and tag_details['guild_id'] != ctx.guild.id:
-            raise TagError(f":x: Global tags can only be edited or removed on "
+            raise TagError(f":x: Global tags can only be edited, transferred or removed on "
                            f"the server they were originally created on.")
 
         if tag_details['author'] != ctx.author.id and not ctx.author.guild_permissions.administrator:
-            raise TagError(f":x: This isn't your tag.")
+            raise TagError(f":x: That isn't your tag.")
 
         aliases = await ctx.bot.db.fetch("SELECT alias FROM guild_tags_alias WHERE tag_id = $1", tag_id)
         aliases = [record['alias'] for record in aliases]

@@ -92,7 +92,7 @@ class Tags(commands.Cog):
                                  show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
-    @tags.command(name="from", aliases=['f'])
+    @tags.command(name="from", aliases=['by'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def _from(self, ctx, *, member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
@@ -162,7 +162,7 @@ class Tags(commands.Cog):
             await ctx.send(f':white_check_mark: The `{config.BOT_PREFIX}{alias}` alias was added to '
                            f'`{config.BOT_PREFIX}{tag.name}`.')
 
-    @tags.command(name="removealias", aliases=['deletealias'])
+    @tags.command(name="removealias", aliases=['deletealias', 'ra', 'da'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @utils.tag_check()
@@ -235,7 +235,7 @@ class Tags(commands.Cog):
 
         return True
 
-    @tags.command(name="add", aliases=['make', 'create'])
+    @tags.command(name="add", aliases=['make', 'create', 'a'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @utils.tag_check()
@@ -313,7 +313,7 @@ class Tags(commands.Cog):
                                       ctx.guild.id, is_global)
                     await ctx.send(f":white_check_mark: The `{config.BOT_PREFIX}{name}` tag was added.")
 
-    @tags.command(name="info", aliases=['about'])
+    @tags.command(name="info", aliases=['about', 'i'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def taginfo(self, ctx, *, tag: Tag):
@@ -321,7 +321,7 @@ class Tags(commands.Cog):
 
         pretty_aliases = (', '.join([f"`{config.BOT_PREFIX}{alias}`" for alias in tag.aliases])) or 'None'
 
-        embed = self.bot.embeds.embed_builder(title="Tag Info", description="")
+        embed = self.bot.embeds.embed_builder(title="Tag Info", description="", has_footer=False)
         embed.add_field(name="Title", value=tag.title, inline=False)
 
         tag_content_type = self.is_emoji_or_media_url(tag.content)
@@ -367,7 +367,20 @@ class Tags(commands.Cog):
 
         await self.bot.db.execute("UPDATE guild_tags SET author = $1 WHERE id = $2", ctx.author.id, tag.id)
 
-        return await ctx.send(f":white_check_mark: You now own `{config.BOT_PREFIX}{tag.name}`.")
+        return await ctx.send(f":white_check_mark: You are now the owner `{config.BOT_PREFIX}{tag.name}`.")
+
+    @tags.command(name="transfer")
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.guild_only()
+    async def transfer(self, ctx, to_person: typing.Union[discord.Member, CaseInsensitiveMember, discord.User], *, tag: OwnedTag):
+        """Transfer a tag of yours to someone else"""
+
+        if to_person == ctx.author:
+            return await ctx.send(":x: You cannot transfer your tag to yourself.")
+
+        await self.bot.db.execute("UPDATE guild_tags SET author = $1 WHERE id = $2", to_person.id, tag.id)
+
+        return await ctx.send(f":white_check_mark: {to_person} is now the owner of `{config.BOT_PREFIX}{tag.name}`.")
 
     @tags.command(name="raw")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

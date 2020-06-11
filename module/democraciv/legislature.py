@@ -185,7 +185,7 @@ class Legislature(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @bill.command(name='from', aliases=['f'])
+    @bill.command(name='from', aliases=['f', 'by'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def b_from(self, ctx, *, member_or_party: typing.Union[
         discord.Member, CaseInsensitiveMember, discord.User, PoliticalParty] = None):
@@ -283,7 +283,7 @@ class Legislature(commands.Cog):
         embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
         await ctx.send(embed=embed)
 
-    @motion.command(name='from', aliases=['f'])
+    @motion.command(name='from', aliases=['f', 'by'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def m_from(self, ctx, *, member_or_party: typing.Union[
         discord.Member, CaseInsensitiveMember, discord.User, PoliticalParty] = None):

@@ -190,7 +190,7 @@ class Laws(commands.Cog, name='Law'):
 
         await ctx.send(embed=embed)
 
-    @law.command(name='from', aliases=['f'])
+    @law.command(name='from', aliases=['f', 'by'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def _from(self, ctx, *, member_or_party: typing.Union[
         discord.Member, CaseInsensitiveMember, discord.User, PoliticalParty] = None):
