@@ -442,59 +442,43 @@ class Starboard(commands.Cog):
         embed = self.bot.embeds.embed_builder(title='', description='', colour=0xFFAC33, has_footer=False)
         embed.set_author(name=member.display_name, icon_url=member.avatar_url_as(static_format='png'))
 
-        # this query calculates
-        # 1 - stars received,
-        # 2 - stars given
-        # The rest are the top 3 starred posts
+        stars_received = await self.bot.db.fetchval("""SELECT COUNT(*)
+                                                    FROM starboard_starrers
+                                                    INNER JOIN starboard_entries entry
+                                                    ON entry.id=starboard_starrers.entry_id
+                                                    WHERE entry.author_id=$1;""",
+                                                    member.id)
 
-        query = """WITH t AS (
-                       SELECT entry.author_id AS entry_author_id,
-                              starboard_starrers.starrer_id,
-                              entry.message_id
-                       FROM starboard_starrers
-                       INNER JOIN starboard_entries entry
-                       ON entry.id=starboard_starrers.entry_id
-                   )
-                   (
-                       SELECT '0'::bigint AS "ID", COUNT(*) AS "Stars"
-                       FROM t
-                       WHERE t.entry_author_id=$1
-                   )
-                   UNION ALL
-                   (
-                       SELECT '0'::bigint AS "ID", COUNT(*) AS "Stars"
-                       FROM t
-                       WHERE t.starrer_id=$1
-                   )
-                   UNION ALL
-                   (
-                       SELECT t.message_id AS "ID", COUNT(*) AS "Stars"
-                       FROM t
-                       WHERE t.entry_author_id=$1
-                       GROUP BY t.message_id
-                       ORDER BY "Stars" DESC
-                       LIMIT 3
-                   )
-                """
+        stars_given = await self.bot.db.fetchval("""SELECT COUNT(*)
+                                                    FROM starboard_starrers
+                                                    INNER JOIN starboard_entries entry
+                                                    ON entry.id=starboard_starrers.entry_id
+                                                    WHERE starboard_starrers.starrer_id=$1;""",
+                                                 member.id)
 
-        records = await self.bot.db.fetch(query, member.id)
-        received = records[0]['Stars']
-        given = records[1]['Stars']
-        top_three = records[2:]
-        top_three_with_link = []
+        top_three_starred = await self.bot.db.fetch("""SELECT entry.message_jump_url, COUNT(*) AS "stars"
+                                                            FROM starboard_starrers
+                                                            INNER JOIN starboard_entries entry
+                                                            ON entry.id=starboard_starrers.entry_id
+                                                            WHERE entry.author_id=$1
+                                                            GROUP BY entry.message_jump_url
+                                                            ORDER BY "stars" DESC
+                                                            LIMIT 3;""",
+                                                    member.id)
 
-        for post in top_three:
-            record = await self.bot.db.fetchval("SELECT message_jump_url FROM starboard_entries "
-                                                "WHERE starboard_message_id = $1", post['ID'])
-            top_three_with_link.append({"ID": f"[Jump to Message]({record})", "Stars": post['Stars']})
+        top_three_starred_fmt = []
+
+        for record in top_three_starred:
+            top_three_starred_fmt.append({"ID": f"[Jump to Message]({record['message_jump_url']})",
+                                          "Stars": record['stars']})
 
         query = """SELECT COUNT(*) FROM starboard_entries WHERE starboard_message_id IS NOT NULL AND author_id = $1;"""
         messages_starred = await self.bot.db.fetchval(query, member.id)
 
         embed.add_field(name='Messages on the Starboard', value=messages_starred, inline=False)
-        embed.add_field(name='Stars Received', value=received, inline=True)
-        embed.add_field(name='Stars Given', value=given, inline=True)
-        embed.add_field(name='Top Starred Posts', value=self.records_to_value(top_three_with_link), inline=False)
+        embed.add_field(name='Stars Received', value=stars_received, inline=True)
+        embed.add_field(name='Stars Given', value=stars_given, inline=True)
+        embed.add_field(name='Top Starred Posts', value=self.records_to_value(top_three_starred_fmt), inline=False)
         await ctx.send(embed=embed)
 
     async def star_overall_stats(self, ctx):
