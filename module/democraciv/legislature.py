@@ -185,6 +185,33 @@ class Legislature(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    @bill.command(name='search', aliases=['s'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def b_search(self, ctx, *, query: str):
+        """Search for a bill"""
+
+        if len(query) < 3:
+            return await ctx.send(":x: The query to search for has to be at least 3 characters long.")
+
+        sql_query = """SELECT id from legislature_bills
+                   WHERE (lower(bill_name) LIKE '%' || $1 || '%')
+                   ORDER BY similarity(lower(bill_name), $1)
+                   LIMIT 20"""
+
+        found_bills = await self.bot.db.fetch(sql_query, query)
+        pretty = []
+
+        for record in found_bills:
+            _bill = await Bill.convert(ctx, record['id'])
+            pretty.append(f"Bill #{_bill.id} - [{_bill.name}]({_bill.link}) "
+                          f"{await _bill.get_emojified_status(verbose=False)}")
+
+        pretty = pretty or ["Nothing found."]
+
+        pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=8,
+                                 title=f"Bills matching '{query}'", show_index=False, show_amount_of_pages=True)
+        await pages.paginate()
+
     @bill.command(name='from', aliases=['f', 'by'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def b_from(self, ctx, *, member_or_party: typing.Union[
@@ -330,6 +357,32 @@ class Legislature(commands.Cog):
     async def mfrom_error(self, ctx, error):
         if isinstance(error, commands.BadUnionArgument):
             return
+
+    @motion.command(name='search', aliases=['s'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def m_search(self, ctx, *, query: str):
+        """Search for a motion"""
+
+        if len(query) < 3:
+            return await ctx.send(":x: The query to search for has to be at least 3 characters long.")
+
+        sql_query = """SELECT id from legislature_motions
+                       WHERE (lower(title) LIKE '%' || $1 || '%') OR (lower(description) LIKE '%' || $1 || '%')
+                       ORDER BY similarity(lower(title), $1)
+                       LIMIT 20"""
+
+        found_motions = await self.bot.db.fetch(sql_query, query)
+        pretty = []
+
+        for record in found_motions:
+            _motion = await Motion.convert(ctx, record['id'])
+            pretty.append(f"Motion #{_motion.id} - [{_motion.title}]({_motion.link})")
+
+        pretty = pretty or ["Nothing found."]
+
+        pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=8,
+                                 title=f"Motions matching '{query}'", show_index=False, show_amount_of_pages=True)
+        await pages.paginate()
 
     @legislature.command(name='opensession', aliases=['os'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -614,11 +667,7 @@ class Legislature(commands.Cog):
             pretty_motions = []
             for motion_id in session.motions:
                 motion = await Motion.convert(ctx, motion_id)
-
-                # If the motion's description is just a Google Docs link, use that link instead of the Hastebin
-                is_google_docs = self.bot.laws.is_google_doc_link(motion.description) and len(motion.description) <= 100
-                link = motion.description if is_google_docs else motion.link
-                pretty_motions.append(f"Motion #{motion.id} - [{motion.short_name}]({link})")
+                pretty_motions.append(f"Motion #{motion.id} - [{motion.short_name}]({motion.link})")
         else:
             pretty_motions = ["-"]
 

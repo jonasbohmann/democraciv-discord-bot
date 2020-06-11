@@ -589,7 +589,7 @@ class Motion(commands.Converter):
         self.title: str = kwargs.get('title')
         self.session: Session = kwargs.get('session')
         self.description: str = kwargs.get('description')
-        self.link: str = kwargs.get('link')
+        self._link: str = kwargs.get('link')
         self.name: str = self.title  # compatibility
         self._submitter: int = kwargs.get('submitter')
         self._bot = kwargs.get('bot')
@@ -607,6 +607,13 @@ class Motion(commands.Converter):
             return self.title[:-to_remove] + '...'
         else:
             return self.title
+
+    @property
+    def link(self) -> str:
+        # If the motion's description is just a Google Docs link, use that link instead of the Hastebin
+
+        is_google_docs = self._bot.laws.is_google_doc_link(self.description) and len(self.description) <= 100
+        return self.description if is_google_docs else self._link
 
     async def withdraw(self):
         await self._bot.db.execute("DELETE FROM legislature_motions WHERE id = $1", self.id)
