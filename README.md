@@ -28,7 +28,6 @@ Provides useful information, political party & role management and much more.
 *  Join and leave political parties and see their members and ranking
 *  Tags: Users can save text and images for later retrieval to command-like tags
 *  Starboard: A starboard on Discord _and_ weekly posts to r/Democraciv with last week's starboard as a sort of "summary" of newsworthy Discord messages to our subreddit
-*  Built-in STV calculator
 *  Smart Wikipedia and Sid Meier's Civilization Wikia queries
 *  Welcome messages & default roles
 *  Selfroles (self-assignable roles) 
