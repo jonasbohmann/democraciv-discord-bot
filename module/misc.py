@@ -325,15 +325,21 @@ class Misc(commands.Cog, name="Miscellaneous"):
             description = ""
             role_name = f"{role.name} {role.mention}"
 
+        if role != role.guild.default_role:
+            role_members = '\n'.join([f"{member.mention} {member}" for member in role.members]) or '-'
+        else:
+            role_members = '-'
+
+        if len(role_members) > 1024:
+            role_members = "*Too long to display.*"
+
         embed = self.bot.embeds.embed_builder(title="Role Information", description=description,
                                               colour=role.colour, has_footer=False)
         embed.add_field(name="Role", value=role_name, inline=False)
         embed.add_field(name="ID", value=role.id, inline=False)
         embed.add_field(name="Created on", value=role.created_at.strftime("%B %d, %Y"), inline=True)
         embed.add_field(name="Colour", value=str(role.colour), inline=True)
-        embed.add_field(name=f"Members ({len(role.members)})",
-                        value='\n'.join([f"{member.mention} {member}" for member in role.members]) or '-',
-                        inline=False)
+        embed.add_field(name=f"Members ({len(role.members)})", value=role_members, inline=False)
         await ctx.send(embed=embed)
 
     @commands.command(name='random')
