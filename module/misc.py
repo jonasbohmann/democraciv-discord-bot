@@ -328,7 +328,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         if role != role.guild.default_role:
             role_members = '\n'.join([f"{member.mention} {member}" for member in role.members]) or '-'
         else:
-            role_members = '-'
+            role_members = "*Too long to display.*"
 
         if len(role_members) > 1024:
             role_members = "*Too long to display.*"

@@ -26,7 +26,7 @@ class Meta(commands.Cog):
 
         embed = self.bot.embeds.embed_builder(title='About This Bot', description=f"[Invite this bot to your"
                                                                                   f" Discord Server.]({invite_url})")
-        embed.add_field(name='Author', value=str(self.bot.owner), inline=True)
+        embed.add_field(name='Developer', value="DerJonas#8036 (u/Jovanos)", inline=True)
         embed.add_field(name='Version', value=config.BOT_VERSION, inline=True)
         embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=True)
         embed.add_field(name='Servers', value=str(len(self.bot.guilds)), inline=True)
@@ -77,21 +77,17 @@ class Meta(commands.Cog):
     async def allcmds(self, ctx):
         """List all commands"""
 
-        all_commands = []
+        description_text = []
+        field_text = []
+
         hidden_cogs = ('Admin', 'ErrorHandler', 'Log', 'Reddit', 'YouTube', 'Twitch')
         amounts = 0
         i = 0
+        p = config.BOT_PREFIX
 
         for name, cog in sorted(self.bot.cogs.items()):
             if name in hidden_cogs:
                 continue
-
-            if i == 0:
-                all_commands.append(f"**__{name}__**\n")
-            else:
-                all_commands.append(f"\n**__{name}__**\n")
-
-            i += 1
 
             amount, cog_cmds = self.collect_all_commands(cog)
             amounts += amount
@@ -102,20 +98,35 @@ class Meta(commands.Cog):
                 if not command.hidden:
                     try:
                         if await command.can_run(ctx):
-                            commands_list.append(f"`{command.qualified_name}`")
+                            commands_list.append(f"`{p}{command.qualified_name}`")
                         else:
-                            commands_list.append(f"*`{command.qualified_name}`*")
+                            commands_list.append(f"`{p}{command.qualified_name}`  :no_entry_sign:")
                     except commands.CommandError:
-                        commands_list.append(f"*`{command.qualified_name}`*")
+                        commands_list.append(f"`{p}{command.qualified_name}`  :no_entry_sign:")
 
-            all_commands.append(' :: '.join(commands_list))
-            all_commands.append("\n")
+            if i == 0:
+                description_text.append(f"**__{name}__**\n")
+                description_text.append('\n'.join(commands_list))
+                description_text.append("\n")
+            elif i < 8:
+                description_text.append(f"\n**__{name}__**\n")
+                description_text.append('\n'.join(commands_list))
+                description_text.append("\n")
+            else:
+                field_text.append(f"\n**__{name}__**\n")
+                field_text.append('\n'.join(commands_list))
+                field_text.append("\n")
+
+            i += 1
 
         embed = self.bot.embeds.embed_builder(title=f'All Commands ({amounts})',
-                                              description=f"Commands that you are not allowed to use (missing role"
-                                                          f" or missing permission) or that cannot be used"
-                                                          f" on this server, "
-                                                          f"are in _italic_.\n\n{' '.join(all_commands)}")
+                                              description=f"Commands that you are not allowed to use (missing role "
+                                                          f"or missing permissions) or that cannot be used on this "
+                                                          f" server, have a :no_entry_sign: behind them."
+                                                          f"\n\n{' '.join(description_text)}",
+                                              has_footer=False)
+
+        embed.add_field(name="\u200b", value=' '.join(field_text))
         await ctx.send(embed=embed)
 
     @commands.command(name='addme', aliases=['inviteme'])
@@ -123,7 +134,9 @@ class Meta(commands.Cog):
     async def addme(self, ctx):
         """Invite this bot to your Discord server"""
         invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
-        embed = self.bot.embeds.embed_builder(title='Add this bot to your own Discord server', description=invite_url)
+        embed = self.bot.embeds.embed_builder(title='Add this bot to your own Discord server',
+                                              description=invite_url,
+                                              has_footer=False)
         await ctx.send(embed=embed)
 
 

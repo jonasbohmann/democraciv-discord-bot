@@ -91,9 +91,9 @@ class HelpPaginator(Pages):
 
         for entry in entries:
             if entry.signature:
-                signature = f'**`{config.BOT_PREFIX}{entry.qualified_name} {entry.signature}`**'
+                signature = f'**__{config.BOT_PREFIX}{entry.qualified_name} {entry.signature}__**'
             else:
-                signature = f'**`{config.BOT_PREFIX}{entry.qualified_name}`**'
+                signature = f'**__{config.BOT_PREFIX}{entry.qualified_name}__**'
 
             self.embed.add_field(name=signature, value=entry.short_doc or "No help given", inline=False)
 
