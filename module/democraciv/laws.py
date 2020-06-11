@@ -258,12 +258,10 @@ class Laws(commands.Cog, name='Law'):
 
             # First, search by name similarity
             async with self.bot.db.acquire() as con:
-                # Set word similarity threshold to 0.3 for search by name
-                await self.bot.laws.update_pg_trgm_similarity_threshold(0.3, connection=con)
                 results = await self.bot.laws.search_law_by_name(name, connection=con)
 
-                # Set word similarity threshold to 0.5 for search by tag
-                await self.bot.laws.update_pg_trgm_similarity_threshold(0.5, connection=con)
+                # Set word similarity threshold for search by tag
+                await self.bot.laws.update_pg_trgm_similarity_threshold(0.4, connection=con)
 
                 # Then, search by tag similarity
                 for substring in query:
@@ -278,7 +276,7 @@ class Laws(commands.Cog, name='Law'):
                     results = ['Nothing found.']
 
         pages = AlternativePages(ctx=ctx, entries=list(results), show_entry_count=False,
-                                 title=f"Search Results for '{name}'", show_index=False, show_amount_of_pages=True)
+                                 title=f"Laws matching '{name}'", show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
     @law.command(name='repeal', aliases=['r, remove', 'delete'])
