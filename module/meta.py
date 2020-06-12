@@ -114,6 +114,32 @@ class Meta(commands.Cog):
                                               has_footer=False)
         await ctx.send(embed=embed)
 
+    @dmsettings.command(name='enableall')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def enableall(self, ctx):
+        """Enable all DMs"""
+
+        await self.bot.db.execute("UPDATE dm_settings SET"
+                                  " ban_kick_mute = true, leg_session_open = true,"
+                                  " leg_session_update = true, leg_session_submit = true,"
+                                  " leg_session_withdraw = true"
+                                  " WHERE user_id = $1", ctx.author.id)
+
+        await ctx.send(":white_check_mark: All DMs from me are now enabled.")
+
+    @dmsettings.command(name='disableall')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def disableall(self, ctx):
+        """Disable all DMs"""
+
+        await self.bot.db.execute("UPDATE dm_settings SET"
+                                  " ban_kick_mute = false, leg_session_open = false,"
+                                  " leg_session_update = false, leg_session_submit = false,"
+                                  " leg_session_withdraw = false"
+                                  " WHERE user_id = $1", ctx.author.id)
+
+        await ctx.send(":white_check_mark: All DMs from me are now disabled.")
+
     @dmsettings.command(name='moderation', aliases=['mod', 'kick', 'ban', 'mute'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def moderation(self, ctx):
