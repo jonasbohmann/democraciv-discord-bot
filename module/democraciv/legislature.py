@@ -909,22 +909,32 @@ class Legislature(commands.Cog):
             return
 
         if str(reaction.emoji) == config.LEG_SUBMIT_BILL:
+
+            if not mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
+                if self.legislator_role not in ctx.author.roles:
+                    return await ctx.send(":x: Only Legislators are allowed to submit bills!")
+
             message, embed = await self.submit_bill(ctx, current_leg_session.id)
 
         elif str(reaction.emoji) == config.LEG_SUBMIT_MOTION:
             ctx.command.reset_cooldown(ctx)
-            if self.legislator_role not in ctx.author.roles:
-                return await ctx.send(":x: Only Legislators are allowed to submit motions!")
+
+            if not mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS:
+                if self.legislator_role not in ctx.author.roles:
+                    return await ctx.send(":x: Only Legislators are allowed to submit motions!")
+
             message, embed = await self.submit_motion(ctx, current_leg_session.id)
 
         if message is None:
             return
 
-        if self.speaker is not None:
-            await self.bot.safe_send_dm(target=self.speaker, reason="leg_session_submit", message=message, embed=embed)
-        if self.vice_speaker is not None:
-            await self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_submit", message=message,
-                                        embed=embed)
+        if not self.is_cabinet(ctx.author):
+            if self.speaker is not None:
+                await self.bot.safe_send_dm(target=self.speaker, reason="leg_session_submit", message=message,
+                                            embed=embed)
+            if self.vice_speaker is not None:
+                await self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_submit", message=message,
+                                            embed=embed)
 
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -1052,7 +1062,7 @@ class Legislature(commands.Cog):
 
             error_messages = '\n'.join(
                 [f"-  **{_object.name}** (#{_object.id}): _{reason}_" for _object, reason in unverified_objects])
-            await ctx.send(f":warning: The following motions can not be withdrawn by you.\n{error_messages}")
+            await ctx.send(f":warning: The following {obj_name}s can not be withdrawn by you.\n{error_messages}")
 
         if not objects:
             return
@@ -1079,6 +1089,14 @@ class Legislature(commands.Cog):
                     await ctx.send(f":warning: Bill #{obj.id} is already a law and cannot be withdrawn.")
 
             await ctx.send(f":white_check_mark: All {obj_name}s were withdrawn.")
+
+            message = f"The following {obj_name}s were withdrawn by {ctx.author}.\n{pretty_objects}"
+
+            if not self.is_cabinet(ctx.author):
+                if self.speaker is not None:
+                    self.bot.safe_send_dm(target=self.speaker, reason="leg_session_withdraw", message=message)
+                if self.vice_speaker is not None:
+                    self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_withdraw", message=message)
 
     @withdraw.command(name='bill', aliases=['b'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

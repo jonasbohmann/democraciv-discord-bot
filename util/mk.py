@@ -16,6 +16,8 @@ NATION_NAME = "Arabia"
 NATION_ADJECTIVE = "Arabian"
 NATION_FLAG_URL = "https://images-ext-2.discordapp.net/external/TSpk771jugy_quO9E4qKF9bl8mehS90p2kuubW2DQxo/https/i.imgur.com/M97zPrP.jpg?width=1134&height=810"
 CIV_GAME = "Sid Meier's Civilization 5"
+LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS = True
+LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS = True
 
 
 class PrettyEnumValue(object):

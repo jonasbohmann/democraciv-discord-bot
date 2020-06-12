@@ -195,7 +195,8 @@ class Meta(commands.Cog):
 
         if new_value:
             message = ":white_check_mark: You will now receive DMs when you are a member of the Cabinet " \
-                      "and someone submits a Bill or Motion."
+                      "and someone submits a Bill or Motion. " \
+                      "Note that you will never get a DM when a member of the Cabinet is the one submitting."
         else:
             message = ":white_check_mark: You will no longer receive DMs when you are a member of the Cabinet " \
                       "and someone submits a Bill or Motion."
@@ -211,7 +212,9 @@ class Meta(commands.Cog):
 
         if new_value:
             message = ":white_check_mark: You will now receive DMs when you are a member of the Cabinet " \
-                      "and someone withdraws their Bill or Motion."
+                      "and someone withdraws their Bill or Motion. " \
+                      "Note that you will never get a DM when a member of the Cabinet is the one withdrawing."
+
         else:
             message = ":white_check_mark: You will no longer receive DMs when you are a member of the Cabinet " \
                       "and someone withdraws their Bill or Motion."
