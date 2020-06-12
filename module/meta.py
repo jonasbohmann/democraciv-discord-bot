@@ -84,10 +84,11 @@ class Meta(commands.Cog):
         i = 0
         p = config.BOT_PREFIX
 
-        embed = self.bot.embeds.embed_builder(title='',
-                                              description=f"Commands that you are not allowed to use (missing role "
-                                                          f"or missing permissions) or that cannot be used on this "
-                                                          f" server, have a :no_entry_sign: behind them.",
+        embed = self.bot.embeds.embed_builder(title="",
+                                              description=f"This lists every command, regardless whether you can "
+                                                          f"use it in this context or not.\n\nFor more detailed "
+                                                          f"explanations and example usage of commands, use `{p}help`, "
+                                                          f"`{p}help <Category>`, or `{p}help <command>`.",
                                               has_footer=False)
 
         for name, cog in sorted(self.bot.cogs.items()):
@@ -101,13 +102,7 @@ class Meta(commands.Cog):
 
             for command in cog_cmds:
                 if not command.hidden:
-                    try:
-                        if await command.can_run(ctx):
-                            commands_list.append(f"`{p}{command.qualified_name}`")
-                        else:
-                            commands_list.append(f"`{p}{command.qualified_name}`  :no_entry_sign:")
-                    except commands.CommandError:
-                        commands_list.append(f"`{p}{command.qualified_name}`  :no_entry_sign:")
+                    commands_list.append(f"`{p}{command.qualified_name}`")
 
             if i == 0:
                 text.append(f"**__{name}__**\n")
@@ -117,7 +112,7 @@ class Meta(commands.Cog):
             text.append('\n'.join(commands_list))
             text.append('\n')
 
-            if i < 4:
+            if i <= 3:
                 i += 1
                 continue
             else:

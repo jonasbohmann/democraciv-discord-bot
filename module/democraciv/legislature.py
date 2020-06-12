@@ -17,7 +17,7 @@ from util.converter import Session, SessionStatus, Bill, Motion, Law, CaseInsens
 class PassScheduler(AnnouncementQueue):
 
     def get_message(self) -> str:
-        message = [f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
+        message = [f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.MINISTER_ROLE).mention}, "
                    f"the following bills were **passed by the Legislature**.\n"]
 
         for obj in self._objects:

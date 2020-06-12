@@ -534,8 +534,7 @@ class Tags(commands.Cog):
         elif url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings_video)):
             return TagContentType.VIDEO
 
-        elif url_pattern.match(tag_content) and any(s in tag_content for s in
-                                                    ['youtube', 'youtu.be', 'tenor.com', 'gph.is', 'giphy.com']):
+        elif any(s in tag_content for s in ['youtube', 'youtu.be', 'tenor.com', 'gph.is', 'giphy.com']):
             return TagContentType.YOUTUBE_TENOR_GIPHY
 
         elif emoji_pattern.fullmatch(tag_content):
