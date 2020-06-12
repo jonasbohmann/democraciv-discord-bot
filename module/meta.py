@@ -1,3 +1,4 @@
+import itertools
 import time
 import discord
 
@@ -226,19 +227,13 @@ class Meta(commands.Cog):
     async def allcmds(self, ctx):
         """List all commands"""
 
-        text = []
+        description_text = []
+        field_text = []
 
         hidden_cogs = ('Admin', 'ErrorHandler', 'Log', 'Reddit', 'YouTube', 'Twitch')
         amounts = 0
         i = 0
         p = config.BOT_PREFIX
-
-        embed = self.bot.embeds.embed_builder(title="",
-                                              description=f"This lists every command, regardless whether you can "
-                                                          f"use it in this context or not.\n\nFor more detailed "
-                                                          f"explanations and example usage of commands, use `{p}help`, "
-                                                          f"`{p}help <Category>`, or `{p}help <command>`.",
-                                              has_footer=False)
 
         for name, cog in sorted(self.bot.cogs.items()):
             if name in hidden_cogs:
@@ -254,22 +249,30 @@ class Meta(commands.Cog):
                     commands_list.append(f"`{p}{command.qualified_name}`")
 
             if i == 0:
-                text.append(f"**__{name}__**\n")
+                description_text.append(f"**__{name}__**\n")
+                description_text.append('\n'.join(commands_list))
+                description_text.append("\n")
+            elif i < 8:
+                description_text.append(f"\n**__{name}__**\n")
+                description_text.append('\n'.join(commands_list))
+                description_text.append("\n")
             else:
-                text.append(f"\n**__{name}__**\n")
+                field_text.append(f"\n**__{name}__**\n")
+                field_text.append('\n'.join(commands_list))
+                field_text.append("\n")
 
-            text.append('\n'.join(commands_list))
-            text.append('\n')
+            i += 1
 
-            if i <= 3:
-                i += 1
-                continue
-            else:
-                embed.add_field(name="\u200b", value=' '.join(text))
-                text.clear()
-                i = 0
+        embed = self.bot.embeds.embed_builder(title=f'All Commands ({amounts})',
+                                              description=f"This lists every command, regardless whether you can use "
+                                                          f"it in this context or not.\n\nFor more detailed "
+                                                          f"explanations and example usage of commands, "
+                                                          f"use `{p}help`, `{p}help <Category>`, "
+                                                          f"or `{p}help <command>`."
+                                                          f"\n\n{' '.join(description_text)}",
+                                              has_footer=False)
 
-        embed.title = f'All Commands ({amounts})'
+        embed.add_field(name="\u200b", value=' '.join(field_text))
         await ctx.send(embed=embed)
 
     @commands.command(name='addme', aliases=['inviteme'])
