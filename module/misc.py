@@ -447,7 +447,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
                   'https://i.redd.it/p4e6a65i3bw31.jpg',
                   'https://media.makeameme.org/created/congratulations-you-have-61e05e0d4b.jpg']
 
-        passed = bool(random.getrandbits(1))
+        passed = True if random.randrange(1, stop=100) >= 65 else False
 
         if passed:
             image = random.choice(vibing)
@@ -467,10 +467,10 @@ class Misc(commands.Cog, name="Miscellaneous"):
         if isinstance(error, commands.BadArgument):
             return
 
-    @commands.command(hidden=True, aliases=['doggo', 'doggos'])
+    @commands.command(name="dog", aliases=['doggo', 'doggos', 'dogs'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def dog(self, ctx):
-        """Just for Tay: A random image of a dog"""
+        """Just for Tay: A random image or video of a dog"""
 
         """The MIT License (MIT)
 
@@ -518,7 +518,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
                 embed.set_footer(text="Just for Taylor.")
                 await ctx.send(embed=embed)
 
-    @commands.command(name="cat", hidden=True)
+    @commands.command(name="cat", aliases=['cats'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def cat(self, ctx):
         """A random cat"""

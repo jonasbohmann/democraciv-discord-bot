@@ -77,13 +77,18 @@ class Meta(commands.Cog):
     async def allcmds(self, ctx):
         """List all commands"""
 
-        description_text = []
-        field_text = []
+        text = []
 
         hidden_cogs = ('Admin', 'ErrorHandler', 'Log', 'Reddit', 'YouTube', 'Twitch')
         amounts = 0
         i = 0
         p = config.BOT_PREFIX
+
+        embed = self.bot.embeds.embed_builder(title='',
+                                              description=f"Commands that you are not allowed to use (missing role "
+                                                          f"or missing permissions) or that cannot be used on this "
+                                                          f" server, have a :no_entry_sign: behind them.",
+                                              has_footer=False)
 
         for name, cog in sorted(self.bot.cogs.items()):
             if name in hidden_cogs:
@@ -105,28 +110,22 @@ class Meta(commands.Cog):
                         commands_list.append(f"`{p}{command.qualified_name}`  :no_entry_sign:")
 
             if i == 0:
-                description_text.append(f"**__{name}__**\n")
-                description_text.append('\n'.join(commands_list))
-                description_text.append("\n")
-            elif i < 8:
-                description_text.append(f"\n**__{name}__**\n")
-                description_text.append('\n'.join(commands_list))
-                description_text.append("\n")
+                text.append(f"**__{name}__**\n")
             else:
-                field_text.append(f"\n**__{name}__**\n")
-                field_text.append('\n'.join(commands_list))
-                field_text.append("\n")
+                text.append(f"\n**__{name}__**\n")
 
-            i += 1
+            text.append('\n'.join(commands_list))
+            text.append('\n')
 
-        embed = self.bot.embeds.embed_builder(title=f'All Commands ({amounts})',
-                                              description=f"Commands that you are not allowed to use (missing role "
-                                                          f"or missing permissions) or that cannot be used on this "
-                                                          f" server, have a :no_entry_sign: behind them."
-                                                          f"\n\n{' '.join(description_text)}",
-                                              has_footer=False)
+            if i < 4:
+                i += 1
+                continue
+            else:
+                embed.add_field(name="\u200b", value=' '.join(text))
+                text.clear()
+                i = 0
 
-        embed.add_field(name="\u200b", value=' '.join(field_text))
+        embed.title = f'All Commands ({amounts})'
         await ctx.send(embed=embed)
 
     @commands.command(name='addme', aliases=['inviteme'])

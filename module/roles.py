@@ -76,7 +76,7 @@ class Roles(commands.Cog, name="Selfroles"):
     @roles.command(name='add', aliases=['create, make'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @commands.has_permissions(manage_roles=True)
+    @commands.has_guild_permissions(manage_roles=True)
     async def addrole(self, ctx):
         """Add a role to this server's `-roles` list"""
 
@@ -116,7 +116,7 @@ class Roles(commands.Cog, name="Selfroles"):
     @roles.command(name='delete', aliases=['remove'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @commands.has_permissions(manage_roles=True)
+    @commands.has_guild_permissions(manage_roles=True)
     async def deleterole(self, ctx, hard: typing.Optional[bool] = False, *, role: str):
         """Remove a selfrole from this server's `-roles` list
 

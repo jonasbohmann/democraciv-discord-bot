@@ -1181,7 +1181,7 @@ class Legislature(commands.Cog):
 
             await ctx.send(f":white_check_mark: The vetos of all bills were overridden.")
 
-    @legislature.command(name='stats')
+    @legislature.command(name='stats', aliases=['stat', 'statistics', 'statistic'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def stats(self, ctx):
         """Statistics about the Legislature"""

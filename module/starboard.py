@@ -478,7 +478,7 @@ class Starboard(commands.Cog):
         embed.add_field(name='Messages on the Starboard', value=messages_starred, inline=False)
         embed.add_field(name='Stars Received', value=stars_received, inline=True)
         embed.add_field(name='Stars Given', value=stars_given, inline=True)
-        embed.add_field(name='Top Starred Posts', value=self.records_to_value(top_three_starred_fmt), inline=False)
+        embed.add_field(name='Top Starred Messages', value=self.records_to_value(top_three_starred_fmt), inline=False)
         await ctx.send(embed=embed)
 
     async def star_overall_stats(self, ctx):
@@ -558,7 +558,7 @@ class Starboard(commands.Cog):
             embed.timestamp = self.starboard_channel.created_at
         await ctx.send(embed=embed)
 
-    @starboard.command(name='stats')
+    @starboard.command(name='stats', aliases=['stat', 'statistics', 'statistic'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def starboardstats(self, ctx, *,
                              member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
