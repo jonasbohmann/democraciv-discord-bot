@@ -82,12 +82,9 @@ class Legislature(commands.Cog):
     def legislator_role(self) -> typing.Optional[discord.Role]:
         return mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE)
 
-    async def dm_legislators(self, message: str):
+    async def dm_legislators(self, message: str, reason: str):
         for legislator in self.legislator_role.members:
-            try:
-                await legislator.send(message)
-            except discord.Forbidden:
-                await self.bot.owner.send(f"Failed to DM {legislator}.")
+            await self.bot.safe_send_dm(target=legislator, reason=reason, message=message)
 
     def is_cabinet(self, member: discord.Member) -> bool:
         if self.speaker_role in member.roles or self.vice_speaker_role in member.roles:
@@ -405,7 +402,8 @@ class Legislature(commands.Cog):
                                                   f"#{new_session} has started! Everyone is allowed "
                                                   f"to submit bills with `-legislature submit`.")
 
-        await self.dm_legislators(f":envelope_with_arrow: The **submission period** for Legislative Session"
+        await self.dm_legislators(reason="leg_session_open",
+                                  message=f":envelope_with_arrow: The **submission period** for Legislative Session "
                                   f" #{new_session} has started! Submit your bills and motions with "
                                   f"`-legislature submit` on the Democraciv server.")
 
@@ -441,7 +439,8 @@ class Legislature(commands.Cog):
                                                   f"Session #{active_leg_session.id}"
                                                   f" has started! Legislators can vote here: {voting_form}")
 
-        await self.dm_legislators(f":ballot_box: The **voting period** for Legislative Session "
+        await self.dm_legislators(reason="leg_session_update",
+                                  message=f":ballot_box: The **voting period** for Legislative Session "
                                   f"#{active_leg_session.id} has started!\nVote here: {voting_form}")
 
     @legislature.command(name='closesession', aliases=['cs'])
@@ -921,13 +920,11 @@ class Legislature(commands.Cog):
         if message is None:
             return
 
-        try:
-            if self.speaker is not None:
-                await self.speaker.send(content=message, embed=embed)
-            if self.vice_speaker is not None:
-                await self.vice_speaker.send(content=message, embed=embed)
-        except discord.Forbidden:
-            pass
+        if self.speaker is not None:
+            await self.bot.safe_send_dm(target=self.speaker, reason="leg_session_submit", message=message, embed=embed)
+        if self.vice_speaker is not None:
+            await self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_submit", message=message,
+                                        embed=embed)
 
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

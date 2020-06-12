@@ -179,7 +179,7 @@ class Twitch(commands.Cog):
         await executive_channel.send(embed=embed)
 
     async def export_twitch_reminder(self):
-        moderation_channel = mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.MODERATION_TEAM_CHANNEL)
+        moderation_channel = mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL)
 
         await asyncio.sleep(7200)  # Wait 2 hours, i.e. after the game session is done, before sending reminder to Mods
 

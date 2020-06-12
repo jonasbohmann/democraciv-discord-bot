@@ -10,6 +10,7 @@ import logging
 import datetime
 import traceback
 import discord.utils
+import typing
 
 import util.exceptions as exceptions
 
@@ -218,6 +219,32 @@ class DemocracivBot(commands.Bot):
     @property
     def democraciv_guild_object(self) -> Optional[discord.Guild]:
         return self.get_guild(self.democraciv_guild_id)
+
+    async def safe_send_dm(self, target: typing.Union[discord.User, discord.Member],
+                           reason: str = None, message: str = None, embed: discord.Embed = None):
+        dm_settings = await self.db.fetchrow("SELECT * FROM dm_settings WHERE user_id = $1", target.id)
+        p = config.BOT_PREFIX
+
+        if not dm_settings:
+            await self.db.fetchrow("INSERT INTO dm_settings (user_id) VALUES ($1) RETURNING *", target.id)
+
+        try:
+            is_enabled = dm_settings[reason]
+        except (KeyError, TypeError):
+            is_enabled = True
+
+        if not is_enabled:
+            return
+
+        if message:
+            message = f"{message}\n\n*If you want to enable or disable specific DMs from me, check `{p}help dms`.*"
+        else:
+            message = f"*If you want to enable or disable specific DMs from me, check `{p}help dms`.*"
+
+        try:
+            await target.send(content=message, embed=embed)
+        except discord.Forbidden:
+            pass
 
     async def close(self):
         """Closes the aiohttp ClientSession, the connection pool to the PostgreSQL database and the bot itself."""

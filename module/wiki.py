@@ -102,7 +102,7 @@ class Wiki(commands.Cog):
 
         async with ctx.typing():
             article = await self.get_civilization_fandom_article_details(
-                                                    await self.get_civilization_fandom_suggested_article(topic))
+                await self.get_civilization_fandom_suggested_article(topic))
 
         if not article[0]:
             return await ctx.send(f":x: Couldn't find any article that's related to `{topic}`.")
@@ -133,8 +133,8 @@ class Wiki(commands.Cog):
                 try:
                     suggested_query_name = suggested_pages['query']['search'][0]['title']
                 except (IndexError, KeyError):
-                    await ctx.send(":x: Unexpected error occurred.")
-                    return
+                    return await ctx.send(":x: Wikipedia could not suggest me anything. "
+                                          "Did you search for something in a language other than English?")
 
                 # Retry with new suggested article title
                 result = await self.get_wikipedia_result_with_rest_api(suggested_query_name)

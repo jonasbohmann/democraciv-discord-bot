@@ -72,6 +72,126 @@ class Meta(commands.Cog):
             commands_list.append(cmd)
         return len(commands_list), sorted(commands_list, key=lambda com: com.qualified_name)
 
+    async def ensure_dm_settings(self, user: int):
+        settings = await self.bot.db.fetchrow("SELECT * FROM dm_settings WHERE user_id = $1", user)
+
+        if not settings:
+            settings = await self.bot.db.fetchrow("INSERT INTO dm_settings (user_id) VALUES ($1) RETURNING *", user)
+
+        return settings
+
+    async def toggle_dm_setting(self, user: int, setting: str):
+        settings = await self.ensure_dm_settings(user)
+        current_setting = settings[setting]
+        await self.bot.db.execute(f"UPDATE dm_settings SET {setting} = $1 WHERE user_id = $2",
+                                  not current_setting,
+                                  user)
+        return not current_setting
+
+    @commands.group(name='dms', aliases=['dm', 'pm', 'dmsettings', 'dm-settings'], case_insensitive=True,
+                    invoke_without_command=True)
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def dmsettings(self, ctx):
+        """See your currently enabled DMs from me"""
+
+        emojify_settings = self.bot.get_cog("Server").emojiy_settings
+        settings = await self.ensure_dm_settings(ctx.author.id)
+
+        mute_kick_ban = emojify_settings(settings['ban_kick_mute'])
+        leg_session_open = emojify_settings(settings['leg_session_open'])
+        leg_session_update = emojify_settings(settings['leg_session_update'])
+        leg_session_submit = emojify_settings(settings['leg_session_submit'])
+        leg_session_withdraw = emojify_settings(settings['leg_session_withdraw'])
+
+        embed = self.bot.embeds.embed_builder(title=f"Direct Messages for {ctx.author.name}",
+                                              description=f"Check `{config.BOT_PREFIX}help dms` for help on "
+                                                          f"how to enable or disable these settings.\n\n"
+                                                          f"{mute_kick_ban} DM when you get muted, kicked or banned\n"
+                                                          f"{leg_session_open} *(Legislator Only)* DM when a Legislative Session opens\n"
+                                                          f"{leg_session_update} *(Legislator Only)* DM when voting starts for a Legislative Session\n"
+                                                          f"{leg_session_submit} *(Cabinet Only)* DM when someone submits a Bill or Motion\n"
+                                                          f"{leg_session_withdraw} *(Cabinet Only)* DM when someone withdraws a Bill or Motion\n",
+                                              has_footer=False)
+        await ctx.send(embed=embed)
+
+    @dmsettings.command(name='moderation', aliases=['mod', 'kick', 'ban', 'mute'])
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def moderation(self, ctx):
+        """Toggle DMs for when you get muted, kicked or banned"""
+
+        new_value = await self.toggle_dm_setting(ctx.author.id, "ban_kick_mute")
+
+        if new_value:
+            message = ":white_check_mark: You will now receive DMs when you get muted, kicked or banned by me."
+        else:
+            message = ":white_check_mark: You will no longer receive DMs when you get muted, kicked or banned."
+
+        await ctx.send(message)
+
+    @dmsettings.command(name='legsessionopen')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def legsessionopen(self, ctx):
+        """Toggle DMs for when a Legislative Session opens"""
+
+        new_value = await self.toggle_dm_setting(ctx.author.id, "leg_session_open")
+
+        if new_value:
+            message = ":white_check_mark: You will now receive DMs when you are a Legislator " \
+                      "and a new Legislative Session is opened."
+        else:
+            message = ":white_check_mark: You will no longer receive DMs when you are a Legislator " \
+                      "and a new Legislative Session is opened."
+
+        await ctx.send(message)
+
+    @dmsettings.command(name='legsessionvoting')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def legsessionvoting(self, ctx):
+        """Toggle DMs for when voting starts for a Legislative Session"""
+
+        new_value = await self.toggle_dm_setting(ctx.author.id, "leg_session_update")
+
+        if new_value:
+            message = ":white_check_mark: You will now receive DMs when you are a Legislator " \
+                      "and voting starts for a Legislative Session."
+        else:
+            message = ":white_check_mark: You will no longer receive DMs when you are a Legislator " \
+                      "and voting starts for a Legislative Session."
+
+        await ctx.send(message)
+
+    @dmsettings.command(name='legsubmit')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def legsubmit(self, ctx):
+        """Toggle DMs for when someone submits a Bill or Motion"""
+
+        new_value = await self.toggle_dm_setting(ctx.author.id, "leg_session_submit")
+
+        if new_value:
+            message = ":white_check_mark: You will now receive DMs when you are a member of the Cabinet " \
+                      "and someone submits a Bill or Motion."
+        else:
+            message = ":white_check_mark: You will no longer receive DMs when you are a member of the Cabinet " \
+                      "and someone submits a Bill or Motion."
+
+        await ctx.send(message)
+
+    @dmsettings.command(name='legwithdraw')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def legwithdraw(self, ctx):
+        """Toggle DMs for when someone withdraws a Bill or Motion"""
+
+        new_value = await self.toggle_dm_setting(ctx.author.id, "leg_session_withdraw")
+
+        if new_value:
+            message = ":white_check_mark: You will now receive DMs when you are a member of the Cabinet " \
+                      "and someone withdraws their Bill or Motion."
+        else:
+            message = ":white_check_mark: You will no longer receive DMs when you are a member of the Cabinet " \
+                      "and someone withdraws their Bill or Motion."
+
+        await ctx.send(message)
+
     @commands.command(name='commands', aliases=['cmd', 'cmds'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def allcmds(self, ctx):

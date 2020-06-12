@@ -136,6 +136,15 @@ CREATE TABLE IF NOT EXISTS original_join_dates(
     join_position serial UNIQUE
 );
 
+CREATE TABLE IF NOT EXISTS dm_settings(
+    user_id bigint PRIMARY KEY,
+    ban_kick_mute bool DEFAULT TRUE,
+    leg_session_open bool DEFAULT TRUE,
+    leg_session_update bool DEFAULT TRUE,
+    leg_session_submit bool DEFAULT TRUE,
+    leg_session_withdraw bool DEFAULT TRUE
+);
+
 CREATE TABLE IF NOT EXISTS starboard_entries(
     id serial PRIMARY KEY,
     author_id bigint,

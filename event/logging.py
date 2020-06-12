@@ -127,10 +127,10 @@ class Log(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
-        if not await self.bot.checks.is_logging_enabled(before.guild.id):
-            return
-
         if before.display_name != after.display_name:
+            if not await self.bot.checks.is_logging_enabled(before.guild.id):
+                return
+
             embed_fields = {
                 "Member": [f"{before.mention} {before}", False],
                 "Before": [before.display_name, False],
@@ -142,6 +142,8 @@ class Log(commands.Cog):
                                  thumbnail=before.avatar_url_as(static_format="png"))
 
         elif before.roles != after.roles:
+            if not await self.bot.checks.is_logging_enabled(before.guild.id):
+                return
 
             if len(before.roles) < len(after.roles):
                 given_role = "*invalid role*"

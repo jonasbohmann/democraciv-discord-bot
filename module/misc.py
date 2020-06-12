@@ -168,9 +168,10 @@ class Misc(commands.Cog, name="Miscellaneous"):
         pretty_artists = ', '.join(member_spotify.artists)
 
         embed = self.bot.embeds.embed_builder(title=f"{config.SPOTIFY_LOGO}  {member.name} on Spotify",
-                                              description="", has_footer=False,
-                                              colour=0x2F3136, footer=f"Use `{config.BOT_PREFIX}lyrics` to get lyrics"
-                                                                      f" for a song!")
+                                              description="", colour=0x2F3136,
+                                              footer=f"Use `{config.BOT_PREFIX}lyrics` to get lyrics"
+                                                     f" for a song!")
+
         embed.add_field(name="Song", value=f"[{member_spotify.title}](https://open.spotify.com/"
                                            f"track/{member_spotify.track_id})", inline=False)
         embed.add_field(name="Artist(s)", value=pretty_artists, inline=True)

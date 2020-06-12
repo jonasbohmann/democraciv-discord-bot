@@ -2,6 +2,7 @@ import typing
 import discord
 import datetime
 
+from bot import DemocracivBot
 from util.flow import Flow
 from discord.ext import commands
 from util import utils, mk, exceptions
@@ -13,7 +14,7 @@ from util.converter import UnbanConverter, BanConverter, CaseInsensitiveMember
 class Moderation(commands.Cog):
     """Commands for the Mod Team of this server."""
 
-    def __init__(self, bot):
+    def __init__(self, bot: DemocracivBot):
         self.bot = bot
 
     async def calculate_alt_chance(self, member: discord.Member, check_messages: bool = False) -> (int, str):
@@ -352,10 +353,8 @@ class Moderation(commands.Cog):
         else:
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with no specified reason."
 
-        try:
-            await member.send(f":boot: You were **kicked** from {ctx.guild.name}.")
-        except discord.Forbidden:
-            pass
+        await self.bot.safe_send_dm(target=member, reason="ban_kick_mute",
+                                    message=f":boot: You were **kicked** from {ctx.guild.name}.")
 
         try:
             await ctx.guild.kick(member, reason=formatted_reason)
@@ -457,10 +456,8 @@ class Moderation(commands.Cog):
         except discord.Forbidden:
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.ADD_ROLE, detail="Muted")
 
-        try:
-            await member.send(f":zipper_mouth: You were **muted** in {ctx.guild.name}.")
-        except discord.Forbidden:
-            pass
+        await self.bot.safe_send_dm(target=member, reason="ban_kick_mute",
+                                    message=f":zipper_mouth: You were **muted** in {ctx.guild.name}.")
 
         await ctx.send(f":white_check_mark: {member} was muted.")
 
@@ -488,10 +485,8 @@ class Moderation(commands.Cog):
         except discord.Forbidden:
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.REMOVE_ROLE, detail="Muted")
 
-        try:
-            await member.send(f":innocent: You were **unmuted** in {ctx.guild.name}.")
-        except discord.Forbidden:
-            pass
+        await self.bot.safe_send_dm(target=member, reason="ban_kick_mute",
+                                    message=f":innocent: You were **unmuted** in {ctx.guild.name}.")
 
         await ctx.send(f":white_check_mark: {member} was unmuted.")
 
@@ -550,10 +545,8 @@ class Moderation(commands.Cog):
             formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id}) with no specified reason."
 
         if member_object:
-            try:
-                await member_object.send(f":no_entry: You were **banned** from {ctx.guild.name}.")
-            except discord.Forbidden:
-                pass
+            await self.bot.safe_send_dm(target=member_object, reason="ban_kick_mute",
+                                        message=f":no_entry: You were **banned** from {ctx.guild.name}.")
 
         try:
             await ctx.guild.ban(discord.Object(id=member_id), reason=formatted_reason, delete_message_days=0)
@@ -704,7 +697,7 @@ class Moderation(commands.Cog):
                                                   overwrites={everyone_role: everyone_perms,
                                                               archives_role: archive_perms})
 
-                await government_category.edit(name=f"MK{mk.MARK} Archives", position=6)
+                await government_category.edit(name=f"MK{mk.MARK}-Archive", position=6)
                 await ctx.send(":white_check_mark: Done.")
 
 
