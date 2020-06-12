@@ -167,6 +167,7 @@ class Tag(commands.Converter):
         self.is_global: bool = kwargs.get('_global')
         self.uses: int = kwargs.get('uses')
         self.aliases: typing.List[str] = kwargs.get('aliases')
+        self.is_embedded: bool = kwargs.get('is_embedded')
         self._author: int = kwargs.get('author', None)
         self._guild: int = kwargs.get('guild')
         self._bot = kwargs.get('bot')
@@ -209,9 +210,15 @@ class Tag(commands.Converter):
         aliases = await ctx.bot.db.fetch("SELECT alias FROM guild_tags_alias WHERE tag_id = $1", tag_id)
         aliases = [record['alias'] for record in aliases]
 
+        try:
+            is_embedded = tag_details['is_embedded']
+        except KeyError:  # backwards compatibility
+            is_embedded = True
+
         return cls(id=tag_details['id'], name=tag_details['name'], title=tag_details['title'],
                    content=tag_details['content'], _global=tag_details['global'], uses=tag_details['uses'],
-                   bot=ctx.bot, guild=tag_details['guild_id'], author=tag_details['author'], aliases=aliases)
+                   bot=ctx.bot, guild=tag_details['guild_id'], author=tag_details['author'], aliases=aliases,
+                   is_embedded=is_embedded)
 
 
 class OwnedTag(Tag):
@@ -248,10 +255,15 @@ class OwnedTag(Tag):
         aliases = await ctx.bot.db.fetch("SELECT alias FROM guild_tags_alias WHERE tag_id = $1", tag_id)
         aliases = [record['alias'] for record in aliases]
 
+        try:
+            is_embedded = tag_details['is_embedded']
+        except KeyError:  # backwards compatibility
+            is_embedded = True
+
         return cls(id=tag_details['id'], name=tag_details['name'], title=tag_details['title'],
                    content=tag_details['content'], _global=tag_details['global'], uses=tag_details['uses'],
                    bot=ctx.bot, guild=tag_details['guild_id'], author=tag_details['author'], aliases=aliases,
-                   invoked_with=argument.lower())
+                   is_embedded=is_embedded, invoked_with=argument.lower())
 
 
 class Session(commands.Converter):

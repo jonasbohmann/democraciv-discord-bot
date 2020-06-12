@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS guild_tags(
     global bool DEFAULT FALSE,
     author bigint,
     uses int DEFAULT 0,
+    is_embedded bool DEFAULT TRUE,
     PRIMARY KEY (guild_id, id),
     UNIQUE (guild_id, name)
 );

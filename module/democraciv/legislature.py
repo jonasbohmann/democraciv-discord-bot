@@ -1094,9 +1094,9 @@ class Legislature(commands.Cog):
 
             if not self.is_cabinet(ctx.author):
                 if self.speaker is not None:
-                    self.bot.safe_send_dm(target=self.speaker, reason="leg_session_withdraw", message=message)
+                    await self.bot.safe_send_dm(target=self.speaker, reason="leg_session_withdraw", message=message)
                 if self.vice_speaker is not None:
-                    self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_withdraw", message=message)
+                    await self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_withdraw", message=message)
 
     @withdraw.command(name='bill', aliases=['b'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

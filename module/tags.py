@@ -255,6 +255,18 @@ class Tags(commands.Cog):
         if not await self.validate_tag_name(ctx, name.lower()):
             return
 
+        embed_q = await ctx.send(":information_source: Should the tag be sent as an embed?")
+
+        embed_bool = await flow.get_yes_no_reaction_confirm(embed_q, 300)
+
+        if embed_bool is None:
+            return
+
+        if embed_bool:
+            is_embedded = True
+        else:
+            is_embedded = False
+
         await ctx.send(":information_source: Reply with the **title** of the tag.")
         title = await flow.get_text_input(300)
 
@@ -304,10 +316,10 @@ class Tags(commands.Cog):
             async with self.bot.db.acquire() as con:
                 async with con.transaction():
                     _id = await con.fetchval("INSERT INTO guild_tags (guild_id, name, content, title,"
-                                             " global, author) VALUES "
-                                             "($1, $2, $3, $4, $5, $6) RETURNING id",
+                                             " global, author, is_embedded) VALUES "
+                                             "($1, $2, $3, $4, $5, $6, $7) RETURNING id",
                                              ctx.guild.id, name.lower(), content, title, is_global,
-                                             ctx.author.id)
+                                             ctx.author.id, is_embedded)
                     await con.execute("INSERT INTO guild_tags_alias (tag_id, alias, guild_id, global)"
                                       " VALUES ($1, $2, $3, $4)", _id, name.lower(),
                                       ctx.guild.id, is_global)
@@ -324,10 +336,8 @@ class Tags(commands.Cog):
         embed = self.bot.embeds.embed_builder(title="Tag Info", description="", has_footer=False)
         embed.add_field(name="Title", value=tag.title, inline=False)
 
-        tag_content_type = self.is_emoji_or_media_url(tag.content)
-        is_embedded = "Yes" if tag_content_type is TagContentType.TEXT or \
-                               tag_content_type is TagContentType.IMAGE else "No"
         is_global = "Yes" if tag.is_global else "No"
+        is_embedded = "Yes" if tag.is_embedded else "No"
 
         if isinstance(tag.author, discord.Member):
             embed.add_field(name="Author", value=tag.author.mention, inline=False)
@@ -372,7 +382,8 @@ class Tags(commands.Cog):
     @tags.command(name="transfer")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def transfer(self, ctx, to_person: typing.Union[discord.Member, CaseInsensitiveMember, discord.User], *, tag: OwnedTag):
+    async def transfer(self, ctx, to_person: typing.Union[discord.Member, CaseInsensitiveMember, discord.User], *,
+                       tag: OwnedTag):
         """Transfer a tag of yours to someone else"""
 
         if to_person == ctx.author:
@@ -400,6 +411,18 @@ class Tags(commands.Cog):
         """Edit one of your tags"""
 
         flow = Flow(self.bot, ctx)
+
+        embed_q = await ctx.send(":information_source: Should the tag be sent as an embed?")
+
+        embed_bool = await flow.get_yes_no_reaction_confirm(embed_q, 300)
+
+        if embed_bool is None:
+            return
+
+        if embed_bool:
+            is_embedded = True
+        else:
+            is_embedded = False
 
         await ctx.send(":information_source: Reply with the updated **title** of this tag.")
         new_title = await flow.get_text_input(300)
@@ -431,8 +454,8 @@ class Tags(commands.Cog):
             return await ctx.send("Aborted.")
 
         else:
-            await self.bot.db.execute("UPDATE guild_tags SET content = $1, title = $3 WHERE id = $2", new_content,
-                                      tag.id, new_title)
+            await self.bot.db.execute("UPDATE guild_tags SET content = $1, title = $3, is_embedded = $4 WHERE id = $2",
+                                      new_content, tag.id, new_title, is_embedded)
             await ctx.send(":white_check_mark: Your tag was edited.")
 
     @tags.command(name="search", aliases=['s'])
@@ -516,7 +539,7 @@ class Tags(commands.Cog):
                     await ctx.send(f":white_check_mark: `{config.BOT_PREFIX}{tag.name}` was removed.")
 
     @staticmethod
-    def is_emoji_or_media_url(tag_content: str) -> TagContentType:
+    def get_tag_content_type(tag_content: str) -> TagContentType:
         emoji_pattern = re.compile(r"<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>")
         discord_invite_pattern = re.compile(r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
         url_pattern = re.compile(
@@ -591,23 +614,24 @@ class Tags(commands.Cog):
         if tag_details is None:
             return
 
-        tag_content_type = self.is_emoji_or_media_url(tag_details['content'])
+        tag_content_type = self.get_tag_content_type(tag_details['content'])
 
-        if tag_content_type is TagContentType.IMAGE:
-            embed = discord.Embed(colour=0x2F3136)
-            embed.set_image(url=tag_details['content'])
+        if tag_details['is_embedded']:
+            if tag_content_type is TagContentType.IMAGE:
+                embed = discord.Embed(colour=0x2F3136)
+                embed.set_image(url=tag_details['content'])
 
-            try:
-                return await message.channel.send(embed=embed)
-            except discord.HTTPException:
-                return await message.channel.send(discord.utils.escape_mentions(tag_details['content']))
+                try:
+                    return await message.channel.send(embed=embed)
+                except discord.HTTPException:
+                    return await message.channel.send(discord.utils.escape_mentions(tag_details['content']))
 
-        elif tag_content_type is not TagContentType.TEXT:
-            return await message.channel.send(discord.utils.escape_mentions(tag_details['content']))
+            embed = self.bot.embeds.embed_builder(title=tag_details['title'], description=tag_details['content'],
+                                                  has_footer=False)
+            await message.channel.send(embed=embed)
 
-        embed = self.bot.embeds.embed_builder(title=tag_details['title'], description=tag_details['content'],
-                                              has_footer=False)
-        await message.channel.send(embed=embed)
+        else:
+            await message.channel.send(discord.utils.escape_mentions(tag_details['content']))
 
 
 def setup(bot):
