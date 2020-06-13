@@ -120,6 +120,8 @@ class Meta(commands.Cog):
     async def enableall(self, ctx):
         """Enable all DMs"""
 
+        await self.ensure_dm_settings(ctx.author.id)
+
         await self.bot.db.execute("UPDATE dm_settings SET"
                                   " ban_kick_mute = true, leg_session_open = true,"
                                   " leg_session_update = true, leg_session_submit = true,"
@@ -132,6 +134,8 @@ class Meta(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def disableall(self, ctx):
         """Disable all DMs"""
+
+        await self.ensure_dm_settings(ctx.author.id)
 
         await self.bot.db.execute("UPDATE dm_settings SET"
                                   " ban_kick_mute = false, leg_session_open = false,"
