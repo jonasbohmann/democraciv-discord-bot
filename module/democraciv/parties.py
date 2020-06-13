@@ -54,10 +54,9 @@ class Party(commands.Cog, name='Political Parties'):
         invite_value = party.discord_invite if party.discord_invite else "*This party does not have a Discord server.*"
         thumbnail = await party.get_logo()
 
-        embed = self.bot.embeds.embed_builder(title=party.role.name,
+        embed = self.bot.embeds.embed_builder(title=f"{self.bot.mk.NATION_EMOJI}  {party.role.name}",
                                               description=f"[Platform and Description]"
-                                                          f"({self.bot.mk.POLITICAL_PARTIES})",
-                                              has_footer=False)
+                                                          f"({self.bot.mk.POLITICAL_PARTIES})")
 
         if thumbnail:
             embed.set_thumbnail(url=thumbnail)
@@ -159,8 +158,8 @@ class Party(commands.Cog, name='Political Parties'):
         if len(party_list_embed_content) == 0:
             party_list_embed_content = ['There are no political parties yet.']
 
-        embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in {self.bot.mk.NATION_NAME}',
-                                              description="")
+        embed = self.bot.embeds.embed_builder(title=f'{self.bot.mk.NATION_EMOJI}  Ranking of Political Parties '
+                                                    f'in {self.bot.mk.NATION_NAME}')
         embed.description = f"[Party Platforms]({self.bot.mk.POLITICAL_PARTIES})\n\n" + '\n\n'.join(party_list_embed_content)
         return await ctx.send(embed=embed)
 

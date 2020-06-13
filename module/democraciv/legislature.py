@@ -105,8 +105,8 @@ class Legislature(commands.Cog):
         else:
             current_session_value = f"Session #{active_leg_session.id} - {active_leg_session.status.value}"
 
-        embed = self.bot.embeds.embed_builder(title=f"The {self.bot.mk.LEGISLATURE_NAME} of "
-                                                    f"{self.bot.mk.NATION_FULL_NAME}")
+        embed = self.bot.embeds.embed_builder(title=f"{self.bot.mk.NATION_EMOJI}  The {self.bot.mk.LEGISLATURE_NAME} "
+                                                    f"of {self.bot.mk.NATION_FULL_NAME}")
         speaker_value = []
 
         if isinstance(self.speaker, discord.Member):
@@ -146,7 +146,7 @@ class Legislature(commands.Cog):
                               f"{await _bill.get_emojified_status(verbose=False)}")
 
         pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=8,
-                                 title=f"All Submitted Bills", a_thumbnail=self.bot.mk.safe_flag,
+                                 title=f"{self.bot.mk.NATION_EMOJI}  All Submitted Bills",
                                  show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
@@ -160,7 +160,7 @@ class Legislature(commands.Cog):
 
         bill = bill_id
 
-        embed = self.bot.embeds.embed_builder(title=f"Bill #{bill.id}", description="", has_footer=False)
+        embed = self.bot.embeds.embed_builder(title=f"{self.bot.mk.NATION_EMOJI}  Bill #{bill.id}")
 
         if bill.submitter is not None:
             embed.set_author(name=bill.submitter.name, icon_url=bill.submitter.avatar_url_as(static_format='png'))
@@ -206,7 +206,8 @@ class Legislature(commands.Cog):
         pretty = pretty or ["Nothing found."]
 
         pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=8,
-                                 title=f"Bills matching '{query}'", show_index=False, show_amount_of_pages=True)
+                                 title=f"{self.bot.mk.NATION_EMOJI}  Bills matching '{query}'",
+                                 show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
     @bill.command(name='from', aliases=['f', 'by'])
@@ -275,8 +276,8 @@ class Legislature(commands.Cog):
                 pretty.append(f"Motion #{record['id']} - [{record['title']}]({record['hastebin']})")
 
         pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=14,
-                                 title=f"All Submitted Motions", show_index=False, show_amount_of_pages=True,
-                                 a_thumbnail=self.bot.mk.safe_flag)
+                                 title=f"{self.bot.mk.NATION_EMOJI}  All Submitted Motions",
+                                 show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
     @legislature.group(name='motion', aliases=['m', 'motions'], case_insensitive=True, invoke_without_command=True)
@@ -289,7 +290,7 @@ class Legislature(commands.Cog):
 
         motion = motion_id
 
-        embed = self.bot.embeds.embed_builder(title=f"Motion #{motion.id}")
+        embed = self.bot.embeds.embed_builder(title=f"{self.bot.mk.NATION_EMOJI}  Motion #{motion.id}")
 
         if motion.submitter is not None:
             embed.set_author(name=motion.submitter.name, icon_url=motion.submitter.avatar_url_as(static_format='png'))
@@ -373,7 +374,8 @@ class Legislature(commands.Cog):
         pretty = pretty or ["Nothing found."]
 
         pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=8,
-                                 title=f"Motions matching '{query}'", show_index=False, show_amount_of_pages=True)
+                                 title=f"{self.bot.mk.NATION_EMOJI}  Motions matching '{query}'",
+                                 show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
     @legislature.command(name='opensession', aliases=['os'])
@@ -596,10 +598,9 @@ class Legislature(commands.Cog):
                 pretty_sessions.append(f"**Session #{record['id']}**  - {opened_on}")
 
         pages = AlternativePages(ctx=ctx, entries=pretty_sessions, show_entry_count=False,
-                                 title=f"All Sessions of the {self.bot.mk.NATION_ADJECTIVE} "
-                                       f"{self.bot.mk.LEGISLATURE_NAME}",
-                                 show_index=False, show_amount_of_pages=True,
-                                 a_thumbnail=self.bot.mk.safe_flag)
+                                 title=f"{self.bot.mk.NATION_EMOJI}  All Sessions of the {self.bot.mk.NATION_ADJECTIVE}"
+                                       f" {self.bot.mk.LEGISLATURE_NAME}",
+                                 show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
     @staticmethod
@@ -678,7 +679,7 @@ class Legislature(commands.Cog):
         else:
             pretty_bills = ["-"]
 
-        embed = self.bot.embeds.embed_builder(title=f"Legislative Session #{session.id}", description="")
+        embed = self.bot.embeds.embed_builder(title=f"{self.bot.mk.NATION_EMOJI}  Legislative Session #{session.id}")
 
         if session.speaker is not None:
             embed.add_field(name="Opened by", value=session.speaker.mention)
@@ -1205,7 +1206,8 @@ class Legislature(commands.Cog):
         async with ctx.typing():
             stats = await self.bot.laws.generate_leg_statistics()
 
-            embed = self.bot.embeds.embed_builder(title=f"Statistics for the {self.bot.mk.NATION_ADJECTIVE} "
+            embed = self.bot.embeds.embed_builder(title=f"{self.bot.mk.NATION_EMOJI}  Statistics for the "
+                                                        f"{self.bot.mk.NATION_ADJECTIVE} "
                                                         f"{self.bot.mk.LEGISLATURE_NAME}")
 
             general_value = f"Sessions: {stats[0]}\n" \

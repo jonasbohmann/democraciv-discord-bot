@@ -71,9 +71,8 @@ class Laws(commands.Cog, name='Law'):
                 return await ctx.send(embed=embed)
 
         pages = AlternativePages(ctx=ctx, entries=pretty_laws, show_entry_count=False,
-                                 title=f"All Laws in {self.bot.mk.NATION_FULL_NAME}", per_page=14,
-                                 show_index=False, show_amount_of_pages=True,
-                                 a_thumbnail=self.bot.mk.safe_flag)
+                                 title=f"{self.bot.mk.NATION_EMOJI}  All Laws in {self.bot.mk.NATION_FULL_NAME}",
+                                 per_page=14, show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
     @commands.group(name='law', aliases=['laws'], case_insensitive=True, invoke_without_command=True)
@@ -92,7 +91,7 @@ class Laws(commands.Cog, name='Law'):
         # If the user did specify a law_id, send details about that law
         law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
 
-        embed = self.bot.embeds.embed_builder(title=f"Law #{law.id}")
+        embed = self.bot.embeds.embed_builder(title=f"{self.bot.mk.NATION_EMOJI}  Law #{law.id}")
 
         if law.bill.submitter is not None:
             embed.set_author(name=law.bill.submitter.name,
@@ -274,7 +273,8 @@ class Laws(commands.Cog, name='Law'):
                     results = ['Nothing found.']
 
         pages = AlternativePages(ctx=ctx, entries=list(results), show_entry_count=False,
-                                 title=f"Laws matching '{name}'", show_index=False, show_amount_of_pages=True)
+                                 title=f"{self.bot.mk.NATION_EMOJI}  Laws matching '{name}'",
+                                 show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
     @law.command(name='repeal', aliases=['r, remove', 'delete'])

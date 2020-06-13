@@ -115,7 +115,7 @@ class Ministry(commands.Cog):
     async def ministry(self, ctx):
         """Dashboard for Ministers with important links and updates on new bills"""
 
-        embed = self.bot.embeds.embed_builder(title=f"The {self.bot.mk.MINISTRY_NAME} of "
+        embed = self.bot.embeds.embed_builder(title=f"{self.bot.mk.NATION_EMOJI}  The {self.bot.mk.MINISTRY_NAME} of "
                                                     f"{self.bot.mk.NATION_FULL_NAME}")
 
         pretty_bills = await self.get_pretty_vetos()
@@ -159,19 +159,20 @@ class Ministry(commands.Cog):
             embed = self.bot.embeds.embed_builder(title="There are no new bills to vote on.")
             return await ctx.send(embed=embed)
 
-        pages = AlternativePages(ctx=ctx, entries=pretty_bills, show_entry_count=False, title="Open Bills to Vote On",
+        pages = AlternativePages(ctx=ctx, entries=pretty_bills, show_entry_count=False,
+                                 title=f"{self.bot.mk.NATION_EMOJI}  Open Bills to Vote On",
                                  show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
     async def verify_bill(self, bill: Bill) -> str:
         if not bill.is_vetoable:
-            return f"The {self.bot.mk.MINISTRY_NAME} cannot veto this!"
+            return f"The {self.bot.mk.MINISTRY_NAME} cannot veto this."
 
         if not bill.passed_leg:
-            return f"This bill hasn't passed the {self.bot.mk.LEGISLATURE_NAME} yet!"
+            return f"This bill hasn't passed the {self.bot.mk.LEGISLATURE_NAME} yet."
 
         if bill.voted_on_by_ministry:
-            return "You already voted on this bill!"
+            return "You already voted on this bill."
 
     @ministry.command(name='veto', aliases=['v'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

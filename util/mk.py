@@ -2,6 +2,7 @@ import enum
 import discord
 import typing
 
+from config import config
 from util import exceptions
 
 """Several functions to retrieve mk-specific names or objects such as roles & channels of government officials."""
@@ -19,6 +20,7 @@ class MarkConfig:
     NATION_ADJECTIVE = "Arabian"
     NATION_FLAG_URL = "https://i.imgur.com/M97zPrP.jpg"
     NATION_ICON_URL = ""
+    NATION_EMOJI = config.NATION_FLAG
 
     LEGISLATURE_NAME = "Legislature"
     LEGISLATURE_CABINET_NAME = "Legislative Cabinet"

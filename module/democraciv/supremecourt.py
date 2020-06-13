@@ -55,7 +55,8 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
     async def court(self, ctx):
         """Dashboard for Supreme Court Justices"""
 
-        embed = self.bot.embeds.embed_builder(title=f"{self.bot.mk.courts_term} of the {self.bot.mk.NATION_FULL_NAME}")
+        embed = self.bot.embeds.embed_builder(title=f"{self.bot.mk.NATION_EMOJI}  "
+                                                    f"{self.bot.mk.courts_term} of the {self.bot.mk.NATION_FULL_NAME}")
 
         justices = self.get_justices() or ['-']
         judges = self.get_judges() or ['-']
