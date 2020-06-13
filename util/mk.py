@@ -4,20 +4,122 @@ import typing
 
 from util import exceptions
 
-"""
-   Several functions to retrieve mk-specific names or objects such as roles & channels of government officials.
+"""Several functions to retrieve mk-specific names or objects such as roles & channels of government officials."""
 
-   This was separated into its own file so the maintainer only has to change this file (and links.py) in the actual
-    code-base if a new Democraciv MK starts.
-"""
 
-MARK = "6"
-NATION_NAME = "Arabia"
-NATION_ADJECTIVE = "Arabian"
-NATION_FLAG_URL = "https://images-ext-2.discordapp.net/external/TSpk771jugy_quO9E4qKF9bl8mehS90p2kuubW2DQxo/https/i.imgur.com/M97zPrP.jpg?width=1134&height=810"
-CIV_GAME = "Sid Meier's Civilization 5"
-LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS = True
-LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS = True
+class MarkConfig:
+    MARK = "6"
+    CIV_GAME = "Sid Meier's Civilization 5"
+    IS_MULTICIV = False
+
+    # -- Government Names --
+
+    NATION_NAME = "Arabia"
+    NATION_FULL_NAME = "Arabian People’s Democratic Union"
+    NATION_ADJECTIVE = "Arabian"
+    NATION_FLAG_URL = "https://i.imgur.com/M97zPrP.jpg"
+    NATION_ICON_URL = ""
+
+    LEGISLATURE_NAME = "Legislature"
+    LEGISLATURE_CABINET_NAME = "Legislative Cabinet"
+    LEGISLATURE_LEGISLATOR_NAME = "Legislator"
+    LEGISLATURE_SPEAKER_NAME = "Speaker"
+    LEGISLATURE_VICE_SPEAKER_NAME = "Vice-Speaker"
+    LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS = True
+    LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS = True
+
+    MINISTRY_NAME = "Ministry"
+    MINISTRY_LEADERSHIP_NAME = "Head of State"
+    MINISTRY_MINISTER_NAME = "Minister"
+    MINISTRY_PRIME_MINISTER_NAME = "Prime Minister"
+    MINISTRY_VICE_PRIME_MINISTER_NAME = "Lt. Prime Minister"
+
+    COURT_NAME = "Supreme Court"
+    COURT_HAS_INFERIOR_COURT = True
+    COURT_CHIEF_JUSTICE_NAME = "Chief Justice"
+    COURT_INFERIOR_NAME = "Appeals Court"
+    COURT_JUSTICE_NAME = "Justice"
+    COURT_JUDGE_NAME = "Judge"
+
+    # -- Links --
+    CONSTITUTION = "https://docs.google.com/document/d/1deWktyhCDWlmC88C2eP7vjpH6sP6NuJ7KfrXX8kcO-s/edit"
+    LEGAL_CODE = "https://docs.google.com/document/d/1nmDfOy3DypadML817J_d2pCc8FpDlO7HUUhHOajWG2o/edit?usp=sharing"
+    POLITICAL_PARTIES = "https://www.reddit.com/r/democraciv/wiki/parties"
+
+    LEGISLATURE_DOCKET = "https://docs.google.com/spreadsheets/d/1k3NkAbh-32ciHMqboZRQVXXkdjT1T21qhtdom0JSm-Q/edit?usp=sharing"
+    LEGISLATURE_PROCEDURES = "https://docs.google.com/document/d/1vUGVIv0F0ZK2cAJrhaDaOS02iKIz8KOXSwjoZZgnEmo/edit?usp=sharing"
+
+    MINISTRY_WORKSHEET = "https://docs.google.com/spreadsheets/d/1hrBA2yftAilQFhPwCDtm74YBVFWRce5l41wRsKf9qdI/edit?usp=sharing"
+    MINISTRY_PROCEDURES = "https://docs.google.com/document/d/1c6HtdY7urz4F3fH9Nra83Qc1bNVrp_O9zmaeFs6szgA/edit?usp=sharing"
+
+    def __init__(self, bot):
+        self.bot = bot
+
+    @property
+    def safe_flag(self):
+        return self.NATION_FLAG_URL or self.bot.democraciv_guild_object.icon_url_as(static_format='png')
+
+    @property
+    def legislator_term(self):
+        try:
+            return get_democraciv_role(self.bot, DemocracivRole.LEGISLATOR_ROLE).name
+        except exceptions.RoleNotFoundError:
+            return self.LEGISLATURE_LEGISLATOR_NAME
+
+    @property
+    def speaker_term(self):
+        try:
+            return get_democraciv_role(self.bot, DemocracivRole.SPEAKER_ROLE).name
+        except exceptions.RoleNotFoundError:
+            return self.LEGISLATURE_SPEAKER_NAME
+
+    @property
+    def vice_speaker_term(self):
+        try:
+            return get_democraciv_role(self.bot, DemocracivRole.VICE_SPEAKER_ROLE).name
+        except exceptions.RoleNotFoundError:
+            return self.LEGISLATURE_VICE_SPEAKER_NAME
+
+    @property
+    def minister_term(self):
+        try:
+            return get_democraciv_role(self.bot, DemocracivRole.MINISTER_ROLE).name
+        except exceptions.RoleNotFoundError:
+            return self.MINISTRY_MINISTER_NAME
+
+    @property
+    def pm_term(self):
+        try:
+            return get_democraciv_role(self.bot, DemocracivRole.PRIME_MINISTER_ROLE).name
+        except exceptions.RoleNotFoundError:
+            return self.MINISTRY_PRIME_MINISTER_NAME
+
+    @property
+    def vice_pm_term(self):
+        try:
+            return get_democraciv_role(self.bot, DemocracivRole.LT_PRIME_MINISTER_ROLE).name
+        except exceptions.RoleNotFoundError:
+            return self.MINISTRY_VICE_PRIME_MINISTER_NAME
+
+    @property
+    def courts_term(self):
+        if self.COURT_HAS_INFERIOR_COURT:
+            return "Courts"
+        return self.COURT_NAME
+
+    @property
+    def justice_term(self):
+        try:
+            return get_democraciv_role(self.bot, DemocracivRole.JUSTICE_ROLE).name
+        except exceptions.RoleNotFoundError:
+            return self.COURT_JUSTICE_NAME
+
+    @property
+    def judge_term(self):
+        try:
+            return get_democraciv_role(self.bot, DemocracivRole.JUDGE_ROLE).name
+        except exceptions.RoleNotFoundError:
+            return self.COURT_JUDGE_NAME
 
 
 class PrettyEnumValue(object):

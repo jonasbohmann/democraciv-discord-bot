@@ -1,12 +1,10 @@
 import re
 import typing
 import discord
-import asyncpg
-from discord import NotFound, HTTPException
 
 from util.flow import Flow
 from discord.ext import commands
-from config import config, links
+from config import config
 from util import utils, exceptions, mk
 from util.converter import PoliticalParty
 from util.exceptions import ForbiddenTask
@@ -58,7 +56,7 @@ class Party(commands.Cog, name='Political Parties'):
 
         embed = self.bot.embeds.embed_builder(title=party.role.name,
                                               description=f"[Platform and Description]"
-                                                          f"({links.parties})",
+                                                          f"({self.bot.mk.POLITICAL_PARTIES})",
                                               has_footer=False)
 
         if thumbnail:
@@ -161,9 +159,9 @@ class Party(commands.Cog, name='Political Parties'):
         if len(party_list_embed_content) == 0:
             party_list_embed_content = ['There are no political parties yet.']
 
-        embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in {mk.NATION_NAME}',
+        embed = self.bot.embeds.embed_builder(title=f'Ranking of Political Parties in {self.bot.mk.NATION_NAME}',
                                               description="")
-        embed.description = f"[Party Platforms]({links.parties})\n\n" + '\n\n'.join(party_list_embed_content)
+        embed.description = f"[Party Platforms]({self.bot.mk.POLITICAL_PARTIES})\n\n" + '\n\n'.join(party_list_embed_content)
         return await ctx.send(embed=embed)
 
     async def create_new_party(self, ctx) -> typing.Optional[PoliticalParty]:

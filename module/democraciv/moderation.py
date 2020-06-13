@@ -6,7 +6,7 @@ from bot import DemocracivBot
 from util.flow import Flow
 from discord.ext import commands
 from util import utils, mk, exceptions
-from config import config, token, links
+from config import config, token
 from util.exceptions import ForbiddenTask
 from util.converter import UnbanConverter, BanConverter, CaseInsensitiveMember
 
@@ -323,7 +323,7 @@ class Moderation(commands.Cog):
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def quire(self, ctx):
         """Quire Project Management"""
-        embed = self.bot.embeds.embed_builder(title='Quire', description=links.quire, has_footer=False)
+        embed = self.bot.embeds.embed_builder(title='Quire', description="https://quire.io/c/democraciv-moderation")
         await ctx.send(embed=embed)
 
     @commands.command(name='kick')
@@ -630,7 +630,7 @@ class Moderation(commands.Cog):
         archives_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name="Archives")
 
         def predicate(c):
-            return c.name.lower() == f"mk{mk.MARK}-archive"
+            return c.name.lower() == f"mk{self.bot.mk.MARK}-archive"
 
         archive_category = discord.utils.find(predicate, self.bot.democraciv_guild_object.categories)
 
@@ -638,9 +638,9 @@ class Moderation(commands.Cog):
             return await ctx.send(":x: There is no role named `Archives` for me to use.")
 
         if archive_category is None:
-            return await ctx.send(f":x: There is no category named `MK{mk.MARK}-Archive` for me to use.")
+            return await ctx.send(f":x: There is no category named `MK{self.bot.mk.MARK}-Archive` for me to use.")
 
-        await channel.edit(name=f"mk{mk.MARK}-{channel.name}",
+        await channel.edit(name=f"mk{self.bot.mk.MARK}-{channel.name}",
                            overwrites={everyone_role: everyone_perms, archives_role: archive_perms},
                            category=archive_category)
 
@@ -674,6 +674,15 @@ class Moderation(commands.Cog):
                 if government_category is None:
                     return await ctx.send(":x: There is no category named `Government` for me to archive.")
 
+                def predicate(c):
+                    return c.name.lower() == f"mk{self.bot.mk.MARK}-archive"
+
+                archive_category = discord.utils.find(predicate, self.bot.democraciv_guild_object.categories)
+
+                if archive_category is None:
+                    return await ctx.send(
+                        f":x: There is no category named `MK{self.bot.mk.MARK}-Archive` for me to use.")
+
                 everyone_perms = discord.PermissionOverwrite(read_message_history=False, send_messages=False,
                                                              read_messages=False)
                 everyone_role = self.bot.democraciv_guild_object.default_role
@@ -685,19 +694,19 @@ class Moderation(commands.Cog):
                     return await ctx.send(":x: There is no role named `Archives` for me to use.")
 
                 for channel in government_category.text_channels:
-                    await channel.send(f":tada: Thanks for playing Democraciv MK{mk.MARK}!")
-                    await channel.edit(name=f"mk{mk.MARK}-{channel.name}",
-                                       overwrites={everyone_role: everyone_perms, archives_role: archive_perms})
+                    await channel.send(f":tada: Thanks for playing Democraciv MK{self.bot.mk.MARK}!")
+                    await channel.edit(name=f"mk{self.bot.mk.MARK}-{channel.name}",
+                                       overwrites={everyone_role: everyone_perms, archives_role: archive_perms},
+                                       category=archive_category)
 
                 propaganda_channel = discord.utils.get(self.bot.democraciv_guild_object.text_channels,
                                                        name="propaganda")
 
                 if propaganda_channel is not None:
-                    await propaganda_channel.edit(name=f"mk{mk.MARK}-propaganda", category=government_category,
+                    await propaganda_channel.edit(name=f"mk{self.bot.mk.MARK}-propaganda", category=government_category,
                                                   overwrites={everyone_role: everyone_perms,
                                                               archives_role: archive_perms})
 
-                await government_category.edit(name=f"MK{mk.MARK}-Archive", position=6)
                 await ctx.send(":white_check_mark: Done.")
 
 

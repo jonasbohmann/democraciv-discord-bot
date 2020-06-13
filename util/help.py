@@ -50,7 +50,7 @@ class HelpPaginator(Pages):
                                f" and was designed specifically " \
                                f"for the [Discord server](https://discord.gg/AK7dYMG) of" \
                                f" the [r/Democraciv](https://reddit.com/r/democraciv)" \
-                               f" community.\n\n**__Democraciv__**\nWe're playing {mk.CIV_GAME}" \
+                               f" community.\n\n**__Democraciv__**\nWe're playing {self.bot.mk.CIV_GAME}" \
                                f" with an elected, democratic government consisting of real players." \
                                f" There's a lot of role-play around the game, there's the press, political " \
                                f"parties, banks, intrigue and drama.\n\n\n**__Bot__**\nMy purpose is to make sure the" \

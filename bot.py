@@ -15,6 +15,8 @@ import typing
 import util.exceptions as exceptions
 
 from typing import Optional
+
+from util import mk
 from util.cache import Cache
 from config import config, token
 from util.law_helper import LawUtils
@@ -103,6 +105,7 @@ class DemocracivBot(commands.Bot):
 
         self.reddit_api = RedditAPIWrapper(self)
         self.google_api = GoogleAPIWrapper(self)
+        self.mk = mk.MarkConfig(self)
 
     async def initialize_aiohttp_session(self):
         """Initialize a shared aiohttp ClientSession to be used for -wikipedia, -leg submit and reddit & twitch requests

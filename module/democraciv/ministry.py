@@ -2,10 +2,11 @@ import datetime
 import typing
 import discord
 
+from bot import DemocracivBot
 from util.flow import Flow
 from discord.ext import commands
 from util.converter import Bill
-from config import config, links
+from config import config
 from util import mk, exceptions, utils
 from discord.ext.commands import Greedy
 from util.paginator import AlternativePages
@@ -16,7 +17,7 @@ class LawPassScheduler(AnnouncementQueue):
 
     def get_message(self) -> str:
         message = [f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
-                   f"the following bills were **passed into law by the Ministry**.\n"]
+                   f"the following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"]
 
         for obj in self._objects:
             message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
@@ -32,7 +33,7 @@ class LawVetoScheduler(AnnouncementQueue):
 
     def get_message(self) -> str:
         message = [f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.SPEAKER_ROLE).mention}, "
-                   f"the following bills were **vetoed by the Ministry**.\n"]
+                   f"the following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"]
 
         for obj in self._objects:
             message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
@@ -44,7 +45,7 @@ class Ministry(commands.Cog):
     """Allows the Ministry to pass or veto bills from the Legislature."""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: DemocracivBot = bot
         self.pass_scheduler = LawPassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.veto_scheduler = LawVetoScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
@@ -114,7 +115,8 @@ class Ministry(commands.Cog):
     async def ministry(self, ctx):
         """Dashboard for Ministers with important links and updates on new bills"""
 
-        embed = self.bot.embeds.embed_builder(title=f"The Ministry of {mk.NATION_NAME}", description="")
+        embed = self.bot.embeds.embed_builder(title=f"The {self.bot.mk.MINISTRY_NAME} of "
+                                                    f"{self.bot.mk.NATION_FULL_NAME}")
 
         pretty_bills = await self.get_pretty_vetos()
 
@@ -126,20 +128,23 @@ class Ministry(commands.Cog):
         minister_value = []
 
         if isinstance(self.prime_minister, discord.Member):
-            minister_value.append(f"Prime Minister: {self.prime_minister.mention}")
+            minister_value.append(f"{self.bot.mk.pm_term}: {self.prime_minister.mention}")
         else:
-            minister_value.append("Prime Minister: -")
+            minister_value.append(f"{self.bot.mk.pm_term}: -")
 
         if isinstance(self.lt_prime_minister, discord.Member):
-            minister_value.append(f"Lt. Prime Minister: {self.lt_prime_minister.mention}")
+            minister_value.append(f"{self.bot.mk.vice_pm_term}: {self.lt_prime_minister.mention}")
         else:
-            minister_value.append("Lt. Prime Minister: -")
+            minister_value.append(f"{self.bot.mk.vice_pm_term}: -")
 
-        embed.add_field(name="Head of State", value='\n'.join(minister_value))
-        embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
-                                            f"[Legal Code]({links.laws})\n"
-                                            f"[Ministry Worksheet]({links.executiveworksheet})\n"
-                                            f"[Ministry Procedures]({links.execprocedures})", inline=True)
+        embed.add_field(name=self.bot.mk.MINISTRY_LEADERSHIP_NAME, value='\n'.join(minister_value))
+        embed.add_field(name="Links", value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
+                                            f"[Legal Code]({self.bot.mk.LEGAL_CODE})\n"
+                                            f"[{self.bot.mk.MINISTRY_NAME} Worksheet]"
+                                            f"({self.bot.mk.MINISTRY_WORKSHEET})\n"
+                                            f"[{self.bot.mk.MINISTRY_NAME} Procedures]"
+                                            f"({self.bot.mk.MINISTRY_PROCEDURES})",
+                        inline=True)
         embed.add_field(name="Open Bills", value=pretty_bills, inline=False)
         await ctx.send(embed=embed)
 
@@ -151,22 +156,19 @@ class Ministry(commands.Cog):
         pretty_bills = await self.get_pretty_vetos()
 
         if pretty_bills is None:
-            embed = self.bot.embeds.embed_builder(title="There are no new bills to vote on.",
-                                                  description="",
-                                                  has_footer=False)
+            embed = self.bot.embeds.embed_builder(title="There are no new bills to vote on.")
             return await ctx.send(embed=embed)
 
         pages = AlternativePages(ctx=ctx, entries=pretty_bills, show_entry_count=False, title="Open Bills to Vote On",
                                  show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
-    @staticmethod
-    async def verify_bill(bill: Bill) -> str:
+    async def verify_bill(self, bill: Bill) -> str:
         if not bill.is_vetoable:
-            return "The Ministry cannot veto this!"
+            return f"The {self.bot.mk.MINISTRY_NAME} cannot veto this!"
 
         if not bill.passed_leg:
-            return "This bill hasn't passed the Legislature yet!"
+            return f"This bill hasn't passed the {self.bot.mk.LEGISLATURE_NAME} yet!"
 
         if bill.voted_on_by_ministry:
             return "You already voted on this bill!"

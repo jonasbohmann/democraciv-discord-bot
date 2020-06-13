@@ -6,7 +6,7 @@ import util.exceptions as exceptions
 
 from util import mk
 from discord.ext import tasks, commands
-from config import config, token, links
+from config import config, token
 
 
 class Twitch(commands.Cog):
@@ -144,30 +144,41 @@ class Twitch(commands.Cog):
 
     async def streaming_rules_reminder(self):
         executive_channel = mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.EXECUTIVE_CHANNEL)
-        minister_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.MINISTER_ROLE)
-        governor_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.GOVERNOR_ROLE)
-        executive_proxy_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.EXECUTIVE_PROXY_ROLE)
+
+        try:
+            minister_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.MINISTER_ROLE)
+            governor_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.GOVERNOR_ROLE)
+            executive_proxy_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.EXECUTIVE_PROXY_ROLE)
+        except exceptions.RoleNotFoundError:
+            minister_role = governor_role = executive_proxy_role = None
 
         if executive_channel is None:
             raise exceptions.ChannelNotFoundError("executive")
 
         embed = self.bot.embeds.embed_builder(title="Streaming Guidelines",
-                                              description="Looks like you're starting another game session."
-                                                          " Remember these guidelines!")
+                                              description="Looks like you're starting another game session. "
+                                                          "Remember these guidelines!")
 
-        embed.add_field(name="Don't show the stream key", value="Never show the stream key or the DMs with the "
-                                                                "moderator that sent you the key on stream!",
+        embed.add_field(name="Don't show the stream key",
+                        value="Never show the stream key or the DMs with the "
+                              "moderator that sent you the key on stream!",
                         inline=False)
 
-        embed.add_field(name="Introduce yourself", value="No one knows which voice belongs to whom!"
-                                                         " Introduce yourself with your name and position.",
+        embed.add_field(name="Introduce yourself",
+                        value="No one knows which voice belongs to whom! "
+                              "Introduce yourself with your name and position.",
                         inline=False)
-        embed.add_field(name="Keep it short", value="In the past, streams often were too long. Keep the stream "
-                                                    "short and don't waste time by starting the stream when not every "
-                                                    "minister is ready or the game is not even started yet!",
+
+        embed.add_field(name="Keep it short",
+                        value="In the past, streams often were too long. Keep the stream "
+                              "short and don't waste time by starting the stream when not every "
+                              "minister is ready or the game is not even started yet!",
                         inline=False)
-        embed.add_field(name="Hand over the save-game", value="Remember to send the save-game to one of"
-                                                              " the moderators after the stream!", inline=False)
+
+        embed.add_field(name="Hand over the save-game",
+                        value="Remember to send the save-game to one of "
+                              "the moderators after the stream!",
+                        inline=False)
 
         embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/423938725525979146/"
                                 "645394491133394966/01-twitch-logo.jpg")
@@ -183,34 +194,37 @@ class Twitch(commands.Cog):
 
         await asyncio.sleep(7200)  # Wait 2 hours, i.e. after the game session is done, before sending reminder to Mods
 
+        mark = self.bot.mk.MARK
+        game = self.bot.mk.CIV_GAME
+        nation = self.bot.mk.NATION_NAME
+
         embed = self.bot.embeds.embed_builder(title="Export the Game Session to YouTube",
-                                              description="Looks like another game session was played!"
-                                                          " Remember to export the Twitch "
-                                                          "VOD to YouTube.")
+                                              description="Looks like another game session was played! "
+                                                          "Remember to export the Twitch VOD to YouTube.")
 
         embed.add_field(name="Export to YouTube",
-                        value="Go to our [channel](https://www.twitch.tv/democraciv/manager),"
-                              " select the last stream and hit 'Export'.",
+                        value="Go to our [channel](https://www.twitch.tv/democraciv/manager), "
+                              "select the last stream and hit 'Export'.",
                         inline=False)
 
         embed.add_field(name="Set the title",
-                        value=f"Use this formatting for the title `Democraciv MK{mk.MARK} - "
+                        value=f"Use this formatting for the title `Democraciv MK{mark} - "
                               f"Game Session X: Turns A-B`.",
                         inline=False)
 
         embed.add_field(name="Set the description",
                         value=f"Use this formatting for the description: ```This is the Xth game session of "
-                              f"Democraciv MK{mk.MARK}, where we play as {mk.NATION_NAME} in {mk.CIV_GAME}.\n\n"
-                              f"Democraciv is a community on Reddit dedicated to play a single-player game of"
-                              f" {mk.CIV_GAME} with a simulated, model government. We have a Legislature, a Supreme "
+                              f"Democraciv MK{mark}, where we play as {nation} in {game}.\n\n"
+                              f"Democraciv is a community on Reddit dedicated to play a game of "
+                              f"{game} with a simulated, model government. We have a Legislature, a Supreme "
                               f"Court and an executive branch, those who can be seen playing the game here."
                               f"\n\nDemocraciv: https://reddit.com/r/democraciv/```",
                         inline=False)
 
         embed.add_field(name="Add some tags",
-                        value=f"Add some variations of `Democraciv`, `Civ {mk.CIV_GAME}`, `Game Politics`, "
-                              f"`Game Roleplay`, `Civ Politics`, `Civ Roleplay`,"
-                              f" `Reddit roleplay`, `Discord roleplay`, `parliament` "
+                        value=f"Add some variations of `Democraciv`, `Civ {game}`, `Game Politics`, "
+                              f"`Game Roleplay`, `Civ Politics`, `Civ Roleplay`, "
+                              f"`Reddit roleplay`, `Discord roleplay`, `parliament` "
                               f"or whatever comes to your mind.",
                         inline=False)
 
@@ -219,14 +233,14 @@ class Twitch(commands.Cog):
                         inline=False)
 
         embed.add_field(name="Update the stream title",
-                        value="Edit the title of our stream on Twitch for the next game"
-                              " session by incrementing the number.",
+                        value="Edit the title of our stream on Twitch for the next game "
+                              "session by incrementing the number.",
                         inline=False)
 
         embed.add_field(name="Add the new video to the playlist",
                         value=f"Don't forget this part! After the Twitch VOD was exported to YouTube, head over "
                               f"[here](https://studio.youtube.com/channel/UC-NukxPakwQIvx73VjtIPnw/videos/) "
-                              f"and add the new video to the playlist named 'MK{mk.MARK} Game Sessions'.",
+                              f"and add the new video to the playlist named 'MK{mark} Game Sessions'.",
                         inline=False)
 
         embed.add_field(name="Adjust description & tags on YouTube",
@@ -235,7 +249,7 @@ class Twitch(commands.Cog):
                         inline=False)
 
         embed.add_field(name="Add Game Session to Wiki",
-                        value=f"Add an entry for this new game session [here]({links.gswiki}).",
+                        value=f"Add an entry for this new game session to the wiki.",
                         inline=False)
 
         embed.add_field(name="Upload the save-game to Google Drive",

@@ -27,15 +27,8 @@ class TestEmbedUtils(unittest.TestCase):
         self.embed.set_footer(text=config.BOT_NAME)
 
         self.assertEqual(self.embed_utils.embed_builder(title="Test Embed", description="Test Description",
-                                                        has_footer=True).footer.text,
+                                                        has_footer=True, footer=config.BOT_NAME).footer.text,
                          self.embed.footer.text, "Footer Text not matching")
-
-    def test_embed_builder_footer_icon(self):
-        self.embed.set_footer(icon_url=config.BOT_ICON_URL)
-
-        self.assertEqual(self.embed_utils.embed_builder(title="Test Embed", description="Test Description",
-                                                        has_footer=True).
-                         footer.icon_url, self.embed.footer.icon_url, "Footer Icon URL not matching")
 
     def test_embed_builder_no_footer(self):
         self.embed.set_footer(text=config.BOT_NAME)

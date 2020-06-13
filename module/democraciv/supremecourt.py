@@ -1,8 +1,9 @@
 import typing
 import discord
 
+from bot import DemocracivBot
 from util import mk, exceptions
-from config import config, links
+from config import config
 from discord.ext import commands
 
 
@@ -10,7 +11,7 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
     """Useful information about the Supreme Court of this nation."""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: DemocracivBot = bot
 
     @property
     def chief(self) -> typing.Optional[discord.Member]:
@@ -35,7 +36,7 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
 
         if isinstance(self.chief, discord.Member):
             justices = [justice.mention for justice in _justices.members if justice.id != self.chief.id]
-            justices.insert(0, f"{self.chief.mention} (Chief Justice)")
+            justices.insert(0, f"{self.chief.mention} ({self.bot.mk.COURT_CHIEF_JUSTICE_NAME})")
             return justices
         else:
             return [justice.mention for justice in _justices.members]
@@ -54,20 +55,21 @@ class SupremeCourt(commands.Cog, name="Supreme Court"):
     async def court(self, ctx):
         """Dashboard for Supreme Court Justices"""
 
-        embed = self.bot.embeds.embed_builder(title=f"Courts of {mk.NATION_NAME}", description="")
+        embed = self.bot.embeds.embed_builder(title=f"{self.bot.mk.courts_term} of the {self.bot.mk.NATION_FULL_NAME}")
 
         justices = self.get_justices() or ['-']
         judges = self.get_judges() or ['-']
 
-        embed.add_field(name="Supreme Court Justices", value='\n'.join(justices), inline=False)
-        embed.add_field(name="Appeals Court Judges", value='\n'.join(judges), inline=False)
-        embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
-                                            f"[Legal Code]({links.laws})\n"
-                                            f"[Submit a new Case]({links.sue})\n"
-                                            f"[Court Cases]({links.sccases})\n"
-                                            f"[Court Worksheet]({links.scworksheet})\n"
-                                            f"[Court Log on Trello]({links.sctrello})\n"
-                                            f"[Court Policies]({links.scpolicy})", inline=False)
+        embed.add_field(name=f"{self.bot.mk.COURT_NAME} {self.bot.mk.COURT_JUSTICE_NAME}s",
+                        value='\n'.join(justices), inline=False)
+
+        if self.bot.mk.COURT_HAS_INFERIOR_COURT:
+            embed.add_field(name=f"{self.bot.mk.COURT_INFERIOR_NAME} {self.bot.mk.COURT_JUDGE_NAME}s",
+                            value='\n'.join(judges), inline=False)
+
+        embed.add_field(name="Links", value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
+                                            f"[Legal Code]({self.bot.mk.LEGAL_CODE})",
+                        inline=False)
 
         await ctx.send(embed=embed)
 

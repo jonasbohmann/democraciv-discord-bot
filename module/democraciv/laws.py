@@ -2,6 +2,7 @@ import typing
 import discord
 import datetime
 
+from bot import DemocracivBot
 from config import config
 from util import mk, utils
 from util.flow import Flow
@@ -29,7 +30,7 @@ class RepealScheduler(AnnouncementQueue):
 class AmendScheduler(AnnouncementQueue):
 
     def get_message(self) -> str:
-        message = ["The links to the following laws were changed by the Cabinet.\n"]
+        message = [f"The links to the following laws were changed by the {self.bot.mk.LEGISLATURE_CABINET_NAME}.\n"]
 
         for obj in self._objects:
             message.append(f"-  **{obj.bill.name}** (<{obj.bill.tiny_link}>)")
@@ -38,10 +39,10 @@ class AmendScheduler(AnnouncementQueue):
 
 
 class Laws(commands.Cog, name='Law'):
-    """List all active laws in Arabia and search for them by name or keyword."""
+    """List all active laws and search for them by name or keyword."""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: DemocracivBot = bot
         self.repeal_scheduler = RepealScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.amend_scheduler = AmendScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.illegal_tags = ('act', 'the', 'author', 'authors', 'date',
@@ -66,17 +67,13 @@ class Laws(commands.Cog, name='Law'):
                 pretty_laws.append(f"Law #{record['law_id']} - [{record['bill_name']}]({record['link']})")
 
             if not pretty_laws:
-                embed = self.bot.embeds.embed_builder(title="There are no laws yet.",
-                                                      description="",
-                                                      has_footer=False)
+                embed = self.bot.embeds.embed_builder(title="There are no laws yet.")
                 return await ctx.send(embed=embed)
 
-        thumbnail = mk.NATION_FLAG_URL or self.bot.democraciv_guild_object.icon_url_as(static_format='png')
-
         pages = AlternativePages(ctx=ctx, entries=pretty_laws, show_entry_count=False,
-                                 title=f"All Laws in {mk.NATION_NAME}", per_page=14,
+                                 title=f"All Laws in {self.bot.mk.NATION_FULL_NAME}", per_page=14,
                                  show_index=False, show_amount_of_pages=True,
-                                 a_thumbnail=thumbnail)
+                                 a_thumbnail=self.bot.mk.safe_flag)
         await pages.paginate()
 
     @commands.group(name='law', aliases=['laws'], case_insensitive=True, invoke_without_command=True)
@@ -95,7 +92,7 @@ class Laws(commands.Cog, name='Law'):
         # If the user did specify a law_id, send details about that law
         law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
 
-        embed = self.bot.embeds.embed_builder(title=f"Law #{law.id}", description="")
+        embed = self.bot.embeds.embed_builder(title=f"Law #{law.id}")
 
         if law.bill.submitter is not None:
             embed.set_author(name=law.bill.submitter.name,
@@ -156,7 +153,8 @@ class Laws(commands.Cog, name='Law'):
             result = await self.bot.google_api.run_apps_script(script_id="MMV-pGVACMhaf_DjTn8jfEGqnXKElby-M",
                                                                function="generate_legal_code",
                                                                parameters=[doc_url,
-                                                                           {'name': mk.NATION_NAME, 'date': date},
+                                                                           {'name': self.bot.mk.NATION_FULL_NAME,
+                                                                            'date': date},
                                                                            ugly_laws])
 
         if result is None or not result['done']:
@@ -219,7 +217,7 @@ class Laws(commands.Cog, name='Law'):
             else:
                 title = f"{name} hasn't made any laws yet."
 
-            embed = self.bot.embeds.embed_builder(title=title, description="", has_footer=False)
+            embed = self.bot.embeds.embed_builder(title=title)
             return await ctx.send(embed=embed)
 
         pretty_laws = []

@@ -3,8 +3,9 @@ import asyncpg
 import discord
 import datetime
 
+from bot import DemocracivBot
 from util.flow import Flow
-from config import config, links
+from config import config
 from discord.ext import commands
 from discord.embeds import EmptyEmbed
 from util import utils, mk, exceptions
@@ -18,7 +19,7 @@ class PassScheduler(AnnouncementQueue):
 
     def get_message(self) -> str:
         message = [f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.MINISTER_ROLE).mention}, "
-                   f"the following bills were **passed by the Legislature**.\n"]
+                   f"the following bills were **passed by the {self.bot.mk.LEGISLATURE_NAME}**.\n"]
 
         for obj in self._objects:
             if obj.is_vetoable:
@@ -26,8 +27,8 @@ class PassScheduler(AnnouncementQueue):
             else:
                 message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>)")
 
-        message.append("\nAll non-vetoable bills are now laws (marked as __underlined__),"
-                       " the others were sent to the Ministry.")
+        message.append(f"\nAll non-vetoable bills are now laws (marked as __underlined__), "
+                       f"the others were sent to the {self.bot.mk.MINISTRY_NAME}.")
         return '\n'.join(message)
 
 
@@ -35,7 +36,8 @@ class OverrideScheduler(AnnouncementQueue):
 
     def get_message(self) -> str:
         message = [f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
-                   f"the Ministry's **veto of the following bills were overridden** by the Legislature.\n"]
+                   f"the {self.bot.mk.MINISTRY_NAME}'s **veto of the following bills were overridden** "
+                   f"by the {self.bot.mk.LEGISLATURE_NAME}.\n"]
 
         for obj in self._objects:
             message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
@@ -48,7 +50,7 @@ class Legislature(commands.Cog):
     """Allows the Cabinet to organize Legislative Sessions and their submitted bills and motions."""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: DemocracivBot = bot
         self.scheduler = PassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.override_scheduler = OverrideScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
@@ -103,24 +105,26 @@ class Legislature(commands.Cog):
         else:
             current_session_value = f"Session #{active_leg_session.id} - {active_leg_session.status.value}"
 
-        embed = self.bot.embeds.embed_builder(title=f"The Legislature of {mk.NATION_NAME}", description="")
+        embed = self.bot.embeds.embed_builder(title=f"The {self.bot.mk.LEGISLATURE_NAME} of "
+                                                    f"{self.bot.mk.NATION_FULL_NAME}")
         speaker_value = []
 
         if isinstance(self.speaker, discord.Member):
-            speaker_value.append(f"Speaker: {self.speaker.mention}")
+            speaker_value.append(f"{self.bot.mk.speaker_term}: {self.speaker.mention}")
         else:
-            speaker_value.append("Speaker: -")
+            speaker_value.append(f"{self.bot.mk.speaker_term}: -")
 
         if isinstance(self.vice_speaker, discord.Member):
-            speaker_value.append(f"Vice-Speaker: {self.vice_speaker.mention}")
+            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention}")
         else:
-            speaker_value.append("Vice-Speaker: -")
+            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
 
-        embed.add_field(name="Legislative Cabinet", value='\n'.join(speaker_value))
-        embed.add_field(name="Links", value=f"[Constitution]({links.constitution})\n"
-                                            f"[Legal Code]({links.laws})\n"
-                                            f"[Legislative Docket]({links.legislativedocket})\n"
-                                            f"[Legislative Procedures]({links.legislativeprocedures})", inline=True)
+        embed.add_field(name=self.bot.mk.LEGISLATURE_CABINET_NAME, value='\n'.join(speaker_value))
+        embed.add_field(name="Links", value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
+                                            f"[Legal Code]({self.bot.mk.LEGAL_CODE})\n"
+                                            f"[Legislative Docket]({self.bot.mk.LEGISLATURE_DOCKET})\n"
+                                            f"[Legislative Procedures]({self.bot.mk.LEGISLATURE_PROCEDURES})",
+                        inline=True)
         embed.add_field(name="Current Session", value=current_session_value, inline=False)
         await ctx.send(embed=embed)
 
@@ -131,9 +135,7 @@ class Legislature(commands.Cog):
             all_bills = await self.bot.db.fetch(query)
 
             if not all_bills:
-                embed = self.bot.embeds.embed_builder(title="No one has submitted any bills yet.",
-                                                      description="",
-                                                      has_footer=False)
+                embed = self.bot.embeds.embed_builder(title="No one has submitted any bills yet.")
                 return await ctx.send(embed=embed)
 
             pretty = []
@@ -143,10 +145,8 @@ class Legislature(commands.Cog):
                 pretty.append(f"Bill #{_bill.id} - [{_bill.name}]({_bill.link}) "
                               f"{await _bill.get_emojified_status(verbose=False)}")
 
-        thumbnail = mk.NATION_FLAG_URL or self.bot.democraciv_guild_object.icon_url_as(static_format='png')
-
         pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=8,
-                                 title=f"All Submitted Bills", a_thumbnail=thumbnail,
+                                 title=f"All Submitted Bills", a_thumbnail=self.bot.mk.safe_flag,
                                  show_index=False, show_amount_of_pages=True)
         await pages.paginate()
 
@@ -233,7 +233,7 @@ class Legislature(commands.Cog):
             else:
                 title = f"{name} hasn't submitted any bills yet."
 
-            embed = self.bot.embeds.embed_builder(title=title, description="", has_footer=False)
+            embed = self.bot.embeds.embed_builder(title=title)
             return await ctx.send(embed=embed)
 
         pretty = []
@@ -266,9 +266,7 @@ class Legislature(commands.Cog):
             all_motions = await self.bot.db.fetch(query)
 
             if not all_motions:
-                embed = self.bot.embeds.embed_builder(title="No one has submitted any motions yet.",
-                                                      description="",
-                                                      has_footer=False)
+                embed = self.bot.embeds.embed_builder(title="No one has submitted any motions yet.")
                 return await ctx.send(embed=embed)
 
             pretty = []
@@ -276,12 +274,9 @@ class Legislature(commands.Cog):
             for record in all_motions:
                 pretty.append(f"Motion #{record['id']} - [{record['title']}]({record['hastebin']})")
 
-        thumbnail = mk.NATION_FLAG_URL or self.bot.democraciv_guild_object.icon_url_as(static_format='png')
-
         pages = AlternativePages(ctx=ctx, entries=pretty, show_entry_count=False, per_page=14,
-                                 title=f"All Submitted Motions",
-                                 show_index=False, show_amount_of_pages=True,
-                                 a_thumbnail=thumbnail)
+                                 title=f"All Submitted Motions", show_index=False, show_amount_of_pages=True,
+                                 a_thumbnail=self.bot.mk.safe_flag)
         await pages.paginate()
 
     @legislature.group(name='motion', aliases=['m', 'motions'], case_insensitive=True, invoke_without_command=True)
@@ -294,7 +289,7 @@ class Legislature(commands.Cog):
 
         motion = motion_id
 
-        embed = self.bot.embeds.embed_builder(title=f"Motion #{motion.id}", description="", has_footer=False)
+        embed = self.bot.embeds.embed_builder(title=f"Motion #{motion.id}")
 
         if motion.submitter is not None:
             embed.set_author(name=motion.submitter.name, icon_url=motion.submitter.avatar_url_as(static_format='png'))
@@ -331,7 +326,7 @@ class Legislature(commands.Cog):
             else:
                 title = f"{name} hasn't submitted any motions yet."
 
-            embed = self.bot.embeds.embed_builder(title=title, description="", has_footer=False)
+            embed = self.bot.embeds.embed_builder(title=title)
             return await ctx.send(embed=embed)
 
         pretty = []
@@ -399,8 +394,8 @@ class Legislature(commands.Cog):
         await ctx.send(f":white_check_mark: The **submission period** for session #{new_session} was opened.")
 
         await self.gov_announcements_channel.send(f"The **submission period** for Legislative Session "
-                                                  f"#{new_session} has started! Everyone is allowed "
-                                                  f"to submit bills with `-legislature submit`.")
+                                                  f"#{new_session} has started! Bills and motions can be "
+                                                  f"submitted with `-legislature submit`.")
 
         await self.dm_legislators(reason="leg_session_open",
                                   message=f":envelope_with_arrow: The **submission period** for Legislative Session "
@@ -436,8 +431,8 @@ class Legislature(commands.Cog):
         await ctx.send(f":white_check_mark: Session #{active_leg_session.id} is now in **voting period**.")
 
         await self.gov_announcements_channel.send(f"The **voting period** for Legislative "
-                                                  f"Session #{active_leg_session.id}"
-                                                  f" has started! Legislators can vote here: {voting_form}")
+                                                  f"Session #{active_leg_session.id} "
+                                                  f"has started!\nVote Form: <{voting_form}>")
 
         await self.dm_legislators(reason="leg_session_update",
                                   message=f":ballot_box: The **voting period** for Legislative Session "
@@ -465,7 +460,8 @@ class Legislature(commands.Cog):
                        f"Check `-help legislature pass` on what to do next.")
 
         await self.gov_announcements_channel.send(f"{self.legislator_role.mention}, Legislative Session "
-                                                  f"#{active_leg_session.id} has been **closed** by the Cabinet.")
+                                                  f"#{active_leg_session.id} has been **closed** by the "
+                                                  f"{self.bot.mk.LEGISLATURE_CABINET_NAME}.")
 
     @legislature.command(name='exportsession', aliases=['es', 'ex', 'export'])
     @commands.cooldown(1, 300, commands.BucketType.user)
@@ -599,12 +595,11 @@ class Legislature(commands.Cog):
             else:
                 pretty_sessions.append(f"**Session #{record['id']}**  - {opened_on}")
 
-        thumbnail = mk.NATION_FLAG_URL or self.bot.democraciv_guild_object.icon_url_as(static_format='png')
-
         pages = AlternativePages(ctx=ctx, entries=pretty_sessions, show_entry_count=False,
-                                 title=f"All Sessions of the {mk.NATION_ADJECTIVE} Legislature",
+                                 title=f"All Sessions of the {self.bot.mk.NATION_ADJECTIVE} "
+                                       f"{self.bot.mk.LEGISLATURE_NAME}",
                                  show_index=False, show_amount_of_pages=True,
-                                 a_thumbnail=thumbnail)
+                                 a_thumbnail=self.bot.mk.safe_flag)
         await pages.paginate()
 
     @staticmethod
@@ -623,7 +618,8 @@ class Legislature(commands.Cog):
 
         return '\n'.join(formatted_time)
 
-    def split_embed_fields(self, things: str) -> typing.Dict[int, str]:
+    @staticmethod
+    def split_embed_fields(things: str) -> typing.Dict[int, str]:
         lines = things.splitlines(keepends=True)
         split_into_1024 = dict()
         index = 0
@@ -758,8 +754,9 @@ class Legislature(commands.Cog):
             return None, None
 
         # Vetoable
-        veto_question = await ctx.send(":information_source: Is the Ministry legally allowed to veto (or vote on) "
-                                       "this bill?")
+        veto_question = await ctx.send(f":information_source: Is the {self.bot.mk.MINISTRY_NAME} legally allowed to "
+                                       f"veto (or vote on) this bill?")
+
         reaction = await flow.get_yes_no_reaction_confirm(veto_question, 200)
 
         if reaction is None:
@@ -813,7 +810,7 @@ class Legislature(commands.Cog):
             embed.add_field(name="Title", value=bill_title, inline=False)
             embed.add_field(name="Author", value=ctx.message.author.name, inline=False)
             embed.add_field(name="Session", value=current_leg_session_id)
-            embed.add_field(name="Ministry Veto Allowed", value="Yes" if is_vetoable else "No")
+            embed.add_field(name=f"{self.bot.mk.MINISTRY_NAME} Veto Allowed", value="Yes" if is_vetoable else "No")
             embed.add_field(name="Time of Submission (UTC)", value=datetime.datetime.utcnow(), inline=False)
             embed.add_field(name="URL", value=google_docs_url, inline=False)
 
@@ -909,18 +906,20 @@ class Legislature(commands.Cog):
 
         if str(reaction.emoji) == config.LEG_SUBMIT_BILL:
 
-            if not mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
+            if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
                 if self.legislator_role not in ctx.author.roles:
-                    return await ctx.send(":x: Only Legislators are allowed to submit bills!")
+                    return await ctx.send(f":x: Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} are allowed to "
+                                          f"submit bills!")
 
             message, embed = await self.submit_bill(ctx, current_leg_session.id)
 
         elif str(reaction.emoji) == config.LEG_SUBMIT_MOTION:
             ctx.command.reset_cooldown(ctx)
 
-            if not mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS:
+            if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS:
                 if self.legislator_role not in ctx.author.roles:
-                    return await ctx.send(":x: Only Legislators are allowed to submit motions!")
+                    return await ctx.send(":x: Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} are allowed to "
+                                          "submit motions!")
 
             message, embed = await self.submit_motion(ctx, current_leg_session.id)
 
@@ -956,13 +955,13 @@ class Legislature(commands.Cog):
 
         async def verify_bill(_bill: Bill, last_session: Session) -> typing.Optional[str]:
             if last_session.id != _bill.session.id:
-                return f"You can only mark bills from the most recent session of the Legislature as passed."
+                return "You can only mark bills from the most recent session as passed."
 
             if last_session.status is not SessionStatus.CLOSED:
-                return f"You cannot mark bills as passed while their session is still in Submission or Voting Period."
+                return "You cannot mark bills as passed while their session is still in Submission or Voting Period."
 
             if _bill.passed_leg:
-                return f"You already voted on this bill!"
+                return "You already voted on this bill!"
 
         error_messages = []
 
@@ -985,8 +984,8 @@ class Legislature(commands.Cog):
             return
 
         pretty_bills = '\n'.join([f"-  **{_bill.name}** (#{_bill.id})" for _bill in bills])
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
-                                      f" to mark the following bills as passed from the Legislature?"
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want "
+                                      f"to mark the following bills as passed from the {self.bot.mk.LEGISLATURE_NAME}?"
                                       f"\n{pretty_bills}")
 
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
@@ -1007,7 +1006,8 @@ class Legislature(commands.Cog):
 
                     self.scheduler.add(_bill)
 
-                await ctx.send(":white_check_mark: All bills were marked as passed from the Legislature.")
+                await ctx.send(f":white_check_mark: All bills were marked as passed from "
+                               f"the {self.bot.mk.LEGISLATURE_NAME}.")
 
     @legislature.group(name='withdraw', aliases=['w'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -1030,10 +1030,10 @@ class Legislature(commands.Cog):
 
         def verify_object(to_verify) -> str:
             if last_leg_session.id != to_verify.session.id:
-                return f"This {obj_name} was not submitted in the last session of the Legislature."
+                return f"This {obj_name} was not submitted in the last session of the {self.bot.mk.LEGISLATURE_NAME}."
 
             if isinstance(to_verify, Bill) and to_verify.voted_on_by_leg:
-                return f"This {obj_name} was already voted on by the Legislature."
+                return f"This {obj_name} was already voted on by the {self.bot.mk.LEGISLATURE_NAME}."
 
             if not self.is_cabinet(ctx.author):
                 if to_verify.submitter is not None and ctx.author.id == to_verify.submitter.id:
@@ -1047,7 +1047,8 @@ class Legislature(commands.Cog):
                 allowed = True
 
             if not allowed:
-                return f"Only the Cabinet and the original submitter of this {obj_name} can withdraw it."
+                return f"Only the {self.bot.mk.LEGISLATURE_CABINET_NAME} and the original submitter " \
+                       f"of this {obj_name} can withdraw it."
 
         unverified_objects = []
 
@@ -1150,10 +1151,10 @@ class Legislature(commands.Cog):
 
         async def verify_bill(bill_to_verify) -> str:
             if not bill_to_verify.passed_leg:
-                return "This bill did not pass the Legislature."
+                return f"This bill did not pass the {self.bot.mk.LEGISLATURE_NAME}."
 
             if not bill_to_verify.voted_on_by_ministry:
-                return "The Ministry did not vote on this bill yet."
+                return f"The {self.bot.mk.MINISTRY_NAME} did not vote on this bill yet."
 
             if await bill_to_verify.is_law() or bill_to_verify.passed_ministry:
                 return "This bill is already law."
@@ -1176,8 +1177,9 @@ class Legislature(commands.Cog):
             return
 
         pretty_objects = '\n'.join([f"-  **{_bill.name}** (#{_bill.id})" for _bill in bills])
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
-                                      f" to override the Ministry's veto of the following bills?\n{pretty_objects}")
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want "
+                                      f"to override the {self.bot.mk.MINISTRY_NAME}'s veto of the following "
+                                      f"bills?\n{pretty_objects}")
 
         flow = Flow(self.bot, ctx)
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)
@@ -1203,16 +1205,18 @@ class Legislature(commands.Cog):
         async with ctx.typing():
             stats = await self.bot.laws.generate_leg_statistics()
 
-            embed = self.bot.embeds.embed_builder(title=f"Statistics for the {mk.NATION_ADJECTIVE} Legislature",
-                                                  description="")
+            embed = self.bot.embeds.embed_builder(title=f"Statistics for the {self.bot.mk.NATION_ADJECTIVE} "
+                                                        f"{self.bot.mk.LEGISLATURE_NAME}")
 
-            general_value = f"Legislative Sessions: {stats[0]}\n" \
+            general_value = f"Sessions: {stats[0]}\n" \
                             f"Submitted Bills: {stats[1]}\n" \
                             f"Submitted Motions: {stats[3]}\n" \
                             f"Active Laws: {stats[2]}"
 
             embed.add_field(name="General Statistics", value=general_value)
-            embed.add_field(name="Top Speakers or Vice-Speakers of the Legislature ", value=stats[5], inline=False)
+            embed.add_field(name=f"Top {self.bot.mk.speaker_term}s or {self.bot.mk.vice_speaker_term}s of "
+                                 f"the {self.bot.mk.LEGISLATURE_NAME}",
+                            value=stats[5], inline=False)
             embed.add_field(name="Top Bill Submitters", value=stats[4], inline=False)
             embed.add_field(name="Top Lawmakers", value=stats[6], inline=False)
 
