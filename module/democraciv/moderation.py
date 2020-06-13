@@ -703,7 +703,15 @@ class Moderation(commands.Cog):
                                                        name="propaganda")
 
                 if propaganda_channel is not None:
-                    await propaganda_channel.edit(name=f"mk{self.bot.mk.MARK}-propaganda", category=government_category,
+                    await propaganda_channel.edit(name=f"mk{self.bot.mk.MARK}-propaganda", category=archive_category,
+                                                  overwrites={everyone_role: everyone_perms,
+                                                              archives_role: archive_perms})
+
+                press_channel = discord.utils.get(self.bot.democraciv_guild_object.text_channels,
+                                                  name="press")
+
+                if press_channel is not None:
+                    await press_channel.edit(name=f"mk{self.bot.mk.MARK}-press", category=archive_category,
                                                   overwrites={everyone_role: everyone_perms,
                                                               archives_role: archive_perms})
 
