@@ -112,11 +112,8 @@ class EmbedUtils:
 
         embed = discord.Embed(title=title, description=description)
 
-        if has_footer:
-            if footer:
-                embed.set_footer(text=footer, icon_url=self.footer_icon)
-            else:
-                embed.set_footer(text=self.footer_text, icon_url=self.footer_icon)
+        if has_footer and footer:
+            embed.set_footer(text=footer)
 
         if time_stamp:
             embed.timestamp = datetime.datetime.utcnow()

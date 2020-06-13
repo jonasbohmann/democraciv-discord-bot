@@ -111,7 +111,7 @@ class Laws(commands.Cog, name='Law'):
         embed.add_field(name="Description", value=law.bill.description, inline=False)
         embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
         embed.add_field(name="Law Since", value=law.passed_on.strftime("%A, %B %d %Y"), inline=False)
-        embed.set_footer(text=f"All dates are in UTC. Associated Bill: #{law.bill.id}", icon_url=config.BOT_ICON_URL)
+        embed.set_footer(text=f"All dates are in UTC. Associated Bill: #{law.bill.id}")
         await ctx.send(embed=embed)
 
     @law.command(name='export', aliases=['e', 'exp', 'ex', 'generate', 'generatelegalcode'])

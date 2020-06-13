@@ -178,7 +178,7 @@ class Legislature(commands.Cog):
 
         if await bill.is_law():
             law = await Law.from_bill(ctx, bill.id)
-            embed.set_footer(text=f"Associated Law: #{law.id}", icon_url=config.BOT_ICON_URL)
+            embed.set_footer(text=f"Associated Law: #{law.id}")
 
         await ctx.send(embed=embed)
 
@@ -191,8 +191,8 @@ class Legislature(commands.Cog):
             return await ctx.send(":x: The query to search for has to be at least 3 characters long.")
 
         sql_query = """SELECT id from legislature_bills
-                   WHERE (lower(bill_name) LIKE '%' || $1 || '%')
-                   ORDER BY similarity(lower(bill_name), $1)
+                   WHERE (lower(bill_name) LIKE '%' || $1 || '%') OR (lower(description) LIKE '%' || $1 || '%')
+                   ORDER BY similarity(lower(bill_name), $1) DESC
                    LIMIT 20"""
 
         found_bills = await self.bot.db.fetch(sql_query, query)
@@ -365,7 +365,7 @@ class Legislature(commands.Cog):
 
         sql_query = """SELECT id from legislature_motions
                        WHERE (lower(title) LIKE '%' || $1 || '%') OR (lower(description) LIKE '%' || $1 || '%')
-                       ORDER BY similarity(lower(title), $1)
+                       ORDER BY similarity(lower(title), $1) DESC
                        LIMIT 20"""
 
         found_motions = await self.bot.db.fetch(sql_query, query)
@@ -733,8 +733,7 @@ class Legislature(commands.Cog):
                 too_long_ = f"This text was too long for Discord, so I put it on [here.]({haste_bin_url})"
                 embed.add_field(name="Submitted Bills", value=too_long_, inline=False)
 
-        embed.set_footer(text=f"Bills that are underlined are active laws. All times are in UTC.",
-                         icon_url=config.BOT_ICON_URL)
+        embed.set_footer(text="Bills that are underlined are active laws. All times are in UTC.")
         await ctx.send(embed=embed)
 
     async def submit_bill(self, ctx, current_leg_session_id: int) -> typing.Tuple[typing.Optional[str],

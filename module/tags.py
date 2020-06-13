@@ -467,7 +467,7 @@ class Tags(commands.Cog):
         db_query = """SELECT tag_id FROM guild_tags_alias
                       WHERE (global = true AND alias LIKE '%' || $1 || '%') OR 
                             (alias LIKE '%' || $1 || '%' AND guild_id = $2)
-                      ORDER BY similarity(alias, $1)
+                      ORDER BY similarity(alias, $1) DESC
                       LIMIT 20
                     """
 

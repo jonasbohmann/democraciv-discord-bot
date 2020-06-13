@@ -215,8 +215,7 @@ class Pages:
         embed = self.embed.copy()
         embed.clear_fields()
         embed.description = '\n'.join(messages)
-        embed.set_footer(text=f'We were on page {self.current_page} before this message.',
-                         icon_url=config.BOT_ICON_URL)
+        embed.set_footer(text=f'We were on page {self.current_page} before this message.')
         await self.message.edit(content=None, embed=embed)
 
         async def go_back_to_current_page():
@@ -313,7 +312,7 @@ class FieldPages(Pages):
             else:
                 text = f'Page {page}/{self.maximum_pages}'
 
-            self.embed.set_footer(text=text, icon_url=config.BOT_ICON_URL)
+            self.embed.set_footer(text=text)
 
 
 class TextPages(Pages):

@@ -169,8 +169,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         embed = self.bot.embeds.embed_builder(title=f"{config.SPOTIFY_LOGO}  {member.name} on Spotify",
                                               description="", colour=0x2F3136,
-                                              footer=f"Use `{config.BOT_PREFIX}lyrics` to get lyrics"
-                                                     f" for a song!")
+                                              footer=f"Use {config.BOT_PREFIX}lyrics to get the lyrics for this song.")
 
         embed.add_field(name="Song", value=f"[{member_spotify.title}](https://open.spotify.com/"
                                            f"track/{member_spotify.track_id})", inline=False)

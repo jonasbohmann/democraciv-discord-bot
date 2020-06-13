@@ -299,7 +299,7 @@ class LawUtils:
         query = """SELECT law_id FROM legislature_laws AS l
                    JOIN legislature_bills lb ON l.bill_id = lb.id
                    WHERE lower(lb.bill_name) LIKE '%' || $1 || '%' 
-                   ORDER BY similarity(lower(lb.bill_name), $1)
+                   ORDER BY similarity(lower(lb.bill_name), $1) DESC
                    LIMIT 10;"""
 
         laws = await con.fetch(query, name.lower())
