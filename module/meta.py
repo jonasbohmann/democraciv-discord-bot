@@ -2,6 +2,7 @@ import itertools
 import time
 import discord
 
+from bot import DemocracivBot
 from config import config
 from discord.ext import commands
 from util.help import PaginatedHelpCommand
@@ -11,7 +12,7 @@ class Meta(commands.Cog):
     """Commands regarding the bot itself."""
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: DemocracivBot = bot
         self.old_help_command = bot.help_command
         bot.help_command = PaginatedHelpCommand()
         bot.help_command.cog = self
@@ -108,10 +109,18 @@ class Meta(commands.Cog):
                                               description=f"Check `{config.BOT_PREFIX}help dms` for help on "
                                                           f"how to enable or disable these settings.\n\n"
                                                           f"{mute_kick_ban} DM when you get muted, kicked or banned\n"
-                                                          f"{leg_session_open} *(Legislator Only)* DM when a Legislative Session opens\n"
-                                                          f"{leg_session_update} *(Legislator Only)* DM when voting starts for a Legislative Session\n"
-                                                          f"{leg_session_submit} *(Cabinet Only)* DM when someone submits a Bill or Motion\n"
-                                                          f"{leg_session_withdraw} *(Cabinet Only)* DM when someone withdraws a Bill or Motion\n",
+                                                          f"{leg_session_open} "
+                                                          f"*({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when "
+                                                          f"a Legislative Session opens\n"
+                                                          f"{leg_session_update} "
+                                                          f"*({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when "
+                                                          f"voting starts for a Legislative Session\n"
+                                                          f"{leg_session_submit} "
+                                                          f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when "
+                                                          f"someone submits a Bill or Motion\n"
+                                                          f"{leg_session_withdraw} "
+                                                          f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when "
+                                                          f"someone withdraws a Bill or Motion\n",
                                               has_footer=False)
         await ctx.send(embed=embed)
 
@@ -167,11 +176,13 @@ class Meta(commands.Cog):
         new_value = await self.toggle_dm_setting(ctx.author.id, "leg_session_open")
 
         if new_value:
-            message = ":white_check_mark: You will now receive DMs when you are a Legislator " \
-                      "and a new Legislative Session is opened."
+            message = f":white_check_mark: You will now receive DMs when you " \
+                      f"are a {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} " \
+                      f"and a new Legislative Session is opened."
         else:
-            message = ":white_check_mark: You will no longer receive DMs when you are a Legislator " \
-                      "and a new Legislative Session is opened."
+            message = f":white_check_mark: You will no longer receive DMs when you are " \
+                      f"a {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} " \
+                      f"and a new Legislative Session is opened."
 
         await ctx.send(message)
 
@@ -183,11 +194,13 @@ class Meta(commands.Cog):
         new_value = await self.toggle_dm_setting(ctx.author.id, "leg_session_update")
 
         if new_value:
-            message = ":white_check_mark: You will now receive DMs when you are a Legislator " \
-                      "and voting starts for a Legislative Session."
+            message = f":white_check_mark: You will now receive DMs when you are " \
+                      f"a {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} " \
+                      f"and voting starts for a Legislative Session."
         else:
-            message = ":white_check_mark: You will no longer receive DMs when you are a Legislator " \
-                      "and voting starts for a Legislative Session."
+            message = f":white_check_mark: You will no longer receive DMs when you are " \
+                      f"a {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} " \
+                      f"and voting starts for a Legislative Session."
 
         await ctx.send(message)
 
@@ -199,12 +212,14 @@ class Meta(commands.Cog):
         new_value = await self.toggle_dm_setting(ctx.author.id, "leg_session_submit")
 
         if new_value:
-            message = ":white_check_mark: You will now receive DMs when you are a member of the Cabinet " \
-                      "and someone submits a Bill or Motion. " \
-                      "Note that you will never get a DM when a member of the Cabinet is the one submitting."
+            message = f":white_check_mark: You will now receive DMs when you are a member of the " \
+                      f"{self.bot.mk.LEGISLATURE_CABINET_NAME} " \
+                      f"and someone submits a Bill or Motion. " \
+                      f"Note that you will never get a DM when a member of the " \
+                      f"{self.bot.mk.LEGISLATURE_CABINET_NAME} is the one submitting."
         else:
-            message = ":white_check_mark: You will no longer receive DMs when you are a member of the Cabinet " \
-                      "and someone submits a Bill or Motion."
+            message = f":white_check_mark: You will no longer receive DMs when you are a member of the " \
+                      f"{self.bot.mk.LEGISLATURE_CABINET_NAME} and someone submits a Bill or Motion."
 
         await ctx.send(message)
 
@@ -216,13 +231,14 @@ class Meta(commands.Cog):
         new_value = await self.toggle_dm_setting(ctx.author.id, "leg_session_withdraw")
 
         if new_value:
-            message = ":white_check_mark: You will now receive DMs when you are a member of the Cabinet " \
-                      "and someone withdraws their Bill or Motion. " \
-                      "Note that you will never get a DM when a member of the Cabinet is the one withdrawing."
+            message = f":white_check_mark: You will now receive DMs when you are a member of the " \
+                      f"{self.bot.mk.LEGISLATURE_CABINET_NAME} and someone withdraws their Bill or Motion. " \
+                      f"Note that you will never get a DM when a member of the " \
+                      f"{self.bot.mk.LEGISLATURE_CABINET_NAME} is the one withdrawing."
 
         else:
-            message = ":white_check_mark: You will no longer receive DMs when you are a member of the Cabinet " \
-                      "and someone withdraws their Bill or Motion."
+            message = f":white_check_mark: You will no longer receive DMs when you are a member of the " \
+                      f"{self.bot.mk.LEGISLATURE_CABINET_NAME} and someone withdraws their Bill or Motion."
 
         await ctx.send(message)
 

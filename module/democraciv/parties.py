@@ -14,8 +14,6 @@ class Party(commands.Cog, name='Political Parties'):
     """Interact with the political parties of Democraciv. Note that you can only join and
     leave parties on the Democraciv server."""
 
-    # TODO - Move all party commands into -party group.
-
     def __init__(self, bot):
         self.bot = bot
 
@@ -43,7 +41,7 @@ class Party(commands.Cog, name='Political Parties'):
 
         return parties_and_members
 
-    @commands.command(name='party')
+    @commands.group(name='party', case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def party(self, ctx, *, party: PoliticalParty):
         """Detailed information about a single political party"""
@@ -245,14 +243,14 @@ class Party(commands.Cog, name='Political Parties'):
 
         return await PoliticalParty.convert(ctx, discord_role.id)
 
-    @commands.command(name='addparty')
+    @party.command(name='add', aliases=['create', 'make'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def addparty(self, ctx):
         """Add a new political party or edit an existing one"""
         await self.create_new_party(ctx)
 
-    @commands.command(name='deleteparty')
+    @party.command(name='delete', aliases=['remove'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def deleteparty(self, ctx, hard: typing.Optional[bool] = False, *, party: PoliticalParty):
@@ -279,7 +277,7 @@ class Party(commands.Cog, name='Political Parties'):
 
         await ctx.send(f':white_check_mark: `{name}` and all its aliases were deleted.')
 
-    @commands.command(name='addalias')
+    @party.command(name='addalias')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def addalias(self, ctx, *, party: PoliticalParty):
@@ -303,7 +301,7 @@ class Party(commands.Cog, name='Political Parties'):
             await ctx.send(f':white_check_mark: Alias `{alias}` for party '
                            f'`{party.role.name}` was added.')
 
-    @commands.command(name='deletealias', aliases=['removealias'])
+    @party.command(name='deletealias', aliases=['removealias'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def deletealias(self, ctx, *, alias: str):
@@ -316,7 +314,7 @@ class Party(commands.Cog, name='Political Parties'):
         await self.bot.db.execute("DELETE FROM party_alias WHERE alias = $1", alias.lower())
         await ctx.send(f':white_check_mark: Alias `{alias}` was deleted.')
 
-    @commands.command(name='mergeparty', aliases=['mergeparties'])
+    @party.command(name='merge')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def mergeparties(self, ctx, amount_of_parties: int):

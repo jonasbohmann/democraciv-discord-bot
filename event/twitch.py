@@ -171,8 +171,8 @@ class Twitch(commands.Cog):
 
         embed.add_field(name="Keep it short",
                         value="In the past, streams often were too long. Keep the stream "
-                              "short and don't waste time by starting the stream when not every "
-                              "minister is ready or the game is not even started yet!",
+                              "short and don't waste time by starting the stream when not everyone "
+                              "is ready or the game is not even started yet!",
                         inline=False)
 
         embed.add_field(name="Hand over the save-game",
@@ -253,7 +253,7 @@ class Twitch(commands.Cog):
                         inline=False)
 
         embed.add_field(name="Upload the save-game to Google Drive",
-                        value="Once a minister sends you the save-game, "
+                        value="Once someone sends you the save-game, "
                               "upload it to our Google Drive under "
                               "'Drive/Game/Savegames'.",
                         inline=False)

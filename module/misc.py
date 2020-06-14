@@ -94,8 +94,8 @@ class Misc(commands.Cog, name="Miscellaneous"):
         member = member or ctx.author
         join_pos, max_members = await self.get_member_join_position(member, ctx.guild.members)
 
-        embed = self.bot.embeds.embed_builder(title="User Information", description="")
-        embed.add_field(name="User", value=f"{member} {member.mention}", inline=False)
+        embed = self.bot.embeds.embed_builder(title="Member Information")
+        embed.add_field(name="Member", value=f"{member} {member.mention}", inline=False)
         embed.add_field(name="ID", value=member.id, inline=False)
         embed.add_field(name='Discord Registration',
                         value=f'{member.created_at.strftime("%B %d, %Y")}', inline=True)
@@ -109,7 +109,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
     @whois.error
     async def whois_error(self, ctx, error):
         if isinstance(error, commands.BadUnionArgument):
-            return
+            await ctx.send(":x: I could not find that person. Are they on this server?")
 
     @commands.command(name='avatar')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

@@ -919,8 +919,8 @@ class Legislature(commands.Cog):
 
             if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS:
                 if self.legislator_role not in ctx.author.roles:
-                    return await ctx.send(":x: Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} are allowed to "
-                                          "submit motions!")
+                    return await ctx.send(f":x: Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} are allowed to "
+                                          f"submit motions!")
 
             message, embed = await self.submit_motion(ctx, current_leg_session.id)
 
