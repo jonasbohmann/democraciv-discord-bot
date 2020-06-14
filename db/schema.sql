@@ -75,10 +75,8 @@ CREATE TABLE IF NOT EXISTS legislature_bills(
     google_docs_description text,
     submitter bigint,
     is_vetoable bool,
-    voted_on_by_leg bool DEFAULT FALSE,
-    has_passed_leg bool DEFAULT FALSE,
-    voted_on_by_ministry bool DEFAULT FALSE,
-    has_passed_ministry bool DEFAULT FALSE
+    status int DEFAULT 0,
+    repealed_on timestamp WITHOUT TIME ZONE
 );
 
 CREATE TABLE IF NOT EXISTS legislature_laws(

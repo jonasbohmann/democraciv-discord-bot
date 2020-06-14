@@ -333,7 +333,7 @@ class Tags(commands.Cog):
 
         pretty_aliases = (', '.join([f"`{config.BOT_PREFIX}{alias}`" for alias in tag.aliases])) or 'None'
 
-        embed = self.bot.embeds.embed_builder(title="Tag Info", description="", has_footer=False)
+        embed = self.bot.embeds.embed_builder(title="Tag Information", description="", has_footer=False)
         embed.add_field(name="Title", value=tag.title, inline=False)
 
         is_global = "Yes" if tag.is_global else "No"

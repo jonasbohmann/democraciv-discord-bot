@@ -12,7 +12,7 @@ from util import utils, mk, exceptions
 from discord.ext.commands import Greedy
 from util.paginator import AlternativePages
 from util.law_helper import AnnouncementQueue
-from util.converter import Session, SessionStatus, Bill, Motion, Law, CaseInsensitiveMember, PoliticalParty
+from util.converter import Session, SessionStatus, Bill, Motion, Law, CaseInsensitiveMember, PoliticalParty, BillStatus
 
 
 class PassScheduler(AnnouncementQueue):
@@ -175,6 +175,9 @@ class Legislature(commands.Cog):
         embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
         embed.add_field(name="Vetoable", value=is_vetoable, inline=False)
         embed.add_field(name="Status", value=await bill.get_emojified_status(verbose=True), inline=False)
+
+        if bill.repealed_on:
+            embed.add_field(name="Repealed On", value=bill.repealed_on.strftime("%A, %B %d %Y"), inline=True)
 
         if await bill.is_law():
             law = await Law.from_bill(ctx, bill.id)
@@ -401,8 +404,8 @@ class Legislature(commands.Cog):
 
         await self.dm_legislators(reason="leg_session_open",
                                   message=f":envelope_with_arrow: The **submission period** for Legislative Session "
-                                  f" #{new_session} has started! Submit your bills and motions with "
-                                  f"`-legislature submit` on the Democraciv server.")
+                                          f" #{new_session} has started! Submit your bills and motions with "
+                                          f"`-legislature submit` on the Democraciv server.")
 
     @legislature.command(name='updatesession', aliases=['us'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -438,7 +441,7 @@ class Legislature(commands.Cog):
 
         await self.dm_legislators(reason="leg_session_update",
                                   message=f":ballot_box: The **voting period** for Legislative Session "
-                                  f"#{active_leg_session.id} has started!\nVote here: {voting_form}")
+                                          f"#{active_leg_session.id} has started!\nVote here: {voting_form}")
 
     @legislature.command(name='closesession', aliases=['cs'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -454,9 +457,9 @@ class Legislature(commands.Cog):
         await active_leg_session.close()
 
         #  Update all bills that did not pass
-        await self.bot.db.execute("UPDATE legislature_bills SET has_passed_leg = false,"
-                                  " voted_on_by_leg = true WHERE leg_session = $1 "
-                                  "AND voted_on_by_leg = false", active_leg_session.id)
+        await self.bot.db.execute("UPDATE legislature_bills SET status = $1 WHERE leg_session = $2",
+                                  BillStatus.LEG_FAILED.value,
+                                  active_leg_session.id)
 
         await ctx.send(f":white_check_mark: Session #{active_leg_session.id} was closed. "
                        f"Check `-help legislature pass` on what to do next.")
@@ -961,8 +964,8 @@ class Legislature(commands.Cog):
             if last_session.status is not SessionStatus.CLOSED:
                 return "You cannot mark bills as passed while their session is still in Submission or Voting Period."
 
-            if _bill.passed_leg:
-                return "You already voted on this bill!"
+            if _bill.status is not BillStatus.SUBMITTED or _bill.status is not BillStatus.LEG_FAILED:
+                return "You already voted on this bill."
 
         error_messages = []
 
@@ -1030,10 +1033,10 @@ class Legislature(commands.Cog):
         last_leg_session = await self.bot.laws.get_last_leg_session()
 
         def verify_object(to_verify) -> str:
-            if last_leg_session.id != to_verify.session.id:
-                return f"This {obj_name} was not submitted in the last session of the {self.bot.mk.LEGISLATURE_NAME}."
+            if not to_verify.session.is_active:
+                return f"The session during which this {obj_name} was submitted is not open anymore."
 
-            if isinstance(to_verify, Bill) and to_verify.voted_on_by_leg:
+            if isinstance(to_verify, Bill) and to_verify.status is not BillStatus.SUBMITTED:
                 return f"This {obj_name} was already voted on by the {self.bot.mk.LEGISLATURE_NAME}."
 
             if not self.is_cabinet(ctx.author):
@@ -1095,9 +1098,11 @@ class Legislature(commands.Cog):
 
             if not self.is_cabinet(ctx.author):
                 if self.speaker is not None:
-                    await self.bot.safe_send_dm(target=self.speaker, reason="leg_session_withdraw", message=message)
+                    await self.bot.safe_send_dm(target=self.speaker, reason="leg_session_withdraw",
+                                                message=message)
                 if self.vice_speaker is not None:
-                    await self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_withdraw", message=message)
+                    await self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_withdraw",
+                                                message=message)
 
     @withdraw.command(name='bill', aliases=['b'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -1150,15 +1155,9 @@ class Legislature(commands.Cog):
 
         bills = bill_ids
 
-        async def verify_bill(bill_to_verify) -> str:
-            if not bill_to_verify.passed_leg:
-                return f"This bill did not pass the {self.bot.mk.LEGISLATURE_NAME}."
-
-            if not bill_to_verify.voted_on_by_ministry:
-                return f"The {self.bot.mk.MINISTRY_NAME} did not vote on this bill yet."
-
-            if await bill_to_verify.is_law() or bill_to_verify.passed_ministry:
-                return "This bill is already law."
+        async def verify_bill(bill_to_verify: Bill) -> str:
+            if bill_to_verify.status is not BillStatus.MIN_FAILED:
+                return "This bill is not currently vetoed."
 
         unverified_bills = []
 

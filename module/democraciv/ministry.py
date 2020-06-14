@@ -5,7 +5,7 @@ import discord
 from bot import DemocracivBot
 from util.flow import Flow
 from discord.ext import commands
-from util.converter import Bill
+from util.converter import Bill, BillStatus
 from config import config
 from util import mk, exceptions, utils
 from discord.ext.commands import Greedy
@@ -78,9 +78,8 @@ class Ministry(commands.Cog):
         """Gets all bills that passed the Legislature, are vetoable and were not yet voted on by the Ministry"""
 
         open_bills = await self.bot.db.fetch('SELECT id, bill_name, link, tiny_link FROM legislature_bills '
-                                             'WHERE has_passed_leg = true '
-                                             'AND is_vetoable = true AND voted_on_by_ministry = false '
-                                             'AND has_passed_ministry = false ORDER BY id')
+                                             'WHERE is_vetoable = true AND status = $1 ORDER BY id',
+                                             BillStatus.LEG_PASSED.value)
 
         if not open_bills:
             return None
@@ -166,13 +165,13 @@ class Ministry(commands.Cog):
 
     async def verify_bill(self, bill: Bill) -> str:
         if not bill.is_vetoable:
-            return f"The {self.bot.mk.MINISTRY_NAME} cannot veto this."
+            return f"The {self.bot.mk.MINISTRY_NAME} cannot vote on this."
 
-        if not bill.passed_leg:
-            return f"This bill hasn't passed the {self.bot.mk.LEGISLATURE_NAME} yet."
-
-        if bill.voted_on_by_ministry:
+        if bill.status is BillStatus.MIN_PASSED or bill.status is BillStatus.MIN_FAILED:
             return "You already voted on this bill."
+
+        if bill.status is not BillStatus.LEG_PASSED:
+            return "You aren't allowed to vote on this bill."
 
     @ministry.command(name='veto', aliases=['v'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -210,8 +209,7 @@ class Ministry(commands.Cog):
             return
 
         pretty_bills = '\n'.join([f"-  **{_bill.name}** (#{_bill.id})" for _bill in bills])
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want"
-                                      f" to veto the following bills?"
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to veto the following bills?"
                                       f"\n{pretty_bills}")
 
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 200)

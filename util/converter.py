@@ -27,6 +27,16 @@ class SessionStatus(enum.Enum):
             raise NotImplementedError
 
 
+class BillStatus(enum.Enum):
+    SUBMITTED = 0
+    LEG_FAILED = 1
+    LEG_PASSED = 2
+    MIN_FAILED = 3
+    MIN_PASSED = 4
+    VETO_OVERRIDDEN = 5
+    REPEALED = 6
+
+
 class Selfrole(commands.Converter):
     def __init__(self, **kwargs):
         self.join_message = kwargs.get('join_message')
@@ -40,7 +50,10 @@ class Selfrole(commands.Converter):
 
     @property
     def role(self) -> typing.Optional[discord.Role]:
-        return self.guild.get_role(self._role)
+        if self.guild is not None:
+            return self.guild.get_role(self._role)
+
+        return None
 
     @classmethod
     async def convert(cls, ctx, argument):
@@ -349,10 +362,8 @@ class Bill(commands.Converter):
         self.description: str = kwargs.get('description')
         self.google_docs_description: str = kwargs.get('google_docs_description')
         self.is_vetoable: bool = kwargs.get('is_vetoable')
-        self.voted_on_by_leg: bool = kwargs.get('voted_on_by_leg')
-        self.passed_leg: bool = kwargs.get('passed_leg')
-        self.voted_on_by_ministry: bool = kwargs.get('voted_on_by_ministry')
-        self.passed_ministry: bool = kwargs.get('passed_ministry')
+        self.status: BillStatus = kwargs.get('status')
+        self.repealed_on: typing.Optional[datetime] = kwargs.get('repealed_on')
         self._submitter: int = kwargs.get('submitter')
         self._bot = kwargs.get('bot')
 
@@ -382,17 +393,24 @@ class Bill(commands.Converter):
         await self._bot.db.execute("DELETE FROM legislature_bills WHERE id = $1", self.id)
 
     async def pass_from_legislature(self):
-        await self._bot.db.execute("UPDATE legislature_bills SET has_passed_leg = true, voted_on_by_leg = true "
-                                   "WHERE id = $1", self.id)
+        await self._bot.db.execute("UPDATE legislature_bills SET status = $1 WHERE id = $2",
+                                   BillStatus.LEG_PASSED.value,
+                                   self.id)
 
     async def veto(self):
-        await self._bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true, has_passed_ministry = "
-                                   "false WHERE id = $1", self.id)
+        await self._bot.db.execute("UPDATE legislature_bills SET status = $1 WHERE id = $2",
+                                   BillStatus.MIN_FAILED.value,
+                                   self.id)
 
     async def pass_into_law(self, override: bool = False):
         if self.is_vetoable and not override:
-            await self._bot.db.execute("UPDATE legislature_bills SET voted_on_by_ministry = true,"
-                                       " has_passed_ministry = true WHERE id = $1", self.id)
+            await self._bot.db.execute("UPDATE legislature_bills SET status = $1 WHERE id = $2",
+                                       BillStatus.MIN_PASSED.value,
+                                       self.id)
+        if override:
+            await self._bot.db.execute("UPDATE legislature_bills SET status = $1 WHERE id = $2",
+                                       BillStatus.VETO_OVERRIDDEN.value,
+                                       self.id)
 
         law_id = await self._bot.db.fetchval("INSERT INTO legislature_laws (bill_id, passed_on)"
                                              " VALUES ($1, $2) RETURNING law_id",
@@ -406,7 +424,7 @@ class Bill(commands.Converter):
         _tags = await self._bot.loop.run_in_executor(None, self._bot.laws.generate_law_tags,
                                                      self.google_docs_description, self.description)
 
-        name_abbreviation = "".join(c[0].lower() for c in self.name.split())
+        name_abbreviation = "".join([c[0].lower() for c in self.name.split()])
 
         if self.name.lower().startswith("the"):
             _tags.append(name_abbreviation[1:])
@@ -418,82 +436,69 @@ class Bill(commands.Converter):
                                        law_id, tag.lower())
 
     async def get_emojified_status(self, verbose: bool = True) -> str:
-        status = []
-
-        if not self.voted_on_by_leg:
+        if self.status is BillStatus.SUBMITTED:
             if verbose:
                 return f"Legislature: {config.LEG_BILL_STATUS_YELLOW} *(Not Voted On Yet)*\n" \
                        f"Ministry: {config.LEG_BILL_STATUS_YELLOW} *(Not Voted On Yet)*\n" \
                        f"Law: {config.LEG_BILL_STATUS_GRAY}\n"
-            else:
-                return f"{config.LEG_BILL_STATUS_YELLOW}{config.LEG_BILL_STATUS_YELLOW}{config.LEG_BILL_STATUS_GRAY}"
-        else:
-            if self.passed_leg:
-                if verbose:
-                    status.append(f"Legislature: {config.LEG_BILL_STATUS_GREEN} *(Passed)*")
-                else:
-                    status.append(config.LEG_BILL_STATUS_GREEN)
 
-                if self.is_vetoable:
-                    if not self.voted_on_by_ministry:
-                        if verbose:
-                            status.append(f"Ministry: {config.LEG_BILL_STATUS_YELLOW} *(Not Voted On Yet)*")
-                        else:
-                            status.append(config.LEG_BILL_STATUS_YELLOW)
-                    else:
-                        if self.passed_ministry:
-                            if verbose:
-                                status.append(f"Ministry: {config.LEG_BILL_STATUS_GREEN} *(Passed)*")
-                            else:
-                                status.append(config.LEG_BILL_STATUS_GREEN)
-                        else:
-                            if verbose:
-                                status.append(f"Ministry: {config.LEG_BILL_STATUS_RED} *(Vetoed)*")
-                            else:
-                                status.append(config.LEG_BILL_STATUS_RED)
-                else:
-                    if verbose:
-                        status.append(f"Ministry: {config.LEG_BILL_STATUS_GRAY} *(Not Vetoable)*")
-                    else:
-                        status.append(config.LEG_BILL_STATUS_GRAY)
+            return f"{config.LEG_BILL_STATUS_YELLOW}{config.LEG_BILL_STATUS_YELLOW}{config.LEG_BILL_STATUS_GRAY}"
 
-                is_law = await self.is_law()
+        elif self.status is BillStatus.LEG_FAILED:
+            if verbose:
+                return f"Legislature: {config.LEG_BILL_STATUS_RED} *(Failed)*\n" \
+                       f"Ministry: {config.LEG_BILL_STATUS_GRAY} *(Failed in Legislature)*\n" \
+                       f"Law: {config.LEG_BILL_STATUS_GRAY}"
 
-                if is_law:
-                    if self.voted_on_by_ministry and not self.passed_ministry:
-                        if verbose:
-                            status.append(f"Law: {config.LEG_BILL_STATUS_GREEN} *(Active Law due"
-                                          f" to Legislature Override of Veto)*")
-                        else:
-                            status.append(config.LEG_BILL_STATUS_GREEN)
-                    else:
-                        if verbose:
-                            status.append(f"Law: {config.LEG_BILL_STATUS_GREEN} *(Active Law)*")
-                        else:
-                            status.append(config.LEG_BILL_STATUS_GREEN)
-                elif not is_law and ((self.is_vetoable and self.passed_leg and self.passed_ministry) or
-                                     (not self.is_vetoable and self.passed_leg)):
-                    if verbose:
-                        status.append(f"Law: {config.LEG_BILL_STATUS_RED} *(Repealed)*")
-                    else:
-                        status.append(config.LEG_BILL_STATUS_RED)  # Repealed
-                else:
-                    if verbose:
-                        status.append(f"Law: {config.LEG_BILL_STATUS_GRAY}")
-                    else:
-                        status.append(config.LEG_BILL_STATUS_GRAY)
+            return f"{config.LEG_BILL_STATUS_RED}{config.LEG_BILL_STATUS_GRAY}{config.LEG_BILL_STATUS_GRAY}"
 
-            else:
-                if verbose:
-                    return f"Legislature: {config.LEG_BILL_STATUS_RED} *(Failed)*\n" \
-                           f"Ministry: {config.LEG_BILL_STATUS_GRAY} *(Failed in Legislature)*\n" \
-                           f"Law: {config.LEG_BILL_STATUS_GRAY}"
-                return f"{config.LEG_BILL_STATUS_RED}{config.LEG_BILL_STATUS_GRAY}{config.LEG_BILL_STATUS_GRAY}"
+        elif self.status is BillStatus.LEG_PASSED and not self.is_vetoable:
+            if verbose:
+                return f"Legislature: {config.LEG_BILL_STATUS_GREEN} *(Passed)*\n" \
+                       f"Ministry: {config.LEG_BILL_STATUS_GRAY} *(Not Vetoable)*\n" \
+                       f"Law: {config.LEG_BILL_STATUS_GREEN} *(Active Law)*"
 
-        if verbose:
-            return '\n'.join(status)
-        else:
-            return ''.join(status)
+            return f"{config.LEG_BILL_STATUS_GREEN}{config.LEG_BILL_STATUS_GRAY}{config.LEG_BILL_STATUS_GREEN}"
+
+        elif self.status is BillStatus.LEG_PASSED and self.is_vetoable:
+            if verbose:
+                return f"Legislature: {config.LEG_BILL_STATUS_GREEN} *(Passed)*\n" \
+                       f"Ministry: {config.LEG_BILL_STATUS_YELLOW} *(Not Voted On Yet)*\n" \
+                       f"Law: {config.LEG_BILL_STATUS_GRAY}"
+
+            return f"{config.LEG_BILL_STATUS_GREEN}{config.LEG_BILL_STATUS_YELLOW}{config.LEG_BILL_STATUS_GRAY}"
+
+        elif self.status is BillStatus.MIN_FAILED:
+            if verbose:
+                return f"Legislature: {config.LEG_BILL_STATUS_GREEN} *(Passed)*\n" \
+                       f"Ministry: {config.LEG_BILL_STATUS_RED} *(Vetoed)*\n" \
+                       f"Law: {config.LEG_BILL_STATUS_GRAY}"
+
+            return f"{config.LEG_BILL_STATUS_GREEN}{config.LEG_BILL_STATUS_RED}{config.LEG_BILL_STATUS_GRAY}"
+
+        elif self.status is BillStatus.MIN_PASSED:
+            if verbose:
+                return f"Legislature: {config.LEG_BILL_STATUS_GREEN} *(Passed)*\n" \
+                       f"Ministry: {config.LEG_BILL_STATUS_GREEN} *(Passed)*\n" \
+                       f"Law: {config.LEG_BILL_STATUS_GREEN} *(Active Law)*"
+
+            return f"{config.LEG_BILL_STATUS_GREEN}{config.LEG_BILL_STATUS_GREEN}{config.LEG_BILL_STATUS_GREEN}"
+
+        elif self.status is BillStatus.VETO_OVERRIDDEN:
+            if verbose:
+                return f"Legislature: {config.LEG_BILL_STATUS_GREEN} *(Passed)*\n" \
+                       f"Ministry: {config.LEG_BILL_STATUS_RED} *(Vetoed)*\n" \
+                       f"Law: {config.LEG_BILL_STATUS_GREEN} *(Active Law due to Legislature Override of Veto)*"
+
+            return f"{config.LEG_BILL_STATUS_GREEN}{config.LEG_BILL_STATUS_RED}{config.LEG_BILL_STATUS_GREEN}"
+
+        elif self.status is BillStatus.REPEALED:
+            if verbose:
+                return f"Legislature: {config.LEG_BILL_STATUS_GREEN} *(Passed)*\n" \
+                       f"Ministry: {config.LEG_BILL_STATUS_GREEN} *(Passed)*\n" \
+                       f"Law: {config.LEG_BILL_STATUS_RED} *(Repealed)*"
+
+            return f"{config.LEG_BILL_STATUS_GREEN}{config.LEG_BILL_STATUS_GREEN}{config.LEG_BILL_STATUS_RED}"
 
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str]):
@@ -512,9 +517,7 @@ class Bill(commands.Converter):
 
         return cls(id=bill['id'], name=bill['bill_name'], link=bill['link'], tiny_link=bill['tiny_link'],
                    description=bill['description'], is_vetoable=bill['is_vetoable'],
-                   voted_on_by_leg=bill['voted_on_by_leg'], passed_leg=bill['has_passed_leg'],
-                   voted_on_by_ministry=bill['voted_on_by_ministry'], passed_ministry=bill['has_passed_ministry'],
-                   session=session, submitter=bill['submitter'],
+                   session=session, submitter=bill['submitter'], status=BillStatus(bill['status']),
                    google_docs_description=bill['google_docs_description'], bot=ctx.bot)
 
 
@@ -546,14 +549,19 @@ class Law(commands.Converter):
         return await cls.convert(ctx, law)
 
     async def repeal(self):
+        await self._bot.db.execute("UPDATE legislature_bills SET status = $1, repealed_on = $2 WHERE id = $3",
+                                   BillStatus.REPEALED.value,
+                                   datetime.utcnow(),
+                                   self.bill.id)
+
         await self._bot.db.execute("DELETE FROM legislature_laws WHERE law_id = $1", self.id)
 
     async def amend(self, new_link: str):
         tiny_url = await self._bot.laws.post_to_tinyurl(new_link)
 
         if tiny_url is None:
-            raise DemocracivBotException(":x: tinyurl.com returned an error, the link was not updated."
-                                         " Try again in a few minutes.")
+            raise DemocracivBotException(":x: tinyurl.com returned an error, the link was not updated. "
+                                         "Try again in a few minutes.")
 
         await self._bot.db.execute("UPDATE legislature_bills SET link = $1, tiny_link = $2 WHERE id = $3",
                                    new_link, tiny_url, self.bill.id)
@@ -565,8 +573,9 @@ class Law(commands.Converter):
             law = await ctx.bot.db.fetchrow("SELECT * FROM legislature_laws WHERE law_id = $1", argument)
         except ValueError:
             query = """SELECT law_id FROM legislature_laws AS l
-                       WHERE exists (SELECT 1 FROM legislature_bills b
-                       WHERE l.bill_id = b.id AND (lower(b.bill_name) = $2 OR b.link = $1 OR b.tiny_link = $1))"""
+                       JOIN legislature_bills b on l.bill_id = b.id
+                       WHERE (lower(b.bill_name) = $2 OR b.link = $1 OR b.tiny_link = $1)"""
+
             law_id = await ctx.bot.db.fetchval(query, argument, argument.lower())
 
             if law_id:
