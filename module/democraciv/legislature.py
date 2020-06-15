@@ -198,7 +198,7 @@ class Legislature(commands.Cog):
                    ORDER BY similarity(lower(bill_name), $1) DESC
                    LIMIT 20"""
 
-        found_bills = await self.bot.db.fetch(sql_query, query)
+        found_bills = await self.bot.db.fetch(sql_query, query.lower())
         pretty = []
 
         for record in found_bills:
@@ -367,7 +367,7 @@ class Legislature(commands.Cog):
                        ORDER BY similarity(lower(title), $1) DESC
                        LIMIT 20"""
 
-        found_motions = await self.bot.db.fetch(sql_query, query)
+        found_motions = await self.bot.db.fetch(sql_query, query.lower())
         pretty = []
 
         for record in found_motions:
