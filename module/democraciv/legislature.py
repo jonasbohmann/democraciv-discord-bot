@@ -591,6 +591,10 @@ class Legislature(commands.Cog):
         all_sessions = await self.bot.db.fetch("SELECT id, opened_on, closed_on FROM legislature_sessions ORDER BY id")
         pretty_sessions = []
 
+        if not all_sessions:
+            embed = self.bot.embeds.embed_builder(title="There hasn't been a session yet.")
+            return await ctx.send(embed=embed)
+
         for record in all_sessions:
             opened_on = record['opened_on'].strftime("%b %d")
 
@@ -660,7 +664,7 @@ class Legislature(commands.Cog):
             session = await self.bot.laws.get_last_leg_session()
 
             if session is None:
-                return await ctx.send(":x: There hasn't been any session yet.")
+                return await ctx.send(":x: There hasn't been a session yet.")
 
         if len(session.motions) > 0:
             pretty_motions = []
