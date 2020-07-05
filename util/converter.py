@@ -127,6 +127,48 @@ class UnbanConverter(commands.Converter):
             raise BadArgument(":x: I couldn't find that person.")
 
 
+class FlowCaseInsensitiveTextChannel(commands.TextChannelConverter):
+    async def convert(self, ctx, argument):
+        try:
+            return await super().convert(ctx, argument)
+        except BadArgument:
+            arg = argument.lower()
+
+            if arg.startswith("#"):
+                arg = arg[1:]
+
+            def predicate(c):
+                return c.name.lower() == arg
+
+            channel = discord.utils.find(predicate, ctx.guild.text_channels)
+
+            if channel:
+                return channel
+
+            raise BadArgument(f":x: There is no channel named `{argument}` on this server.")
+
+
+class FlowCaseInsensitiveRole(commands.RoleConverter):
+    async def convert(self, ctx, argument):
+        try:
+            return await super().convert(ctx, argument)
+        except BadArgument:
+            arg = argument.lower()
+
+            if arg.startswith("@"):
+                arg = arg[1:]
+
+            def predicate(r):
+                return r.name.lower() == arg
+
+            role = discord.utils.find(predicate, ctx.guild.roles)
+
+            if role:
+                return role
+
+            raise BadArgument(f":x: There is no role named `{argument}` on this server.")
+
+
 class CaseInsensitiveRole(commands.Converter):
     async def convert(self, ctx, argument):
         arg = argument.lower()

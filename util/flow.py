@@ -2,9 +2,9 @@ import typing
 import asyncio
 import discord
 
-from discord.ext import commands
-
 from config import config
+from discord.ext import commands
+from util.converter import FlowCaseInsensitiveRole, FlowCaseInsensitiveTextChannel
 
 
 class Flow:
@@ -106,7 +106,7 @@ class Flow:
             return None
 
         try:
-            channel_object = await commands.TextChannelConverter().convert(self.ctx, channel.content)
+            channel_object = await FlowCaseInsensitiveTextChannel().convert(self.ctx, channel.content)
         except commands.BadArgument:
             return channel.content
 
@@ -203,7 +203,7 @@ class Flow:
             return None
 
         try:
-            role_object = await commands.RoleConverter().convert(self.ctx, role.content)
+            role_object = await FlowCaseInsensitiveRole().convert(self.ctx, role.content)
         except commands.BadArgument:
             role_object = role.content
 

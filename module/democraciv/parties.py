@@ -52,7 +52,7 @@ class Party(commands.Cog, name='Political Parties'):
         invite_value = party.discord_invite if party.discord_invite else "*This party does not have a Discord server.*"
         thumbnail = await party.get_logo()
 
-        embed = self.bot.embeds.embed_builder(title=f"{self.bot.mk.NATION_EMOJI}  {party.role.name}",
+        embed = self.bot.embeds.embed_builder(title=party.role.name,
                                               description=f"[Platform and Description]"
                                                           f"({self.bot.mk.POLITICAL_PARTIES})")
 
@@ -67,9 +67,24 @@ class Party(commands.Cog, name='Political Parties'):
         if party.aliases is not None:
             embed.add_field(name="Aliases", value=', '.join(party.aliases) or '-', inline=False)
 
-        embed.add_field(name=f"Members ({len(party.role.members)})",
-                        value='\n'.join([f"{member.mention} {member}" for member in party.role.members]) or '-',
-                        inline=False)
+        party_members = '\n'.join([f"{member.mention} {member}" for member in party.role.members]) or '-'
+
+        if len(party_members) <= 1024:
+            embed.add_field(name=f"Members ({len(party.role.members)})", value=party_members, inline=False)
+        else:
+            fields = self.bot.get_cog("Legislature").split_embed_fields(party_members)
+
+            for index in fields:
+                if index == 0:
+                    embed.add_field(name=f"Members ({len(party.role.members)})", value=fields[index], inline=False)
+                else:
+                    embed.add_field(name="Members (Cont.)", value=fields[index], inline=False)
+
+        if len(embed) > 6000:
+            for _ in embed.fields:
+                embed.remove_field(len(embed.fields) - 1)
+
+            embed.add_field(name=f"Members ({len(party.role.members)})", value="*Too long to display.*", inline=False)
 
         await ctx.send(embed=embed)
 

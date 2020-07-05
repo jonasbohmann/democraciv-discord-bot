@@ -330,16 +330,30 @@ class Misc(commands.Cog, name="Miscellaneous"):
         else:
             role_members = "*Too long to display.*"
 
-        if len(role_members) > 1024:
-            role_members = "*Too long to display.*"
-
         embed = self.bot.embeds.embed_builder(title="Role Information", description=description,
                                               colour=role.colour, has_footer=False)
         embed.add_field(name="Role", value=role_name, inline=False)
         embed.add_field(name="ID", value=role.id, inline=False)
         embed.add_field(name="Created on", value=role.created_at.strftime("%B %d, %Y"), inline=True)
         embed.add_field(name="Colour", value=str(role.colour), inline=True)
-        embed.add_field(name=f"Members ({len(role.members)})", value=role_members, inline=False)
+
+        if len(role_members) <= 1024:
+            embed.add_field(name=f"Members ({len(role.members)})", value=role_members, inline=False)
+        else:
+            fields = self.bot.get_cog("Legislature").split_embed_fields(role_members)
+
+            for index in fields:
+                if index == 0:
+                    embed.add_field(name=f"Members ({len(role.members)})", value=fields[index], inline=False)
+                else:
+                    embed.add_field(name="Members (Cont.)", value=fields[index], inline=False)
+
+        if len(embed) > 6000:
+            for _ in embed.fields:
+                embed.remove_field(4)
+
+            embed.add_field(name=f"Members ({len(role.members)})", value="*Too long to display.*", inline=False)
+
         await ctx.send(embed=embed)
 
     @commands.command(name='random')

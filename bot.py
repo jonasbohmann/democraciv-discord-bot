@@ -229,7 +229,7 @@ class DemocracivBot(commands.Bot):
         p = config.BOT_PREFIX
 
         if not dm_settings:
-            await self.db.fetchrow("INSERT INTO dm_settings (user_id) VALUES ($1) RETURNING *", target.id)
+            dm_settings = await self.db.fetchrow("INSERT INTO dm_settings (user_id) VALUES ($1) RETURNING *", target.id)
 
         try:
             is_enabled = dm_settings[reason]

@@ -213,7 +213,7 @@ class Guild(commands.Cog, name="Server"):
 
             **Usage:**
                 `-server exclude` to see all excluded channels
-                `-server exclude <channel>` too add/remove a channel to/from the excluded channels list
+                `-server exclude <channel>` to add/remove a channel to/from the excluded channels list
         """
         current_logging_channel = await utils.get_logging_channel(self.bot, ctx.guild)
 

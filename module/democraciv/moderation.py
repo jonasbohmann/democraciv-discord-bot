@@ -198,10 +198,10 @@ class Moderation(commands.Cog):
         if len(content) > 2048:
             return await ctx.send(":x: Text cannot be more than 2048 characters.")
 
-        pretty_anon = "Yes" if is_anon else "No"
+        pretty_anon = "be anonymous" if is_anon else "not be anonymous"
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to send this report?"
-                                      f"\n```Anonymous: {pretty_anon}\n\n\nReport: {content}```")
+        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to send this report? "
+                                      f"The report will **{pretty_anon}**.")
 
         reaction = await flow.get_yes_no_reaction_confirm(are_you_sure, 150)
 
@@ -211,8 +211,12 @@ class Moderation(commands.Cog):
         if reaction:
             embed = self.bot.embeds.embed_builder(title=":exclamation: New Report", description=content)
 
-            if not is_anon:
-                embed.add_field(name="From", value=f"{ctx.author} ({ctx.author.id})")
+            if is_anon:
+                from_value = "*Anonymous Report*"
+            else:
+                from_value = str(ctx.author)
+
+            embed.add_field(name="From", value=from_value)
 
             await mk.get_democraciv_channel(self.bot,
                                             mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(

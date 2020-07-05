@@ -107,7 +107,7 @@ class Log(commands.Cog):
 
         embed_fields = {
             "Member": [f"{member.mention} {member}", False],
-            "ID": [f"{member.id}", False]
+            "ID": [member.id, False]
         }
 
         await self.log_event(member.guild, ':tada:  Member Joined', embed_fields,
@@ -119,7 +119,8 @@ class Log(commands.Cog):
             return
 
         embed_fields = {
-            "Name": [str(member), True]
+            "Name": [str(member), False],
+            "ID": [member.id, False]
         }
 
         await self.log_event(member.guild, ':no_pedestrians:  Member Left', embed_fields,
