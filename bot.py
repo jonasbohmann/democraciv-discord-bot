@@ -10,44 +10,40 @@ import logging
 import datetime
 import traceback
 import discord.utils
-import typing
 
-import util.exceptions as exceptions
-
-from typing import Optional
-
-from util import mk
-from util.cache import Cache
-from config import config, token
-from util.law_helper import LawUtils
+from dciv_bot.util.cache import Cache
+from dciv_bot.util import mk, exceptions
+from dciv_bot.config import token, config
+from typing import Optional, Union
+from dciv_bot.util.law_helper import LawUtils
 from discord.ext import commands, tasks
-from util.reddit_api import RedditAPIWrapper
-from util.google_api import GoogleAPIWrapper
-from util.utils import CheckUtils, EmbedUtils
+from dciv_bot.util.reddit_api import RedditAPIWrapper
+from dciv_bot.util.google_api import GoogleAPIWrapper
+from dciv_bot.util.utils import CheckUtils, EmbedUtils
 
 logging.basicConfig(level=logging.INFO)
 
 # List of cogs that will be loaded on startup
-initial_extensions = ['event.logging',
-                      'event.error_handler',
-                      'event.reddit',
-                      'event.youtube',
-                      'event.twitch',
-                      'module.meta',
-                      'module.time',
-                      'module.misc',
-                      'module.roles',
-                      'module.guild',
-                      'module.admin',
-                      'module.wiki',
-                      'module.tags',
-                      'module.starboard',
-                      'module.democraciv.moderation',
-                      'module.democraciv.parties',
-                      'module.democraciv.legislature',
-                      'module.democraciv.laws',
-                      'module.democraciv.ministry',
-                      'module.democraciv.supremecourt']
+initial_extensions = ['dciv_bot.event.logging',
+                      'dciv_bot.event.error_handler',
+                      'dciv_bot.event.reddit',
+                      'dciv_bot.event.youtube',
+                      'dciv_bot.event.twitch',
+                      'dciv_bot.module.meta',
+                      'dciv_bot.module.time',
+                      'dciv_bot.module.misc',
+                      'dciv_bot.module.roles',
+                      'dciv_bot.module.guild',
+                      'dciv_bot.module.admin',
+                      'dciv_bot.module.wiki',
+                      'dciv_bot.module.tags',
+                      'dciv_bot.module.starboard',
+                      'dciv_bot.module.democraciv.moderation',
+                      'dciv_bot.module.democraciv.parties',
+                      'dciv_bot.module.democraciv.legislature',
+                      'dciv_bot.module.democraciv.laws',
+                      'dciv_bot.module.democraciv.ministry',
+                      'dciv_bot.module.democraciv.supremecourt']
 
 
 class DemocracivBot(commands.Bot):
@@ -83,7 +79,7 @@ class DemocracivBot(commands.Bot):
         self.owner = None
         self.democraciv_guild_id = None
 
-        # Load the bot's cogs from ./event and ./module
+        # Load the bot's cogs from /event and /module
         for extension in initial_extensions:
             try:
                 self.load_extension(extension)
@@ -169,7 +165,7 @@ class DemocracivBot(commands.Bot):
             self.db_ready = False
             return
 
-        with open('db/schema.sql') as sql:
+        with open('dciv_bot/db/schema.sql') as sql:
             try:
                 await self.db.execute(sql.read())
             except asyncpg.InsufficientPrivilegeError:
@@ -223,7 +219,7 @@ class DemocracivBot(commands.Bot):
     def democraciv_guild_object(self) -> Optional[discord.Guild]:
         return self.get_guild(self.democraciv_guild_id)
 
-    async def safe_send_dm(self, target: typing.Union[discord.User, discord.Member],
+    async def safe_send_dm(self, target: Union[discord.User, discord.Member],
                            reason: str = None, message: str = None, embed: discord.Embed = None):
         dm_settings = await self.db.fetchrow("SELECT * FROM dm_settings WHERE user_id = $1", target.id)
         p = config.BOT_PREFIX
@@ -299,7 +295,7 @@ class DemocracivBot(commands.Bot):
 
         # Check if backup dir exists
         if not os.path.isdir('./db/backup'):
-            os.mkdir('./db/backup')
+            os.mkdir('dciv_bot/db/backup')
 
         # Run the command and save the backup files in db/backup/
         await asyncio.create_subprocess_shell(command)
@@ -318,7 +314,6 @@ class DemocracivBot(commands.Bot):
         await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)
 
 
-# This will start the bot when you run this file
 if __name__ == '__main__':
     dciv = DemocracivBot()
 

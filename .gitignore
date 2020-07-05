@@ -132,10 +132,10 @@ dmypy.json
 
 # Custom
 /.idea/
-/config/token.py
+/dciv_bot/config/token.py
 migrate.sql
-/db/backup/*
-/db/stv/*
+/dciv_bot/db/backup/*
+/dciv_bot/db/stv/*
 core
-config/google_cloud_platform_client_secret.json
-config/google_cloud_platform_oauth2_credentials.json
+dciv_bot/config/google_cloud_platform_client_secret.json
+dciv_bot/config/google_cloud_platform_oauth2_credentials.json
