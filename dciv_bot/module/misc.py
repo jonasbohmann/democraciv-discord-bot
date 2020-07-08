@@ -399,12 +399,14 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         elif arg[0].lower() in ('flip', 'coin', 'coinflip'):
             coin = ['Heads', 'Tails']
-            return await ctx.send(f':arrows_counterclockwise: **{random.choice(coin)}**')
+            msg = discord.utils.escape_mentions(f':arrows_counterclockwise: **{random.choice(coin)}**')
+            return await ctx.send(msg)
 
         elif arg[0].lower() == 'choice':
             choices = list(arg)
             choices.pop(0)
-            return await ctx.send(f':tada: The winner is: **{random.choice(choices)}**')
+            msg = discord.utils.escape_mentions(f':tada: The winner is: **{random.choice(choices)}**')
+            return await ctx.send(msg)
 
         elif len(arg) == 1:
             start = 1
@@ -429,7 +431,8 @@ class Misc(commands.Cog, name="Miscellaneous"):
         except Exception:
             raise commands.BadArgument()
 
-        await ctx.send(f':arrows_counterclockwise: Random number ({start} - {end}): **{result}**')
+        msg = discord.utils.escape_mentions(f':arrows_counterclockwise: Random number ({start} - {end}): **{result}**')
+        await ctx.send(msg)
 
     @commands.command(name='vibecheck', hidden=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)

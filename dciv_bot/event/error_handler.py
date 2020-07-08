@@ -139,11 +139,11 @@ class ErrorHandler(commands.Cog):
             return
 
         elif isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(f":x: You forgot to give me the `{error.param.name}` argument!")
+            await ctx.send(f":x: You forgot to give me the `{error.param.name}` argument.")
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.TooManyArguments):
-            await ctx.send(f":x: You gave me too many arguments!")
+            await ctx.send(f":x: You gave me too many arguments.")
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.BadArgument):

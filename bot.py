@@ -294,7 +294,7 @@ class DemocracivBot(commands.Bot):
                   f'-h {token.POSTGRESQL_HOST} -w'
 
         # Check if backup dir exists
-        if not os.path.isdir('./db/backup'):
+        if not os.path.isdir('dciv_bot/db/backup'):
             os.mkdir('dciv_bot/db/backup')
 
         # Run the command and save the backup files in db/backup/
@@ -304,7 +304,7 @@ class DemocracivBot(commands.Bot):
         await asyncio.sleep(20)
 
         # Upload the file to the #backup channel in the Moderation category on the Democraciv server
-        file = discord.File(f'db/backup/{file_name}')
+        file = discord.File(f'dciv_bot/db/backup/{file_name}')
         backup_channel = self.get_channel(config.DATABASE_DAILY_BACKUP_DISCORD_CHANNEL)
 
         if backup_channel is None:
