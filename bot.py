@@ -290,7 +290,7 @@ class DemocracivBot(commands.Bot):
         # Use pg_dump to dumb the database as raw SQL
         # Login with credentials provided in token.py
         command = f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump {token.POSTGRESQL_DATABASE} > ' \
-                  f'db/backup/{file_name} -U {token.POSTGRESQL_USER} ' \
+                  f'dciv_bot/db/backup/{file_name} -U {token.POSTGRESQL_USER} ' \
                   f'-h {token.POSTGRESQL_HOST} -w'
 
         # Check if backup dir exists
