@@ -4,6 +4,7 @@ import random
 import discord
 import operator
 import datetime
+import xdice
 
 from dciv_bot.config import config
 from discord.ext import commands
@@ -579,6 +580,64 @@ class Misc(commands.Cog, name="Miscellaneous"):
         invite = await ctx.channel.create_invite(max_age=0, unique=False)
         await ctx.send(invite.url)
 
+    @commands.command(name='roll')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def roll(self, ctx, arg):
+        """Roll some dice
+
+            Take a user's dice string and roll it. With output that looks like this:
+            <User's input> = <Intermidiate roll> = <Final number>
+            **Example:**
+              `-roll 1d6` will roll a d6
+              `-roll (2d20L1) +1d4+5` will roll 2d20s, discard the lower one, and add 1d4 and 5 to the result
+
+            **Supported Notation**
+            - Dice rolls take the form NdX, where N is the number of dice to roll, and X are the faces of the dice. For example, 1d6 is one six-sided die.
+            - A dice roll can be followed by an Ln or Hn, where it will discard the lowest n rolls or highest n rolls, respectively. So 2d20L1 means to roll two d20s and discard the lower. I.E advantage.
+            - A dice roll can be part of a mathematical expression, such as 1d4 +5.
+
+            *Full notation can be found here: https://xdice.readthedocs.io/en/latest/dice_notation.html*
+            """
+        string = arg
+        try:
+            # Attempt to parse the user command and roll the dice
+            argument = xdice.Pattern(string)
+            argument.compile()
+            roll = argument.roll()
+        except (SyntaxError, TypeError):
+            raise commands.BadArgument()
+        else:
+            # If the dice roll succeeds, we begin generating the intermediate text and storing it in rollInformation
+            rollInformation = []
+            for score in roll.scores():
+                scoreString = ""
+                
+                # Join to
+                if type(score.detail) is int:
+                    scoreString = scoreString + score.detail
+                elif type(score.detail) is list:
+                    scoreString = scoreString + " + ".join(map(str,score.detail))
+                
+                if score.dropped == []:
+                    pass
+                elif type(score.dropped) is int:
+                    scoreString = scoreString + " ~~+ " +score.dropped + "~~"
+                elif type(score.dropped) is list:
+                    scoreString = scoreString +  " ~~+ " + " + ".join(map(str,score.dropped)) + "~~"
+
+                scoreString = "[{0}]".format(scoreString)
+                rollInformation.append(scoreString)
+
+            # Put spaces between the operators and format the string
+            formatString = argument.format_string
+            for i in ["+","-","/","*"]:
+                formatString = formatString.replace(i, " {0} ".format(i))
+            rolls = formatString.format(*rollInformation)
+
+            #Create the final message
+            msg = "`{0}` = {1} = {2}".format(string,rolls,roll)
+
+            await ctx.send(msg)
 
 def setup(bot):
     bot.add_cog(Misc(bot))
