@@ -599,6 +599,10 @@ class Misc(commands.Cog, name="Miscellaneous"):
             *Full notation can be found here: https://xdice.readthedocs.io/en/latest/dice_notation.html*
             """
 
+        #Todo:
+        # []: Make the special message system more robust and logical 
+
+
         # Putting all the arguments in one string
         # https://stackoverflow.com/questions/55665255/how-do-i-put-multiple-words-in-one-argument-discord-py
         arg = " ".join(args[:])
@@ -608,8 +612,11 @@ class Misc(commands.Cog, name="Miscellaneous"):
             argument = xdice.Pattern(arg)
             argument.compile()
             roll = argument.roll()
-        except (SyntaxError, TypeError):
+        except (SyntaxError, TypeError, ValueError):
             raise commands.BadArgument()
+
+        # Add a special message if a user rolls a 20 or 1    
+        specialMessage = ""
 
         # Loop over each dice roll and add it to the intermediate text
         rollInformation = []
@@ -628,6 +635,14 @@ class Misc(commands.Cog, name="Miscellaneous"):
             elif type(score.dropped) is list:
                 scoreString = scoreString +  " ~~+ " + " + ".join(map(str,score.dropped)) + "~~"
 
+            #Check if we need a special message:
+            if "d20" in score.name:
+                if 1 in score.detail:
+                    specialMessage = "Aww, you rolled a natural 1"
+                elif 20 in score.detail:
+                    specialMessage = "Yay! You rolled a natural 20"
+
+
             scoreString = "[{0}]".format(scoreString)
             rollInformation.append(scoreString)
 
@@ -640,7 +655,9 @@ class Misc(commands.Cog, name="Miscellaneous"):
         rolls = formatString.format(*rollInformation)
 
         #Create the final message
-        msg = "`{0}` = {1} = {2}".format(arg,rolls,roll)
+        msg = "{0}: `{1}` = {2} = {3}".format(ctx.message.author.mention,arg,rolls,roll)
+        if specialMessage != "":
+            msg = msg + "\n" + specialMessage
 
         await ctx.send(msg)
 
