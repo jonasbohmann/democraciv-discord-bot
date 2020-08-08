@@ -582,7 +582,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
     @commands.command(name='roll')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def roll(self, ctx, arg):
+    async def roll(self, ctx, *args):
         """Roll some dice
 
             Take a user's dice string and roll it. With output that looks like this:
@@ -598,7 +598,11 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
             *Full notation can be found here: https://xdice.readthedocs.io/en/latest/dice_notation.html*
             """
-            
+
+        # Putting all the arguments in one string
+        # https://stackoverflow.com/questions/55665255/how-do-i-put-multiple-words-in-one-argument-discord-py
+        arg = " ".join(args[:])
+
         try:
             # Attempt to parse the user command and roll the dice
             argument = xdice.Pattern(arg)
