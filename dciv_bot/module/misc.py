@@ -655,7 +655,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         rolls = formatString.format(*rollInformation)
 
         #Create the final message
-        msg = "{0}: `{1}` = {2} = {3}".format(ctx.message.author.mention,arg,rolls,roll)
+        msg = "{0}:\n> `{1}` = {2} = {3}".format(ctx.message.author.mention,arg,rolls,roll)
         if specialMessage != "":
             msg = msg + "\n" + specialMessage
 
