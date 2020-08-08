@@ -598,46 +598,47 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
             *Full notation can be found here: https://xdice.readthedocs.io/en/latest/dice_notation.html*
             """
-        string = arg
+            
         try:
             # Attempt to parse the user command and roll the dice
-            argument = xdice.Pattern(string)
+            argument = xdice.Pattern(arg)
             argument.compile()
             roll = argument.roll()
         except (SyntaxError, TypeError):
             raise commands.BadArgument()
-        else:
-            # If the dice roll succeeds, we begin generating the intermediate text and storing it in rollInformation
-            rollInformation = []
-            for score in roll.scores():
-                scoreString = ""
-                
-                # Join to
-                if type(score.detail) is int:
-                    scoreString = scoreString + score.detail
-                elif type(score.detail) is list:
-                    scoreString = scoreString + " + ".join(map(str,score.detail))
-                
-                if score.dropped == []:
-                    pass
-                elif type(score.dropped) is int:
-                    scoreString = scoreString + " ~~+ " +score.dropped + "~~"
-                elif type(score.dropped) is list:
-                    scoreString = scoreString +  " ~~+ " + " + ".join(map(str,score.dropped)) + "~~"
 
-                scoreString = "[{0}]".format(scoreString)
-                rollInformation.append(scoreString)
+        # Loop over each dice roll and add it to the intermediate text
+        rollInformation = []
+        for score in roll.scores():
+            scoreString = ""
+            
+            if type(score.detail) is int:
+                scoreString = scoreString + score.detail
+            elif type(score.detail) is list:
+                scoreString = scoreString + " + ".join(map(str,score.detail))
+            
+            if score.dropped == []:
+                pass
+            elif type(score.dropped) is int:
+                scoreString = scoreString + " ~~+ " +score.dropped + "~~"
+            elif type(score.dropped) is list:
+                scoreString = scoreString +  " ~~+ " + " + ".join(map(str,score.dropped)) + "~~"
 
-            # Put spaces between the operators and format the string
-            formatString = argument.format_string
-            for i in ["+","-","/","*"]:
-                formatString = formatString.replace(i, " {0} ".format(i))
-            rolls = formatString.format(*rollInformation)
+            scoreString = "[{0}]".format(scoreString)
+            rollInformation.append(scoreString)
 
-            #Create the final message
-            msg = "`{0}` = {1} = {2}".format(string,rolls,roll)
+        # Put spaces between the operators in the xdice template
+        formatString = argument.format_string
+        for i in ["+","-","/","*"]:
+            formatString = formatString.replace(i, " {0} ".format(i))
+        
+        #Format the intermediate text using the previous template
+        rolls = formatString.format(*rollInformation)
 
-            await ctx.send(msg)
+        #Create the final message
+        msg = "`{0}` = {1} = {2}".format(arg,rolls,roll)
+
+        await ctx.send(msg)
 
 def setup(bot):
     bot.add_cog(Misc(bot))
