@@ -585,16 +585,14 @@ class Misc(commands.Cog, name="Miscellaneous"):
     async def roll(self, ctx, *args):
         """Roll some dice
 
-            Take a user's dice string and roll it. With output that looks like this:
-            <User's input> = <Intermidiate roll> = <Final number>
-            **Example:**
-              `-roll 1d6` will roll a d6
-              `-roll (2d20L1) +1d4+5` will roll 2d20s, discard the lower one, and add 1d4 and 5 to the result
-
             **Supported Notation**
             - Dice rolls take the form NdX, where N is the number of dice to roll, and X are the faces of the dice. For example, 1d6 is one six-sided die.
             - A dice roll can be followed by an Ln or Hn, where it will discard the lowest n rolls or highest n rolls, respectively. So 2d20L1 means to roll two d20s and discard the lower. I.E advantage.
             - A dice roll can be part of a mathematical expression, such as 1d4 +5.
+
+            **Example:**
+              `-roll 1d6` will roll a d6
+              `-roll (2d20L1) + 1d4 + 5` will roll 2d20s, discard the lower one, and add 1d4 and 5 to the result
 
             *Full notation can be found here: https://xdice.readthedocs.io/en/latest/dice_notation.html*
             """
