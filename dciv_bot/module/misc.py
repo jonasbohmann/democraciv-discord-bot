@@ -619,6 +619,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         # Loop over each dice roll and add it to the intermediate text
         rollInformation = []
         for score in roll.scores():
+            
             scoreString = ""
             
             if type(score.detail) is int:
