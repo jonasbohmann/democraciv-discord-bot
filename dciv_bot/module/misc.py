@@ -4,6 +4,7 @@ import random
 import discord
 import operator
 import datetime
+import xdice
 
 from dciv_bot.config import config
 from discord.ext import commands
@@ -579,6 +580,80 @@ class Misc(commands.Cog, name="Miscellaneous"):
         invite = await ctx.channel.create_invite(max_age=0, unique=False)
         await ctx.send(invite.url)
 
+    @commands.command(name='roll')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    async def roll(self, ctx, *, dices):
+        """Roll some dice
+
+            **Supported Notation**
+            - Dice rolls take the form NdX, where N is the number of dice to roll, and X are the faces of the dice. For example, 1d6 is one six-sided die.
+            - A dice roll can be followed by an Ln or Hn, where it will discard the lowest n rolls or highest n rolls, respectively. So 2d20L1 means to roll two d20s and discard the lower. I.E advantage.
+            - A dice roll can be part of a mathematical expression, such as 1d4 +5.
+
+            **Example:**
+              `-roll 1d6` will roll a d6
+              `-roll (2d20L1) + 1d4 + 5` will roll 2d20s, discard the lower one, and add 1d4 and 5 to the result
+
+            *Full notation can be found here: https://xdice.readthedocs.io/en/latest/dice_notation.html*
+            """
+
+        #Todo:
+        # []: Make the special message system more robust and logical 
+
+        try:
+            # Attempt to parse the user command and roll the dice
+            dice_pattern = xdice.Pattern(dices)
+            dice_pattern.compile()
+            roll = dice_pattern.roll()
+        except (SyntaxError, TypeError, ValueError):
+            raise commands.BadArgument()
+
+        # Defining some helper variables
+        special_message = ""
+        roll_information = []
+
+        # Loop over each dice roll and add it to the intermediate text
+        for score in roll.scores():
+            
+            score_string = ""
+            
+            if len(score.detail) > 1:
+                score_string = f"{score_string}{' + '.join(map(str,score.detail))}"
+            else: 
+                score_string = f"{score_string}{score.detail[0]}"
+            
+            if score.dropped == []:
+                pass
+            elif len(score.dropped) > 1:
+                score_string = f"{score_string} ~~+ {' + '.join(map(str,score.dropped))}~~"
+            else: 
+                score_string = f"{score_string} ~~+ {score.dropped[0]}~~"
+
+            # Add a special message if a user rolls a 20 or 1    
+            if "d20" in score.name:
+                if 1 in score.detail:
+                    special_message = "Aww, you rolled a natural 1"
+                elif 20 in score.detail:
+                    special_message = "Yay! You rolled a natural 20"
+
+
+            score_string = f"[{score_string}]"
+            roll_information.append(score_string)
+
+        # Put spaces between the operators in the xdice template
+        format_string = dice_pattern.format_string
+        for i in ["+","-","/","*"]:
+            format_string = format_string.replace(i, f" {i} ")
+        
+        #Format the intermediate text using the previous template
+        rolls = format_string.format(*roll_information)
+
+        #Create the final message
+        msg = f"{ctx.author.mention}:\n> `{dices}` = {rolls} = {roll}"
+        if special_message:
+            msg = f"{msg}\n{special_message}"
+
+        await ctx.send(msg)
 
 def setup(bot):
     bot.add_cog(Misc(bot))
