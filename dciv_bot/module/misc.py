@@ -618,7 +618,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
             score_string = ""
             
             if len(score.detail) > 1:
-                score_string = f"{score_string} {' + '.join(map(str,score.detail))}"
+                score_string = f"{score_string}{' + '.join(map(str,score.detail))}"
             else: 
                 score_string = f"{score_string}{score.detail[0]}"
             
