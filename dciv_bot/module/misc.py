@@ -623,7 +623,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
             scoreString = ""
             
             if isinstance(score.detail, int):
-                scoreString = scoreString + score.detail
+                score_string = f"{score_string}{score.detail}"
             elif type(score.detail) is list:
                 scoreString = scoreString + " + ".join(map(str,score.detail))
             
