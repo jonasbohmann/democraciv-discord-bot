@@ -582,7 +582,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
     @commands.command(name='roll')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def roll(self, ctx, *args):
+    async def roll(self, ctx, *, dices):
         """Roll some dice
 
             **Supported Notation**
