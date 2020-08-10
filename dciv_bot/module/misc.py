@@ -601,9 +601,19 @@ class Misc(commands.Cog, name="Miscellaneous"):
         # []: Make the special message system more robust and logical 
 
         try:
-            # Attempt to parse the user command and roll the dice
+            # Attempt to parse the user command
             dice_pattern = xdice.Pattern(dices)
             dice_pattern.compile()
+
+            # Ensure the number of dice the user asked to roll is reasonable
+            for dice in dice_pattern.dices:
+                if dice.sides > 1000000 or dice.amount > 200:
+                    # If they're not rolling a reasonable amount of dice, abort the roll. Nice job Piper...
+                    failure_message = f"{ctx.author.mention}, can't roll {dice.amount}d{dice.sides}, too many dice"
+                    await ctx.send(failure_message)
+                    return
+
+            # Roll the dice
             roll = dice_pattern.roll()
         except (SyntaxError, TypeError, ValueError):
             raise commands.BadArgument()
