@@ -622,7 +622,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
             
             scoreString = ""
             
-            if type(score.detail) is int:
+            if isinstance(score.detail, int):
                 scoreString = scoreString + score.detail
             elif type(score.detail) is list:
                 scoreString = scoreString + " + ".join(map(str,score.detail))
