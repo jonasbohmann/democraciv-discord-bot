@@ -602,9 +602,9 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         try:
             # Attempt to parse the user command and roll the dice
-            argument = xdice.Pattern(dices)
-            argument.compile()
-            roll = argument.roll()
+            dice_pattern = xdice.Pattern(dices)
+            dice_pattern.compile()
+            roll = dice_pattern.roll()
         except (SyntaxError, TypeError, ValueError):
             raise commands.BadArgument()
 
@@ -641,7 +641,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
             rollInformation.append(scoreString)
 
         # Put spaces between the operators in the xdice template
-        formatString = argument.format_string
+        formatString = dice_pattern.format_string
         for i in ["+","-","/","*"]:
             formatString = formatString.replace(i, " {0} ".format(i))
         
