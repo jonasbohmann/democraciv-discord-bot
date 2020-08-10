@@ -5,6 +5,7 @@ import discord
 import operator
 import datetime
 import xdice
+import re
 
 from dciv_bot.config import config
 from discord.ext import commands
@@ -602,6 +603,11 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         try:
             # Attempt to parse the user command
+            if re.match("[rR]\d*\(.*\)", dices):
+                failure_message = f"{ctx.author.mention}, repeat notation is disabled."
+                await ctx.send(failure_message)
+                return
+
             dice_pattern = xdice.Pattern(dices)
             dice_pattern.compile()
 
