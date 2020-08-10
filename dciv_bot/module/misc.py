@@ -642,7 +642,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
                     specialMessage = "Yay! You rolled a natural 20"
 
 
-            scoreString = "[{0}]".format(scoreString)
+            score_string = f"[{score_string}]"
             rollInformation.append(scoreString)
 
         # Put spaces between the operators in the xdice template
