@@ -600,14 +600,9 @@ class Misc(commands.Cog, name="Miscellaneous"):
         #Todo:
         # []: Make the special message system more robust and logical 
 
-
-        # Putting all the arguments in one string
-        # https://stackoverflow.com/questions/55665255/how-do-i-put-multiple-words-in-one-argument-discord-py
-        arg = " ".join(args[:])
-
         try:
             # Attempt to parse the user command and roll the dice
-            argument = xdice.Pattern(arg)
+            argument = xdice.Pattern(dices)
             argument.compile()
             roll = argument.roll()
         except (SyntaxError, TypeError, ValueError):
@@ -654,7 +649,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         rolls = formatString.format(*rollInformation)
 
         #Create the final message
-        msg = f"{ctx.author.mention}:\n> `{arg}` = {rolls} = {roll}"
+        msg = f"{ctx.author.mention}:\n> `{dices}` = {rolls} = {roll}"
         if special_message:
             msg = f"{msg}\n{special_message}"
 
