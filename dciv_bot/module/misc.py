@@ -620,14 +620,14 @@ class Misc(commands.Cog, name="Miscellaneous"):
             if isinstance(score.detail, int):
                 score_string = f"{score_string}{score.detail}"
             elif type(score.detail) is list:
-                score_string = score_string + " + ".join(map(str,score.detail))
+                score_string = f"{score_string} + {' + '.join(map(str,score.detail))}"
             
             if score.dropped == []:
                 pass
             elif type(score.dropped) is int:
-                score_string = score_string + " ~~+ " +score.dropped + "~~"
+                score_string = f"{score_string} ~~+ {score.dropped}~~"
             elif type(score.dropped) is list:
-                score_string = score_string +  " ~~+ " + " + ".join(map(str,score.dropped)) + "~~"
+                score_string = f"{score_string} ~~+ {' + '.join(map(str,score.dropped))}~~"
 
             # Add a special message if a user rolls a 20 or 1    
             if "d20" in score.name:
@@ -643,7 +643,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         # Put spaces between the operators in the xdice template
         format_string = dice_pattern.format_string
         for i in ["+","-","/","*"]:
-            format_string = format_string.replace(i, " {0} ".format(i))
+            format_string = format_string.replace(i, f" {i} ")
         
         #Format the intermediate text using the previous template
         rolls = format_string.format(*roll_information)
