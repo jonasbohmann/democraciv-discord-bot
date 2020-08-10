@@ -608,45 +608,45 @@ class Misc(commands.Cog, name="Miscellaneous"):
         except (SyntaxError, TypeError, ValueError):
             raise commands.BadArgument()
 
-        # Add a special message if a user rolls a 20 or 1    
-        specialMessage = ""
+        # Defining some helper variables
+        special_message = ""
+        roll_information = []
 
         # Loop over each dice roll and add it to the intermediate text
-        rollInformation = []
         for score in roll.scores():
             
-            scoreString = ""
+            score_string = ""
             
             if isinstance(score.detail, int):
                 score_string = f"{score_string}{score.detail}"
             elif type(score.detail) is list:
-                scoreString = scoreString + " + ".join(map(str,score.detail))
+                score_string = score_string + " + ".join(map(str,score.detail))
             
             if score.dropped == []:
                 pass
             elif type(score.dropped) is int:
-                scoreString = scoreString + " ~~+ " +score.dropped + "~~"
+                score_string = score_string + " ~~+ " +score.dropped + "~~"
             elif type(score.dropped) is list:
-                scoreString = scoreString +  " ~~+ " + " + ".join(map(str,score.dropped)) + "~~"
+                score_string = score_string +  " ~~+ " + " + ".join(map(str,score.dropped)) + "~~"
 
-            #Check if we need a special message:
+            # Add a special message if a user rolls a 20 or 1    
             if "d20" in score.name:
                 if 1 in score.detail:
-                    specialMessage = "Aww, you rolled a natural 1"
+                    special_message = "Aww, you rolled a natural 1"
                 elif 20 in score.detail:
-                    specialMessage = "Yay! You rolled a natural 20"
+                    special_message = "Yay! You rolled a natural 20"
 
 
             score_string = f"[{score_string}]"
-            rollInformation.append(scoreString)
+            roll_information.append(score_string)
 
         # Put spaces between the operators in the xdice template
-        formatString = dice_pattern.format_string
+        format_string = dice_pattern.format_string
         for i in ["+","-","/","*"]:
-            formatString = formatString.replace(i, " {0} ".format(i))
+            format_string = format_string.replace(i, " {0} ".format(i))
         
         #Format the intermediate text using the previous template
-        rolls = formatString.format(*rollInformation)
+        rolls = format_string.format(*roll_information)
 
         #Create the final message
         msg = f"{ctx.author.mention}:\n> `{dices}` = {rolls} = {roll}"
