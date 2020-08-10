@@ -655,8 +655,8 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
         #Create the final message
         msg = f"{ctx.author.mention}:\n> `{arg}` = {rolls} = {roll}"
-        if specialMessage != "":
-            msg = msg + "\n" + specialMessage
+        if special_message:
+            msg = f"{msg}\n{special_message}"
 
         await ctx.send(msg)
 
