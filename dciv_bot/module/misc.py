@@ -617,17 +617,17 @@ class Misc(commands.Cog, name="Miscellaneous"):
             
             score_string = ""
             
-            if isinstance(score.detail, int):
-                score_string = f"{score_string}{score.detail}"
-            elif type(score.detail) is list:
-                score_string = f"{score_string} + {' + '.join(map(str,score.detail))}"
+            if len(score.detail) > 1:
+                score_string = f"{score_string} {' + '.join(map(str,score.detail))}"
+            else: 
+                score_string = f"{score_string}{score.detail[0]}"
             
             if score.dropped == []:
                 pass
-            elif type(score.dropped) is int:
-                score_string = f"{score_string} ~~+ {score.dropped}~~"
-            elif type(score.dropped) is list:
+            elif len(score.dropped) > 1:
                 score_string = f"{score_string} ~~+ {' + '.join(map(str,score.dropped))}~~"
+            else: 
+                score_string = f"{score_string} ~~+ {score.dropped[0]}~~"
 
             # Add a special message if a user rolls a 20 or 1    
             if "d20" in score.name:
