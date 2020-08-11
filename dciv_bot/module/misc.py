@@ -624,7 +624,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         # []: Make the special message system more robust and logical 
 
         # Roll dice in a separate thread to prevent blocking, ideally.
-
+        
         roll = await self.bot.loop.run_in_executor(None, self.roll_dices, dices)
 
         if roll is None:
@@ -680,6 +680,10 @@ class Misc(commands.Cog, name="Miscellaneous"):
         if special_message:
             msg = f"{msg}\n{special_message}"
 
+        if len(msg) > 2000:
+            await ctx.send("Sorry, result too large")
+            return
+        
         await ctx.send(msg)
 
 def setup(bot):
