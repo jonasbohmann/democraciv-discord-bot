@@ -5,6 +5,7 @@ import discord
 import operator
 import datetime
 import xdice
+import re
 
 from dciv_bot.config import config
 from discord.ext import commands
@@ -579,6 +580,28 @@ class Misc(commands.Cog, name="Miscellaneous"):
         """Get an active invite link to this server"""
         invite = await ctx.channel.create_invite(max_age=0, unique=False)
         await ctx.send(invite.url)
+    
+    def roll_dices(self,dices):
+        try:
+            # Attempt to parse the user command
+            if re.match(r".*[rR]\d*\(.*\).*", dices):
+                failure_message = f"Repeat notation is disabled."
+                return failure_message
+
+            dice_pattern = xdice.Pattern(dices)
+            dice_pattern.compile()
+
+            # Ensure the number of dice the user asked to roll is reasonable
+            for dice in dice_pattern.dices:
+                if dice.sides > 100000 or dice.amount > 200:
+                    # If they're not rolling a reasonable amount of dice, abort the roll. Nice job Piper...
+                    failure_message = f"Can't roll `{dice.amount}d{dice.sides}`, too many dice"
+                    return failure_message
+
+            # Roll the dice
+            return (dice_pattern.roll(), dice_pattern.format_string)
+        except (SyntaxError, TypeError, ValueError):
+            return None
 
     @commands.command(name='roll')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -600,13 +623,18 @@ class Misc(commands.Cog, name="Miscellaneous"):
         #Todo:
         # []: Make the special message system more robust and logical 
 
-        try:
-            # Attempt to parse the user command and roll the dice
-            dice_pattern = xdice.Pattern(dices)
-            dice_pattern.compile()
-            roll = dice_pattern.roll()
-        except (SyntaxError, TypeError, ValueError):
+        # Roll dice in a separate thread to prevent blocking, ideally.
+        
+        roll = await self.bot.loop.run_in_executor(None, self.roll_dices, dices)
+
+        if roll is None:
             raise commands.BadArgument()
+        elif isinstance(roll, str):
+            await ctx.send(roll)
+            return
+
+        format_string = roll[1]
+        roll = roll[0]
 
         # Defining some helper variables
         special_message = ""
@@ -641,7 +669,6 @@ class Misc(commands.Cog, name="Miscellaneous"):
             roll_information.append(score_string)
 
         # Put spaces between the operators in the xdice template
-        format_string = dice_pattern.format_string
         for i in ["+","-","/","*"]:
             format_string = format_string.replace(i, f" {i} ")
         
@@ -653,6 +680,10 @@ class Misc(commands.Cog, name="Miscellaneous"):
         if special_message:
             msg = f"{msg}\n{special_message}"
 
+        if len(msg) > 2000:
+            await ctx.send("Sorry, result too large")
+            return
+        
         await ctx.send(msg)
 
 def setup(bot):
