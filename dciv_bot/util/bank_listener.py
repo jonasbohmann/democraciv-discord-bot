@@ -32,3 +32,6 @@ class BankListener:
                 await user.send(content=msg, embed=embed)
             except discord.Forbidden:
                 continue
+        
+        return web.json_response({'ok': 'ok'})
+
