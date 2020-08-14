@@ -592,10 +592,12 @@ class Misc(commands.Cog, name="Miscellaneous"):
             dice_pattern.compile()
 
             # Ensure the number of dice the user asked to roll is reasonable
+            total_dice = 0
             for dice in dice_pattern.dices:
-                if dice.sides > 100000 or dice.amount > 200:
+                total_dice += dice.amount
+                if dice.sides > 100000 or total_dice > 200:
                     # If they're not rolling a reasonable amount of dice, abort the roll. Nice job Piper...
-                    failure_message = f"Can't roll `{dice.amount}d{dice.sides}`, too many dice"
+                    failure_message = f"Can't roll `{dices}`, too many dice"
                     return failure_message
 
             # Roll the dice
