@@ -1,6 +1,7 @@
 import asyncio
 import traceback
 import dciv_bot.util.utils as utils
+import dciv_bot.util.levenshtein as levenshtein
 import dciv_bot.util.exceptions as exceptions
 
 from dciv_bot.util import mk
@@ -136,6 +137,11 @@ class ErrorHandler(commands.Cog):
 
         # Anything in ignored will return
         if isinstance(error, commands.CommandNotFound):
+            if self.bot.commands:
+                async with ctx.typing():
+                    shortest = min(*self.bot.commands, key=lambda cmd: levenshtein.distance(cmd.name, ctx.invoked_with))
+                    await ctx.send(f":x: Could not find command {ctx.invoked_with}. Did you mean {shortest.name}?")
+            
             return
 
         elif isinstance(error, commands.MissingRequiredArgument):
