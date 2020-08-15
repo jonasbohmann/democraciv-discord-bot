@@ -137,11 +137,13 @@ class ErrorHandler(commands.Cog):
 
         # Anything in ignored will return
         if isinstance(error, commands.CommandNotFound):
+            message = f":x: Could not find command `{ctx.invoked_with}`."
             if self.bot.commands:
                 async with ctx.typing():
                     shortest = min(*self.bot.commands, key=lambda cmd: levenshtein.distance(cmd.name, ctx.invoked_with))
-                    await ctx.send(f":x: Could not find command {ctx.invoked_with}. Did you mean {shortest.name}?")
+                    message += f"Did you mean `{shortest.name}`?"
             
+            await ctx.send(message)
             return
 
         elif isinstance(error, commands.MissingRequiredArgument):
