@@ -140,8 +140,12 @@ class ErrorHandler(commands.Cog):
             message = f":x: Could not find command `{ctx.invoked_with}`."
             if self.bot.commands:
                 async with ctx.typing():
-                    shortest = min(*self.bot.commands, key=lambda cmd: levenshtein.distance(cmd.name, ctx.invoked_with))
-                    message += f"Did you mean `{shortest.name}`?"
+                    closest_alias = min(*self.bot.all_commands.keys(), key=lambda cmd: levenshtein.distance(cmd, ctx.invoked_with))
+                    closest_name = self.bot.all_commands.get(closest_alias).name
+                    if closest_alias == closest_name:
+                        message += f" Did you mean `{closest_alias}`?"
+                    else:
+                        message += f" Did you mean `{closest_alias}` (`{closest_name}`)?"
             
             await ctx.send(message)
             return
