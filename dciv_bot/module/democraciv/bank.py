@@ -1,4 +1,5 @@
 import sys
+import textwrap
 import uuid
 import decimal
 import aiohttp
@@ -24,7 +25,7 @@ def _(y) -> tuple:
     try:
         return CURRENCIES[y]
     except KeyError:
-        return 'Unknown Currency', 'UC'
+        return 'Unknown Currency', '?'
 
 
 class CurrencySelector(menus.Menu):
@@ -270,17 +271,38 @@ class Bank(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @bank.command(name='organization', aliases=['org', 'corp', 'company', 'corporation', 'marketplace'])
+    @bank.command(name='organization', aliases=['org', 'corp', 'company', 'corporation', 'marketplace', 'm'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def organization(self, ctx, organization: BankCorporation = None):
         """Details about a specific organization or corporation on the Marketplace"""
         if organization is None:
-            embed = self.bot.embeds.embed_builder(title=f"{self.BANK_NAME} - Marketplace",
-                                                  description="Check out all corporations, organizations from around "
-                                                              "the world and what they have to offer on "
+            response = await self.request(BankRoute("GET", 'featured_corporation'))
+
+            embed = self.bot.embeds.embed_builder(description="Check out all corporations and organizations from around"
+                                                              " the world and what they have to offer on "
                                                               "[**democracivbank.com/marketplace**]"
                                                               "(https://democracivbank.com/marketplace)")
             embed.url = "https://democracivbank.com/marketplace"
+            embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
+
+            if response.status != 200:
+                return await ctx.send(embed=embed)
+
+            json = await response.json()
+            for result in json['results']:
+
+                # this will break/look like shit if too many ads
+                value = f"[{result['corporation']['organization_type']} from the " \
+                        f"{result['corporation']['nation']}]" \
+                        f"(https://democracivbank.com/corporation/{result['corporation']['abbreviation']})" \
+                        f"\n\n{textwrap.shorten(result['ad_message'], width=800, placeholder='...')}"
+
+                embed.add_field(name=f"{result['corporation']['name']} ({result['corporation']['abbreviation']})",
+                                value=value,
+                                inline=False)
+
+            embed.description = f"{embed.description}\n\nThe following organizations are paid features on the " \
+                                f"Marketplace."
             return await ctx.send(embed=embed)
 
         embed = self.bot.embeds.embed_builder(title=f"{organization.name} ({organization.abbreviation})",
