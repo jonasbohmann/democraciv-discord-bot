@@ -8,7 +8,7 @@ import typing
 
 from discord.ext import commands
 from dciv_bot.util import converter, exceptions
-from dciv_bot.config import config
+from dciv_bot.config import config, token
 from discord.ext import menus
 from dciv_bot.util.flow import Flow
 from dciv_bot.util.paginator import AlternativePages
@@ -38,11 +38,11 @@ class CurrencySelector(menus.Menu):
         embed.description = "Since you did not specify an IBAN to send the money to, " \
                             "I cannot automatically determine the currency for this " \
                             "transaction. Once you've chosen a currency, I will send the money " \
-                            "from your default account for the chosen currency, to the default " \
-                            "account for the chosen currency of the recipient.\n\n" \
+                            "from your default account for the chosen currency, to the recipient's default " \
+                            "account for the chosen currency.\n\n" \
                             "This only works provided that both you and the " \
                             "recipient have previously selected a default account for the chosen currency on " \
-                            "https://democracivbank.com\n\n" \
+                            "[democracivbank.com](https://democracivbank.com)\n\n" \
                             "__**In which currency would you like to send the money?**__\n" \
                             f":one:  {_('LRA')[0]}\n" \
                             f":two:  {_('MAO')[0]}\n" \
@@ -109,7 +109,7 @@ class BankRoute:
         self.url = self.DEMOCRACIV_BANK_API_BASE + self.path
         self.user_agent = f'Democraciv Discord Bot {config.BOT_VERSION} - Python/{sys.version_info[0]}.' \
                           f'{sys.version_info[1]}.{sys.version_info[2]} aiohttp/{aiohttp.__version__}'
-        self.headers = {"Authorization": f"Token ac332c040a3ad8e5df7c852fa9460250fd0976a3",
+        self.headers = {"Authorization": f"Token {token.DEMOCRACIV_BANK_API_ADMIN_TOKEN}",
                         "Accept": "application/json",
                         "User-Agent": self.user_agent}
 
@@ -163,7 +163,7 @@ class Bank(commands.Cog):
                                                   data=kwargs.get('data', None),
                                                   params=kwargs.get('params', None))
         if response.status >= 500:
-            raise BankConnectionError(f":x: There was an unexpected error, please notify {self.bot.owner}.")
+            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!\n`Status >= 500`")
 
         return response
 
@@ -171,7 +171,7 @@ class Bank(commands.Cog):
         response = await self.request(BankRoute("GET", f"account/{iban}"))
 
         if response.status != 200:
-            raise BankConnectionError(":x: There was an error.")
+            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
 
         json = await response.json()
         return json['balance_currency']
@@ -346,7 +346,7 @@ class Bank(commands.Cog):
 
         response = await self.request(BankRoute("GET", f"accounts/{ctx.author.id}"))
         if response.status != 200:
-            raise BankConnectionError(":x: There was an error.")
+            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
 
         json = await response.json()
         desc = ["\n"]
@@ -432,7 +432,7 @@ class Bank(commands.Cog):
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
         await ctx.send(embed=embed)
 
-    @bank.command(name='applyottomanformula')
+    @bank.command(name='applyottomantax', aliases=['applyottomanformula'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def apply_ottoman_formula(self, ctx):
         """See the outcome of a dry-run of the tax on all bank accounts with the Ottoman currency and then apply that tax """
@@ -441,7 +441,7 @@ class Bank(commands.Cog):
         response = await self.request(BankRoute("GET", 'ottoman/apply'))
 
         if response.status != 200:
-            raise BankConnectionError(f":x: {self.bot.owner.mention}")
+            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
 
         dry_run_results = await response.json()
         desc = ["This is just a dry run, the changes have not been applied yet. Double check the results and once "
@@ -470,7 +470,7 @@ class Bank(commands.Cog):
         response = await self.request(BankRoute("POST", 'ottoman/apply'))
 
         if response.status != 200:
-            raise BankConnectionError(f":x: {self.bot.owner.mention}")
+            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
 
         await ctx.send(":white_check_mark: Tax was applied to all accounts with the Ottoman currency.")
 
@@ -482,7 +482,7 @@ class Bank(commands.Cog):
         response = await self.request(BankRoute("GET", 'ottoman/threshold'))
 
         if response.status != 200:
-            raise BankConnectionError(f":x: {self.bot.owner.mention}")
+            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
 
         json = await response.json()
         desc = []
@@ -516,7 +516,7 @@ class Bank(commands.Cog):
         response = await self.request(BankRoute("POST", 'ottoman/threshold'), data=payload)
 
         if response.status != 200:
-            raise BankConnectionError(f":x: {self.bot.owner.mention}")
+            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
 
         json = await response.json()
         p_or_c = "Personal" if json['individual_holder'] else "Corporate"
