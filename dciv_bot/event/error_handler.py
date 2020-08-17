@@ -137,7 +137,7 @@ class ErrorHandler(commands.Cog):
 
         # Anything in ignored will return
         if isinstance(error, commands.CommandNotFound):
-            if await self.bot.cogs["Tags"].send_tag(ctx.message):
+            if self.bot.cogs.get("Tags") and await self.bot.cogs["Tags"].send_tag(ctx.message):
                 return
 
             message = f":x: There is no command called `{ctx.invoked_with}`."
