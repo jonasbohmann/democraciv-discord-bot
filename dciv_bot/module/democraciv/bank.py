@@ -14,7 +14,7 @@ from dciv_bot.util.flow import Flow
 from dciv_bot.util.paginator import AlternativePages
 
 CURRENCIES = {
-    'LRA': ('Ottoman Lira', 'L'),
+    'LRA': ('Ottoman Lira', '£'),
     'MAO': ('Maori Pound', 'P'),
     'CAN': ('Canadian Loonie', 'Ⱡ'),
     'CIV': ('Civilization Coin', 'C')
