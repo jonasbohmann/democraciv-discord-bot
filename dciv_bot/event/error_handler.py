@@ -137,15 +137,15 @@ class ErrorHandler(commands.Cog):
 
         # Anything in ignored will return
         if isinstance(error, commands.CommandNotFound):
-            message = f":x: Could not find command `{ctx.invoked_with}`."
+            message = f":x: There is no command called `{ctx.invoked_with}`."
             if self.bot.commands:
                 async with ctx.typing():
                     closest_alias = min(*self.bot.all_commands.keys(), key=lambda cmd: levenshtein.distance(cmd, ctx.invoked_with))
                     closest_name = self.bot.all_commands.get(closest_alias).name
                     if closest_alias == closest_name:
-                        message += f" Did you mean `{closest_alias}`?"
+                        message += f" Did you mean `{ctx.prefix}{closest_alias}`?"
                     else:
-                        message += f" Did you mean `{closest_alias}` (`{closest_name}`)?"
+                        message += f" Did you mean `{ctx.prefix}{closest_alias}`, an alias of the `{ctx.prefix}{closest_name}` command?"
             
             await ctx.send(message)
             return
