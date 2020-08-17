@@ -2,15 +2,23 @@ import os
 import re
 import time
 import math
+import asyncio
+
+try:
+    import uvloop
+    uvloop.install()
+except (ModuleNotFoundError, ImportError):
+    pass
+
 import discord
 import aiohttp
-import asyncio
 import asyncpg
 import logging
 import datetime
 import traceback
 import discord.utils
 
+from dciv_bot.util.bank_listener import BankListener
 from dciv_bot.util.cache import Cache
 from dciv_bot.util import mk, exceptions
 from dciv_bot.config import token, config
@@ -39,6 +47,7 @@ initial_extensions = ['dciv_bot.event.logging',
                       'dciv_bot.module.tags',
                       'dciv_bot.module.starboard',
                       'dciv_bot.module.democraciv.moderation',
+                      'dciv_bot.module.democraciv.bank',
                       'dciv_bot.module.democraciv.parties',
                       'dciv_bot.module.democraciv.legislature',
                       'dciv_bot.module.democraciv.laws',
@@ -74,6 +83,7 @@ class DemocracivBot(commands.Bot):
         self.checks = CheckUtils(self)
         self.laws = LawUtils(self)
         self.cache = Cache(self)
+        self.bank_listener = BankListener(self)
 
         # Attributes will be "initialized" in on_ready as they need a connection to Discord
         self.owner = None
