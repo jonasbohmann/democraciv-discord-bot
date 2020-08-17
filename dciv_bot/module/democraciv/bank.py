@@ -101,7 +101,7 @@ class BankTransactionError(exceptions.DemocracivBotException):
 
 
 class BankRoute:
-    DEMOCRACIV_BANK_API_BASE = 'http://localhost:8000/api/v1/'
+    DEMOCRACIV_BANK_API_BASE = 'https://democracivbank.com/api/v1/'
 
     def __init__(self, method, path):
         self.method = method
