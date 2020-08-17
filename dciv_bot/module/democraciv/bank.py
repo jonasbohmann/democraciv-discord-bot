@@ -7,7 +7,7 @@ import discord
 import typing
 
 from discord.ext import commands
-from dciv_bot.util import converter, exceptions
+from dciv_bot.util import converter, exceptions, utils, mk
 from dciv_bot.config import config, token
 from discord.ext import menus
 from dciv_bot.util.flow import Flow
@@ -98,6 +98,7 @@ class BankInvalidIBANFormat(exceptions.DemocracivBotException):
 
 class BankTransactionError(exceptions.DemocracivBotException):
     pass
+
 
 
 class BankRoute:
@@ -434,6 +435,7 @@ class Bank(commands.Cog):
 
     @bank.command(name='applyottomantax', aliases=['applyottomanformula'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.has_democraciv_role(mk.DemocracivRole.OTTOMAN_BANK_ROLE)
     async def apply_ottoman_formula(self, ctx):
         """See the outcome of a dry-run of the tax on all bank accounts with the Ottoman currency and then apply that tax """
 
@@ -476,6 +478,7 @@ class Bank(commands.Cog):
 
     @bank.command(name='listottomanvariable', aliases=['listottomanvariables'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.has_democraciv_role(mk.DemocracivRole.OTTOMAN_BANK_ROLE)
     async def list_ottoman_ibal(self, ctx):
         """List all bank accounts with the Ottoman currency and check their Equilibrium variable"""
 
@@ -501,6 +504,7 @@ class Bank(commands.Cog):
     @bank.command(name='changeottomanvariable',
                   aliases=['changeottomanvariables', 'editottomanvariables', 'editottomanvariable'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.has_democraciv_role(mk.DemocracivRole.OTTOMAN_BANK_ROLE)
     async def edit_ottoman_ibal(self, ctx, iban: uuid.UUID, new_ibal: decimal.Decimal):
         """Change the Equilibrium variable of a bank account with the Ottoman currency
 

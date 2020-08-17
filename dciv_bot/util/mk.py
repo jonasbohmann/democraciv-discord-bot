@@ -161,6 +161,8 @@ class DemocracivRole(PrettyEnum):
 
     GOVERNMENT_ROLE = PrettyEnumValue(641077467204943916, 'Arabian Government')
 
+    OTTOMAN_BANK_ROLE = PrettyEnumValue(744983252854636675, "Ottoman Tax Officer")
+
 
 class DemocracivChannel(enum.Enum):
     # Moderation
