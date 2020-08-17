@@ -295,7 +295,7 @@ class Bank(commands.Cog):
                 # this will break/look like shit if too many ads
                 value = f"[{result['corporation']['organization_type']} from the " \
                         f"{result['corporation']['nation']}]" \
-                        f"(https://democracivbank.com/corporation/{result['corporation']['abbreviation']})" \
+                        f"(https://democracivbank.com/organization/{result['corporation']['abbreviation']})" \
                         f"\n\n{textwrap.shorten(result['ad_message'], width=800, placeholder='...')}"
 
                 embed.add_field(name=f"{result['corporation']['name']} ({result['corporation']['abbreviation']})",
@@ -311,7 +311,7 @@ class Bank(commands.Cog):
                                                           f"{organization.nation}")
 
         embed.add_field(name="Description", value=organization.description, inline=False)
-        embed.url = f"https://democracivbank.com/corporation/{organization.abbreviation}"
+        embed.url = f"https://democracivbank.com/organization/{organization.abbreviation}"
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
         embed.set_footer(text=f"Send money to this organization with: -bank send {organization.abbreviation} <amount>")
 
