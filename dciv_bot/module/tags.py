@@ -587,15 +587,6 @@ class Tags(commands.Cog):
 
     async def send_tag(self, message):
         """If the tag exists, the contents are sent. If the tag is exists returns True, otherwise returns False."""
-        if not message.content.startswith(config.BOT_PREFIX):
-            return False
-
-        if message.author.bot:
-            return False
-
-        if (await self.bot.get_context(message)).valid:
-            return False
-
         tag_name = message.content[len(config.BOT_PREFIX):]
 
         if message.guild is None:
