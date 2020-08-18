@@ -100,7 +100,6 @@ class BankTransactionError(exceptions.DemocracivBotException):
     pass
 
 
-
 class BankRoute:
     DEMOCRACIV_BANK_API_BASE = 'https://democracivbank.com/api/v1/'
 
@@ -302,7 +301,7 @@ class Bank(commands.Cog):
                                 value=value,
                                 inline=False)
 
-            embed.description = f"{embed.description}\n\nThe following organizations are paid features on the " \
+            embed.description = f"{embed.description}\n\nThe following organizations are paid ads on the " \
                                 f"Marketplace."
             return await ctx.send(embed=embed)
 
@@ -385,7 +384,7 @@ class Bank(commands.Cog):
     @bank.command(name='send', aliases=['s', 'transfer', 't', 'give'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def send(self, ctx, to_member_or_iban_or_organization: typing.Union[
-        discord.Member, converter.CaseInsensitiveMember, uuid.UUID, str]
+        discord.Member, converter.CaseInsensitiveMember, discord.User, uuid.UUID, str]
                    , amount: decimal.Decimal, *, purpose: str = None):
         """Send money to a specific bank account, organization, or person on this server
 
@@ -422,7 +421,7 @@ class Bank(commands.Cog):
             currency = await self.get_currency_from_iban(to_iban)
             from_iban = await self.resolve_iban(ctx.author.id, currency, is_sender=True)
 
-        purpose = "Sent via the Democraciv Discord Bot" if not purpose else f"{purpose}\n\nSent via the Democraciv Discord Bot"
+        purpose = "Sent via the Democraciv Discord Bot" if not purpose else purpose
 
         transaction = await self.send_money(ctx.author.id, from_iban, to_iban, amount, purpose)
 
