@@ -296,10 +296,11 @@ class DemocracivBot(commands.Bot):
         now = time.time()
         pretty_time = datetime.datetime.utcfromtimestamp(now).strftime("%A, %B %d %Y %H:%M:%S")
         file_name = f'democraciv-bot-db-backup-{now}'
+        bank_backup_too = False
 
         # Use pg_dump to dumb the database as raw SQL
         # Login with credentials provided in token.py
-        command = f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump {token.POSTGRESQL_DATABASE} > ' \
+        command = f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump -Fc {token.POSTGRESQL_DATABASE} > ' \
                   f'dciv_bot/db/backup/{file_name} -U {token.POSTGRESQL_USER} ' \
                   f'-h {token.POSTGRESQL_HOST} -w'
 
@@ -310,18 +311,35 @@ class DemocracivBot(commands.Bot):
         # Run the command and save the backup files in db/backup/
         await asyncio.create_subprocess_shell(command)
 
-        # Make sure that pg_dump is finished before loading the backup
+        backup_channel = self.get_channel(config.DATABASE_DAILY_BACKUP_DISCORD_CHANNEL)
+
+        if config.DATABASE_DAILY_BACKUP_BANK_OF_DEMOCRACIV_BACKUP:
+            if not os.path.isdir('dciv_bot/db/backup/bank'):
+                os.mkdir('dciv_bot/db/backup/bank')
+
+            fn = f'bank-of-democraciv-backup-{now}'
+            bn = config.DATABASE_DAILY_BACKUP_BANK_OF_DEMOCRACIV_DATABASE
+
+            command = f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump -Fc {bn} > dciv_bot/db/backup/bank/{fn} ' \
+                      f'-U {token.POSTGRESQL_USER} -h {token.POSTGRESQL_HOST} -w'
+
+            await asyncio.create_subprocess_shell(command)
+            bank_backup_too = True
+
         await asyncio.sleep(20)
 
-        # Upload the file to the #backup channel in the Moderation category on the Democraciv server
         file = discord.File(f'dciv_bot/db/backup/{file_name}')
-        backup_channel = self.get_channel(config.DATABASE_DAILY_BACKUP_DISCORD_CHANNEL)
 
         if backup_channel is None:
             print(f"[DATABASE] Couldn't find Backup Discord channel for database backup 'db/backup/{file_name}'.")
             return
 
         await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)
+
+        if bank_backup_too:
+            file = discord.File(f'dciv_bot/db/backup/bank/{fn}')
+            await backup_channel.send(f"---- democracivbank.com Database Backup from {pretty_time} (UTC) ----",
+                                      file=file)
 
 
 if __name__ == '__main__':

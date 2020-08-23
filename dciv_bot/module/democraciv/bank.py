@@ -126,7 +126,7 @@ class BankCorporation(commands.Converter):
 
     @classmethod
     async def convert(cls, ctx, argument):
-        response = await ctx.bot.get_cog("Bank").request(BankRoute("GET", f"corporation/{argument}"))
+        response = await ctx.bot.get_cog("Bank").request(BankRoute("GET", f"corporation/{argument}/"))
 
         if response.status == 404:
             raise commands.BadArgument(f":x: {argument} is either not the abbreviation of an existing "
@@ -150,7 +150,7 @@ class Bank(commands.Cog):
         self.BANK_ICON_URL = "https://cdn.discordapp.com/attachments/663076007426785300/717434510861533344/ezgif-5-8a4edb1f0306.png"
 
     async def is_connected_with_bank_user(self, ctx):
-        response = await self.request(BankRoute("HEAD", f"user/{ctx.author.id}"))
+        response = await self.request(BankRoute("HEAD", f"discord_user/{ctx.author.id}/"))
 
         if response.status != 200:
             raise BankDiscordUserNotConnected(f":x: {ctx.author.mention}, your Discord account is not connected to any "
@@ -168,7 +168,7 @@ class Bank(commands.Cog):
         return response
 
     async def get_currency_from_iban(self, iban: str) -> str:
-        response = await self.request(BankRoute("GET", f"account/{iban}"))
+        response = await self.request(BankRoute("GET", f"account/{iban}/"))
 
         if response.status != 200:
             raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
@@ -184,7 +184,7 @@ class Bank(commands.Cog):
         else:
             get_params['corporation'] = member_id_or_corp
 
-        response = await self.request(BankRoute("GET", "default_account"), params=get_params)
+        response = await self.request(BankRoute("GET", "default_account/"), params=get_params)
 
         if response.status == 200:
             json = await response.json()
@@ -276,7 +276,7 @@ class Bank(commands.Cog):
     async def organization(self, ctx, organization: BankCorporation = None):
         """Details about a specific organization or corporation on the Marketplace"""
         if organization is None:
-            response = await self.request(BankRoute("GET", 'featured_corporation'))
+            response = await self.request(BankRoute("GET", 'featured_corporation/'))
 
             embed = self.bot.embeds.embed_builder(description="Check out all corporations and organizations from around"
                                                               " the world and what they have to offer on "
@@ -344,7 +344,7 @@ class Bank(commands.Cog):
 
             await privacy_q.delete()
 
-        response = await self.request(BankRoute("GET", f"accounts/{ctx.author.id}"))
+        response = await self.request(BankRoute("GET", f"accounts/{ctx.author.id}/"))
         if response.status != 200:
             raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
 
@@ -439,7 +439,7 @@ class Bank(commands.Cog):
         """See the outcome of a dry-run of the tax on all bank accounts with the Ottoman currency and then apply that tax """
 
         # Do the dry run first
-        response = await self.request(BankRoute("GET", 'ottoman/apply'))
+        response = await self.request(BankRoute("GET", 'ottoman/apply/'))
 
         if response.status != 200:
             raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
@@ -468,7 +468,7 @@ class Bank(commands.Cog):
         if not reaction:
             return await ctx.send("Aborted. Taxes were not applied.")
 
-        response = await self.request(BankRoute("POST", 'ottoman/apply'))
+        response = await self.request(BankRoute("POST", 'ottoman/apply/'))
 
         if response.status != 200:
             raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
@@ -481,7 +481,7 @@ class Bank(commands.Cog):
     async def list_ottoman_ibal(self, ctx):
         """List all bank accounts with the Ottoman currency and check their Equilibrium variable"""
 
-        response = await self.request(BankRoute("GET", 'ottoman/threshold'))
+        response = await self.request(BankRoute("GET", 'ottoman/threshold/'))
 
         if response.status != 200:
             raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
@@ -516,7 +516,7 @@ class Bank(commands.Cog):
                                         "format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`")
 
         payload = {'iban': str(iban), 'new': new_ibal}
-        response = await self.request(BankRoute("POST", 'ottoman/threshold'), data=payload)
+        response = await self.request(BankRoute("POST", 'ottoman/threshold/'), data=payload)
 
         if response.status != 200:
             raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
