@@ -585,17 +585,8 @@ class Tags(commands.Cog):
         await self.bot.db.execute("UPDATE guild_tags SET uses = uses + 1 WHERE id = $1", tag_id)
         return tag_details
 
-    @commands.Cog.listener(name="on_message")
-    async def guild_tags_listener(self, message):
-        if not message.content.startswith(config.BOT_PREFIX):
-            return
-
-        if message.author.bot:
-            return
-
-        if (await self.bot.get_context(message)).valid:
-            return
-
+    async def send_tag(self, message):
+        """If the tag exists, the contents are sent. If the tag is exists returns True, otherwise returns False."""
         tag_name = message.content[len(config.BOT_PREFIX):]
 
         if message.guild is None:
@@ -604,7 +595,7 @@ class Tags(commands.Cog):
                 tag_name.lower())
 
             if tag_id is None:
-                return
+                return False
 
             tag_details = await self.bot.db.fetchrow("SELECT * FROM guild_tags WHERE id = $1", tag_id)
 
@@ -612,7 +603,7 @@ class Tags(commands.Cog):
             tag_details = await self.resolve_tag_name(tag_name, message.guild)
 
         if tag_details is None:
-            return
+            return False
 
         tag_content_type = self.get_tag_content_type(tag_details['content'])
 
@@ -622,9 +613,11 @@ class Tags(commands.Cog):
                 embed.set_image(url=tag_details['content'])
 
                 try:
-                    return await message.channel.send(embed=embed)
+                    await message.channel.send(embed=embed)
+                    return True
                 except discord.HTTPException:
-                    return await message.channel.send(discord.utils.escape_mentions(tag_details['content']))
+                    await message.channel.send(discord.utils.escape_mentions(tag_details['content']))
+                    return True
 
             embed = self.bot.embeds.embed_builder(title=tag_details['title'], description=tag_details['content'],
                                                   has_footer=False)
@@ -632,6 +625,8 @@ class Tags(commands.Cog):
 
         else:
             await message.channel.send(discord.utils.escape_mentions(tag_details['content']))
+        
+        return True
 
 
 def setup(bot):

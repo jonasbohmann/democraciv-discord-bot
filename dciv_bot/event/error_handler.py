@@ -1,6 +1,7 @@
 import asyncio
 import traceback
 import dciv_bot.util.utils as utils
+import dciv_bot.util.levenshtein as levenshtein
 import dciv_bot.util.exceptions as exceptions
 
 from dciv_bot.util import mk
@@ -136,6 +137,20 @@ class ErrorHandler(commands.Cog):
 
         # Anything in ignored will return
         if isinstance(error, commands.CommandNotFound):
+            if self.bot.cogs.get("Tags") and await self.bot.cogs["Tags"].send_tag(ctx.message):
+                return
+
+            message = f":x: There is no command called `{ctx.invoked_with}`."
+            if self.bot.commands:
+                async with ctx.typing():
+                    closest_alias = min(*self.bot.all_commands.keys(), key=lambda cmd: levenshtein.distance(cmd, ctx.invoked_with))
+                    closest_name = self.bot.all_commands.get(closest_alias).name
+                    if closest_alias == closest_name:
+                        message += f" Did you mean `{ctx.prefix}{closest_alias}`?"
+                    else:
+                        message += f" Did you mean `{ctx.prefix}{closest_alias}`, an alias of the `{ctx.prefix}{closest_name}` command?"
+            
+            await ctx.send(message)
             return
 
         elif isinstance(error, commands.MissingRequiredArgument):
