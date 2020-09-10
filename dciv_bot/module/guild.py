@@ -7,6 +7,8 @@ from dciv_bot.config import config
 from dciv_bot.util.flow import Flow
 from discord.ext import commands
 
+from dciv_bot.util.paginator import AlternativePages
+
 
 class Guild(commands.Cog, name="Server"):
     """Configure various features of this bot for this server."""
@@ -221,12 +223,12 @@ class Guild(commands.Cog, name="Server"):
             return await ctx.send(":x: This server currently has no logging channel."
                                   " Please set one with `-server logs`.")
 
-        help_description = "Add or remove a channel to the excluded channels with:\n`-server exclude [channel_name]`\n"
+        help_description = "Add or remove a channel to the excluded channels with:\n`-server exclude [channel_name]`\n\n"
 
         excluded_channels = await self.bot.db.fetchval("SELECT logging_excluded FROM guilds WHERE id = $1",
                                                        ctx.guild.id)
         if not channel:
-            current_excluded_channels_by_name = []
+            current_excluded_channels_by_name = [help_description]
 
             if excluded_channels is None:
                 return await ctx.send("There are no from logging excluded channels on this server.")
@@ -236,15 +238,10 @@ class Guild(commands.Cog, name="Server"):
                 if channel is not None:
                     current_excluded_channels_by_name.append(channel.mention)
 
-            if not current_excluded_channels_by_name:
-                current_excluded_channels_by_name = "There are no from logging excluded channels on this server."
-            else:
-                current_excluded_channels_by_name = '\n'.join(current_excluded_channels_by_name)
-
-            embed = self.bot.embeds.embed_builder(title=f"Logging-Excluded Channels on {ctx.guild.name}",
-                                                  description=help_description, has_footer=False)
-            embed.add_field(name="Excluded Channels", value=current_excluded_channels_by_name)
-            return await ctx.send(embed=embed)
+            pages = AlternativePages(ctx=ctx, entries=current_excluded_channels_by_name, show_entry_count=False,
+                                     title=f"Logging-Excluded Channels on {ctx.guild.name}", show_index=False,
+                                     per_page=20, show_amount_of_pages=True)
+            return await pages.paginate()
 
         else:
             try:
