@@ -290,7 +290,6 @@ class Bank(commands.Cog):
 
             json = await response.json()
             for result in json['results']:
-
                 # this will break/look like shit if too many ads
                 value = f"[{result['corporation']['organization_type']} from the " \
                         f"{result['corporation']['nation']}]" \
@@ -474,6 +473,20 @@ class Bank(commands.Cog):
             raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
 
         await ctx.send(":white_check_mark: Tax was applied to all accounts with the Ottoman currency.")
+
+    @bank.command(name='liracirculation')
+    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @utils.has_democraciv_role(mk.DemocracivRole.OTTOMAN_BANK_ROLE)
+    async def ottoman_circulation(self, ctx):
+        """See how much Lira is currently in circulation"""
+
+        response = await self.request(BankRoute("GET", 'circulation/LRA/'))
+        lira = await response.json()
+
+        embed = self.bot.embeds.embed_builder(title=f"{lira['result']}{_('LRA')[1]}",
+                                              description="This does not include the Ottoman Government's Lira "
+                                                          "Reserve.")
+        await ctx.send(embed=embed)
 
     @bank.command(name='listottomanvariable', aliases=['listottomanvariables'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
