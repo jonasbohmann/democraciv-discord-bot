@@ -146,7 +146,7 @@ class Bank(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.BANK_NAME = "Bank of Arabia"
+        self.BANK_NAME = "Bank of Democraciv"
         self.BANK_ICON_URL = "https://cdn.discordapp.com/attachments/663076007426785300/717434510861533344/ezgif-5-8a4edb1f0306.png"
 
     async def is_connected_with_bank_user(self, ctx):
@@ -246,7 +246,7 @@ class Bank(commands.Cog):
                     invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def bank(self, ctx):
-        """The Bank of Arabia"""
+        """The Bank of Democraciv"""
 
         response = await self.request(BankRoute("GET", "statistics/"))
 
