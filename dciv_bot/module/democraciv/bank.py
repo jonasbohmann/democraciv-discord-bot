@@ -26,6 +26,24 @@ def _(y) -> tuple:
         return CURRENCIES[y]
     except KeyError:
         return 'Unknown Currency', '?'
+    
+ 
+class CurrencyConverter(commands.Converter):
+
+    async def convert(self, ctx, argument):
+        arg = argument.lower()
+
+        aliases = {'LRA': ('lira', 'ottoman', 'ottoman lira', '£', 'liras'),
+                   'MAO': ('maori', 'maoris', 'pound', 'pounds', 'maori pound', 'maori pounds', 'p'),
+                   'CAN': (
+                   'loonie', 'loony', 'looni', 'canada', 'Canadian loonie', 'Ⱡ', 'l', 'canadian loonies', 'loonies'),
+                   'CIV': ('cc', 'c', 'civilization coin', 'civilization coins')}
+
+        for key, value in aliases.items():
+            if arg in value:
+                return key
+
+        raise commands.BadArgument(f":x: {argument} is not a recognized currency.")
 
 
 class CurrencySelector(menus.Menu):
@@ -474,18 +492,18 @@ class Bank(commands.Cog):
 
         await ctx.send(":white_check_mark: Tax was applied to all accounts with the Ottoman currency.")
 
-    @bank.command(name='liracirculation')
+    @bank.command(name='circulation', aliases=['total'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_democraciv_role(mk.DemocracivRole.OTTOMAN_BANK_ROLE)
-    async def ottoman_circulation(self, ctx):
-        """See how much Lira is currently in circulation"""
+    async def circulation(self, ctx, *, currency: CurrencyConverter):
+        """See how much of a currency is currently in circulation"""
 
-        response = await self.request(BankRoute("GET", 'circulation/LRA/'))
-        lira = await response.json()
+        response = await self.request(BankRoute("GET", f'circulation/{currency}/'))
+        total = await response.json()
 
-        embed = self.bot.embeds.embed_builder(title=f"{lira['result']}{_('LRA')[1]}",
-                                              description="This does not include the Ottoman Government's Lira "
-                                                          "Reserve.")
+        embed = self.bot.embeds.embed_builder(title=f"{total['result']}{_(currency)[1]}",
+                                              description=f"This does not include any currency reserves that "
+                                                          f"were provided by the {self.BANK_NAME} when this currency "
+                                                          f"was originally created.")
         await ctx.send(embed=embed)
 
     @bank.command(name='listottomanvariable', aliases=['listottomanvariables'])
