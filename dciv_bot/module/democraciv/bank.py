@@ -17,7 +17,8 @@ CURRENCIES = {
     'LRA': ('Ottoman Lira', '£'),
     'MAO': ('Maori Pound', 'P'),
     'CAN': ('Canadian Loonie', 'Ⱡ'),
-    'CIV': ('Civilization Coin', 'C')
+    'CIV': ('Civilization Coin', 'C'),
+    'ROM': ('Ariera', 'Â')
 }
 
 
@@ -46,8 +47,9 @@ class CurrencySelector(menus.Menu):
                             "__**In which currency would you like to send the money?**__\n" \
                             f":one:  {_('LRA')[0]}\n" \
                             f":two:  {_('MAO')[0]}\n" \
-                            f":three:  {_('CAN')[0]}\n" \
-                            f":four:  {_('CIV')[0]}"
+                            f":three:  {_('ROM')[0]}\n" \
+                            f":four:  {_('CAN')[0]}\n" \
+                            f":five: {_('CIV')[0]}"
 
         return await channel.send(embed=embed)
 
@@ -63,11 +65,16 @@ class CurrencySelector(menus.Menu):
 
     @menus.button('3\N{variation selector-16}\N{combining enclosing keycap}')
     async def on_third_choice(self, payload):
-        self.result = "CAN"
+        self.result = "ROM"
         self.stop()
 
     @menus.button('4\N{variation selector-16}\N{combining enclosing keycap}')
     async def on_fourth_choice(self, payload):
+        self.result = "CAN"
+        self.stop()
+
+    @menus.button('5\N{variation selector-16}\N{combining enclosing keycap}')
+    async def on_fifth_choice(self, payload):
         self.result = "CIV"
         self.stop()
 
