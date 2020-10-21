@@ -27,24 +27,6 @@ def _(y) -> tuple:
     except KeyError:
         return 'Unknown Currency', '?'
     
- 
-class CurrencyConverter(commands.Converter):
-
-    async def convert(self, ctx, argument):
-        arg = argument.lower()
-
-        aliases = {'LRA': ('lira', 'ottoman', 'ottoman lira', '£', 'liras'),
-                   'MAO': ('maori', 'maoris', 'pound', 'pounds', 'maori pound', 'maori pounds', 'p'),
-                   'CAN': (
-                   'loonie', 'loony', 'looni', 'canada', 'Canadian loonie', 'Ⱡ', 'l', 'canadian loonies', 'loonies'),
-                   'CIV': ('cc', 'c', 'civilization coin', 'civilization coins')}
-
-        for key, value in aliases.items():
-            if arg in value:
-                return key
-
-        raise commands.BadArgument(f":x: {argument} is not a recognized currency.")
-
 
 class CurrencySelector(menus.Menu):
     def __init__(self):
@@ -494,16 +476,19 @@ class Bank(commands.Cog):
 
     @bank.command(name='circulation', aliases=['total'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def circulation(self, ctx, *, currency: CurrencyConverter):
-        """See how much of a currency is currently in circulation"""
+    async def circulation(self, ctx):
+        """See how much of every currency is currently in circulation"""
 
-        response = await self.request(BankRoute("GET", f'circulation/{currency}/'))
-        total = await response.json()
-
-        embed = self.bot.embeds.embed_builder(title=f"{total['result']}{_(currency)[1]}",
+        embed = self.bot.embeds.embed_builder(title="Currency Circulation",
                                               description=f"This does not include any currency reserves that "
                                                           f"were provided by the {self.BANK_NAME} when this currency "
                                                           f"was originally created.")
+
+        for currency in CURRENCIES:
+            response = await self.request(BankRoute("GET", f'circulation/{currency}/'))
+            total = await response.json()
+            embed.add_field(name=_(currency)[0], value=f"{total['result']}{_(currency)[1]}", inline=False)
+
         await ctx.send(embed=embed)
 
     @bank.command(name='listottomanvariable', aliases=['listottomanvariables'])
