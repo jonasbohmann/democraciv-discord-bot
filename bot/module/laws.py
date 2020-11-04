@@ -4,7 +4,7 @@ import datetime
 
 from bot import DemocracivBot
 from bot.config import config, mk
-from bot.utils import utils
+from bot.utils import text
 from discord.ext import commands
 from discord.embeds import EmptyEmbed
 from discord.ext.commands import Greedy
@@ -277,7 +277,7 @@ class Laws(commands.Cog, name='Law'):
 
     @law.command(name='repeal', aliases=['r, remove', 'delete'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def removelaw(self, ctx, law_ids: Greedy[Law]):
         """Repeal one or multiple laws
 
@@ -314,7 +314,7 @@ class Laws(commands.Cog, name='Law'):
 
     @law.command(name='updatelink', aliases=['ul', 'amend'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def updatelink(self, ctx, law_id: Law, new_link: str):
         """Update the link to a law
 

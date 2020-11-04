@@ -1,6 +1,6 @@
 import discord
 import datetime
-import bot.utils.utils as utils
+import bot.utils.text as utils
 
 from bot.config import config
 from discord.ext import commands

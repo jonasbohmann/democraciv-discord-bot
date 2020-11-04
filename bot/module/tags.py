@@ -3,7 +3,7 @@ import enum
 import typing
 import discord
 
-import bot.utils.utils as utils
+import bot.utils.text as utils
 
 from bot.config import config, mk
 from discord.ext import commands

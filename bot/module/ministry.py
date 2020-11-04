@@ -6,7 +6,7 @@ from bot import DemocracivBot
 from discord.ext import commands
 from bot.utils.converter import Bill, BillStatus
 from bot.config import config, mk
-from bot.utils import exceptions, utils
+from bot.utils import exceptions, text
 from discord.ext.commands import Greedy
 from bot.utils.law_helper import AnnouncementQueue
 
@@ -173,7 +173,7 @@ class Ministry(commands.Cog):
 
     @ministry.command(name='veto', aliases=['v'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
+    @text.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
     async def veto(self, ctx, bill_ids: Greedy[Bill]):
         """Veto one or multiple bills
 
@@ -228,7 +228,7 @@ class Ministry(commands.Cog):
 
     @ministry.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
+    @text.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER_ROLE, mk.DemocracivRole.LT_PRIME_MINISTER_ROLE)
     async def pass_bill(self, ctx, bill_ids: Greedy[Bill]):
         """Pass one or multiple bills into law
 

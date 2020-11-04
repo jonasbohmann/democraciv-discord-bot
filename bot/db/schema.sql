@@ -2,26 +2,28 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TABLE IF NOT EXISTS guilds(
     id bigint UNIQUE PRIMARY KEY,
-    welcome bool DEFAULT FALSE,
+    welcome_enabled bool DEFAULT FALSE,
     welcome_message text,
     welcome_channel bigint,
-    logging bool DEFAULT FALSE,
+    logging_enabled bool DEFAULT FALSE,
     logging_channel bigint,
-    logging_excluded bigint[] DEFAULT '{}',
-    defaultrole bool DEFAULT FALSE,
-    defaultrole_role bigint,
+    default_role_enabled bool DEFAULT FALSE,
+    default_role_role bigint,
     tag_creation_allowed bool DEFAULT FALSE
 );
+
+CREATE TABLE IF NOT EXISTS guild_private_channels(
+    guild_id bigint references guilds(id),
+    channel_id bigint,
+    UNIQUE (guild_id, channel_id)
+);
+
 
 CREATE TABLE IF NOT EXISTS roles(
     guild_id bigint references guilds(id),
     role_id bigint,
     join_message text,
     UNIQUE (guild_id, role_id)
-);
-
-CREATE TABLE IF NOT EXISTS reddit_posts(
-    id text UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS youtube_uploads(
@@ -32,20 +34,39 @@ CREATE TABLE IF NOT EXISTS youtube_streams(
     id text UNIQUE
 );
 
-CREATE TABLE IF NOT EXISTS twitch_streams(
-    id text UNIQUE
-);
+DO $$ BEGIN
+    CREATE TYPE party_join_mode AS ENUM ('Public', 'Request', 'Private');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 
 CREATE TABLE IF NOT EXISTS parties(
     id bigint UNIQUE PRIMARY KEY,
     discord_invite text,
-    is_private bool DEFAULT FALSE,
-    leader bigint
+    join_mode party_join_mode DEFAULT 'Public'::party_join_mode
+);
+
+CREATE TABLE IF NOT EXISTS party_leader(
+    party_id bigint references parties(id),
+    leader_id bigint,
+    UNIQUE (party_id, leader_id)
+);
+
+CREATE TABLE IF NOT EXISTS party_join_request(
+    id serial unique,
+    party_id bigint references parties(id) ON DELETE CASCADE,
+    requesting_member bigint
+);
+
+CREATE TABLE IF NOT EXISTS party_join_request_message(
+    request_id serial references party_join_request(id) ON DELETE CASCADE,
+    message_id bigint
 );
 
 CREATE TABLE IF NOT EXISTS party_alias(
-    alias text UNIQUE,
-    party_id bigint references parties(id)
+    party_id bigint references parties(id) ON DELETE CASCADE,
+    alias text UNIQUE
 );
 
 DO $$ BEGIN
@@ -141,7 +162,8 @@ CREATE TABLE IF NOT EXISTS dm_settings(
     leg_session_open bool DEFAULT TRUE,
     leg_session_update bool DEFAULT TRUE,
     leg_session_submit bool DEFAULT TRUE,
-    leg_session_withdraw bool DEFAULT TRUE
+    leg_session_withdraw bool DEFAULT TRUE,
+    party_join_leave bool DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS starboard_entries(

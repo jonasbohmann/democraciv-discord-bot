@@ -7,7 +7,7 @@ import discord
 import typing
 
 from discord.ext import commands
-from bot.utils import converter, exceptions, utils
+from bot.utils import converter, exceptions, text
 from bot.config import config, token, mk
 from discord.ext import menus
 
@@ -326,7 +326,7 @@ class Bank(commands.Cog):
         await self.is_connected_with_bank_user(ctx)
 
         if ctx.guild:
-            embed = utils.SafeEmbed(title=":information_source:  Privacy Prompt")
+            embed = text.SafeEmbed(title=":information_source:  Privacy Prompt")
             embed.description = "Are you sure that you want to proceed?\n\n" \
                                 "Everyone in this channel would be able to see information about all bank accounts " \
                                 "you have access to, including their IBAN and their balance.\n\n*Using this command " \
@@ -429,7 +429,7 @@ class Bank(commands.Cog):
 
     @bank.command(name='applyottomantax', aliases=['applyottomanformula'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_democraciv_role(mk.DemocracivRole.OTTOMAN_BANK_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.OTTOMAN_BANK_ROLE)
     async def apply_ottoman_formula(self, ctx):
         """See the outcome of a dry-run of the tax on all bank accounts with the Ottoman currency and then apply that tax """
 
@@ -472,7 +472,7 @@ class Bank(commands.Cog):
 
     @bank.command(name='liracirculation')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_democraciv_role(mk.DemocracivRole.OTTOMAN_BANK_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.OTTOMAN_BANK_ROLE)
     async def ottoman_circulation(self, ctx):
         """See how much Lira is currently in circulation"""
 
@@ -486,7 +486,7 @@ class Bank(commands.Cog):
 
     @bank.command(name='listottomanvariable', aliases=['listottomanvariables'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_democraciv_role(mk.DemocracivRole.OTTOMAN_BANK_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.OTTOMAN_BANK_ROLE)
     async def list_ottoman_ibal(self, ctx):
         """List all bank accounts with the Ottoman currency and check their Equilibrium variable"""
 
@@ -512,7 +512,7 @@ class Bank(commands.Cog):
     @bank.command(name='changeottomanvariable',
                   aliases=['changeottomanvariables', 'editottomanvariables', 'editottomanvariable'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_democraciv_role(mk.DemocracivRole.OTTOMAN_BANK_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.OTTOMAN_BANK_ROLE)
     async def edit_ottoman_ibal(self, ctx, iban: uuid.UUID, new_ibal: decimal.Decimal):
         """Change the Equilibrium variable of a bank account with the Ottoman currency
 

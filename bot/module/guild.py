@@ -1,6 +1,6 @@
 import discord
 
-import bot.utils.utils as utils
+import bot.utils.text as utils
 import bot.utils.exceptions as exceptions
 from bot.config import config
 from discord.ext import commands

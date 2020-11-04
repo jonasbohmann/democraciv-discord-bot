@@ -191,17 +191,20 @@ class CaseInsensitiveRole(commands.Converter):
 
 class CaseInsensitiveMember(commands.MemberConverter):
     async def convert(self, ctx, argument):
-        arg = argument.lower()
+        try:
+            return await super().convert(ctx, argument)
+        except BadArgument:
+            arg = argument.lower()
 
-        def predicate(m):
-            return m.name.lower() == arg or (m.nick and m.nick.lower() == arg)
+            def predicate(m):
+                return m.name.lower() == arg or (m.nick and m.nick.lower() == arg)
 
-        member = discord.utils.find(predicate, ctx.guild.members)
+            member = discord.utils.find(predicate, ctx.guild.members)
 
-        if member:
-            return member
+            if member:
+                return member
 
-        raise BadArgument()
+            raise BadArgument()
 
 
 class Tag(commands.Converter):
@@ -699,6 +702,12 @@ class Motion(commands.Converter):
                    session=session, submitter=motion['submitter'], bot=ctx.bot)
 
 
+class PoliticalPartyJoinMode(enum.Enum):
+    PUBLIC = "Public"
+    REQUEST = "Request"
+    PRIVATE = "Private"
+
+
 class PoliticalParty(commands.Converter):
     """
     Represents a political party.
@@ -711,10 +720,10 @@ class PoliticalParty(commands.Converter):
     """
 
     def __init__(self, **kwargs):
-        self.is_private: str = kwargs.get('is_private')
         self.discord_invite: str = kwargs.get('discord_invite')
         self.aliases: typing.List[str] = kwargs.get('aliases')
-        self._leader: str = kwargs.get('leader')
+        self.join_mode: PoliticalPartyJoinMode = kwargs.get('join_mode')
+        self._leaders: typing.List[int] = kwargs.get('leaders')
         self._id: int = kwargs.get('id')
         self._bot = kwargs.get('bot')
 
@@ -722,9 +731,8 @@ class PoliticalParty(commands.Converter):
             self._id = kwargs.get('role').id
 
     @property
-    def leader(self) -> typing.Union[discord.Member, discord.User, None]:
-        user = self._bot.democraciv_guild_object.get_member(self._leader) or self._bot.get_user(self._leader)
-        return user
+    def leaders(self) -> typing.List[typing.Union[discord.Member, discord.User, None]]:
+        return [self._bot.dciv.get_member(leader) or self._bot.get_user(leader) for leader in self._leaders]
 
     @property
     def role(self) -> typing.Optional[discord.Role]:
@@ -752,9 +760,9 @@ class PoliticalParty(commands.Converter):
             party_id = argument
 
         elif isinstance(argument, str):
-            if argument.lower() in ("independent", "independant", "ind", "ind."):
+            if argument.lower() in ("independent", "independant", "ind", "ind.", "independents", "independants"):
                 return cls(role=discord.utils.get(ctx.bot.democraciv_guild_object.roles, name="Independent"),
-                           is_private=False, bot=ctx.bot)
+                           join_mode=PoliticalPartyJoinMode.PUBLIC, bot=ctx.bot)
 
             party_id = await ctx.bot.db.fetchval("SELECT party_id FROM party_alias WHERE alias = $1", argument.lower())
 
@@ -777,5 +785,11 @@ class PoliticalParty(commands.Converter):
         aliases = await ctx.bot.db.fetch("SELECT alias FROM party_alias WHERE party_id = $1", party['id'])
         aliases = [record['alias'] for record in aliases]
 
-        return cls(id=party['id'], leader=party['leader'], discord_invite=party['discord_invite'],
-                   is_private=party['is_private'], aliases=aliases, bot=ctx.bot)
+        leaders = await ctx.bot.db.fetch("SELECT leader_id FROM party_leader WHERE party_id = $1", party['id'])
+        leaders = [record['leader_id'] for record in leaders]
+
+        if not ctx.bot.dciv.get_role(party['id']):
+            raise PartyNotFoundError(argument)
+
+        return cls(id=party['id'], leaders=leaders, discord_invite=party['discord_invite'],
+                   join_mode=PoliticalPartyJoinMode(party['join_mode']), aliases=aliases, bot=ctx.bot)

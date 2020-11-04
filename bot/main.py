@@ -22,7 +22,7 @@ import traceback
 import discord.utils
 
 from bot.ext.bank.bank_listener import BankListener
-from bot.utils import exceptions, utils, context
+from bot.utils import exceptions, text, context
 from bot.config import token, config, mk
 from typing import Optional, Union
 from bot.utils.law_helper import LawUtils
@@ -40,13 +40,13 @@ initial_extensions = ['bot.module.logging',
                       'bot.module.admin',
                       'bot.module.tags',
                       'bot.module.starboard',
-                      'bot.module.democraciv.moderation',
-                      'bot.module.democraciv.bank',
-                      'bot.module.democraciv.parties',
-                      'bot.module.democraciv.legislature',
-                      'bot.module.democraciv.laws',
-                      'bot.module.democraciv.ministry',
-                      'bot.module.democraciv.supremecourt']
+                      'bot.module.moderation',
+                      'bot.module.bank',
+                      'bot.module.parties',
+                      'bot.module.legislature',
+                      'bot.module.laws',
+                      'bot.module.ministry',
+                      'bot.module.supremecourt']
 
 # monkey patch dpy's send
 _old_send = discord.abc.Messageable.send
@@ -62,11 +62,11 @@ async def safe_send(self, content=None, **kwargs) -> discord.Message:
     if not content and not embed:
         return await _old_send(self, "*empty message*", **kwargs)
 
-    if isinstance(embed, utils.SafeEmbed):
+    if isinstance(embed, text.SafeEmbed):
         embed.clean()
 
     if content and len(content) > 2000:
-        split_messages = utils.split_string_by_paragraphs(content, 1900)
+        split_messages = text.split_string_by_paragraphs(content, 1900)
 
         for index in split_messages:
             if index == len(split_messages) - 1:
@@ -93,7 +93,7 @@ class DemocracivBot(commands.Bot):
 
         super().__init__(command_prefix=commands.when_mentioned_or(config.BOT_PREFIX),
                          description=config.BOT_DESCRIPTION, case_insensitive=True,
-                         intens=intents, allowed_mentions=discord.AllowedMentions.none(),
+                         intents=intents, allowed_mentions=discord.AllowedMentions.none(),
                          activity=discord.Game(name=f"{config.BOT_PREFIX}help | {config.BOT_PREFIX}commands |"
                                                     f" {config.BOT_PREFIX}about"))
 
@@ -109,14 +109,7 @@ class DemocracivBot(commands.Bot):
         self.owner = None
         self.democraciv_guild_id = None
 
-        # Load the bot's cogs from /event and /module
-        for extension in initial_extensions:
-            try:
-                self.load_extension(extension)
-                print(f'[BOT] Successfully loaded {extension}')
-            except Exception:
-                print(f'[BOT] Failed to load module {extension}.')
-                traceback.print_exc()
+
 
         if config.DATABASE_DAILY_BACKUP_ENABLED:
             self.daily_db_backup.start()
@@ -139,6 +132,15 @@ class DemocracivBot(commands.Bot):
         self.allowed_guild_settings = ("welcome", "welcome_message", "welcome_channel", "logging", "logging_channel",
                                        "logging_excluded", "defaultrole", "defaultrole_role", "tag_creation_allowed")
 
+        # Load the bot's cogs from /event and /module
+        for extension in initial_extensions:
+            try:
+                self.load_extension(extension)
+                print(f'[BOT] Successfully loaded {extension}')
+            except Exception:
+                print(f'[BOT] Failed to load module {extension}.')
+                traceback.print_exc()
+
     async def get_context(self, message, *, cls=None):
         return await super().get_context(message, cls=cls or context.CustomContext)
 
@@ -155,7 +157,7 @@ class DemocracivBot(commands.Bot):
         if ctx.guild is None:
             return
 
-        embed = utils.SafeEmbed(title=':x:  Command Error')
+        embed = text.SafeEmbed(title=':x:  Command Error')
 
         embed.add_field(name='Error', value=f"{error.__class__.__name__}: {error}", inline=False)
         embed.add_field(name='Channel', value=ctx.channel.mention, inline=True)
@@ -163,8 +165,8 @@ class DemocracivBot(commands.Bot):
         embed.add_field(name='Caused by', value=ctx.message.clean_content, inline=False)
 
         if to_context:
-            local_embed = utils.SafeEmbed(title=":warning:  Unexpected Error occurred",
-                                          description=f"An unexpected error occurred while"
+            local_embed = text.SafeEmbed(title=":warning:  Unexpected Error occurred",
+                                         description=f"An unexpected error occurred while"
                                                       f" performing this command. The developer"
                                                       f" has been notified."
                                                       f"\n\n```{error.__class__.__name__}:"
@@ -385,17 +387,17 @@ class DemocracivBot(commands.Bot):
             await asyncio.sleep(5)
 
         records = await self.db.fetch("SELECT * FROM guilds")
-        guild_config = dict()
+        guild_config = {}
 
         for record in records:
-            config = {"welcome": record['welcome'],
+            config = {"welcome": record['welcome_enabled'],
                       "welcome_message": record['welcome_message'],
                       "welcome_channel": record['welcome_channel'],
-                      "logging": record['logging'],
+                      "logging": record['logging_enabled'],
                       "logging_channel": record['logging_channel'],
-                      "logging_excluded": record['logging_excluded'],
-                      "defaultrole": record['defaultrole'],
-                      "defaultrole_role": record['defaultrole_role'],
+                      #"logging_excluded": record['logging_excluded'],
+                      "defaultrole": record['default_role_enabled'],
+                      "defaultrole_role": record['default_role_role'],
                       "tag_creation_allowed": record['tag_creation_allowed']
                       }
 
@@ -701,12 +703,31 @@ class DemocracivBot(commands.Bot):
 
     async def is_guild_initialized(self, guild_id: int) -> bool:
         """Returns true if the guild has an entry in the bot's database."""
-        return_bool = await self.db.fetchval("SELECT id FROM guilds WHERE id = $1", guild_id)
+        return bool(await self.db.fetchval("SELECT id FROM guilds WHERE id = $1", guild_id))
 
-        if return_bool is None:
-            return False
-        else:
-            return True
+    async def make_paste(self, txt: str) -> typing.Optional[str]:
+        """Post text to mystb.in"""
+
+        async with self.session.post("https://mystb.in/documents", data=txt) as response:
+            if response.status == 200:
+                data = await response.json()
+
+                try:
+                    key = data['key']
+                except KeyError:
+                    return None
+
+                return f"https://mystb.in/{key}"
+
+    async def tinyurl(self, url: str) -> typing.Optional[str]:
+        async with self.session.get(f"https://tinyurl.com/api-create.php?url={url}") as response:
+            if response.status == 200:
+                tiny_url = await response.text()
+
+                if tiny_url == "Error":
+                    raise exceptions.DemocracivBotException(":x: tinyurl.com returned an error, try again later.")
+
+                return tiny_url
 
 
 if __name__ == '__main__':

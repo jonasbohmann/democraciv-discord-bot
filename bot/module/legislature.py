@@ -7,7 +7,7 @@ from bot import DemocracivBot
 from bot.config import config, mk
 from discord.ext import commands
 from discord.embeds import EmptyEmbed
-from bot.utils import exceptions, utils
+from bot.utils import exceptions, text
 from discord.ext.commands import Greedy
 from bot.utils.law_helper import AnnouncementQueue
 from bot.utils.converter import Session, SessionStatus, Bill, Motion, Law, CaseInsensitiveMember, PoliticalParty, BillStatus
@@ -381,7 +381,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='opensession', aliases=['os'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
 
@@ -407,7 +407,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='updatesession', aliases=['us'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def updatesession(self, ctx, voting_form: str):
         """Changes the current session's status to be open for voting
 
@@ -443,7 +443,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='closesession', aliases=['cs'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def closesession(self, ctx):
         """Closes the current session"""
 
@@ -878,7 +878,7 @@ class Legislature(commands.Cog):
     @legislature.command(name='submit')
     @commands.cooldown(1, 180, commands.BucketType.user)
     @commands.max_concurrency(1, per=commands.BucketType.guild, wait=False)
-    @utils.is_democraciv_guild()
+    @text.is_democraciv_guild()
     async def submit(self, ctx):
         """Submit a new bill or motion to the currently active session"""
 
@@ -942,7 +942,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def pass_bill(self, ctx, bill_ids: Greedy[Bill]):
         """Mark one or multiple bills as passed from the Legislature
 
@@ -1017,7 +1017,7 @@ class Legislature(commands.Cog):
 
     @legislature.group(name='withdraw', aliases=['w'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.is_democraciv_guild()
+    @text.is_democraciv_guild()
     async def withdraw(self, ctx):
         """Withdraw one or multiple bills or motions from the current session"""
         if ctx.invoked_subcommand is None:
@@ -1108,7 +1108,7 @@ class Legislature(commands.Cog):
 
     @withdraw.command(name='bill', aliases=['b'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.is_democraciv_guild()
+    @text.is_democraciv_guild()
     async def withdrawbill(self, ctx, bill_ids: Greedy[Bill]):
         """Withdraw one or multiple bills from the current session
 
@@ -1126,7 +1126,7 @@ class Legislature(commands.Cog):
 
     @withdraw.command(name='motion', aliases=['m'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.is_democraciv_guild()
+    @text.is_democraciv_guild()
     async def withdrawmotion(self, ctx, motion_ids: Greedy[Motion]):
         """Withdraw one or multiple motions from the current session
 
@@ -1144,7 +1144,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='override', aliases=['ov'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @utils.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def override(self, ctx, bill_ids: Greedy[Bill]):
         """Override the veto of one or multiple bills to pass them into law
 

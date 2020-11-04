@@ -4,7 +4,7 @@ import datetime
 
 from bot import DemocracivBot
 from discord.ext import commands
-from bot.utils import exceptions, utils
+from bot.utils import exceptions, text
 from bot.config import token, config, mk
 from bot.utils.exceptions import ForbiddenTask
 from bot.utils.converter import UnbanConverter, BanConverter, CaseInsensitiveMember
@@ -241,14 +241,14 @@ class Moderation(commands.Cog):
             await ctx.send(embed=embed)
 
     @commands.command(name='restart', aliases=['stop'])
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def restart(self, ctx):
         """Restarts the bot"""
         await ctx.send(':wave: Restarting...')
         await self.bot.close()
 
     @commands.command(name='say')
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def say(self, ctx, *, content: str):
         """Make the bot say something"""
         try:
@@ -259,7 +259,7 @@ class Moderation(commands.Cog):
         await ctx.send(content)
 
     @commands.command(name='alt')
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def alt(self, ctx, member: typing.Union[discord.Member, CaseInsensitiveMember], check_messages: bool = False):
         """Check if someone is an alt"""
         async with ctx.typing():
@@ -277,7 +277,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name='hub', aliases=['modhub', 'moderationhub', 'mhub'])
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def hub(self, ctx):
         """Link to the Moderation Hub"""
         link = token.MOD_HUB or 'https://hastebin.com/afijavahox.coffeescript'
@@ -286,7 +286,7 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='registry')
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def registry(self, ctx):
         """Link to the Democraciv Registry"""
         link = token.REGISTRY or 'https://hastebin.com/afijavahox.coffeescript'
@@ -295,7 +295,7 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='drive', aliases=['googledrive', 'gdrive'])
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def gdrive(self, ctx):
         """Link to the Google Drive for MK6"""
         link = token.MK6_DRIVE or 'https://hastebin.com/afijavahox.coffeescript'
@@ -304,7 +304,7 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='pin', aliases=['pins', 'electiontool', 'pintool'])
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def electiontool(self, ctx):
         """Link to DerJonas' Election Tool"""
         link = token.PIN_TOOL or 'https://hastebin.com/afijavahox.coffeescript'
@@ -313,7 +313,7 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='modguidelines', aliases=['modguideline', 'mod', 'mods', 'modprocedure', 'modprocedures'])
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def modguidelines(self, ctx):
         """Link to the Democraciv Moderation Guidelines"""
         link = token.MOD_GUIDELINES or 'https://hastebin.com/afijavahox.coffeescript'
@@ -323,7 +323,7 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='quire', aliases=['q'])
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def quire(self, ctx):
         """Quire Project Management"""
         embed = self.bot.embeds.embed_builder(title='Quire', description="https://quire.io/c/democraciv-moderation")
@@ -616,7 +616,7 @@ class Moderation(commands.Cog):
             await ctx.send(":x: I couldn't find that person.")
 
     @commands.command(name='archivechannel')
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def archivechannel(self, ctx, *, channel: discord.TextChannel):
         """Archive a channel and automatically set the right permissions
 
@@ -650,7 +650,7 @@ class Moderation(commands.Cog):
         await ctx.send(":white_check_mark: Channel was archived.")
 
     @commands.command(name='archiveoldgov')
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def archiveoldgov(self, ctx):
         """Move all channels in the Government category and #propaganda into the Archives and set the right permissions
         """

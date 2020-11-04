@@ -5,7 +5,7 @@ from bot import DemocracivBot
 from bot.config import config
 from discord.ext import commands
 from bot.utils.help import PaginatedHelpCommand
-from bot.utils.utils import SafeEmbed
+from bot.utils.text import SafeEmbed
 
 
 class Meta(commands.Cog):

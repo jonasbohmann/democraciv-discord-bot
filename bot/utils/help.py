@@ -27,7 +27,7 @@ import asyncio
 import discord
 
 from bot.config import config
-from bot.utils import utils
+from bot.utils import text
 from bot.utils.paginator import Pages
 from discord.ext import commands, menus
 
@@ -115,7 +115,7 @@ class BotHelpPageSource(menus.ListPageSource):
         prefix = menu.ctx.prefix
         description = f'Use `{prefix}help thing` for more info on a category or command.\n'
 
-        embed = utils.SafeEmbed(title='All Categories | Help', description=description)
+        embed = text.SafeEmbed(title='All Categories | Help', description=description)
 
         for cog in cogs:
             commands = self.commands.get(cog)
@@ -137,7 +137,7 @@ class GroupHelpPageSource(menus.ListPageSource):
         self.description = self.group.description
 
     async def format_page(self, menu, commands):
-        embed = utils.SafeEmbed(title=self.title, description=self.description)
+        embed = text.SafeEmbed(title=self.title, description=self.description)
 
         for command in commands:
             signature = f'{command.qualified_name} {command.signature}'
@@ -159,7 +159,7 @@ class HelpMenu(Pages):
         if not self.send_intro:
             return await super().send_initial_message(ctx, channel)
 
-        embed = utils.SafeEmbed(title="Welcome to the Democraciv Bot")
+        embed = text.SafeEmbed(title="Welcome to the Democraciv Bot")
         embed.description = BOT_INTRO
         self.current_page = -1
         return await channel.send(embed=embed)
@@ -168,7 +168,7 @@ class HelpMenu(Pages):
     async def show_bot_help(self, payload):
         """shows how to use the bot"""
 
-        embed = utils.SafeEmbed(title='Using the Democraciv Bot')
+        embed = text.SafeEmbed(title='Using the Democraciv Bot')
 
         entries = (
             ('<argument>', 'This means the argument is __**required**__.'),
@@ -235,7 +235,7 @@ class PaginatedHelpCommand(commands.HelpCommand):
             embed_like.description = command.help or 'No help found...'
 
     async def send_command_help(self, command):
-        embed = utils.SafeEmbed()
+        embed = text.SafeEmbed()
         self.common_command_formatting(embed, command)
         await self.context.send(embed=embed)
 
