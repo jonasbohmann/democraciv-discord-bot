@@ -30,10 +30,10 @@ from bot.utils.text import SafeEmbed
 
 
 class Pages(menus.MenuPages):
-    def __init__(self, source, *, title=EmptyEmbed, icon=EmptyEmbed):
+    def __init__(self, source, *, title=EmptyEmbed, author="", icon=EmptyEmbed):
         super().__init__(source=source, check_embeds=True)
-        self.embed = SafeEmbed()
-        self.embed.set_author(name=title, icon_url=icon)
+        self.embed = SafeEmbed(title=title)
+        self.embed.set_author(name=author, icon_url=icon)
 
     async def finalize(self, timed_out):
         try:

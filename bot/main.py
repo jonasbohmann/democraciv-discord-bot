@@ -3,14 +3,12 @@ import re
 import time
 import math
 import asyncio
-
 import typing
-
 
 try:
     import uvloop
     uvloop.install()
-except (ModuleNotFoundError, ImportError):
+except ImportError:
     pass
 
 import discord
@@ -19,9 +17,7 @@ import asyncpg
 import logging
 import datetime
 import traceback
-import discord.utils
 
-from bot.ext.bank.bank_listener import BankListener
 from bot.utils import exceptions, text, context
 from bot.config import token, config, mk
 from typing import Optional, Union
@@ -41,15 +37,18 @@ initial_extensions = ['bot.module.logging',
                       'bot.module.tags',
                       'bot.module.starboard',
                       'bot.module.moderation',
-                      'bot.module.bank',
                       'bot.module.parties',
                       'bot.module.legislature',
                       'bot.module.laws',
                       'bot.module.ministry',
-                      'bot.module.supremecourt']
+                      'bot.module.supremecourt',
+                      'bot.ext.democracivbank.bank']
 
 # monkey patch dpy's send
 _old_send = discord.abc.Messageable.send
+
+
+# todo on_resume
 
 
 async def safe_send(self, content=None, **kwargs) -> discord.Message:
@@ -104,12 +103,9 @@ class DemocracivBot(commands.Bot):
         self.db = None
         self.loop.create_task(self.connect_to_db())
         self.laws = LawUtils(self)
-        self.bank_listener = BankListener(self)
 
         self.owner = None
         self.democraciv_guild_id = None
-
-
 
         if config.DATABASE_DAILY_BACKUP_ENABLED:
             self.daily_db_backup.start()
@@ -148,7 +144,7 @@ class DemocracivBot(commands.Bot):
         to_return = self.dciv.get_role(role.value)
 
         if to_return is None:
-            raise exceptions.RoleNotFoundError(role.printable_name)
+            raise exceptions.RoleNotFoundError(role.name.replace("_", " ").title())
 
         return to_return
 
@@ -167,10 +163,10 @@ class DemocracivBot(commands.Bot):
         if to_context:
             local_embed = text.SafeEmbed(title=":warning:  Unexpected Error occurred",
                                          description=f"An unexpected error occurred while"
-                                                      f" performing this command. The developer"
-                                                      f" has been notified."
-                                                      f"\n\n```{error.__class__.__name__}:"
-                                                      f" {error}```", has_footer=False)
+                                                     f" performing this command. The developer"
+                                                     f" has been notified."
+                                                     f"\n\n```{error.__class__.__name__}:"
+                                                     f" {error}```", has_footer=False)
             await ctx.send(embed=local_embed)
 
         if to_log_channel:
@@ -220,7 +216,7 @@ class DemocracivBot(commands.Bot):
         return fmt
 
     @staticmethod
-    def format_roles(missing_roles: list) -> str:
+    def format_roles(ctx, missing_roles: list) -> str:
         """
         The MIT License (MIT)
 
@@ -244,10 +240,18 @@ class DemocracivBot(commands.Bot):
         FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
         DEALINGS IN THE SOFTWARE.
         """
-        if isinstance(missing_roles[0], mk.DemocracivRole):
-            missing = [f"`{role.printable_name}`" for role in missing_roles]
-        else:
-            missing = [f"`{role}`" for role in missing_roles]
+
+        def safe_get_role(r) -> typing.Optional[discord.Role]:
+            if isinstance(r, str):
+                found = discord.utils.get(ctx.guild.roles, name=r) or discord.utils.get(ctx.bot.dciv.roles, name=r)
+                if found:
+                    return found
+            elif isinstance(r, int):
+                found = ctx.guild.get_role(r) or ctx.bot.dciv.get_role(r)
+                if found:
+                    return found
+
+        missing = [f"`{safe_get_role(role).name}`" for role in missing_roles]
 
         if len(missing) > 2:
             fmt = '{}, or {}'.format(", ".join(missing[:-1]), missing[-1])
@@ -301,11 +305,12 @@ class DemocracivBot(commands.Bot):
                                   f" this command.")
 
         elif isinstance(error, commands.MissingRole):
-            return await ctx.send(f":x: You need the `{error.missing_role}` role in order to use this command.")
+            role = ctx.guild.get_role(error.missing_role) or ctx.bot.dciv.get_role(error.missing_role)
+            return await ctx.send(f":x: You need the `{role.name}` role in order to use this command.")
 
         elif isinstance(error, commands.MissingAnyRole):
             return await ctx.send(f":x: You need at least one of these roles in order to use this command: "
-                                  f"{self.format_roles(error.missing_roles)}")
+                                  f"{self.format_roles(ctx, error.missing_roles)}")
 
         elif isinstance(error, commands.BotMissingPermissions):
             await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
@@ -313,14 +318,15 @@ class DemocracivBot(commands.Bot):
                                   f" to perform this action for you.")
 
         elif isinstance(error, commands.BotMissingRole):
+            role = ctx.guild.get_role(error.missing_role) or ctx.bot.dciv.get_role(error.missing_role)
             await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
-            return await ctx.send(f":x: I need the `{error.missing_role}` role in order to perform this"
+            return await ctx.send(f":x: I need the `{role.name}` role in order to perform this"
                                   f" action for you.")
 
         elif isinstance(error, commands.BotMissingAnyRole):
             await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
             return await ctx.send(f":x: I need at least one of these roles in order to perform this action for you: "
-                                  f"{self.format_roles(error.missing_roles)}")
+                                  f"{self.format_roles(ctx, error.missing_roles)}")
 
         elif isinstance(error, commands.NoPrivateMessage):
             return await ctx.send(":x: This command cannot be used in DMs.")
@@ -395,7 +401,7 @@ class DemocracivBot(commands.Bot):
                       "welcome_channel": record['welcome_channel'],
                       "logging": record['logging_enabled'],
                       "logging_channel": record['logging_channel'],
-                      #"logging_excluded": record['logging_excluded'],
+                      # "logging_excluded": record['logging_excluded'],
                       "defaultrole": record['default_role_enabled'],
                       "defaultrole_role": record['default_role_role'],
                       "tag_creation_allowed": record['tag_creation_allowed']
@@ -637,13 +643,13 @@ class DemocracivBot(commands.Bot):
         backup_channel = self.get_channel(config.DATABASE_DAILY_BACKUP_DISCORD_CHANNEL)
 
         if config.DATABASE_DAILY_BACKUP_BANK_OF_DEMOCRACIV_BACKUP:
-            if not os.path.isdir('bot/db/backup/bank'):
-                os.mkdir('db/backup/bank')
+            if not os.path.isdir('bot/db/backup/democracivbank'):
+                os.mkdir('db/backup/democracivbank')
 
-            fn = f'bank-of-democraciv-backup-{now}'
+            fn = f'democracivbank-of-democraciv-backup-{now}'
             bn = config.DATABASE_DAILY_BACKUP_BANK_OF_DEMOCRACIV_DATABASE
 
-            command = f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump -Fc {bn} > bot/db/backup/bank/{fn} ' \
+            command = f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump -Fc {bn} > bot/db/backup/democracivbank/{fn} ' \
                       f'-U {token.POSTGRESQL_USER} -h {token.POSTGRESQL_HOST} -w'
 
             await asyncio.create_subprocess_shell(command)
@@ -660,7 +666,7 @@ class DemocracivBot(commands.Bot):
         await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)
 
         if bank_backup_too:
-            file = discord.File(f'bot/db/backup/bank/{fn}')
+            file = discord.File(f'bot/db/backup/democracivbank/{fn}')
             await backup_channel.send(f"---- democracivbank.com Database Backup from {pretty_time} (UTC) ----",
                                       file=file)
 

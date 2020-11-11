@@ -105,7 +105,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
                 embed.set_thumbnail(url=_thumbnail_url)
         await ctx.send(embed=embed)
 
-    @commands.command(name='time', aliases=['clock, tz'])
+    @commands.command(name='time', aliases=['clock', 'tz'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def time(self, ctx, *, zone: str):
         """Displays the current time of a specified timezone"""

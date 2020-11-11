@@ -4,16 +4,18 @@ import datetime
 
 from bot import DemocracivBot
 from bot.config import config, mk
-from bot.utils import text
+from bot.utils import text, checks
 from discord.ext import commands
 from discord.embeds import EmptyEmbed
 from discord.ext.commands import Greedy
-from bot.utils.law_helper import AnnouncementQueue
+
+from bot.utils.mixin import GovernmentMixin
+from bot.utils.text import AnnouncementScheduler
 from bot.utils.exceptions import DemocracivBotException
 from bot.utils.converter import Law, CaseInsensitiveMember, PoliticalParty
 
 
-class RepealScheduler(AnnouncementQueue):
+class RepealScheduler(AnnouncementScheduler):
 
     def get_message(self) -> str:
         message = [f"{mk.get_democraciv_role(self.bot, mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
@@ -25,7 +27,7 @@ class RepealScheduler(AnnouncementQueue):
         return '\n'.join(message)
 
 
-class AmendScheduler(AnnouncementQueue):
+class AmendScheduler(AnnouncementScheduler):
 
     def get_message(self) -> str:
         message = [f"The links to the following laws were changed by the {self.bot.mk.LEGISLATURE_CABINET_NAME}.\n"]
@@ -36,19 +38,15 @@ class AmendScheduler(AnnouncementQueue):
         return '\n'.join(message)
 
 
-class Laws(commands.Cog, name='Law'):
+class Laws(commands.Cog, GovernmentMixin, name="Law"):
     """List all active laws and search for them by name or keyword."""
 
     def __init__(self, bot):
-        self.bot: DemocracivBot = bot
+        super().__init__(bot)
         self.repeal_scheduler = RepealScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.amend_scheduler = AmendScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.illegal_tags = ('act', 'the', 'author', 'authors', 'date',
                              'name', 'bill', 'law', 'and', 'd/m/y', 'type', 'description')
-
-    @property
-    def gov_announcements_channel(self) -> typing.Optional[discord.TextChannel]:
-        return mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
     async def paginate_all_laws(self, ctx):
         async with ctx.typing():
@@ -277,7 +275,7 @@ class Laws(commands.Cog, name='Law'):
 
     @law.command(name='repeal', aliases=['r, remove', 'delete'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def removelaw(self, ctx, law_ids: Greedy[Law]):
         """Repeal one or multiple laws
 
@@ -314,7 +312,7 @@ class Laws(commands.Cog, name='Law'):
 
     @law.command(name='updatelink', aliases=['ul', 'amend'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def updatelink(self, ctx, law_id: Law, new_link: str):
         """Update the link to a law
 

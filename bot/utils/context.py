@@ -6,6 +6,11 @@ from discord.ext.commands import Context
 from discord.ext import commands
 
 
+class MockContext:
+    def __init__(self, bot):
+        self.bot = bot
+
+
 class CustomContext(Context):
 
     @property
@@ -95,6 +100,7 @@ class CustomContext(Context):
                 return True
 
             elif str(reaction.emoji) == no_emoji:
+                await self.send("Aborted.")
                 return False
 
     async def input(self, text=None, *, timeout: int = 300, delete_after: bool = False,

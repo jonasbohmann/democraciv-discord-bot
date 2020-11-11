@@ -1,8 +1,11 @@
+import abc
+import functools
 import re
 import enum
 import typing
 import discord
 
+from bot import DemocracivBot
 from bot.config import config
 from datetime import datetime
 from discord.ext import commands
@@ -27,7 +30,7 @@ class SessionStatus(enum.Enum):
             raise NotImplementedError
 
 
-class BillStatus(enum.Enum):
+class _BillStatusFlag(enum.Enum):
     SUBMITTED = 0
     LEG_FAILED = 1
     LEG_PASSED = 2
@@ -35,6 +38,105 @@ class BillStatus(enum.Enum):
     MIN_PASSED = 4
     VETO_OVERRIDDEN = 5
     REPEALED = 6
+
+
+class IllegalBillOperation(DemocracivBotException):
+    pass
+
+
+class BillStatus(abc.ABC):
+    flag: _BillStatusFlag
+    verbose_name: str
+    stale: bool = False
+
+    def __init__(self, bot, bill):
+        self._bot: DemocracivBot = bot
+        self._bill: Bill = bill
+
+    def __eq__(self, other):
+        return isinstance(other, BillStatus) and self.flag == other.flag
+
+    def __int__(self):
+        return self.flag
+
+    def __str__(self):
+        return self.verbose_name
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} flag={self.flag} stale={self.stale}>"
+
+    def make_stale(self, func):
+        @functools.wraps(func)
+        def wrapper():
+            func()
+            self.stale = True
+
+        return wrapper
+
+    @abc.abstractmethod
+    def is_law(self):
+        pass
+
+    @abc.abstractmethod
+    @make_stale
+    async def veto(self):
+        pass
+
+    @abc.abstractmethod
+    @make_stale
+    async def withdraw(self):
+        pass
+
+    @abc.abstractmethod
+    @make_stale
+    async def pass_into_law(self):
+        pass
+
+    @abc.abstractmethod
+    @make_stale
+    async def pass_from_legislature(self):
+        pass
+
+    @abc.abstractmethod
+    @make_stale
+    async def override_veto(self):
+        pass
+
+    @abc.abstractmethod
+    def emojified_status(self, verbose=True):
+        pass
+
+
+class BillSubmitted(BillStatus):
+    flag = _BillStatusFlag.SUBMITTED
+    verbose_name = "Submitted"
+
+    def is_law(self):
+        return False
+
+    async def veto(self):
+        raise IllegalBillOperation("")
+
+    async def withdraw(self):
+        await self._bot.db.execute("DELETE FROM legislature_bills WHERE id = $1", self.id)
+
+    async def pass_into_law(self):
+        pass
+
+    async def pass_from_legislature(self):
+        await self._bot.db.execute("UPDATE legislature_bills SET status = $1 WHERE id = $2",
+                                   _BillStatusFlag.LEG_PASSED.value, self._bill.id)
+
+    async def override_veto(self):
+        raise IllegalBillOperation("")
+
+    def emojified_status(self, verbose=True):
+        if verbose:
+            return f"{self._bot.mk.LEGISLATURE_NAME}: {config.LEG_BILL_STATUS_YELLOW} *(Not Voted On Yet)*\n" \
+                   f"{self._bot.mk.MINISTRY_NAME}: {config.LEG_BILL_STATUS_YELLOW} *(Waiting on {self._bot.mk.LEGISLATURE_NAME})*\n" \
+                   f"Law: {config.LEG_BILL_STATUS_GRAY}\n"
+
+        return f"{config.LEG_BILL_STATUS_YELLOW}{config.LEG_BILL_STATUS_YELLOW}{config.LEG_BILL_STATUS_GRAY}"
 
 
 class Selfrole(commands.Converter):
@@ -76,10 +178,9 @@ class Selfrole(commands.Converter):
             return cls(join_message=role_record['join_message'], role=role_record['role_id'],
                        guild=role_record['guild_id'], bot=ctx.bot)
 
-        else:
-            raise NotFoundError(f":x: There is no selfrole on this server that matches `{argument}`. "
-                                f"If you're trying to join or leave a political party,"
-                                f" check `{config.BOT_PREFIX}help Political Parties`")
+        raise NotFoundError(f":x: There is no selfrole on this server that matches `{argument}`. "
+                            f"If you're trying to join or leave a political party,"
+                            f" check `{config.BOT_PREFIX}help Political Parties`")
 
 
 class BanConverter(commands.Converter):
@@ -427,12 +528,7 @@ class Bill(commands.Converter):
             return self.name
 
     async def is_law(self) -> bool:
-        found = await self._bot.db.fetchval("SELECT law_id FROM legislature_laws WHERE bill_id = $1", self.id)
-
-        if found:
-            return True
-        else:
-            return False
+        return bool(await self._bot.db.fetchval("SELECT law_id FROM legislature_laws WHERE bill_id = $1", self.id))
 
     async def withdraw(self):
         await self._bot.db.execute("DELETE FROM legislature_bills WHERE id = $1", self.id)

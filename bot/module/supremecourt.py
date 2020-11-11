@@ -6,27 +6,14 @@ from bot.utils import exceptions
 from bot.config import config, mk
 from discord.ext import commands
 
+from bot.utils.mixin import GovernmentMixin
 
-class SupremeCourt(commands.Cog, name="Supreme Court"):
+
+class SupremeCourt(commands.Cog, GovernmentMixin, name="Supreme Court"):
     """Useful information about the Supreme Court of this nation."""
 
     def __init__(self, bot):
-        self.bot: DemocracivBot = bot
-
-    @property
-    def chief(self) -> typing.Optional[discord.Member]:
-        try:
-            return mk.get_democraciv_role(self.bot, mk.DemocracivRole.CHIEF_JUSTICE_ROLE).members[0]
-        except (IndexError, exceptions.RoleNotFoundError):
-            return None
-
-    @property
-    def justice_role(self) -> typing.Optional[discord.Role]:
-        return mk.get_democraciv_role(self.bot, mk.DemocracivRole.JUSTICE_ROLE)
-
-    @property
-    def judge_role(self) -> typing.Optional[discord.Role]:
-        return mk.get_democraciv_role(self.bot, mk.DemocracivRole.JUDGE_ROLE)
+        super().__init__(bot)
 
     def get_justices(self):
         try:

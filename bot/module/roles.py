@@ -3,6 +3,7 @@ import discord
 import bot.utils.exceptions as exceptions
 
 from bot.config import config
+from bot.utils import text
 from bot.utils.converter import Selfrole
 from discord.ext import commands
 
@@ -26,9 +27,9 @@ class Roles(commands.Cog, name="Selfroles"):
         if not embed_message:
             embed_message = ["This server has no selfroles yet."]
 
-        embed = self.bot.embeds.embed_builder(title=f"Selfroles in {ctx.guild.name}",
-                                              description='\n'.join(embed_message),
-                                              has_footer=False)
+        embed = text.SafeEmbed(title=f"Selfroles in {ctx.guild.name}",
+                               description='\n'.join(embed_message),
+                               has_footer=False)
         embed.set_footer(text=f"In order to add or remove a role from you, use '{config.BOT_PREFIX}role <role>'")
         await ctx.send(embed=embed)
 
@@ -45,11 +46,7 @@ class Roles(commands.Cog, name="Selfroles"):
         """
 
         if role:
-            if role.role is None:
-                return await ctx.send(":x: This selfrole was deleted.")
-
             await self.toggle_role(ctx, role)
-
         else:
             await self.list_all_roles(ctx)
 

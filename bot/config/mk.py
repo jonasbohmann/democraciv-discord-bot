@@ -1,9 +1,48 @@
 import enum
-
 from bot.utils import exceptions
 from bot.config import config
 
-"""Several functions to retrieve mk-specific names or objects such as roles & channels of government officials."""
+
+class DemocracivRole(enum.Enum):
+    # Moderation
+    MODERATION = 319663296728924160
+
+    # Executive
+    MINISTER = 639438027852087297
+    GOVERNOR = 639438794239639573
+    PRIME_MINISTER = 639438159498838016
+    LT_PRIME_MINISTER = 646677815755931659
+
+    # Legislature
+    SPEAKER = 639438304705642506
+    VICE_SPEAKER = 639439805729734656
+    LEGISLATOR = 639438268601204737
+
+    # Courts
+    CHIEF_JUSTICE = 639442447721562122
+    JUSTICE = 639438578304417792
+    JUDGE = 668544161884143657
+
+    GOVERNMENT = 641077467204943916
+
+    OTTOMAN_TAX_OFFICER = 744983252854636675
+
+
+class DemocracivChannel(enum.Enum):
+    # Moderation
+    MOD_REQUESTS_CHANNEL = 208986206183227392
+    MODERATION_TEAM_CHANNEL = 209410498804973569
+    MODERATION_NOTIFICATIONS_CHANNEL = 661201604493443092
+
+    # Government
+    GOV_ANNOUNCEMENTS_CHANNEL = 647469752767479809
+
+    # Executive
+    EXECUTIVE_CHANNEL = 637051136955777049
+
+
+def _make_property(role: DemocracivRole, alt: str):
+    return property(lambda self: self._dynamic_role_term(role, alt))
 
 
 class MarkConfig:
@@ -55,51 +94,24 @@ class MarkConfig:
     def __init__(self, bot):
         self.bot = bot
 
+    def _dynamic_role_term(self, role: DemocracivRole, alt: str):
+        try:
+            return self.bot.get_democraciv_role(role).name
+        except exceptions.RoleNotFoundError:
+            return alt
+
+    legislator_term = _make_property(DemocracivRole.LEGISLATOR, LEGISLATURE_LEGISLATOR_NAME)
+    speaker_term = _make_property(DemocracivRole.SPEAKER, LEGISLATURE_SPEAKER_NAME)
+    vice_speaker_term = _make_property(DemocracivRole.VICE_SPEAKER, LEGISLATURE_VICE_SPEAKER_NAME)
+    minister_term = _make_property(DemocracivRole.MINISTER, MINISTRY_MINISTER_NAME)
+    pm_term = _make_property(DemocracivRole.PRIME_MINISTER, MINISTRY_PRIME_MINISTER_NAME)
+    lt_pm_term = _make_property(DemocracivRole.LT_PRIME_MINISTER, MINISTRY_VICE_PRIME_MINISTER_NAME)
+    justice_term = _make_property(DemocracivRole.JUSTICE, COURT_JUSTICE_NAME)
+    judge_term = _make_property(DemocracivRole.JUDGE, COURT_JUDGE_NAME)
+
     @property
     def safe_flag(self):
-        return self.NATION_FLAG_URL or self.bot.democraciv_guild_object.icon_url_as(static_format='png')
-
-    @property
-    def legislator_term(self):
-        try:
-            return self.bot.get_democraciv_role(DemocracivRole.LEGISLATOR_ROLE).name
-        except exceptions.RoleNotFoundError:
-            return self.LEGISLATURE_LEGISLATOR_NAME
-
-    @property
-    def speaker_term(self):
-        try:
-            return self.bot.get_democraciv_role(DemocracivRole.SPEAKER_ROLE).name
-        except exceptions.RoleNotFoundError:
-            return self.LEGISLATURE_SPEAKER_NAME
-
-    @property
-    def vice_speaker_term(self):
-        try:
-            return self.bot.get_democraciv_role(DemocracivRole.VICE_SPEAKER_ROLE).name
-        except exceptions.RoleNotFoundError:
-            return self.LEGISLATURE_VICE_SPEAKER_NAME
-
-    @property
-    def minister_term(self):
-        try:
-            return self.bot.get_democraciv_role(DemocracivRole.MINISTER_ROLE).name
-        except exceptions.RoleNotFoundError:
-            return self.MINISTRY_MINISTER_NAME
-
-    @property
-    def pm_term(self):
-        try:
-            return self.bot.get_democraciv_role(DemocracivRole.PRIME_MINISTER_ROLE).name
-        except exceptions.RoleNotFoundError:
-            return self.MINISTRY_PRIME_MINISTER_NAME
-
-    @property
-    def vice_pm_term(self):
-        try:
-            return self.bot.get_democraciv_role(DemocracivRole.LT_PRIME_MINISTER_ROLE).name
-        except exceptions.RoleNotFoundError:
-            return self.MINISTRY_VICE_PRIME_MINISTER_NAME
+        return self.NATION_FLAG_URL or self.bot.dciv.icon_url_as(static_format='png')
 
     @property
     def courts_term(self):
@@ -107,70 +119,3 @@ class MarkConfig:
             return "Courts"
 
         return self.COURT_NAME
-
-    @property
-    def justice_term(self):
-        try:
-            return self.bot.get_democraciv_role(DemocracivRole.JUSTICE_ROLE).name
-        except exceptions.RoleNotFoundError:
-            return self.COURT_JUSTICE_NAME
-
-    @property
-    def judge_term(self):
-        try:
-            return self.bot.get_democraciv_role(DemocracivRole.JUDGE_ROLE).name
-        except exceptions.RoleNotFoundError:
-            return self.COURT_JUDGE_NAME
-
-
-class PrettyEnumValue(object):
-    def __init__(self, value, printable_name):
-        self.value = value
-        self.printable_name = printable_name
-
-
-class PrettyEnum(enum.Enum):
-    def __new__(cls, value):
-        obj = object.__new__(cls)
-        obj._value_ = value.value
-        obj.printable_name = value.printable_name
-        return obj
-
-
-class DemocracivRole(PrettyEnum):
-    # Moderation
-    MODERATION_ROLE = PrettyEnumValue(319663296728924160, 'Moderation')
-
-    # Executive
-    MINISTER_ROLE = PrettyEnumValue(639438027852087297, 'Minister')
-    GOVERNOR_ROLE = PrettyEnumValue(639438794239639573, 'Governor')
-    EXECUTIVE_PROXY_ROLE = PrettyEnumValue(643190277494013962, 'Executive Proxy')
-    PRIME_MINISTER_ROLE = PrettyEnumValue(639438159498838016, 'Prime Minister')
-    LT_PRIME_MINISTER_ROLE = PrettyEnumValue(646677815755931659, 'Lieutenant Prime Minister')
-
-    # Legislature
-    SPEAKER_ROLE = PrettyEnumValue(639438304705642506, 'Speaker of the Legislature')
-    VICE_SPEAKER_ROLE = PrettyEnumValue(639439805729734656, 'Vice-Speaker of the Legislature')
-    LEGISLATOR_ROLE = PrettyEnumValue(639438268601204737, 'Legislator')
-
-    # Courts
-    CHIEF_JUSTICE_ROLE = PrettyEnumValue(639442447721562122, 'Chief Justice')
-    JUSTICE_ROLE = PrettyEnumValue(639438578304417792, 'Justice')
-    JUDGE_ROLE = PrettyEnumValue(668544161884143657, 'Judge')
-
-    GOVERNMENT_ROLE = PrettyEnumValue(641077467204943916, 'Arabian Government')
-
-    OTTOMAN_BANK_ROLE = PrettyEnumValue(744983252854636675, "Ottoman Tax Officer")
-
-
-class DemocracivChannel(enum.Enum):
-    # Moderation
-    MOD_REQUESTS_CHANNEL = 208986206183227392
-    MODERATION_TEAM_CHANNEL = 209410498804973569
-    MODERATION_NOTIFICATIONS_CHANNEL = 661201604493443092
-
-    # Government
-    GOV_ANNOUNCEMENTS_CHANNEL = 647469752767479809
-
-    # Executive
-    EXECUTIVE_CHANNEL = 637051136955777049

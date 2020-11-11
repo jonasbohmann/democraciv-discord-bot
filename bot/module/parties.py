@@ -164,12 +164,16 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='join')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @checks.is_democraciv_guild()
     async def join(self, ctx, *, party: PoliticalParty):
         """Join a political party"""
 
-        if party.role in ctx.author.roles:
-            return await ctx.send(f':x: You are already part of {party.role.name}.')
+        person_in_dciv = self.bot.dciv.get_member(ctx.author.id)
+
+        if person_in_dciv is None:
+            return await ctx.send(f":x: You're not in the {self.bot.dciv.name} server.")
+
+        if party.role in person_in_dciv.roles:
+            return await ctx.send(f":x: You're already part of {party.role.name}.")
 
         if party.join_mode is PoliticalPartyJoinMode.PRIVATE:
             return await ctx.send(f':x: {party.role.name} is a private party. '
@@ -207,7 +211,7 @@ class Party(commands.Cog, name='Political Parties'):
 
         elif party.join_mode is PoliticalPartyJoinMode.PUBLIC:
             try:
-                await ctx.author.add_roles(party.role)
+                await person_in_dciv.add_roles(party.role)
             except discord.Forbidden:
                 raise exceptions.ForbiddenError(ForbiddenTask.ADD_ROLE, party.role.name)
 
@@ -223,15 +227,19 @@ class Party(commands.Cog, name='Political Parties'):
 
     @commands.command(name='leave')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @checks.is_democraciv_guild()
     async def leave(self, ctx, *, party: PoliticalParty):
         """Leave a political party"""
 
-        if party.role not in ctx.author.roles:
+        person_in_dciv = self.bot.dciv.get_member(ctx.author.id)
+
+        if person_in_dciv is None:
+            return await ctx.send(f":x: You're not in the {self.bot.dciv.name} server.")
+
+        if party.role not in person_in_dciv.roles:
             return await ctx.send(f':x: You are not part of {party.role.name}.')
 
         try:
-            await ctx.author.remove_roles(party.role)
+            await person_in_dciv.remove_roles(party.role)
         except discord.Forbidden:
             raise exceptions.ForbiddenError(ForbiddenTask.REMOVE_ROLE, detail=party.role.name)
 
@@ -331,7 +339,6 @@ class Party(commands.Cog, name='Political Parties'):
         if not discord_invite_pattern.fullmatch(party_invite):
             party_invite = None
 
-
         reactions = {
             "\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467": PoliticalPartyJoinMode.PUBLIC,
             "\U0001f4e9": PoliticalPartyJoinMode.REQUEST,
@@ -381,6 +388,7 @@ class Party(commands.Cog, name='Political Parties'):
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
     async def changeparty(self, ctx):
         """Edit an existing political party"""
+        # todo
         await self.create_new_party(ctx)
 
     @party.command(name='delete', aliases=['remove'])
@@ -451,9 +459,7 @@ class Party(commands.Cog, name='Political Parties'):
         to_be_merged = []
 
         for i in range(1, amount_of_parties + 1):
-            await ctx.send(f":information_source: What's the name or alias for political party #{i}?")
-
-            name = await ctx.input()
+            name = await ctx.input(f":information_source: What's the name or alias for political party #{i}?")
 
             if not name:
                 return

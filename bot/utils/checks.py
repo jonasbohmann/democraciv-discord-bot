@@ -34,7 +34,7 @@ def has_democraciv_role(role: mk.DemocracivRole):
         found = discord.utils.get(ctx.author.roles, id=role.value)
 
         if found is None:
-            raise commands.MissingRole(role.printable_name)
+            raise commands.MissingRole(role)
 
         return True
 

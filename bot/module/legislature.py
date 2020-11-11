@@ -7,13 +7,16 @@ from bot import DemocracivBot
 from bot.config import config, mk
 from discord.ext import commands
 from discord.embeds import EmptyEmbed
-from bot.utils import exceptions, text
+from bot.utils import exceptions, text, checks
 from discord.ext.commands import Greedy
-from bot.utils.law_helper import AnnouncementQueue
-from bot.utils.converter import Session, SessionStatus, Bill, Motion, Law, CaseInsensitiveMember, PoliticalParty, BillStatus
+
+from bot.utils.mixin import GovernmentMixin
+from bot.utils.text import AnnouncementScheduler
+from bot.utils.converter import Session, SessionStatus, Bill, Motion, Law, CaseInsensitiveMember, PoliticalParty, \
+    BillStatus
 
 
-class PassScheduler(AnnouncementQueue):
+class PassScheduler(AnnouncementScheduler):
 
     def get_message(self) -> str:
         message = [f"{self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER_ROLE).mention}, "
@@ -30,7 +33,7 @@ class PassScheduler(AnnouncementQueue):
         return '\n'.join(message)
 
 
-class OverrideScheduler(AnnouncementQueue):
+class OverrideScheduler(AnnouncementScheduler):
 
     def get_message(self) -> str:
         message = [f"{self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
@@ -44,52 +47,13 @@ class OverrideScheduler(AnnouncementQueue):
         return '\n'.join(message)
 
 
-class Legislature(commands.Cog):
+class Legislature(commands.Cog, GovernmentMixin):
     """Allows the Cabinet to organize Legislative Sessions and their submitted bills and motions."""
 
     def __init__(self, bot):
-        self.bot: DemocracivBot = bot
-        self.scheduler = PassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+        super().__init__(bot)
+        self.pass_scheduler = PassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.override_scheduler = OverrideScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
-
-    @property
-    def speaker(self) -> typing.Optional[discord.Member]:
-        try:
-            return self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE).members[0]
-        except (IndexError, exceptions.RoleNotFoundError):
-            return None
-
-    @property
-    def speaker_role(self) -> typing.Optional[discord.Role]:
-        return self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE)
-
-    @property
-    def vice_speaker(self) -> typing.Optional[discord.Member]:
-        try:
-            return self.bot.get_democraciv_role(mk.DemocracivRole.VICE_SPEAKER_ROLE).members[0]
-        except (IndexError, exceptions.RoleNotFoundError):
-            return None
-
-    @property
-    def vice_speaker_role(self) -> typing.Optional[discord.Role]:
-        return mk.get_democraciv_role(self.bot, mk.DemocracivRole.VICE_SPEAKER_ROLE)
-
-    @property
-    def gov_announcements_channel(self) -> typing.Optional[discord.TextChannel]:
-        return mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
-
-    @property
-    def legislator_role(self) -> typing.Optional[discord.Role]:
-        return mk.get_democraciv_role(self.bot, mk.DemocracivRole.LEGISLATOR_ROLE)
-
-    async def dm_legislators(self, message: str, reason: str):
-        for legislator in self.legislator_role.members:
-            await self.bot.safe_send_dm(target=legislator, reason=reason, message=message)
-
-    def is_cabinet(self, member: discord.Member) -> bool:
-        if self.speaker_role in member.roles or self.vice_speaker_role in member.roles:
-            return True
-        return False
 
     @commands.group(name='legislature', aliases=['leg'], case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -381,7 +345,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='opensession', aliases=['os'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
 
@@ -407,7 +371,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='updatesession', aliases=['us'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def updatesession(self, ctx, voting_form: str):
         """Changes the current session's status to be open for voting
 
@@ -443,7 +407,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='closesession', aliases=['cs'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def closesession(self, ctx):
         """Closes the current session"""
 
@@ -942,7 +906,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='pass', aliases=['p'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def pass_bill(self, ctx, bill_ids: Greedy[Bill]):
         """Mark one or multiple bills as passed from the Legislature
 
@@ -1017,7 +981,7 @@ class Legislature(commands.Cog):
 
     @legislature.group(name='withdraw', aliases=['w'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @text.is_democraciv_guild()
+    @checks.is_democraciv_guild()
     async def withdraw(self, ctx):
         """Withdraw one or multiple bills or motions from the current session"""
         if ctx.invoked_subcommand is None:
@@ -1144,7 +1108,7 @@ class Legislature(commands.Cog):
 
     @legislature.command(name='override', aliases=['ov'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @text.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
     async def override(self, ctx, bill_ids: Greedy[Bill]):
         """Override the veto of one or multiple bills to pass them into law
 

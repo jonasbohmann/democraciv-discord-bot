@@ -1,9 +1,9 @@
 import discord
-
 import bot.utils.text as utils
 import bot.utils.exceptions as exceptions
 from bot.config import config
 from discord.ext import commands
+
 
 class Guild(commands.Cog, name="Server"):
     """Configure various features of this bot for this server."""

@@ -14,74 +14,10 @@ from bot.config import mk
 from bot.utils.converter import Session, Bill, Law
 
 
-class MockContext:
-    def __init__(self, bot):
-        self.bot = bot
 
 
-class AnnouncementQueue:
-    def __init__(self, bot, channel):
-        self.bot = bot
-        self._channel: mk.DemocracivChannel = channel
-        self._objects: typing.List[typing.Union[Bill, Law, Session]] = []
-        self._last_addition = None
-        self._task = None
 
-    def __del__(self):
-        if self._task is not None:
-            self._task.cancel()
 
-    @property
-    def channel(self) -> typing.Optional[discord.TextChannel]:
-        return self.bot.get_democraciv_channel(self._channel)
-
-    def get_message(self) -> str:
-        raise NotImplementedError()
-
-    def split_message(self, message: str) -> typing.List[str]:
-        lines = message.splitlines(keepends=True)
-        split_into_2000 = dict()
-        index = 0
-
-        for paragraph in lines:
-            try:
-                split_into_2000[index]
-            except KeyError:
-                split_into_2000[index] = ""
-
-            split_into_2000[index] = split_into_2000[index] + ''.join(paragraph)
-
-            if (len(''.join(split_into_2000[index]))) > 1900:
-                index += 1
-
-        return list(split_into_2000.values())
-
-    def add(self, obj: typing.Union[Bill, Law, Session]):
-        if len(self._objects) == 0:
-            self._task = copy.copy(self._wait)
-            self._task.start()
-
-        self._objects.append(obj)
-        self._last_addition = datetime.datetime.utcnow()
-
-    async def send_messages(self):
-        message = self.get_message()
-
-        if len(message) > 2000:
-            split_messages = self.split_message(message)
-            for msg in split_messages:
-                await self.channel.send(msg)
-        else:
-            await self.channel.send(message)
-        self._objects.clear()
-        self._task.cancel()
-
-    @tasks.loop(seconds=30)
-    async def _wait(self):
-        if self._last_addition is not None and \
-                datetime.datetime.utcnow() - self._last_addition > datetime.timedelta(minutes=10):
-            self._last_addition = None
-            await self.send_messages()
 
 
 class LawUtils:

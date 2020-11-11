@@ -16,7 +16,7 @@ class Moderation(commands.Cog):
     def __init__(self, bot: DemocracivBot):
         self.bot = bot
 
-    async def calculate_alt_chance(self, member: discord.Member, check_messages: bool = False) -> (int, str):
+    async def calculate_alt_chance(self, member: discord.Member) -> (int, str):
         is_alt_chance = 0
         factor_details = ""
 
@@ -84,30 +84,6 @@ class Moderation(commands.Cog):
             is_alt_chance -= 2
             factor_details += "Discord Nitro (-200%)\n"
 
-        if check_messages:
-            # This checks how often the member talked in the most common channels (#citizens, #welcome, #public-forum,
-            # etc..)
-
-            counter = 0
-            citizens = self.bot.get_channel(208984105310879744)
-            welcome = self.bot.get_channel(253009353601318912)
-            helpchannel = self.bot.get_channel(466922441344548905)
-            propaganda = self.bot.get_channel(636446062084620288)
-            offtopic = self.bot.get_channel(208986320356376578)
-            public_forum = self.bot.get_channel(637016498535137340)
-
-            channels = [citizens, welcome, helpchannel, propaganda, offtopic, public_forum]
-
-            for i in range(5):
-                async for message in channels[i].history(limit=5000):
-                    # This takes a long time and shouldn't really be used
-                    if message.author == member:
-                        counter += 1
-
-            if counter <= 20:
-                is_alt_chance += 0.45
-                factor_details += "Did not write any messages recently (+45%)\n"
-
         return is_alt_chance, factor_details
 
     @commands.Cog.listener(name="on_message")
@@ -146,7 +122,7 @@ class Moderation(commands.Cog):
         if member.bot:
             return
 
-        chance, details = await self.calculate_alt_chance(member, False)
+        chance, details = await self.calculate_alt_chance(member)
 
         if chance >= 0.2:
             embed = self.bot.embeds.embed_builder(title="Possible Alt Account Joined", description="")
@@ -260,10 +236,9 @@ class Moderation(commands.Cog):
 
     @commands.command(name='alt')
     @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
-    async def alt(self, ctx, member: typing.Union[discord.Member, CaseInsensitiveMember], check_messages: bool = False):
+    async def alt(self, ctx, member: typing.Union[discord.Member, CaseInsensitiveMember]):
         """Check if someone is an alt"""
-        async with ctx.typing():
-            chance, details = await self.calculate_alt_chance(member, check_messages)
+        chance, details = await self.calculate_alt_chance(member)
 
         embed = self.bot.embeds.embed_builder(title="Possible Alt Detection", description="This is in no way perfect "
                                                                                           "and should always be taken"
