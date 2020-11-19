@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS guilds(
     logging_channel bigint,
     default_role_enabled bool DEFAULT FALSE,
     default_role_role bigint,
-    tag_creation_allowed bool DEFAULT FALSE
+    tag_creation_allowed bool DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS guild_private_channels(
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS guild_private_channels(
 );
 
 
-CREATE TABLE IF NOT EXISTS roles(
+CREATE TABLE IF NOT EXISTS selfroles(
     guild_id bigint references guilds(id),
     role_id bigint,
     join_message text,
@@ -48,13 +48,14 @@ CREATE TABLE IF NOT EXISTS parties(
 );
 
 CREATE TABLE IF NOT EXISTS party_leader(
+    id serial UNIQUE PRIMARY KEY,
     party_id bigint references parties(id),
     leader_id bigint,
     UNIQUE (party_id, leader_id)
 );
 
 CREATE TABLE IF NOT EXISTS party_join_request(
-    id serial unique,
+    id serial UNIQUE PRIMARY KEY,
     party_id bigint references parties(id) ON DELETE CASCADE,
     requesting_member bigint
 );
@@ -86,34 +87,34 @@ CREATE TABLE IF NOT EXISTS legislature_sessions(
     closed_on timestamp WITHOUT TIME ZONE
 );
 
-CREATE TABLE IF NOT EXISTS legislature_bills(
+CREATE TABLE IF NOT EXISTS bills(
     id serial UNIQUE PRIMARY KEY,
     leg_session serial references legislature_sessions(id),
+    name text,
     link text,
     tiny_link text,
-    bill_name text,
-    description text,
-    google_docs_description text,
     submitter bigint,
+    submitter_description text,
+    google_docs_description text,
     is_vetoable bool,
-    status int DEFAULT 0,
-    repealed_on timestamp WITHOUT TIME ZONE
+    status int DEFAULT 0
 );
 
-CREATE TABLE IF NOT EXISTS legislature_laws(
-    bill_id serial UNIQUE references legislature_bills(id),
-    law_id serial UNIQUE PRIMARY KEY,
-    passed_on timestamp WITHOUT TIME ZONE
+CREATE TABLE IF NOT EXISTS bill_history(
+    id serial UNIQUE PRIMARY KEY,
+    bill_id serial references bills(id) ON DELETE CASCADE,
+    date timestamp WITHOUT TIME ZONE,
+    before_status int,
+    after_status int
 );
 
-CREATE TABLE IF NOT EXISTS legislature_tags(
-    id serial references legislature_laws(law_id) ON DELETE CASCADE,
+
+CREATE TABLE IF NOT EXISTS bill_lookup_tags(
+    id serial UNIQUE PRIMARY KEY,
+    bill_id serial references bills(id) ON DELETE CASCADE,
     tag text,
-    UNIQUE (id, tag)
+    UNIQUE (bill_id, tag)
 );
-
-CREATE INDEX IF NOT EXISTS legislature_tags_tag_trgm_idx ON legislature_tags USING gin (tag gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS legislature_bills_name_lower_idx ON legislature_bills (LOWER(bill_name));
 
 CREATE TABLE IF NOT EXISTS legislature_motions(
     id serial UNIQUE PRIMARY KEY,
@@ -123,6 +124,10 @@ CREATE TABLE IF NOT EXISTS legislature_motions(
     hastebin text,
     submitter bigint
 );
+
+CREATE INDEX IF NOT EXISTS bill_tags_tag_trgm_idx ON bill_tags USING gin (tag gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS bills_name_lower_idx ON bills (LOWER(bill_name));
+
 
 CREATE TABLE IF NOT EXISTS guild_tags(
     guild_id bigint references guilds(id),
@@ -154,6 +159,17 @@ CREATE TABLE IF NOT EXISTS original_join_dates(
     member bigint UNIQUE,
     join_date timestamp WITHOUT TIME ZONE,
     join_position serial UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS profile(
+    user_id bigint PRIMARY KEY,
+    description text
+);
+
+CREATE TABLE IF NOT EXISTS profile_mks(
+    user_id bigint references profile(user_id),
+    mk int,
+    UNIQUE (user_id, mk)
 );
 
 CREATE TABLE IF NOT EXISTS dm_settings(

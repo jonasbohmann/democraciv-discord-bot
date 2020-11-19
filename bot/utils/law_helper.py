@@ -14,23 +14,12 @@ from bot.config import mk
 from bot.utils.converter import Session, Bill, Law
 
 
-
-
-
-
-
-
 class LawUtils:
     """Several helper functions to query the database for session, bill & law info. """
 
     def __init__(self, bot):
         self.bot = bot
-        self.illegal_tags = ('act', 'the', 'author', 'authors', 'date',
-                             'name', 'bill', 'law', 'and', 'd/m/y', 'type', 'description')
 
-        # The natural language processor module nltk used for legislature_tags needs extra data to work
-        nltk.download('punkt')
-        nltk.download('averaged_perceptron_tagger')
 
     @staticmethod
     def is_google_doc_link(link: str) -> bool:
@@ -196,8 +185,6 @@ class LawUtils:
 
         return [amount_of_sessions, amount_of_bills, amount_of_laws, amount_of_motions,
                 pretty_top_submitter, pretty_top_speaker, pretty_top_lawmaker]
-
-
 
     async def update_pg_trgm_similarity_threshold(self, threshold: float = 0.3, connection=None):
         # I couldn't figure out how to make the setting persist in all sessions from the connection pool, so

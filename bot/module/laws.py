@@ -4,7 +4,7 @@ import datetime
 
 from bot import DemocracivBot
 from bot.config import config, mk
-from bot.utils import text, checks
+from bot.utils import text, checks, context
 from discord.ext import commands
 from discord.embeds import EmptyEmbed
 from discord.ext.commands import Greedy
@@ -38,7 +38,7 @@ class AmendScheduler(AnnouncementScheduler):
         return '\n'.join(message)
 
 
-class Laws(commands.Cog, GovernmentMixin, name="Law"):
+class Laws(context.CustomCog, GovernmentMixin, name="Law"):
     """List all active laws and search for them by name or keyword."""
 
     def __init__(self, bot):
@@ -72,7 +72,6 @@ class Laws(commands.Cog, GovernmentMixin, name="Law"):
         await pages.paginate()
 
     @commands.group(name='law', aliases=['laws'], case_insensitive=True, invoke_without_command=True)
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def law(self, ctx, *, law_id: Law = None):
         """List all laws or get details about a specific law
 
@@ -184,7 +183,6 @@ class Laws(commands.Cog, GovernmentMixin, name="Law"):
         await ctx.send(embed=embed)
 
     @law.command(name='from', aliases=['f', 'by'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def _from(self, ctx, *, member_or_party: typing.Union[
         discord.Member, CaseInsensitiveMember, discord.User, PoliticalParty] = None):
         """List the laws a specific person or Political Party authored"""
@@ -238,7 +236,6 @@ class Laws(commands.Cog, GovernmentMixin, name="Law"):
             return
 
     @law.command(name='search', aliases=['s'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def search(self, ctx, *query: str):
         """Search for laws by their name or description"""
 
@@ -274,8 +271,7 @@ class Laws(commands.Cog, GovernmentMixin, name="Law"):
         await pages.paginate()
 
     @law.command(name='repeal', aliases=['r, remove', 'delete'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def removelaw(self, ctx, law_ids: Greedy[Law]):
         """Repeal one or multiple laws
 
@@ -311,8 +307,7 @@ class Laws(commands.Cog, GovernmentMixin, name="Law"):
             return await ctx.send(f":white_check_mark: All laws were repealed.")
 
     @law.command(name='updatelink', aliases=['ul', 'amend'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE, mk.DemocracivRole.VICE_SPEAKER_ROLE)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def updatelink(self, ctx, law_id: Law, new_link: str):
         """Update the link to a law
 

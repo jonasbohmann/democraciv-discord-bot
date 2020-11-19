@@ -1,18 +1,18 @@
 import time
 import discord
 
-from bot import DemocracivBot
 from bot.config import config
 from discord.ext import commands
+from bot.utils import context
 from bot.utils.help import PaginatedHelpCommand
 from bot.utils.text import SafeEmbed
 
 
-class Meta(commands.Cog):
+class Meta(context.CustomCog):
     """Commands regarding the bot itself."""
 
     def __init__(self, bot):
-        self.bot: DemocracivBot = bot
+        super().__init__(bot)
         self.old_help_command = bot.help_command
         bot.help_command = PaginatedHelpCommand()
         bot.help_command.cog = self
@@ -20,247 +20,77 @@ class Meta(commands.Cog):
     def cog_unload(self):
         self.bot.help_command = self.old_help_command
 
-    @commands.command(name='about')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    # shortcut to '-jsk reload ~' for faster debugging
+    @commands.command(name="r", hidden=True)
+    @commands.is_owner()
+    async def reload_all(self, ctx):
+        """Alias to -jishaku reload ~"""
+        if not self.bot.get_cog("Admin"):
+            return await ctx.send(":x: Admin module not loaded.")
+
+        await ctx.invoke(self.bot.get_command("jsk reload"), list(self.bot.extensions))
+
+    @commands.command(name='about', aliases=['info'])
     async def about(self, ctx):
         """About this bot"""
         invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
 
-        embed = SafeEmbed(title='About This Bot', description=f"[Invite this bot to your"
-                                                                                  f" Discord Server.]({invite_url})")
+        embed = SafeEmbed(title='About This Bot',
+                          description=f"[Invite this bot to your Discord Server.]({invite_url})")
         embed.add_field(name='Developer', value="DerJonas#8036 (u/Jovanos)", inline=True)
         embed.add_field(name='Version', value=config.BOT_VERSION, inline=True)
-        embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=True)
+        embed.add_field(name='Library', value=f"discord.py {discord.__version__}", inline=True)
         embed.add_field(name='Servers', value=len(self.bot.guilds), inline=True)
         embed.add_field(name='Users', value=len(self.bot.users), inline=True)
         embed.add_field(name='Prefix', value=f"`{config.BOT_PREFIX}`", inline=True)
         embed.add_field(name='Uptime', value=self.bot.uptime, inline=True)
         embed.add_field(name='Ping', value=f'{self.bot.ping}ms', inline=True)
-        embed.add_field(name="Source Code", value="[Link](https://github.com/jonasbohmann/democraciv-discord-bot)",
+
+        embed.add_field(name="Source Code",
+                        value="[Link](https://github.com/jonasbohmann/democraciv-discord-bot)",
                         inline=True)
-        embed.add_field(name='Commands', value=f'Check `{config.BOT_PREFIX}commands` '
-                                               f'or `{config.BOT_PREFIX}help`', inline=False)
-        embed.set_thumbnail(url=self.bot.owner.avatar_url_as(static_format="png"))
+
+        embed.add_field(name='List of Commands',
+                        value=f'Check `{config.BOT_PREFIX}commands` or `{config.BOT_PREFIX}help`',
+                        inline=False)
+
+        embed.set_author(icon_url=self.bot.owner.avatar_url_as(static_format="png"), name=f"Made by {self.bot.owner}")
         await ctx.send(embed=embed)
 
     @commands.command(name='ping', aliases=['pong'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def ping(self, ctx):
+    async def ping(self, ctx: context.CustomContext):
         """Pong!"""
+        title = "Pong!" if ctx.invoked_with == "ping" else "Ping!"
         start = time.perf_counter()
         message = await ctx.send(":arrows_counterclockwise: Ping...")
         end = time.perf_counter()
         duration = (end - start) * 1000
-        embed = self.bot.embeds.embed_builder(title=":ping_pong:  Pong!",
-                                              description=f"REST API: {duration:.0f}ms\n"
-                                                          f"Websocket: {self.bot.ping}ms\n"
-                                                          f"[Discord Status](https://status.discord.com/)",
-                                              has_footer=False)
+        embed = SafeEmbed(title=f":ping_pong:  {title}",
+                          description=f"REST API: {duration:.0f}ms\n"
+                                      f"Websocket: {self.bot.ping}ms\n"
+                                      f"[Discord Status](https://status.discord.com/)")
         await message.edit(content=None, embed=embed)
 
-    @staticmethod
-    def collect_all_commands(cog):
-        commands_list = []
-        for cmd in cog.get_commands():
-            if isinstance(cmd, discord.ext.commands.Group):
-                for c in cmd.commands:
-                    if isinstance(c, discord.ext.commands.Group):
-                        if c.qualified_name != "legislature withdraw":  # hacky :(
-                            commands_list.append(c)
-                        for co in c.commands:
-                            commands_list.append(co)
-                    else:
-                        commands_list.append(c)
-            commands_list.append(cmd)
-        return len(commands_list), sorted(commands_list, key=lambda com: com.qualified_name)
-
-    async def ensure_dm_settings(self, user: int):
-        settings = await self.bot.db.fetchrow("SELECT * FROM dm_settings WHERE user_id = $1", user)
-
-        if not settings:
-            settings = await self.bot.db.fetchrow("INSERT INTO dm_settings (user_id) VALUES ($1) RETURNING *", user)
-
-        return settings
-
-    async def toggle_dm_setting(self, user: int, setting: str):
-        settings = await self.ensure_dm_settings(user)
-        current_setting = settings[setting]
-        await self.bot.db.execute(f"UPDATE dm_settings SET {setting} = $1 WHERE user_id = $2",
-                                  not current_setting,
-                                  user)
-        return not current_setting
-
-    @commands.group(name='dms', aliases=['dm', 'pm', 'dmsettings', 'dm-settings'], case_insensitive=True,
-                    invoke_without_command=True)
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def dmsettings(self, ctx):
-        """See your currently enabled DMs from me"""
-
-        emojify_settings = self.bot.get_cog("Server").emojiy_settings
-        settings = await self.ensure_dm_settings(ctx.author.id)
-
-        mute_kick_ban = emojify_settings(settings['ban_kick_mute'])
-        leg_session_open = emojify_settings(settings['leg_session_open'])
-        leg_session_update = emojify_settings(settings['leg_session_update'])
-        leg_session_submit = emojify_settings(settings['leg_session_submit'])
-        leg_session_withdraw = emojify_settings(settings['leg_session_withdraw'])
-
-        embed = self.bot.embeds.embed_builder(title=f"Direct Messages for {ctx.author.name}",
-                                              description=f"Check `{config.BOT_PREFIX}help dms` for help on "
-                                                          f"how to enable or disable these settings.\n\n"
-                                                          f"{mute_kick_ban} DM when you get muted, kicked or banned\n"
-                                                          f"{leg_session_open} "
-                                                          f"*({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when "
-                                                          f"a Legislative Session opens\n"
-                                                          f"{leg_session_update} "
-                                                          f"*({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when "
-                                                          f"voting starts for a Legislative Session\n"
-                                                          f"{leg_session_submit} "
-                                                          f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when "
-                                                          f"someone submits a Bill or Motion\n"
-                                                          f"{leg_session_withdraw} "
-                                                          f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when "
-                                                          f"someone withdraws a Bill or Motion\n",
-                                              has_footer=False)
-        await ctx.send(embed=embed)
-
-    @dmsettings.command(name='enableall')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def enableall(self, ctx):
-        """Enable all DMs"""
-
-        await self.ensure_dm_settings(ctx.author.id)
-
-        await self.bot.db.execute("UPDATE dm_settings SET"
-                                  " ban_kick_mute = true, leg_session_open = true,"
-                                  " leg_session_update = true, leg_session_submit = true,"
-                                  " leg_session_withdraw = true"
-                                  " WHERE user_id = $1", ctx.author.id)
-
-        await ctx.send(":white_check_mark: All DMs from me are now enabled.")
-
-    @dmsettings.command(name='disableall')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def disableall(self, ctx):
-        """Disable all DMs"""
-
-        await self.ensure_dm_settings(ctx.author.id)
-
-        await self.bot.db.execute("UPDATE dm_settings SET"
-                                  " ban_kick_mute = false, leg_session_open = false,"
-                                  " leg_session_update = false, leg_session_submit = false,"
-                                  " leg_session_withdraw = false"
-                                  " WHERE user_id = $1", ctx.author.id)
-
-        await ctx.send(":white_check_mark: All DMs from me are now disabled.")
-
-    @dmsettings.command(name='moderation', aliases=['mod', 'kick', 'ban', 'mute'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def moderation(self, ctx):
-        """Toggle DMs for when you get muted, kicked or banned"""
-
-        new_value = await self.toggle_dm_setting(ctx.author.id, "ban_kick_mute")
-
-        if new_value:
-            message = ":white_check_mark: You will now receive DMs when you get muted, kicked or banned by me."
-        else:
-            message = ":white_check_mark: You will no longer receive DMs when you get muted, kicked or banned."
-
-        await ctx.send(message)
-
-    @dmsettings.command(name='legsessionopen')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def legsessionopen(self, ctx):
-        """Toggle DMs for when a Legislative Session opens"""
-
-        new_value = await self.toggle_dm_setting(ctx.author.id, "leg_session_open")
-
-        if new_value:
-            message = f":white_check_mark: You will now receive DMs when you " \
-                      f"are a {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} " \
-                      f"and a new Legislative Session is opened."
-        else:
-            message = f":white_check_mark: You will no longer receive DMs when you are " \
-                      f"a {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} " \
-                      f"and a new Legislative Session is opened."
-
-        await ctx.send(message)
-
-    @dmsettings.command(name='legsessionvoting')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def legsessionvoting(self, ctx):
-        """Toggle DMs for when voting starts for a Legislative Session"""
-
-        new_value = await self.toggle_dm_setting(ctx.author.id, "leg_session_update")
-
-        if new_value:
-            message = f":white_check_mark: You will now receive DMs when you are " \
-                      f"a {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} " \
-                      f"and voting starts for a Legislative Session."
-        else:
-            message = f":white_check_mark: You will no longer receive DMs when you are " \
-                      f"a {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} " \
-                      f"and voting starts for a Legislative Session."
-
-        await ctx.send(message)
-
-    @dmsettings.command(name='legsubmit')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def legsubmit(self, ctx):
-        """Toggle DMs for when someone submits a Bill or Motion"""
-
-        new_value = await self.toggle_dm_setting(ctx.author.id, "leg_session_submit")
-
-        if new_value:
-            message = f":white_check_mark: You will now receive DMs when you are a member of the " \
-                      f"{self.bot.mk.LEGISLATURE_CABINET_NAME} " \
-                      f"and someone submits a Bill or Motion. " \
-                      f"Note that you will never get a DM when a member of the " \
-                      f"{self.bot.mk.LEGISLATURE_CABINET_NAME} is the one submitting."
-        else:
-            message = f":white_check_mark: You will no longer receive DMs when you are a member of the " \
-                      f"{self.bot.mk.LEGISLATURE_CABINET_NAME} and someone submits a Bill or Motion."
-
-        await ctx.send(message)
-
-    @dmsettings.command(name='legwithdraw')
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def legwithdraw(self, ctx):
-        """Toggle DMs for when someone withdraws a Bill or Motion"""
-
-        new_value = await self.toggle_dm_setting(ctx.author.id, "leg_session_withdraw")
-
-        if new_value:
-            message = f":white_check_mark: You will now receive DMs when you are a member of the " \
-                      f"{self.bot.mk.LEGISLATURE_CABINET_NAME} and someone withdraws their Bill or Motion. " \
-                      f"Note that you will never get a DM when a member of the " \
-                      f"{self.bot.mk.LEGISLATURE_CABINET_NAME} is the one withdrawing."
-
-        else:
-            message = f":white_check_mark: You will no longer receive DMs when you are a member of the " \
-                      f"{self.bot.mk.LEGISLATURE_CABINET_NAME} and someone withdraws their Bill or Motion."
-
-        await ctx.send(message)
-
     @commands.command(name='commands', aliases=['cmd', 'cmds'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def allcmds(self, ctx):
         """List all commands"""
 
         description_text = []
         field_text = []
 
-        hidden_cogs = ('Admin', 'ErrorHandler', 'Log', 'Reddit', 'YouTube', 'Twitch')
         amounts = 0
         i = 0
         p = config.BOT_PREFIX
 
         for name, cog in sorted(self.bot.cogs.items()):
-            if name in hidden_cogs:
+            if cog.hidden:
                 continue
 
-            amount, cog_cmds = self.collect_all_commands(cog)
-            amounts += amount
+            cog_cmds = sorted([command for command in cog.walk_commands() if not (
+                    'group_show_parent_in_help' in command.__original_kwargs__ and not command.__original_kwargs__[
+                'group_show_parent_in_help'])], key=lambda c: c.qualified_name)
+
+            amounts += len(cog_cmds)
 
             commands_list = []
 
@@ -283,27 +113,22 @@ class Meta(commands.Cog):
 
             i += 1
 
-        embed = self.bot.embeds.embed_builder(title=f'All Commands ({amounts})',
-                                              description=f"This lists every command, regardless whether you can use "
-                                                          f"it in this context or not.\n\nFor more detailed "
-                                                          f"explanations and example usage of commands, "
-                                                          f"use `{p}help`, `{p}help <Category>`, "
-                                                          f"or `{p}help <command>`."
-                                                          f"\n\n{' '.join(description_text)}",
-                                              has_footer=False)
+        embed = SafeEmbed(title=f'All Commands ({amounts})',
+                          description=f"This lists every command, regardless whether you can use "
+                                      f"it in this context or not.\n\nFor more detailed "
+                                      f"explanations and example usage of commands, "
+                                      f"use `{p}help`, `{p}help <Category>`, "
+                                      f"or `{p}help <command>`."
+                                      f"\n\n{' '.join(description_text)}")
 
         embed.add_field(name="\u200b", value=' '.join(field_text))
         await ctx.send(embed=embed)
 
-    @commands.command(name='addme', aliases=['inviteme'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+    @commands.command(name='addme', aliases=['inviteme', 'invite'])
     async def addme(self, ctx):
         """Invite this bot to your Discord server"""
         invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
-        embed = self.bot.embeds.embed_builder(title='Add this bot to your own Discord server',
-                                              description=invite_url,
-                                              has_footer=False)
-        await ctx.send(embed=embed)
+        await ctx.send(embed=SafeEmbed(title='Add this bot to your own Discord server', description=invite_url))
 
 
 def setup(bot):

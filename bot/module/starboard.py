@@ -32,15 +32,16 @@ import itertools
 from bot.config import token, config, mk
 from discord.ext import commands, tasks
 
+from bot.utils import context
 from bot.utils.converter import CaseInsensitiveMember
 
 
-class Starboard(commands.Cog):
+class Starboard(context.CustomCog):
     """The Starboard. If a message on the Democraciv Server has at least 5 :star: reactions,
     it will be posted to the Starboard channel and in a weekly summary to the subreddit every Saturday."""
 
     def __init__(self, bot):
-        self.bot = bot
+        super().__init__(bot)
         self.star_emoji = config.STARBOARD_STAR_EMOJI
         self.star_threshold = config.STARBOARD_MIN_STARS
 
@@ -114,7 +115,7 @@ class Starboard(commands.Cog):
             markdown.append(title)
 
             for record in group:
-                channel = self.bot.democraciv_guild_object.get_channel(record['channel_id'])
+                channel = self.bot.dciv.get_channel(record['channel_id'])
 
                 if not channel:
                     continue
@@ -124,7 +125,7 @@ class Starboard(commands.Cog):
                 if not message:
                     continue
 
-                author = self.bot.democraciv_guild_object.get_member(record['author_id'])
+                author = self.bot.dciv.get_member(record['author_id'])
                 author = f"**{author.display_name}** ({str(author)})" if author is not None else "_Author left Democraciv_"
 
                 fmt_channel = f"**#{channel.name}**" if channel is not None else "_channel was deleted_"
@@ -222,12 +223,12 @@ class Starboard(commands.Cog):
         await self.bot.wait_until_ready()
 
         # Delay first run of task until Democraciv Guild has been found
-        if self.bot.democraciv_guild_object is None:
+        if self.bot.dciv is None:
             await asyncio.sleep(5)
 
     @property
     def starboard_channel(self) -> typing.Optional[discord.TextChannel]:
-        return self.bot.democraciv_guild_object.get_channel(config.STARBOARD_CHANNEL)
+        return self.bot.dciv.get_channel(config.STARBOARD_CHANNEL)
 
     def get_starboard_embed(self, message: discord.Message, stars: int) -> discord.Embed:
         """Returns the embed to be posted to the Starboard channel"""
@@ -265,13 +266,13 @@ class Starboard(commands.Cog):
         if str(payload.emoji) != self.star_emoji:
             return False
 
-        if payload.guild_id != self.bot.democraciv_guild_object.id:
+        if payload.guild_id != self.bot.dciv.id:
             return False
 
         if payload.channel_id == self.starboard_channel.id:
             return False
 
-        if await self.bot.is_channel_excluded(self.bot.democraciv_guild_object.id, payload.channel_id):
+        if await self.bot.is_channel_excluded(self.bot.dciv.id, payload.channel_id):
             return False
 
         if not isinstance(channel, discord.TextChannel):
@@ -281,7 +282,7 @@ class Starboard(commands.Cog):
 
     @commands.Cog.listener(name='on_raw_reaction_add')
     async def star_listener(self, payload: discord.RawReactionActionEvent):
-        channel = self.bot.democraciv_guild_object.get_channel(payload.channel_id)
+        channel = self.bot.dciv.get_channel(payload.channel_id)
 
         if not await self.verify_reaction(payload, channel):
             return
@@ -300,13 +301,13 @@ class Starboard(commands.Cog):
         if (not message.content and len(message.attachments) == 0) or message.type is not discord.MessageType.default:
             return
 
-        starrer = self.bot.democraciv_guild_object.get_member(payload.user_id)
+        starrer = self.bot.dciv.get_member(payload.user_id)
 
         await self.star_message(message, starrer)
 
     @commands.Cog.listener(name='on_raw_reaction_remove')
     async def unstar_listener(self, payload: discord.RawReactionActionEvent):
-        channel = self.bot.democraciv_guild_object.get_channel(payload.channel_id)
+        channel = self.bot.dciv.get_channel(payload.channel_id)
 
         if not await self.verify_reaction(payload, channel):
             return
@@ -317,7 +318,7 @@ class Starboard(commands.Cog):
         if payload.user_id == message.author.id:
             return
 
-        starrer = self.bot.democraciv_guild_object.get_member(payload.user_id)
+        starrer = self.bot.dciv.get_member(payload.user_id)
 
         await self.unstar_message(message, starrer)
 

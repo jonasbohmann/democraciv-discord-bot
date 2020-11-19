@@ -1,19 +1,12 @@
-import typing
 import discord
 
-from bot import DemocracivBot
-from bot.utils import exceptions
-from bot.config import config, mk
+from bot.utils import exceptions, context
 from discord.ext import commands
-
 from bot.utils.mixin import GovernmentMixin
 
 
-class SupremeCourt(commands.Cog, GovernmentMixin, name="Supreme Court"):
+class SupremeCourt(context.CustomCog, GovernmentMixin, name="Supreme Court"):
     """Useful information about the Supreme Court of this nation."""
-
-    def __init__(self, bot):
-        super().__init__(bot)
 
     def get_justices(self):
         try:
@@ -21,9 +14,9 @@ class SupremeCourt(commands.Cog, GovernmentMixin, name="Supreme Court"):
         except exceptions.RoleNotFoundError:
             return None
 
-        if isinstance(self.chief, discord.Member):
-            justices = [justice.mention for justice in _justices.members if justice.id != self.chief.id]
-            justices.insert(0, f"{self.chief.mention} ({self.bot.mk.COURT_CHIEF_JUSTICE_NAME})")
+        if isinstance(self.chief_justice, discord.Member):
+            justices = [justice.mention for justice in _justices.members if justice.id != self.chief_justice.id]
+            justices.insert(0, f"{self.chief_justice.mention} ({self.bot.mk.COURT_CHIEF_JUSTICE_NAME})")
             return justices
         else:
             return [justice.mention for justice in _justices.members]
@@ -37,8 +30,7 @@ class SupremeCourt(commands.Cog, GovernmentMixin, name="Supreme Court"):
         return [judge.mention for judge in _judges.members]
 
     @commands.group(name='court', aliases=['sc', 'courts', 'j', 'judicial'], case_insensitive=True,
-                    invoke_without_command=True)
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+                    invoke_without_command=True, thing="yea")
     async def court(self, ctx):
         """Dashboard for Supreme Court Justices"""
 

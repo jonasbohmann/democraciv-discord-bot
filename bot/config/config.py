@@ -46,6 +46,9 @@ HELP_PREVIOUS = "<:left:685985693285220392>"
 HELP_NEXT = "<:right:685985692857401353>"
 HELP_LAST = "<:last:685985693264379904>"
 HELP_BOT_HELP = "<:qe:685986162225184788>"
+YES = ":white_check_mark"
+NO = ":x:"
+USER_REACTION_REQUIRED = ":information_source"
 
 # Database Configuration
 DATABASE_DAILY_BACKUP_ENABLED = True

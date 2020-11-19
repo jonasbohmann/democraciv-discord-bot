@@ -8,7 +8,7 @@ from discord.ext import commands
 from bot.utils.context import CustomContext
 from bot.utils.converter import Bill, BillStatus
 from bot.config import config, mk
-from bot.utils import exceptions, text, paginator, checks
+from bot.utils import exceptions, text, paginator, checks, context
 from discord.ext.commands import Greedy
 from bot.utils.text import AnnouncementScheduler
 from bot.utils.mixin import GovernmentMixin
@@ -24,7 +24,7 @@ class LawPassScheduler(AnnouncementScheduler):
 
         message.append(f"\nAll new laws were added to `{config.BOT_PREFIX}laws` and can now be found with "
                        f"`{config.BOT_PREFIX}laws search <query>`. The "
-                       f"{self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE).mention} should add them to "
+                       f"{self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER).mention} should add them to "
                        f"the Legal Code as soon as possible.")
 
         return '\n'.join(message)
@@ -32,7 +32,7 @@ class LawPassScheduler(AnnouncementScheduler):
 
 class LawVetoScheduler(AnnouncementScheduler):
     def get_message(self) -> str:
-        message = [f"{self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER_ROLE).mention}, "
+        message = [f"{self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER).mention}, "
                    f"the following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"]
 
         for obj in self._objects:
@@ -41,8 +41,8 @@ class LawVetoScheduler(AnnouncementScheduler):
         return '\n'.join(message)
 
 
-class Ministry(commands.Cog, GovernmentMixin):
-    """Allows the Ministry to pass or veto bills from the Legislature."""
+class Ministry(context.CustomCog, GovernmentMixin):
+    """Allows the {MINISTRY_NAME} to pass and veto bills from the {LEGISLATURE_NAME}."""
 
     def __init__(self, bot):
         super().__init__(bot)
@@ -85,7 +85,6 @@ class Ministry(commands.Cog, GovernmentMixin):
         return pretty_bills
 
     @commands.group(name='ministry', aliases=['m', 'min'], case_insensitive=True, invoke_without_command=True)
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def ministry(self, ctx):
         """Dashboard for Ministers with important links and updates on new bills"""
 
@@ -118,7 +117,6 @@ class Ministry(commands.Cog, GovernmentMixin):
         await ctx.send(embed=embed)
 
     @ministry.command(name='bills', aliases=['b'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def bills(self, ctx):
         """See all open bills from the {LEGISLATURE_NAME} to vote on"""
 
@@ -142,7 +140,6 @@ class Ministry(commands.Cog, GovernmentMixin):
             return "You aren't allowed to vote on this bill."
 
     @ministry.command(name='veto', aliases=['v'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER, mk.DemocracivRole.LT_PRIME_MINISTER)
     async def veto(self, ctx: CustomContext, bill_ids: Greedy[Bill]):
         """Veto one or multiple bills
@@ -192,7 +189,6 @@ class Ministry(commands.Cog, GovernmentMixin):
             await ctx.send(":white_check_mark: All bills were vetoed.")
 
     @ministry.command(name='pass', aliases=['p'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER, mk.DemocracivRole.LT_PRIME_MINISTER)
     async def pass_bill(self, ctx, bill_ids: Greedy[Bill]):
         """Pass one or multiple bills into law

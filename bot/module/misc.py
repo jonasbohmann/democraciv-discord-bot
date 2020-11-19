@@ -2,23 +2,23 @@ import io
 import typing
 import random
 from urllib import parse
-
 import discord
 import operator
 import datetime
-import xdice
 import re
 
 from bot.config import config, token
 from discord.ext import commands
+
+from bot.utils import context
 from bot.utils.converter import CaseInsensitiveRole, PoliticalParty, CaseInsensitiveMember
 
 
-class Misc(commands.Cog, name="Miscellaneous"):
+class Misc(context.CustomCog, name="Miscellaneous"):
     """Miscellaneous commands. Some useful, some not."""
 
     def __init__(self, bot):
-        self.bot = bot
+        super().__init__(bot)
         self.cached_sorted_veterans_on_democraciv = []
 
     @staticmethod
@@ -148,7 +148,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
 
     @commands.Cog.listener(name="on_member_join")
     async def original_join_position_listener(self, member):
-        if member.guild.id != self.bot.democraciv_guild_object.id:
+        if member.guild.id != self.bot.dciv.id:
             return
 
         joined_on = member.joined_at or datetime.datetime.utcnow()
@@ -157,7 +157,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
                                   "VALUES ($1, $2) ON CONFLICT DO NOTHING", member.id, joined_on)
 
     async def get_member_join_date(self, member: discord.Member) -> datetime.datetime:
-        if member.guild.id == self.bot.democraciv_guild_object.id:
+        if member.guild.id == self.bot.dciv.id:
             original_date = await self.bot.db.fetchval("SELECT join_date FROM original_join_dates WHERE member = $1",
                                                        member.id)
             if original_date is not None:
@@ -166,7 +166,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         return member.joined_at
 
     async def get_member_join_position(self, user, members: list):
-        if user.guild.id == self.bot.democraciv_guild_object.id:
+        if user.guild.id == self.bot.dciv.id:
             original_position = await self.bot.db.fetchval("SELECT join_position FROM original_join_dates "
                                                            "WHERE member = $1", user.id)
             all_members = await self.bot.db.fetchval("SELECT max(join_position) FROM original_join_dates")
@@ -320,7 +320,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
         sorted_first_15_members = []
 
         # As veterans rarely change, use a cached version of sorted list if exists
-        if ctx.guild.id == self.bot.democraciv_guild_object.id:
+        if ctx.guild.id == self.bot.dciv.id:
             if len(self.cached_sorted_veterans_on_democraciv) >= 2:
                 sorted_first_15_members = self.cached_sorted_veterans_on_democraciv
             else:
@@ -350,7 +350,7 @@ class Misc(commands.Cog, name="Miscellaneous"):
                 sorted_first_15_members = sorted(first_15_members, key=lambda x: x[1])
 
                 # Save to cache if democraciv guild. This should only be done once in the bot's life cycle.
-                if ctx.guild.id == self.bot.democraciv_guild_object.id:
+                if ctx.guild.id == self.bot.dciv.id:
                     self.cached_sorted_veterans_on_democraciv = sorted_first_15_members
 
         # Send veterans
@@ -700,32 +700,12 @@ class Misc(commands.Cog, name="Miscellaneous"):
             embed.set_image(url=js[0]['url'])
             await ctx.send(embed=embed)
 
-    @commands.command(name='invite')
+    @commands.command(name='serverinvite')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def invite(self, ctx):
         """Get an active invite link to this server"""
         invite = await ctx.channel.create_invite(max_age=0, unique=False)
         await ctx.send(invite.url)
-
-    def roll_dices(self, dices):
-        # Attempt to parse the user command
-        if re.match(r".*[rR]\d*\(.*\).*", dices):
-            return "Repeat notation is disabled."
-
-        dice_pattern = xdice.Pattern(dices)
-        dice_pattern.compile()
-
-        # Ensure the number of dice the user asked to roll is reasonable
-        total_dice = 0
-
-        for dice in dice_pattern.dices:
-            total_dice += dice.amount
-            if dice.sides > 100000 or total_dice > 200:
-                # If they're not rolling a reasonable amount of dice, abort the roll. Nice job Piper...
-                return f"Can't roll `{dices}`, too many dice"
-
-        # Roll the dice
-        return dice_pattern.roll(), dice_pattern.format_string
 
     @commands.command(name='roll')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -744,61 +724,13 @@ class Misc(commands.Cog, name="Miscellaneous"):
             *Full notation can be found here: https://xdice.readthedocs.io/en/latest/dice_notation.html*
             """
 
-        # Roll dice in a separate thread to prevent blocking, ideally.
-        try:
-            roll = await self.bot.loop.run_in_executor(None, self.roll_dices, dices)
-        except (SyntaxError, TypeError, ValueError):
-            raise commands.BadArgument()
+        js = await self.bot.api_request("POST", "roll", json={'dices': dices})
 
-        if isinstance(roll, str):
-            return await ctx.send(roll)
+        if 'error' in js:
+            raise commands.BadArgument(js['error'])
 
-        format_string = roll[1]
-        roll = roll[0]
-
-        special_message = ""
-        roll_information = []
-
-        # Loop over each dice roll and add it to the intermediate text
-        for score in roll.scores():
-
-            score_string = ""
-
-            if len(score.detail) > 1:
-                score_string = f"{score_string}{' + '.join(map(str, score.detail))}"
-            else:
-                score_string = f"{score_string}{score.detail[0]}"
-
-            if not score.dropped:
-                pass
-            elif len(score.dropped) > 1:
-                score_string = f"{score_string} ~~+ {' + '.join(map(str, score.dropped))}~~"
-            else:
-                score_string = f"{score_string} ~~+ {score.dropped[0]}~~"
-
-            # Add a special message if a user rolls a 20 or 1    
-            if "d20" in score.name:
-                if 1 in score.detail:
-                    special_message = "Aww, you rolled a natural 1."
-                elif 20 in score.detail:
-                    special_message = "Yay! You rolled a natural 20."
-
-            score_string = f"[{score_string}]"
-            roll_information.append(score_string)
-
-        # Put spaces between the operators in the xdice template
-        for i in ["+", "-", "/", "*"]:
-            format_string = format_string.replace(i, f" {i} ")
-
-        # Format the intermediate text using the previous template
-        rolls = format_string.format(*roll_information)
-
-        msg = f"`{dices}` = {rolls} = {roll}"
-
-        if special_message:
-            msg = f"{msg}\n{special_message}"
-
-        await ctx.send(msg)
+        if 'result' in js:
+            await ctx.send(js['result'])
 
 
 def setup(bot):

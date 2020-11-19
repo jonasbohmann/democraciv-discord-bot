@@ -5,6 +5,7 @@ import html
 import logging
 import typing
 import aiohttp
+
 from discord.ext import tasks
 from discord import Embed
 
@@ -23,6 +24,17 @@ class RedditManager:
     def status(self):
         return len(self._scrapers)
 
+    async def get_webhooks_per_guild(self, guild_id: int):
+        records = await self.db.get_reddit_webhooks_by_guild(guild_id)
+        webhooks = []
+
+        for record in records:
+            webhooks.append({'id': record['id'],
+                             'subreddit': record['subreddit'],
+                             'webhook_id': record['webhook_id']})
+
+        return webhooks
+
     def clear_scrapers(self):
         for scraper in self._scrapers.values():
             scraper.stop()
@@ -30,34 +42,31 @@ class RedditManager:
 
         self._scrapers = dict()
 
-    async def bulk_setup(self, scrapers: typing.Dict[str, typing.Set[str]]):
-        self.clear_scrapers()
-
-        for subreddit, webhook_urls in scrapers.items():
-            await self.start_scraper(subreddit=subreddit, webhook_urls=webhook_urls)
-
-    async def start_scraper(self, *, subreddit: str, webhook_urls: typing.Set[str]):
-        subreddit = subreddit.lower()  # subreddit names are case-insensitive right?
-
+    async def start_scraper(self, *, subreddit: str, webhook_url: str):
         if subreddit in self._scrapers:
-            self._scrapers[subreddit].webhook_urls.update(webhook_urls)
-
+            self._scrapers[subreddit].add_webhook(webhook_url)
         else:
-            scraper = SubredditScraper(db=self.db, session=self.session, subreddit=subreddit,
-                                       webhook_urls=webhook_urls)
-            await scraper.start()
+            scraper = SubredditScraper(db=self.db, session=self.session, subreddit=subreddit)
+            scraper.add_webhook(webhook_url)
             self._scrapers[subreddit] = scraper
+            await scraper.start()
 
-        logging.info(f"added subreddit scraper for r/{subreddit} to {webhook_urls}")
+        logging.info(f"added subreddit scraper for r/{subreddit} to {webhook_url}")
 
-    def remove_scraper(self, *, subreddit: str, webhook_url: str):
-        subreddit = subreddit.lower()
+    async def add_scraper(self, config):
+        await self.db.add_reddit_scraper(config)
+        await self.start_scraper(subreddit=config.subreddit, webhook_url=config.webhook_url)
 
+    async def remove_scraper(self, config):
+        subreddit, webhook_url, channel_id = await self.db.remove_reddit_scraper(config.id)
+        await self.stop_scraper(subreddit=subreddit, webhook_url=webhook_url)
+        return {"subreddit": subreddit, "webhook_url": webhook_url, "channel_id": channel_id}
+
+    async def stop_scraper(self, *, subreddit: str, webhook_url: str):
         if subreddit not in self._scrapers:
             return
 
-        if len(self._scrapers[subreddit].webhook_urls) == 1 and webhook_url in self._scrapers[
-            subreddit].webhook_urls:
+        if len(self._scrapers[subreddit].webhook_urls) == 1 and webhook_url in self._scrapers[subreddit].webhook_urls:
             del self._scrapers[subreddit]
         else:
             self._scrapers[subreddit].webhook_urls.remove(webhook_url)
@@ -70,7 +79,7 @@ class RedditPost:
         self.author: str = kwargs.get("author")
         self._link: str = kwargs.get("permalink")
         self.subreddit: str = kwargs.get("subreddit")
-        self._thumbnail: typing.Optional[str] = None
+        self._thumbnail: typing.Optional[str]
 
         try:
             self._thumbnail = kwargs['preview']['images'][0]['source']['url']
@@ -106,10 +115,9 @@ class RedditPost:
 
 
 class SubredditScraper:
-    def __init__(self, *, db, subreddit: str, webhook_urls: typing.Set[str],
-                 session: aiohttp.ClientSession, post_limit: typing.Optional[int] = 1):
+    def __init__(self, *, db, subreddit: str, session: aiohttp.ClientSession, post_limit: typing.Optional[int] = 1):
         self.subreddit = subreddit
-        self.webhook_urls = webhook_urls
+        self.webhook_urls = set()
         self.db = db
         self.post_limit = post_limit
         self._session = session
@@ -117,6 +125,9 @@ class SubredditScraper:
 
     def __del__(self):
         self.stop()
+
+    def add_webhook(self, webhook_url: str):
+        self.webhook_urls.add(webhook_url)
 
     async def start(self):
         self._task = copy.copy(self.reddit_task)

@@ -5,10 +5,11 @@ import bot.utils.text as utils
 from bot.config import config
 from discord.ext import commands
 
+from bot.utils import context
 
-class Log(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
+
+class Log(context.CustomCog):
+    hidden = True
 
     async def log_event(self, guild: discord.Guild, title: str, fields: dict, thumbnail: str = None,
                         to_owner: bool = False):
@@ -195,7 +196,7 @@ class Log(commands.Cog):
         p = config.BOT_PREFIX
 
         introduction_message = f"Thanks for inviting me!\n\nYou can check `{p}help` or `{p}commands` to get more " \
-                               f"information about me.\n\nUse the `{p}server` command to configure me for this server."\
+                               f"information about me.\n\nUse the `{p}server` command to configure me for this server." \
                                f"\n\nIf you have any questions or suggestions, send a DM to {self.bot.owner.mention}!"
 
         # Send introduction message to random guild channel

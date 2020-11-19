@@ -7,6 +7,8 @@ from jishaku.metacog import GroupCogMeta
 class Admin(JishakuBase, metaclass=GroupCogMeta, command_parent=jsk, command_attrs=dict(hidden=True)):
     """Administrative commands to debug and monitor the bot"""
 
+    hidden = True
+
     @commands.command(name='sql')
     @commands.is_owner()
     async def sql(self, ctx, *, query: str):
@@ -23,7 +25,7 @@ class Admin(JishakuBase, metaclass=GroupCogMeta, command_parent=jsk, command_att
         result = f'```{result}```'
 
         if len(result) > 2000:
-            link = await self.bot.laws.post_to_hastebin(result)
+            link = await self.bot.make_paste(result)
             await ctx.send(f'<{link}>')
         else:
             await ctx.send(result)

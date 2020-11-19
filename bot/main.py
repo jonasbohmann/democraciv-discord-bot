@@ -1,3 +1,4 @@
+import io
 import os
 import re
 import time
@@ -34,6 +35,7 @@ initial_extensions = ['bot.module.logging',
                       'bot.module.roles',
                       'bot.module.guild',
                       'bot.module.admin',
+                      'bot.module.profile',
                       'bot.module.tags',
                       'bot.module.starboard',
                       'bot.module.moderation',
@@ -81,6 +83,7 @@ discord.abc.Messageable.send = safe_send
 
 
 class DemocracivBot(commands.Bot):
+    BASE_API = "http://127.0.0.1:8000"
 
     def __init__(self):
         self.start_time = time.time()
@@ -96,37 +99,29 @@ class DemocracivBot(commands.Bot):
                          activity=discord.Game(name=f"{config.BOT_PREFIX}help | {config.BOT_PREFIX}commands |"
                                                     f" {config.BOT_PREFIX}about"))
 
-        self.session = None
         self.loop.create_task(self.initialize_aiohttp_session())
 
         self.db_ready = False
-        self.db = None
         self.loop.create_task(self.connect_to_db())
         self.laws = LawUtils(self)
 
-        self.owner = None
-        self.democraciv_guild_id = None
-
-        if config.DATABASE_DAILY_BACKUP_ENABLED:
-            self.daily_db_backup.start()
+        # if config.DATABASE_DAILY_BACKUP_ENABLED:
+        #    self.daily_db_backup.start()
 
         # The bot needs a "main" guild that will be used for Reddit, Twitch & Youtube notifications, political
         # parties, legislature & ministry organization, the starboard and other admin commands.
         # The bot will automatically pick the first guild that it can see if 'DEMOCRACIV_GUILD_ID' from
         # config.py is invalid
         self.loop.create_task(self.initialize_democraciv_guild())
+        self.mk = mk.MarkConfig(self)
 
         self.loop.create_task(self.check_custom_emoji_availability())
         self.loop.create_task(self.fetch_owner())
 
         self.reddit_api = RedditAPIWrapper(self)
         self.google_api = GoogleAPIWrapper(self)
-        self.mk = mk.MarkConfig(self)
 
-        self.guild_config = None
         self.loop.create_task(self.update_guild_config_cache())
-        self.allowed_guild_settings = ("welcome", "welcome_message", "welcome_channel", "logging", "logging_channel",
-                                       "logging_excluded", "defaultrole", "defaultrole_role", "tag_creation_allowed")
 
         # Load the bot's cogs from /event and /module
         for extension in initial_extensions:
@@ -136,6 +131,11 @@ class DemocracivBot(commands.Bot):
             except Exception:
                 print(f'[BOT] Failed to load module {extension}.')
                 traceback.print_exc()
+
+    async def api_request(self, method: str, route: str, **kwargs):
+        async with self.session.request(method, f"{self.BASE_API}/{route}", **kwargs) as response:
+            if response.status == 200:
+                return await response.json()
 
     async def get_context(self, message, *, cls=None):
         return await super().get_context(message, cls=cls or context.CustomContext)
@@ -166,7 +166,7 @@ class DemocracivBot(commands.Bot):
                                                      f" performing this command. The developer"
                                                      f" has been notified."
                                                      f"\n\n```{error.__class__.__name__}:"
-                                                     f" {error}```", has_footer=False)
+                                                     f" {error}```")
             await ctx.send(embed=local_embed)
 
         if to_log_channel:
@@ -355,15 +355,11 @@ class DemocracivBot(commands.Bot):
 
         # This includes all exceptions declared in utils.exceptions.py
         elif isinstance(error, exceptions.DemocracivBotException):
-            await ctx.send(error.message)
-            return await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
-
-        elif isinstance(error, exceptions.TagCheckError):
             return await ctx.send(error.message)
 
         else:
             await self.log_error(ctx, error, to_log_channel=False, to_owner=True, to_context=True)
-            logging.exception(f"Ignoring exception in command '{ctx.command}':")
+            raise error
 
     def get_democraciv_channel(self, channel: mk.DemocracivChannel) -> typing.Optional[discord.TextChannel]:
         to_return = self.dciv.get_channel(channel.value)
@@ -374,6 +370,8 @@ class DemocracivBot(commands.Bot):
         return to_return
 
     async def verify_guild_config_cache(self, message):
+        """deprecated"""
+
         if message.guild is None:
             return
 
@@ -386,65 +384,60 @@ class DemocracivBot(commands.Bot):
 
             await self.update_guild_config_cache()
 
+    async def _populate_guild_config_cache(self, record: asyncpg.Record):
+        settings = {k: v for k, v in record.items() if k != "id"}
+        private_channels = await self.db.fetch("SELECT channel_id FROM guild_private_channels WHERE guild_id = $1",
+                                               record['id'])
+        settings['private_channels'] = [r['channel_id'] for r in private_channels]
+        return settings
+
     async def update_guild_config_cache(self):
         await self.wait_until_ready()
-
-        if self.db is None:
-            await asyncio.sleep(5)
 
         records = await self.db.fetch("SELECT * FROM guilds")
         guild_config = {}
 
         for record in records:
-            config = {"welcome": record['welcome_enabled'],
-                      "welcome_message": record['welcome_message'],
-                      "welcome_channel": record['welcome_channel'],
-                      "logging": record['logging_enabled'],
-                      "logging_channel": record['logging_channel'],
-                      # "logging_excluded": record['logging_excluded'],
-                      "defaultrole": record['default_role_enabled'],
-                      "defaultrole_role": record['default_role_role'],
-                      "tag_creation_allowed": record['tag_creation_allowed']
-                      }
+            guild_config[record['id']] = await self._populate_guild_config_cache(record)
 
-            guild_config[record['id']] = config
+        for guild in self.guilds:
+            if guild.id not in guild_config:
+                settings = await self.db.fetchrow("INSERT INTO guilds (id) VALUES ($1) RETURNING *", guild.id)
+                guild_config[settings['id']] = await self._populate_guild_config_cache(settings)
 
         self.guild_config = guild_config
-        print("[CACHE] Guild config cache was updated.")
+        logging.info("[CACHE] Guild config cache was updated.")
+        return guild_config
 
-    async def get_guild_config_cache(self, guild_id: int, setting: str):
-        if setting not in self.allowed_guild_settings:
-            raise Exception("illegal setting")
+    async def make_file_from_image_link(self, url: str):
+        async with self.session.get(url) as response:
+            image = await response.read()
+            return discord.File(io.BytesIO(image), filename="image.png")
 
+    async def get_guild_setting(self, guild_id: int, setting: str) -> typing.Union[typing.Any, typing.List]:
         if not self.is_ready():
             await self.wait_until_ready()
 
-        if self.guild_config is None:
-            await asyncio.sleep(5)
-
         try:
-            cached = self.guild_config[guild_id][setting]
-        except (TypeError, KeyError) as e:
-            print(f"[CACHE] Error in Cache.get_guild_config_cache({guild_id}, {setting})."
-                  f" Possible race condition on_guild_join"
-                  f"\n{e.__class__.__name__}: {e}")
-
-            # f-string sql query is bad practice
-            return await self.db.fetchval(f"SELECT {setting} FROM guilds WHERE id = $1", guild_id)
-
-        return cached
+            return self.guild_config[guild_id][setting]
+        except (TypeError, KeyError):
+            if setting == "private_channels":
+                private_channels = await self.db.fetch("SELECT channel_id FROM guild_private_channels WHERE guild_id = $1", guild_id)
+                return [record['channel_id'] for record in private_channels]
+            else:
+                return await self.db.fetchval(f"SELECT {setting} FROM guilds WHERE id = $1", guild_id)
 
     async def fetch_owner(self):
         await self.wait_until_ready()
 
-        self.owner = (await self.application_info()).owner
-        self.owner_id = self.owner.id
+        self.owner: discord.User = (await self.application_info()).owner
+        self.owner_id: int = self.owner.id
 
     async def initialize_aiohttp_session(self):
         """Initialize a shared aiohttp ClientSession to be used for -wikipedia, -leg submit and reddit & twitch requests
         aiohttp needs to have this in an async function, that's why it's separated from __init__()"""
 
-        self.session = aiohttp.ClientSession()
+        self.session: aiohttp.ClientSession = aiohttp.ClientSession()
 
     async def check_custom_emoji_availability(self):
         # If these custom emoji are not set in config.py, -help and -leg submit will break.
@@ -492,13 +485,12 @@ class DemocracivBot(commands.Bot):
         This will also fill an empty database with tables needed by the bot"""
 
         try:
-            self.db = await asyncpg.create_pool(user=token.POSTGRESQL_USER,
-                                                password=token.POSTGRESQL_PASSWORD,
-                                                database=token.POSTGRESQL_DATABASE,
-                                                host=token.POSTGRESQL_HOST)
+            self.db: asyncpg.pool.Pool = await asyncpg.create_pool(user=token.POSTGRESQL_USER,
+                                                                   password=token.POSTGRESQL_PASSWORD,
+                                                                   database=token.POSTGRESQL_DATABASE,
+                                                                   host=token.POSTGRESQL_HOST)
         except Exception as e:
             print("[DATABASE] Unexpected error occurred while connecting to PostgreSQL database.")
-            print(f"[DATABASE] {e}")
             self.db_ready = False
             raise e
 
@@ -514,7 +506,6 @@ class DemocracivBot(commands.Bot):
 
             except Exception as e:
                 print("[DATABASE] Unexpected error occurred while executing default schema on PostgreSQL database")
-                print(f"[DATABASE] {e}")
                 self.db_ready = False
                 raise e
 
@@ -554,18 +545,13 @@ class DemocracivBot(commands.Bot):
         return math.floor(self.latency * 1000)
 
     @property
-    def democraciv_guild_object(self) -> Optional[discord.Guild]:
-        return self.get_guild(self.democraciv_guild_id)
-
-    @property
     def dciv(self) -> Optional[discord.Guild]:
-        return self.democraciv_guild_object
+        return self.get_guild(self.democraciv_guild_id)
 
     async def safe_send_dm(self, target: Union[discord.User, discord.Member],
                            reason: str = None, message: str = None, embed: discord.Embed = None):
         dm_settings = await self.db.fetchrow("SELECT * FROM dm_settings WHERE user_id = $1", target.id)
         p = config.BOT_PREFIX
-
         if not dm_settings:
             dm_settings = await self.db.fetchrow("INSERT INTO dm_settings (user_id) VALUES ($1) RETURNING *", target.id)
 
@@ -601,19 +587,16 @@ class DemocracivBot(commands.Bot):
         print(f"[BOT] Logged in as {self.user.name} with discord.py {discord.__version__}")
         print("------------------------------------------------------------")
 
-    async def on_message(self, message):
+    async def on_message(self, message: discord.Message):
         # Don't process message/command from other bots
         if message.author.bot:
             return
 
-        for user in message.mentions:
-            if user.id == self.user.id and len(message.content) in (20, 21, 22):
-                await message.channel.send(f"Hey! :wave:\nMy prefix is: `{config.BOT_PREFIX}`\n"
-                                           f"Try `{config.BOT_PREFIX}help`, `{config.BOT_PREFIX}commands`"
-                                           f" or `{config.BOT_PREFIX}about` to learn more about me!")
-                break
+        if self.user.id in message.raw_mentions and len(message.content) in (20, 21, 22):
+            await message.channel.send(f"Hey! :wave:\nMy prefix is: `{config.BOT_PREFIX}`\n"
+                                       f"Try `{config.BOT_PREFIX}help`, `{config.BOT_PREFIX}commands`"
+                                       f" or `{config.BOT_PREFIX}about` to learn more about me!")
 
-        await self.verify_guild_config_cache(message)
         await self.process_commands(message)
 
     @tasks.loop(hours=config.DATABASE_DAILY_BACKUP_INTERVAL)
@@ -624,32 +607,32 @@ class DemocracivBot(commands.Bot):
         # Unique filenames with current UNIX timestamp
         now = time.time()
         pretty_time = datetime.datetime.utcfromtimestamp(now).strftime("%A, %B %d %Y %H:%M:%S")
-        file_name = f'democraciv-bot-db-backup-{now}'
+        file_name = f'democraciv-bot-database-backup-{now}'
         bank_backup_too = False
 
         # Use pg_dump to dumb the database as raw SQL
         # Login with credentials provided in token.py
         command = f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump -Fc {token.POSTGRESQL_DATABASE} > ' \
-                  f'bot/db/backup/{file_name} -U {token.POSTGRESQL_USER} ' \
+                  f'bot/database/backup/{file_name} -U {token.POSTGRESQL_USER} ' \
                   f'-h {token.POSTGRESQL_HOST} -w'
 
         # Check if backup dir exists
-        if not os.path.isdir('bot/db/backup'):
+        if not os.path.isdir('bot/database/backup'):
             os.mkdir('db/backup')
 
-        # Run the command and save the backup files in db/backup/
+        # Run the command and save the backup files in database/backup/
         await asyncio.create_subprocess_shell(command)
 
         backup_channel = self.get_channel(config.DATABASE_DAILY_BACKUP_DISCORD_CHANNEL)
 
         if config.DATABASE_DAILY_BACKUP_BANK_OF_DEMOCRACIV_BACKUP:
-            if not os.path.isdir('bot/db/backup/democracivbank'):
+            if not os.path.isdir('bot/database/backup/democracivbank'):
                 os.mkdir('db/backup/democracivbank')
 
             fn = f'democracivbank-of-democraciv-backup-{now}'
             bn = config.DATABASE_DAILY_BACKUP_BANK_OF_DEMOCRACIV_DATABASE
 
-            command = f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump -Fc {bn} > bot/db/backup/democracivbank/{fn} ' \
+            command = f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump -Fc {bn} > bot/database/backup/democracivbank/{fn} ' \
                       f'-U {token.POSTGRESQL_USER} -h {token.POSTGRESQL_HOST} -w'
 
             await asyncio.create_subprocess_shell(command)
@@ -657,59 +640,39 @@ class DemocracivBot(commands.Bot):
 
         await asyncio.sleep(20)
 
-        file = discord.File(f'bot/db/backup/{file_name}')
+        file = discord.File(f'bot/database/backup/{file_name}')
 
         if backup_channel is None:
-            print(f"[DATABASE] Couldn't find Backup Discord channel for database backup 'db/backup/{file_name}'.")
+            print(f"[DATABASE] Couldn't find Backup Discord channel for database backup 'database/backup/{file_name}'.")
             return
 
         await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)
 
         if bank_backup_too:
-            file = discord.File(f'bot/db/backup/democracivbank/{fn}')
+            file = discord.File(f'bot/database/backup/democracivbank/{fn}')
             await backup_channel.send(f"---- democracivbank.com Database Backup from {pretty_time} (UTC) ----",
                                       file=file)
 
     async def get_logging_channel(self, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
-        channel = await self.get_guild_config_cache(guild.id, 'logging_channel')
+        channel = await self.get_guild_setting(guild.id, 'logging_channel')
 
         if channel:
             return guild.get_channel(channel)
 
     async def get_welcome_channel(self, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
-        channel = await self.get_guild_config_cache(guild.id, 'welcome_channel')
+        channel = await self.get_guild_setting(guild.id, 'welcome_channel')
 
         if channel:
             return guild.get_channel(channel)
 
-    async def is_logging_enabled(self, guild_id: int) -> bool:
-        """Returns true if logging is enabled for this guild."""
-        return await self.get_guild_config_cache(guild_id, 'logging')
-
-    async def is_welcome_message_enabled(self, guild_id: int) -> bool:
-        """Returns true if welcome messages are enabled for this guild."""
-        return await self.get_guild_config_cache(guild_id, 'welcome')
-
-    async def is_default_role_enabled(self, guild_id: int) -> bool:
-        """Returns true if a default role is enabled for this guild."""
-        return await self.get_guild_config_cache(guild_id, 'defaultrole')
-
-    async def is_tag_creation_allowed(self, guild_id: int) -> bool:
-        """Returns true if everyone is allowed to make tags on this guild."""
-        return await self.get_guild_config_cache(guild_id, 'tag_creation_allowed')
-
     async def is_channel_excluded(self, guild_id: int, channel_id: int) -> bool:
         """Returns true if the channel is excluded from logging. This is used for the Starboard too."""
-        excluded_channels = await self.get_guild_config_cache(guild_id, 'logging_excluded')
+        excluded_channels = await self.get_guild_setting(guild_id, 'private_channels')
 
         if excluded_channels is not None:
             return channel_id in excluded_channels
         else:
             return False
-
-    async def is_guild_initialized(self, guild_id: int) -> bool:
-        """Returns true if the guild has an entry in the bot's database."""
-        return bool(await self.db.fetchval("SELECT id FROM guilds WHERE id = $1", guild_id))
 
     async def make_paste(self, txt: str) -> typing.Optional[str]:
         """Post text to mystb.in"""

@@ -7,11 +7,10 @@ import discord
 import typing
 
 from discord.ext import commands
-from bot.utils import converter, exceptions, text, checks
+from bot.utils import converter, exceptions, text, checks, context
 from bot.config import config, token, mk
 from discord.ext import menus
 from aiohttp import web
-
 
 CURRENCIES = {
     'LRA': ('Ottoman Lira', '£'),
@@ -36,6 +35,9 @@ class BankListener:
         self.app.add_routes([web.post('/dm', self.send_dm)])
         self.runner = web.AppRunner(self.app)
         self.bot.loop.create_task(self.setup())
+
+    async def shutdown(self):
+        await self.runner.cleanup()
 
     async def setup(self):
         await self.runner.setup()
@@ -68,7 +70,7 @@ class CurrencySelector(menus.Menu):
         self.result = None
 
     async def send_initial_message(self, ctx, channel):
-        embed = ctx.bot.embeds.embed_builder(title=":information_source:  Currency Selection")
+        embed = text.SafeEmbed(title=":information_source:  Currency Selection")
         embed.description = "Since you did not specify an IBAN to send the money to, " \
                             "I cannot automatically determine the currency for this " \
                             "transaction. Once you've chosen a currency, I will send the money " \
@@ -175,14 +177,17 @@ class BankCorporation(commands.Converter):
         raise commands.BadArgument()
 
 
-class Bank(commands.Cog):
-    """Open as many democracivbank accounts as you want and send money in multiple currencies. Sign up on [democracivbank.com](https://democracivbank.com)"""
+class Bank(context.CustomCog):
+    """Open as many bank accounts as you want and send money in multiple currencies. Sign up on [democracivbank.com](https://democracivbank.com)"""
 
     def __init__(self, bot):
-        self.bot = bot
+        super().__init__(bot)
         self.BANK_NAME = "Bank of Arabia"
         self.BANK_ICON_URL = "https://cdn.discordapp.com/attachments/663076007426785300/717434510861533344/ezgif-5-8a4edb1f0306.png"
         self.bank_listener = BankListener(bot)
+
+    def cog_unload(self):
+        self.bot.loop.create_task(self.bank_listener.shutdown())
 
     async def is_connected_with_bank_user(self, ctx):
         response = await self.request(BankRoute("HEAD", f"discord_user/{ctx.author.id}/"))
@@ -240,19 +245,21 @@ class Bank(commands.Cog):
             if 'discord_id' in get_params:
                 if not is_sender:
                     name = self.bot.get_user(get_params['discord_id'])
-                    raise BankNoDefaultAccountForCurrency(f":x: **{name}** does not have a default democracivbank account "
-                                                          f"for this currency. Tell them to set a default democracivbank "
-                                                          f"account for this currency on "
-                                                          f"<https://democracivbank.com>.")
+                    raise BankNoDefaultAccountForCurrency(
+                        f":x: **{name}** does not have a default bank account "
+                        f"for this currency. Tell them to set a default bank "
+                        f"account for this currency on "
+                        f"<https://democracivbank.com>.")
                 if is_sender:
-                    raise BankNoDefaultAccountForCurrency(":x: You do not have a default democracivbank account for "
+                    raise BankNoDefaultAccountForCurrency(":x: You do not have a default bank account for "
                                                           "this currency. You can make one of your personal "
-                                                          "democracivbank accounts that holds this currency to be the "
-                                                          "default democracivbank account for this currency on "
+                                                          "bank accounts that holds this currency to be the "
+                                                          "default bank account for this currency on "
                                                           "<https://democracivbank.com>.")
             else:
-                raise BankNoDefaultAccountForCurrency(f":x: This organization does not have a default democracivbank account "
-                                                      f"for this currency.")
+                raise BankNoDefaultAccountForCurrency(
+                    f":x: This organization does not have a default democracivbank account "
+                    f"for this currency.")
 
     async def send_money(self, from_discord, from_iban, to_iban, amount, purpose):
         payload = {'from_account': from_iban, 'to_account': to_iban, 'amount': amount, 'purpose': purpose,
@@ -277,7 +284,7 @@ class Bank(commands.Cog):
                 raise BankTransactionError(f":x: The transaction could not be completed, please notify "
                                            f"{self.bot.owner}.")
 
-    @commands.group(name='democracivbank', aliases=['b', 'economy', 'cash', 'currency'], case_insensitive=True,
+    @commands.group(name='bank', aliases=['b', 'economy', 'cash', 'currency'], case_insensitive=True,
                     invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def bank(self, ctx):
@@ -346,7 +353,8 @@ class Bank(commands.Cog):
         embed.add_field(name="Description", value=organization.description, inline=False)
         embed.url = f"https://democracivbank.com/organization/{organization.abbreviation}"
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
-        embed.set_footer(text=f"Send money to this organization with: -democracivbank send {organization.abbreviation} <amount>")
+        embed.set_footer(
+            text=f"Send money to this organization with: -bank send {organization.abbreviation} <amount>")
 
         if organization.discord_server:
             embed.add_field(name="Discord Server", value=organization.discord_server)
@@ -359,13 +367,13 @@ class Bank(commands.Cog):
     @bank.command(name='accounts', aliases=['bal', 'money', 'cash', 'b', 'account', 'balance', 'a', 'acc'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def accounts(self, ctx):
-        """See the balance of every democracivbank account you have access to"""
+        """See the balance of every bank account you have access to"""
         await self.is_connected_with_bank_user(ctx)
 
         if ctx.guild:
             embed = text.SafeEmbed(title=":information_source:  Privacy Prompt")
             embed.description = "Are you sure that you want to proceed?\n\n" \
-                                "Everyone in this channel would be able to see information about all democracivbank accounts " \
+                                "Everyone in this channel would be able to see information about all bank accounts " \
                                 "you have access to, including their IBAN and their balance.\n\n*Using this command " \
                                 "in DMs with me does not trigger this question.*"
             privacy_q = await ctx.send(embed=embed)
@@ -418,13 +426,13 @@ class Bank(commands.Cog):
     async def send(self, ctx, to_member_or_iban_or_organization: typing.Union[
         discord.Member, converter.CaseInsensitiveMember, discord.User, uuid.UUID, str]
                    , amount: decimal.Decimal, *, purpose: str = None):
-        """Send money to a specific democracivbank account, organization, or person on this server
+        """Send money to a specific bank account, organization, or person on this server
 
         **Examples**
-            `-democracivbank send @DerJonas 9.99`
-            `-democracivbank send DerJonas#8036 250`
-            `-democracivbank send c4a3ec17-cba4-462f-bdda-05620f574dce 32.10 Thanks ;)`
-            `-democracivbank send GOOGLE 1000.21` assuming 'GOOGLE' is the abbreviation of an existing, published organization
+            `{PREFIX}{COMMAND} @DerJonas 9.99`
+            `{PREFIX}{COMMAND} DerJonas#8036 250`
+            `{PREFIX}{COMMAND} c4a3ec17-cba4-462f-bdda-05620f574dce 32.10 Thanks ;)`
+            `{PREFIX}{COMMAND} GOOGLE 1000.21` assuming 'GOOGLE' is the abbreviation of an existing, published organization
         """
 
         await self.is_connected_with_bank_user(ctx)
@@ -468,7 +476,7 @@ class Bank(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.OTTOMAN_TAX_OFFICER)
     async def apply_ottoman_formula(self, ctx):
-        """See the outcome of a dry-run of the tax on all democracivbank accounts with the Ottoman currency and then apply that tax """
+        """See the outcome of a dry-run of the tax on all bank accounts with the Ottoman currency and then apply that tax """
 
         # Do the dry run first
         response = await self.request(BankRoute("GET", 'ottoman/apply/'))
@@ -525,7 +533,7 @@ class Bank(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.OTTOMAN_TAX_OFFICER)
     async def list_ottoman_ibal(self, ctx):
-        """List all democracivbank accounts with the Ottoman currency and check their Equilibrium variable"""
+        """List all bank accounts with the Ottoman currency and check their Equilibrium variable"""
 
         response = await self.request(BankRoute("GET", 'ottoman/threshold/'))
 
@@ -551,10 +559,10 @@ class Bank(commands.Cog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.OTTOMAN_TAX_OFFICER)
     async def edit_ottoman_ibal(self, ctx, iban: uuid.UUID, new_ibal: decimal.Decimal):
-        """Change the Equilibrium variable of a democracivbank account with the Ottoman currency
+        """Change the Equilibrium variable of a bank account with the Ottoman currency
 
         **Example:**
-            `-democracivbank changeottomanvariable c4a3ec17-cba4-462f-bdda-05620f574dce 200` their new variable will be 200
+            `{PREFIX}{COMMAND} c4a3ec17-cba4-462f-bdda-05620f574dce 200` their new variable will be 200
         """
 
         if iban.version != 4:
@@ -569,12 +577,12 @@ class Bank(commands.Cog):
 
         json = await response.json()
         p_or_c = "Personal" if json['individual_holder'] else "Corporate"
-        embed = self.bot.embeds.embed_builder(title="Updated Ottoman Bank Account",
-                                              description=f"**IBAN**\n{json['iban']}\n"
-                                                          f"**Bank Account Type**\n{p_or_c}\n"
-                                                          f"**Owner**\n{json['pretty_holder']}\n"
-                                                          f"**Equilibrium variable**\n"
-                                                          f"{json['ottoman_threshold_variable']}")
+        embed = text.SafeEmbed(title="Updated Ottoman Bank Account",
+                               description=f"**IBAN**\n{json['iban']}\n"
+                                           f"**Bank Account Type**\n{p_or_c}\n"
+                                           f"**Owner**\n{json['pretty_holder']}\n"
+                                           f"**Equilibrium variable**\n"
+                                           f"{json['ottoman_threshold_variable']}")
         await ctx.send(embed=embed)
 
 

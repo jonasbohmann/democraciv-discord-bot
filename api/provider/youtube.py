@@ -6,7 +6,7 @@ from discord.ext import tasks, commands
 from bot.config import token, config
 
 
-class YouTube(commands.Cog):
+class YouTube(context.CustomCog):
     """Announcements for new video uploads and live broadcasts from a YouTube Channel.
     Needs a valid YouTube Data V3 API key for the requests."""
 
@@ -75,7 +75,7 @@ class YouTube(commands.Cog):
         #   This task, with the minutes set to 15, costs approx. 9.888 units per day
 
         try:
-            discord_channel = self.bot.democraciv_guild_object.get_channel(config.YOUTUBE_ANNOUNCEMENT_CHANNEL)
+            discord_channel = self.bot.dciv.get_channel(config.YOUTUBE_ANNOUNCEMENT_CHANNEL)
         except AttributeError:
             print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "DEMOCRACIV_GUILD_ID" '
                   f'in the config to a server I am in or disable YouTube Stream announcements.')
@@ -130,7 +130,7 @@ class YouTube(commands.Cog):
         #   This task, with the minutes set to 10, costs approx. 2160 units per day
 
         try:
-            discord_channel = self.bot.democraciv_guild_object.get_channel(config.YOUTUBE_ANNOUNCEMENT_CHANNEL)
+            discord_channel = self.bot.dciv.get_channel(config.YOUTUBE_ANNOUNCEMENT_CHANNEL)
         except AttributeError:
             print(f'[BOT] ERROR - I could not find the Democraciv Discord Server! Change "DEMOCRACIV_GUILD_ID" '
                   f'in the config to a server I am in or disable YouTube Upload announcements.')
@@ -192,7 +192,7 @@ class YouTube(commands.Cog):
         await self.bot.wait_until_ready()
 
         # Delay first run of task until Democraciv Guild has been found
-        if self.bot.democraciv_guild_object is None:
+        if self.bot.dciv is None:
             await asyncio.sleep(5)
 
     @youtube_stream_task.before_loop
@@ -200,7 +200,7 @@ class YouTube(commands.Cog):
         await self.bot.wait_until_ready()
 
         # Delay first run of task until Democraciv Guild has been found
-        if self.bot.democraciv_guild_object is None:
+        if self.bot.dciv is None:
             await asyncio.sleep(5)
 
 

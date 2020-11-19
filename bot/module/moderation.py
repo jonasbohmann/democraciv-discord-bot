@@ -4,17 +4,14 @@ import datetime
 
 from bot import DemocracivBot
 from discord.ext import commands
-from bot.utils import exceptions, text
+from bot.utils import exceptions, text, context, checks
 from bot.config import token, config, mk
 from bot.utils.exceptions import ForbiddenTask
 from bot.utils.converter import UnbanConverter, BanConverter, CaseInsensitiveMember
 
 
-class Moderation(commands.Cog):
+class Moderation(context.CustomCog):
     """Commands for the Mod Team of this server."""
-
-    def __init__(self, bot: DemocracivBot):
-        self.bot = bot
 
     async def calculate_alt_chance(self, member: discord.Member) -> (int, str):
         is_alt_chance = 0
@@ -92,14 +89,14 @@ class Moderation(commands.Cog):
         if (await self.bot.get_context(message)).valid:
             return
 
-        if message.guild != self.bot.democraciv_guild_object:
+        if message.guild != self.bot.dciv:
             return
 
         if message.author.bot:
             return
 
         try:
-            mod_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE)
+            mod_role = mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION)
         except exceptions.RoleNotFoundError:
             return
 
@@ -116,7 +113,7 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener(name="on_member_join")
     async def possible_alt_listener(self, member):
-        if member.guild != self.bot.democraciv_guild_object:
+        if member.guild != self.bot.dciv:
             return
 
         if member.bot:
@@ -195,7 +192,7 @@ class Moderation(commands.Cog):
 
             await mk.get_democraciv_channel(self.bot,
                                             mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
-                content=mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE).mention, embed=embed)
+                content=mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION).mention, embed=embed)
 
             await ctx.send(":white_check_mark: Report was sent.")
 
@@ -208,7 +205,7 @@ class Moderation(commands.Cog):
             return await ctx.author.send(embed=embed)
 
         unsafe_members = [member for member in ctx.channel.members if not member.bot
-                          and mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION_ROLE) not in member.roles]
+                          and mk.get_democraciv_role(self.bot, mk.DemocracivRole.MODERATION) not in member.roles]
 
         if unsafe_members:
             await ctx.message.add_reaction("\U0001f4e9")
@@ -217,14 +214,14 @@ class Moderation(commands.Cog):
             await ctx.send(embed=embed)
 
     @commands.command(name='restart', aliases=['stop'])
-    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def restart(self, ctx):
         """Restarts the bot"""
         await ctx.send(':wave: Restarting...')
         await self.bot.close()
 
     @commands.command(name='say')
-    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def say(self, ctx, *, content: str):
         """Make the bot say something"""
         try:
@@ -235,7 +232,7 @@ class Moderation(commands.Cog):
         await ctx.send(content)
 
     @commands.command(name='alt')
-    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def alt(self, ctx, member: typing.Union[discord.Member, CaseInsensitiveMember]):
         """Check if someone is an alt"""
         chance, details = await self.calculate_alt_chance(member)
@@ -252,7 +249,7 @@ class Moderation(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(name='hub', aliases=['modhub', 'moderationhub', 'mhub'])
-    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def hub(self, ctx):
         """Link to the Moderation Hub"""
         link = token.MOD_HUB or 'https://hastebin.com/afijavahox.coffeescript'
@@ -261,7 +258,7 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='registry')
-    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def registry(self, ctx):
         """Link to the Democraciv Registry"""
         link = token.REGISTRY or 'https://hastebin.com/afijavahox.coffeescript'
@@ -270,7 +267,7 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='drive', aliases=['googledrive', 'gdrive'])
-    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def gdrive(self, ctx):
         """Link to the Google Drive for MK6"""
         link = token.MK6_DRIVE or 'https://hastebin.com/afijavahox.coffeescript'
@@ -279,7 +276,7 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='pin', aliases=['pins', 'electiontool', 'pintool'])
-    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def electiontool(self, ctx):
         """Link to DerJonas' Election Tool"""
         link = token.PIN_TOOL or 'https://hastebin.com/afijavahox.coffeescript'
@@ -288,7 +285,7 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='modguidelines', aliases=['modguideline', 'mod', 'mods', 'modprocedure', 'modprocedures'])
-    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def modguidelines(self, ctx):
         """Link to the Democraciv Moderation Guidelines"""
         link = token.MOD_GUIDELINES or 'https://hastebin.com/afijavahox.coffeescript'
@@ -298,7 +295,7 @@ class Moderation(commands.Cog):
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name='quire', aliases=['q'])
-    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def quire(self, ctx):
         """Quire Project Management"""
         embed = self.bot.embeds.embed_builder(title='Quire', description="https://quire.io/c/democraciv-moderation")
@@ -591,7 +588,7 @@ class Moderation(commands.Cog):
             await ctx.send(":x: I couldn't find that person.")
 
     @commands.command(name='archivechannel')
-    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def archivechannel(self, ctx, *, channel: discord.TextChannel):
         """Archive a channel and automatically set the right permissions
 
@@ -601,16 +598,16 @@ class Moderation(commands.Cog):
 
         everyone_perms = discord.PermissionOverwrite(read_message_history=False, send_messages=False,
                                                      read_messages=False)
-        everyone_role = self.bot.democraciv_guild_object.default_role
+        everyone_role = self.bot.dciv.default_role
 
         archive_perms = discord.PermissionOverwrite(read_message_history=True, send_messages=False,
                                                     read_messages=True)
-        archives_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name="Archives")
+        archives_role = discord.utils.get(self.bot.dciv.roles, name="Archives")
 
         def predicate(c):
             return c.name.lower() == f"mk{self.bot.mk.MARK}-archive"
 
-        archive_category = discord.utils.find(predicate, self.bot.democraciv_guild_object.categories)
+        archive_category = discord.utils.find(predicate, self.bot.dciv.categories)
 
         if archives_role is None:
             return await ctx.send(":x: There is no role named `Archives` for me to use.")
@@ -625,7 +622,7 @@ class Moderation(commands.Cog):
         await ctx.send(":white_check_mark: Channel was archived.")
 
     @commands.command(name='archiveoldgov')
-    @text.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def archiveoldgov(self, ctx):
         """Move all channels in the Government category and #propaganda into the Archives and set the right permissions
         """
@@ -646,7 +643,7 @@ class Moderation(commands.Cog):
         elif reaction:
             async with ctx.typing():
                 government_category: discord.CategoryChannel = discord.utils.get(
-                    self.bot.democraciv_guild_object.categories,
+                    self.bot.dciv.categories,
                     name="Government")
 
                 if government_category is None:
@@ -655,7 +652,7 @@ class Moderation(commands.Cog):
                 def predicate(c):
                     return c.name.lower() == f"mk{self.bot.mk.MARK}-archive"
 
-                archive_category = discord.utils.find(predicate, self.bot.democraciv_guild_object.categories)
+                archive_category = discord.utils.find(predicate, self.bot.dciv.categories)
 
                 if archive_category is None:
                     return await ctx.send(
@@ -663,10 +660,10 @@ class Moderation(commands.Cog):
 
                 everyone_perms = discord.PermissionOverwrite(read_message_history=False, send_messages=False,
                                                              read_messages=False)
-                everyone_role = self.bot.democraciv_guild_object.default_role
+                everyone_role = self.bot.dciv.default_role
                 archive_perms = discord.PermissionOverwrite(read_message_history=True, send_messages=False,
                                                             read_messages=True)
-                archives_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name="Archives")
+                archives_role = discord.utils.get(self.bot.dciv.roles, name="Archives")
 
                 if archives_role is None:
                     return await ctx.send(":x: There is no role named `Archives` for me to use.")
@@ -677,7 +674,7 @@ class Moderation(commands.Cog):
                                        overwrites={everyone_role: everyone_perms, archives_role: archive_perms},
                                        category=archive_category)
 
-                propaganda_channel = discord.utils.get(self.bot.democraciv_guild_object.text_channels,
+                propaganda_channel = discord.utils.get(self.bot.dciv.text_channels,
                                                        name="propaganda")
 
                 if propaganda_channel is not None:
@@ -685,7 +682,7 @@ class Moderation(commands.Cog):
                                                   overwrites={everyone_role: everyone_perms,
                                                               archives_role: archive_perms})
 
-                press_channel = discord.utils.get(self.bot.democraciv_guild_object.text_channels,
+                press_channel = discord.utils.get(self.bot.dciv.text_channels,
                                                   name="press")
 
                 if press_channel is not None:

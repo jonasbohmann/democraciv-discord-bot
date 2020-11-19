@@ -1,21 +1,98 @@
+import bot  # for type hint: https://www.python.org/dev/peps/pep-0484/#forward-references
 import asyncio
+import inspect
 import discord
 import typing
 
-from discord.ext.commands import Context
 from discord.ext import commands
+from bot.config import config
+from utils import exceptions
 
 
 class MockContext:
+    """
+    Mainly used when manually using the converter in bot.utils.converter, i.e. not as type hints in command arguments.
+
+    Attributes
+    ----------
+
+     bot: DemocracivBot
+        The bot instance
+    """
+
     def __init__(self, bot):
         self.bot = bot
 
 
-class CustomContext(Context):
+class CustomCog(commands.Cog):
+    """
+    Subclass of commands.Cog to allow the use of MarkConfig in the cog's description docstring, as well as in the
+    docstrings of all of its commands. Makes the transition between marks easier.
+
+    The standard command cooldown is also applied on every command in this cog.
+
+
+    Attributes
+    ----------
+
+     hidden: bool
+        Whether to hide this cog in -help and -commands
+
+    """
+    hidden = False
+
+    def __init__(self, bot):
+        self.bot: 'bot.DemocracivBot' = bot
+        self.bot.loop.create_task(self._transform_description())
+        self._bot_is_ready = False
+
+        for command in self.walk_commands():
+            if command.help:
+                self.bot.loop.create_task(self._transform_command_help(command))
+
+            if not command._buckets._cooldown:
+                cooldown_deco = commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+                cooldown_deco(command)
+
+    async def _transform_description(self):
+        if not self._bot_is_ready:
+            await self.bot.wait_until_ready()
+            self._bot_is_ready = True
+
+        doc = inspect.getdoc(self)
+        if doc is not None:
+            cleaned = doc.format_map(self.bot.mk.to_dict())
+            self.__cog_cleaned_doc__ = cleaned
+
+    async def _transform_command_help(self, command: commands.Command):
+        if not self._bot_is_ready:
+            await self.bot.wait_until_ready()
+            self._bot_is_ready = True
+
+        format_mapping = self.bot.mk.to_dict()
+        format_mapping['COMMAND'] = command.qualified_name
+        format_mapping['PREFIX'] = config.BOT_PREFIX
+        command.help = command.help.format_map(format_mapping)
+
+
+class CustomContext(commands.Context):
+
+    def __init__(self, **attrs):
+        self.bot: 'bot.DemocracivBot' = attrs.get('bot')  # for typing
+        super().__init__(**attrs)
 
     @property
     def db(self):
         return self.bot.db
+
+    @property
+    def guild_icon(self):
+        if self.guild:
+            return self.guild.icon_url_as(static_format="png")
+
+    @property
+    def author_icon(self):
+        return self.author.icon_url_as(static_format="png")
 
     def _wait_for_message_check(self):
         def check(message):
@@ -35,7 +112,8 @@ class CustomContext(Context):
 
         return check
 
-    async def choose(self, text=None, *, reactions, message: discord.Message = None, timeout: int = 300) -> (
+    async def choose(self, text=None, *, reactions: typing.Iterable[typing.Any], message: discord.Message = None,
+                     timeout: int = 300) -> (
             discord.Reaction,
             typing.Union[
                 discord.User, discord.Member]):
@@ -116,15 +194,13 @@ class CustomContext(Context):
         try:
             message = await self.bot.wait_for('message', check=self._wait_for_message_check(), timeout=timeout)
         except asyncio.TimeoutError:
-            await self.send(":zzz: You took too long to reply.")
-            return
+            raise exceptions.InvalidUserInputError(":zzz: You took too long to reply.")
 
         if not message.content:
             if image_allowed and message.attachments and not message.content:
                 return message.attachments[0].url
 
-            await self.send(":x: You didn't reply with text.")
-            return
+            raise exceptions.InvalidUserInputError(":x: You didn't reply with text.")
 
         else:
             if delete_after:
@@ -135,19 +211,20 @@ class CustomContext(Context):
 
             return message.content
 
-    async def ask_for_model(self, *, converter, timeout: int = 300):
-        text = await self.input(timeout=timeout)
+    async def converted_input(self, text=None, *, converter, timeout: int = 300, return_input_on_fail: bool = True):
+        if text:
+            await self.send(text)
 
-        if not text:
-            return
+        message = await self.input(timeout=timeout)
 
         if hasattr(converter, "convert"):
             try:
-                model = await converter().convert(self, text)
+                return await converter().convert(self, message)
             except commands.BadArgument:
-                return text
+                if return_input_on_fail:
+                    return message
+                raise exceptions.InvalidUserInputError(":x: Something went wrong while converting your input. "
+                                                       "Are you sure it was right?")
         else:
             # fallback
-            return converter(text)
-
-        return model if model else text
+            return converter(message)

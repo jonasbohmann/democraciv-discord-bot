@@ -1,28 +1,22 @@
 import contextlib
-import inspect
 import re
 import typing
 import discord
 
 from discord.ext import commands
 
-from bot import DemocracivBot
 from bot.config import config, mk
-from bot.utils import exceptions, text, checks, converter
+from bot.utils import exceptions, checks, converter, context
 from bot.utils.context import CustomContext
-from bot.utils.converter import PoliticalParty, PoliticalPartyJoinMode, FlowCaseInsensitiveRole
+from bot.utils.converter import PoliticalParty, PoliticalPartyJoinMode, CaseInsensitiveRole
 from bot.utils.exceptions import ForbiddenTask
-from bot.utils.law_helper import MockContext
+from bot.utils.context import MockContext
 from bot.utils.text import SafeEmbed
 
 
-class Party(commands.Cog, name='Political Parties'):
-    """Interact with the political parties of {nation}. Note that you can only join and
+class Party(context.CustomCog, name='Political Parties'):
+    """Interact with the political parties of {NATION_NAME}. Note that you can only join and
     leave parties on the Democraciv server."""
-
-    def __init__(self, bot: DemocracivBot):
-        self.bot = bot
-        self.__cog_cleaned_doc__ = inspect.getdoc(self).format(nation=self.bot.mk.NATION_NAME)
 
     async def collect_parties_and_members(self) -> typing.List[typing.Tuple[str, int]]:
         """Returns all parties with a role on the Democraciv server and their amount of members for -members."""
@@ -34,7 +28,7 @@ class Party(commands.Cog, name='Political Parties'):
         error_string = []
 
         for party in parties:
-            role = self.bot.democraciv_guild_object.get_role(party)
+            role = self.bot.dciv.get_role(party)
 
             if role is None:
                 error_string.append(str(party))
@@ -269,7 +263,7 @@ class Party(commands.Cog, name='Political Parties'):
                 party_list_embed_content.append(f'**{party[0]}**\n{party[1]} members')
 
         # Append Independents to message
-        independent_role = discord.utils.get(self.bot.democraciv_guild_object.roles, name='Independent')
+        independent_role = discord.utils.get(self.bot.dciv.roles, name='Independent')
 
         if independent_role is not None:
             if len(independent_role.members) == 1:
@@ -293,7 +287,7 @@ class Party(commands.Cog, name='Political Parties'):
     async def create_new_party(self, ctx: CustomContext) -> typing.Optional[PoliticalParty]:
         await ctx.send(":information_source: Reply with the name of the new party you want to create.")
 
-        role_name = await ctx.ask_for_model(converter=FlowCaseInsensitiveRole)
+        role_name = await ctx.converted_input(converter=CaseInsensitiveRole)
 
         if isinstance(role_name, str):
             is_updated = False
@@ -317,9 +311,6 @@ class Party(commands.Cog, name='Political Parties'):
             ":information_source: Reply with the name or mention of the party's leader or representative. "
             "If this party has multiple leaders, separate them with a newline.")).splitlines()
 
-        if not leaders_text:
-            return None
-
         leaders = []
 
         for leader in leaders_text:
@@ -331,9 +322,6 @@ class Party(commands.Cog, name='Political Parties'):
         party_invite = await ctx.input(
             ":information_source: Reply with the invite link to the party's Discord server. If they don't have one, "
             "just reply with gibberish.")
-
-        if not party_invite:
-            return None
 
         discord_invite_pattern = re.compile(r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
         if not discord_invite_pattern.fullmatch(party_invite):
@@ -347,9 +335,6 @@ class Party(commands.Cog, name='Political Parties'):
 
         reaction = await ctx.choose(":information_source: Should this party be public, request-based, or private?\n\n",
                                     reactions=reactions.keys())
-
-        if reaction is None:
-            return None
 
         join_mode = reactions[str(reaction)]
 
@@ -378,14 +363,14 @@ class Party(commands.Cog, name='Political Parties'):
 
     @party.command(name='add', aliases=['create', 'make'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def addparty(self, ctx):
         """Add a new political party"""
         await self.create_new_party(ctx)
 
     @party.command(name='edit', aliases=['change'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def changeparty(self, ctx):
         """Edit an existing political party"""
         # todo
@@ -393,7 +378,7 @@ class Party(commands.Cog, name='Political Parties'):
 
     @party.command(name='delete', aliases=['remove'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def deleteparty(self, ctx, *, party: PoliticalParty):
         """Delete a political party
 
@@ -421,7 +406,7 @@ class Party(commands.Cog, name='Political Parties'):
 
     @party.command(name='addalias')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def addalias(self, ctx, *, party: PoliticalParty):
         """Add a new alias to a political party"""
 
@@ -439,7 +424,7 @@ class Party(commands.Cog, name='Political Parties'):
 
     @party.command(name='deletealias', aliases=['removealias'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def deletealias(self, ctx, *, alias: str):
         """Delete a party's alias"""
         try:
@@ -452,7 +437,7 @@ class Party(commands.Cog, name='Political Parties'):
 
     @party.command(name='merge')
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def mergeparties(self, ctx, amount_of_parties: int):
         """Merge one or multiple parties into a single, new party"""
 

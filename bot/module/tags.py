@@ -3,10 +3,10 @@ import enum
 import typing
 import discord
 
-import bot.utils.text as utils
 
 from bot.config import config, mk
 from discord.ext import commands
+from bot.utils import context, checks
 from bot.utils.converter import Tag, OwnedTag, CaseInsensitiveMember
 
 
@@ -20,11 +20,8 @@ class TagContentType(enum.Enum):
     PARTIAL_IMAGE = 7
 
 
-class Tags(commands.Cog):
-    """Create tags for later retrieval of text, images & links. Tags are accessed with the bot's prefix. Server administrators can change who is allowed to create tags on their server with `-server tagcreation`."""
-
-    def __init__(self, bot):
-        self.bot = bot
+class Tags(context.CustomCog):
+    """Create tags for later retrieval of text, images & links. Tags are accessed with the bot's prefix."""
 
     @commands.group(name="tag", aliases=['tags', 't'], invoke_without_command=True, case_insensitive=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -121,7 +118,7 @@ class Tags(commands.Cog):
     @tags.command(name="addalias")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @utils.tag_check()
+    @checks.tag_check()
     async def addtagalias(self, ctx, *, tag: OwnedTag):
         """Add a new alias to a tag"""
 
@@ -162,7 +159,7 @@ class Tags(commands.Cog):
     @tags.command(name="removealias", aliases=['deletealias', 'ra', 'da'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @utils.tag_check()
+    @checks.tag_check()
     async def removetagalias(self, ctx, *, alias: OwnedTag):
         """Remove an alias from a tag"""
 
@@ -235,7 +232,7 @@ class Tags(commands.Cog):
     @tags.command(name="add", aliases=['make', 'create', 'a'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @utils.tag_check()
+    @checks.tag_check()
     async def addtag(self, ctx):
         """Add a tag for this server"""
 
@@ -284,7 +281,7 @@ class Tags(commands.Cog):
 
         is_global = False
 
-        if ctx.author.guild_permissions.administrator and ctx.guild.id == self.bot.democraciv_guild_object.id:
+        if ctx.author.guild_permissions.administrator and ctx.guild.id == self.bot.dciv.id:
             is_global_msg = await ctx.send(":information_source: Should this tag be global?")
 
             reaction = await flow.get_yes_no_reaction_confirm(is_global_msg, 300)
@@ -403,7 +400,7 @@ class Tags(commands.Cog):
     @tags.command(name="edit")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @utils.tag_check()
+    @checks.tag_check()
     async def edittag(self, ctx, *, tag: OwnedTag):
         """Edit one of your tags"""
 
@@ -491,7 +488,7 @@ class Tags(commands.Cog):
     @tags.command(name="toggleglobal")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @utils.has_democraciv_role(mk.DemocracivRole.MODERATION_ROLE)
+    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def toggleglobal(self, ctx, *, tag: Tag):
         """Change a tag to be global/local"""
 
@@ -510,7 +507,7 @@ class Tags(commands.Cog):
     @tags.command(name="remove", aliases=['delete'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @utils.tag_check()
+    @checks.tag_check()
     async def removetag(self, ctx, *, tag: OwnedTag):
         """Remove a tag"""
 

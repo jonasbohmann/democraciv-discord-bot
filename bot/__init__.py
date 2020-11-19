@@ -1,1 +1,1 @@
-from bot.main import DemocracivBot
+from .main import DemocracivBot

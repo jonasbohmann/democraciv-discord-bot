@@ -5,12 +5,13 @@ import enum
 import typing
 import discord
 
-from bot import DemocracivBot
+import bot
 from bot.config import config
 from datetime import datetime
 from discord.ext import commands
 from discord.ext.commands import BadArgument
 from bot.utils.exceptions import DemocracivBotException, TagError, NotFoundError, PartyNotFoundError
+from utils import context
 
 
 class SessionStatus(enum.Enum):
@@ -28,115 +29,6 @@ class SessionStatus(enum.Enum):
             return SessionStatus.CLOSED
         else:
             raise NotImplementedError
-
-
-class _BillStatusFlag(enum.Enum):
-    SUBMITTED = 0
-    LEG_FAILED = 1
-    LEG_PASSED = 2
-    MIN_FAILED = 3
-    MIN_PASSED = 4
-    VETO_OVERRIDDEN = 5
-    REPEALED = 6
-
-
-class IllegalBillOperation(DemocracivBotException):
-    pass
-
-
-class BillStatus(abc.ABC):
-    flag: _BillStatusFlag
-    verbose_name: str
-    stale: bool = False
-
-    def __init__(self, bot, bill):
-        self._bot: DemocracivBot = bot
-        self._bill: Bill = bill
-
-    def __eq__(self, other):
-        return isinstance(other, BillStatus) and self.flag == other.flag
-
-    def __int__(self):
-        return self.flag
-
-    def __str__(self):
-        return self.verbose_name
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__} flag={self.flag} stale={self.stale}>"
-
-    def make_stale(self, func):
-        @functools.wraps(func)
-        def wrapper():
-            func()
-            self.stale = True
-
-        return wrapper
-
-    @abc.abstractmethod
-    def is_law(self):
-        pass
-
-    @abc.abstractmethod
-    @make_stale
-    async def veto(self):
-        pass
-
-    @abc.abstractmethod
-    @make_stale
-    async def withdraw(self):
-        pass
-
-    @abc.abstractmethod
-    @make_stale
-    async def pass_into_law(self):
-        pass
-
-    @abc.abstractmethod
-    @make_stale
-    async def pass_from_legislature(self):
-        pass
-
-    @abc.abstractmethod
-    @make_stale
-    async def override_veto(self):
-        pass
-
-    @abc.abstractmethod
-    def emojified_status(self, verbose=True):
-        pass
-
-
-class BillSubmitted(BillStatus):
-    flag = _BillStatusFlag.SUBMITTED
-    verbose_name = "Submitted"
-
-    def is_law(self):
-        return False
-
-    async def veto(self):
-        raise IllegalBillOperation("")
-
-    async def withdraw(self):
-        await self._bot.db.execute("DELETE FROM legislature_bills WHERE id = $1", self.id)
-
-    async def pass_into_law(self):
-        pass
-
-    async def pass_from_legislature(self):
-        await self._bot.db.execute("UPDATE legislature_bills SET status = $1 WHERE id = $2",
-                                   _BillStatusFlag.LEG_PASSED.value, self._bill.id)
-
-    async def override_veto(self):
-        raise IllegalBillOperation("")
-
-    def emojified_status(self, verbose=True):
-        if verbose:
-            return f"{self._bot.mk.LEGISLATURE_NAME}: {config.LEG_BILL_STATUS_YELLOW} *(Not Voted On Yet)*\n" \
-                   f"{self._bot.mk.MINISTRY_NAME}: {config.LEG_BILL_STATUS_YELLOW} *(Waiting on {self._bot.mk.LEGISLATURE_NAME})*\n" \
-                   f"Law: {config.LEG_BILL_STATUS_GRAY}\n"
-
-        return f"{config.LEG_BILL_STATUS_YELLOW}{config.LEG_BILL_STATUS_YELLOW}{config.LEG_BILL_STATUS_GRAY}"
 
 
 class Selfrole(commands.Converter):
@@ -228,7 +120,7 @@ class UnbanConverter(commands.Converter):
             raise BadArgument(":x: I couldn't find that person.")
 
 
-class FlowCaseInsensitiveTextChannel(commands.TextChannelConverter):
+class CaseInsensitiveTextChannel(commands.TextChannelConverter):
     async def convert(self, ctx, argument):
         try:
             return await super().convert(ctx, argument)
@@ -249,8 +141,32 @@ class FlowCaseInsensitiveTextChannel(commands.TextChannelConverter):
             raise BadArgument(f":x: There is no channel named `{argument}` on this server.")
 
 
-class FlowCaseInsensitiveRole(commands.RoleConverter):
+class CaseInsensitiveTextChannelOrCategoryChannel(CaseInsensitiveTextChannel):
     async def convert(self, ctx, argument):
+        try:
+            return await super().convert(ctx, argument)
+        except BadArgument:
+            try:
+                return await commands.CategoryChannelConverter().convert(ctx, argument)
+            except BadArgument:
+                arg = argument.lower()
+
+                if arg.startswith("#"):
+                    arg = arg[1:]
+
+                def predicate(c):
+                    return c.name.lower() == arg
+
+                channel = discord.utils.find(predicate, ctx.guild.categories)
+
+                if channel:
+                    return channel
+
+                raise BadArgument(f":x: There is no channel or category named `{argument}` on this server.")
+
+
+class CaseInsensitiveRole(commands.RoleConverter):
+    async def convert(self, ctx: context.CustomContext, argument):
         try:
             return await super().convert(ctx, argument)
         except BadArgument:
@@ -270,24 +186,23 @@ class FlowCaseInsensitiveRole(commands.RoleConverter):
             raise BadArgument(f":x: There is no role named `{argument}` on this server.")
 
 
-class CaseInsensitiveRole(commands.Converter):
-    async def convert(self, ctx, argument):
-        arg = argument.lower()
+class DemocracivCaseInsensitiveRole(CaseInsensitiveRole):
+    async def convert(self, ctx: context.CustomContext, argument):
+        try:
+            return await super().convert(ctx, argument)
+        except BadArgument:
+            arg = argument.lower()
 
-        def predicate(r):
-            return r.name.lower() == arg
+            def predicate(r):
+                return r.name.lower() == arg
 
-        role = discord.utils.find(predicate, ctx.guild.roles)
+            role = discord.utils.find(predicate, ctx.bot.dciv.roles)
 
-        if role:
-            return role
+            if role:
+                return role
 
-        role = discord.utils.find(predicate, ctx.bot.democraciv_guild_object.roles)
-
-        if role:
-            return role
-
-        raise BadArgument(f":x: There is no role named `{argument}` on this or the Democraciv server.")
+            raise BadArgument(
+                f":x: There is no role named `{argument}` on this server or the {ctx.bot.dciv.name} server.")
 
 
 class CaseInsensitiveMember(commands.MemberConverter):
@@ -448,7 +363,7 @@ class Session(commands.Converter):
 
     @property
     def speaker(self) -> typing.Union[discord.Member, discord.User, None]:
-        user = self._bot.democraciv_guild_object.get_member(self._speaker) or self._bot.get_user(self._speaker)
+        user = self._bot.dciv.get_member(self._speaker) or self._bot.get_user(self._speaker)
         return user
 
     async def start_voting(self, voting_form):
@@ -515,7 +430,7 @@ class Bill(commands.Converter):
 
     @property
     def submitter(self) -> typing.Union[discord.Member, discord.User, None]:
-        user = self._bot.democraciv_guild_object.get_member(self._submitter) or self._bot.get_user(self._submitter)
+        user = self._bot.dciv.get_member(self._submitter) or self._bot.get_user(self._submitter)
         return user
 
     @property
@@ -758,7 +673,7 @@ class Motion(commands.Converter):
 
     @property
     def submitter(self) -> typing.Union[discord.Member, discord.User, None]:
-        user = self._bot.democraciv_guild_object.get_member(self._submitter) or self._bot.get_user(self._submitter)
+        user = self._bot.dciv.get_member(self._submitter) or self._bot.get_user(self._submitter)
         return user
 
     @property
@@ -832,7 +747,7 @@ class PoliticalParty(commands.Converter):
 
     @property
     def role(self) -> typing.Optional[discord.Role]:
-        return self._bot.democraciv_guild_object.get_role(self._id)
+        return self._bot.dciv.get_role(self._id)
 
     async def get_logo(self):
         if not self.discord_invite:
@@ -848,7 +763,7 @@ class PoliticalParty(commands.Converter):
     async def convert(cls, ctx, argument: typing.Union[int, str]):
         if isinstance(argument, int):
             # Check if role still exists before doing DB query
-            party = ctx.bot.democraciv_guild_object.get_role(argument)
+            party = ctx.bot.dciv.get_role(argument)
 
             if party is None:
                 raise PartyNotFoundError(argument)
@@ -857,13 +772,13 @@ class PoliticalParty(commands.Converter):
 
         elif isinstance(argument, str):
             if argument.lower() in ("independent", "independant", "ind", "ind.", "independents", "independants"):
-                return cls(role=discord.utils.get(ctx.bot.democraciv_guild_object.roles, name="Independent"),
+                return cls(role=discord.utils.get(ctx.bot.dciv.roles, name="Independent"),
                            join_mode=PoliticalPartyJoinMode.PUBLIC, bot=ctx.bot)
 
             party_id = await ctx.bot.db.fetchval("SELECT party_id FROM party_alias WHERE alias = $1", argument.lower())
 
             if party_id is None:
-                party = discord.utils.get(ctx.bot.democraciv_guild_object.roles, name=argument)
+                party = discord.utils.get(ctx.bot.dciv.roles, name=argument)
 
                 if party is None:
                     raise PartyNotFoundError(argument)

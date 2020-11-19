@@ -1,4 +1,8 @@
 import enum
+import inspect
+
+import typing
+
 from bot.utils import exceptions
 from bot.config import config
 
@@ -60,6 +64,7 @@ class MarkConfig:
     NATION_EMOJI = config.NATION_FLAG
 
     LEGISLATURE_NAME = "Legislature"
+    LEGISLATURE_ADJECTIVE = "Legislative"
     LEGISLATURE_CABINET_NAME = "Legislative Cabinet"
     LEGISLATURE_LEGISLATOR_NAME = "Legislator"
     LEGISLATURE_SPEAKER_NAME = "Speaker"
@@ -93,6 +98,20 @@ class MarkConfig:
 
     def __init__(self, bot):
         self.bot = bot
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        try:
+            return self._attributes_as_dict
+        except AttributeError:
+            attributes = inspect.getmembers(self.__class__)
+            as_dict = {a[0]: a[1] for a in attributes if not a[0].startswith('__') and not a[0].endswith('__')}
+
+            for key, value in as_dict.items():
+                if type(value) == property:
+                    as_dict[key] = getattr(self, key)
+
+            self._attributes_as_dict = as_dict
+            return as_dict
 
     def _dynamic_role_term(self, role: DemocracivRole, alt: str):
         try:

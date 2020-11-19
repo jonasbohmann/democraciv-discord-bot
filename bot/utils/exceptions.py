@@ -10,6 +10,10 @@ class DemocracivBotException(commands.CommandError):
         self.message = message
 
 
+class InvalidUserInputError(DemocracivBotException):
+    pass
+
+
 class RoleNotFoundError(DemocracivBotException):
     """Raised when the bot tries to find a non-existing role on a guild"""
 

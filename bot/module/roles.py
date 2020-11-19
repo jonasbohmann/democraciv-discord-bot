@@ -3,16 +3,15 @@ import discord
 import bot.utils.exceptions as exceptions
 
 from bot.config import config
-from bot.utils import text
+from bot.utils import text, context
 from bot.utils.converter import Selfrole
 from discord.ext import commands
 
+from utils import converter
 
-class Roles(commands.Cog, name="Selfroles"):
+
+class Selfroles(context.CustomCog):
     """Self-assignable roles for this server."""
-
-    def __init__(self, bot):
-        self.bot = bot
 
     async def list_all_roles(self, ctx):
         role_list = await self.bot.db.fetch("SELECT role_id FROM roles WHERE guild_id = $1", ctx.guild.id)
@@ -27,22 +26,20 @@ class Roles(commands.Cog, name="Selfroles"):
         if not embed_message:
             embed_message = ["This server has no selfroles yet."]
 
-        embed = text.SafeEmbed(title=f"Selfroles in {ctx.guild.name}",
-                               description='\n'.join(embed_message),
-                               has_footer=False)
+        embed = text.SafeEmbed(description='\n'.join(embed_message))
+        embed.set_author(name=f"Selfroles in {ctx.guild.name}", icon_url=ctx.guild.icon_url_as(static_format="png"))
         embed.set_footer(text=f"In order to add or remove a role from you, use '{config.BOT_PREFIX}role <role>'")
         await ctx.send(embed=embed)
 
     @commands.group(name='role', aliases=['roles', 'selfrole', 'selfroles'], case_insensitive=True,
                     invoke_without_command=True)
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def roles(self, ctx, *, role: Selfrole = None):
-        """List all roles on this server or get/lose a role by specifying the role's name
+        """List all selfroles on this server or toggle a selfrole by specifying the selfrole's name
 
         **Usage:**
-          `-role` List all available roles on this server
-          `-role <role>` Get/Lose a role
+          `{PREFIX}{COMMAND}` List all available selfroles on this server
+          `{PREFIX}{COMMAND} <role>` Toggle a selfrole
         """
 
         if role:
@@ -70,16 +67,14 @@ class Roles(commands.Cog, name="Selfroles"):
             await ctx.send(f":white_check_mark: The `{selfrole.role.name}` role was removed from you.")
 
     @roles.command(name='add', aliases=['create, make'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
-    async def addrole(self, ctx):
+    async def addrole(self, ctx: context.CustomContext):
         """Add a role to this server's `-roles` list"""
 
         await ctx.send(":information_source: Reply with the name of the role you want to create.")
 
-        flow = Flow(self.bot, ctx)
-        role_name = await flow.get_new_role(240)
+        role_name = await ctx.converted_input(converter=converter.CaseInsensitiveRole)
 
         if isinstance(role_name, str):
             await ctx.send(
@@ -95,12 +90,7 @@ class Roles(commands.Cog, name="Selfroles"):
             await ctx.send(
                 f":white_check_mark: I'll use the **pre-existing role** named `{discord_role.name}` for this.")
 
-        await ctx.send(":information_source: Reply with a short message the user should see when they get the role.")
-
-        role_join_message = await flow.get_text_input(300)
-
-        if not role_join_message:
-            return
+        role_join_message = await ctx.input(":information_source: Reply with a short message the user should see when they get the role.")
 
         await self.bot.db.execute("INSERT INTO roles (guild_id, role_id, join_message) VALUES ($1, $2, $3) "
                                   "ON CONFLICT (guild_id, role_id) DO UPDATE set join_message = $3",
@@ -110,7 +100,6 @@ class Roles(commands.Cog, name="Selfroles"):
                        f'updated in case the selfrole already existed.')
 
     @roles.command(name='delete', aliases=['remove'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
     async def deleterole(self, ctx, hard: typing.Optional[bool] = False, *, role: str):
@@ -143,4 +132,4 @@ class Roles(commands.Cog, name="Selfroles"):
 
 
 def setup(bot):
-    bot.add_cog(Roles(bot))
+    bot.add_cog(Selfroles(bot))
