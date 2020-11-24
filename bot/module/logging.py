@@ -1,3 +1,5 @@
+import logging
+
 import discord
 import datetime
 import bot.utils.text as utils
@@ -242,7 +244,7 @@ class Log(context.CustomCog):
         try:
             await introduction_channel.send(embed=embed)
         except discord.Forbidden:
-            print(f"[BOT] Got Forbidden while sending my introduction message on {guild.name} ({guild.id})")
+            logging.warning(f"got Forbidden while sending my introduction message on {guild.name} ({guild.id})")
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role):

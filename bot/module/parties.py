@@ -1,4 +1,5 @@
 import contextlib
+import logging
 import re
 import typing
 import discord
@@ -40,8 +41,8 @@ class Party(context.CustomCog, name="Political Parties"):
             parties_and_members.append((role.name, len(role.members)))
 
         if error_string:
-            print("[DATABASE] The following ids were added as a party but have no role on the Democraciv guild: ")
-            print(", ".join(error_string))
+            errored = ", ".join(error_string)
+            logging.warning(f"the following ids were added as a party but have no role on the Democraciv guild: {errored}")
 
         return parties_and_members
 
@@ -302,7 +303,6 @@ class Party(context.CustomCog, name="Political Parties"):
             party_list_embed_content = ["There are no political parties yet."]
 
         party_list_embed_content = "\n\n".join(party_list_embed_content)
-        print(party_list_embed_content)
 
         embed = SafeEmbed(
             title=f"{self.bot.mk.NATION_EMOJI}  Ranking of Political Parties in " f"{self.bot.mk.NATION_NAME}",

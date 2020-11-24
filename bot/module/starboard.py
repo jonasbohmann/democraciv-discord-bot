@@ -214,9 +214,9 @@ class Starboard(context.CustomCog):
 
         grouped_stars = self.group_starred_messages_by_day(new_starred_messages)
 
-        msg = "[BOT] Posting last week's starboard to Reddit..."
+        msg = "Posting last week's starboard to Reddit..."
         await self.bot.get_democraciv_channel(mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(msg)
-        print(msg)
+        logging.info(msg)
 
         today = datetime.datetime.utcnow().today()
         start_of_last_week = today - datetime.timedelta(days=7)

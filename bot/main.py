@@ -8,7 +8,6 @@ import typing
 
 try:
     import uvloop
-
     uvloop.install()
 except ImportError:
     pass
@@ -130,9 +129,9 @@ class DemocracivBot(commands.Bot):
         for extension in initial_extensions:
             try:
                 self.load_extension(extension)
-                print(f"[BOT] Successfully loaded {extension}")
+                logging.info(f"successfully loaded {extension}")
             except Exception:
-                print(f"[BOT] Failed to load module {extension}.")
+                logging.error(f"failed to load module {extension}.")
                 traceback.print_exc()
 
     async def api_request(self, method: str, route: str, **kwargs):
@@ -492,7 +491,7 @@ class DemocracivBot(commands.Bot):
         emoji_availability = [check_custom_emoji(emoji) for emoji in emojis]
 
         if False in emoji_availability:
-            print(
+            logging.warning(
                 "[BOT] Reverting to standard Unicode emojis for Paginator and -leg submit"
                 " as at least one emoji from config.py cannot be seen/used by me or does not exist."
             )
@@ -520,7 +519,7 @@ class DemocracivBot(commands.Bot):
                 host=token.POSTGRESQL_HOST,
             )
         except Exception as e:
-            print("[DATABASE] Unexpected error occurred while connecting to PostgreSQL database.")
+            logging.error("unexpected error occurred while connecting to PostgreSQL database.")
             self.db_ready = False
             raise e
 
@@ -528,8 +527,7 @@ class DemocracivBot(commands.Bot):
             try:
                 await self.db.execute(sql.read())
             except asyncpg.InsufficientPrivilegeError as e:
-                print(
-                    "[DATABASE] Could not create extension 'pg_trgm' as this user. Login as the"
+                logging.error("could not create extension 'pg_trgm' as this user. Login as the"
                     " postgres user and manually create extension on database."
                 )
                 self.db_ready = False
@@ -537,11 +535,11 @@ class DemocracivBot(commands.Bot):
                 raise e
 
             except Exception as e:
-                print("[DATABASE] Unexpected error occurred while executing default schema on PostgreSQL database")
+                logging.error("unexpected error occurred while executing default schema on PostgreSQL database")
                 self.db_ready = False
                 raise e
 
-        print("[DATABASE] Successfully initialised database")
+        logging.info("successfully initialised database")
         self.db_ready = True
 
     async def initialize_democraciv_guild(self):
@@ -554,8 +552,8 @@ class DemocracivBot(commands.Bot):
 
         if dciv_guild is None:
 
-            print(
-                "[BOT] Couldn't find guild with ID specified in config.py 'DEMOCRACIV_GUILD_ID'.\n"
+            logging.warning(
+                "couldn't find guild with ID specified in config.py 'DEMOCRACIV_GUILD_ID'.\n"
                 "      I will use the first guild that I can see to be used for my Democraciv-specific features."
             )
 
@@ -567,7 +565,7 @@ class DemocracivBot(commands.Bot):
         config.DEMOCRACIV_GUILD_ID = dciv_guild.id
         self.democraciv_guild_id = dciv_guild.id
 
-        print(f"[BOT] Using '{dciv_guild.name}' as Democraciv guild.")
+        logging.info(f"using '{dciv_guild.name}' as Democraciv guild.")
 
     @property
     def uptime(self):
@@ -620,11 +618,11 @@ class DemocracivBot(commands.Bot):
 
     async def on_ready(self):
         if not self.db_ready:
-            print("[DATABASE] Fatal error while connecting to database. Closing bot...")
+            logging.error("fatal error while connecting to database. Closing bot...")
             return await self.close()
 
-        print(f"[BOT] Logged in as {self.user.name} with discord.py {discord.__version__}")
-        print("------------------------------------------------------------")
+        logging.info(f"logged in as {self.user.name} with discord.py {discord.__version__}")
+        logging.info("------------------------------------------------------------")
 
     async def on_message(self, message: discord.Message):
         # Don't process message/command from other bots
@@ -692,7 +690,7 @@ class DemocracivBot(commands.Bot):
         file = discord.File(f"bot/database/backup/{file_name}")
 
         if backup_channel is None:
-            print(f"[DATABASE] Couldn't find Backup Discord channel for database backup 'database/backup/{file_name}'.")
+            logging.warning(f"couldn't find Backup Discord channel for database backup 'database/backup/{file_name}'.")
             return
 
         await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)

@@ -1,3 +1,4 @@
+import logging
 import os
 import pickle
 import aiohttp
@@ -52,11 +53,11 @@ class RedditAPIWrapper:
                     "https://oauth.reddit.com/api/submit", data=data, headers=headers
             ) as response:
                 if response.status != 200:
-                    print(f"[BOT] ERROR - Error while posting to Reddit, got status {response.status}.")
+                    logging.error(f"error while posting to Reddit, got status {response.status}.")
                     return False
                 return True
         except Exception as e:
-            print(f"[BOT] ERROR - Error while posting to Reddit: {e}")
+            logging.error(f"error while posting to Reddit: {e}")
             return False
 
 
@@ -94,5 +95,5 @@ class GoogleAPIWrapper:
         try:
             return service.scripts().run(body=request, scriptId=script_id).execute()
         except errors.HttpError as e:
-            print(f"[GOOGLE] Error while executing Apps Script {script_id}: {e.content}")
+            logging.error(f"error while executing Apps Script {script_id}: {e.content}")
             raise e
