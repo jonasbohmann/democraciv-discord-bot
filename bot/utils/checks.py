@@ -89,3 +89,7 @@ def tag_check():
             )
 
     return commands.check(check)
+
+
+def moderation_or_nation_leader():
+    return has_any_democraciv_role(mk.DemocracivRole.MODERATION, mk.DemocracivRole.NATION_ADMIN)

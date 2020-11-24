@@ -30,6 +30,9 @@ class DemocracivRole(enum.Enum):
 
     OTTOMAN_TAX_OFFICER = 744983252854636675
 
+    # multiciv
+    NATION_ADMIN = 0
+
 
 class DemocracivChannel(enum.Enum):
     # Moderation
@@ -49,11 +52,13 @@ def _make_property(role: DemocracivRole, alt: str):
 
 
 class MarkConfig:
-    MARK = "6"
-    CIV_GAME = "Sid Meier's Civilization 5"
+    MARK = "7"
+    CIV_GAME = "Sid Meier's Civilization 6"
     IS_MULTICIV = False
 
     # -- Government Names --
+
+    NATION_ROLE_PREFIX = ""
 
     NATION_NAME = "Arabia"
     NATION_FULL_NAME = "Arabian People’s Democratic Union"

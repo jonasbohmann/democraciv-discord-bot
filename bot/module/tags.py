@@ -550,7 +550,7 @@ class Tags(context.CustomCog):
     @tags.command(name="toggleglobal")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
+    @checks.moderation_or_nation_leader()
     async def toggleglobal(self, ctx: context.CustomContext, *, tag: Tag):
         """Change a tag to be global/local"""
 

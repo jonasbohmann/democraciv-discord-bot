@@ -305,7 +305,7 @@ class DemocracivBot(commands.Bot):
 
         elif isinstance(error, commands.BadArgument):
             await ctx.send(
-                f"{config.NO} There was an error with one of the arguments you provided," f" take a look at the help page:"
+                f"{config.NO} There was an error with one of the arguments you provided, take a look at the help page:"
             )
             return await ctx.send_help(ctx.command)
 
@@ -324,7 +324,7 @@ class DemocracivBot(commands.Bot):
 
         elif isinstance(error, commands.MissingPermissions):
             return await ctx.send(
-                f"{config.NO} You need {self.format_permissions(error.missing_perms)} permission(s) to use" f" this command."
+                f"{config.NO} You need {self.format_permissions(error.missing_perms)} permission(s) to use this command."
             )
 
         elif isinstance(error, commands.MissingRole):
@@ -357,29 +357,32 @@ class DemocracivBot(commands.Bot):
             )
 
         elif isinstance(error, commands.NoPrivateMessage):
-            return await ctx.send("{config.NO} This command cannot be used in DMs.")
+            return await ctx.send(f"{config.NO} This command cannot be used in DMs.")
 
         elif isinstance(error, commands.PrivateMessageOnly):
-            return await ctx.send("{config.NO} This command can only be used in DMs.")
+            return await ctx.send(f"{config.NO} This command can only be used in DMs with me.")
 
         elif isinstance(error, commands.DisabledCommand):
-            return await ctx.send("{config.NO} This command has been disabled.")
+            return await ctx.send(f"{config.NO} This command has been disabled.")
 
         elif isinstance(error, exceptions.PartyNotFoundError):
-            await ctx.send(f"{config.NO} There is no political party named `{error.party}`.")
+            await ctx.send()
 
             parties = await self.db.fetch("SELECT id FROM party")
             parties = [record["id"] for record in parties]
+            msg = []
 
-            msg = ["**Try one of these:**"]
             for party in parties:
                 role = self.dciv.get_role(party)
                 if role is not None:
                     msg.append(role.name)
 
-            if len(msg) > 1:
-                await ctx.send("\n".join(msg))
-            return
+            if msg:
+                message = f"{config.NO} There is no political party named `{error.party}`.\nTry one of these:\n" + '\n'.join(msg)
+            else:
+                message = f"{config.NO} There is no political party named `{error.party}`."
+
+            return await ctx.send(message)
 
         # This includes all exceptions declared in utils.exceptions.py
         elif isinstance(error, exceptions.DemocracivBotException):

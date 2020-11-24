@@ -20,6 +20,7 @@ STARBOARD_REDDIT_SUMMARY_ENABLED = True  # Toggle weekly posts to r/REDDIT_SUBRE
 STARBOARD_MIN_STARS = 5  # How many star reactions does a message need to be added to the starboard
 STARBOARD_MAX_AGE = 7  # Messages older than 7 days won't be allowed into the starboard
 STARBOARD_STAR_EMOJI = "\U00002b50"
+REDDIT_SUBREDDIT = "democraciv"  # This will be used for Starboard subreddit
 
 # Custom Emoji Configuration
 LEG_SUBMIT_MOTION = "<:motion:683370053508399121>"
@@ -58,13 +59,6 @@ DATABASE_DAILY_BACKUP_BANK_OF_DEMOCRACIV_BACKUP = True
 DATABASE_DAILY_BACKUP_BANK_OF_DEMOCRACIV_DATABASE = "live_bank"
 
 
-REDDIT_SUBREDDIT = "democraciv"  # This will be used for Starboard subreddit
-
-# Twitch Notifications
-TWITCH_ENABLED = True
-TWITCH_CHANNEL = "democraciv"  # The twitch.tv streamer that the bot should check for live streams
-TWITCH_ANNOUNCEMENT_CHANNEL = 209432307730350080  # The Discord Channel in which the bot will post Twitch notifications
-TWITCH_EVERYONE_PING_ON_ANNOUNCEMENT = True
 TWITCH_ANNOUNCEMENT_TO_REDDIT = True  # Announces live streams on r/REDDIT_SUBREDDIT as well. Reddit client id,
 # client secret and refresh token need to be provided in token.py for this to work
 

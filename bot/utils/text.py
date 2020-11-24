@@ -79,9 +79,7 @@ class AnnouncementScheduler:
 
     async def send_messages(self):
         message = self.get_message()
-
         await self.channel.send(message, allowed_mentions=discord.AllowedMentions(roles=True))
-
         self._objects.clear()
         self._task.cancel()
 
