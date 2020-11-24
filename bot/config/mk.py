@@ -1,6 +1,5 @@
 import enum
 import inspect
-
 import typing
 
 from bot.utils import exceptions
@@ -64,6 +63,7 @@ class MarkConfig:
     NATION_EMOJI = config.NATION_FLAG
 
     LEGISLATURE_NAME = "Legislature"
+    LEGISLATURE_COMMAND = "legislature"
     LEGISLATURE_ADJECTIVE = "Legislative"
     LEGISLATURE_CABINET_NAME = "Legislative Cabinet"
     LEGISLATURE_LEGISLATOR_NAME = "Legislator"
@@ -71,8 +71,10 @@ class MarkConfig:
     LEGISLATURE_VICE_SPEAKER_NAME = "Vice-Speaker"
     LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS = True
     LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS = True
+    LEGISLATURE_MOTIONS_EXIST = True
 
     MINISTRY_NAME = "Ministry"
+    MINISTRY_COMMAND = "ministry"
     MINISTRY_LEADERSHIP_NAME = "Head of State"
     MINISTRY_MINISTER_NAME = "Minister"
     MINISTRY_PRIME_MINISTER_NAME = "Prime Minister"
@@ -90,11 +92,19 @@ class MarkConfig:
     LEGAL_CODE = "https://docs.google.com/document/d/1nmDfOy3DypadML817J_d2pCc8FpDlO7HUUhHOajWG2o/edit?usp=sharing"
     POLITICAL_PARTIES = "https://www.reddit.com/r/democraciv/wiki/parties"
 
-    LEGISLATURE_DOCKET = "https://docs.google.com/spreadsheets/d/1k3NkAbh-32ciHMqboZRQVXXkdjT1T21qhtdom0JSm-Q/edit?usp=sharing"
-    LEGISLATURE_PROCEDURES = "https://docs.google.com/document/d/1vUGVIv0F0ZK2cAJrhaDaOS02iKIz8KOXSwjoZZgnEmo/edit?usp=sharing"
+    LEGISLATURE_DOCKET = (
+        "https://docs.google.com/spreadsheets/d/1k3NkAbh-32ciHMqboZRQVXXkdjT1T21qhtdom0JSm-Q/edit?usp=sharing"
+    )
+    LEGISLATURE_PROCEDURES = (
+        "https://docs.google.com/document/d/1vUGVIv0F0ZK2cAJrhaDaOS02iKIz8KOXSwjoZZgnEmo/edit?usp=sharing"
+    )
 
-    MINISTRY_WORKSHEET = "https://docs.google.com/spreadsheets/d/1hrBA2yftAilQFhPwCDtm74YBVFWRce5l41wRsKf9qdI/edit?usp=sharing"
-    MINISTRY_PROCEDURES = "https://docs.google.com/document/d/1c6HtdY7urz4F3fH9Nra83Qc1bNVrp_O9zmaeFs6szgA/edit?usp=sharing"
+    MINISTRY_WORKSHEET = (
+        "https://docs.google.com/spreadsheets/d/1hrBA2yftAilQFhPwCDtm74YBVFWRce5l41wRsKf9qdI/edit?usp=sharing"
+    )
+    MINISTRY_PROCEDURES = (
+        "https://docs.google.com/document/d/1c6HtdY7urz4F3fH9Nra83Qc1bNVrp_O9zmaeFs6szgA/edit?usp=sharing"
+    )
 
     def __init__(self, bot):
         self.bot = bot
@@ -104,7 +114,7 @@ class MarkConfig:
             return self._attributes_as_dict
         except AttributeError:
             attributes = inspect.getmembers(self.__class__)
-            as_dict = {a[0]: a[1] for a in attributes if not a[0].startswith('__') and not a[0].endswith('__')}
+            as_dict = {a[0]: a[1] for a in attributes if not a[0].startswith("__") and not a[0].endswith("__")}
 
             for key, value in as_dict.items():
                 if type(value) == property:
@@ -129,8 +139,12 @@ class MarkConfig:
     judge_term = _make_property(DemocracivRole.JUDGE, COURT_JUDGE_NAME)
 
     @property
+    def democraciv(self):
+        return self.bot.dciv.name
+
+    @property
     def safe_flag(self):
-        return self.NATION_FLAG_URL or self.bot.dciv.icon_url_as(static_format='png')
+        return self.NATION_FLAG_URL or self.bot.dciv.icon_url_as(static_format="png")
 
     @property
     def courts_term(self):

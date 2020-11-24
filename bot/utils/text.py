@@ -1,14 +1,14 @@
+import copy
 import datetime
 import typing
 import discord
 from discord.ext import tasks
-
 from bot.config import config, mk
-from bot.utils.converter import Bill, Law, Session
+from bot.utils import models
 
 
 def split_string(string: str, length: int):
-    return list((string[0 + i:length + i] for i in range(0, len(string), length)))
+    return list((string[0 + i : length + i] for i in range(0, len(string), length)))
 
 
 def split_string_by_paragraphs(string: str, length: int):
@@ -24,9 +24,9 @@ def split_string_by_paragraphs(string: str, length: int):
         except KeyError:
             split_into_length[index] = ""
 
-        split_into_length[index] = split_into_length[index] + ''.join(paragraph)
+        split_into_length[index] = split_into_length[index] + "".join(paragraph)
 
-        if (len(''.join(split_into_length[index]))) > length:
+        if (len("".join(split_into_length[index]))) > length:
             index += 1
 
     return split_into_length
@@ -36,7 +36,7 @@ class AnnouncementScheduler:
     def __init__(self, bot, channel):
         self.bot = bot
         self._channel: mk.DemocracivChannel = channel
-        self._objects: typing.List[typing.Union[Bill, Law, Session]] = []
+        self._objects: typing.List[typing.Union[models.Bill, models.Law, models.Session]] = []
         self._last_addition = None
         self._task = None
 
@@ -62,14 +62,14 @@ class AnnouncementScheduler:
             except KeyError:
                 split_into_2000[index] = ""
 
-            split_into_2000[index] = split_into_2000[index] + ''.join(paragraph)
+            split_into_2000[index] = split_into_2000[index] + "".join(paragraph)
 
-            if (len(''.join(split_into_2000[index]))) > 1900:
+            if (len("".join(split_into_2000[index]))) > 1900:
                 index += 1
 
         return list(split_into_2000.values())
 
-    def add(self, obj: typing.Union[Bill, Law, Session]):
+    def add(self, obj: typing.Union[models.Bill, models.Session]):
         if len(self._objects) == 0:
             self._task = copy.copy(self._wait)
             self._task.start()
@@ -80,19 +80,16 @@ class AnnouncementScheduler:
     async def send_messages(self):
         message = self.get_message()
 
-        if len(message) > 2000:
-            split_messages = self.split_message(message)
-            for msg in split_messages:
-                await self.channel.send(msg)
-        else:
-            await self.channel.send(message)
+        await self.channel.send(message, allowed_mentions=discord.AllowedMentions(roles=True))
+
         self._objects.clear()
         self._task.cancel()
 
     @tasks.loop(seconds=30)
     async def _wait(self):
-        if self._last_addition is not None and \
-                datetime.datetime.utcnow() - self._last_addition > datetime.timedelta(minutes=10):
+        if self._last_addition is not None and datetime.datetime.utcnow() - self._last_addition > datetime.timedelta(
+            minutes=10
+        ):
             self._last_addition = None
             await self.send_messages()
 
@@ -113,7 +110,14 @@ class SafeEmbed(discord.Embed):
         if len(self.title) > 256:
             self.title = f"{self.title[:253]}..."
 
-    def add_field(self, *, name: typing.Any, value: typing.Any, inline: bool = True):
+    def add_field(
+        self,
+        *,
+        name: typing.Any,
+        value: typing.Any,
+        inline: bool = True,
+        too_long_value: str = None,
+    ):
         field_index = len(self.fields)
         name = str(name)
         value = str(value)
@@ -125,7 +129,7 @@ class SafeEmbed(discord.Embed):
                 if index == 0:
                     super().add_field(name=name, value=fields[index], inline=inline)
                 else:
-                    super().add_field(name=f"{name} (Cont.)", value=fields[index], inline=inline)
+                    super().add_field(name=f"{name} (Cont.)", value=fields[index], inline=False)
         else:
             super().add_field(name=name, value=value, inline=inline)
 
@@ -133,4 +137,5 @@ class SafeEmbed(discord.Embed):
             for _ in self.fields:
                 self.remove_field(field_index)
 
-            super().add_field(name=name, value="*Too long to display.*", inline=inline)
+            v = too_long_value if too_long_value else "*Too long to display.*"
+            super().add_field(name=name, value=v, inline=inline)

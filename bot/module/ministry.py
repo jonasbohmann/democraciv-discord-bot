@@ -2,46 +2,47 @@ import datetime
 import typing
 import discord
 
-from bot import DemocracivBot
 from discord.ext import commands
-
-from bot.utils.context import CustomContext
-from bot.utils.converter import Bill, BillStatus
-from bot.config import config, mk
-from bot.utils import exceptions, text, paginator, checks, context
 from discord.ext.commands import Greedy
-from bot.utils.text import AnnouncementScheduler
-from bot.utils.mixin import GovernmentMixin
+
+from bot.config import config, mk
+from bot.utils import text, paginator, checks, context, mixin, models
 
 
-class LawPassScheduler(AnnouncementScheduler):
+class LawPassScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
-        message = [f"{self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
-                   f"the following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"]
+        message = [
+            f"{self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
+            f"the following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"
+        ]
 
         for obj in self._objects:
             message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
 
-        message.append(f"\nAll new laws were added to `{config.BOT_PREFIX}laws` and can now be found with "
-                       f"`{config.BOT_PREFIX}laws search <query>`. The "
-                       f"{self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER).mention} should add them to "
-                       f"the Legal Code as soon as possible.")
+        message.append(
+            f"\nAll new laws were added to `{config.BOT_PREFIX}laws` and can now be found with "
+            f"`{config.BOT_PREFIX}laws search <query>`. The "
+            f"{self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER).mention} should add them to "
+            f"the Legal Code as soon as possible."
+        )
 
-        return '\n'.join(message)
+        return "\n".join(message)
 
 
-class LawVetoScheduler(AnnouncementScheduler):
+class LawVetoScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
-        message = [f"{self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER).mention}, "
-                   f"the following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"]
+        message = [
+            f"{self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER).mention}, "
+            f"the following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"
+        ]
 
         for obj in self._objects:
             message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
 
-        return '\n'.join(message)
+        return "\n".join(message)
 
 
-class Ministry(context.CustomCog, GovernmentMixin):
+class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINISTRY_NAME):
     """Allows the {MINISTRY_NAME} to pass and veto bills from the {LEGISLATURE_NAME}."""
 
     def __init__(self, bot):
@@ -52,9 +53,10 @@ class Ministry(context.CustomCog, GovernmentMixin):
     async def get_pretty_vetos(self) -> typing.Optional[typing.List[str]]:
         """Gets all bills that passed the Legislature, are vetoable and were not yet voted on by the Ministry"""
 
-        open_bills = await self.bot.db.fetch('SELECT id, bill_name, link, tiny_link FROM legislature_bills '
-                                             'WHERE is_vetoable = true AND status = $1 ORDER BY id',
-                                             BillStatus.LEG_PASSED.value)
+        open_bills = await self.bot.db.fetch(
+            "SELECT id, name, link, tiny_link FROM bill " "WHERE is_vetoable = true AND status = $1 ORDER BY id",
+            models.BillPassedLegislature.flag.value,
+        )
 
         if not open_bills:
             return None
@@ -65,38 +67,49 @@ class Ministry(context.CustomCog, GovernmentMixin):
 
         for record in open_bills:
             b_ids.append(f"Bill #{record['id']}")
-            b_hyperlinks.append(f"=HYPERLINK(\"{record['link']}\"; \"{record['bill_name']}\")")
-            pretty_bills.append(f"Bill #{record['id']} - [{record['bill_name']}]({record['tiny_link']})")
+            b_hyperlinks.append(f"=HYPERLINK(\"{record['link']}\"; \"{record['name']}\")")
+            pretty_bills.append(f"Bill #{record['id']} - [{record['name']}]({record['tiny_link']})")
 
         exported = [
             f"Export of Vetoable Bills -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n",
-            "----- Vetoable Bills -----\n"]
+            "----- Vetoable Bills -----\n",
+        ]
 
         exported.extend(b_ids)
         exported.append("\n")
         exported.extend(b_hyperlinks)
 
-        link = await self.bot.make_paste('\n'.join(exported))
+        link = await self.bot.make_paste("\n".join(exported))
 
         if link:
-            pretty_bills.insert(0, f"[View this list in Google Spreadsheets formatting for"
-                                   f" easy copy & pasting]({link})\n")
+            pretty_bills.insert(
+                0,
+                f"[View this list in Google Spreadsheets formatting for" f" easy copy & pasting]({link})\n",
+            )
 
         return pretty_bills
 
-    @commands.group(name='ministry', aliases=['m', 'min'], case_insensitive=True, invoke_without_command=True)
+    @commands.group(
+        name=mk.MarkConfig.MINISTRY_COMMAND,
+        aliases=["m", "min"],
+        case_insensitive=True,
+        invoke_without_command=True,
+    )
     async def ministry(self, ctx):
-        """Dashboard for Ministers with important links and updates on new bills"""
+        """Dashboard for {minister_term} with important links and updates on new bills"""
 
-        embed = text.SafeEmbed(title=f"{self.bot.mk.NATION_EMOJI}  The {self.bot.mk.MINISTRY_NAME} of "
-                                     f"{self.bot.mk.NATION_FULL_NAME}")
+        embed = text.SafeEmbed(
+            title=f"{self.bot.mk.NATION_EMOJI}  The {self.bot.mk.MINISTRY_NAME} of " f"{self.bot.mk.NATION_FULL_NAME}"
+        )
 
         pretty_bills = await self.get_pretty_vetos()
 
         if pretty_bills is None:
-            pretty_bills = 'There are no new bills to vote on.'
+            pretty_bills = "There are no new bills to vote on."
         else:
-            pretty_bills = f"You can vote on new bills, check `{config.BOT_PREFIX}ministry bills`."
+            pretty_bills = (
+                f"You can vote on new bills, check `{config.BOT_PREFIX}{mk.MarkConfig.MINISTRY_COMMAND} bills`."
+            )
 
         minister_value = []
 
@@ -110,129 +123,85 @@ class Ministry(context.CustomCog, GovernmentMixin):
         else:
             minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
 
-        embed.add_field(name=self.bot.mk.MINISTRY_LEADERSHIP_NAME, value='\n'.join(minister_value))
-        embed.add_field(name="Links", value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
-                                            f"[Legal Code]({self.bot.mk.LEGAL_CODE})\n", inline=True)
+        embed.add_field(name=self.bot.mk.MINISTRY_LEADERSHIP_NAME, value="\n".join(minister_value))
+        embed.add_field(
+            name="Links",
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n" f"[Legal Code]({self.bot.mk.LEGAL_CODE})\n",
+            inline=True,
+        )
         embed.add_field(name="Veto-able Bills", value=pretty_bills, inline=False)
         await ctx.send(embed=embed)
 
-    @ministry.command(name='bills', aliases=['b'])
+    @ministry.command(name="bills", aliases=["b"])
     async def bills(self, ctx):
         """See all open bills from the {LEGISLATURE_NAME} to vote on"""
 
         pretty_bills = await self.get_pretty_vetos()
-
-        if pretty_bills is None:
-            embed = text.SafeEmbed(title="There are no new bills to vote on.")
-            return await ctx.send(embed=embed)
-
-        pages = paginator.SimplePages(entries=pretty_bills, title=f"{self.bot.mk.NATION_EMOJI}  Open Bills to Vote On")
+        pages = paginator.SimplePages(
+            entries=pretty_bills,
+            title=f"{self.bot.mk.NATION_EMOJI}  Open Bills to Vote On",
+            empty_message="There are no new bills to vote on.",
+        )
         await pages.start(ctx)
 
-    async def verify_bill(self, bill: Bill) -> str:
-        if not bill.is_vetoable:
-            return f"The {self.bot.mk.MINISTRY_NAME} cannot vote on this."
-
-        if bill.status is BillStatus.MIN_PASSED or bill.status is BillStatus.MIN_FAILED:
-            return "You already voted on this bill."
-
-        if bill.status is not BillStatus.LEG_PASSED:
-            return "You aren't allowed to vote on this bill."
-
-    @ministry.command(name='veto', aliases=['v'])
+    @ministry.command(name="veto", aliases=["v"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER, mk.DemocracivRole.LT_PRIME_MINISTER)
-    async def veto(self, ctx: CustomContext, bill_ids: Greedy[Bill]):
+    async def veto(self, ctx: context.CustomContext, bill_ids: Greedy[models.Bill]):
         """Veto one or multiple bills
 
         **Example:**
-            `-ministry veto 12` will veto Bill #12
-            `-ministry veto 45 46 49 51 52` will veto all those bills"""
+            `{PREFIX}{COMMAND} 12` will veto Bill #12
+            `{PREFIX}{COMMAND} 45 46 49 51 52` will veto all those bills"""
 
         if not bill_ids:
             return await ctx.send_help(ctx.command)
 
         bills = bill_ids
+        consumer = models.LegalConsumer(ctx=ctx, objects=bills, action=models.BillStatus.veto)
+        await consumer.filter()
 
-        error_messages = []
+        if consumer.failed:
+            await ctx.send(f":warning: The following bills can not be vetoed.\n{consumer.failed_formatted}")
 
-        for _bill in bills:
-            error = await self.verify_bill(_bill)
-
-            if error:
-                error_messages.append((_bill, error))
-
-        if error_messages:
-            # Remove bills that did not pass verify_bill from bills list
-            bills[:] = [b for b in bills if b not in list(map(list, zip(*error_messages)))[0]]
-
-            error_messages = '\n'.join(
-                [f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
-            await ctx.send(f":warning: The following bills can not be vetoed.\n{error_messages}")
-
-        # If all bills failed verify_bills, return
-        if not bills:
-            return
-
-        pretty_bills = '\n'.join([f"-  **{_bill.name}** (#{_bill.id})" for _bill in bills])
-
-        reaction = await ctx.confirm(f":information_source: Are you sure that you want to veto the following bills?"
-                                     f"\n{pretty_bills}")
+        reaction = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to veto the following bills?"
+            f"\n{consumer.passed_formatted}"
+        )
 
         if not reaction:
             return
 
-        async with ctx.typing():
-            for _bill in bills:
-                await _bill.veto()
-                self.veto_scheduler.add(_bill)
+        await consumer.consume(scheduler=self.veto_scheduler)
+        await ctx.send(f"{config.YES} All bills were vetoed.")
 
-            await ctx.send(":white_check_mark: All bills were vetoed.")
-
-    @ministry.command(name='pass', aliases=['p'])
+    @ministry.command(name="pass", aliases=["p"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER, mk.DemocracivRole.LT_PRIME_MINISTER)
-    async def pass_bill(self, ctx, bill_ids: Greedy[Bill]):
+    async def pass_bill(self, ctx, bill_ids: Greedy[models.Bill]):
         """Pass one or multiple bills into law
 
         **Example:**
-            `-ministry pass 12` will pass Bill #12 into law
-            `-ministry pass 45 46 49 51 52` will pass all those bills into law"""
+            `{PREFIX}{COMMAND} 12` will pass Bill #12 into law
+            `{PREFIX}{COMMAND} 45 46 49 51 52` will pass all those bills into law"""
 
         bills = bill_ids
 
-        error_messages = []
+        consumer = models.LegalConsumer(ctx=ctx, objects=bills, action=models.BillStatus.pass_into_law)
+        await consumer.filter()
 
-        for bill in bills:
-            error = await self.verify_bill(bill)
-            if error:
-                error_messages.append((bill, error))
+        if consumer.failed:
+            await ctx.send(f":warning: The following bills can not be passed into law.\n{consumer.failed_formatted}")
 
-        if error_messages:
-            # Remove bills that did not pass verify_bill from bills list
-            bills = [b for b in bills if b not in list(map(list, zip(*error_messages)))[0]]
-
-            error_messages = '\n'.join(
-                [f"-  **{_bill.name}** (#{_bill.id}): _{reason}_" for _bill, reason in error_messages])
-            await ctx.send(f":warning: The following bills can not be passed into law.\n{error_messages}")
-
-        # If all bills failed verify_bills, return
-        if not bills:
-            return
-
-        pretty_bills = '\n'.join([f"-  **{_bill.name}** (#{_bill.id})" for _bill in bills])
-
-        reaction = await ctx.confirm(f":information_source: Are you sure that you want "
-                                     f"to pass the following bills into law?"
-                                     f"\n{pretty_bills}")
+        reaction = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
+            f"to pass the following bills into law?"
+            f"\n{consumer.passed_formatted}"
+        )
 
         if not reaction:
             return
 
-        async with ctx.typing():
-            for bill in bills:
-                await bill.pass_into_law()
-                self.pass_scheduler.add(bill)
-
-            await ctx.send(":white_check_mark: All bills were passed into law.")
+        await consumer.consume(scheduler=self.pass_scheduler)
+        await ctx.send(f"{config.YES} All bills were passed into law.")
 
 
 def setup(bot):

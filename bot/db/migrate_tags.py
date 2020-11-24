@@ -18,20 +18,32 @@ class TagContentType(enum.Enum):
 
 
 async def get_db():
-    return await asyncpg.create_pool(user=token.POSTGRESQL_USER,
-                                     password=token.POSTGRESQL_PASSWORD,
-                                     database=token.POSTGRESQL_DATABASE,
-                                     host=token.POSTGRESQL_HOST)
+    return await asyncpg.create_pool(
+        user=token.POSTGRESQL_USER,
+        password=token.POSTGRESQL_PASSWORD,
+        database=token.POSTGRESQL_DATABASE,
+        host=token.POSTGRESQL_HOST,
+    )
 
 
 def get_tag_content_type(tag_content: str) -> TagContentType:
     emoji_pattern = re.compile(r"<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>")
     discord_invite_pattern = re.compile(r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
     url_pattern = re.compile(
-        r"((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*")
+        r"((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*"
+    )
 
-    url_endings_image = ('.jpeg', '.jpg', '.png', '.gif', '.webp', '.bmp', '.img', '.svg')
-    url_endings_video = ('.avi', '.mp4', '.mp3', '.mov', '.flv', '.wmv')
+    url_endings_image = (
+        ".jpeg",
+        ".jpg",
+        ".png",
+        ".gif",
+        ".webp",
+        ".bmp",
+        ".img",
+        ".svg",
+    )
+    url_endings_video = (".avi", ".mp4", ".mp3", ".mov", ".flv", ".wmv")
 
     if url_pattern.fullmatch(tag_content) and (tag_content.lower().endswith(url_endings_image)):
         return TagContentType.IMAGE
@@ -43,7 +55,8 @@ def get_tag_content_type(tag_content: str) -> TagContentType:
         return TagContentType.VIDEO
 
     elif url_pattern.match(tag_content) and any(
-            s in tag_content for s in ['youtube', 'youtu.be', 'tenor.com', 'gph.is', 'giphy.com']):
+        s in tag_content for s in ["youtube", "youtu.be", "tenor.com", "gph.is", "giphy.com"]
+    ):
         return TagContentType.YOUTUBE_TENOR_GIPHY
 
     elif emoji_pattern.fullmatch(tag_content):
@@ -63,17 +76,23 @@ async def main():
             tags = await connection.fetch("SELECT * FROM guild_tags")
 
             for record in tags:
-                ct = get_tag_content_type(record['content'])
+                ct = get_tag_content_type(record["content"])
 
                 if ct is TagContentType.IMAGE or ct is TagContentType.TEXT:
                     print(f"Set {record['name']} with CT {ct} to be embedded.")
-                    await connection.execute("UPDATE guild_tags SET is_embedded = true WHERE id = $1", record['id'])
+                    await connection.execute(
+                        "UPDATE guild_tags SET is_embedded = true WHERE id = $1",
+                        record["id"],
+                    )
 
                 else:
                     print(f"Set {record['name']} with CT {ct} to be text.")
-                    await connection.execute("UPDATE guild_tags SET is_embedded = false WHERE id = $1", record['id'])
+                    await connection.execute(
+                        "UPDATE guild_tags SET is_embedded = false WHERE id = $1",
+                        record["id"],
+                    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
     print("Migration complete.")

@@ -3,9 +3,9 @@ import discord
 
 from bot.config import config
 from discord.ext import commands
-from bot.utils import context
-from bot.utils.help import PaginatedHelpCommand
+from bot.utils import context, help
 from bot.utils.text import SafeEmbed
+from utils import models
 
 
 class Meta(context.CustomCog):
@@ -14,11 +14,23 @@ class Meta(context.CustomCog):
     def __init__(self, bot):
         super().__init__(bot)
         self.old_help_command = bot.help_command
-        bot.help_command = PaginatedHelpCommand()
+        bot.help_command = help.PaginatedHelpCommand()
         bot.help_command.cog = self
 
     def cog_unload(self):
         self.bot.help_command = self.old_help_command
+
+    @commands.command(name="gc", hidden=True)
+    @commands.is_owner()
+    async def gc(self, ctx):
+        kwargs = {
+            "name": "The Constitution of the Greater Ottoman Empire",
+            "submitter_description": "Section 2: Duties of the Ministry The Ministry shall have sole power to wager trades and conduct diplomacy with other Nations, except in circumstances in which they must first seek the approval of Parliament. These cases include: The Denouncement and Declaration of Warfare against other Nations; The Continued Agreement to Defensive Pacts, Open Borders, and Alliances among computer-controlled Nations, and Potential Agreement in any such capacity among player-controlled Nations; The Proposal and Ratification of motions to the World Congress, particularly those which may trigger Offensive Action upon another Nation;",
+            "link": "https://docs.google.com/document/d/1proo_j4h3iemMk1KBlVDaktSjl1sQRQCTruVo1Yd4ac/edit",
+            "bot": self.bot
+        }
+        b = models.Bill(**kwargs)
+        await ctx.send(await b.generate_lookup_tags())
 
     # shortcut to '-jsk reload ~' for faster debugging
     @commands.command(name="r", hidden=True)
@@ -26,52 +38,71 @@ class Meta(context.CustomCog):
     async def reload_all(self, ctx):
         """Alias to -jishaku reload ~"""
         if not self.bot.get_cog("Admin"):
-            return await ctx.send(":x: Admin module not loaded.")
+            return await ctx.send(f"{config.NO} Admin module not loaded.")
 
         await ctx.invoke(self.bot.get_command("jsk reload"), list(self.bot.extensions))
 
-    @commands.command(name='about', aliases=['info'])
+    @commands.command(name="about", aliases=["info"])
     async def about(self, ctx):
         """About this bot"""
         invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
 
-        embed = SafeEmbed(title='About This Bot',
-                          description=f"[Invite this bot to your Discord Server.]({invite_url})")
-        embed.add_field(name='Developer', value="DerJonas#8036 (u/Jovanos)", inline=True)
-        embed.add_field(name='Version', value=config.BOT_VERSION, inline=True)
-        embed.add_field(name='Library', value=f"discord.py {discord.__version__}", inline=True)
-        embed.add_field(name='Servers', value=len(self.bot.guilds), inline=True)
-        embed.add_field(name='Users', value=len(self.bot.users), inline=True)
-        embed.add_field(name='Prefix', value=f"`{config.BOT_PREFIX}`", inline=True)
-        embed.add_field(name='Uptime', value=self.bot.uptime, inline=True)
-        embed.add_field(name='Ping', value=f'{self.bot.ping}ms', inline=True)
+        embed = SafeEmbed(
+            title="About This Bot",
+            description=f"[Invite this bot to your Discord Server.]({invite_url})",
+        )
+        embed.add_field(name="Developer", value="DerJonas#8036 (u/Jovanos)", inline=True)
+        embed.add_field(name="Version", value=config.BOT_VERSION, inline=True)
+        embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=True)
+        embed.add_field(name="Servers", value=len(self.bot.guilds), inline=True)
+        embed.add_field(name="Users", value=len(self.bot.users), inline=True)
+        embed.add_field(name="Prefix", value=f"`{config.BOT_PREFIX}`", inline=True)
+        embed.add_field(name="Uptime", value=self.bot.uptime, inline=True)
+        embed.add_field(name="Ping", value=f"{self.bot.ping}ms", inline=True)
 
-        embed.add_field(name="Source Code",
-                        value="[Link](https://github.com/jonasbohmann/democraciv-discord-bot)",
-                        inline=True)
+        embed.add_field(
+            name="Source Code",
+            value="[Link](https://github.com/jonasbohmann/democraciv-discord-bot)",
+            inline=True,
+        )
 
-        embed.add_field(name='List of Commands',
-                        value=f'Check `{config.BOT_PREFIX}commands` or `{config.BOT_PREFIX}help`',
-                        inline=False)
+        embed.add_field(
+            name="List of Commands",
+            value=f"Check `{config.BOT_PREFIX}commands` or `{config.BOT_PREFIX}help`",
+            inline=False,
+        )
 
-        embed.set_author(icon_url=self.bot.owner.avatar_url_as(static_format="png"), name=f"Made by {self.bot.owner}")
+        embed.set_author(
+            icon_url=self.bot.owner.avatar_url_as(static_format="png"),
+            name=f"Made by {self.bot.owner}",
+        )
         await ctx.send(embed=embed)
 
-    @commands.command(name='ping', aliases=['pong'])
+    @commands.command(name="ping", aliases=["pong"])
     async def ping(self, ctx: context.CustomContext):
         """Pong!"""
         title = "Pong!" if ctx.invoked_with == "ping" else "Ping!"
+
         start = time.perf_counter()
         message = await ctx.send(":arrows_counterclockwise: Ping...")
         end = time.perf_counter()
-        duration = (end - start) * 1000
-        embed = SafeEmbed(title=f":ping_pong:  {title}",
-                          description=f"REST API: {duration:.0f}ms\n"
-                                      f"Websocket: {self.bot.ping}ms\n"
-                                      f"[Discord Status](https://status.discord.com/)")
+        discord_http = (end - start) * 1000
+
+        start = time.perf_counter()
+        await self.bot.api_request("GET", "")
+        end = time.perf_counter()
+        api_http = (end - start) * 1000
+
+        embed = SafeEmbed(
+            title=f":ping_pong:  {title}",
+            description=f"Discord HTTP API: {discord_http:.0f}ms\n"
+                        f"Discord Gateway Websocket: {self.bot.ping}ms\n"
+                        f"[Discord Status](https://status.discord.com/)\n\n"
+                        f"Democraciv Discord Bot API: {api_http:.0f}ms",
+        )
         await message.edit(content=None, embed=embed)
 
-    @commands.command(name='commands', aliases=['cmd', 'cmds'])
+    @commands.command(name="commands", aliases=["cmd", "cmds"])
     async def allcmds(self, ctx):
         """List all commands"""
 
@@ -86,9 +117,14 @@ class Meta(context.CustomCog):
             if cog.hidden:
                 continue
 
-            cog_cmds = sorted([command for command in cog.walk_commands() if not (
-                    'group_show_parent_in_help' in command.__original_kwargs__ and not command.__original_kwargs__[
-                'group_show_parent_in_help'])], key=lambda c: c.qualified_name)
+            cog_cmds = sorted(
+                [
+                    command
+                    for command in cog.walk_commands()
+                    if not command.hidden
+                ],
+                key=lambda c: c.qualified_name,
+            )
 
             amounts += len(cog_cmds)
 
@@ -99,36 +135,38 @@ class Meta(context.CustomCog):
                     commands_list.append(f"`{p}{command.qualified_name}`")
 
             if i == 0:
-                description_text.append(f"**__{name}__**\n")
-                description_text.append('\n'.join(commands_list))
+                description_text.append(f"**__{cog.qualified_name}__**\n")
+                description_text.append("\n".join(commands_list))
                 description_text.append("\n")
             elif i < 8:
-                description_text.append(f"\n**__{name}__**\n")
-                description_text.append('\n'.join(commands_list))
+                description_text.append(f"\n**__{cog.qualified_name}__**\n")
+                description_text.append("\n".join(commands_list))
                 description_text.append("\n")
             else:
-                field_text.append(f"\n**__{name}__**\n")
-                field_text.append('\n'.join(commands_list))
+                field_text.append(f"\n**__{cog.qualified_name}__**\n")
+                field_text.append("\n".join(commands_list))
                 field_text.append("\n")
 
             i += 1
 
-        embed = SafeEmbed(title=f'All Commands ({amounts})',
-                          description=f"This lists every command, regardless whether you can use "
-                                      f"it in this context or not.\n\nFor more detailed "
-                                      f"explanations and example usage of commands, "
-                                      f"use `{p}help`, `{p}help <Category>`, "
-                                      f"or `{p}help <command>`."
-                                      f"\n\n{' '.join(description_text)}")
+        embed = SafeEmbed(
+            title=f"All Commands ({amounts})",
+            description=f"This lists every command, regardless whether you can use "
+                        f"it in this context or not.\n\nFor more detailed "
+                        f"explanations and example usage of commands, "
+                        f"use `{p}help`, `{p}help <Category>`, "
+                        f"or `{p}help <command>`."
+                        f"\n\n{' '.join(description_text)}",
+        )
 
-        embed.add_field(name="\u200b", value=' '.join(field_text))
+        embed.add_field(name="\u200b", value=" ".join(field_text))
         await ctx.send(embed=embed)
 
-    @commands.command(name='addme', aliases=['inviteme', 'invite'])
+    @commands.command(name="addme", aliases=["inviteme", "invite"])
     async def addme(self, ctx):
         """Invite this bot to your Discord server"""
         invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
-        await ctx.send(embed=SafeEmbed(title='Add this bot to your own Discord server', description=invite_url))
+        await ctx.send(embed=SafeEmbed(title="Add this bot to your own Discord server", description=invite_url))
 
 
 def setup(bot):

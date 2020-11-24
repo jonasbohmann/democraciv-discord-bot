@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-CREATE TABLE IF NOT EXISTS guilds(
+CREATE TABLE IF NOT EXISTS guild(
     id bigint UNIQUE PRIMARY KEY,
     welcome_enabled bool DEFAULT FALSE,
     welcome_message text,
@@ -13,25 +13,19 @@ CREATE TABLE IF NOT EXISTS guilds(
 );
 
 CREATE TABLE IF NOT EXISTS guild_private_channels(
-    guild_id bigint references guilds(id),
+    id serial UNIQUE PRIMARY KEY,
+    guild_id bigint references guild(id),
     channel_id bigint,
     UNIQUE (guild_id, channel_id)
 );
 
 
-CREATE TABLE IF NOT EXISTS selfroles(
-    guild_id bigint references guilds(id),
+CREATE TABLE IF NOT EXISTS selfrole(
+    id serial UNIQUE PRIMARY KEY,
+    guild_id bigint references guild(id),
     role_id bigint,
     join_message text,
     UNIQUE (guild_id, role_id)
-);
-
-CREATE TABLE IF NOT EXISTS youtube_uploads(
-    id text UNIQUE
-);
-
-CREATE TABLE IF NOT EXISTS youtube_streams(
-    id text UNIQUE
 );
 
 DO $$ BEGIN
@@ -41,7 +35,7 @@ EXCEPTION
 END $$;
 
 
-CREATE TABLE IF NOT EXISTS parties(
+CREATE TABLE IF NOT EXISTS party(
     id bigint UNIQUE PRIMARY KEY,
     discord_invite text,
     join_mode party_join_mode DEFAULT 'Public'::party_join_mode
@@ -49,24 +43,26 @@ CREATE TABLE IF NOT EXISTS parties(
 
 CREATE TABLE IF NOT EXISTS party_leader(
     id serial UNIQUE PRIMARY KEY,
-    party_id bigint references parties(id),
+    party_id bigint references party(id),
     leader_id bigint,
     UNIQUE (party_id, leader_id)
 );
 
 CREATE TABLE IF NOT EXISTS party_join_request(
     id serial UNIQUE PRIMARY KEY,
-    party_id bigint references parties(id) ON DELETE CASCADE,
+    party_id bigint references party(id) ON DELETE CASCADE,
     requesting_member bigint
 );
 
 CREATE TABLE IF NOT EXISTS party_join_request_message(
+    id serial UNIQUE PRIMARY KEY,
     request_id serial references party_join_request(id) ON DELETE CASCADE,
     message_id bigint
 );
 
 CREATE TABLE IF NOT EXISTS party_alias(
-    party_id bigint references parties(id) ON DELETE CASCADE,
+    id serial UNIQUE PRIMARY KEY,
+    party_id bigint references party(id) ON DELETE CASCADE,
     alias text UNIQUE
 );
 
@@ -76,7 +72,7 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
-CREATE TABLE IF NOT EXISTS legislature_sessions(
+CREATE TABLE IF NOT EXISTS legislature_session(
     id serial UNIQUE PRIMARY KEY,
     speaker bigint,
     is_active bool,
@@ -87,9 +83,9 @@ CREATE TABLE IF NOT EXISTS legislature_sessions(
     closed_on timestamp WITHOUT TIME ZONE
 );
 
-CREATE TABLE IF NOT EXISTS bills(
+CREATE TABLE IF NOT EXISTS bill(
     id serial UNIQUE PRIMARY KEY,
-    leg_session serial references legislature_sessions(id),
+    leg_session serial references legislature_session(id),
     name text,
     link text,
     tiny_link text,
@@ -102,36 +98,36 @@ CREATE TABLE IF NOT EXISTS bills(
 
 CREATE TABLE IF NOT EXISTS bill_history(
     id serial UNIQUE PRIMARY KEY,
-    bill_id serial references bills(id) ON DELETE CASCADE,
+    bill_id serial references bill(id) ON DELETE CASCADE,
     date timestamp WITHOUT TIME ZONE,
     before_status int,
     after_status int
 );
 
 
-CREATE TABLE IF NOT EXISTS bill_lookup_tags(
+CREATE TABLE IF NOT EXISTS bill_lookup_tag(
     id serial UNIQUE PRIMARY KEY,
-    bill_id serial references bills(id) ON DELETE CASCADE,
+    bill_id serial references bill(id) ON DELETE CASCADE,
     tag text,
     UNIQUE (bill_id, tag)
 );
 
-CREATE TABLE IF NOT EXISTS legislature_motions(
+CREATE TABLE IF NOT EXISTS motion(
     id serial UNIQUE PRIMARY KEY,
-    leg_session serial references legislature_sessions(id),
+    leg_session serial references legislature_session(id),
     title text,
     description text,
-    hastebin text,
+    paste_link text,
     submitter bigint
 );
 
-CREATE INDEX IF NOT EXISTS bill_tags_tag_trgm_idx ON bill_tags USING gin (tag gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS bills_name_lower_idx ON bills (LOWER(bill_name));
+CREATE INDEX IF NOT EXISTS bill_lookup_tag_tag_trgm_idx ON bill_lookup_tag USING gin (tag gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS bill_name_lower_idx ON bill (LOWER(name));
 
 
-CREATE TABLE IF NOT EXISTS guild_tags(
-    guild_id bigint references guilds(id),
+CREATE TABLE IF NOT EXISTS tag(
     id serial UNIQUE,
+    guild_id bigint references guild(id),
     name text,
     title text,
     content text,
@@ -143,20 +139,18 @@ CREATE TABLE IF NOT EXISTS guild_tags(
     UNIQUE (guild_id, name)
 );
 
-CREATE TABLE IF NOT EXISTS guild_tags_alias(
-    tag_id serial references guild_tags(id) ON DELETE CASCADE,
-    guild_id bigint references guilds(id),
+CREATE TABLE IF NOT EXISTS tag_lookup(
+    id serial UNIQUE PRIMARY KEY,
+    tag_id serial references tag(id) ON DELETE CASCADE,
     alias text,
-    global bool DEFAULT FALSE,
-    UNIQUE (guild_id, alias)
+    UNIQUE (tag_id, alias)
 );
 
-CREATE INDEX IF NOT EXISTS guild_tags_alias_alias_idx ON guild_tags_alias (alias);
-CREATE UNIQUE INDEX IF NOT EXISTS guild_tags_alias_alias_guild_id_idx ON guild_tags_alias (alias, guild_id);
+CREATE INDEX IF NOT EXISTS tag_lookup_alias_idx ON tag_lookup (alias);
 
 
-CREATE TABLE IF NOT EXISTS original_join_dates(
-    member bigint UNIQUE,
+CREATE TABLE IF NOT EXISTS original_join_date(
+    member bigint UNIQUE PRIMARY KEY,
     join_date timestamp WITHOUT TIME ZONE,
     join_position serial UNIQUE
 );
@@ -166,13 +160,14 @@ CREATE TABLE IF NOT EXISTS profile(
     description text
 );
 
-CREATE TABLE IF NOT EXISTS profile_mks(
+CREATE TABLE IF NOT EXISTS profile_mk(
+    id serial UNIQUE,
     user_id bigint references profile(user_id),
     mk int,
     UNIQUE (user_id, mk)
 );
 
-CREATE TABLE IF NOT EXISTS dm_settings(
+CREATE TABLE IF NOT EXISTS dm_setting(
     user_id bigint PRIMARY KEY,
     ban_kick_mute bool DEFAULT TRUE,
     leg_session_open bool DEFAULT TRUE,
@@ -182,21 +177,22 @@ CREATE TABLE IF NOT EXISTS dm_settings(
     party_join_leave bool DEFAULT TRUE
 );
 
-CREATE TABLE IF NOT EXISTS starboard_entries(
+CREATE TABLE IF NOT EXISTS starboard_entry(
     id serial PRIMARY KEY,
     author_id bigint,
     message_id bigint UNIQUE,
     channel_id bigint,
     guild_id bigint,
+    message_jump_url text,
     message_creation_date timestamp WITHOUT TIME ZONE,
     is_posted_to_reddit bool DEFAULT FALSE,
     starboard_message_id bigint UNIQUE,
     starboard_message_created_at timestamp
 );
 
-CREATE TABLE IF NOT EXISTS starboard_starrers(
+CREATE TABLE IF NOT EXISTS starboard_starrer(
     id serial PRIMARY KEY,
-    entry_id serial references starboard_entries(id) ON DELETE CASCADE,
+    entry_id serial references starboard_entry(id) ON DELETE CASCADE,
     starrer_id bigint,
     UNIQUE (entry_id, starrer_id)
 );

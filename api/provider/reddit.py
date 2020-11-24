@@ -29,9 +29,14 @@ class RedditManager:
         webhooks = []
 
         for record in records:
-            webhooks.append({'id': record['id'],
-                             'subreddit': record['subreddit'],
-                             'webhook_id': record['webhook_id']})
+            webhooks.append(
+                {
+                    "id": record["id"],
+                    "subreddit": record["subreddit"],
+                    "webhook_id": record["webhook_id"],
+                    "webhook_url": record["webhook_url"],
+                }
+            )
 
         return webhooks
 
@@ -41,6 +46,14 @@ class RedditManager:
             del scraper
 
         self._scrapers = dict()
+
+    async def clear_scraper_per_guild(self, guild_id: int):
+        scraper = await self.get_webhooks_per_guild(guild_id)
+
+        for scrap in scraper:
+            await self.remove_scraper(scrap["id"], guild_id)
+
+        return scraper
 
     async def start_scraper(self, *, subreddit: str, webhook_url: str):
         if subreddit in self._scrapers:
@@ -57,8 +70,12 @@ class RedditManager:
         await self.db.add_reddit_scraper(config)
         await self.start_scraper(subreddit=config.subreddit, webhook_url=config.webhook_url)
 
-    async def remove_scraper(self, config):
-        subreddit, webhook_url, channel_id = await self.db.remove_reddit_scraper(config.id)
+    async def remove_scraper(self, scraper_id, guild_id):
+        subreddit, webhook_url, channel_id = await self.db.remove_reddit_scraper(scraper_id, guild_id)
+
+        if subreddit is None:
+            return {"error": "scraper not found"}
+
         await self.stop_scraper(subreddit=subreddit, webhook_url=webhook_url)
         return {"subreddit": subreddit, "webhook_url": webhook_url, "channel_id": channel_id}
 
@@ -82,7 +99,7 @@ class RedditPost:
         self._thumbnail: typing.Optional[str]
 
         try:
-            self._thumbnail = kwargs['preview']['images'][0]['source']['url']
+            self._thumbnail = kwargs["preview"]["images"][0]["source"]["url"]
         except KeyError:
             self._thumbnail = None
 
@@ -148,7 +165,8 @@ class SubredditScraper:
 
     async def get_newest_reddit_post(self) -> typing.Optional[typing.Dict]:
         async with self._session.get(
-                f"https://www.reddit.com/r/{self.subreddit}/new.json?limit={self.post_limit}") as response:
+            f"https://www.reddit.com/r/{self.subreddit}/new.json?limit={self.post_limit}"
+        ) as response:
             if response.status == 200:
                 return await response.json()
 
@@ -161,7 +179,7 @@ class SubredditScraper:
 
         for post_json in reddit_json["data"]["children"]:
             reddit_post_json = post_json["data"]
-            post_id = reddit_post_json['id']
+            post_id = reddit_post_json["id"]
 
             if not await self.db.is_reddit_post_new(post_id):
                 continue

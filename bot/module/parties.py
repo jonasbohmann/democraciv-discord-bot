@@ -8,22 +8,25 @@ from discord.ext import commands
 from bot.config import config, mk
 from bot.utils import exceptions, checks, converter, context
 from bot.utils.context import CustomContext
-from bot.utils.converter import PoliticalParty, PoliticalPartyJoinMode, CaseInsensitiveRole
-from bot.utils.exceptions import ForbiddenTask
+from bot.utils.converter import (
+    PoliticalParty,
+    PoliticalPartyJoinMode,
+    CaseInsensitiveRole,
+)
 from bot.utils.context import MockContext
 from bot.utils.text import SafeEmbed
+from utils.exceptions import ForbiddenTask
 
 
-class Party(context.CustomCog, name='Political Parties'):
-    """Interact with the political parties of {NATION_NAME}. Note that you can only join and
-    leave parties on the Democraciv server."""
+class Party(context.CustomCog, name="Political Parties"):
+    """Interact with the political parties of {NATION_NAME}."""
 
     async def collect_parties_and_members(self) -> typing.List[typing.Tuple[str, int]]:
         """Returns all parties with a role on the Democraciv server and their amount of members for -members."""
         parties_and_members = []
 
-        parties = await self.bot.db.fetch("SELECT id FROM parties")
-        parties = [record['id'] for record in parties]
+        parties = await self.bot.db.fetch("SELECT id FROM party")
+        parties = [record["id"] for record in parties]
 
         error_string = []
 
@@ -38,11 +41,11 @@ class Party(context.CustomCog, name='Political Parties'):
 
         if error_string:
             print("[DATABASE] The following ids were added as a party but have no role on the Democraciv guild: ")
-            print(', '.join(error_string))
+            print(", ".join(error_string))
 
         return parties_and_members
 
-    @commands.group(name='party', case_insensitive=True, invoke_without_command=True)
+    @commands.group(name="party", case_insensitive=True, invoke_without_command=True)
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def party(self, ctx, *, party: PoliticalParty = None):
         """Detailed information about a single political party"""
@@ -50,8 +53,10 @@ class Party(context.CustomCog, name='Political Parties'):
         if party is None:
             return await ctx.invoke(self.bot.get_command("parties"))
 
-        embed = SafeEmbed(title=party.role.name,
-                          description=f"[Platform and Description]({self.bot.mk.POLITICAL_PARTIES})")
+        embed = SafeEmbed(
+            title=party.role.name,
+            description=f"[Platform and Description]({self.bot.mk.POLITICAL_PARTIES})",
+        )
 
         thumbnail = await party.get_logo()
 
@@ -64,17 +69,24 @@ class Party(context.CustomCog, name='Political Parties'):
         embed.add_field(name="Join Setting", value=party.join_mode.value)
 
         if party.leaders:
-            embed.add_field(name="Leaders or Representatives",
-                            value='\n'.join([f"{leader.mention} {leader}" for leader in party.leaders]))
+            embed.add_field(
+                name="Leaders or Representatives",
+                value="\n".join([f"{leader.mention} {leader}" for leader in party.leaders]),
+            )
 
         if party.aliases is not None:
-            embed.add_field(name="Aliases", value=', '.join(party.aliases) or '-', inline=False)
+            embed.add_field(name="Aliases", value=", ".join(party.aliases) or "-", inline=False)
 
-        party_members = '\n'.join([f"{member.mention} {member}" for member in party.role.members]) or '-'
-        embed.add_field(name=f"Members ({len(party.role.members)})", value=party_members, inline=False)
+        party_members = "\n".join([f"{member.mention} {member}" for member in party.role.members]) or "-"
+        embed.add_field(
+            name=f"Members ({len(party.role.members)})",
+            value=party_members,
+            inline=False,
+        )
+        embed.set_footer(text=f"Join this party with: {config.BOT_PREFIX}join {party.role.name}")
         await ctx.send(embed=embed)
 
-    @commands.Cog.listener(name='on_raw_reaction_add')
+    @commands.Cog.listener(name="on_raw_reaction_add")
     async def party_join_request_listener(self, payload: discord.RawReactionActionEvent):
         if payload.guild_id:  # only ever happens in DMs
             return
@@ -89,15 +101,15 @@ class Party(context.CustomCog, name='Political Parties'):
         if not request_match:
             return
 
-        yes_emoji = "\U00002705"
-        no_emoji = "\U0000274c"
+        yes_emoji = config.YES
+        no_emoji = config.NO
 
         try:
-            party = await PoliticalParty.convert(MockContext(self.bot), request_match['party_id'])
+            party = await PoliticalParty.convert(MockContext(self.bot), request_match["party_id"])
         except commands.BadArgument:
             return
 
-        member = self.bot.dciv.get_member(request_match['requesting_member'])
+        member = self.bot.dciv.get_member(request_match["requesting_member"])
 
         if not party or not party.role or not member:
             return
@@ -115,7 +127,7 @@ class Party(context.CustomCog, name='Political Parties'):
         else:
             return
 
-        await self.bot.db.execute("DELETE FROM party_join_request WHERE id = $1", request_match['id'])
+        await self.bot.db.execute("DELETE FROM party_join_request WHERE id = $1", request_match["id"])
 
         for leader in party.leaders:
             with contextlib.suppress(discord.Forbidden):
@@ -156,7 +168,7 @@ class Party(context.CustomCog, name='Political Parties'):
         for leader in party.leaders:
             await self.bot.safe_send_dm(target=leader, message=message, reason="party_join_leave")
 
-    @commands.command(name='join')
+    @commands.command(name="join")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def join(self, ctx, *, party: PoliticalParty):
         """Join a political party"""
@@ -164,44 +176,54 @@ class Party(context.CustomCog, name='Political Parties'):
         person_in_dciv = self.bot.dciv.get_member(ctx.author.id)
 
         if person_in_dciv is None:
-            return await ctx.send(f":x: You're not in the {self.bot.dciv.name} server.")
+            return await ctx.send(f"{config.NO} You're not in the {self.bot.dciv.name} server.")
 
         if party.role in person_in_dciv.roles:
-            return await ctx.send(f":x: You're already part of {party.role.name}.")
+            return await ctx.send(f"{config.NO} You're already part of {party.role.name}.")
 
         if party.join_mode is PoliticalPartyJoinMode.PRIVATE:
-            return await ctx.send(f':x: {party.role.name} is a private party. '
-                                  f'Contact the party leaders for further information.')
+            return await ctx.send(
+                f"{config.NO} {party.role.name} is a private party. " f"Contact the party leaders for further information."
+            )
 
         elif party.join_mode is PoliticalPartyJoinMode.REQUEST:
             query = """SELECT * FROM party_join_request WHERE party_id = $1 AND requesting_member = $2"""
             existing_request = await self.bot.db.fetchrow(query, party.role.id, ctx.author.id)
 
             if existing_request:
-                return await ctx.send(f":x: You already requested to join {party.role.name}. Once the leaders "
-                                      f"accept or deny your request, I will notify you.")
+                return await ctx.send(
+                    f"{config.NO} You already requested to join {party.role.name}. Once the leaders "
+                    f"accept or deny your request, I will notify you."
+                )
 
             request_id = await self.bot.db.fetchval(
                 "INSERT INTO party_join_request (party_id, requesting_member) VALUES ($1, $2) RETURNING id",
-                party.role.id, ctx.author.id)
+                party.role.id,
+                ctx.author.id,
+            )
 
             for leader in party.leaders:
                 try:
-                    message = await leader.send(f"{ctx.author} wants to join your party, {party.role.name}. "
-                                                f"Do you want to accept their request?")
-                    await message.add_reaction("\U00002705")
-                    await message.add_reaction("\U0000274c")
+                    message = await leader.send(
+                        f"{ctx.author} wants to join your party, {party.role.name}. "
+                        f"Do you want to accept their request?"
+                    )
+                    await message.add_reaction(config.YES)
+                    await message.add_reaction(config.NO)
 
                 except discord.Forbidden:
                     continue
 
                 await self.bot.db.execute(
                     "INSERT INTO party_join_request_message (request_id, message_id) VALUES ($1, $2)",
-                    request_id, message.id)
+                    request_id,
+                    message.id,
+                )
 
             return await ctx.send(
-                f":white_check_mark: Your request to join {party.role.name} was sent to their leaders. "
-                f"Once they accept or deny your request, I'll notify you.")
+                f"{config.YES} Your request to join {party.role.name} was sent to their leaders. "
+                f"Once they accept or deny your request, I'll notify you."
+            )
 
         elif party.join_mode is PoliticalPartyJoinMode.PUBLIC:
             try:
@@ -209,17 +231,17 @@ class Party(context.CustomCog, name='Political Parties'):
             except discord.Forbidden:
                 raise exceptions.ForbiddenError(ForbiddenTask.ADD_ROLE, party.role.name)
 
-            if party.role.name == 'Independent':
-                return await ctx.send(f':white_check_mark: You are now an {party.role.name}.')
+            if party.role.name == "Independent":
+                return await ctx.send(f"{config.YES} You are now an {party.role.name}.")
 
-            message = f":white_check_mark: You've joined {party.role.name}!"
+            message = f"{config.YES} You've joined {party.role.name}!"
 
             if party.discord_invite:
                 message = f"{message} Now head to their Discord Server and introduce yourself: {party.discord_invite}"
 
             await ctx.send(message)
 
-    @commands.command(name='leave')
+    @commands.command(name="leave")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def leave(self, ctx, *, party: PoliticalParty):
         """Leave a political party"""
@@ -227,65 +249,70 @@ class Party(context.CustomCog, name='Political Parties'):
         person_in_dciv = self.bot.dciv.get_member(ctx.author.id)
 
         if person_in_dciv is None:
-            return await ctx.send(f":x: You're not in the {self.bot.dciv.name} server.")
+            return await ctx.send(f"{config.NO} You're not in the {self.bot.dciv.name} server.")
 
         if party.role not in person_in_dciv.roles:
-            return await ctx.send(f':x: You are not part of {party.role.name}.')
+            return await ctx.send(f"{config.NO} You are not part of {party.role.name}.")
 
         try:
             await person_in_dciv.remove_roles(party.role)
         except discord.Forbidden:
             raise exceptions.ForbiddenError(ForbiddenTask.REMOVE_ROLE, detail=party.role.name)
 
-        if party.role.name == 'Independent':
-            msg = f':white_check_mark: You are no longer an {party.role.name}.'
+        if party.role.name == "Independent":
+            msg = f"{config.YES} You are no longer an {party.role.name}."
         else:
-            msg = f':white_check_mark: You left {party.role.name}.'
+            msg = f"{config.YES} You left {party.role.name}."
 
         await ctx.send(msg)
 
-    @commands.command(name='parties', aliases=['rank', 'ranks', 'members', 'member', 'rankings', 'ranking'])
+    @commands.command(
+        name="parties",
+        aliases=["rank", "ranks", "members", "member", "rankings", "ranking"],
+    )
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def parties(self, ctx):
         """Ranking of political parties by their amount of members"""
 
         party_list_embed_content = []
 
-        sorted_parties_and_members = sorted(await self.collect_parties_and_members(), key=lambda x: x[1],
-                                            reverse=True)
+        sorted_parties_and_members = sorted(await self.collect_parties_and_members(), key=lambda x: x[1], reverse=True)
 
         for party in sorted_parties_and_members:
-            if party[0] == 'Independent':
+            if party[0] == "Independent":
                 continue
             if party[1] == 1:
-                party_list_embed_content.append(f'**{party[0]}**\n{party[1]} member')
+                party_list_embed_content.append(f"**{party[0]}**\n{party[1]} member")
             else:
-                party_list_embed_content.append(f'**{party[0]}**\n{party[1]} members')
+                party_list_embed_content.append(f"**{party[0]}**\n{party[1]} members")
 
         # Append Independents to message
-        independent_role = discord.utils.get(self.bot.dciv.roles, name='Independent')
+        independent_role = discord.utils.get(self.bot.dciv.roles, name="Independent")
 
         if independent_role is not None:
             if len(independent_role.members) == 1:
-                party_list_embed_content.append(f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n'
-                                                f'{len(independent_role.members)} citizen')
+                party_list_embed_content.append(
+                    f"⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n" f"{len(independent_role.members)} citizen"
+                )
             else:
-                party_list_embed_content.append(f'⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n'
-                                                f'{len(independent_role.members)} citizens')
+                party_list_embed_content.append(
+                    f"⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n" f"{len(independent_role.members)} citizens"
+                )
         if len(party_list_embed_content) == 0:
-            party_list_embed_content = ['There are no political parties yet.']
+            party_list_embed_content = ["There are no political parties yet."]
 
-        party_list_embed_content = '\n\n'.join(party_list_embed_content)
+        party_list_embed_content = "\n\n".join(party_list_embed_content)
         print(party_list_embed_content)
 
-        embed = SafeEmbed(title=f'{self.bot.mk.NATION_EMOJI}  Ranking of Political Parties in '
-                                f'{self.bot.mk.NATION_NAME}',
-                          description=f"[Party Platforms]({self.bot.mk.POLITICAL_PARTIES})\n\n{party_list_embed_content}")
-
+        embed = SafeEmbed(
+            title=f"{self.bot.mk.NATION_EMOJI}  Ranking of Political Parties in " f"{self.bot.mk.NATION_NAME}",
+            description=f"[Party Platforms]({self.bot.mk.POLITICAL_PARTIES})\n\n{party_list_embed_content}",
+        )
+        embed.set_footer(text=f"For more information about a party, use: {config.BOT_PREFIX}party <party>")
         return await ctx.send(embed=embed)
 
     async def create_new_party(self, ctx: CustomContext) -> typing.Optional[PoliticalParty]:
-        await ctx.send(":information_source: Reply with the name of the new party you want to create.")
+        await ctx.send(f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the new party you want to create.")
 
         role_name = await ctx.converted_input(converter=CaseInsensitiveRole)
 
@@ -293,8 +320,9 @@ class Party(context.CustomCog, name='Political Parties'):
             is_updated = False
 
             await ctx.send(
-                f":white_check_mark: I will **create a new role** on this server named `{role_name}`"
-                f" for the new party.")
+                f"{config.YES} I will **create a new role** on this server named `{role_name}`"
+                f" for the new party."
+            )
             try:
                 discord_role = await ctx.guild.create_role(name=role_name)
             except discord.Forbidden:
@@ -304,12 +332,16 @@ class Party(context.CustomCog, name='Political Parties'):
             is_updated = True
             discord_role = role_name
 
-            await ctx.send(f":white_check_mark: I'll use the **pre-existing role**"
-                           f" `{discord_role.name}` for the new party.")
+            await ctx.send(
+                f"{config.YES} I'll use the **pre-existing role**" f" `{discord_role.name}` for the new party."
+            )
 
-        leaders_text = (await ctx.input(
-            ":information_source: Reply with the name or mention of the party's leader or representative. "
-            "If this party has multiple leaders, separate them with a newline.")).splitlines()
+        leaders_text = (
+            await ctx.input(
+                f"{config.USER_INTERACTION_REQUIRED} Reply with the name or mention of the party's leader or representative. "
+                "If this party has multiple leaders, separate them with a newline."
+            )
+        ).splitlines()
 
         leaders = []
 
@@ -320,8 +352,9 @@ class Party(context.CustomCog, name='Political Parties'):
                     leaders.append(converted.id)
 
         party_invite = await ctx.input(
-            ":information_source: Reply with the invite link to the party's Discord server. If they don't have one, "
-            "just reply with gibberish.")
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the invite link to the party's Discord server. If they don't have one, "
+            "just reply with gibberish."
+        )
 
         discord_invite_pattern = re.compile(r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
         if not discord_invite_pattern.fullmatch(party_invite):
@@ -330,45 +363,57 @@ class Party(context.CustomCog, name='Political Parties'):
         reactions = {
             "\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467": PoliticalPartyJoinMode.PUBLIC,
             "\U0001f4e9": PoliticalPartyJoinMode.REQUEST,
-            "\U0001f575": PoliticalPartyJoinMode.PRIVATE
+            "\U0001f575": PoliticalPartyJoinMode.PRIVATE,
         }
 
-        reaction = await ctx.choose(":information_source: Should this party be public, request-based, or private?\n\n",
-                                    reactions=reactions.keys())
+        reaction = await ctx.choose(
+            f"{config.USER_INTERACTION_REQUIRED} Should this party be public, request-based, or private?\n\n",
+            reactions=reactions.keys(),
+        )
 
         join_mode = reactions[str(reaction)]
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
                 await connection.execute(
-                    "INSERT INTO parties (id, discord_invite, join_mode) VALUES ($1, $2, $3)"
-                    "ON CONFLICT (id) DO UPDATE SET discord_invite = $2, join_mode = $3 WHERE parties.id = $1",
-                    discord_role.id, party_invite, join_mode.value)
+                    "INSERT INTO party (id, discord_invite, join_mode) VALUES ($1, $2, $3)"
+                    "ON CONFLICT (id) DO UPDATE SET discord_invite = $2, join_mode = $3 WHERE party.id = $1",
+                    discord_role.id,
+                    party_invite,
+                    join_mode.value,
+                )
 
-                await connection.execute("INSERT INTO party_alias (party_id, alias) VALUES ($1, $2)"
-                                         " ON CONFLICT DO NOTHING ",
-                                         discord_role.id, discord_role.name.lower())
+                await connection.execute(
+                    "INSERT INTO party_alias (party_id, alias) VALUES ($1, $2)" " ON CONFLICT DO NOTHING ",
+                    discord_role.id,
+                    discord_role.name.lower(),
+                )
 
                 for leader in leaders:
-                    await connection.execute("INSERT INTO party_leader (party_id, leader_id) VALUES ($1, $2)"
-                                             " ON CONFLICT DO NOTHING ", discord_role.id, leader)
+                    await connection.execute(
+                        "INSERT INTO party_leader (party_id, leader_id) VALUES ($1, $2)" " ON CONFLICT DO NOTHING ",
+                        discord_role.id,
+                        leader,
+                    )
 
                 if not is_updated:
-                    await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a new party.')
+                    await ctx.send(f"{config.YES} `{discord_role.name}` was added as a new party.")
                 else:
-                    await ctx.send(f':white_check_mark: `{discord_role.name}` was added as a new party or its '
-                                   f'properties were updated if it already existed.')
+                    await ctx.send(
+                        f"{config.YES} `{discord_role.name}` was added as a new party or its "
+                        f"properties were updated if it already existed."
+                    )
 
         return await PoliticalParty.convert(ctx, discord_role.id)
 
-    @party.command(name='add', aliases=['create', 'make'])
+    @party.command(name="add", aliases=["create", "make"])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def addparty(self, ctx):
         """Add a new political party"""
         await self.create_new_party(ctx)
 
-    @party.command(name='edit', aliases=['change'])
+    @party.command(name="edit", aliases=["change"])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def changeparty(self, ctx):
@@ -376,25 +421,27 @@ class Party(context.CustomCog, name='Political Parties'):
         # todo
         await self.create_new_party(ctx)
 
-    @party.command(name='delete', aliases=['remove'])
+    @party.command(name="delete", aliases=["remove"])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def deleteparty(self, ctx, *, party: PoliticalParty):
         """Delete a political party
 
-            **Usage:**
-             `-party delete <party>`
+        **Usage:**
+         `-party delete <party>`
         """
 
         name = party.role.name
 
-        delete_role_too = await ctx.confirm(f":information_source: I will remove {name} from the list of "
-                                            f"parties. Should I delete their Discord role too?")
+        delete_role_too = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} I will remove {name} from the list of "
+            f"parties. Should I delete their Discord role too?"
+        )
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
                 await connection.execute("DELETE FROM party_alias WHERE party_id = $1", party.role.id)
-                await connection.execute("DELETE FROM parties WHERE id = $1", party.role.id)
+                await connection.execute("DELETE FROM party WHERE id = $1", party.role.id)
 
         if delete_role_too:
             try:
@@ -402,27 +449,30 @@ class Party(context.CustomCog, name='Political Parties'):
             except discord.Forbidden:
                 raise exceptions.ForbiddenError(ForbiddenTask.DELETE_ROLE, detail=party.role.name)
 
-        await ctx.send(f':white_check_mark: `{name}` and all its aliases were deleted.')
+        await ctx.send(f"{config.YES} `{name}` and all its aliases were deleted.")
 
-    @party.command(name='addalias')
+    @party.command(name="addalias")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def addalias(self, ctx, *, party: PoliticalParty):
         """Add a new alias to a political party"""
 
-        alias = await ctx.input(f":information_source: Reply with the new alias for `{party.role.name}`.")
+        alias = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the new alias for `{party.role.name}`.")
 
         if not alias:
             return
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
-                await connection.execute("INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
-                                         alias.lower(), party.role.id)
+                await connection.execute(
+                    "INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
+                    alias.lower(),
+                    party.role.id,
+                )
 
-        await ctx.send(f':white_check_mark: Alias `{alias}` for party `{party.role.name}` was added.')
+        await ctx.send(f"{config.YES} Alias `{alias}` for party `{party.role.name}` was added.")
 
-    @party.command(name='deletealias', aliases=['removealias'])
+    @party.command(name="deletealias", aliases=["removealias"])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def deletealias(self, ctx, *, alias: str):
@@ -430,12 +480,12 @@ class Party(context.CustomCog, name='Political Parties'):
         try:
             await PoliticalParty.convert(ctx, alias)
         except exceptions.PartyNotFoundError:
-            return await ctx.send(f":x: `{alias}` is not an alias of any party.")
+            return await ctx.send(f"{config.NO} `{alias}` is not an alias of any party.")
 
         await self.bot.db.execute("DELETE FROM party_alias WHERE alias = $1", alias.lower())
-        await ctx.send(f':white_check_mark: Alias `{alias}` was deleted.')
+        await ctx.send(f"{config.YES} Alias `{alias}` was deleted.")
 
-    @party.command(name='merge')
+    @party.command(name="merge")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def mergeparties(self, ctx, amount_of_parties: int):
@@ -444,7 +494,7 @@ class Party(context.CustomCog, name='Political Parties'):
         to_be_merged = []
 
         for i in range(1, amount_of_parties + 1):
-            name = await ctx.input(f":information_source: What's the name or alias for political party #{i}?")
+            name = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} What's the name or alias for political party #{i}?")
 
             if not name:
                 return
@@ -452,15 +502,17 @@ class Party(context.CustomCog, name='Political Parties'):
             try:
                 party = await PoliticalParty.convert(ctx, name)
             except exceptions.PartyNotFoundError:
-                return await ctx.send(f":x: There is no party that matches `{name}`. Aborted.")
+                return await ctx.send(f"{config.NO} There is no party that matches `{name}`. Aborted.")
 
             to_be_merged.append(party)
 
         members_to_merge = {member for party in to_be_merged for member in party.role.members}
         pretty_parties = [f"`{party.role.name}`" for party in to_be_merged]
 
-        are_you_sure = await ctx.send(f":information_source: Are you sure that you want to merge"
-                                      f" {', '.join(pretty_parties)} into one, new party?")
+        are_you_sure = await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to merge"
+            f" {', '.join(pretty_parties)} into one, new party?"
+        )
 
         reaction = await ctx.confirm(message=are_you_sure)
 
@@ -473,10 +525,10 @@ class Party(context.CustomCog, name='Political Parties'):
         try:
             new_party = await self.create_new_party(ctx)
         except exceptions.DemocracivBotException as e:
-            return await ctx.send(f"{e.message}\n:x: Party creation failed, old parties were not deleted.")
+            return await ctx.send(f"{e.message}\n{config.NO} Party creation failed, old parties were not deleted.")
 
         if new_party is None or new_party.role is None:
-            return await ctx.send(":x: Party creation failed, old parties were not deleted.")
+            return await ctx.send(f"{config.NO} Party creation failed, old parties were not deleted.")
 
         async with ctx.typing():
             for member in members_to_merge:
@@ -489,13 +541,17 @@ class Party(context.CustomCog, name='Political Parties'):
 
                 async with self.bot.db.acquire() as connection:
                     async with connection.transaction():
-                        await connection.execute("DELETE FROM party_alias WHERE party_id = $1; "
-                                                 "DELETE FROM parties WHERE id = $1", party.role.id)
+                        await connection.execute(
+                            "DELETE FROM party_alias WHERE party_id = $1; " "DELETE FROM party WHERE id = $1",
+                            party.role.id,
+                        )
 
                 await party.role.delete()
 
-        await ctx.send(":white_check_mark: The old parties were deleted and"
-                       " all their members have now the role of the new party.")
+        await ctx.send(
+            f"{config.YES} The old parties were deleted and"
+            " all their members have now the role of the new party."
+        )
 
 
 def setup(bot):

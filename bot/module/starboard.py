@@ -33,11 +33,12 @@ from bot.config import token, config, mk
 from discord.ext import commands, tasks
 
 from bot.utils import context
-from bot.utils.converter import CaseInsensitiveMember
+from bot.utils.converter import CaseInsensitiveMember, CaseInsensitiveUser
+from bot.utils import text
 
 
 class Starboard(context.CustomCog):
-    """The Starboard. If a message on the Democraciv Server has at least 5 :star: reactions,
+    """The Starboard. If a message on the {democraciv} Server has at least 5 :star: reactions,
     it will be posted to the Starboard channel and in a weekly summary to the subreddit every Saturday."""
 
     def __init__(self, bot):
@@ -48,18 +49,23 @@ class Starboard(context.CustomCog):
         if config.STARBOARD_ENABLED and config.STARBOARD_REDDIT_SUMMARY_ENABLED:
             if not config.REDDIT_SUBREDDIT:
                 logging.warning(
-                    "[BOT] ERROR - Starboard Reddit post is enabled but no subreddit was provided in config.py!")
+                    "[BOT] ERROR - Starboard Reddit post is enabled but no subreddit was provided in config.py!"
+                )
             elif not token.REDDIT_CLIENT_ID:
-                logging.warning("[BOT] ERROR - Starboard Reddit post is enabled but no Reddit Client ID "
-                                "was provided in token.py!")
+                logging.warning(
+                    "[BOT] ERROR - Starboard Reddit post is enabled but no Reddit Client ID "
+                    "was provided in token.py!"
+                )
             elif not token.REDDIT_CLIENT_SECRET:
                 logging.warning(
                     "[BOT] ERROR - Starboard Reddit post is enabled but no Reddit Client Secret was provided "
-                    "in token.py!")
+                    "in token.py!"
+                )
             elif not token.REDDIT_REFRESH_TOKEN:
                 logging.warning(
                     "[BOT] ERROR - Starboard Reddit post is enabled but no Reddit Refresh Token was provided"
-                    " in token.py!")
+                    " in token.py!"
+                )
             else:
                 self.weekly_starboard_to_reddit_task.start()
 
@@ -67,14 +73,17 @@ class Starboard(context.CustomCog):
         self.weekly_starboard_to_reddit_task.cancel()
 
     @staticmethod
-    def group_starred_messages_by_day(starred_messages: typing.List[asyncpg.Record]) -> typing.List[
-        typing.List[asyncpg.Record]]:
+    def group_starred_messages_by_day(
+        starred_messages: typing.List[asyncpg.Record],
+    ) -> typing.List[typing.List[asyncpg.Record]]:
         """Groups a list of records of starboard_entries by the message_creation_date row."""
 
         def get_date(item):
-            date_identifier = f"{item['message_creation_date'].year}" \
-                              f"{item['message_creation_date'].month}" \
-                              f"{item['message_creation_date'].day}"
+            date_identifier = (
+                f"{item['message_creation_date'].year}"
+                f"{item['message_creation_date'].month}"
+                f"{item['message_creation_date'].day}"
+            )
             return date_identifier
 
         groups = []
@@ -90,12 +99,15 @@ class Starboard(context.CustomCog):
         today = datetime.datetime.utcnow().today()
         start_of_last_week = today - datetime.timedelta(days=7)
 
-        starred_messages = await self.bot.db.fetch("SELECT * FROM starboard_entries "
-                                                   "WHERE starboard_message_created_at >= $1 "
-                                                   "AND starboard_message_created_at < $2 "
-                                                   "AND is_posted_to_reddit = FALSE "
-                                                   "ORDER BY message_creation_date",
-                                                   start_of_last_week, today)
+        starred_messages = await self.bot.db.fetch(
+            "SELECT * FROM starboard_entry "
+            "WHERE starboard_message_created_at >= $1 "
+            "AND starboard_message_created_at < $2 "
+            "AND is_posted_to_reddit = FALSE "
+            "ORDER BY message_creation_date",
+            start_of_last_week,
+            today,
+        )
 
         return starred_messages
 
@@ -111,46 +123,50 @@ class Starboard(context.CustomCog):
         markdown = [intro]
 
         for group in starred_messages:
-            title = group[0]['message_creation_date'].strftime("##%A, %B %d")
+            title = group[0]["message_creation_date"].strftime("##%A, %B %d")
             markdown.append(title)
 
             for record in group:
-                channel = self.bot.dciv.get_channel(record['channel_id'])
+                channel = self.bot.dciv.get_channel(record["channel_id"])
 
                 if not channel:
                     continue
 
-                message = await channel.fetch_message(record['message_id'])
+                message = await channel.fetch_message(record["message_id"])
 
                 if not message:
                     continue
 
-                author = self.bot.dciv.get_member(record['author_id'])
-                author = f"**{author.display_name}** ({str(author)})" if author is not None else "_Author left Democraciv_"
+                author = self.bot.dciv.get_member(record["author_id"])
+                author = (
+                    f"**{author.display_name}** ({str(author)})" if author is not None else f"_Author left {self.bot.dciv.name}_"
+                )
 
                 fmt_channel = f"**#{channel.name}**" if channel is not None else "_channel was deleted_"
-                pretty_time = record['message_creation_date'].strftime("%H:%M")
+                pretty_time = record["message_creation_date"].strftime("%H:%M")
                 quote = [f"> {line}" for line in message.clean_content.splitlines()]
 
                 image_url = None
 
                 if message.embeds:
                     data = message.embeds[0]
-                    if data.type == 'image':
+                    if data.type == "image":
                         image_url = data.url
 
                 if message.attachments:
                     file = message.attachments[0]
-                    if file.url.lower().endswith(('png', 'jpeg', 'jpg', 'gif', 'webp')):
+                    if file.url.lower().endswith(("png", "jpeg", "jpg", "gif", "webp")):
                         image_url = file.url
 
                 if image_url:
                     quote.append(f"> [Attached Image]({image_url})")
 
-                content = '\n'.join(quote)
+                content = "\n".join(quote)
 
-                markdown.append(f"{author} [said]({message.jump_url}) in "
-                                f"{fmt_channel} at {pretty_time} UTC:\n{content}\n\n---\n\n")
+                markdown.append(
+                    f"{author} [said]({message.jump_url}) in "
+                    f"{fmt_channel} at {pretty_time} UTC:\n{content}\n\n---\n\n"
+                )
 
             markdown.append("\n\n&nbsp;\n\n")
 
@@ -164,11 +180,16 @@ class Starboard(context.CustomCog):
         async with self.bot.session.get(f"https://www.reddit.com/user/{token.REDDIT_USERNAME}.json?limit=15") as resp:
             if resp.status == 200:
                 json_data = await resp.json()
+            else:
+                return False
 
-            for post in json_data['data']['children']:
+            for post in json_data["data"]["children"]:
                 try:
-                    if post['data']['title'].startswith("Weekly Discord News"):
-                        time = datetime.date.fromtimestamp(post['data']['created_utc'])
+                    if (
+                        post["data"]["title"].startswith("Weekly Discord News")
+                        and post["data"]["subreddit"] == config.REDDIT_SUBREDDIT
+                    ):
+                        time = datetime.date.fromtimestamp(post["data"]["created_utc"])
                         if time == datetime.date.today():
                             return True
                 except KeyError:
@@ -194,7 +215,7 @@ class Starboard(context.CustomCog):
         grouped_stars = self.group_starred_messages_by_day(new_starred_messages)
 
         msg = "[BOT] Posting last week's starboard to Reddit..."
-        await mk.get_democraciv_channel(self.bot, mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(msg)
+        await self.bot.get_democraciv_channel(mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(msg)
         print(msg)
 
         today = datetime.datetime.utcnow().today()
@@ -210,13 +231,16 @@ class Starboard(context.CustomCog):
             "title": title,
             "text": post_content,
             "spoiler": False,
-            "ad": False
+            "ad": False,
         }
 
         if await self.bot.reddit_api.post_to_reddit(data):
-            await self.bot.db.execute("UPDATE starboard_entries SET is_posted_to_reddit = true "
-                                      "WHERE starboard_message_created_at >= $1 AND starboard_message_created_at < $2",
-                                      start_of_last_week, today)
+            await self.bot.db.execute(
+                "UPDATE starboard_entry SET is_posted_to_reddit = true "
+                "WHERE starboard_message_created_at >= $1 AND starboard_message_created_at < $2",
+                start_of_last_week,
+                today,
+            )
 
     @weekly_starboard_to_reddit_task.before_loop
     async def before_starboard_task(self):
@@ -235,25 +259,33 @@ class Starboard(context.CustomCog):
 
         footer_text = f"{stars} star" if stars == 1 else f"{stars} stars"
 
-        embed = self.bot.embeds.embed_builder(title="", description=message.content,
-                                              colour=0xFFAC33, has_footer=False)
-        embed.set_footer(text=footer_text, icon_url="https://cdn.discordapp.com/attachments/"
-                                                    "639549494693724170/679824104190115911/star.png")
+        embed = text.SafeEmbed(description=message.content, colour=0xFFAC33)
+        embed.set_footer(
+            text=footer_text,
+            icon_url="https://cdn.discordapp.com/attachments/" "639549494693724170/679824104190115911/star.png",
+        )
         embed.timestamp = message.created_at
-        embed.set_author(name=message.author.display_name, icon_url=message.author.avatar_url_as(static_format='png'))
+        embed.set_author(
+            name=f"{message.author.display_name} in #{message.channel.name}",
+            icon_url=message.author.avatar_url_as(static_format="png"),
+        )
         embed.add_field(name="Original", value=f"[Jump]({message.jump_url})", inline=False)
 
         if message.embeds:
             data = message.embeds[0]
-            if data.type == 'image':
+            if data.type == "image":
                 embed.set_image(url=data.url)
 
         if message.attachments:
             file = message.attachments[0]
-            if file.url.lower().endswith(('png', 'jpeg', 'jpg', 'gif', 'webp')):
+            if file.url.lower().endswith(("png", "jpeg", "jpg", "gif", "webp")):
                 embed.set_image(url=file.url)
             else:
-                embed.add_field(name='Attachment', value=f'[{file.filename}]({file.url})', inline=False)
+                embed.add_field(
+                    name="Attachment",
+                    value=f"[{file.filename}]({file.url})",
+                    inline=False,
+                )
 
         return embed
 
@@ -280,7 +312,7 @@ class Starboard(context.CustomCog):
 
         return True
 
-    @commands.Cog.listener(name='on_raw_reaction_add')
+    @commands.Cog.listener(name="on_raw_reaction_add")
     async def star_listener(self, payload: discord.RawReactionActionEvent):
         channel = self.bot.dciv.get_channel(payload.channel_id)
 
@@ -302,10 +334,9 @@ class Starboard(context.CustomCog):
             return
 
         starrer = self.bot.dciv.get_member(payload.user_id)
-
         await self.star_message(message, starrer)
 
-    @commands.Cog.listener(name='on_raw_reaction_remove')
+    @commands.Cog.listener(name="on_raw_reaction_remove")
     async def unstar_listener(self, payload: discord.RawReactionActionEvent):
         channel = self.bot.dciv.get_channel(payload.channel_id)
 
@@ -319,62 +350,78 @@ class Starboard(context.CustomCog):
             return
 
         starrer = self.bot.dciv.get_member(payload.user_id)
-
         await self.unstar_message(message, starrer)
 
     async def star_message(self, message: discord.Message, starrer: discord.Member):
         """Star a message"""
 
-        query = """INSERT INTO starboard_entries (author_id, message_id, channel_id, guild_id,
-                   message_creation_date) VALUES ($1, $2, $3, $4, $5)
+        query = """INSERT INTO starboard_entry (author_id, message_id, channel_id, guild_id,
+                   message_creation_date, message_jump_url) VALUES ($1, $2, $3, $4, $5, $6)
                    ON CONFLICT DO NOTHING RETURNING id"""
 
-        entry_id = await self.bot.db.fetchval(query, message.author.id, message.id, message.channel.id,
-                                              message.guild.id, message.created_at)
+        entry_id = await self.bot.db.fetchval(
+            query,
+            message.author.id,
+            message.id,
+            message.channel.id,
+            message.guild.id,
+            message.created_at,
+            message.jump_url,
+        )
 
         if entry_id is None:
-            entry_id = await self.bot.db.fetchval("SELECT id FROM starboard_entries WHERE message_id = $1", message.id)
+            entry_id = await self.bot.db.fetchval("SELECT id FROM starboard_entry WHERE message_id = $1", message.id)
 
         try:
-            await self.bot.db.execute("INSERT INTO starboard_starrers (entry_id, starrer_id) VALUES ($1, $2)",
-                                      entry_id, starrer.id)
+            await self.bot.db.execute(
+                "INSERT INTO starboard_starrer (entry_id, starrer_id) VALUES ($1, $2)",
+                entry_id,
+                starrer.id,
+            )
         except asyncpg.UniqueViolationError:
             return
 
-        amount_of_stars = await self.bot.db.fetchval("SELECT COUNT(*) FROM starboard_starrers WHERE entry_id = $1",
-                                                     entry_id)
+        amount_of_stars = await self.bot.db.fetchval(
+            "SELECT COUNT(*) FROM starboard_starrer WHERE entry_id = $1", entry_id
+        )
 
         if amount_of_stars < self.star_threshold:
             return
 
         # Send embed to starboard channel or update amount of stars in existing embed
-        bot_message = await self.bot.db.fetchval("SELECT starboard_message_id FROM starboard_entries "
-                                                 "WHERE id = $1", entry_id)
+        bot_message = await self.bot.db.fetchval(
+            "SELECT starboard_message_id FROM starboard_entry " "WHERE id = $1",
+            entry_id,
+        )
 
         embed = self.get_starboard_embed(message, amount_of_stars)
 
         if bot_message is None:
             # Send new message
             new_bot_message = await self.starboard_channel.send(embed=embed)
-            await self.bot.db.execute("UPDATE starboard_entries SET starboard_message_id = $1,"
-                                      " starboard_message_created_at = $3 WHERE id = $2",
-                                      new_bot_message.id, entry_id, new_bot_message.created_at)
+            await self.bot.db.execute(
+                "UPDATE starboard_entry SET starboard_message_id = $1,"
+                " starboard_message_created_at = $3 WHERE id = $2",
+                new_bot_message.id,
+                entry_id,
+                new_bot_message.created_at,
+            )
 
         else:
             # Update star amount
             try:
                 old_bot_message = await self.starboard_channel.fetch_message(bot_message)
             except discord.NotFound:
-                await self.bot.db.execute("DELETE FROM starboard_entries WHERE id = $1", entry_id)
+                await self.bot.db.execute("DELETE FROM starboard_entry WHERE id = $1", entry_id)
             else:
                 await old_bot_message.edit(embed=embed)
 
     async def unstar_message(self, message: discord.Message, starrer: discord.Member):
         """Unstars a message"""
 
-        query = """DELETE FROM starboard_starrers USING starboard_entries starboard_entry
-                   WHERE starboard_entry.message_id = $1 AND starboard_entry.id = starboard_starrers.entry_id 
-                   AND starboard_starrers.starrer_id = $2 RETURNING starboard_starrers.entry_id,
+        query = """DELETE FROM starboard_starrer USING starboard_entry
+                   WHERE starboard_entry.message_id = $1 AND starboard_entry.id = starboard_starrer.entry_id 
+                   AND starboard_starrer.starrer_id = $2 RETURNING starboard_starrer.entry_id,
                     starboard_entry.starboard_message_id"""
 
         entry = await self.bot.db.fetchrow(query, message.id, starrer.id)
@@ -389,21 +436,24 @@ class Starboard(context.CustomCog):
         if bot_message is None:
             return
 
-        amount_of_stars = await self.bot.db.fetchval("SELECT COUNT(*) FROM starboard_starrers WHERE entry_id = $1",
-                                                     entry_id)
+        amount_of_stars = await self.bot.db.fetchval(
+            "SELECT COUNT(*) FROM starboard_starrer WHERE entry_id = $1", entry_id
+        )
 
         try:
             old_bot_message = await self.starboard_channel.fetch_message(bot_message)
         except discord.NotFound:
-            await self.bot.db.execute("DELETE FROM starboard_entries WHERE id = $1", entry_id)
+            await self.bot.db.execute("DELETE FROM starboard_entry WHERE id = $1", entry_id)
             return
 
         if amount_of_stars < self.star_threshold:
             # Delete starboard message if too few stars
             await old_bot_message.delete()
-            await self.bot.db.execute("UPDATE starboard_entries SET starboard_message_id = NULL,"
-                                      " starboard_message_created_at = NULL WHERE id = $1",
-                                      entry_id)
+            await self.bot.db.execute(
+                "UPDATE starboard_entry SET starboard_message_id = NULL,"
+                " starboard_message_created_at = NULL WHERE id = $1",
+                entry_id,
+            )
 
         else:
             # Update star amount
@@ -415,7 +465,10 @@ class Starboard(context.CustomCog):
         if self.starboard_channel and self.starboard_channel.id != payload.channel_id:
             return
 
-        await self.bot.db.execute("DELETE FROM starboard_entries WHERE starboard_message_id = $1", payload.message_id)
+        await self.bot.db.execute(
+            "DELETE FROM starboard_entry WHERE starboard_message_id = $1",
+            payload.message_id,
+        )
 
     @commands.Cog.listener()
     async def on_raw_bulk_message_delete(self, payload):
@@ -424,81 +477,114 @@ class Starboard(context.CustomCog):
 
         messages = list(payload.message_ids)
 
-        await self.bot.db.execute("DELETE FROM starboard_entries WHERE starboard_message_id = ANY($1::bigint[]);",
-                                  messages)
+        await self.bot.db.execute(
+            "DELETE FROM starboard_entry WHERE starboard_message_id = ANY($1::bigint[]);",
+            messages,
+        )
 
-    @commands.group(name='star', aliases=['starboard', 'stars'], case_insensitive=True,
-                    invoke_without_command=True, hidden=True)
+    @commands.group(
+        name="stars",
+        aliases=["starboard", "star", "starstats", "starsstats"],
+        case_insensitive=True,
+        invoke_without_command=True,
+    )
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
-    async def starboard(self, ctx):
-        """The Starboard Group command"""
-        if ctx.invoked_subcommand is None:
-            return await ctx.send_help(ctx.command.cog)
+    async def starboard(
+        self,
+        ctx,
+        *,
+        member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser] = None,
+    ):
+        """Statistics about our Starboard
+
+        **Usage:**
+             `-star stats` for statistics on the general starboard usage
+             `-star stats <member>` for statistics on the starboard usage of a specific member"""
+        if member is None:
+            await self.star_overall_stats(ctx)
+        else:
+            await self.star_member_stats(ctx, member)
 
     @staticmethod
-    def records_to_value(records, fmt=None, default='-'):
+    def records_to_value(records, fmt=None, default="-"):
         if not records:
             return default
 
-        emoji = 0x1f947  # :first_place:
+        emoji = 0x1F947  # :first_place:
         fmt = fmt or (lambda o: o)
-        return '\n'.join(
-            f'{chr(emoji + i)} {fmt(r["ID"])} ({r["Stars"]} stars)' for i, r in enumerate(records))
+        return "\n".join(f'{chr(emoji + i)} {fmt(r["ID"])} ({r["Stars"]} stars)' for i, r in enumerate(records))
 
     async def star_member_stats(self, ctx, member):
-        embed = self.bot.embeds.embed_builder(title='', description='', colour=0xFFAC33, has_footer=False)
-        embed.set_author(name=member.display_name, icon_url=member.avatar_url_as(static_format='png'))
+        embed = text.SafeEmbed(colour=0xFFAC33)
+        embed.set_author(name=member.display_name, icon_url=member.avatar_url_as(static_format="png"))
 
-        stars_received = await self.bot.db.fetchval("""SELECT COUNT(*)
-                                                    FROM starboard_starrers
-                                                    INNER JOIN starboard_entries entry
-                                                    ON entry.id=starboard_starrers.entry_id
+        stars_received = await self.bot.db.fetchval(
+            """SELECT COUNT(*)
+                                                    FROM starboard_starrer
+                                                    INNER JOIN starboard_entry entry
+                                                    ON entry.id=starboard_starrer.entry_id
                                                     WHERE entry.author_id=$1;""",
-                                                    member.id)
+            member.id,
+        )
 
-        stars_given = await self.bot.db.fetchval("""SELECT COUNT(*)
-                                                    FROM starboard_starrers
-                                                    INNER JOIN starboard_entries entry
-                                                    ON entry.id=starboard_starrers.entry_id
-                                                    WHERE starboard_starrers.starrer_id=$1;""",
-                                                 member.id)
+        stars_given = await self.bot.db.fetchval(
+            """SELECT COUNT(*)
+                                                    FROM starboard_starrer
+                                                    INNER JOIN starboard_entry entry
+                                                    ON entry.id=starboard_starrer.entry_id
+                                                    WHERE starboard_starrer.starrer_id=$1;""",
+            member.id,
+        )
 
-        top_three_starred = await self.bot.db.fetch("""SELECT entry.message_jump_url, COUNT(*) AS "stars"
-                                                            FROM starboard_starrers
-                                                            INNER JOIN starboard_entries entry
-                                                            ON entry.id=starboard_starrers.entry_id
-                                                            WHERE entry.author_id=$1
-                                                            GROUP BY entry.message_jump_url
+        top_three_starred = await self.bot.db.fetch(
+            """SELECT starboard_entry.message_jump_url, COUNT(*) AS "stars"
+                                                            FROM starboard_starrer
+                                                            INNER JOIN starboard_entry 
+                                                            ON starboard_entry.id=starboard_starrer.entry_id
+                                                            WHERE starboard_entry.author_id=$1
+                                                            GROUP BY starboard_entry.message_jump_url
                                                             ORDER BY "stars" DESC
                                                             LIMIT 3;""",
-                                                    member.id)
+            member.id,
+        )
 
         top_three_starred_fmt = []
 
         for record in top_three_starred:
-            top_three_starred_fmt.append({"ID": f"[Jump to Message]({record['message_jump_url']})",
-                                          "Stars": record['stars']})
+            top_three_starred_fmt.append(
+                {
+                    "ID": f"[Jump to Message]({record['message_jump_url']})",
+                    "Stars": record["stars"],
+                }
+            )
 
-        query = """SELECT COUNT(*) FROM starboard_entries WHERE starboard_message_id IS NOT NULL AND author_id = $1;"""
+        query = """SELECT COUNT(*) FROM starboard_entry WHERE starboard_message_id IS NOT NULL AND author_id = $1;"""
         messages_starred = await self.bot.db.fetchval(query, member.id)
 
-        embed.add_field(name='Messages on the Starboard', value=messages_starred, inline=False)
-        embed.add_field(name='Stars Received', value=stars_received, inline=True)
-        embed.add_field(name='Stars Given', value=stars_given, inline=True)
-        embed.add_field(name='Top Starred Messages', value=self.records_to_value(top_three_starred_fmt), inline=False)
+        embed.add_field(name="Messages on the Starboard", value=messages_starred, inline=False)
+        embed.add_field(name="Stars Received", value=stars_received, inline=True)
+        embed.add_field(name="Stars Given", value=stars_given, inline=True)
+        embed.add_field(
+            name="Top Starred Messages",
+            value=self.records_to_value(top_three_starred_fmt),
+            inline=False,
+        )
         await ctx.send(embed=embed)
 
     async def star_overall_stats(self, ctx):
-        total_starred_messages = await self.bot.db.fetchval("SELECT COUNT(*) FROM starboard_entries")
-        total_stars = await self.bot.db.fetchval("SELECT COUNT(*) FROM starboard_starrers INNER JOIN starboard_entries "
-                                                 "entry ON entry.id = starboard_starrers.entry_id;")
+        total_starred_messages = await self.bot.db.fetchval("SELECT COUNT(*) FROM starboard_entry")
+        total_stars = await self.bot.db.fetchval(
+            "SELECT COUNT(*) FROM starboard_starrer INNER JOIN starboard_entry "
+            "entry ON entry.id = starboard_starrer.entry_id;"
+        )
 
-        embed = self.bot.embeds.embed_builder(title='Starboard Stats',
-                                              description=f'So far, there are {total_starred_messages} messages starred'
-                                                          f' with a total of {total_stars} stars.',
-                                              colour=0xFFAC33,
-                                              has_footer=False)
+        embed = text.SafeEmbed(
+            title="Starboard Stats",
+            description=f"So far, there are {total_starred_messages} messages starred"
+            f" with a total of {total_stars} stars.",
+            colour=0xFFAC33,
+        )
 
         # this big query fetches 3 things:
         # top 3 starred posts (Type 3)
@@ -507,11 +593,11 @@ class Starboard(context.CustomCog):
         query = """WITH t AS (
                            SELECT
                                entry.author_id AS entry_author_id,
-                               starboard_starrers.starrer_id,
+                               starboard_starrer.starrer_id,
                                entry.starboard_message_id
-                           FROM starboard_starrers
-                           INNER JOIN starboard_entries entry
-                           ON entry.id = starboard_starrers.entry_id
+                           FROM starboard_starrer
+                           INNER JOIN starboard_entry entry
+                           ON entry.id = starboard_starrer.entry_id
                        )
                        (
                            SELECT t.entry_author_id AS "ID", 1 AS "Type", COUNT(*) AS "Stars"
@@ -540,45 +626,39 @@ class Starboard(context.CustomCog):
                        );"""
 
         records = await self.bot.db.fetch(query)
-        starred_posts = [r for r in records if r['Type'] == 3]
+        starred_posts = [r for r in records if r["Type"] == 3]
         starred_posts_with_link = []
 
         for post in starred_posts:
-            record = await self.bot.db.fetchval("SELECT message_jump_url FROM starboard_entries "
-                                                "WHERE starboard_message_id = $1", post['ID'])
-            starred_posts_with_link.append({"ID": f"[Jump to Message]({record})", "Stars": post['Stars']})
+            record = await self.bot.db.fetchval(
+                "SELECT message_jump_url FROM starboard_entry " "WHERE starboard_message_id = $1",
+                post["ID"],
+            )
+            starred_posts_with_link.append({"ID": f"[Jump to Message]({record})", "Stars": post["Stars"]})
 
-        embed.add_field(name='Top Starred Messages', value=self.records_to_value(starred_posts_with_link), inline=False)
+        embed.add_field(
+            name="Top Starred Messages",
+            value=self.records_to_value(starred_posts_with_link),
+            inline=False,
+        )
 
-        to_mention = lambda o: f'<@{o}>'
+        to_mention = lambda o: f"<@{o}>"
 
-        star_receivers = [r for r in records if r['Type'] == 1]
-        value = self.records_to_value(star_receivers, to_mention, default='No one!')
-        embed.add_field(name='Top Star Receivers', value=value, inline=False)
+        star_receivers = [r for r in records if r["Type"] == 1]
+        value = self.records_to_value(star_receivers, to_mention, default="No one!")
+        embed.add_field(name="Top Star Receivers", value=value, inline=False)
 
-        star_givers = [r for r in records if r['Type'] == 2]
-        value = self.records_to_value(star_givers, to_mention, default='No one!')
-        embed.add_field(name='Top Star Givers', value=value, inline=False)
+        star_givers = [r for r in records if r["Type"] == 2]
+        value = self.records_to_value(star_givers, to_mention, default="No one!")
+        embed.add_field(name="Top Star Givers", value=value, inline=False)
 
         if self.starboard_channel is not None:
-            embed.set_footer(text='Collecting stars since', icon_url="https://cdn.discordapp.com/attachments/"
-                                                                     "639549494693724170/679824104190115911/star.png")
+            embed.set_footer(
+                text="Collecting stars since",
+                icon_url="https://cdn.discordapp.com/attachments/" "639549494693724170/679824104190115911/star.png",
+            )
             embed.timestamp = self.starboard_channel.created_at
         await ctx.send(embed=embed)
-
-    @starboard.command(name='stats', aliases=['stat', 'statistics', 'statistic'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
-    async def starboardstats(self, ctx, *,
-                             member: typing.Union[discord.Member, CaseInsensitiveMember, discord.User] = None):
-        """Statistics about our Starboard
-
-        **Usage:**
-             `-star stats` for statistics on the general starboard usage
-             `-star stats <member>` for statistics on the starboard usage of a specific member"""
-        if member is None:
-            await self.star_overall_stats(ctx)
-        else:
-            await self.star_member_stats(ctx, member)
 
 
 def setup(bot):

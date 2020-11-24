@@ -27,8 +27,9 @@ class TwitchManager:
     TWITCH_CLIENT_SECRET = ""
     TWITCH_OAUTH_APP_ACCESS_TOKEN = ""
 
-    def __init__(self):
-        self._session: aiohttp.ClientSession = None
+    def __init__(self, db):
+        self.db = db
+        self._session: aiohttp.ClientSession
         self._loop = asyncio.get_event_loop()
         self._loop.create_task(self._make_aiohttp_session())
         self._streams: typing.Dict[str, typing.Set[str]] = dict()
@@ -43,18 +44,21 @@ class TwitchManager:
 
     @property
     def _headers(self):
-        return {'Client-ID': self.TWITCH_CLIENT_ID, 'Authorization': f'Bearer {self.TWITCH_OAUTH_APP_ACCESS_TOKEN}'}
+        return {"Client-ID": self.TWITCH_CLIENT_ID, "Authorization": f"Bearer {self.TWITCH_OAUTH_APP_ACCESS_TOKEN}"}
 
     async def _refresh_twitch_oauth_token(self):
         """Gets a new app access_token for the Twitch Helix API"""
 
-        post_data = {"client_id": self.TWITCH_CLIENT_ID, "client_secret": self.TWITCH_CLIENT_SECRET,
-                     "grant_type": "client_credentials"}
+        post_data = {
+            "client_id": self.TWITCH_CLIENT_ID,
+            "client_secret": self.TWITCH_CLIENT_SECRET,
+            "grant_type": "client_credentials",
+        }
 
         async with self._session.post("https://id.twitch.tv/oauth2/token", data=post_data) as response:
             if response.status == 200:
                 r = await response.json()
-                self.TWITCH_OAUTH_APP_ACCESS_TOKEN = r['access_token']
+                self.TWITCH_OAUTH_APP_ACCESS_TOKEN = r["access_token"]
 
     async def _make_aiohttp_session(self):
         self._session = aiohttp.ClientSession()
@@ -62,8 +66,24 @@ class TwitchManager:
     async def _get_user_id_from_username(self, username: str):
         async with self._session.get(f"{self.API_USER_ENDPOINT}{username}", headers=self._headers) as response:
             if response.status == 200:
-                json = await response.json()
-                return json["data"][0]["id"]
+                js = await response.json()
+                return js["data"][0]["id"]
+
+    async def get_webhooks_per_guild(self, guild_id: int):
+        records = await self.db.get_reddit_webhooks_by_guild(guild_id)
+        webhooks = []
+
+        for record in records:
+            webhooks.append(
+                {
+                    "id": record["id"],
+                    "subreddit": record["subreddit"],
+                    "webhook_id": record["webhook_id"],
+                    "webhook_url": record["webhook_url"],
+                }
+            )
+
+        return webhooks
 
     async def add_stream(self, streamer: str, to_discord_webhook: str):
         streamer = streamer.lower()
@@ -101,36 +121,37 @@ class TwitchManager:
         user_id = await self._get_user_id_from_username(stream)
         print(f"{mode} to ", stream)
 
-        json = {
+        js = {
             "hub.callback": "http://138.68.80.72:8888/twitch/callback",
             "hub.mode": mode,
             "hub.topic": f"{self.API_STREAM_ENDPOINT}?user_id={user_id}",
-            "hub.lease_seconds": 600
+            "hub.lease_seconds": 600,
         }
 
-        async with self._session.post("https://api.twitch.tv/helix/webhooks/hub", json=json,
-                                      headers=self._headers) as response:
+        async with self._session.post(
+            "https://api.twitch.tv/helix/webhooks/hub", json=js, headers=self._headers
+        ) as response:
             j = await response.text()
             print(3)
             print(j)
             return j
 
     async def process_incoming_notification(self, request):
-        json = await request.json()
+        js = await request.json()
 
-        if not json['data']:
+        if not js["data"]:
             # stream went from online to offline
             return
 
-        self._loop.create_task(self.send_webhook(TwitchStream(**json['data'][0])))
+        self._loop.create_task(self.send_webhook(TwitchStream(**js["data"][0])))
 
     async def send_webhook(self, stream: TwitchStream):
-        embed = Embed(title=f"<:twitch:660116652012077080> {stream.streamer} - Live on Twitch", colour=0x984efc)
+        embed = Embed(title=f"<:twitch:660116652012077080> {stream.streamer} - Live on Twitch", colour=0x984EFC)
         embed.add_field(name="Title", value=stream.title, inline=False)
         embed.add_field(name="Link", value=stream.link, inline=False)
         embed.set_image(url=stream.thumbnail)
 
-        json = {"embeds": [embed.to_dict()]}
+        js = {"embeds": [embed.to_dict()]}
 
         streamer = stream.streamer.lower()
 
@@ -138,7 +159,6 @@ class TwitchManager:
             return  # ? how
 
         for discord_webhook in self._streams[streamer]:
-            async with self._session.post(discord_webhook, json=json) as response:
+            async with self._session.post(discord_webhook, json=js) as response:
                 if response.status not in (200, 204):
                     logging.error(f"error while sending reddit webhook: {response.status} {await response.text()}")
-

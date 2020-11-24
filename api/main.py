@@ -1,6 +1,4 @@
 import logging
-import time
-
 import pydantic
 import xdice
 
@@ -12,9 +10,9 @@ from fastapi.responses import PlainTextResponse
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
-db = Database(dsn="postgres://postgres:PASSWORD@localhost/api_test")
+db = Database(dsn="postgres://postgres:PW@localhost/api_test")
 reddit_manager = RedditManager(db=db)
-twitch_manager = TwitchManager()
+twitch_manager = TwitchManager(db=db)
 
 
 class AddSubredditScraper(pydantic.BaseModel):
@@ -27,12 +25,20 @@ class AddSubredditScraper(pydantic.BaseModel):
 
 class RemoveSubredditScraper(pydantic.BaseModel):
     id: int
+    guild_id: int
 
 
-class TwitchConfig(pydantic.BaseModel):
+class ClearGuildSubredditScraper(pydantic.BaseModel):
+    guild_id: int
+
+
+class AddTwitchHook(pydantic.BaseModel):
     streamer: str
     webhook_url: str
+    webhook_id: int
     everyone_ping: bool
+    guild_id: int
+    channel_id: int
 
 
 class Dice(pydantic.BaseModel):
@@ -41,7 +47,7 @@ class Dice(pydantic.BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    pass
+    logging.info("api ready to serve")
 
 
 @app.get("/")
@@ -50,9 +56,15 @@ def read_root():
 
 
 @app.post("/twitch/add")
-async def twitch_sub(twitch_config: TwitchConfig):
+async def twitch_sub(twitch_config: AddTwitchHook):
     j = await twitch_manager.add_stream(twitch_config.streamer, twitch_config.webhook_url)
     return j
+
+
+@app.get("/reddit/list/{guild_id}")
+async def reddit_list(guild_id: int):
+    webhooks = await twitch_manager.get_webhooks_per_guild(guild_id)
+    return {"webhooks": webhooks}
 
 
 @app.get("/twitch/callback", response_class=PlainTextResponse)
@@ -61,7 +73,7 @@ async def twitch_subscription_verify(request: Request):
         logging.error(f"could not subscribe to Twitch Webhook: {request.query_params['hub.reason']}")
     print(4)
     print(request)
-    return request.query_params['hub.challenge']
+    return request.query_params["hub.challenge"]
 
 
 @app.post("/twitch/callback")
@@ -75,7 +87,7 @@ async def twitch_webhook_received(request: Request, background_tasks: Background
 @app.get("/reddit/list/{guild_id}")
 async def reddit_list(guild_id: int):
     webhooks = await reddit_manager.get_webhooks_per_guild(guild_id)
-    return {'webhooks': webhooks}
+    return {"webhooks": webhooks}
 
 
 @app.post("/reddit/add")
@@ -87,9 +99,18 @@ def reddit_add(reddit_config: AddSubredditScraper, background_tasks: BackgroundT
 
 @app.post("/reddit/remove")
 async def reddit_remove(reddit_config: RemoveSubredditScraper):
-    response = await reddit_manager.remove_scraper(config=reddit_config)
-    response["ok"] = "ok"
+    response = await reddit_manager.remove_scraper(scraper_id=reddit_config.id, guild_id=reddit_config.guild_id)
+
+    if "error" not in response:
+        response["ok"] = "ok"
+
     return response
+
+
+@app.post("/reddit/clear")
+async def reddit_clear(reddit_config: ClearGuildSubredditScraper):
+    removed = await reddit_manager.clear_scraper_per_guild(guild_id=reddit_config.guild_id)
+    return {"ok": "ok", "removed": removed}
 
 
 @app.post("/roll")
@@ -150,4 +171,4 @@ def roll_dice(dice_to_roll: Dice):
     if special_message:
         msg = f"{msg}\n{special_message}"
 
-    return {'ok': 'ok', 'result': msg}
+    return {"ok": "ok", "result": msg}
