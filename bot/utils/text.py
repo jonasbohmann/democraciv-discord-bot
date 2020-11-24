@@ -8,7 +8,7 @@ from bot.utils import models
 
 
 def split_string(string: str, length: int):
-    return list((string[0 + i : length + i] for i in range(0, len(string), length)))
+    return list((string[0 + i: length + i] for i in range(0, len(string), length)))
 
 
 def split_string_by_paragraphs(string: str, length: int):
@@ -86,7 +86,7 @@ class AnnouncementScheduler:
     @tasks.loop(seconds=30)
     async def _wait(self):
         if self._last_addition is not None and datetime.datetime.utcnow() - self._last_addition > datetime.timedelta(
-            minutes=10
+                minutes=10
         ):
             self._last_addition = None
             await self.send_messages()
@@ -109,12 +109,12 @@ class SafeEmbed(discord.Embed):
             self.title = f"{self.title[:253]}..."
 
     def add_field(
-        self,
-        *,
-        name: typing.Any,
-        value: typing.Any,
-        inline: bool = True,
-        too_long_value: str = None,
+            self,
+            *,
+            name: typing.Any,
+            value: typing.Any,
+            inline: bool = True,
+            too_long_value: str = None,
     ):
         field_index = len(self.fields)
         name = str(name)

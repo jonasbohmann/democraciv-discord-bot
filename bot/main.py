@@ -8,6 +8,7 @@ import typing
 
 try:
     import uvloop
+
     uvloop.install()
 except ImportError:
     pass
@@ -25,10 +26,9 @@ from discord.ext import commands, tasks
 from bot.utils import exceptions, text, context
 from bot.config import token, config, mk
 
-
 from bot.utils.api_wrapper import RedditAPIWrapper, GoogleAPIWrapper
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [BOT] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
 
 # List of cogs that will be loaded on startup
 initial_extensions = [
@@ -68,13 +68,13 @@ async def safe_send(self, content=None, **kwargs) -> discord.Message:
         embed.clean()
 
     if content and len(content) > 2000:
-        split_messages = text.split_string_by_paragraphs(content, 1800)
+        split_messages = text.split_string(content, 1800)
 
         for index in split_messages:
             if index == len(split_messages) - 1:
-                return await _old_send(self, split_messages[index], embed=embed, **kwargs)
+                return await _old_send(self, index, embed=embed, **kwargs)
             else:
-                await _old_send(self, split_messages[index], **kwargs)
+                await _old_send(self, index, **kwargs)
 
     else:
         return await _old_send(self, content, embed=embed, **kwargs)
@@ -129,9 +129,9 @@ class DemocracivBot(commands.Bot):
         for extension in initial_extensions:
             try:
                 self.load_extension(extension)
-                logging.info(f"successfully loaded {extension}")
+                logging.info(f"Successfully loaded {extension}")
             except Exception:
-                logging.error(f"failed to load module {extension}.")
+                logging.error(f"Failed to load module {extension}.")
                 traceback.print_exc()
 
     async def api_request(self, method: str, route: str, **kwargs):
@@ -160,17 +160,17 @@ class DemocracivBot(commands.Bot):
         return to_return
 
     async def log_error(
-        self,
-        ctx,
-        error,
-        to_log_channel: bool = True,
-        to_owner: bool = False,
-        to_context: bool = False,
+            self,
+            ctx,
+            error,
+            to_log_channel: bool = True,
+            to_owner: bool = False,
+            to_context: bool = False,
     ):
         if ctx.guild is None:
             return
 
-        embed = text.SafeEmbed(title="{config.NO}  Command Error")
+        embed = text.SafeEmbed(title=f"{config.NO}  Command Error")
 
         embed.add_field(name="Error", value=f"{error.__class__.__name__}: {error}", inline=False)
         embed.add_field(name="Channel", value=ctx.channel.mention, inline=True)
@@ -181,10 +181,10 @@ class DemocracivBot(commands.Bot):
             local_embed = text.SafeEmbed(
                 title=":warning:  Something went wrong",
                 description=f"An unexpected error occurred while"
-                f" performing this command. The developer"
-                f" has been notified."
-                f"\n\n```{error.__class__.__name__}:"
-                f" {error}```",
+                            f" performing this command. The developer"
+                            f" has been notified."
+                            f"\n\n```{error.__class__.__name__}:"
+                            f" {error}```",
             )
             await ctx.send(embed=local_embed)
 
@@ -346,7 +346,8 @@ class DemocracivBot(commands.Bot):
         elif isinstance(error, commands.BotMissingRole):
             role = ctx.guild.get_role(error.missing_role) or ctx.bot.dciv.get_role(error.missing_role)
             await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
-            return await ctx.send(f"{config.NO} I need the `{role.name}` role in order to perform this" f" action for you.")
+            return await ctx.send(
+                f"{config.NO} I need the `{role.name}` role in order to perform this" f" action for you.")
 
         elif isinstance(error, commands.BotMissingAnyRole):
             await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
@@ -365,8 +366,6 @@ class DemocracivBot(commands.Bot):
             return await ctx.send(f"{config.NO} This command has been disabled.")
 
         elif isinstance(error, exceptions.PartyNotFoundError):
-            await ctx.send()
-
             parties = await self.db.fetch("SELECT id FROM party")
             parties = [record["id"] for record in parties]
             msg = []
@@ -377,7 +376,8 @@ class DemocracivBot(commands.Bot):
                     msg.append(role.name)
 
             if msg:
-                message = f"{config.NO} There is no political party named `{error.party}`.\nTry one of these:\n" + '\n'.join(msg)
+                message = f"{config.NO} There is no political party named `{error.party}`.\nTry one of these:\n" + '\n'.join(
+                    msg)
             else:
                 message = f"{config.NO} There is no political party named `{error.party}`."
 
@@ -423,7 +423,7 @@ class DemocracivBot(commands.Bot):
                 guild_config[settings["id"]] = await self._populate_guild_config_cache(settings)
 
         self.guild_config = guild_config
-        logging.info("[CACHE] Guild config cache was updated.")
+        logging.info("Guild config cache was updated.")
         return guild_config
 
     async def make_file_from_image_link(self, url: str):
@@ -486,13 +486,14 @@ class DemocracivBot(commands.Bot):
             config.LEG_SUBMIT_BILL,
             config.LEG_SUBMIT_MOTION,
             config.GUILD_SETTINGS_GEAR,
+            config.NO, config.YES, config.USER_INTERACTION_REQUIRED
         ]
 
         emoji_availability = [check_custom_emoji(emoji) for emoji in emojis]
 
         if False in emoji_availability:
             logging.warning(
-                "[BOT] Reverting to standard Unicode emojis for Paginator and -leg submit"
+                "Reverting to standard Unicode emojis for Paginator and -leg submit"
                 " as at least one emoji from config.py cannot be seen/used by me or does not exist."
             )
             config.HELP_FIRST = "\N{BLACK LEFT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}"
@@ -519,7 +520,7 @@ class DemocracivBot(commands.Bot):
                 host=token.POSTGRESQL_HOST,
             )
         except Exception as e:
-            logging.error("unexpected error occurred while connecting to PostgreSQL database.")
+            logging.error("Unexpected error occurred while connecting to PostgreSQL database.")
             self.db_ready = False
             raise e
 
@@ -527,19 +528,19 @@ class DemocracivBot(commands.Bot):
             try:
                 await self.db.execute(sql.read())
             except asyncpg.InsufficientPrivilegeError as e:
-                logging.error("could not create extension 'pg_trgm' as this user. Login as the"
-                    " postgres user and manually create extension on database."
-                )
+                logging.error("Could not create extension 'pg_trgm' as this user. Login as the"
+                              " postgres user and manually create extension on database."
+                              )
                 self.db_ready = False
                 await asyncio.sleep(5)
                 raise e
 
             except Exception as e:
-                logging.error("unexpected error occurred while executing default schema on PostgreSQL database")
+                logging.error("Unexpected error occurred while executing default schema on PostgreSQL database")
                 self.db_ready = False
                 raise e
 
-        logging.info("successfully initialised database")
+        logging.info("Successfully initialised database")
         self.db_ready = True
 
     async def initialize_democraciv_guild(self):
@@ -553,7 +554,7 @@ class DemocracivBot(commands.Bot):
         if dciv_guild is None:
 
             logging.warning(
-                "couldn't find guild with ID specified in config.py 'DEMOCRACIV_GUILD_ID'.\n"
+                "Couldn't find guild with ID specified in config.py 'DEMOCRACIV_GUILD_ID'.\n"
                 "      I will use the first guild that I can see to be used for my Democraciv-specific features."
             )
 
@@ -565,7 +566,7 @@ class DemocracivBot(commands.Bot):
         config.DEMOCRACIV_GUILD_ID = dciv_guild.id
         self.democraciv_guild_id = dciv_guild.id
 
-        logging.info(f"using '{dciv_guild.name}' as Democraciv guild.")
+        logging.info(f"Using '{dciv_guild.name}' as Democraciv guild.")
 
     @property
     def uptime(self):
@@ -581,11 +582,11 @@ class DemocracivBot(commands.Bot):
         return self.get_guild(self.democraciv_guild_id)
 
     async def safe_send_dm(
-        self,
-        target: Union[discord.User, discord.Member],
-        reason: str = None,
-        message: str = None,
-        embed: discord.Embed = None,
+            self,
+            target: Union[discord.User, discord.Member],
+            reason: str = None,
+            message: str = None,
+            embed: discord.Embed = None,
     ):
         dm_settings = await self.db.fetchrow("SELECT * FROM dm_setting WHERE user_id = $1", target.id)
         p = config.BOT_PREFIX
@@ -612,17 +613,37 @@ class DemocracivBot(commands.Bot):
 
     async def close(self):
         """Closes the aiohttp ClientSession, the connection pool to the PostgreSQL database and the bot itself."""
+        logging.info("Closing bot...")
+        channel = self.get_channel(config.BOT_TECHNICAL_NOTIFICATIONS_CHANNEL)
+
+        if channel:
+            embed = text.SafeEmbed(title=f"{config.YES}  Bot is shutting down...")
+            await channel.send(embed=embed)
+
         await super().close()
         await self.session.close()
         await self.db.close()
 
     async def on_ready(self):
         if not self.db_ready:
-            logging.error("fatal error while connecting to database. Closing bot...")
+            logging.error("Fatal error while connecting to database. Closing bot...")
             return await self.close()
 
-        logging.info(f"logged in as {self.user.name} with discord.py {discord.__version__}")
-        logging.info("------------------------------------------------------------")
+        logging.info(f"Logged in as {self.user.name} with discord.py {discord.__version__}")
+
+        channel = self.get_channel(config.BOT_TECHNICAL_NOTIFICATIONS_CHANNEL)
+
+        if channel:
+            embed = text.SafeEmbed(title=f"{config.YES}  Bot is ready")
+            await channel.send(embed=embed)
+
+    async def on_resumed(self):
+        logging.info("Resumed connection to Discord")
+        channel = self.get_channel(config.BOT_TECHNICAL_NOTIFICATIONS_CHANNEL)
+
+        if channel:
+            embed = text.SafeEmbed(title=f"{config.YES}  Resumed connection to Discord")
+            await channel.send(embed=embed)
 
     async def on_message(self, message: discord.Message):
         # Don't process message/command from other bots
@@ -630,9 +651,9 @@ class DemocracivBot(commands.Bot):
             return
 
         if self.user.id in message.raw_mentions and len(message.content) in (
-            20,
-            21,
-            22,
+                20,
+                21,
+                22,
         ):
             await message.channel.send(
                 f"Hey! :wave:\nMy prefix is: `{config.BOT_PREFIX}`\n"
@@ -690,7 +711,7 @@ class DemocracivBot(commands.Bot):
         file = discord.File(f"bot/database/backup/{file_name}")
 
         if backup_channel is None:
-            logging.warning(f"couldn't find Backup Discord channel for database backup 'database/backup/{file_name}'.")
+            logging.warning(f"Couldn't find Backup Discord channel for database backup 'database/backup/{file_name}'.")
             return
 
         await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)
@@ -744,7 +765,8 @@ class DemocracivBot(commands.Bot):
                 tiny_url = await response.text()
 
                 if tiny_url == "Error":
-                    raise exceptions.DemocracivBotException("{config.NO} tinyurl.com returned an error, try again later.")
+                    raise exceptions.DemocracivBotException(
+                        "{config.NO} tinyurl.com returned an error, try again later.")
 
                 return tiny_url
 

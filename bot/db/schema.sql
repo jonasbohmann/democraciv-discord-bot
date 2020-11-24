@@ -91,7 +91,6 @@ CREATE TABLE IF NOT EXISTS bill(
     tiny_link text,
     submitter bigint,
     submitter_description text,
-    google_docs_description text,
     is_vetoable bool,
     status int DEFAULT 0
 );

@@ -244,7 +244,7 @@ class Log(context.CustomCog):
         try:
             await introduction_channel.send(embed=embed)
         except discord.Forbidden:
-            logging.warning(f"got Forbidden while sending my introduction message on {guild.name} ({guild.id})")
+            logging.warning(f"Got Forbidden while sending my introduction message on {guild.name} ({guild.id})")
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role):

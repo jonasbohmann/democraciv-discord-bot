@@ -42,7 +42,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
         if error_string:
             errored = ", ".join(error_string)
-            logging.warning(f"the following ids were added as a party but have no role on the Democraciv guild: {errored}")
+            logging.warning(f"The following ids were added as a party but have no role on the Democraciv guild: {errored}")
 
         return parties_and_members
 

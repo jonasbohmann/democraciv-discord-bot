@@ -103,13 +103,12 @@ class Bill(commands.Converter):
     """
 
     def __init__(self, **kwargs):
-        self.id: int = kwargs.get("id", None)
+        self.id: int = kwargs.get("id", 0)
         self.name: str = kwargs.get("name", None)
         self.session: Session = kwargs.get("session", None)
         self.link: str = kwargs.get("link")
         self.tiny_link: str = kwargs.get("tiny_link", None)
         self.description: str = kwargs.get("submitter_description", None)
-        self.google_docs_description: str = kwargs.get("google_docs_description", None)
         self.is_vetoable: bool = kwargs.get("is_vetoable", None)
         self.status: BillStatus = kwargs.get("status", None)
         self.repealed_on: typing.Optional[datetime] = kwargs.get("repealed_on", None)
@@ -119,18 +118,15 @@ class Bill(commands.Converter):
     async def generate_lookup_tags(self) -> typing.List[str]:
         """Generates tags from all nouns of submitter-provided description and the Google Docs description"""
 
-        response: typing.Dict = await self._bot.google_api.run_apps_script(
-            script_id="MtyscpHHIi0Ck1h8XfuBIn2qnXKElby-M",
-            function="get_keywords",
-            parameters=[self.link])
+        try:
+            response: typing.Dict = await self._bot.google_api.run_apps_script(
+                script_id="MtyscpHHIi0Ck1h8XfuBIn2qnXKElby-M",
+                function="get_keywords",
+                parameters=[self.link])
 
-        if "error" in response:
+            keywords = [word['ngram'] for word in response['response']['result']['keywords']]
+        except (DemocracivBotException, KeyError):
             keywords = []
-        else:
-            try:
-                keywords = [word['ngram'] for word in response['response']['result']['keywords']]
-            except KeyError:
-                keywords = []
 
         async with self._bot.session.post(
                 "http://yake.inesctec.pt/yake/v2/extract_keywords?max_ngram_size=2&number_of_keywords=20&highlight=false",
@@ -149,6 +145,13 @@ class Bill(commands.Converter):
 
         keywords.append(name_abbreviation)
         return list(set(keywords))
+
+    async def make_lookup_tags(self):
+        tags = await self.generate_lookup_tags()
+
+        for tag in tags:
+            await self._bot.db.execute("INSERT INTO bill_lookup_tag (bill_id, tag) VALUES "
+                                       "($1, $2) ON CONFLICT DO NOTHING ", self.id, tag)
 
     @property
     def submitter(self) -> typing.Union[discord.Member, discord.User, None]:

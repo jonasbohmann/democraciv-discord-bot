@@ -134,37 +134,13 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
                 ],
             )
 
-        if result is None or not result["done"]:
-            ctx.command.reset_cooldown(ctx)
-            return await ctx.send(
-                f"{config.NO} There was an error while generating the document. Are you sure that you " "gave me an edit link?"
-            )
-
-        if "error" in result:
-            ctx.command.reset_cooldown(ctx)
-
-            error_msg = (
-                "Exception: No item with the given ID could be found," " or you do not have permission to access it.",
-                "Action not allowed",
-            )
-
-            if result["error"]["details"][0]["errorMessage"] in error_msg:
-                return await ctx.send(
-                    f"{config.NO} I cannot access that Google Docs document. Are you sure that you " "gave me an edit link?"
-                )
-            else:
-                return await ctx.send(
-                    f"{config.NO} There was an error while generating the document. Are you sure that you "
-                    "gave me an edit link?"
-                )
-
         embed = text.SafeEmbed(
             title=f"Generated Legal Code",
             description="This Legal Code is not guaranteed to be correct. Its "
-            f"content is based entirely on the list of Laws "
-            f"in `{config.BOT_PREFIX}laws`."
-            "\n\nRemember to change the edit link you "
-            "gave me earlier to not be public.",
+                        f"content is based entirely on the list of Laws "
+                        f"in `{config.BOT_PREFIX}laws`."
+                        "\n\nRemember to change the edit link you "
+                        "gave me earlier to not be public.",
         )
 
         embed.add_field(
@@ -176,10 +152,10 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
 
     @law.command(name="from", aliases=["f", "by"])
     async def _from(
-        self,
-        ctx,
-        *,
-        member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty] = None,
+            self,
+            ctx,
+            *,
+            member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty] = None,
     ):
         """List the laws a specific person or Political Party authored"""
         return await self._from_person_model(ctx, model=models.Law, member_or_party=member_or_party)

@@ -47,7 +47,7 @@ class Database:
     async def setup(self, dsn: str):
         self._pool: asyncpg.pool.Pool = await asyncpg.create_pool(dsn=dsn, loop=self._loop)
         await self.apply_schema()
-        logging.info("successfully connected to database")
+        logging.info("Successfully connected to database")
 
     async def apply_schema(self):
         await self._pool.execute(DB_SCHEMA)

@@ -9,7 +9,7 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport import requests
 
-from bot.config import token, config
+from bot.config import token, config, exceptions
 
 
 class RedditAPIWrapper:
@@ -53,12 +53,18 @@ class RedditAPIWrapper:
                     "https://oauth.reddit.com/api/submit", data=data, headers=headers
             ) as response:
                 if response.status != 200:
-                    logging.error(f"error while posting to Reddit, got status {response.status}.")
+                    logging.error(f"Error while posting to Reddit, got status {response.status}.")
                     return False
                 return True
         except Exception as e:
-            logging.error(f"error while posting to Reddit: {e}")
+            logging.error(f"Error while posting to Reddit: {e}")
             return False
+
+
+class GoogleAPIError(exceptions.DemocracivBotException):
+    message = f"{config.NO} Something went wrong during the execution of a Google Apps Script. " \
+              f"Please try again later or contact the developer. Make sure that, if you have given me the URL " \
+              f"of a Google Docs or Google Forms, that I have edit permissions on this document if needed."
 
 
 class GoogleAPIWrapper:
@@ -68,7 +74,15 @@ class GoogleAPIWrapper:
         self.scopes = config.GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES
 
     async def run_apps_script(self, script_id, function, parameters):
-        return await self.bot.loop.run_in_executor(None, self._execute_apps_script, script_id, function, parameters)
+        try:
+            result = await self.bot.loop.run_in_executor(None, self._execute_apps_script, script_id, function, parameters)
+
+            if "error" in result:
+                raise GoogleAPIError()
+
+            return result
+        except Exception:
+            raise GoogleAPIError()
 
     def _execute_apps_script(self, script_id, function, parameters):
         google_credentials = None
@@ -95,5 +109,5 @@ class GoogleAPIWrapper:
         try:
             return service.scripts().run(body=request, scriptId=script_id).execute()
         except errors.HttpError as e:
-            logging.error(f"error while executing Apps Script {script_id}: {e.content}")
+            logging.error(f"Error while executing Apps Script {script_id}: {e.content}")
             raise e

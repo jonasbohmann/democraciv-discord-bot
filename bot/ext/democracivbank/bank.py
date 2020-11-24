@@ -491,7 +491,7 @@ class Bank(context.CustomCog):
     ):
         """Send money to a specific bank account, organization, or person on this server
 
-        **Examples**
+        **Example**
             `{PREFIX}{COMMAND} @DerJonas 9.99`
             `{PREFIX}{COMMAND} DerJonas#8036 250`
             `{PREFIX}{COMMAND} c4a3ec17-cba4-462f-bdda-05620f574dce 32.10 Thanks ;)`

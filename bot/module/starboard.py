@@ -49,21 +49,21 @@ class Starboard(context.CustomCog):
         if config.STARBOARD_ENABLED and config.STARBOARD_REDDIT_SUMMARY_ENABLED:
             if not config.REDDIT_SUBREDDIT:
                 logging.warning(
-                    "[BOT] ERROR - Starboard Reddit post is enabled but no subreddit was provided in config.py!"
+                    "Starboard Reddit post is enabled but no subreddit was provided in config.py!"
                 )
             elif not token.REDDIT_CLIENT_ID:
                 logging.warning(
-                    "[BOT] ERROR - Starboard Reddit post is enabled but no Reddit Client ID "
+                    "Starboard Reddit post is enabled but no Reddit Client ID "
                     "was provided in token.py!"
                 )
             elif not token.REDDIT_CLIENT_SECRET:
                 logging.warning(
-                    "[BOT] ERROR - Starboard Reddit post is enabled but no Reddit Client Secret was provided "
+                    "Starboard Reddit post is enabled but no Reddit Client Secret was provided "
                     "in token.py!"
                 )
             elif not token.REDDIT_REFRESH_TOKEN:
                 logging.warning(
-                    "[BOT] ERROR - Starboard Reddit post is enabled but no Reddit Refresh Token was provided"
+                    "Starboard Reddit post is enabled but no Reddit Refresh Token was provided"
                     " in token.py!"
                 )
             else:
@@ -215,7 +215,11 @@ class Starboard(context.CustomCog):
         grouped_stars = self.group_starred_messages_by_day(new_starred_messages)
 
         msg = "Posting last week's starboard to Reddit..."
-        await self.bot.get_democraciv_channel(mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(msg)
+        channel = await self.bot.get_channel(config.BOT_TECHNICAL_NOTIFICATIONS_CHANNEL)
+
+        if channel:
+            await channel.send(msg)
+
         logging.info(msg)
 
         today = datetime.datetime.utcnow().today()

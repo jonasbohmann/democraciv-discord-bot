@@ -64,7 +64,7 @@ class RedditManager:
             self._scrapers[subreddit] = scraper
             await scraper.start()
 
-        logging.info(f"added subreddit scraper for r/{subreddit} to {webhook_url}")
+        logging.info(f"Added subreddit scraper for r/{subreddit} to {webhook_url}")
 
     async def add_scraper(self, config):
         await self.db.add_reddit_scraper(config)
@@ -161,7 +161,7 @@ class SubredditScraper:
         for webhook in self.webhook_urls:
             async with self._session.post(url=webhook, json=post_data) as response:
                 if response.status not in (200, 204):
-                    logging.error(f"error while sending reddit webhook: {response.status} {await response.text()}")
+                    logging.error(f"Error while sending reddit webhook: {response.status} {await response.text()}")
 
     async def get_newest_reddit_post(self) -> typing.Optional[typing.Dict]:
         async with self._session.get(

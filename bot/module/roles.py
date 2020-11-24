@@ -119,13 +119,11 @@ class Selfroles(context.CustomCog):
     @roles.command(name="delete", aliases=["remove"])
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
-    async def deleterole(self, ctx, hard: typing.Optional[bool] = False, *, role: str):
+    async def deleterole(self, ctx: context.CustomContext, *, role: str):
         """Remove a selfrole from this server's `-roles` list
 
         **Usage:**
-         `-role delete true <role>` will remove the selfrole **and** delete its Discord role
-         `-role delete false <role>` will remove the selfrole but not delete its Discord role
-
+         `{PREFIX}{COMMAND} <role>` will remove the selfrole **and** delete its Discord role
         """
 
         try:
@@ -133,13 +131,20 @@ class Selfroles(context.CustomCog):
         except exceptions.NotFoundError:
             return await ctx.send(f"{config.NO} This server has no selfrole that matches `{role}`.")
 
+        if selfrole.role:
+            hard_delete = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Should I also delete the "
+                                          f"Discord role `{selfrole.role.name}`, instead of just removing it from the "
+                                          f"list of selfroles in `{config.BOT_PREFIX}roles`?")
+        else:
+            hard_delete = False
+
         await self.bot.db.execute(
             "DELETE FROM selfrole WHERE guild_id = $1 AND role_id = $2",
             ctx.guild.id,
             selfrole.role.id,
         )
 
-        if hard and selfrole.role:
+        if hard_delete:
             try:
                 await selfrole.role.delete()
             except discord.Forbidden:

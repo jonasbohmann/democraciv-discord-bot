@@ -91,7 +91,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
         embed = text.SafeEmbed(
             title=f"{self.bot.mk.NATION_EMOJI}  The {self.bot.mk.LEGISLATURE_NAME} "
-            f"of {self.bot.mk.NATION_FULL_NAME}"
+                  f"of {self.bot.mk.NATION_FULL_NAME}"
         )
         speaker_value = []
 
@@ -135,10 +135,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
     @bill.command(name="from", aliases=["f", "by"])
     async def b_from(
-        self,
-        ctx: context.CustomContext,
-        *,
-        member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty] = None,
+            self,
+            ctx: context.CustomContext,
+            *,
+            member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty] = None,
     ):
         """List all bills that a specific person or Political Party submitted"""
         return await self._from_person_model(ctx, member_or_party=member_or_party, model=models.Bill)
@@ -159,10 +159,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
     @motion.command(name="from", aliases=["f", "by"])
     async def m_from(
-        self,
-        ctx: context.CustomContext,
-        *,
-        member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty] = None,
+            self,
+            ctx: context.CustomContext,
+            *,
+            member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty] = None,
     ):
         """List all motions that a specific person or Political Party submitted"""
         return await self._from_person_model(ctx, model=models.Motion, member_or_party=member_or_party)
@@ -260,7 +260,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         active_leg_session = await self.get_active_leg_session()
 
         if active_leg_session is not None:
-            return await ctx.send(f"{config.NO} There is still an open session, close session #{active_leg_session.id} first!")
+            return await ctx.send(
+                f"{config.NO} There is still an open session, close session #{active_leg_session.id} first!")
 
         new_session = await self.bot.db.fetchval(
             "INSERT INTO legislature_session (speaker, is_active, opened_on)" "VALUES ($1, true, $2) RETURNING id",
@@ -279,8 +280,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         await self.dm_legislators(
             reason="leg_session_open",
             message=f":envelope_with_arrow: The **submission period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
-            f" #{new_session} has started! Submit your bills with "
-            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit` on the {self.bot.dciv.name} server.",
+                    f" #{new_session} has started! Submit your bills with "
+                    f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit` on the {self.bot.dciv.name} server.",
         )
 
     @leg_session.command(name="vote", aliases=["u", "v", "update"])
@@ -320,7 +321,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         await self.dm_legislators(
             reason="leg_session_update",
             message=f":ballot_box: The **voting period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
-            f"#{active_leg_session.id} has started!\nVote here: {voting_form}",
+                    f"#{active_leg_session.id} has started!\nVote here: {voting_form}",
         )
 
     @leg_session.command(name="close", aliases=["c"])
@@ -446,33 +447,14 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
                     parameters=[form_url, session.id, bills, motions],
                 )
 
-                if result is None or not result["done"]:
-                    ctx.command.reset_cooldown(ctx)
-                    return await ctx.send("{config.NO} There was an error while generating the form.")
-
-                if "error" in result:
-                    ctx.command.reset_cooldown(ctx)
-
-                    error_msg = (
-                        "Exception: No item with the given ID could be found, or you do"
-                        " not have permission to access it."
-                    )
-
-                    if result["error"]["details"][0]["errorMessage"] == error_msg:
-                        return await ctx.send(
-                            "{config.NO} I cannot access that Google Forms form. Are you sure that you " "gave me an edit link?"
-                        )
-                    else:
-                        return await ctx.send("{config.NO} There was an error while generating the form.")
-
             embed = text.SafeEmbed(
                 title=f"Generated Voting Form for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}",
                 description="Remember to double check the form to make sure it's "
-                "correct.\n\nNote that you may have to adjust "
-                "the form to comply with this nation's laws.\n"
-                "This comes with no guarantees of a form's valid "
-                "legal status.\n\nRemember to change the edit link you "
-                "gave me earlier to not be public.",
+                            "correct.\n\nNote that you may have to adjust "
+                            "the form to comply with this nation's laws.\n"
+                            "This comes with no guarantees of a form's valid "
+                            "legal status.\n\nRemember to change the edit link you "
+                            "gave me earlier to not be public.",
             )
 
             embed.add_field(
@@ -503,7 +485,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         pages = paginator.SimplePages(
             entries=pretty_sessions,
             title=f"{self.bot.mk.NATION_EMOJI}  All Sessions of the {self.bot.mk.NATION_ADJECTIVE}"
-            f" {self.bot.mk.LEGISLATURE_NAME}",
+                  f" {self.bot.mk.LEGISLATURE_NAME}",
             empty_message="There hasn't been a session yet.",
         )
         await pages.start(ctx)
@@ -531,7 +513,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         return await self.paginate_all_sessions(ctx)
 
     async def submit_bill(
-        self, ctx: context.CustomContext, current_leg_session_id: int
+            self, ctx: context.CustomContext, current_leg_session_id: int
     ) -> typing.Optional[discord.Embed]:
         """Submits a bill to a session that is in Submission Period. Uses the Flow API to get the bill
         details via Discord. Returns the message and formatted Embed that will be sent to
@@ -539,7 +521,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
         # Google Docs Link
         google_docs_url = await ctx.input(
-           f"{config.YES} You will submit a **bill**.\n"
+            f"{config.YES} You will submit a **bill**.\n"
             f"{config.USER_INTERACTION_REQUIRED} Reply with the Google Docs link to the bill you want to submit."
         )
 
@@ -549,11 +531,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             return
 
         # Vetoable
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Is the {self.bot.mk.MINISTRY_NAME} legally allowed to " f"veto this bill?"
+        is_vetoable = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Is the {self.bot.mk.MINISTRY_NAME} legally allowed to vote on (veto) this bill?"
         )
 
-        is_vetoable = True if reaction else False
         bill_description = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with a **short** description of what your bill does.",
             timeout=400,
@@ -563,42 +544,32 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             bill_description = "-"
 
         async with ctx.typing():
-            # todo
-            google_meta_info = await self.bot.laws.get_google_docs_meta_data(google_docs_url)
+            response = await self.bot.google_api.run_apps_script(
+                script_id="MtyscpHHIi0Ck1h8XfuBIn2qnXKElby-M",
+                function="get_title",
+                parameters=[google_docs_url])
 
-            if google_meta_info is None:
-                await ctx.send(
-                    "{config.NO} Couldn't connect to Google Docs. Make sure that the document can be"
-                    " read by anyone and that it's not a published version."
-                )
-                ctx.command.reset_cooldown(ctx)
-                return
+            bill_title = response['response']['result']
 
-            bill_title = google_meta_info["title"]
-            google_description = google_meta_info["description"]
-
-            # Make the Google Docs link smaller to workaround the "embed value cannot be longer than 1024 characters
-            # in -legislature session" issue
             tiny_url = await self.bot.tinyurl(google_docs_url)
 
             if tiny_url is None:
                 await ctx.send(
-                    "{config.NO} Your bill was not submitted since there was a problem with tinyurl.com. "
+                    f"{config.NO} Your bill was not submitted since there was a problem with tinyurl.com. "
                     "Try again in a few minutes."
                 )
                 return
 
-            await self.bot.db.execute(
+            bill_id = await self.bot.db.fetchval(
                 "INSERT INTO bill (leg_session, link, name, submitter, is_vetoable, "
-                "submitter_description, tiny_link, google_docs_description) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                "submitter_description, tiny_link) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
                 current_leg_session_id,
                 google_docs_url,
                 bill_title,
                 ctx.author.id,
                 is_vetoable,
                 bill_description,
-                tiny_url,
-                google_description,
+                tiny_url
             )
 
             embed = text.SafeEmbed(
@@ -620,6 +591,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             )
             embed.add_field(name="URL", value=google_docs_url, inline=False)
 
+            bill = models.Bill(bot=self.bot, id=bill_id, name=bill_title,
+                               link=google_docs_url, submitter_description=bill_description)
+            self.bot.loop.create_task(bill.make_lookup_tags())
+
         await ctx.send(
             f"{config.YES} Your bill `{bill_title}` was submitted for session #{current_leg_session_id}."
         )
@@ -627,7 +602,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         return embed
 
     async def submit_motion(
-        self, ctx: context.CustomContext, current_leg_session_id: int
+            self, ctx: context.CustomContext, current_leg_session_id: int
     ) -> typing.Optional[discord.Embed]:
         """Submits a motion to a session that is in Submission Period. Uses the Flow API to get the bill
         details via Discord. Returns the message and formatted Embed that will be sent to
@@ -685,7 +660,6 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             )
 
         await ctx.send(f"{config.YES} Your motion `{title}` was submitted for session #{current_leg_session_id}.")
-
         return embed
 
     @legislature.command(name="submit")
@@ -707,7 +681,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             return await ctx.send("{config.NO} There is no active session.")
 
         if current_leg_session.status is not SessionStatus.SUBMISSION_PERIOD:
-            return await ctx.send(f"{config.NO} The submission period for session #{current_leg_session.id} is already over.")
+            return await ctx.send(
+                f"{config.NO} The submission period for session #{current_leg_session.id} is already over.")
 
         if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
             reaction = await ctx.choose(
@@ -810,9 +785,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             await ctx.send_help(ctx.command)
 
     async def withdraw_objects(
-        self,
-        ctx: context.CustomContext,
-        objects: typing.List[typing.Union[Bill, Motion]],
+            self,
+            ctx: context.CustomContext,
+            objects: typing.List[typing.Union[Bill, Motion]],
     ):
         if isinstance(objects[0], Bill):
             obj_name = "bill"
@@ -881,7 +856,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         The {speaker_term} and {vice_speaker_term} can withdraw every submitted bill during both the Submission Period and the Voting Period.
            The original submitter of the bill can only withdraw their own bill during the Submission Period.
 
-        **Examples:**
+        **Example:**
             `{PREFIX}{COMMAND} 56` will withdraw bill #56
             `{PREFIX}{COMMAND} 12 13 14 15 16` will withdraw all those bills"""
 
@@ -898,7 +873,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         The {speaker_term} and {vice_speaker_term} can withdraw every submitted motion during both the Submission Period and the Voting Period.
            The original submitter of the motion can only withdraw their own motion during the Submission Period.
 
-        **Examples:**
+        **Example:**
             `{PREFIX}{COMMAND} 56` will withdraw motion #56
             `{PREFIX}{COMMAND} 12 13 14 15 16` will withdraw all those motions"""
 
@@ -912,7 +887,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
     async def override(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Override the veto of one or multiple bills to pass them into law
 
-        **Examples:**
+        **Example:**
            `{PREFIX}{COMMAND} 56`
            `{PREFIX}{COMMAND} 12 13 14 15 16`"""
 
@@ -1008,8 +983,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
         embed = text.SafeEmbed(
             title=f"{self.bot.mk.NATION_EMOJI}  Statistics for the "
-            f"{self.bot.mk.NATION_ADJECTIVE} "
-            f"{self.bot.mk.LEGISLATURE_NAME}"
+                  f"{self.bot.mk.NATION_ADJECTIVE} "
+                  f"{self.bot.mk.LEGISLATURE_NAME}"
         )
 
         general_value = (
@@ -1020,7 +995,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         embed.add_field(name="General Statistics", value=general_value)
         embed.add_field(
             name=f"Top {self.bot.mk.speaker_term}s or {self.bot.mk.vice_speaker_term}s of "
-            f"the {self.bot.mk.LEGISLATURE_NAME}",
+                 f"the {self.bot.mk.LEGISLATURE_NAME}",
             value=stats["top_speaker"],
             inline=False,
         )

@@ -127,9 +127,6 @@ class Guild(context.CustomCog, name="Server"):
                 )
                 await ctx.send(f"{config.YES} Welcome messages are now enabled on this server.")
 
-                # Get new welcome channel
-                await ctx.send()
-
                 channel_object = await ctx.converted_input(
                     f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the welcome channel.",
                     converter=converter.CaseInsensitiveTextChannel,

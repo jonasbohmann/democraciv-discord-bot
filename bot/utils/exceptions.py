@@ -8,7 +8,7 @@ from config import config
 class DemocracivBotException(commands.CommandError):
     """Generic CommandError exception that gets send to event.error_handler.on_command_error()"""
 
-    def __init__(self, message):
+    def __init__(self, message = None):
         self.message = message
 
 

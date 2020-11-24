@@ -161,4 +161,4 @@ class TwitchManager:
         for discord_webhook in self._streams[streamer]:
             async with self._session.post(discord_webhook, json=js) as response:
                 if response.status not in (200, 204):
-                    logging.error(f"error while sending reddit webhook: {response.status} {await response.text()}")
+                    logging.error(f"Error while sending reddit webhook: {response.status} {await response.text()}")

@@ -601,7 +601,7 @@ class Moderation(context.CustomCog):
     async def archivechannel(self, ctx, *, channel: discord.TextChannel):
         """Archive a channel and automatically set the right permissions
 
-        **Examples:**
+        **Example:**
             `-archivechannel #public-form`
             `-archivechannel legislature`"""
 

@@ -47,7 +47,7 @@ class Dice(pydantic.BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    logging.info("api ready to serve")
+    logging.info("API ready to serve")
 
 
 @app.get("/")
@@ -70,7 +70,7 @@ async def reddit_list(guild_id: int):
 @app.get("/twitch/callback", response_class=PlainTextResponse)
 async def twitch_subscription_verify(request: Request):
     if "hub.reason" in request.query_params:
-        logging.error(f"could not subscribe to Twitch Webhook: {request.query_params['hub.reason']}")
+        logging.error(f"Could not subscribe to Twitch Webhook: {request.query_params['hub.reason']}")
     print(4)
     print(request)
     return request.query_params["hub.challenge"]
@@ -166,6 +166,7 @@ def roll_dice(dice_to_roll: Dice):
     # Format the intermediate text using the previous template
     rolls = format_string.format(*roll_information)
 
+    rolls = rolls if len(rolls) < 1800 else "*rolls omitted*"
     msg = f"`{dice_to_roll.dices}` = {rolls} = {roll}"
 
     if special_message:
