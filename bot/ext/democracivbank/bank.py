@@ -1,18 +1,21 @@
 import asyncio
+import datetime
+import logging
+import os
 import sys
 import textwrap
+import time
 import uuid
 import decimal
 import aiohttp
 import discord
 import typing
 
-from discord.ext import commands
+from discord.ext import commands, tasks
 from bot.utils import converter, exceptions, text, checks, context, paginator
 from bot.config import config, token, mk
 from discord.ext import menus
 from aiohttp import web
-
 
 CURRENCIES = {
     "LRA": ("Ottoman Lira", "£"),
@@ -169,7 +172,7 @@ class BankCorporation(commands.Converter):
 
     @classmethod
     async def convert(cls, ctx, argument):
-        response = await ctx.bot.get_cog("Bank").request(BankRoute("GET", f"corporation/{argument}/"))
+        response = await ctx.bot.get_cog("Bank").twitch_request(BankRoute("GET", f"corporation/{argument}/"))
 
         if response.status == 404:
             raise commands.BadArgument(
@@ -196,9 +199,43 @@ class Bank(context.CustomCog):
             "https://cdn.discordapp.com/attachments/663076007426785300/717434510861533344/ezgif-5-8a4edb1f0306.png"
         )
         self.bank_listener = BankListener(bot)
+        self.bank_db_backup.start()
 
     def cog_unload(self):
         self.bot.loop.create_task(self.bank_listener.shutdown())
+        self.bank_db_backup.cancel()
+
+    @tasks.loop(hours=config.DATABASE_DAILY_BACKUP_INTERVAL)
+    async def bank_db_backup(self):
+        # Unique filenames with current UNIX timestamp
+        now = time.time()
+        pretty_time = datetime.datetime.utcfromtimestamp(now).strftime("%A, %B %d %Y %H:%M:%S")
+        backup_channel = self.bot.get_channel(config.DATABASE_DAILY_BACKUP_DISCORD_CHANNEL)
+        path = "bot/ext/democracivbank/db/"
+
+        if not os.path.isdir(path):
+            os.mkdir(path)
+
+        fn = f"bank-of-democraciv-backup-{now}"
+
+        command = (
+            f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump -Fc live_bank > {path}{fn} '
+            f"-U {token.POSTGRESQL_USER} -h {token.POSTGRESQL_HOST} -w"
+        )
+
+        await asyncio.create_subprocess_shell(command)
+        await asyncio.sleep(20)
+
+        if backup_channel is None:
+            logging.warning(
+                f"Couldn't find Backup Discord channel for democracivbank.com backup '{path}{fn}'.")
+            return
+
+        file = discord.File(f"{path}{fn}")
+        await backup_channel.send(
+            f"---- democracivbank.com Database Backup from {pretty_time} (UTC) ----",
+            file=file,
+        )
 
     async def is_connected_with_bank_user(self, ctx):
         response = await self.request(BankRoute("HEAD", f"discord_user/{ctx.author.id}/"))
@@ -360,9 +397,9 @@ class Bank(context.CustomCog):
 
             embed = text.SafeEmbed(
                 description="Check out all corporations and organizations from around"
-                " the world and what they have to offer on "
-                "[**democracivbank.com/marketplace**]"
-                "(https://democracivbank.com/marketplace)"
+                            " the world and what they have to offer on "
+                            "[**democracivbank.com/marketplace**]"
+                            "(https://democracivbank.com/marketplace)"
             )
             embed.url = "https://democracivbank.com/marketplace"
             embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
@@ -476,18 +513,18 @@ class Bank(context.CustomCog):
     @bank.command(name="send", aliases=["s", "transfer", "t", "give"])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def send(
-        self,
-        ctx,
-        to_member_or_iban_or_organization: typing.Union[
-            discord.Member,
-            converter.CaseInsensitiveMember,
-            discord.User,
-            uuid.UUID,
-            str,
-        ],
-        amount: decimal.Decimal,
-        *,
-        purpose: str = None,
+            self,
+            ctx,
+            to_member_or_iban_or_organization: typing.Union[
+                discord.Member,
+                converter.CaseInsensitiveMember,
+                discord.User,
+                uuid.UUID,
+                str,
+            ],
+            amount: decimal.Decimal,
+            *,
+            purpose: str = None,
     ):
         """Send money to a specific bank account, organization, or person on this server
 
@@ -651,10 +688,10 @@ class Bank(context.CustomCog):
         embed = text.SafeEmbed(
             title="Updated Ottoman Bank Account",
             description=f"**IBAN**\n{json['iban']}\n"
-            f"**Bank Account Type**\n{p_or_c}\n"
-            f"**Owner**\n{json['pretty_holder']}\n"
-            f"**Equilibrium variable**\n"
-            f"{json['ottoman_threshold_variable']}",
+                        f"**Bank Account Type**\n{p_or_c}\n"
+                        f"**Owner**\n{json['pretty_holder']}\n"
+                        f"**Equilibrium variable**\n"
+                        f"{json['ottoman_threshold_variable']}",
         )
         await ctx.send(embed=embed)
 

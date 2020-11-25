@@ -1,4 +1,6 @@
 import typing
+
+import asyncpg
 import discord
 import bot.utils.exceptions as exceptions
 
@@ -13,7 +15,7 @@ from bot.utils import converter
 class Selfroles(context.CustomCog):
     """Self-assignable roles for this server."""
 
-    async def list_all_roles(self, ctx):
+    async def _list_all_roles(self, ctx):
         role_list = await self.bot.db.fetch("SELECT role_id FROM selfrole WHERE guild_id = $1", ctx.guild.id)
 
         embed_message = []
@@ -50,11 +52,11 @@ class Selfroles(context.CustomCog):
         """
 
         if role:
-            await self.toggle_role(ctx, role)
+            await self._toggle_role(ctx, role)
         else:
-            await self.list_all_roles(ctx)
+            await self._list_all_roles(ctx)
 
-    async def toggle_role(self, ctx, selfrole: Selfrole):
+    async def _toggle_role(self, ctx, selfrole: Selfrole):
         """Assigns or removes a role from someone"""
 
         if selfrole.role not in ctx.message.author.roles:
@@ -103,13 +105,16 @@ class Selfroles(context.CustomCog):
             f"{config.USER_INTERACTION_REQUIRED} Reply with a short message the user should see when they get the role."
         )
 
-        await self.bot.db.execute(
-            "INSERT INTO selfrole (guild_id, role_id, join_message) VALUES ($1, $2, $3) "
-            "ON CONFLICT (guild_id, role_id) DO UPDATE set join_message = $3",
-            ctx.guild.id,
-            discord_role.id,
-            role_join_message,
-        )
+        try:
+            await self.bot.db.execute(
+                "INSERT INTO selfrole (guild_id, role_id, join_message) VALUES ($1, $2, $3) "
+                "ON CONFLICT (guild_id, role_id) DO UPDATE set join_message = $3",
+                ctx.guild.id,
+                discord_role.id,
+                role_join_message,
+            )
+        except asyncpg.UniqueViolationError:
+            return await ctx.send(f"{config.NO} `{discord_role.name}` is already a selfrole on this server.")
 
         await ctx.send(
             f"{config.YES} `{discord_role.name}` was added as a selfrole or its join message was "

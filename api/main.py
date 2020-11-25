@@ -1,16 +1,66 @@
+import asyncio
 import logging
+import asyncpg
 import pydantic
 import xdice
 
-from api.database import Database
 from api.provider import RedditManager, TwitchManager
 from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.responses import PlainTextResponse
 
 logging.basicConfig(level=logging.INFO)
 
+
+class Database:
+    def __init__(self, *, dsn):
+        self.dsn = dsn
+        self._loop = asyncio.get_event_loop()
+        self.pool = None
+        self.ready = False
+
+    async def apply_schema(self):
+        schema = """CREATE TABLE IF NOT EXISTS reddit_webhook(
+                    id serial PRIMARY KEY,
+                    subreddit text NOT NULL,
+                    webhook_id bigint UNIQUE NOT NULL,
+                    webhook_url text UNIQUE NOT NULL,
+                    guild_id bigint NOT NULL,
+                    channel_id bigint NOT NULL
+                    );
+                    
+                    CREATE TABLE IF NOT EXISTS twitch_webhook(
+                    id serial PRIMARY KEY,
+                    streamer text NOT NULL,
+                    webhook_id bigint UNIQUE NOT NULL,
+                    webhook_url text UNIQUE NOT NULL,
+                    guild_id bigint NOT NULL,
+                    channel_id bigint NOT NULL,
+                    everyone_ping bool DEFAULT FALSE NOT NULL
+                    );
+                    
+                    CREATE TABLE IF NOT EXISTS reddit_post(
+                    id text UNIQUE NOT NULL
+                    );
+                    
+                    CREATE TABLE IF NOT EXISTS youtube_upload(
+                    id text UNIQUE NOT NULL
+                    );
+                    
+                    CREATE TABLE IF NOT EXISTS youtube_stream(
+                    id text UNIQUE NOT NULL
+                    );"""
+
+        await self.pool.execute(schema)
+
+    async def make_pool(self):
+        self.pool = await asyncpg.create_pool(dsn=self.dsn, loop=self._loop)
+        await self.apply_schema()
+        self.ready = True
+        return self.pool
+
+
 app = FastAPI()
-db = Database(dsn="postgres://postgres:PW@localhost/api_test")
+db = Database(dsn="postgres://postgres:pw@localhost/api_test")
 reddit_manager = RedditManager(db=db)
 twitch_manager = TwitchManager(db=db)
 
@@ -23,15 +73,6 @@ class AddSubredditScraper(pydantic.BaseModel):
     channel_id: int
 
 
-class RemoveSubredditScraper(pydantic.BaseModel):
-    id: int
-    guild_id: int
-
-
-class ClearGuildSubredditScraper(pydantic.BaseModel):
-    guild_id: int
-
-
 class AddTwitchHook(pydantic.BaseModel):
     streamer: str
     webhook_url: str
@@ -41,47 +82,28 @@ class AddTwitchHook(pydantic.BaseModel):
     channel_id: int
 
 
+class RemoveWebHook(pydantic.BaseModel):
+    id: int
+    guild_id: int
+
+
+class ClearPerGuild(pydantic.BaseModel):
+    guild_id: int
+
+
 class Dice(pydantic.BaseModel):
     dices: str
 
 
 @app.on_event("startup")
 async def startup_event():
+    await db.make_pool()
     logging.info("API ready to serve")
 
 
 @app.get("/")
-def read_root():
+async def ok():
     return {"ok": "ok"}
-
-
-@app.post("/twitch/add")
-async def twitch_sub(twitch_config: AddTwitchHook):
-    j = await twitch_manager.add_stream(twitch_config.streamer, twitch_config.webhook_url)
-    return j
-
-
-@app.get("/reddit/list/{guild_id}")
-async def reddit_list(guild_id: int):
-    webhooks = await twitch_manager.get_webhooks_per_guild(guild_id)
-    return {"webhooks": webhooks}
-
-
-@app.get("/twitch/callback", response_class=PlainTextResponse)
-async def twitch_subscription_verify(request: Request):
-    if "hub.reason" in request.query_params:
-        logging.error(f"Could not subscribe to Twitch Webhook: {request.query_params['hub.reason']}")
-    print(4)
-    print(request)
-    return request.query_params["hub.challenge"]
-
-
-@app.post("/twitch/callback")
-async def twitch_webhook_received(request: Request, background_tasks: BackgroundTasks):
-    background_tasks.add_task(twitch_manager.process_incoming_notification, request)
-    print(5)
-    print(await request.body())
-    return {"ok": "thank you mr. twitch"}
 
 
 @app.get("/reddit/list/{guild_id}")
@@ -98,7 +120,7 @@ def reddit_add(reddit_config: AddSubredditScraper, background_tasks: BackgroundT
 
 
 @app.post("/reddit/remove")
-async def reddit_remove(reddit_config: RemoveSubredditScraper):
+async def reddit_remove(reddit_config: RemoveWebHook):
     response = await reddit_manager.remove_scraper(scraper_id=reddit_config.id, guild_id=reddit_config.guild_id)
 
     if "error" not in response:
@@ -108,9 +130,51 @@ async def reddit_remove(reddit_config: RemoveSubredditScraper):
 
 
 @app.post("/reddit/clear")
-async def reddit_clear(reddit_config: ClearGuildSubredditScraper):
+async def reddit_clear(reddit_config: ClearPerGuild):
     removed = await reddit_manager.clear_scraper_per_guild(guild_id=reddit_config.guild_id)
     return {"ok": "ok", "removed": removed}
+
+
+@app.get("/twitch/list/{guild_id}")
+async def twitch_list(guild_id: int):
+    webhooks = await twitch_manager.get_webhooks_per_guild(guild_id)
+    return {"webhooks": webhooks}
+
+
+@app.post("/twitch/add")
+async def twitch_add(twitch_config: AddTwitchHook):
+    twitch_config.streamer = twitch_config.streamer.lower()
+    result = await twitch_manager.add_stream(config=twitch_config)
+    return result
+
+
+@app.post("/twitch/remove")
+async def twitch_remove(twitch_config: RemoveWebHook):
+    response = await twitch_manager.remove_stream(hook_id=twitch_config.id, guild_id=twitch_config.guild_id)
+
+    if "error" not in response:
+        response["ok"] = "ok"
+
+    return response
+
+
+@app.post("/reddit/clear")
+async def twitch_clear(twitch_config: ClearPerGuild):
+    removed = await twitch_manager.clear_per_guild(guild_id=twitch_config.guild_id)
+    return {"ok": "ok", "removed": removed}
+
+
+@app.post("/twitch/callback", response_class=PlainTextResponse)
+async def twitch_subscription_verify(request: Request, background_tasks: BackgroundTasks):
+    js = await request.json()
+    print(js)
+
+    if "challenge" in js:
+        return js['challenge']
+
+    elif "event" in js:
+        background_tasks.add_task(twitch_manager.process_incoming_notification, js['event'])
+        return "ok"
 
 
 @app.post("/roll")

@@ -243,7 +243,7 @@ class GovernmentMixin:
 
         for record in found_bills:
             model = models.Bill if not search_laws else models.Law
-            obj = await model.convert(context.MockContext(self.bot), record["id"])
+            obj = await model.convert(context.MockContext(self.bot), record["bill_id"])
             formatted[obj.formatted] = None
 
         return formatted

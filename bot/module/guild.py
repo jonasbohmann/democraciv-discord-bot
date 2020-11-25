@@ -8,7 +8,7 @@ from discord.ext import commands
 from bot.utils import text, converter, paginator, exceptions, context
 
 
-class Guild(context.CustomCog, name="Server"):
+class _Guild(context.CustomCog, name="Server"):
     """Configure various features of this bot for this server."""
 
     @staticmethod
@@ -57,16 +57,16 @@ class Guild(context.CustomCog, name="Server"):
         embed.add_field(
             name="Settings",
             value=f"{is_welcome_enabled} Welcome Messages\n"
-            f"{is_logging_enabled} Logging ({excluded_channels} excluded channels)\n"
-            f"{is_default_role_enabled} Default Role\n"
-            f"{is_tag_creation_allowed} Tag Creation by Everyone",
+                  f"{is_logging_enabled} Logging ({excluded_channels} excluded channels)\n"
+                  f"{is_default_role_enabled} Default Role\n"
+                  f"{is_tag_creation_allowed} Tag Creation by Everyone",
         )
         embed.add_field(
             name="Statistics",
             value=f"{ctx.guild.member_count} members\n"
-            f"{len(ctx.guild.text_channels)} text channels\n"
-            f"{len(ctx.guild.roles)} roles\n"
-            f"{len(ctx.guild.emojis)} custom emojis",
+                  f"{len(ctx.guild.text_channels)} text channels\n"
+                  f"{len(ctx.guild.roles)} roles\n"
+                  f"{len(ctx.guild.emojis)} custom emojis",
         )
         embed.set_footer(text=f"Server was created on {ctx.guild.created_at.strftime('%A, %B %d %Y')}")
         embed.set_thumbnail(url=ctx.guild.icon_url_as(static_format="png"))
@@ -247,7 +247,7 @@ class Guild(context.CustomCog, name="Server"):
 
         if current_logging_channel is None:
             return await ctx.send(
-                f"{config.NO} This server currently has no logging channel." " Please set one with `-server logs`."
+                f"{config.NO} This server currently has no logging channel. Please set one with `-server logs`."
             )
 
         help_description = (
@@ -282,7 +282,7 @@ class Guild(context.CustomCog, name="Server"):
             # Remove channel
             if channel_object.id in private_channels:
                 await self.bot.db.execute(
-                    "DELETE FROM guild_private_channels WHERE guild_id = $1 AND channel_id = $2",
+                    "DELETE FROM guild_private_channel WHERE guild_id = $1 AND channel_id = $2",
                     ctx.guild.id,
                     channel_object.id,
                 )
@@ -294,7 +294,7 @@ class Guild(context.CustomCog, name="Server"):
             # Add channel
             elif channel_object.id not in private_channels:
                 await self.bot.db.execute(
-                    "INSERT INTO guild_private_channels (guild_id, channel_id) VALUES ($1, $2)",
+                    "INSERT INTO guild_private_channel (guild_id, channel_id) VALUES ($1, $2)",
                     ctx.guild.id,
                     channel_object.id,
                 )
@@ -354,7 +354,7 @@ class Guild(context.CustomCog, name="Server"):
                 await ctx.send(f"{config.YES} Default role was enabled on this server.")
 
                 new_default_role = await ctx.converted_input(
-                   f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the role that every "
+                    f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the role that every "
                     "new member should get once they join.",
                     converter=converter.CaseInsensitiveRole,
                 )
@@ -473,7 +473,7 @@ class Guild(context.CustomCog, name="Server"):
             icon=ctx.guild_icon,
             entries=entries,
             empty_message=f"This server does not have any subreddit feeds yet.\n\nAdd some "
-            f"with `{config.BOT_PREFIX}server reddit add`.",
+                          f"with `{config.BOT_PREFIX}server reddit add`.",
         )
         await pages.start(ctx)
 
@@ -499,7 +499,8 @@ class Guild(context.CustomCog, name="Server"):
         try:
             webhook = await channel.create_webhook(name=self.bot.user.name, avatar=await self.bot.avatar_bytes())
         except discord.Forbidden:
-            return await ctx.send(f"{config.NO} You need to give me the `Manage Webhooks` permission in {channel.mention}.")
+            return await ctx.send(
+                f"{config.NO} You need to give me the `Manage Webhooks` permission in {channel.mention}.")
 
         js = {
             "subreddit": subreddit,
@@ -594,29 +595,145 @@ class Guild(context.CustomCog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch(self, ctx: context.CustomContext):
-        reddit_scraper = await self.bot.api_request("GET", f"twitch/list/{ctx.guild.id}")
+        hooks = await self.bot.api_request("GET", f"twitch/list/{ctx.guild.id}")
         entries = []
 
-        for scraper in reddit_scraper["webhooks"]:
+        for scraper in hooks["webhooks"]:
             try:
                 webhook = await self.bot.fetch_webhook(scraper["webhook_id"])
             except discord.HTTPException:
                 continue
 
             entries.append(
-                f"**#{scraper['id']}**  -  [r/{scraper['subreddit']}](https://reddit.com/r/{scraper['subreddit']}) "
+                f"**#{scraper['id']}**  -  [twitch.tv/{scraper['streamer']}](https://twitch.tv/{scraper['streamer']}) "
                 f"to {webhook.channel.mention}"
             )
 
         pages = paginator.SimplePages(
-            author=f"Subreddit Feeds on {ctx.guild.name}",
+            author=f"Twitch Notifications on {ctx.guild.name}",
             icon=ctx.guild_icon,
             entries=entries,
-            empty_message=f"This server does not have any subreddit feeds yet.\n\nAdd some "
-            f"with `{config.BOT_PREFIX}server reddit add`.",
+            empty_message=f"This server does not have any twitch notifications yet.\n\nAdd some "
+                          f"with `{config.BOT_PREFIX}server twitch add`.",
         )
         await pages.start(ctx)
 
+    @twitch.command(name="add", aliases=["make", "create"])
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def twitch_add(self, ctx: context.CustomContext):
+        streamer = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the streamer.")
+
+        channel = await ctx.converted_input(
+            f"{config.USER_INTERACTION_REQUIRED} In which channel should I post when `{streamer}` is going live?",
+            converter=converter.CaseInsensitiveTextChannel,
+            return_input_on_fail=False,
+        )
+
+        try:
+            webhook = await channel.create_webhook(name=self.bot.user.name, avatar=await self.bot.avatar_bytes())
+        except discord.Forbidden:
+            return await ctx.send(
+                f"{config.NO} You need to give me the `Manage Webhooks` permission in {channel.mention}.")
+
+        everyone = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should I ping @ everyone in "
+                                     f"{channel.mention} when `{streamer}` goes live?")
+
+        js = {
+            "streamer": streamer,
+            "webhook_url": webhook.url,
+            "webhook_id": webhook.id,
+            "guild_id": ctx.guild.id,
+            "channel_id": ctx.channel.id,
+            "everyone_ping": everyone
+        }
+
+        response = await self.bot.api_request("POST", f"twitch/add", json=js)
+
+        if "error" in response:
+            return await ctx.send(f"{config.NO} `{streamer}` is not a real streamer.")
+
+        await ctx.send(
+            f"{config.YES} Notifications for when `{streamer}` goes live will be posted to {channel.mention}.")
+
+    @twitch.command(name="remove", aliases=["delete"])
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def twitch_remove(self, ctx: context.CustomContext):
+        file = await self.bot.make_file_from_image_link(
+            "https://cdn.discordapp.com/attachments/499669824847478785/778778261450653706/redditds.PNG"
+        )
+
+        await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} What's the ID of the twitch notification you want to remove? "
+            f"You can get the ID from `{config.BOT_PREFIX}server twitch`. "
+            f"In case you want to remove every feed on this server, use `{config.BOT_PREFIX}server twitch "
+            f"clear` instead.",
+            file=file,
+        )
+
+        hook_id = await ctx.input()
+
+        if hook_id.startswith("#"):
+            hook_id = hook_id[1:]
+
+        if not hook_id.isdigit():
+            return await ctx.send(f"{config.NO} `{hook_id}` is not a real ID.")
+
+        try:
+            response = await self.bot.api_request(
+                "POST",
+                f"twitch/remove",
+                json={"id": hook_id, "guild_id": ctx.guild.id},
+            )
+        except exceptions.DemocracivBotAPIError:
+            return await ctx.send(
+                f"{config.NO} Something went wrong. Are you sure that `{hook_id}` is the ID of a "
+                f"existing twitch notification on this server?"
+            )
+
+        if "error" in response:
+            return await ctx.send(
+                f"{config.NO} Something went wrong. Are you sure that `{hook_id}` is the ID of a "
+                f"existing twitch notification on this server?"
+            )
+
+        webhook = discord.Webhook.from_url(
+            response["webhook_url"],
+            adapter=discord.AsyncWebhookAdapter(self.bot.session),
+        )
+
+        try:
+            await webhook.delete()
+        except discord.HTTPException:
+            pass
+
+        channel = ctx.guild.get_channel(response["channel_id"])
+        channel_fmt = channel.mention if channel else "#deleted-channel"
+        await ctx.send(
+            f"{config.YES} Notifications for when `{response['streamer']}` goes live will no longer be posted to {channel_fmt}."
+        )
+
+    @twitch.command(name="clear", aliases=["removeall", "deleteall"])
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def twitch_clear(self, ctx: context.CustomContext):
+        response = await self.bot.api_request("POST", f"twitch/clear", json={"guild_id": ctx.guild.id})
+
+        for removed_hook in response["removed"]:
+            webhook = discord.Webhook.from_url(
+                removed_hook["webhook_url"],
+                adapter=discord.AsyncWebhookAdapter(self.bot.session),
+            )
+            try:
+                await webhook.delete()
+            except discord.HTTPException:
+                continue
+
+        await ctx.send(
+            f"{config.YES} All {len(response['removed'])} twitch notifications on this server were removed."
+        )
+
 
 def setup(bot):
-    bot.add_cog(Guild(bot))
+    bot.add_cog(_Guild(bot))

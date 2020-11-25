@@ -4,7 +4,7 @@
 # Bot Configuration
 BOT_NAME = "Democraciv Bot"
 BOT_PREFIX = "!"
-BOT_COMMAND_COOLDOWN = 2.0  # In seconds
+BOT_COMMAND_COOLDOWN = 2.0  # in seconds
 BOT_DESCRIPTION = "Discord Bot for the r/Democraciv community."
 BOT_VERSION = "2.0.0a"
 BOT_ICON_URL = "https://cdn.discordapp.com/attachments/585502938571604056/586310405618532362/final_pride2.png"
@@ -50,30 +50,16 @@ HELP_LAST = "<:last:685985693264379904>"
 HELP_BOT_HELP = "<:qe:685986162225184788>"
 YES = "<:yes:780571751142391808>"
 NO = "<:no:780571751158906900>"
-USER_INTERACTION_REQUIRED = "<a:speak:660562010051837973>"
+USER_INTERACTION_REQUIRED = "<:info:781283291176108042>"
 
 # Database Configuration
 DATABASE_DAILY_BACKUP_ENABLED = True
 DATABASE_DAILY_BACKUP_DISCORD_CHANNEL = 738903909535318086
 DATABASE_DAILY_BACKUP_INTERVAL = 72  # hours
-DATABASE_DAILY_BACKUP_BANK_OF_DEMOCRACIV_BACKUP = True
-DATABASE_DAILY_BACKUP_BANK_OF_DEMOCRACIV_DATABASE = "live_bank"
-
 
 TWITCH_ANNOUNCEMENT_TO_REDDIT = True  # Announces live streams on r/REDDIT_SUBREDDIT as well. Reddit client id,
 # client secret and refresh token need to be provided in token.py for this to work
 
-
-# YouTube Notifications
-YOUTUBE_ENABLED = True
-YOUTUBE_VIDEO_UPLOADS_ENABLED = True
-YOUTUBE_VIDEO_UPLOADS_TO_REDDIT = True  # Announces new YouTube uploads on r/REDDIT_SUBREDDIT. Reddit client id, client
-# secret and refresh token need to be provided in token.py for this to work
-YOUTUBE_LIVESTREAM_ENABLED = False
-YOUTUBE_EVERYONE_PING_ON_STREAM = False
-YOUTUBE_CHANNEL_ID = "UC-NukxPakwQIvx73VjtIPnw"  # The channel ID of the YouTuber's channel
-YOUTUBE_CHANNEL_UPLOADS_PLAYLIST = "UU-NukxPakwQIvx73VjtIPnw"  # The playlist ID of the YouTuber's 'Uploads' playlist
-YOUTUBE_ANNOUNCEMENT_CHANNEL = 209432307730350080  # The Discord Channel for YouTube notifications
 
 # Google Cloud Platform Configuration
 GOOGLE_CLOUD_PLATFORM_CLIENT_SECRETS_FILE = "config/google_client_secret.json"

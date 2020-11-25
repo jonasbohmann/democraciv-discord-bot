@@ -3,29 +3,30 @@ import logging
 import json
 import aiohttp
 import typing
-
 from discord import Embed
 
 
 class TwitchStream:
     def __init__(self, **kwargs):
-        self.streamer: str = kwargs.get("user_name")
-        self.title: str = kwargs.get("title")
-        self._thumbnail: str = kwargs.get("thumbnail_url")
-        self.link: str = f"https://twitch.tv/{self.streamer}"
+        self.streamer_id: str = kwargs.get("broadcaster_user_id")
+        self.streamer: str = kwargs.get("broadcaster_user_name")
+        self.title: str = kwargs.get("title", None)
+        self.thumbnail: str = kwargs.get("thumbnail_url", None)
+        self.game: str = kwargs.get("game_name", None)
 
-    @property
-    def thumbnail(self):
-        return self._thumbnail.format(width=1280, height=720)
+        if self.thumbnail:
+            self.thumbnail = self.thumbnail.format(width=1280, height=720)
+
+        self.link: str = f"https://twitch.tv/{self.streamer}"
 
 
 class TwitchManager:
     API_BASE = "https://api.twitch.tv/helix/"
     API_USER_ENDPOINT = API_BASE + "users?login="
     API_STREAM_ENDPOINT = API_BASE + "streams"
-    TWITCH_CLIENT_ID = ""
-    TWITCH_CLIENT_SECRET = ""
-    TWITCH_OAUTH_APP_ACCESS_TOKEN = ""
+    TWITCH_CLIENT_ID = "cp1i4afimhmstlp4tzktm8141v41j4"
+    TWITCH_CLIENT_SECRET = "pba22oai1q77wqvzqip79kgag1pkbu"
+    TWITCH_OAUTH_APP_ACCESS_TOKEN = "330sp1oxn8mgsrfj2cfm886zy6oggl"
 
     def __init__(self, db):
         self.db = db
@@ -33,6 +34,9 @@ class TwitchManager:
         self._loop = asyncio.get_event_loop()
         self._loop.create_task(self._make_aiohttp_session())
         self._streams: typing.Dict[str, typing.Set[str]] = dict()
+        # self._loop.create_task(self._refresh_twitch_oauth_token())
+        self._lock = asyncio.Lock()
+        self._loop.create_task(self._bulk_start_all())
 
     def _get_token(self):
         with open("", "r") as token_file:
@@ -44,7 +48,8 @@ class TwitchManager:
 
     @property
     def _headers(self):
-        return {"Client-ID": self.TWITCH_CLIENT_ID, "Authorization": f"Bearer {self.TWITCH_OAUTH_APP_ACCESS_TOKEN}"}
+        return {"Client-ID": self.TWITCH_CLIENT_ID, "Authorization": f"Bearer {self.TWITCH_OAUTH_APP_ACCESS_TOKEN}",
+                "Content-Type": "application/json"}
 
     async def _refresh_twitch_oauth_token(self):
         """Gets a new app access_token for the Twitch Helix API"""
@@ -67,49 +72,86 @@ class TwitchManager:
         async with self._session.get(f"{self.API_USER_ENDPOINT}{username}", headers=self._headers) as response:
             if response.status == 200:
                 js = await response.json()
-                return js["data"][0]["id"]
+                try:
+                    return js["data"][0]["id"]
+                except (KeyError, IndexError):
+                    return None
 
     async def get_webhooks_per_guild(self, guild_id: int):
-        records = await self.db.get_reddit_webhooks_by_guild(guild_id)
-        webhooks = []
+        records = await self.db.pool.fetch("SELECT id, streamer, webhook_id, webhook_url,"
+                                           " everyone_ping FROM twitch_webhook WHERE guild_id = $1", guild_id)
+        return [dict(record) for record in records]
 
-        for record in records:
-            webhooks.append(
-                {
-                    "id": record["id"],
-                    "subreddit": record["subreddit"],
-                    "webhook_id": record["webhook_id"],
-                    "webhook_url": record["webhook_url"],
-                }
-            )
+    async def _bulk_start_all(self):
+        if not self.db.ready:
+            await asyncio.sleep(5)
 
-        return webhooks
+        scraper = await self.db.pool.fetch("SELECT streamer, webhook_url FROM twitch_webhook")
 
-    async def add_stream(self, streamer: str, to_discord_webhook: str):
-        streamer = streamer.lower()
+        for scrap in scraper:
+            self._loop.create_task(self._start_webhook(streamer=scrap['streamer'], webhook_url=scrap['webhook_url']))
 
-        if streamer in self._streams:
-            self._streams[streamer].add(to_discord_webhook)
-            print(1)
-            print(self._streams)
-            return self._streams[streamer]
-        else:
-            result = await self.subscribe(streamer)
-            self._streams[streamer] = {to_discord_webhook}
-            print(2)
-            print(self._streams)
-            return result
+        logging.info(f"started twitch {len(scraper)} hooks")
 
-    async def remove_stream(self, streamer: str, to_discord_webhook: str):
-        streamer = streamer.lower()
+    async def add_stream(self, config):
+        # await self.db.pool.execute("INSERT INTO twitch_webhook (streamer, webhook_id, webhook_url, "
+        #                           "guild_id, channel_id, everyone_ping)"
+        #                           "VALUES ($1, $2, $3, $4, $5, $6)",
+        #                           config.streamer, config.webhook_id, config.webhook_url,
+        #                           config.guild_id, config.channel_id, config.everyone_ping)
+        return await self._start_webhook(streamer=config.streamer, webhook_url=config.webhook_url)
 
+    async def twitch_request(self, method, url, *, retry=False, **kwargs):
+        async with self._session.request(method, url, **kwargs, headers=self._headers) as resp:
+            if resp.status == 403:
+                if not retry:
+                    await self._refresh_twitch_oauth_token()
+                    await self.twitch_request(method, url, retry=True, **kwargs)
+
+            elif resp.status == 200:
+                return await resp.json()
+
+            else:
+                return {}
+
+    async def _start_webhook(self, *, streamer: str, webhook_url: str):
+        async with self._lock:
+            if streamer in self._streams:
+                self._streams[streamer].add(webhook_url)
+                return self._streams[streamer]
+            else:
+                result = await self.subscribe(streamer)
+                self._streams[streamer] = {webhook_url}
+                return result
+
+    async def remove_stream(self, *, hook_id: int, guild_id: int):
+        record = await self.db.pool.fetchrow("DELETE FROM twitch_webhook WHERE id = $1 AND guild_id = $2 "
+                                             "RETURNING streamer, webhook_url, channel_id", hook_id, guild_id)
+
+        if not record:
+            return {"error": "not found"}
+
+        self._loop.create_task(self._remove_stream(streamer=record['streamer'], webhook_url=record['webhook_url']))
+        return dict(record)
+
+    async def _remove_stream(self, *, streamer: str, webhook_url: str):
         if streamer not in self._streams:
             return
 
-        if len(self._streams[streamer]) == 1 and to_discord_webhook in self._streams[streamer]:
-            del self._streams[streamer]
-        else:
-            self._streams[streamer].remove(to_discord_webhook)
+        async with self._lock:
+            if len(self._streams[streamer]) == 1 and webhook_url in self._streams[streamer]:
+                await self.unsubscribe(streamer)
+                del self._streams[streamer]
+            else:
+                self._streams[streamer].remove(webhook_url)
+
+    async def clear_per_guild(self, guild_id: int):
+        hooks = await self.get_webhooks_per_guild(guild_id=guild_id)
+
+        for hook in hooks:
+            self._loop.create_task(self.remove_stream(hook_id=hook['id'], guild_id=guild_id))
+
+        return hooks
 
     async def subscribe(self, stream: str):
         return await self._manage_subscription(stream=stream, mode="subscribe")
@@ -119,31 +161,38 @@ class TwitchManager:
 
     async def _manage_subscription(self, *, stream: str, mode: str):
         user_id = await self._get_user_id_from_username(stream)
-        print(f"{mode} to ", stream)
+
+        if not user_id:
+            return {"error": "invalid streamer name"}
+
+        logging.info(f"[Twitch] {mode} to {stream}")
 
         js = {
-            "hub.callback": "http://138.68.80.72:8888/twitch/callback",
-            "hub.mode": mode,
-            "hub.topic": f"{self.API_STREAM_ENDPOINT}?user_id={user_id}",
-            "hub.lease_seconds": 600,
+            "type": "stream.online",
+            "version": "1",
+            "condition": {
+                "broadcaster_user_id": user_id
+            },
+            "transport": {
+                "method": "webhook",
+                "callback": "https://keinerosen.requestcatcher.com/test",
+                "secret": "thisismysecrettwitchthanks"
+            }
         }
 
-        async with self._session.post(
-            "https://api.twitch.tv/helix/webhooks/hub", json=js, headers=self._headers
-        ) as response:
-            j = await response.text()
-            print(3)
-            print(j)
-            return j
+        j = await self.twitch_request("POST", "https://api.twitch.tv/helix/eventsub/subscriptions", json=js)
+        j['ok'] = "ok"
+        return j
 
-    async def process_incoming_notification(self, request):
-        js = await request.json()
+    async def process_incoming_notification(self, event: typing.Dict):
+        js = await self.twitch_request("GET", f"https://api.twitch.tv/helix/streams?user_id={event['broadcaster_user_id']}")
 
-        if not js["data"]:
-            # stream went from online to offline
-            return
+        if js['data']:
+            event['title'] = js['data'][0]['title']
+            event['thumbnail_url'] = js['data'][0]['thumbnail_url']
+            event['game_name'] = js['data'][0]['game_name']
 
-        self._loop.create_task(self.send_webhook(TwitchStream(**js["data"][0])))
+        await self.send_webhook(TwitchStream(**event))
 
     async def send_webhook(self, stream: TwitchStream):
         embed = Embed(title=f"<:twitch:660116652012077080> {stream.streamer} - Live on Twitch", colour=0x984EFC)

@@ -5,4 +5,4 @@ psutil
 asyncpg
 google-api-python-client
 google-auth-oauthlib
-requests
+google-auth-httplib2

@@ -111,20 +111,10 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
                 "SELECT id, name, link FROM bill WHERE status = $1 ORDER BY id;",
                 models.BillIsLaw.flag.value,
             )
-            ugly_laws = []
-
-            for record in all_laws:
-                ugly_laws.append(
-                    {
-                        "id": record["law_id"],
-                        "name": record["bill_name"],
-                        "link": record["link"],
-                    }
-                )
-
+            ugly_laws = [dict(r) for r in all_laws]
             date = datetime.datetime.utcnow().strftime("%B %d, %Y at %H:%M")
 
-            result = await self.bot.google_api.run_apps_script(
+            result = await self.bot.run_apps_script(
                 script_id="MMV-pGVACMhaf_DjTn8jfEGqnXKElby-M",
                 function="generate_legal_code",
                 parameters=[

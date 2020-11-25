@@ -115,26 +115,29 @@ class Bill(commands.Converter):
         self._submitter: int = kwargs.get("submitter", None)
         self._bot = kwargs.get("bot")
 
-    async def generate_lookup_tags(self) -> typing.List[str]:
-        """Generates tags from all nouns of submitter-provided description and the Google Docs description"""
+    async def fetch_name_and_keywords(self) -> typing.Tuple[str, typing.List[str]]:
 
         try:
-            response: typing.Dict = await self._bot.google_api.run_apps_script(
+            response: typing.Dict = await self._bot.run_apps_script(
                 script_id="MtyscpHHIi0Ck1h8XfuBIn2qnXKElby-M",
-                function="get_keywords",
+                function="main",
                 parameters=[self.link])
 
-            keywords = [word['ngram'] for word in response['response']['result']['keywords']]
+            self.name = name = response['response']['result']['title']
+            keywords = [word['ngram'] for word in response['response']['result']['keywords']['keywords'] if
+                        word['ngram']]
+
         except (DemocracivBotException, KeyError):
             keywords = []
+            self.name = name = ""
 
         async with self._bot.session.post(
                 "http://yake.inesctec.pt/yake/v2/extract_keywords?max_ngram_size=2&number_of_keywords=20&highlight=false",
-                data={'content': self.description}, raise_for_status=True) as r:
+                data={'content': self.description}) as r:
             js = await r.json()
 
             try:
-                keywords.extend([word['ngram'] for word in js['keywords']])
+                keywords.extend([word['ngram'] for word in js['keywords'] if word['ngram']])
             except KeyError:
                 pass
 
@@ -144,14 +147,7 @@ class Bill(commands.Converter):
             keywords.append(name_abbreviation[1:])
 
         keywords.append(name_abbreviation)
-        return list(set(keywords))
-
-    async def make_lookup_tags(self):
-        tags = await self.generate_lookup_tags()
-
-        for tag in tags:
-            await self._bot.db.execute("INSERT INTO bill_lookup_tag (bill_id, tag) VALUES "
-                                       "($1, $2) ON CONFLICT DO NOTHING ", self.id, tag)
+        return name, list(set(keywords))
 
     @property
     def submitter(self) -> typing.Union[discord.Member, discord.User, None]:

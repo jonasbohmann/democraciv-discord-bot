@@ -8,7 +8,7 @@ from config import config
 class DemocracivBotException(commands.CommandError):
     """Generic CommandError exception that gets send to event.error_handler.on_command_error()"""
 
-    def __init__(self, message = None):
+    def __init__(self, message=None):
         self.message = message
 
 
@@ -18,6 +18,12 @@ class InvalidUserInputError(DemocracivBotException):
 
 class DemocracivBotAPIError(DemocracivBotException):
     pass
+
+
+class GoogleAPIError(DemocracivBotException):
+    message = f"{config.NO} Something went wrong during the execution of a Google Apps Script. " \
+              f"Please try again later or contact the developer. Make sure that, if you have given me the URL " \
+              f"of a Google Docs or Google Forms, that I have edit permissions on this document if needed."
 
 
 class RoleNotFoundError(DemocracivBotException):

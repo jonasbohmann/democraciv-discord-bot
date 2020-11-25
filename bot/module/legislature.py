@@ -441,7 +441,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
                 bills = {b.name: b.link for b in [await Bill.convert(ctx, _b) for _b in session.bills]}
                 motions = {m.name: m.link for m in [await Motion.convert(ctx, _m) for _m in session.motions]}
 
-                result = await self.bot.google_api.run_apps_script(
+                result = await self.bot.run_apps_script(
                     script_id="MME1GytLY6YguX02rrXqPiGqnXKElby-M",
                     function="generate_form",
                     parameters=[form_url, session.id, bills, motions],
@@ -544,13 +544,6 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             bill_description = "-"
 
         async with ctx.typing():
-            response = await self.bot.google_api.run_apps_script(
-                script_id="MtyscpHHIi0Ck1h8XfuBIn2qnXKElby-M",
-                function="get_title",
-                parameters=[google_docs_url])
-
-            bill_title = response['response']['result']
-
             tiny_url = await self.bot.tinyurl(google_docs_url)
 
             if tiny_url is None:
@@ -560,24 +553,31 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
                 )
                 return
 
+            bill = models.Bill(bot=self.bot, link=google_docs_url, submitter_description=bill_description)
+            name, tags = await bill.fetch_name_and_keywords()
+
             bill_id = await self.bot.db.fetchval(
-                "INSERT INTO bill (leg_session, link, name, submitter, is_vetoable, "
+                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, "
                 "submitter_description, tiny_link) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
                 current_leg_session_id,
+                name,
                 google_docs_url,
-                bill_title,
                 ctx.author.id,
                 is_vetoable,
                 bill_description,
                 tiny_url
             )
 
+            id_with_tags = [(bill_id, tag) for tag in tags]
+            self.bot.loop.create_task(self.bot.db.executemany("INSERT INTO bill_lookup_tag (bill_id, tag) VALUES "
+                                                              "($1, $2) ON CONFLICT DO NOTHING ", id_with_tags))
+
             embed = text.SafeEmbed(
                 title="Bill Submitted",
                 description="Hey! A new **bill** was just submitted.",
                 timestamp=datetime.datetime.utcnow(),
             )
-            embed.add_field(name="Title", value=bill_title, inline=False)
+            embed.add_field(name="Title", value=name, inline=False)
             embed.add_field(name="Author", value=ctx.message.author.name, inline=False)
             embed.add_field(name="Session", value=current_leg_session_id)
             embed.add_field(
@@ -591,12 +591,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             )
             embed.add_field(name="URL", value=google_docs_url, inline=False)
 
-            bill = models.Bill(bot=self.bot, id=bill_id, name=bill_title,
-                               link=google_docs_url, submitter_description=bill_description)
-            self.bot.loop.create_task(bill.make_lookup_tags())
-
         await ctx.send(
-            f"{config.YES} Your bill `{bill_title}` was submitted for session #{current_leg_session_id}."
+            f"{config.YES} Your bill `{name}` was submitted for session #{current_leg_session_id}."
         )
 
         return embed

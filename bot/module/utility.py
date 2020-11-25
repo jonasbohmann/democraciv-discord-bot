@@ -14,11 +14,11 @@ from bot.utils import context, paginator, text
 from bot.utils.converter import (
     CaseInsensitiveRole,
     PoliticalParty,
-    CaseInsensitiveMember, CaseInsensitiveUser,
+    CaseInsensitiveMember, CaseInsensitiveUser, DemocracivCaseInsensitiveRole,
 )
 
 
-class Misc(context.CustomCog, name="Utility"):
+class Utility(context.CustomCog, name="Utility"):
     """Utility commands. Some more useful than others."""
 
     def __init__(self, bot):
@@ -206,7 +206,7 @@ class Misc(context.CustomCog, name="Utility"):
             *,
             member: typing.Union[
                 CaseInsensitiveMember,
-                CaseInsensitiveRole,
+                DemocracivCaseInsensitiveRole,
                 PoliticalParty,
             ] = None,
     ):
@@ -397,7 +397,7 @@ class Misc(context.CustomCog, name="Utility"):
             self,
             ctx,
             *,
-            role: typing.Union[CaseInsensitiveRole, PoliticalParty],
+            role: typing.Union[DemocracivCaseInsensitiveRole, PoliticalParty],
     ):
         """Detailed information about a role"""
 
@@ -634,4 +634,4 @@ class Misc(context.CustomCog, name="Utility"):
 
 
 def setup(bot):
-    bot.add_cog(Misc(bot))
+    bot.add_cog(Utility(bot))

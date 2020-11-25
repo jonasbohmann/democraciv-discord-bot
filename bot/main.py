@@ -5,6 +5,7 @@ import time
 import math
 import asyncio
 import typing
+import pickle
 
 try:
     import uvloop
@@ -22,11 +23,13 @@ import traceback
 
 from typing import Optional, Union
 from discord.ext import commands, tasks
-
 from bot.utils import exceptions, text, context
 from bot.config import token, config, mk
 
-from bot.utils.api_wrapper import RedditAPIWrapper, GoogleAPIWrapper
+from googleapiclient import errors
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport import requests
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [BOT] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
 
@@ -34,7 +37,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [BOT] %(message)s', 
 initial_extensions = [
     "bot.module.logging",
     "bot.module.meta",
-    "bot.module.misc",
+    "bot.module.utility",
     "bot.module.roles",
     "bot.module.guild",
     "bot.module.admin",
@@ -52,9 +55,6 @@ initial_extensions = [
 
 # monkey patch dpy's send
 _old_send = discord.abc.Messageable.send
-
-
-# todo on_resume
 
 
 async def safe_send(self, content=None, **kwargs) -> discord.Message:
@@ -120,9 +120,6 @@ class DemocracivBot(commands.Bot):
 
         self.loop.create_task(self.check_custom_emoji_availability())
         self.loop.create_task(self.fetch_owner())
-
-        self.reddit_api = RedditAPIWrapper(self)
-        self.google_api = GoogleAPIWrapper(self)
 
         self.loop.create_task(self.update_guild_config_cache())
 
@@ -402,7 +399,7 @@ class DemocracivBot(commands.Bot):
     async def _populate_guild_config_cache(self, record: asyncpg.Record):
         settings = {k: v for k, v in record.items() if k != "id"}
         private_channels = await self.db.fetch(
-            "SELECT channel_id FROM guild_private_channels WHERE guild_id = $1",
+            "SELECT channel_id FROM guild_private_channel WHERE guild_id = $1",
             record["id"],
         )
         settings["private_channels"] = [r["channel_id"] for r in private_channels]
@@ -440,7 +437,7 @@ class DemocracivBot(commands.Bot):
         except (TypeError, KeyError, AttributeError):
             if setting == "private_channels":
                 private_channels = await self.db.fetch(
-                    "SELECT channel_id FROM guild_private_channels WHERE guild_id = $1",
+                    "SELECT channel_id FROM guild_private_channel WHERE guild_id = $1",
                     guild_id,
                 )
                 return [record["channel_id"] for record in private_channels]
@@ -466,6 +463,7 @@ class DemocracivBot(commands.Bot):
         await self.wait_until_ready()
 
         def check_custom_emoji(emoji):
+
             emoji_id = [int(s) for s in re.findall(r"\b\d+\b", emoji)]
 
             if emoji_id:
@@ -486,7 +484,9 @@ class DemocracivBot(commands.Bot):
             config.LEG_SUBMIT_BILL,
             config.LEG_SUBMIT_MOTION,
             config.GUILD_SETTINGS_GEAR,
-            config.NO, config.YES, config.USER_INTERACTION_REQUIRED
+            config.NO,
+            config.YES,
+            config.USER_INTERACTION_REQUIRED
         ]
 
         emoji_availability = [check_custom_emoji(emoji) for emoji in emojis]
@@ -581,6 +581,43 @@ class DemocracivBot(commands.Bot):
     def dciv(self) -> Optional[discord.Guild]:
         return self.get_guild(self.democraciv_guild_id)
 
+    async def run_apps_script(self, script_id, function, parameters):
+        try:
+            result = await self.loop.run_in_executor(None, self._execute_apps_script, script_id, function,
+                                                     parameters)
+
+            if "error" in result:
+                raise exceptions.GoogleAPIError()
+
+            return result
+
+        except errors.HttpError as e:
+            logging.error(f"Error while executing Apps Script {script_id}: {e.content}")
+            raise exceptions.GoogleAPIError() from e
+
+    def _execute_apps_script(self, script_id, function, parameters):
+        google_credentials = None
+
+        if os.path.exists('config/google_oauth_token.pickle'):
+            with open('config/google_oauth_token.pickle', 'rb') as google_token:
+                google_credentials = pickle.load(google_token)
+
+        if not google_credentials or not google_credentials.valid:
+            if google_credentials and google_credentials.expired and google_credentials.refresh_token:
+                google_credentials.refresh(requests.Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    config.GOOGLE_CLOUD_PLATFORM_CLIENT_SECRETS_FILE,
+                    config.GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES)
+                google_credentials = flow.run_local_server(port=0)
+
+            with open('config/google_oauth_token.pickle', 'wb') as google_token:
+                pickle.dump(google_credentials, google_token)
+
+        service = build("script", "v1", credentials=google_credentials, cache_discovery=False)
+        request = {"function": function, "parameters": parameters, "devMode": True}
+        return service.scripts().run(body=request, scriptId=script_id).execute()
+
     async def safe_send_dm(
             self,
             target: Union[discord.User, discord.Member],
@@ -672,7 +709,6 @@ class DemocracivBot(commands.Bot):
         now = time.time()
         pretty_time = datetime.datetime.utcfromtimestamp(now).strftime("%A, %B %d %Y %H:%M:%S")
         file_name = f"democraciv-bot-database-backup-{now}"
-        bank_backup_too = False
 
         # Use pg_dump to dumb the database as raw SQL
         # Login with credentials provided in token.py
@@ -688,24 +724,7 @@ class DemocracivBot(commands.Bot):
 
         # Run the command and save the backup files in database/backup/
         await asyncio.create_subprocess_shell(command)
-
         backup_channel = self.get_channel(config.DATABASE_DAILY_BACKUP_DISCORD_CHANNEL)
-
-        if config.DATABASE_DAILY_BACKUP_BANK_OF_DEMOCRACIV_BACKUP:
-            if not os.path.isdir("bot/database/backup/democracivbank"):
-                os.mkdir("db/backup/democracivbank")
-
-            fn = f"democracivbank-of-democraciv-backup-{now}"
-            bn = config.DATABASE_DAILY_BACKUP_BANK_OF_DEMOCRACIV_DATABASE
-
-            command = (
-                f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump -Fc {bn} > bot/database/backup/democracivbank/{fn} '
-                f"-U {token.POSTGRESQL_USER} -h {token.POSTGRESQL_HOST} -w"
-            )
-
-            await asyncio.create_subprocess_shell(command)
-            bank_backup_too = True
-
         await asyncio.sleep(20)
 
         file = discord.File(f"bot/database/backup/{file_name}")
@@ -715,13 +734,6 @@ class DemocracivBot(commands.Bot):
             return
 
         await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)
-
-        if bank_backup_too:
-            file = discord.File(f"bot/database/backup/democracivbank/{fn}")
-            await backup_channel.send(
-                f"---- democracivbank.com Database Backup from {pretty_time} (UTC) ----",
-                file=file,
-            )
 
     async def get_logging_channel(self, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
         channel = await self.get_guild_setting(guild.id, "logging_channel")

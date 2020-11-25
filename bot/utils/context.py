@@ -138,7 +138,7 @@ class CustomContext(commands.Context):
         except asyncio.TimeoutError:
             raise exceptions.InvalidUserInputError(":zzz: You took too long to react.")
 
-    async def ask_to_continue(self, *, message: discord.Message, emoji: str, timeout: int = 300):
+    async def ask_to_continue(self, *, message: discord.Message, emoji: str, timeout: int = 300) -> bool:
         await message.add_reaction(emoji)
 
         try:
@@ -152,7 +152,7 @@ class CustomContext(commands.Context):
         else:
             return True
 
-    async def confirm(self, text=None, *, message: discord.Message = None, timeout: int = 300) -> typing.Optional[bool]:
+    async def confirm(self, text=None, *, message: discord.Message = None, timeout: int = 300) -> bool:
         """Adds the {config.YES} and {config.NO} emoji to the message and returns the reaction and user if either
         reaction has been added by the original user.
 
@@ -193,7 +193,7 @@ class CustomContext(commands.Context):
         timeout: int = 300,
         delete_after: bool = False,
         image_allowed: bool = False,
-    ) -> typing.Optional[str]:
+    ) -> str:
         """Waits for a reply by the original user in the original channel and returns reply as string.
 
         Returns None if the user did nothing.

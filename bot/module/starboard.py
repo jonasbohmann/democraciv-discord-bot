@@ -29,7 +29,7 @@ import datetime
 import logging
 import itertools
 
-from bot.config import token, config, mk
+from bot.config import token, config
 from discord.ext import commands, tasks
 
 from bot.utils import context
@@ -218,7 +218,7 @@ class Starboard(context.CustomCog):
         channel = await self.bot.get_channel(config.BOT_TECHNICAL_NOTIFICATIONS_CHANNEL)
 
         if channel:
-            await channel.send(msg)
+            await channel.send(embed=text.SafeEmbed(title=msg))
 
         logging.info(msg)
 

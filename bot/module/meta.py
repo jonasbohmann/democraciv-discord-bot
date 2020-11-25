@@ -24,13 +24,13 @@ class Meta(context.CustomCog):
     @commands.is_owner()
     async def gc(self, ctx):
         kwargs = {
-            "name": "The Constitution of the Greater Ottoman Empire",
             "submitter_description": "Section 2: Duties of the Ministry The Ministry shall have sole power to wager trades and conduct diplomacy with other Nations, except in circumstances in which they must first seek the approval of Parliament. These cases include: The Denouncement and Declaration of Warfare against other Nations; The Continued Agreement to Defensive Pacts, Open Borders, and Alliances among computer-controlled Nations, and Potential Agreement in any such capacity among player-controlled Nations; The Proposal and Ratification of motions to the World Congress, particularly those which may trigger Offensive Action upon another Nation;",
             "link": "https://docs.google.com/document/d/1proo_j4h3iemMk1KBlVDaktSjl1sQRQCTruVo1Yd4ac/edit",
             "bot": self.bot
         }
+
         b = models.Bill(**kwargs)
-        await ctx.send(await b.generate_lookup_tags())
+        await ctx.send(await b.fetch_name_and_keywords())
 
     # shortcut to '-jsk reload ~' for faster debugging
     @commands.command(name="r", hidden=True)
