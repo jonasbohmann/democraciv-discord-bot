@@ -172,7 +172,7 @@ class BankCorporation(commands.Converter):
 
     @classmethod
     async def convert(cls, ctx, argument):
-        response = await ctx.bot.get_cog("Bank").twitch_request(BankRoute("GET", f"corporation/{argument}/"))
+        response = await ctx.bot.get_cog("Bank").request(BankRoute("GET", f"corporation/{argument}/"))
 
         if response.status == 404:
             raise commands.BadArgument(

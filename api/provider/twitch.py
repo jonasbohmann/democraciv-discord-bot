@@ -24,9 +24,9 @@ class TwitchManager:
     API_BASE = "https://api.twitch.tv/helix/"
     API_USER_ENDPOINT = API_BASE + "users?login="
     API_STREAM_ENDPOINT = API_BASE + "streams"
-    TWITCH_CLIENT_ID = "cp1i4afimhmstlp4tzktm8141v41j4"
-    TWITCH_CLIENT_SECRET = "pba22oai1q77wqvzqip79kgag1pkbu"
-    TWITCH_OAUTH_APP_ACCESS_TOKEN = "330sp1oxn8mgsrfj2cfm886zy6oggl"
+    TWITCH_CLIENT_ID = ""
+    TWITCH_CLIENT_SECRET = ""
+    TWITCH_OAUTH_APP_ACCESS_TOKEN = ""
 
     def __init__(self, db):
         self.db = db
