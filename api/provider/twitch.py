@@ -23,28 +23,39 @@ class TwitchStream:
 class TwitchManager:
     API_BASE = "https://api.twitch.tv/helix/"
     API_USER_ENDPOINT = API_BASE + "users?login="
-    API_STREAM_ENDPOINT = API_BASE + "streams"
-    TWITCH_CLIENT_ID = ""
-    TWITCH_CLIENT_SECRET = ""
-    TWITCH_OAUTH_APP_ACCESS_TOKEN = ""
+    API_STREAM_ENDPOINT = API_BASE + "streams?user_id="
+    API_EVENTSUB_ENDPOINT = API_BASE + "eventsub/subscriptions"
+    API_TOKEN_ENDPOINT = "https://id.twitch.tv/oauth2/token"
+    TWITCH_CLIENT_ID: str
+    TWITCH_CLIENT_SECRET: str
+    TWITCH_OAUTH_APP_ACCESS_TOKEN: str
+    TWITCH_CALLBACK = "https://keinerosen.requestcatcher.com/test"
 
     def __init__(self, db):
         self.db = db
+        self._get_token()
         self._session: aiohttp.ClientSession
         self._loop = asyncio.get_event_loop()
         self._loop.create_task(self._make_aiohttp_session())
-        self._streams: typing.Dict[str, typing.Set[str]] = dict()
-        # self._loop.create_task(self._refresh_twitch_oauth_token())
+        self._streams: typing.Dict[str, typing.Set[str]] = {}
         self._lock = asyncio.Lock()
         self._loop.create_task(self._bulk_start_all())
 
     def _get_token(self):
-        with open("", "r") as token_file:
-            token = json.load(token_file)
+        with open("/api/token.json", "r") as token_file:
+            token_json = json.load(token_file)
+            self.TWITCH_CLIENT_ID = token_json['twitch']['client_id']
+            self.TWITCH_CLIENT_SECRET = token_json['twitch']['client_secret']
+            self.TWITCH_OAUTH_APP_ACCESS_TOKEN = token_json['twitch']['oauth_token']
 
-    def _save_token(self, data):
-        with open("", "w") as token_file:
-            json.dump(data, token_file)
+    def _save_token(self):
+        with open("/api/token.json", "r") as token_file:
+            js = json.load(token_file)
+
+        js['twitch']['oauth_token'] = self.TWITCH_OAUTH_APP_ACCESS_TOKEN
+
+        with open("/api/token.json", "w") as token_file:
+            json.dump(js, token_file)
 
     @property
     def _headers(self):
@@ -60,10 +71,11 @@ class TwitchManager:
             "grant_type": "client_credentials",
         }
 
-        async with self._session.post("https://id.twitch.tv/oauth2/token", data=post_data) as response:
+        async with self._session.post(self.API_TOKEN_ENDPOINT, data=post_data) as response:
             if response.status == 200:
                 r = await response.json()
                 self.TWITCH_OAUTH_APP_ACCESS_TOKEN = r["access_token"]
+                self._save_token()
 
     async def _make_aiohttp_session(self):
         self._session = aiohttp.ClientSession()
@@ -175,17 +187,17 @@ class TwitchManager:
             },
             "transport": {
                 "method": "webhook",
-                "callback": "https://keinerosen.requestcatcher.com/test",
+                "callback": self.TWITCH_CALLBACK,
                 "secret": "thisismysecrettwitchthanks"
             }
         }
 
-        j = await self.twitch_request("POST", "https://api.twitch.tv/helix/eventsub/subscriptions", json=js)
+        j = await self.twitch_request("POST", self.API_EVENTSUB_ENDPOINT, json=js)
         j['ok'] = "ok"
         return j
 
     async def process_incoming_notification(self, event: typing.Dict):
-        js = await self.twitch_request("GET", f"https://api.twitch.tv/helix/streams?user_id={event['broadcaster_user_id']}")
+        js = await self.twitch_request("GET", f"{self.API_STREAM_ENDPOINT}{event['broadcaster_user_id']}")
 
         if js['data']:
             event['title'] = js['data'][0]['title']
