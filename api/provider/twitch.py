@@ -42,19 +42,19 @@ class TwitchManager:
         self._loop.create_task(self._bulk_start_all())
 
     def _get_token(self):
-        with open("/api/token.json", "r") as token_file:
+        with open("api/token.json", "r") as token_file:
             token_json = json.load(token_file)
             self.TWITCH_CLIENT_ID = token_json['twitch']['client_id']
             self.TWITCH_CLIENT_SECRET = token_json['twitch']['client_secret']
             self.TWITCH_OAUTH_APP_ACCESS_TOKEN = token_json['twitch']['oauth_token']
 
     def _save_token(self):
-        with open("/api/token.json", "r") as token_file:
+        with open("api/token.json", "r") as token_file:
             js = json.load(token_file)
 
         js['twitch']['oauth_token'] = self.TWITCH_OAUTH_APP_ACCESS_TOKEN
 
-        with open("/api/token.json", "w") as token_file:
+        with open("api/token.json", "w") as token_file:
             json.dump(js, token_file)
 
     @property
@@ -136,6 +136,16 @@ class TwitchManager:
                 self._streams[streamer] = {webhook_url}
                 return result
 
+    async def _can_discord_webhook_be_deleted(self, channel_id: int):
+        others_exist = await self.db.pool.fetch("SELECT 1 FROM reddit_webhook FULL OUTER JOIN twitch_webhook ON "
+                                                "reddit_webhook.channel_id = twitch_webhook.channel_id "
+                                                "WHERE reddit_webhook.channel_id = $1 OR "
+                                                "twitch_webhook.channel_id = $1", channel_id)
+        if others_exist:
+            return False
+        else:
+            return True
+
     async def remove_stream(self, *, hook_id: int, guild_id: int):
         record = await self.db.pool.fetchrow("DELETE FROM twitch_webhook WHERE id = $1 AND guild_id = $2 "
                                              "RETURNING streamer, webhook_url, channel_id", hook_id, guild_id)
@@ -143,8 +153,12 @@ class TwitchManager:
         if not record:
             return {"error": "not found"}
 
+        safe_to_delete = await self._can_discord_webhook_be_deleted(record['channel_id'])
+        js = dict(record)
+        js['safe_to_delete'] = safe_to_delete
+
         self._loop.create_task(self._remove_stream(streamer=record['streamer'], webhook_url=record['webhook_url']))
-        return dict(record)
+        return js
 
     async def _remove_stream(self, *, streamer: str, webhook_url: str):
         if streamer not in self._streams:

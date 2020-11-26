@@ -450,32 +450,131 @@ class _Guild(context.CustomCog, name="Server"):
 
             await self.bot.update_guild_config_cache()
 
+    async def _get_or_make_discord_webhook(self, ctx, channel):
+        try:
+            channel_webhooks = await channel.webhooks()
+
+            # check to see if the current channel already has a webhook managed by us
+            def pred(w):
+                return (w.user and w.user.id == self.bot.user.id) or w.name == self.bot.user.name \
+                       or w.avatar_url == self.bot.user.avatar_url
+
+            webhook = discord.utils.find(pred, channel_webhooks)
+
+            if webhook:
+                return webhook
+            else:
+                return await channel.create_webhook(name=self.bot.user.name, avatar=await self.bot.avatar_bytes())
+
+        except discord.Forbidden:
+            await ctx.send(
+                f"{config.NO} You need to give me the `Manage Webhooks` permission in {channel.mention}.")
+            return
+
+    async def _list_webhooks(self, ctx, *, endpoint: str, webhook_name: str, command_name: str, icon: str, fmt: typing.Callable):
+        webhooks = await self.bot.api_request("GET", f"{endpoint}{ctx.guild.id}")
+        entries = []
+
+        for webhook in webhooks["webhooks"]:
+            try:
+                discord_webhook = await self.bot.fetch_webhook(webhook["webhook_id"])
+            except discord.HTTPException:
+                continue
+
+            entries.append(fmt(webhook, discord_webhook))
+
+        pages = paginator.SimplePages(
+            author=f"{webhook_name.title()} on {ctx.guild.name}",
+            icon=icon,
+            entries=entries,
+            empty_message=f"This server does not have any {webhook_name} yet.\n\nAdd some "
+                          f"with `{config.BOT_PREFIX}server {command_name} add`.",
+        )
+        await pages.start(ctx)
+
+    async def _remove_webhook(self, ctx, *, endpoint: str, webhook_name: str, command_name: str,
+                              success_fmt: typing.Callable):
+        file = await self.bot.make_file_from_image_link(
+            "https://cdn.discordapp.com/attachments/499669824847478785/778778261450653706/redditds.PNG"
+        )
+
+        await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} What's the ID of the {webhook_name} you want to remove? "
+            f"You can get the ID from `{config.BOT_PREFIX}server {command_name}`. "
+            f"In case you want to remove every feed on this server, use `{config.BOT_PREFIX}server {command_name} "
+            f"clear` instead.",
+            file=file,
+        )
+
+        hook_id = await ctx.input()
+
+        if hook_id.startswith("#"):
+            hook_id = hook_id[1:]
+
+        if not hook_id.isdigit():
+            return await ctx.send(f"{config.NO} `{hook_id}` is not a real ID.")
+
+        try:
+            response = await self.bot.api_request(
+                "POST",
+                endpoint,
+                json={"id": hook_id, "guild_id": ctx.guild.id},
+            )
+        except exceptions.DemocracivBotAPIError:
+            return await ctx.send(
+                f"{config.NO} Something went wrong. Are you sure that `{hook_id}` is the ID of a "
+                f"existing {webhook_name} on this server?"
+            )
+
+        if "error" in response:
+            return await ctx.send(
+                f"{config.NO} Something went wrong. Are you sure that `{hook_id}` is the ID of a "
+                f"existing {webhook_name} on this server?"
+            )
+
+        if response['safe_to_delete']:
+            webhook = discord.Webhook.from_url(
+                response["webhook_url"],
+                adapter=discord.AsyncWebhookAdapter(self.bot.session),
+            )
+
+            try:
+                await webhook.delete()
+            except discord.HTTPException:
+                pass
+
+        channel = ctx.guild.get_channel(response["channel_id"])
+        channel_fmt = channel.mention if channel else "#deleted-channel"
+        await ctx.send(success_fmt(response, channel_fmt))
+
+    async def _clear_webhooks(self, ctx, *, endpoint, webhook_name):
+        response = await self.bot.api_request("POST", endpoint, json={"guild_id": ctx.guild.id})
+
+        for removed_hook in response["removed"]:
+            webhook = discord.Webhook.from_url(
+                removed_hook["webhook_url"],
+                adapter=discord.AsyncWebhookAdapter(self.bot.session),
+            )
+            try:
+                await webhook.delete()
+            except discord.HTTPException:
+                continue
+
+        await ctx.send(
+            f"{config.YES} All {len(response['removed'])} {webhook_name} on this server were removed."
+        )
+
     @guild.group(name="reddit", case_insensitive=True, invoke_without_command=True)
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def reddit(self, ctx: context.CustomContext):
-        reddit_scraper = await self.bot.api_request("GET", f"reddit/list/{ctx.guild.id}")
-        entries = []
+        def fmt(webhook, discord_webhook):
+            return f"**#{webhook['id']}**  -  [r/{webhook['subreddit']}](https://reddit.com/r/{webhook['subreddit']}) to {discord_webhook.channel.mention}"
 
-        for scraper in reddit_scraper["webhooks"]:
-            try:
-                webhook = await self.bot.fetch_webhook(scraper["webhook_id"])
-            except discord.HTTPException:
-                continue
-
-            entries.append(
-                f"**#{scraper['id']}**  -  [r/{scraper['subreddit']}](https://reddit.com/r/{scraper['subreddit']}) "
-                f"to {webhook.channel.mention}"
-            )
-
-        pages = paginator.SimplePages(
-            author=f"Subreddit Feeds on {ctx.guild.name}",
-            icon=ctx.guild_icon,
-            entries=entries,
-            empty_message=f"This server does not have any subreddit feeds yet.\n\nAdd some "
-                          f"with `{config.BOT_PREFIX}server reddit add`.",
-        )
-        await pages.start(ctx)
+        await self._list_webhooks(ctx, endpoint="reddit/list/",
+                                  command_name="reddit", webhook_name="subreddit feeds",
+                                  fmt=fmt,
+                                  icon="https://cdn.discordapp.com/attachments/730898526040752291/781547428087201792/Reddit_Mark_OnWhite.png")
 
     @reddit.command(name="add", aliases=["make", "create"])
     @commands.guild_only()
@@ -496,11 +595,10 @@ class _Guild(context.CustomCog, name="Server"):
             return_input_on_fail=False,
         )
 
-        try:
-            webhook = await channel.create_webhook(name=self.bot.user.name, avatar=await self.bot.avatar_bytes())
-        except discord.Forbidden:
-            return await ctx.send(
-                f"{config.NO} You need to give me the `Manage Webhooks` permission in {channel.mention}.")
+        webhook = await self._get_or_make_discord_webhook(ctx, channel)
+
+        if not webhook:
+            return
 
         js = {
             "subreddit": subreddit,
@@ -517,106 +615,32 @@ class _Guild(context.CustomCog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def reddit_remove(self, ctx: context.CustomContext):
-        file = await self.bot.make_file_from_image_link(
-            "https://cdn.discordapp.com/attachments/499669824847478785/778778261450653706/redditds.PNG"
-        )
+        def fmt(response, channel_fmt):
+            return f"{config.YES} New posts from `r/{response['subreddit']}` will no longer be posted to {channel_fmt}."
 
-        await ctx.send(
-            f"{config.USER_INTERACTION_REQUIRED} What's the ID of the reddit feed you want to remove? "
-            f"You can get the ID from `{config.BOT_PREFIX}server reddit`. "
-            f"In case you want to remove every feed on this server, use `{config.BOT_PREFIX}server reddit "
-            f"clear` instead.",
-            file=file,
-        )
-
-        scraper_id = await ctx.input()
-
-        if scraper_id.startswith("#"):
-            scraper_id = scraper_id[1:]
-
-        if not scraper_id.isdigit():
-            return await ctx.send(f"{config.NO} `{scraper_id}` is not a real ID.")
-
-        try:
-            response = await self.bot.api_request(
-                "POST",
-                f"reddit/remove",
-                json={"id": scraper_id, "guild_id": ctx.guild.id},
-            )
-        except exceptions.DemocracivBotAPIError:
-            return await ctx.send(
-                f"{config.NO} Something went wrong. Are you sure that `{scraper_id}` is the ID of an "
-                f"existing subreddit feed on this server?"
-            )
-
-        if "error" in response:
-            return await ctx.send(
-                f"{config.NO} Something went wrong. Are you sure that `{scraper_id}` is the ID of an "
-                f"existing subreddit feed on this server?"
-            )
-
-        webhook = discord.Webhook.from_url(
-            response["webhook_url"],
-            adapter=discord.AsyncWebhookAdapter(self.bot.session),
-        )
-
-        try:
-            await webhook.delete()
-        except discord.HTTPException:
-            pass
-
-        channel = ctx.guild.get_channel(response["channel_id"])
-        channel_fmt = channel.mention if channel else "#deleted-channel"
-        await ctx.send(
-            f"{config.YES} New posts from `r/{response['subreddit']}` will no longer be posted to {channel_fmt}."
-        )
+        await self._remove_webhook(ctx, endpoint="reddit/remove",
+                                   command_name="reddit",
+                                   webhook_name="subreddit feed",
+                                   success_fmt=fmt)
 
     @reddit.command(name="clear", aliases=["removeall", "deleteall"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def reddit_clear(self, ctx: context.CustomContext):
-        response = await self.bot.api_request("POST", f"reddit/clear", json={"guild_id": ctx.guild.id})
-
-        for removed_scraper in response["removed"]:
-            webhook = discord.Webhook.from_url(
-                removed_scraper["webhook_url"],
-                adapter=discord.AsyncWebhookAdapter(self.bot.session),
-            )
-            try:
-                await webhook.delete()
-            except discord.HTTPException:
-                continue
-
-        await ctx.send(
-            f"{config.YES} All {len(response['removed'])} subreddit feed(s) " f"on this server were removed."
-        )
+        await self._clear_webhooks(ctx, endpoint="reddit/clear", webhook_name="subreddit feed(s)")
 
     @guild.group(name="twitch", case_insensitive=True, invoke_without_command=True)
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch(self, ctx: context.CustomContext):
-        hooks = await self.bot.api_request("GET", f"twitch/list/{ctx.guild.id}")
-        entries = []
+        def fmt(webhook, discord_webhook):
+            return f"**#{webhook['id']}**  -  [twitch.tv/{webhook['streamer']}]" \
+                   f"(https://twitch.tv/{webhook['streamer']}) to {discord_webhook.channel.mention}"
 
-        for scraper in hooks["webhooks"]:
-            try:
-                webhook = await self.bot.fetch_webhook(scraper["webhook_id"])
-            except discord.HTTPException:
-                continue
-
-            entries.append(
-                f"**#{scraper['id']}**  -  [twitch.tv/{scraper['streamer']}](https://twitch.tv/{scraper['streamer']}) "
-                f"to {webhook.channel.mention}"
-            )
-
-        pages = paginator.SimplePages(
-            author=f"Twitch Notifications on {ctx.guild.name}",
-            icon=ctx.guild_icon,
-            entries=entries,
-            empty_message=f"This server does not have any twitch notifications yet.\n\nAdd some "
-                          f"with `{config.BOT_PREFIX}server twitch add`.",
-        )
-        await pages.start(ctx)
+        await self._list_webhooks(ctx, endpoint="twitch/list/",
+                                  command_name="twitch", webhook_name="twitch notifications",
+                                  fmt=fmt,
+                                  icon="https://cdn.discordapp.com/attachments/730898526040752291/781547042471149598/TwitchGlitchPurple.png")
 
     @twitch.command(name="add", aliases=["make", "create"])
     @commands.guild_only()
@@ -630,11 +654,10 @@ class _Guild(context.CustomCog, name="Server"):
             return_input_on_fail=False,
         )
 
-        try:
-            webhook = await channel.create_webhook(name=self.bot.user.name, avatar=await self.bot.avatar_bytes())
-        except discord.Forbidden:
-            return await ctx.send(
-                f"{config.NO} You need to give me the `Manage Webhooks` permission in {channel.mention}.")
+        webhook = await self._get_or_make_discord_webhook(ctx, channel)
+
+        if not webhook:
+            return
 
         everyone = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should I ping @ everyone in "
                                      f"{channel.mention} when `{streamer}` goes live?")
@@ -660,79 +683,19 @@ class _Guild(context.CustomCog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch_remove(self, ctx: context.CustomContext):
-        file = await self.bot.make_file_from_image_link(
-            "https://cdn.discordapp.com/attachments/499669824847478785/778778261450653706/redditds.PNG"
-        )
+        def fmt(response, channel_fmt):
+            return f"{config.YES} Notifications for when `{response['streamer']}` goes live will no longer be posted to {channel_fmt}."
 
-        await ctx.send(
-            f"{config.USER_INTERACTION_REQUIRED} What's the ID of the twitch notification you want to remove? "
-            f"You can get the ID from `{config.BOT_PREFIX}server twitch`. "
-            f"In case you want to remove every feed on this server, use `{config.BOT_PREFIX}server twitch "
-            f"clear` instead.",
-            file=file,
-        )
-
-        hook_id = await ctx.input()
-
-        if hook_id.startswith("#"):
-            hook_id = hook_id[1:]
-
-        if not hook_id.isdigit():
-            return await ctx.send(f"{config.NO} `{hook_id}` is not a real ID.")
-
-        try:
-            response = await self.bot.api_request(
-                "POST",
-                f"twitch/remove",
-                json={"id": hook_id, "guild_id": ctx.guild.id},
-            )
-        except exceptions.DemocracivBotAPIError:
-            return await ctx.send(
-                f"{config.NO} Something went wrong. Are you sure that `{hook_id}` is the ID of a "
-                f"existing twitch notification on this server?"
-            )
-
-        if "error" in response:
-            return await ctx.send(
-                f"{config.NO} Something went wrong. Are you sure that `{hook_id}` is the ID of a "
-                f"existing twitch notification on this server?"
-            )
-
-        webhook = discord.Webhook.from_url(
-            response["webhook_url"],
-            adapter=discord.AsyncWebhookAdapter(self.bot.session),
-        )
-
-        try:
-            await webhook.delete()
-        except discord.HTTPException:
-            pass
-
-        channel = ctx.guild.get_channel(response["channel_id"])
-        channel_fmt = channel.mention if channel else "#deleted-channel"
-        await ctx.send(
-            f"{config.YES} Notifications for when `{response['streamer']}` goes live will no longer be posted to {channel_fmt}."
-        )
+        await self._remove_webhook(ctx, endpoint="twitch/remove",
+                                   command_name="twitch",
+                                   webhook_name="stream notification",
+                                   success_fmt=fmt)
 
     @twitch.command(name="clear", aliases=["removeall", "deleteall"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch_clear(self, ctx: context.CustomContext):
-        response = await self.bot.api_request("POST", f"twitch/clear", json={"guild_id": ctx.guild.id})
-
-        for removed_hook in response["removed"]:
-            webhook = discord.Webhook.from_url(
-                removed_hook["webhook_url"],
-                adapter=discord.AsyncWebhookAdapter(self.bot.session),
-            )
-            try:
-                await webhook.delete()
-            except discord.HTTPException:
-                continue
-
-        await ctx.send(
-            f"{config.YES} All {len(response['removed'])} twitch notifications on this server were removed."
-        )
+        await self._clear_webhooks(ctx, endpoint="twitch/clear", webhook_name="twitch notifications")
 
 
 def setup(bot):

@@ -125,6 +125,16 @@ class RedditManager:
 
         await self.start_scraper(subreddit=config.subreddit, webhook_url=config.webhook_url)
 
+    async def _can_discord_webhook_be_deleted(self, channel_id: int):
+        others_exist = await self.db.pool.fetch("SELECT 1 FROM reddit_webhook FULL OUTER JOIN twitch_webhook ON "
+                                                "reddit_webhook.channel_id = twitch_webhook.channel_id "
+                                                "WHERE reddit_webhook.channel_id = $1 OR "
+                                                "twitch_webhook.channel_id = $1", channel_id)
+        if others_exist:
+            return False
+        else:
+            return True
+
     async def remove_scraper(self, scraper_id, guild_id):
         record = await self.db.pool.fetchrow(
             "DELETE FROM reddit_webhook WHERE id = $1 AND guild_id = $2 RETURNING subreddit, webhook_url, channel_id",
@@ -135,8 +145,12 @@ class RedditManager:
         if not record:
             return {"error": "scraper not found"}
 
+        safe_to_delete = await self._can_discord_webhook_be_deleted(record['channel_id'])
+        js = dict(record)
+        js['safe_to_delete'] = safe_to_delete
+
         self._loop.create_task(self.stop_scraper(subreddit=record['subreddit'], webhook_url=record['webhook_url']))
-        return dict(record)
+        return js
 
     async def stop_scraper(self, *, subreddit: str, webhook_url: str):
         if subreddit not in self._scrapers:

@@ -22,8 +22,8 @@ class Database:
         schema = """CREATE TABLE IF NOT EXISTS reddit_webhook(
                     id serial PRIMARY KEY,
                     subreddit text NOT NULL,
-                    webhook_id bigint UNIQUE NOT NULL,
-                    webhook_url text UNIQUE NOT NULL,
+                    webhook_id bigint NOT NULL,
+                    webhook_url text NOT NULL,
                     guild_id bigint NOT NULL,
                     channel_id bigint NOT NULL
                     );
@@ -31,8 +31,8 @@ class Database:
                     CREATE TABLE IF NOT EXISTS twitch_webhook(
                     id serial PRIMARY KEY,
                     streamer text NOT NULL,
-                    webhook_id bigint UNIQUE NOT NULL,
-                    webhook_url text UNIQUE NOT NULL,
+                    webhook_id bigint NOT NULL,
+                    webhook_url text NOT NULL,
                     guild_id bigint NOT NULL,
                     channel_id bigint NOT NULL,
                     everyone_ping bool DEFAULT FALSE NOT NULL
@@ -60,29 +60,24 @@ class Database:
 
 
 app = FastAPI()
-db = Database(dsn="postgres://postgres:pw@localhost/api_test")
+db = Database(dsn="postgres://postgres:ehre@localhost/api_test")
 reddit_manager = RedditManager(db=db)
 twitch_manager = TwitchManager(db=db)
 
 
-class AddSubredditScraper(pydantic.BaseModel):
-    subreddit: str
+class AddWebhook(pydantic.BaseModel):
+    target: str
     webhook_url: str
     webhook_id: int
     guild_id: int
     channel_id: int
 
 
-class AddTwitchHook(pydantic.BaseModel):
-    streamer: str
-    webhook_url: str
-    webhook_id: int
+class AddTwitchHook(AddWebhook):
     everyone_ping: bool
-    guild_id: int
-    channel_id: int
 
 
-class RemoveWebHook(pydantic.BaseModel):
+class RemoveWebhook(pydantic.BaseModel):
     id: int
     guild_id: int
 
@@ -113,14 +108,14 @@ async def reddit_list(guild_id: int):
 
 
 @app.post("/reddit/add")
-def reddit_add(reddit_config: AddSubredditScraper, background_tasks: BackgroundTasks):
-    reddit_config.subreddit = reddit_config.subreddit.lower()  # subreddit names are case-insensitive right?
+def reddit_add(reddit_config: AddWebhook, background_tasks: BackgroundTasks):
+    reddit_config.subreddit = reddit_config.target.lower()  # subreddit names are case-insensitive right?
     background_tasks.add_task(reddit_manager.add_scraper, config=reddit_config)
     return reddit_config
 
 
 @app.post("/reddit/remove")
-async def reddit_remove(reddit_config: RemoveWebHook):
+async def reddit_remove(reddit_config: RemoveWebhook):
     response = await reddit_manager.remove_scraper(scraper_id=reddit_config.id, guild_id=reddit_config.guild_id)
 
     if "error" not in response:
@@ -143,13 +138,13 @@ async def twitch_list(guild_id: int):
 
 @app.post("/twitch/add")
 async def twitch_add(twitch_config: AddTwitchHook):
-    twitch_config.streamer = twitch_config.streamer.lower()
+    twitch_config.streamer = twitch_config.target.lower()
     result = await twitch_manager.add_stream(config=twitch_config)
     return result
 
 
 @app.post("/twitch/remove")
-async def twitch_remove(twitch_config: RemoveWebHook):
+async def twitch_remove(twitch_config: RemoveWebhook):
     response = await twitch_manager.remove_stream(hook_id=twitch_config.id, guild_id=twitch_config.guild_id)
 
     if "error" not in response:

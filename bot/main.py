@@ -494,7 +494,7 @@ class DemocracivBot(commands.Bot):
         if False in emoji_availability:
             logging.warning(
                 "Reverting to standard Unicode emojis for Paginator and -leg submit"
-                " as at least one emoji from config.py cannot be seen/used by me or does not exist."
+                " as at leaost one emoji from config.py cannot be seen/used by me or does not exist."
             )
             config.HELP_FIRST = "\N{BLACK LEFT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}"
             config.HELP_PREVIOUS = "\N{BLACK LEFT-POINTING TRIANGLE}"
@@ -699,6 +699,22 @@ class DemocracivBot(commands.Bot):
             )
 
         await self.process_commands(message)
+
+    async def on_guild_join(self, guild: discord.Guild):
+        if len(self.guilds) >= 70:
+            if guild.system_channel:
+                embed = text.SafeEmbed(title=":pensive:  Sorry!",
+                                       description="Discord requires bot developers to hand over their passport "
+                                                   "once their bot reaches about ~75 servers. If they refuse to, "
+                                                   f"the bot cannot be invited anymore and Discord takes away some "
+                                                   f"critical features that the Democraciv Bot needs in order "
+                                                   f"to work properly. I **do not want to give Discord my "
+                                                   f"passport.**\n\nThis is the 70th server the bot is in, "
+                                                   f"and as a precaution **the bot is leaving this server** again.")
+
+                await guild.system_channel.send(embed=embed)
+
+            await guild.leave()
 
     @tasks.loop(hours=config.DATABASE_DAILY_BACKUP_INTERVAL)
     async def daily_db_backup(self):
