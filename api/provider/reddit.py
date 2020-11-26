@@ -1,4 +1,3 @@
-import asyncio
 import copy
 import datetime
 import html
@@ -9,19 +8,24 @@ import aiohttp
 from discord.ext import tasks
 from discord import Embed
 
+from provider.abc import ProviderManager
 
-class RedditManager:
+
+class RedditManager(ProviderManager):
+    provider = "Reddit"
+    target = "subreddit"
+    table = "reddit_webhook"
+
+    async def new_webhook_for_target(self, *, target: str, webhook_url: str):
+        pass
+
+    async def no_more_webhooks_for_target(self, *, target: str, webhook_url: str):
+        pass
+
     def __init__(self, *, db):
-        self.db = db
-        self.session = None
-        self._loop = asyncio.get_event_loop()
-        self._loop.create_task(self.make_aiohttp_session())
+        super().__init__(db=db)
         self._scrapers: typing.Dict[str, SubredditScraper] = dict()
-        self._loop.create_task(self._bulk_start_all_scraper())
-        self._lock = asyncio.Lock()
-
-    async def make_aiohttp_session(self):
-        self.session = aiohttp.ClientSession()
+        self.bearer_token = ""
 
     async def refresh_reddit_bearer_token(self):
         """Gets a new access_token for the Reddit API with a refresh token that was previously acquired by following
@@ -34,7 +38,7 @@ class RedditManager:
         }
         headers = {"User-Agent": f"democraciv-discord-bot by DerJonas - u/Jovanos"}
 
-        async with self.session.post(
+        async with self._session.post(
                 "https://www.reddit.com/api/v1/access_token",
                 data=post_data,
                 auth=auth,
@@ -55,7 +59,7 @@ class RedditManager:
         }
 
         try:
-            async with self.session.post(
+            async with self._session.post(
                     "https://oauth.reddit.com/api/submit", data=data, headers=headers
             ) as response:
                 if response.status != 200:
@@ -66,102 +70,17 @@ class RedditManager:
             logging.error(f"Error while posting to Reddit: {e}")
             return False
 
-    @property
-    def status(self):
-        return len(self._scrapers)
-
-    async def get_webhooks_per_guild(self, guild_id: int):
-        records = await self.db.pool.fetch(
-            "SELECT id, subreddit, webhook_id, webhook_url FROM reddit_webhook WHERE guild_id = $1", guild_id)
-        return [dict(r) for r in records]
-
-    def clear_scrapers(self):
-        for scraper in self._scrapers.values():
-            scraper.stop()
-            del scraper
-
-        self._scrapers = dict()
-
-    async def clear_scraper_per_guild(self, guild_id: int):
-        scraper = await self.get_webhooks_per_guild(guild_id)
-
-        for scrap in scraper:
-            self._loop.create_task(self.remove_scraper(scrap["id"], guild_id))
-
-        return scraper
-
-    async def _bulk_start_all_scraper(self):
-        if not self.db.ready:
-            await asyncio.sleep(5)
-
-        scraper = await self.db.pool.fetch("SELECT subreddit, webhook_url FROM reddit_webhook")
-
-        for scrap in scraper:
-            self._loop.create_task(self.start_scraper(subreddit=scrap['subreddit'], webhook_url=scrap['webhook_url']))
-
-        logging.info(f"started reddit {len(scraper)} scraper")
-
     async def start_scraper(self, *, subreddit: str, webhook_url: str):
         async with self._lock:
             if subreddit in self._scrapers:
                 self._scrapers[subreddit].add_webhook(webhook_url)
             else:
-                scraper = SubredditScraper(db=self.db, session=self.session, subreddit=subreddit)
+                scraper = SubredditScraper(db=self.db, session=self._session, subreddit=subreddit)
                 scraper.add_webhook(webhook_url)
                 self._scrapers[subreddit] = scraper
                 scraper.start()
 
             logging.info(f"Added subreddit scraper for r/{subreddit} to {webhook_url}")
-
-    async def add_scraper(self, config):
-        await self.db.pool.execute("INSERT INTO reddit_webhook "
-                                   "(subreddit, webhook_id, webhook_url, guild_id, channel_id) "
-                                   "VALUES ($1, $2, $3, $4, $5)",
-                                   config.subreddit,
-                                   config.webhook_id,
-                                   config.webhook_url,
-                                   config.guild_id,
-                                   config.channel_id)
-
-        await self.start_scraper(subreddit=config.subreddit, webhook_url=config.webhook_url)
-
-    async def _can_discord_webhook_be_deleted(self, channel_id: int):
-        others_exist = await self.db.pool.fetch("SELECT 1 FROM reddit_webhook FULL OUTER JOIN twitch_webhook ON "
-                                                "reddit_webhook.channel_id = twitch_webhook.channel_id "
-                                                "WHERE reddit_webhook.channel_id = $1 OR "
-                                                "twitch_webhook.channel_id = $1", channel_id)
-        if others_exist:
-            return False
-        else:
-            return True
-
-    async def remove_scraper(self, scraper_id, guild_id):
-        record = await self.db.pool.fetchrow(
-            "DELETE FROM reddit_webhook WHERE id = $1 AND guild_id = $2 RETURNING subreddit, webhook_url, channel_id",
-            scraper_id,
-            guild_id,
-        )
-
-        if not record:
-            return {"error": "scraper not found"}
-
-        safe_to_delete = await self._can_discord_webhook_be_deleted(record['channel_id'])
-        js = dict(record)
-        js['safe_to_delete'] = safe_to_delete
-
-        self._loop.create_task(self.stop_scraper(subreddit=record['subreddit'], webhook_url=record['webhook_url']))
-        return js
-
-    async def stop_scraper(self, *, subreddit: str, webhook_url: str):
-        if subreddit not in self._scrapers:
-            return
-
-        async with self._lock:
-            if len(self._scrapers[subreddit].webhook_urls) == 1 and webhook_url in self._scrapers[
-                subreddit].webhook_urls:
-                del self._scrapers[subreddit]
-            else:
-                self._scrapers[subreddit].webhook_urls.remove(webhook_url)
 
 
 class RedditPost:
@@ -170,33 +89,24 @@ class RedditPost:
         self.title: str = kwargs.get("title")
         self.author: str = kwargs.get("author")
         self._link: str = kwargs.get("permalink")
+        self.link: str = f"https://reddit.com/{self._link}"
+        self.short_link: str = f"https://redd.it/{self.id}"
         self.subreddit: str = kwargs.get("subreddit")
         self._thumbnail: typing.Optional[str]
 
         try:
             self._thumbnail = kwargs["preview"]["images"][0]["source"]["url"]
-        except KeyError:
+        except (KeyError, IndexError):
             self._thumbnail = None
 
         self._created_utc: float = kwargs.get("created_utc")
+        self.timestamp = datetime.datetime.utcfromtimestamp(self._created_utc)
 
     def to_embed(self):
         e = Embed(title=f"<:reddit:660114002533285888>   New post on r/{self.subreddit}", colour=16723228)
         e.add_field(name="Thread", value=f"[{self.title}]({self.link})", inline=False)
         e.add_field(name="Author", value=f"u/{self.author}", inline=False)
         return e.to_dict()
-
-    @property
-    def link(self) -> str:
-        return f"https://reddit.com/{self._link}"
-
-    @property
-    def short_link(self) -> str:
-        return f"https://redd.it/{self.id}"
-
-    @property
-    def timestamp(self) -> datetime.datetime:
-        return datetime.datetime.utcfromtimestamp(self._created_utc)
 
     @property
     def thumbnail(self) -> typing.Optional[str]:
@@ -207,7 +117,7 @@ class RedditPost:
 
 
 class SubredditScraper:
-    def __init__(self, *, db, subreddit: str, session: aiohttp.ClientSession, post_limit: typing.Optional[int] = 1):
+    def __init__(self, *, db, subreddit: str, session: aiohttp.ClientSession, post_limit: int = 1):
         self.subreddit = subreddit
         self.webhook_urls = set()
         self.db = db
@@ -256,7 +166,8 @@ class SubredditScraper:
             reddit_post_json = post_json["data"]
             post_id = reddit_post_json["id"]
 
-            status = await self.db.pool.execute("INSERT INTO reddit_post (id) VALUES ($1) ON CONFLICT DO NOTHING", post_id)
+            status = await self.db.pool.execute("INSERT INTO reddit_post (id) VALUES ($1) ON CONFLICT DO NOTHING",
+                                                post_id)
             is_new = False if status == "INSERT 0 0" else True
 
             if not is_new:

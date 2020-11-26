@@ -5,6 +5,8 @@ import aiohttp
 import typing
 from discord import Embed
 
+from provider.abc import ProviderManager
+
 
 class TwitchStream:
     def __init__(self, **kwargs):
@@ -20,7 +22,11 @@ class TwitchStream:
         self.link: str = f"https://twitch.tv/{self.streamer}"
 
 
-class TwitchManager:
+class TwitchManager(ProviderManager):
+    provider = "Twitch"
+    target = "streamer"
+    table = "twitch_webhook"
+
     API_BASE = "https://api.twitch.tv/helix/"
     API_USER_ENDPOINT = API_BASE + "users?login="
     API_STREAM_ENDPOINT = API_BASE + "streams?user_id="
@@ -32,14 +38,8 @@ class TwitchManager:
     TWITCH_CALLBACK = "https://keinerosen.requestcatcher.com/test"
 
     def __init__(self, db):
-        self.db = db
+        super().__init__(db=db)
         self._get_token()
-        self._session: aiohttp.ClientSession
-        self._loop = asyncio.get_event_loop()
-        self._loop.create_task(self._make_aiohttp_session())
-        self._streams: typing.Dict[str, typing.Set[str]] = {}
-        self._lock = asyncio.Lock()
-        self._loop.create_task(self._bulk_start_all())
 
     def _get_token(self):
         with open("api/token.json", "r") as token_file:
@@ -77,9 +77,6 @@ class TwitchManager:
                 self.TWITCH_OAUTH_APP_ACCESS_TOKEN = r["access_token"]
                 self._save_token()
 
-    async def _make_aiohttp_session(self):
-        self._session = aiohttp.ClientSession()
-
     async def _get_user_id_from_username(self, username: str):
         async with self._session.get(f"{self.API_USER_ENDPOINT}{username}", headers=self._headers) as response:
             if response.status == 200:
@@ -89,29 +86,13 @@ class TwitchManager:
                 except (KeyError, IndexError):
                     return None
 
-    async def get_webhooks_per_guild(self, guild_id: int):
-        records = await self.db.pool.fetch("SELECT id, streamer, webhook_id, webhook_url,"
-                                           " everyone_ping FROM twitch_webhook WHERE guild_id = $1", guild_id)
-        return [dict(record) for record in records]
-
-    async def _bulk_start_all(self):
-        if not self.db.ready:
-            await asyncio.sleep(5)
-
-        scraper = await self.db.pool.fetch("SELECT streamer, webhook_url FROM twitch_webhook")
-
-        for scrap in scraper:
-            self._loop.create_task(self._start_webhook(streamer=scrap['streamer'], webhook_url=scrap['webhook_url']))
-
-        logging.info(f"started twitch {len(scraper)} hooks")
-
     async def add_stream(self, config):
-        # await self.db.pool.execute("INSERT INTO twitch_webhook (streamer, webhook_id, webhook_url, "
-        #                           "guild_id, channel_id, everyone_ping)"
-        #                           "VALUES ($1, $2, $3, $4, $5, $6)",
-        #                           config.streamer, config.webhook_id, config.webhook_url,
-        #                           config.guild_id, config.channel_id, config.everyone_ping)
-        return await self._start_webhook(streamer=config.streamer, webhook_url=config.webhook_url)
+        await self.db.pool.execute("INSERT INTO twitch_webhook (streamer, webhook_id, webhook_url, "
+                                   "guild_id, channel_id, everyone_ping)"
+                                   "VALUES ($1, $2, $3, $4, $5, $6)",
+                                   config.streamer, config.webhook_id, config.webhook_url,
+                                   config.guild_id, config.channel_id, config.everyone_ping)
+        return await self._start_webhook(target=config.streamer, webhook_url=config.webhook_url)
 
     async def twitch_request(self, method, url, *, retry=False, **kwargs):
         async with self._session.request(method, url, **kwargs, headers=self._headers) as resp:
@@ -126,58 +107,11 @@ class TwitchManager:
             else:
                 return {}
 
-    async def _start_webhook(self, *, streamer: str, webhook_url: str):
-        async with self._lock:
-            if streamer in self._streams:
-                self._streams[streamer].add(webhook_url)
-                return self._streams[streamer]
-            else:
-                result = await self.subscribe(streamer)
-                self._streams[streamer] = {webhook_url}
-                return result
+    async def new_webhook_for_target(self, *, target: str, webhook_url: str):
+        return await self.subscribe(target)
 
-    async def _can_discord_webhook_be_deleted(self, channel_id: int):
-        others_exist = await self.db.pool.fetch("SELECT 1 FROM reddit_webhook FULL OUTER JOIN twitch_webhook ON "
-                                                "reddit_webhook.channel_id = twitch_webhook.channel_id "
-                                                "WHERE reddit_webhook.channel_id = $1 OR "
-                                                "twitch_webhook.channel_id = $1", channel_id)
-        if others_exist:
-            return False
-        else:
-            return True
-
-    async def remove_stream(self, *, hook_id: int, guild_id: int):
-        record = await self.db.pool.fetchrow("DELETE FROM twitch_webhook WHERE id = $1 AND guild_id = $2 "
-                                             "RETURNING streamer, webhook_url, channel_id", hook_id, guild_id)
-
-        if not record:
-            return {"error": "not found"}
-
-        safe_to_delete = await self._can_discord_webhook_be_deleted(record['channel_id'])
-        js = dict(record)
-        js['safe_to_delete'] = safe_to_delete
-
-        self._loop.create_task(self._remove_stream(streamer=record['streamer'], webhook_url=record['webhook_url']))
-        return js
-
-    async def _remove_stream(self, *, streamer: str, webhook_url: str):
-        if streamer not in self._streams:
-            return
-
-        async with self._lock:
-            if len(self._streams[streamer]) == 1 and webhook_url in self._streams[streamer]:
-                await self.unsubscribe(streamer)
-                del self._streams[streamer]
-            else:
-                self._streams[streamer].remove(webhook_url)
-
-    async def clear_per_guild(self, guild_id: int):
-        hooks = await self.get_webhooks_per_guild(guild_id=guild_id)
-
-        for hook in hooks:
-            self._loop.create_task(self.remove_stream(hook_id=hook['id'], guild_id=guild_id))
-
-        return hooks
+    async def no_more_webhooks_for_target(self, *, target: str, webhook_url: str):
+        return await self.unsubscribe(target)
 
     async def subscribe(self, stream: str):
         return await self._manage_subscription(stream=stream, mode="subscribe")
@@ -230,10 +164,10 @@ class TwitchManager:
 
         streamer = stream.streamer.lower()
 
-        if streamer not in self._streams:
+        if streamer not in self._webhooks:
             return  # ? how
 
-        for discord_webhook in self._streams[streamer]:
+        for discord_webhook in self._webhooks[streamer]:
             async with self._session.post(discord_webhook, json=js) as response:
                 if response.status not in (200, 204):
                     logging.error(f"Error while sending reddit webhook: {response.status} {await response.text()}")
