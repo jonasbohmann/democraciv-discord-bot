@@ -228,23 +228,20 @@ class Starboard(context.CustomCog):
         post_content = await self.get_reddit_post_content(grouped_stars)
         title = f"Weekly Discord News - {start_of_last_week.strftime('%B %d')} to {today.strftime('%B %d')}"
 
-        data = {
-            "kind": "self",
-            "nsfw": False,
-            "sr": config.REDDIT_SUBREDDIT,
+        js = {
+            "subreddit": config.REDDIT_SUBREDDIT,
             "title": title,
-            "text": post_content,
-            "spoiler": False,
-            "ad": False,
+            "content": post_content
         }
 
-        if await self.bot.reddit_api.post_to_reddit(data):
-            await self.bot.db.execute(
-                "UPDATE starboard_entry SET is_posted_to_reddit = true "
-                "WHERE starboard_message_created_at >= $1 AND starboard_message_created_at < $2",
-                start_of_last_week,
-                today,
-            )
+        await self.bot.api_request("POST", "reddit/post", json=js)
+
+        await self.bot.db.execute(
+            "UPDATE starboard_entry SET is_posted_to_reddit = true "
+            "WHERE starboard_message_created_at >= $1 AND starboard_message_created_at < $2",
+            start_of_last_week,
+            today,
+        )
 
     @weekly_starboard_to_reddit_task.before_loop
     async def before_starboard_task(self):

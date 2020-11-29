@@ -10,6 +10,18 @@ from bot.config import config
 from bot.utils import context, exceptions
 
 
+class InternalAPIWebhookConverter(commands.Converter):
+    @classmethod
+    async def convert(cls, ctx, argument):
+        if argument.startswith("#"):
+            argument = argument[1:]
+
+        if not argument.isdigit():
+            return await ctx.send(f"{config.NO} `{argument}` is not a real ID.")
+
+        return int(argument)
+
+
 class PoliticalPartyJoinMode(enum.Enum):
     PUBLIC = "Public"
     REQUEST = "Request"
@@ -140,7 +152,8 @@ class Selfrole(commands.Converter):
                 f" check `{config.BOT_PREFIX}help Political Parties`"
             )
 
-        role_record = await ctx.bot.db.fetchrow("SELECT * FROM selfrole WHERE guild_id = $1 AND role_id = $2", ctx.guild.id, role.id)
+        role_record = await ctx.bot.db.fetchrow("SELECT * FROM selfrole WHERE guild_id = $1 AND role_id = $2",
+                                                ctx.guild.id, role.id)
 
         if not role_record:
             raise exceptions.NotFoundError(
@@ -166,7 +179,7 @@ class BanConverter(commands.Converter):
         if member:
             return member
 
-        raise BadArgument("{config.NO} I couldn't find that person.")
+        raise BadArgument(f"{config.NO} I couldn't find that person.")
 
 
 class UnbanConverter(commands.Converter):
@@ -194,7 +207,7 @@ class UnbanConverter(commands.Converter):
         if user:
             return user
 
-        raise BadArgument("{config.NO} I couldn't find that person.")
+        raise BadArgument(f"{config.NO} I couldn't find that person.")
 
 
 class CaseInsensitiveTextChannel(commands.TextChannelConverter):

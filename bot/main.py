@@ -120,7 +120,6 @@ class DemocracivBot(commands.Bot):
 
         self.loop.create_task(self.check_custom_emoji_availability())
         self.loop.create_task(self.fetch_owner())
-
         self.loop.create_task(self.update_guild_config_cache())
 
         for extension in initial_extensions:
@@ -133,8 +132,10 @@ class DemocracivBot(commands.Bot):
 
     async def api_request(self, method: str, route: str, **kwargs):
         async with self.session.request(method, f"{self.BASE_API}/{route}", **kwargs) as response:
+            js = await response.json()
+            print(js)
             if response.status == 200:
-                return await response.json()
+                return js
 
             raise exceptions.DemocracivBotAPIError(f"{config.NO} Something went wrong.")
 
@@ -300,6 +301,9 @@ class DemocracivBot(commands.Bot):
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.BadArgument):
+            if hasattr(error, "message") and error.message:
+                return await ctx.send(error.message)
+
             await ctx.send(
                 f"{config.NO} There was an error with one of the arguments you provided, take a look at the help page:"
             )

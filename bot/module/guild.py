@@ -33,7 +33,7 @@ class _Guild(context.CustomCog, name="Server"):
 
     @commands.group(
         name="server",
-        aliases=["settings", "guild", "config"],
+        aliases=["settings", "guild", "config", "s"],
         case_insensitive=True,
         invoke_without_command=True,
     )
@@ -492,27 +492,22 @@ class _Guild(context.CustomCog, name="Server"):
         )
         await pages.start(ctx)
 
-    async def _remove_webhook(self, ctx, *, endpoint: str, webhook_name: str, command_name: str,
+    async def _remove_webhook(self, ctx, *, hook_id: int = None, endpoint: str, webhook_name: str, command_name: str,
                               success_fmt: typing.Callable):
-        file = await self.bot.make_file_from_image_link(
-            "https://cdn.discordapp.com/attachments/499669824847478785/778778261450653706/redditds.PNG"
-        )
+        if not hook_id:
+            file = await self.bot.make_file_from_image_link(
+                "https://cdn.discordapp.com/attachments/499669824847478785/778778261450653706/redditds.PNG"
+            )
 
-        await ctx.send(
-            f"{config.USER_INTERACTION_REQUIRED} What's the ID of the {webhook_name} you want to remove? "
-            f"You can get the ID from `{config.BOT_PREFIX}server {command_name}`. "
-            f"In case you want to remove every feed on this server, use `{config.BOT_PREFIX}server {command_name} "
-            f"clear` instead.",
-            file=file,
-        )
+            await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} What's the ID of the {webhook_name} you want to remove? "
+                f"You can get the ID from `{config.BOT_PREFIX}server {command_name}`. "
+                f"In case you want to remove every feed on this server, use `{config.BOT_PREFIX}server {command_name} "
+                f"clear` instead.",
+                file=file,
+            )
 
-        hook_id = await ctx.input()
-
-        if hook_id.startswith("#"):
-            hook_id = hook_id[1:]
-
-        if not hook_id.isdigit():
-            return await ctx.send(f"{config.NO} `{hook_id}` is not a real ID.")
+            hook_id = await ctx.converted_input(converter=converter.InternalAPIWebhookConverter)
 
         try:
             response = await self.bot.api_request(
@@ -551,20 +546,21 @@ class _Guild(context.CustomCog, name="Server"):
         response = await self.bot.api_request("POST", endpoint, json={"guild_id": ctx.guild.id})
 
         for removed_hook in response["removed"]:
-            webhook = discord.Webhook.from_url(
-                removed_hook["webhook_url"],
-                adapter=discord.AsyncWebhookAdapter(self.bot.session),
-            )
-            try:
-                await webhook.delete()
-            except discord.HTTPException:
-                continue
+            if removed_hook['safe_to_delete']:
+                webhook = discord.Webhook.from_url(
+                    removed_hook["webhook_url"],
+                    adapter=discord.AsyncWebhookAdapter(self.bot.session),
+                )
+                try:
+                    await webhook.delete()
+                except discord.HTTPException:
+                    continue
 
         await ctx.send(
             f"{config.YES} All {len(response['removed'])} {webhook_name} on this server were removed."
         )
 
-    @guild.group(name="reddit", case_insensitive=True, invoke_without_command=True)
+    @guild.group(name="reddit", case_insensitive=True, invoke_without_command=True, aliases=['r'])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def reddit(self, ctx: context.CustomContext):
@@ -576,7 +572,7 @@ class _Guild(context.CustomCog, name="Server"):
                                   fmt=fmt,
                                   icon="https://cdn.discordapp.com/attachments/730898526040752291/781547428087201792/Reddit_Mark_OnWhite.png")
 
-    @reddit.command(name="add", aliases=["make", "create"])
+    @reddit.command(name="add", aliases=["make", "create", "a", "m"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def reddit_add(self, ctx: context.CustomContext):
@@ -601,24 +597,25 @@ class _Guild(context.CustomCog, name="Server"):
             return
 
         js = {
-            "subreddit": subreddit,
+            "target": subreddit,
             "webhook_url": webhook.url,
             "webhook_id": webhook.id,
             "guild_id": ctx.guild.id,
-            "channel_id": ctx.channel.id,
+            "channel_id": channel.id,
         }
 
         await self.bot.api_request("POST", f"reddit/add", json=js)
         await ctx.send(f"{config.YES} New posts from `r/{subreddit}` will now be posted to {channel.mention}.")
 
-    @reddit.command(name="remove", aliases=["delete"])
+    @reddit.command(name="remove", aliases=["delete", "r", "d"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
-    async def reddit_remove(self, ctx: context.CustomContext):
+    async def reddit_remove(self, ctx: context.CustomContext, subreddit_feed_id: converter.InternalAPIWebhookConverter = None):
         def fmt(response, channel_fmt):
             return f"{config.YES} New posts from `r/{response['subreddit']}` will no longer be posted to {channel_fmt}."
 
-        await self._remove_webhook(ctx, endpoint="reddit/remove",
+        await self._remove_webhook(ctx, hook_id=subreddit_feed_id,
+                                   endpoint="reddit/remove",
                                    command_name="reddit",
                                    webhook_name="subreddit feed",
                                    success_fmt=fmt)
@@ -629,7 +626,7 @@ class _Guild(context.CustomCog, name="Server"):
     async def reddit_clear(self, ctx: context.CustomContext):
         await self._clear_webhooks(ctx, endpoint="reddit/clear", webhook_name="subreddit feed(s)")
 
-    @guild.group(name="twitch", case_insensitive=True, invoke_without_command=True)
+    @guild.group(name="twitch", case_insensitive=True, invoke_without_command=True, aliases=["t"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch(self, ctx: context.CustomContext):
@@ -642,7 +639,7 @@ class _Guild(context.CustomCog, name="Server"):
                                   fmt=fmt,
                                   icon="https://cdn.discordapp.com/attachments/730898526040752291/781547042471149598/TwitchGlitchPurple.png")
 
-    @twitch.command(name="add", aliases=["make", "create"])
+    @twitch.command(name="add", aliases=["make", "create", "a", "m"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch_add(self, ctx: context.CustomContext):
@@ -663,11 +660,11 @@ class _Guild(context.CustomCog, name="Server"):
                                      f"{channel.mention} when `{streamer}` goes live?")
 
         js = {
-            "streamer": streamer,
+            "target": streamer,
             "webhook_url": webhook.url,
             "webhook_id": webhook.id,
             "guild_id": ctx.guild.id,
-            "channel_id": ctx.channel.id,
+            "channel_id": channel.id,
             "everyone_ping": everyone
         }
 
@@ -679,14 +676,15 @@ class _Guild(context.CustomCog, name="Server"):
         await ctx.send(
             f"{config.YES} Notifications for when `{streamer}` goes live will be posted to {channel.mention}.")
 
-    @twitch.command(name="remove", aliases=["delete"])
+    @twitch.command(name="remove", aliases=["delete", "r", "d"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
-    async def twitch_remove(self, ctx: context.CustomContext):
+    async def twitch_remove(self, ctx: context.CustomContext, notification_id: converter.InternalAPIWebhookConverter = None):
         def fmt(response, channel_fmt):
             return f"{config.YES} Notifications for when `{response['streamer']}` goes live will no longer be posted to {channel_fmt}."
 
-        await self._remove_webhook(ctx, endpoint="twitch/remove",
+        await self._remove_webhook(ctx, hook_id=notification_id,
+                                   endpoint="twitch/remove",
                                    command_name="twitch",
                                    webhook_name="stream notification",
                                    success_fmt=fmt)

@@ -1,6 +1,7 @@
 import copy
 import datetime
 import html
+import json
 import logging
 import typing
 import aiohttp
@@ -8,7 +9,7 @@ import aiohttp
 from discord.ext import tasks
 from discord import Embed
 
-from provider.abc import ProviderManager
+from api.provider.abc import ProviderManager
 
 
 class RedditManager(ProviderManager):
@@ -16,27 +17,45 @@ class RedditManager(ProviderManager):
     target = "subreddit"
     table = "reddit_webhook"
 
-    async def new_webhook_for_target(self, *, target: str, webhook_url: str):
-        pass
-
-    async def no_more_webhooks_for_target(self, *, target: str, webhook_url: str):
-        pass
+    REDDIT_CLIENT_ID: str
+    REDDIT_CLIENT_SECRET: str
+    REDDIT_REFRESH_TOKEN: str
+    REDDIT_BEARER_TOKEN: str
 
     def __init__(self, *, db):
         super().__init__(db=db)
-        self._scrapers: typing.Dict[str, SubredditScraper] = dict()
-        self.bearer_token = ""
+        self._webhooks: typing.Dict[str, SubredditScraper] = {}
+        self._get_token()
+
+    def _get_token(self):
+        with open("api/token.json", "r") as token_file:
+            token_json = json.load(token_file)
+            self.REDDIT_CLIENT_ID = token_json['reddit']['client_id']
+            self.REDDIT_CLIENT_SECRET = token_json['reddit']['client_secret']
+            self.REDDIT_REFRESH_TOKEN = token_json['reddit']['refresh_token']
+            self.REDDIT_BEARER_TOKEN = token_json['reddit']['bearer_token']
+
+    def _save_token(self):
+        with open("api/token.json", "r") as token_file:
+            js = json.load(token_file)
+
+        js['reddit']['bearer_token'] = self.REDDIT_BEARER_TOKEN
+
+        with open("api/token.json", "w") as token_file:
+            json.dump(js, token_file)
 
     async def refresh_reddit_bearer_token(self):
         """Gets a new access_token for the Reddit API with a refresh token that was previously acquired by following
         this guide: https://github.com/reddit-archive/reddit/wiki/OAuth2"""
 
-        auth = aiohttp.BasicAuth(login=token.REDDIT_CLIENT_ID, password=token.REDDIT_CLIENT_SECRET)
+        auth = aiohttp.BasicAuth(login=self.REDDIT_CLIENT_ID, password=self.REDDIT_CLIENT_SECRET)
+
         post_data = {
             "grant_type": "refresh_token",
-            "refresh_token": token.REDDIT_REFRESH_TOKEN,
+            "refresh_token": self.REDDIT_REFRESH_TOKEN,
         }
-        headers = {"User-Agent": f"democraciv-discord-bot by DerJonas - u/Jovanos"}
+
+        headers = {"User-Agent": "democraciv-discord-bot by DerJonas - u/Jovanos"}
 
         async with self._session.post(
                 "https://www.reddit.com/api/v1/access_token",
@@ -46,41 +65,61 @@ class RedditManager(ProviderManager):
         ) as response:
             if response.status == 200:
                 r = await response.json()
-                self.bearer_token = r["access_token"]
+                self.REDDIT_BEARER_TOKEN = r["access_token"]
+                self._save_token()
 
-    async def post_to_reddit(self, data: dict) -> bool:
+    async def post_to_reddit(self, *, subreddit: str, title: str, content: str, retry=False):
         """Submit post to specified subreddit"""
 
-        await self.refresh_reddit_bearer_token()
-
         headers = {
-            "Authorization": f"bearer {self.bearer_token}",
-            "User-Agent": f"democraciv-discord-bot by DerJonas - u/Jovanos",
+            "Authorization": f"bearer {self.REDDIT_BEARER_TOKEN}",
+            "User-Agent": "democraciv-discord-bot by DerJonas - u/Jovanos",
         }
 
-        try:
-            async with self._session.post(
-                    "https://oauth.reddit.com/api/submit", data=data, headers=headers
-            ) as response:
-                if response.status != 200:
-                    logging.error(f"Error while posting to Reddit, got status {response.status}.")
-                    return False
-                return True
-        except Exception as e:
-            logging.error(f"Error while posting to Reddit: {e}")
-            return False
+        data = {
+            "kind": "self",
+            "nsfw": False,
+            "sr": subreddit,
+            "title": title,
+            "text": content,
+            "spoiler": False,
+            "ad": False,
+        }
 
-    async def start_scraper(self, *, subreddit: str, webhook_url: str):
+        async with self._session.post("https://oauth.reddit.com/api/submit", data=data, headers=headers) as response:
+            if response.status == 403:
+
+                if not retry:
+                    await self.refresh_reddit_bearer_token()
+                    return await self.post_to_reddit(subreddit=subreddit, title=title, content=content, retry=True)
+
+                logging.warning("got 403 while posting to reddit")
+
+            return await response.json()
+
+    async def _start_webhook(self, *, target: str, webhook_url: str):
         async with self._lock:
-            if subreddit in self._scrapers:
-                self._scrapers[subreddit].add_webhook(webhook_url)
+            if target in self._webhooks:
+                self._webhooks[target].webhook_urls.add(webhook_url)
             else:
-                scraper = SubredditScraper(db=self.db, session=self._session, subreddit=subreddit)
-                scraper.add_webhook(webhook_url)
-                self._scrapers[subreddit] = scraper
+                scraper = SubredditScraper(db=self.db, session=self._session, subreddit=target)
+                scraper.webhook_urls.add(webhook_url)
+                self._webhooks[target] = scraper
                 scraper.start()
 
-            logging.info(f"Added subreddit scraper for r/{subreddit} to {webhook_url}")
+            logging.info(f"Added subreddit scraper for r/{target} to {webhook_url}")
+
+    async def _remove_webhook(self, *, target: str, webhook_url: str):
+        if target not in self._webhooks:
+            return
+
+        async with self._lock:
+            if len(self._webhooks[target].webhook_urls) == 1 and webhook_url in self._webhooks[target].webhook_urls:
+                self._webhooks[target].stop()
+                print(f"stopping {self._webhooks[target]} ({self._webhooks[target].subreddit})")
+                del self._webhooks[target]
+            else:
+                self._webhooks[target].webhook_urls.remove(webhook_url)
 
 
 class RedditPost:
@@ -89,7 +128,7 @@ class RedditPost:
         self.title: str = kwargs.get("title")
         self.author: str = kwargs.get("author")
         self._link: str = kwargs.get("permalink")
-        self.link: str = f"https://reddit.com/{self._link}"
+        self.link: str = f"https://reddit.com{self._link}"
         self.short_link: str = f"https://redd.it/{self.id}"
         self.subreddit: str = kwargs.get("subreddit")
         self._thumbnail: typing.Optional[str]
@@ -127,9 +166,6 @@ class SubredditScraper:
 
     def __del__(self):
         self.stop()
-
-    def add_webhook(self, webhook_url: str):
-        self.webhook_urls.add(webhook_url)
 
     def start(self):
         self._task = copy.copy(self.reddit_task)

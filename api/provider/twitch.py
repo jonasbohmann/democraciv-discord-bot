@@ -1,11 +1,12 @@
-import asyncio
 import logging
 import json
-import aiohttp
 import typing
-from discord import Embed
 
-from provider.abc import ProviderManager
+from collections import namedtuple
+from discord import Embed
+from api.provider.abc import ProviderManager
+
+StreamContext = namedtuple("StreamContext", "webhook_url everyone_ping")
 
 
 class TwitchStream:
@@ -28,7 +29,7 @@ class TwitchManager(ProviderManager):
     table = "twitch_webhook"
 
     API_BASE = "https://api.twitch.tv/helix/"
-    API_USER_ENDPOINT = API_BASE + "users?login="
+    API_USER_ENDPOINT = API_BASE + "users"
     API_STREAM_ENDPOINT = API_BASE + "streams?user_id="
     API_EVENTSUB_ENDPOINT = API_BASE + "eventsub/subscriptions"
     API_TOKEN_ENDPOINT = "https://id.twitch.tv/oauth2/token"
@@ -39,6 +40,7 @@ class TwitchManager(ProviderManager):
 
     def __init__(self, db):
         super().__init__(db=db)
+        self._webhooks: typing.Dict[str, set] = {}
         self._get_token()
 
     def _get_token(self):
@@ -78,7 +80,7 @@ class TwitchManager(ProviderManager):
                 self._save_token()
 
     async def _get_user_id_from_username(self, username: str):
-        async with self._session.get(f"{self.API_USER_ENDPOINT}{username}", headers=self._headers) as response:
+        async with self._session.get(f"{self.API_USER_ENDPOINT}?login={username}", headers=self._headers) as response:
             if response.status == 200:
                 js = await response.json()
                 try:
@@ -86,7 +88,7 @@ class TwitchManager(ProviderManager):
                 except (KeyError, IndexError):
                     return None
 
-    async def add_stream(self, config):
+    async def add_webhook(self, config):
         await self.db.pool.execute("INSERT INTO twitch_webhook (streamer, webhook_id, webhook_url, "
                                    "guild_id, channel_id, everyone_ping)"
                                    "VALUES ($1, $2, $3, $4, $5, $6)",
@@ -107,25 +109,26 @@ class TwitchManager(ProviderManager):
             else:
                 return {}
 
-    async def new_webhook_for_target(self, *, target: str, webhook_url: str):
-        return await self.subscribe(target)
+    async def _start_webhook(self, *, target: str, webhook_url: str):
+        async with self._lock:
+            if target in self._webhooks:
+                self._webhooks[target].add(webhook_url)
+                return self._webhooks[target]
+            else:
+                result = await self.subscribe(target)
+                self._webhooks[target] = {webhook_url}
+                return result
 
     async def no_more_webhooks_for_target(self, *, target: str, webhook_url: str):
         return await self.unsubscribe(target)
 
     async def subscribe(self, stream: str):
-        return await self._manage_subscription(stream=stream, mode="subscribe")
-
-    async def unsubscribe(self, stream: str):
-        return await self._manage_subscription(stream=stream, mode="unsubscribe")
-
-    async def _manage_subscription(self, *, stream: str, mode: str):
         user_id = await self._get_user_id_from_username(stream)
 
         if not user_id:
             return {"error": "invalid streamer name"}
 
-        logging.info(f"[Twitch] {mode} to {stream}")
+        logging.info(f"[Twitch] subscribing to {stream}")
 
         js = {
             "type": "stream.online",
@@ -144,6 +147,23 @@ class TwitchManager(ProviderManager):
         j['ok'] = "ok"
         return j
 
+    async def unsubscribe(self, streamer: str):
+        subscription_id = await self.db.pool.fetchval("SELECT twitch_subscription_id FROM "
+                                                      "twitch_eventsub_subscription WHERE streamer = $1", streamer)
+
+        if not subscription_id:
+            return
+
+        await self.twitch_request("DELETE", f"{self.API_EVENTSUB_ENDPOINT}?id={subscription_id}")
+
+    async def add_twitch_subscription_id(self, streamer_id: str, subscription_id: str):
+        response = await self.twitch_request("GET", f"{self.API_USER_ENDPOINT}?id={streamer_id}")
+        streamer = response['data'][0]['login']
+
+        await self.db.pool.execute("INSERT INTO twitch_eventsub_subscription "
+                                   "(twitch_subscription_id, streamer, streamer_id) "
+                                   "VALUES ($1, $2, $3) ON CONFLICT DO NOTHING ", subscription_id, streamer, streamer_id)
+
     async def process_incoming_notification(self, event: typing.Dict):
         js = await self.twitch_request("GET", f"{self.API_STREAM_ENDPOINT}{event['broadcaster_user_id']}")
 
@@ -152,9 +172,25 @@ class TwitchManager(ProviderManager):
             event['thumbnail_url'] = js['data'][0]['thumbnail_url']
             event['game_name'] = js['data'][0]['game_name']
 
-        await self.send_webhook(TwitchStream(**event))
+            """CREATE TABLE IF NOT EXISTS twitch_webhook(
+                    id serial PRIMARY KEY,
+                    streamer text NOT NULL,
+                    webhook_id bigint NOT NULL,
+                    webhook_url text NOT NULL,
+                    guild_id bigint NOT NULL,
+                    channel_id bigint NOT NULL,
+                    everyone_ping bool DEFAULT FALSE NOT NULL
+                    );"""
 
-    async def send_webhook(self, stream: TwitchStream):
+        streamer = event['broadcaster_user_name'].lower()
+        record = await self.db.pool.fetch("SELECT webhook_url, everyone_ping FROM "
+                                          "twitch_webhook WHERE streamer = $1", streamer)
+
+        for row in record:
+            context = StreamContext(webhook_url=row['webhook_url'], everyone_ping=row['everyone_ping'])
+            await self.send_webhook(context, TwitchStream(**event))
+
+    async def send_webhook(self, context: StreamContext, stream: TwitchStream):
         embed = Embed(title=f"<:twitch:660116652012077080> {stream.streamer} - Live on Twitch", colour=0x984EFC)
         embed.add_field(name="Title", value=stream.title, inline=False)
         embed.add_field(name="Link", value=stream.link, inline=False)
@@ -162,12 +198,9 @@ class TwitchManager(ProviderManager):
 
         js = {"embeds": [embed.to_dict()]}
 
-        streamer = stream.streamer.lower()
+        if context.everyone_ping:
+            js['content'] = f"@everyone **{stream.streamer}** just went live on Twitch!"
 
-        if streamer not in self._webhooks:
-            return  # ? how
-
-        for discord_webhook in self._webhooks[streamer]:
-            async with self._session.post(discord_webhook, json=js) as response:
-                if response.status not in (200, 204):
-                    logging.error(f"Error while sending reddit webhook: {response.status} {await response.text()}")
+        async with self._session.post(context.webhook_url, json=js) as response:
+            if response.status not in (200, 204):
+                logging.error(f"Error while sending reddit webhook: {response.status} {await response.text()}")

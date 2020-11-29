@@ -1,11 +1,11 @@
+import abc
 import asyncio
 import logging
 import typing
-
 import aiohttp
 
 
-class ProviderManager:
+class ProviderManager(abc.ABC):
     provider: str
     target: str
     table: str
@@ -37,15 +37,15 @@ class ProviderManager:
         await self.db.pool.execute(f"INSERT INTO {self.table} ({self.target}, webhook_id, webhook_url, "
                                    "guild_id, channel_id)"
                                    "VALUES ($1, $2, $3, $4, $5)",
-                                   config.streamer, config.webhook_id, config.webhook_url,
+                                   config.target, config.webhook_id, config.webhook_url,
                                    config.guild_id, config.channel_id)
-        return await self._start_webhook(target=config.streamer, webhook_url=config.webhook_url)
+        return await self._start_webhook(target=config.target, webhook_url=config.webhook_url)
 
     async def new_webhook_for_target(self, *, target: str, webhook_url: str):
-        raise NotImplementedError()
+        pass
 
     async def no_more_webhooks_for_target(self, *, target: str, webhook_url: str):
-        raise NotImplementedError()
+        pass
 
     async def _start_webhook(self, *, target: str, webhook_url: str):
         async with self._lock:
@@ -83,7 +83,8 @@ class ProviderManager:
         return js
 
     async def _can_discord_webhook_be_deleted(self, channel_id: int):
-        others_exist = await self.db.pool.fetch("SELECT 1 FROM reddit_webhook FULL OUTER JOIN twitch_webhook ON "
+        others_exist = await self.db.pool.fetch("SELECT true AS other_exists FROM reddit_webhook FULL "
+                                                "OUTER JOIN twitch_webhook ON "
                                                 "reddit_webhook.channel_id = twitch_webhook.channel_id "
                                                 "WHERE reddit_webhook.channel_id = $1 OR "
                                                 "twitch_webhook.channel_id = $1", channel_id)
@@ -98,8 +99,10 @@ class ProviderManager:
 
     async def clear_per_guild(self, guild_id: int):
         hooks = await self.get_webhooks_per_guild(guild_id=guild_id)
+        result = []
 
         for hook in hooks:
-            self._loop.create_task(self.remove_webhook(hook_id=hook['id'], guild_id=guild_id))
+            js = await self.remove_webhook(hook_id=hook['id'], guild_id=guild_id)
+            result.append(js)
 
-        return hooks
+        return result

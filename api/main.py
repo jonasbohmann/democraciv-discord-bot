@@ -2,6 +2,7 @@ import asyncio
 import logging
 import asyncpg
 import pydantic
+import typing
 import xdice
 
 from api.provider import RedditManager, TwitchManager
@@ -38,6 +39,13 @@ class Database:
                     everyone_ping bool DEFAULT FALSE NOT NULL
                     );
                     
+                    CREATE TABLE IF NOT EXISTS twitch_eventsub_subscription(
+                    id serial PRIMARY KEY,
+                    twitch_subscription_id text UNIQUE NOT NULL,
+                    streamer text NOT NULL,
+                    streamer_id text NOT NULL
+                    );
+                    
                     CREATE TABLE IF NOT EXISTS reddit_post(
                     id text UNIQUE NOT NULL
                     );
@@ -60,7 +68,7 @@ class Database:
 
 
 app = FastAPI()
-db = Database(dsn="postgres://postgres:ehre@localhost/api_test")
+db = Database(dsn="postgres://postgres:pw@localhost/api_test")
 reddit_manager = RedditManager(db=db)
 twitch_manager = TwitchManager(db=db)
 
@@ -90,6 +98,12 @@ class Dice(pydantic.BaseModel):
     dices: str
 
 
+class SubmitRedditPost(pydantic.BaseModel):
+    subreddit: str
+    title: str
+    content: str
+
+
 @app.on_event("startup")
 async def startup_event():
     await db.make_pool()
@@ -98,7 +112,8 @@ async def startup_event():
 
 @app.get("/")
 async def ok():
-    return {"ok": "ok"}
+    y = [r.subreddit for k, r in reddit_manager._webhooks.items()]
+    return {"ok": y}
 
 
 @app.get("/reddit/list/{guild_id}")
@@ -108,15 +123,15 @@ async def reddit_list(guild_id: int):
 
 
 @app.post("/reddit/add")
-def reddit_add(reddit_config: AddWebhook, background_tasks: BackgroundTasks):
-    reddit_config.subreddit = reddit_config.target.lower()  # subreddit names are case-insensitive right?
-    background_tasks.add_task(reddit_manager.add_scraper, config=reddit_config)
+async def reddit_add(reddit_config: AddWebhook):
+    reddit_config.target = reddit_config.target.lower()  # subreddit names are case-insensitive right?
+    await reddit_manager.add_webhook(config=reddit_config)
     return reddit_config
 
 
 @app.post("/reddit/remove")
 async def reddit_remove(reddit_config: RemoveWebhook):
-    response = await reddit_manager.remove_scraper(scraper_id=reddit_config.id, guild_id=reddit_config.guild_id)
+    response = await reddit_manager.remove_webhook(hook_id=reddit_config.id, guild_id=reddit_config.guild_id)
 
     if "error" not in response:
         response["ok"] = "ok"
@@ -124,9 +139,16 @@ async def reddit_remove(reddit_config: RemoveWebhook):
     return response
 
 
+@app.post("/reddit/post")
+async def reddit_post(submission: SubmitRedditPost):
+    return await reddit_manager.post_to_reddit(subreddit=submission.subreddit,
+                                               title=submission.title,
+                                               content=submission.content)
+
+
 @app.post("/reddit/clear")
 async def reddit_clear(reddit_config: ClearPerGuild):
-    removed = await reddit_manager.clear_scraper_per_guild(guild_id=reddit_config.guild_id)
+    removed = await reddit_manager.clear_per_guild(guild_id=reddit_config.guild_id)
     return {"ok": "ok", "removed": removed}
 
 
@@ -138,14 +160,14 @@ async def twitch_list(guild_id: int):
 
 @app.post("/twitch/add")
 async def twitch_add(twitch_config: AddTwitchHook):
-    twitch_config.streamer = twitch_config.target.lower()
-    result = await twitch_manager.add_stream(config=twitch_config)
+    twitch_config.target = twitch_config.target.lower()
+    result = await twitch_manager.add_webhook(config=twitch_config)
     return result
 
 
 @app.post("/twitch/remove")
 async def twitch_remove(twitch_config: RemoveWebhook):
-    response = await twitch_manager.remove_stream(hook_id=twitch_config.id, guild_id=twitch_config.guild_id)
+    response = await twitch_manager.remove_webhook(hook_id=twitch_config.id, guild_id=twitch_config.guild_id)
 
     if "error" not in response:
         response["ok"] = "ok"
@@ -165,6 +187,9 @@ async def twitch_subscription_verify(request: Request, background_tasks: Backgro
     print(js)
 
     if "challenge" in js:
+        background_tasks.add_task(twitch_manager.add_twitch_subscription_id,
+                                  js['subscription']['condition']['broadcaster_user_id'],
+                                  js['subscription']['id'])
         return js['challenge']
 
     elif "event" in js:
