@@ -1,6 +1,7 @@
 import io
 import os
 import re
+import sys
 import time
 import math
 import asyncio
@@ -301,15 +302,20 @@ class DemocracivBot(commands.Bot):
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.BadArgument):
-            if hasattr(error, "message") and error.message:
-                return await ctx.send(error.message)
+            if error.args and not str(error).startswith("Convert"):  # catching default BadArgument message
+                return await ctx.send(error)
 
             await ctx.send(
-                f"{config.NO} There was an error with one of the arguments you provided, take a look at the help page:"
+                f"{config.NO} There was an error with the argument you provided, take a look at the help page:"
             )
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.BadUnionArgument):
+            first_error = error.errors[0]
+
+            if first_error.args and not str(first_error).startswith("Convert"):  # catching default BadArgument message
+                return await ctx.send(first_error)
+
             await ctx.send(
                 f"{config.NO} There was an error with the `{error.param.name}` argument you provided,"
                 f" take a look at the help page:"
@@ -320,7 +326,8 @@ class DemocracivBot(commands.Bot):
             return await ctx.send(f"{config.NO} You are on cooldown! Try again in {error.retry_after:.2f} seconds.")
 
         elif isinstance(error, commands.MaxConcurrencyReached):
-            return await ctx.send(f"{config.NO} This command is already being used right now, try again later.")
+            return await ctx.send(f"{config.NO} This command can only be used by one person at the same time, and it "
+                                  f"is already being used right now. Try again later.")
 
         elif isinstance(error, commands.MissingPermissions):
             return await ctx.send(
@@ -390,7 +397,8 @@ class DemocracivBot(commands.Bot):
 
         else:
             await self.log_error(ctx, error, to_log_channel=False, to_owner=True, to_context=True)
-            raise error
+            logging.error(f'Ignoring exception in command {ctx.command}:', file=sys.stderr)
+            traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 
     def get_democraciv_channel(self, channel: mk.DemocracivChannel) -> typing.Optional[discord.TextChannel]:
         to_return = self.dciv.get_channel(channel.value)
@@ -466,51 +474,39 @@ class DemocracivBot(commands.Bot):
 
         await self.wait_until_ready()
 
-        def check_custom_emoji(emoji):
-
-            emoji_id = [int(s) for s in re.findall(r"\b\d+\b", emoji)]
+        def check_custom_emoji(em):
+            emoji_id = [int(s) for s in re.findall(r"\b\d+\b", em)]
 
             if emoji_id:
                 emoji_id = emoji_id.pop()
-                emoji = self.get_emoji(emoji_id)
+                emoj = self.get_emoji(emoji_id)
 
-                if emoji is not None:
+                if emoj is not None:
                     return True
 
             return False
 
-        emojis = [
-            config.HELP_FIRST,
-            config.HELP_PREVIOUS,
-            config.HELP_NEXT,
-            config.HELP_LAST,
-            config.HELP_BOT_HELP,
-            config.LEG_SUBMIT_BILL,
-            config.LEG_SUBMIT_MOTION,
-            config.GUILD_SETTINGS_GEAR,
-            config.NO,
-            config.YES,
-            config.USER_INTERACTION_REQUIRED
-        ]
+        emojis = {
+            "HELP_FIRST": "\N{BLACK LEFT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}",
+            "HELP_PREVIOUS": "\N{BLACK LEFT-POINTING TRIANGLE}",
+            "HELP_NEXT": "\N{BLACK RIGHT-POINTING TRIANGLE}",
+            "HELP_LAST": "\N{BLACK RIGHT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}",
+            "HELP_BOT_HELP": "\N{WHITE QUESTION MARK ORNAMENT}",
+            "LEG_SUBMIT_BILL": "\U0001f1e7",
+            "LEG_SUBMIT_MOTION": "\U0001f1f2",
+            "GUILD_SETTINGS_GEAR": "\U00002699",
+            "NO": ":x:",
+            "YES": ":white_check_mark:",
+            "USER_INTERACTION_REQUIRED": ":information_source:"
+        }
 
-        emoji_availability = [check_custom_emoji(emoji) for emoji in emojis]
+        for attr, default in emojis.items():
+            emoji = getattr(config, attr)
+            emoji_availability = check_custom_emoji(emoji)
+            if not emoji_availability:
+                setattr(config, attr, default)
 
-        if False in emoji_availability:
-            logging.warning(
-                "Reverting to standard Unicode emojis for Paginator and -leg submit"
-                " as at leaost one emoji from config.py cannot be seen/used by me or does not exist."
-            )
-            config.HELP_FIRST = "\N{BLACK LEFT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}"
-            config.HELP_PREVIOUS = "\N{BLACK LEFT-POINTING TRIANGLE}"
-            config.HELP_NEXT = "\N{BLACK RIGHT-POINTING TRIANGLE}"
-            config.HELP_LAST = "\N{BLACK RIGHT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}"
-            config.HELP_BOT_HELP = "\N{WHITE QUESTION MARK ORNAMENT}"
-            config.LEG_SUBMIT_BILL = "\U0001f1e7"
-            config.LEG_SUBMIT_MOTION = "\U0001f1f2"
-            config.GUILD_SETTINGS_GEAR = "\U00002699"
-            config.NO = ":x:"
-            config.YES = ":white_check_mark:"
-            config.USER_INTERACTION_REQUIRED = ":information_source:"
+            logging.warning(f"Reverting to standard Unicode emoji for {emoji}")
 
     async def connect_to_db(self):
         """Attempt to connect to PostgreSQL database with specified credentials from token.py.
@@ -569,7 +565,6 @@ class DemocracivBot(commands.Bot):
 
         config.DEMOCRACIV_GUILD_ID = dciv_guild.id
         self.democraciv_guild_id = dciv_guild.id
-
         logging.info(f"Using '{dciv_guild.name}' as Democraciv guild.")
 
     @property
@@ -703,6 +698,9 @@ class DemocracivBot(commands.Bot):
             )
 
         await self.process_commands(message)
+
+    async def on_message_edit(self, before, after):
+        await self.process_commands(after)
 
     async def on_guild_join(self, guild: discord.Guild):
         if len(self.guilds) >= 70:

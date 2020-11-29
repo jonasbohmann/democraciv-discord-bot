@@ -18,7 +18,7 @@ from bot.utils.converter import (
 )
 
 
-class Utility(context.CustomCog, name="Utility"):
+class Utility(context.CustomCog):
     """Utility commands. Some more useful than others."""
 
     def __init__(self, bot):
@@ -182,7 +182,9 @@ class Utility(context.CustomCog, name="Utility"):
 
     async def get_member_join_position(self, user, members: list):
         if user.guild.id == self.bot.dciv.id:
-            row = await self.bot.db.fetchrow("SELECT join_position, max(join_position) AS all_members FROM original_join_date WHERE member = $1", user.id)
+            row = await self.bot.db.fetchrow(
+                "SELECT join_position, max(join_position) AS all_members FROM original_join_date WHERE member = $1",
+                user.id)
 
             if row:
                 return row['join_position'], row['all_members']
@@ -262,12 +264,12 @@ class Utility(context.CustomCog, name="Utility"):
         embed.set_thumbnail(url=member.avatar_url_as(static_format="png"))
         await ctx.send(embed=embed)
 
-    @commands.command(name="avatar")
+    @commands.command(name="avatar", aliases=['pfp'])
     @commands.guild_only()
     async def avatar(self, ctx, *, member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser] = None):
-        """Get someone's avatar in detail
+        """View someone's avatar in detail
 
-        **Example:**
+        **Example**
              `-avatar`
              `-avatar @DerJonas`
              `-avatar DerJonas`
@@ -275,7 +277,7 @@ class Utility(context.CustomCog, name="Utility"):
         """
 
         member = member or ctx.author
-        avatar_png: discord.Asset = member.avatar_url_as(static_format="png", size=4096)
+        avatar_png = member.avatar_url_as(static_format="png", size=4096)
         embed = text.SafeEmbed(title=f"{member.display_name}'s Avatar", url=avatar_png)
         embed.set_image(url=avatar_png)
         await ctx.send(embed=embed)
@@ -324,22 +326,22 @@ class Utility(context.CustomCog, name="Utility"):
                     self.cached_sorted_veterans_on_democraciv = sorted_first_15_members
 
         # Send veterans
-        message = "These are the first 15 people who joined this server.\nBot accounts are not counted.\n\n"
+        message = ["These are the first 15 people who joined this server.\nBot accounts are not counted.\n"]
 
         for veteran in sorted_first_15_members:
             person = str(veteran[0]) if veteran[0] else f"*Person left {self.bot.dciv.name}*"
-            message += f"{veteran[1]}. {person}\n"
+            message.append(f"{veteran[1]}. {person}")
 
-        embed = text.SafeEmbed(description=message)
-        embed.set_footer(text=f"Veterans of {ctx.guild.name}", icon_url=ctx.guild_icon)
+        embed = text.SafeEmbed(description='\n'.join(message))
+        embed.set_author(name=f"Veterans of {ctx.guild.name}", icon_url=ctx.guild_icon)
         await ctx.send(embed=embed)
 
     @commands.command()
     async def lyrics(self, ctx, *, query: str):
         """Find lyrics for a song
 
-        **Usage:**
-            `-lyrics <query>` to search for lyrics that match your query
+        **Usage**
+            `{PREFIX}{COMMAND} <query>` to search for lyrics that match your query
         """
 
         if len(query) < 3:
@@ -439,11 +441,9 @@ class Utility(context.CustomCog, name="Utility"):
     async def random(self, ctx, start: int = 1, end: int = 100):
         """Generate a random number
 
-        **Example:**
+        **Example**
           `{PREFIX}{COMMAND}` will choose a random number between 1 and 100
           `{PREFIX}{COMMAND} 50 200` will choose a random number between 50 and 200
-          `{PREFIX}{COMMAND} coin` will choose Heads or Tails
-          `{PREFIX}{COMMAND} choose "England" "Rome"` will choose between England and Rome
         """
 
         try:
@@ -457,7 +457,7 @@ class Utility(context.CustomCog, name="Utility"):
     async def random_choice(self, ctx, *choices):
         """Make me choose between things
 
-        **Example:**
+        **Example**
           `{PREFIX}{COMMAND} "Civ 4" "Civ 5" "Civ 6" "Civ BE"`"""
 
         await ctx.send(f":tada: The winner is: **{random.choice(choices)}**")
@@ -556,7 +556,8 @@ class Utility(context.CustomCog, name="Utility"):
                             return await ctx.send("{config.NO} Could not download dog video :(")
 
                         if int(other.headers["Content-Length"]) >= filesize:
-                            return await ctx.send(f"{config.NO} Video was too big to upload, watch it here instead: {url}")
+                            return await ctx.send(
+                                f"{config.NO} Video was too big to upload, watch it here instead: {url}")
 
                         fp = io.BytesIO(await other.read())
                         await ctx.send(file=discord.File(fp, filename=filename))

@@ -133,14 +133,16 @@ class GroupHelpPageSource(menus.ListPageSource):
 
     async def format_page(self, menu, commands):
         embed = text.SafeEmbed(title=self.title, description=self.description)
+        fmt_commands = []
 
         for command in commands:
-            signature = f"__{config.BOT_PREFIX}{command.qualified_name} {command.signature}__"
-            embed.add_field(
-                name=signature,
-                value=command.short_doc or "No help given...",
-                inline=False,
-            )
+            hlp = command.short_doc or "No help given."
+            fmt_commands.append(f"__**{config.BOT_PREFIX}{command.qualified_name} {command.signature}**__\n{hlp}\n")
+
+        if fmt_commands:
+            embed.add_field(name="Subcommands",
+                            value='\n'.join(fmt_commands),
+                            inline=False)
 
         maximum = self.get_max_pages()
         if maximum > 1:
@@ -268,15 +270,19 @@ class PaginatedHelpCommand(commands.HelpCommand):
     async def send_command_help(self, command):
         embed = text.SafeEmbed()
         self.common_command_formatting(embed, command)
-        embed.add_field(name="Aliases", value=', '.join(
-            [f"`{config.BOT_PREFIX}{command.full_parent_name} {a}`" for a in command.aliases]) or '-')
+        aliases = [f"`{config.BOT_PREFIX}{command.full_parent_name} {a}`" for a in command.aliases]
+
+        if aliases:
+            embed.add_field(name="Aliases", value=', '.join(aliases))
+
         await self.context.send(embed=embed)
 
     async def send_group_help(self, group):
         # The end user doesn't know the difference between a Group and a Command. To avoid confusion, just show them
         # the whole cog
         if group in (self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} withdraw"),
-                     self.context.bot.get_command("dms")):
+                     self.context.bot.get_command("dms"),
+                     self.context.bot.get_command("random")):
             return await self._send_group_help(group)
 
         await self.send_cog_help(group.cog)

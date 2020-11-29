@@ -543,14 +543,14 @@ class Moderation(context.CustomCog):
         if member_id is None:
             return await ctx.send(f"{config.NO} I couldn't find that person.")
 
-        if member_object == ctx.author:
+        if member_id == ctx.author.id:
             return await ctx.send(f"{config.NO} You can't ban yourself.")
 
-        if member_object == self.bot.owner:
+        if member_id == self.bot.owner.id:
             #  :)
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_BAN)
 
-        if member_object == ctx.guild.me:
+        if member_id == ctx.guild.me.id:
             return await ctx.send(f"{config.NO} I can't ban myself.")
 
         if member_object is not None and member_object.top_role >= ctx.author.top_role:
@@ -585,7 +585,6 @@ class Moderation(context.CustomCog):
 
     @commands.command(name="unban")
     @commands.guild_only()
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     async def unban(self, ctx, *, user: UnbanConverter):
@@ -616,15 +615,6 @@ class Moderation(context.CustomCog):
             name = f"The Discord user with ID `{user_id}`"
 
         await ctx.send(f"{config.YES} {name} was unbanned.")
-
-    @unmute.error
-    @mute.error
-    @unban.error
-    @ban.error
-    @kick.error
-    async def not_found(self, ctx, error):
-        if isinstance(error, (commands.BadUnionArgument, commands.BadArgument)):
-            await ctx.send(f"{config.NO} I couldn't find that person.")
 
     @commands.command(name="archivechannel")
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)

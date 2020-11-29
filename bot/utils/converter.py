@@ -179,7 +179,7 @@ class BanConverter(commands.Converter):
         if member:
             return member
 
-        raise BadArgument(f"{config.NO} I couldn't find that person.")
+        raise BadArgument(message=f"{config.NO} I couldn't find that person.")
 
 
 class UnbanConverter(commands.Converter):
@@ -311,7 +311,7 @@ class CaseInsensitiveMember(commands.MemberConverter):
             if member:
                 return member
 
-            raise BadArgument()
+            raise BadArgument(f"{config.NO} I couldn't find that person.")
 
 
 class CaseInsensitiveUser(commands.UserConverter):
@@ -329,7 +329,7 @@ class CaseInsensitiveUser(commands.UserConverter):
             if user:
                 return user
 
-            raise BadArgument()
+            raise BadArgument(f"{config.NO} I couldn't find that person.")
 
 
 class Tag(commands.Converter):
