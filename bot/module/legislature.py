@@ -181,7 +181,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
     async def leg_session(self, ctx: context.CustomContext, session: Session = None):
         """Get details about a session from the Legislature
 
-        **Usage:**
+        **Usage**
         `{PREFIX}{COMMAND}` to see details about the last session
         `{PREFIX}{COMMAND} <number>` to see details about a specific session"""
 
@@ -345,7 +345,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
         await ctx.send(
             f"{config.YES} Session #{active_leg_session.id} was closed. "
-            f"Check `-help {self.bot.mk.LEGISLATURE_COMMAND} pass` on what to do next."
+            f"Check `{config.BOT_PREFIX}help {self.bot.mk.LEGISLATURE_COMMAND} pass` on what to do next."
         )
 
         await self.gov_announcements_channel.send(
@@ -625,7 +625,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
             if not haste_bin_url:
                 await ctx.send(
-                    "{config.NO} Your motion was not submitted, there was a problem with mystb.in. "
+                    f"{config.NO} Your motion was not submitted, there was a problem with mystb.in. "
                     "Try again in a few minutes."
                 )
                 return
@@ -674,7 +674,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         current_leg_session = await self.get_active_leg_session()
 
         if current_leg_session is None:
-            return await ctx.send("{config.NO} There is no active session.")
+            return await ctx.send(f"{config.NO} There is no active session.")
 
         if current_leg_session.status is not SessionStatus.SUBMISSION_PERIOD:
             return await ctx.send(
@@ -737,7 +737,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
         If the bill is veto-able, it sends the bill to the {MINISTRY_NAME}. If not, the bill automatically becomes law.
 
-        **Example:**
+        **Example**
             `{PREFIX}{COMMAND} 12` will mark Bill #12 as passed from the {LEGISLATURE_NAME}
             `{PREFIX}{COMMAND} 45 46 49 51 52` will mark all those bills as passed"""
 
@@ -775,7 +775,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         """Withdraw one or multiple bills or motions from the current session"""
         if ctx.invoked_subcommand is None:
             await ctx.send(
-                "{config.NO} You have to tell me whether you want to withdraw motions or bills!"
+                f"{config.NO} You have to tell me whether you want to withdraw motions or bills!"
                 " Take a look at the help page:"
             )
             await ctx.send_help(ctx.command)
@@ -852,7 +852,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         The {speaker_term} and {vice_speaker_term} can withdraw every submitted bill during both the Submission Period and the Voting Period.
            The original submitter of the bill can only withdraw their own bill during the Submission Period.
 
-        **Example:**
+        **Example**
             `{PREFIX}{COMMAND} 56` will withdraw bill #56
             `{PREFIX}{COMMAND} 12 13 14 15 16` will withdraw all those bills"""
 
@@ -869,7 +869,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         The {speaker_term} and {vice_speaker_term} can withdraw every submitted motion during both the Submission Period and the Voting Period.
            The original submitter of the motion can only withdraw their own motion during the Submission Period.
 
-        **Example:**
+        **Example**
             `{PREFIX}{COMMAND} 56` will withdraw motion #56
             `{PREFIX}{COMMAND} 12 13 14 15 16` will withdraw all those motions"""
 
@@ -883,7 +883,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
     async def override(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Override the veto of one or multiple bills to pass them into law
 
-        **Example:**
+        **Example**
            `{PREFIX}{COMMAND} 56`
            `{PREFIX}{COMMAND} 12 13 14 15 16`"""
 

@@ -70,6 +70,8 @@ class PoliticalParty(commands.Converter):
 
     @classmethod
     async def convert(cls, ctx, argument):
+        argument = str(argument)
+
         try:
             arg_as_int = int(argument)
         except ValueError:
@@ -90,7 +92,8 @@ class PoliticalParty(commands.Converter):
             )
 
         party = await ctx.bot.db.fetchrow(
-            "SELECT * FROM party JOIN party_alias a ON party.id = a.party_id " "WHERE a.alias = $1 OR party.id = $2",
+            "SELECT party.id, party.discord_invite, party.join_mode FROM party JOIN party_alias a ON "
+            "party.id = a.party_id WHERE a.alias = $1 OR party.id = $2",
             argument.lower(),
             arg_as_int,
         )
@@ -393,7 +396,8 @@ class Tag(commands.Converter):
         tag_record = await ctx.bot.db.fetchrow(sql, argument.lower(), guild_id)
 
         if tag_record is None:
-            raise exceptions.TagError(f"{config.NO} There is no global or local tag named `{argument}`.")
+            raise exceptions.TagError(f"{config.NO} There is no global tag from the {ctx.bot.dciv.name} server nor a "
+                                      f"local tag from this server named `{argument}`.")
 
         aliases = await ctx.bot.db.fetch("SELECT alias FROM tag_lookup WHERE tag_id = $1", tag_record["id"])
         aliases = [record["alias"] for record in aliases]

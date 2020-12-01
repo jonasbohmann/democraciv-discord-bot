@@ -46,7 +46,7 @@ class Selfroles(context.CustomCog):
     async def roles(self, ctx, *, role: Selfrole = None):
         """List all selfroles on this server or toggle a selfrole by specifying the selfrole's name
 
-        **Usage:**
+        **Usage**
           `{PREFIX}{COMMAND}` List all available selfroles on this server
           `{PREFIX}{COMMAND} <role>` Toggle a selfrole
         """
@@ -79,7 +79,7 @@ class Selfroles(context.CustomCog):
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
     async def addrole(self, ctx: context.CustomContext):
-        """Add a role to this server's `-roles` list"""
+        """Add a role to this server's `{PREFIX}roles` list"""
 
         await ctx.send(f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the role you want to create.")
 
@@ -125,9 +125,9 @@ class Selfroles(context.CustomCog):
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
     async def deleterole(self, ctx: context.CustomContext, *, role: str):
-        """Remove a selfrole from this server's `-roles` list
+        """Remove a selfrole from this server's `{PREFIX}roles` list
 
-        **Usage:**
+        **Usage**
          `{PREFIX}{COMMAND} <role>` will remove the selfrole **and** delete its Discord role
         """
 
@@ -158,7 +158,7 @@ class Selfroles(context.CustomCog):
             return await ctx.send(f"{config.YES} The `{role}` selfrole and its Discord role were deleted.")
 
         await ctx.send(
-            f"{config.YES} The `{role}` selfrole was removed from the `-roles` list but "
+            f"{config.YES} The `{role}` selfrole was removed from the `{config.BOT_PREFIX}roles` list but "
             f"I did not delete its Discord role."
         )
 

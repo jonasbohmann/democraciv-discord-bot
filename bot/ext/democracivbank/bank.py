@@ -45,7 +45,7 @@ class BankListener:
 
     async def setup(self):
         await self.runner.setup()
-        site = web.TCPSite(self.runner, "localhost", 8080)
+        site = web.TCPSite(self.runner, "0.0.0.0", 8080)
         await site.start()
 
     async def send_dm(self, request):
@@ -668,13 +668,13 @@ class Bank(context.CustomCog):
     async def edit_ottoman_ibal(self, ctx, iban: uuid.UUID, new_ibal: decimal.Decimal):
         """Change the Equilibrium variable of a bank account with the Ottoman currency
 
-        **Example:**
+        **Example**
             `{PREFIX}{COMMAND} c4a3ec17-cba4-462f-bdda-05620f574dce 200` their new variable will be 200
         """
 
         if iban.version != 4:
             raise BankInvalidIBANFormat(
-                "{config.NO} That is not a valid IBAN, it needs to be in this " "format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`"
+                f"{config.NO} That is not a valid IBAN, it needs to be in this " "format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`"
             )
 
         payload = {"iban": str(iban), "new": new_ibal}

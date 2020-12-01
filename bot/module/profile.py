@@ -41,11 +41,11 @@ class Profile(context.CustomCog):
         leg_session_update = emojify_settings(settings["leg_session_update"])
         leg_session_submit = emojify_settings(settings["leg_session_submit"])
         leg_session_withdraw = emojify_settings(settings["leg_session_withdraw"])
+        party = emojify_settings(settings["party_join_leave"])
 
         embed = text.SafeEmbed(
-            title=f"DMs for {ctx.author.name}",
             description=f"Check `{config.BOT_PREFIX}help dms` for help on "
-            f"how to enable or disable these settings.\n\n"
+            f"how to enable or disable each setting.\n\n"
             f"{mute_kick_ban} DM when you get muted, kicked or banned\n"
             f"{leg_session_open} "
             f"*({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when "
@@ -58,11 +58,14 @@ class Profile(context.CustomCog):
             f"someone submits a Bill or Motion\n"
             f"{leg_session_withdraw} "
             f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when "
-            f"someone withdraws a Bill or Motion\n",
+            f"someone withdraws a Bill or Motion\n"
+            f"{party} *(Party Leaders Only)* DM when someone joins or leaves your political party\n"
         )
+
+        embed.set_author(name=ctx.author, icon_url=ctx.author_icon)
         await ctx.send(embed=embed)
 
-    @dmsettings.command(name="enableall")
+    @dmsettings.command(name="on", aliases=['enableall'])
     async def enableall(self, ctx):
         """Enable all DMs"""
 
@@ -72,14 +75,14 @@ class Profile(context.CustomCog):
             "UPDATE dm_setting SET"
             " ban_kick_mute = true, leg_session_open = true,"
             " leg_session_update = true, leg_session_submit = true,"
-            " leg_session_withdraw = true"
+            " leg_session_withdraw = true, party_join_leave = true"
             " WHERE user_id = $1",
             ctx.author.id,
         )
 
         await ctx.send(f"{config.YES} All DMs from me are now enabled.")
 
-    @dmsettings.command(name="disableall")
+    @dmsettings.command(name="off", aliases=["disableall"])
     async def disableall(self, ctx):
         """Disable all DMs"""
 
@@ -89,7 +92,7 @@ class Profile(context.CustomCog):
             "UPDATE dm_setting SET"
             " ban_kick_mute = false, leg_session_open = false,"
             " leg_session_update = false, leg_session_submit = false,"
-            " leg_session_withdraw = false"
+            " leg_session_withdraw = false, party_join_leave = false "
             " WHERE user_id = $1",
             ctx.author.id,
         )
@@ -191,6 +194,24 @@ class Profile(context.CustomCog):
             message = (
                 f"{config.YES} You will no longer receive DMs when you are a member of the "
                 f"{self.bot.mk.LEGISLATURE_CABINET_NAME} and someone withdraws their Bill or Motion."
+            )
+
+        await ctx.send(message)
+
+    @dmsettings.command(name="party")
+    async def party_join_leave(self, ctx):
+        """Toggle DMs for when someone joins or leaves your political party"""
+
+        new_value = await self.toggle_dm_setting(ctx.author.id, "party_join_leave")
+
+        if new_value:
+            message = (
+                f"{config.YES} You will now receive DMs when someone joins or leaves your political party."
+            )
+
+        else:
+            message = (
+                f"{config.YES} You will no longer receive DMs when someone joins or leaves your political party."
             )
 
         await ctx.send(message)

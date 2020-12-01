@@ -214,13 +214,13 @@ class Utility(context.CustomCog):
     ):
         """Get detailed information about a member of this server
 
-        **Example:**
-         `-whois`
-         `-whois Jonas - u/Jovanos`
-         `-whois @DerJonas`
-         `-whois DerJonas`
-         `-whois deRjoNAS`
-         `-whois DerJonas#8109`
+        **Example**
+         `{PREFIX}{COMMAND}`
+         `{PREFIX}{COMMAND} Jonas - u/Jovanos`
+         `{PREFIX}{COMMAND} @DerJonas`
+         `{PREFIX}{COMMAND} DerJonas`
+         `{PREFIX}{COMMAND} deRjoNAS`
+         `{PREFIX}{COMMAND} DerJonas#8109`
         """
 
         def _get_roles(roles):
@@ -270,16 +270,17 @@ class Utility(context.CustomCog):
         """View someone's avatar in detail
 
         **Example**
-             `-avatar`
-             `-avatar @DerJonas`
-             `-avatar DerJonas`
-             `-avatar DerJonas#8109`
+             `{PREFIX}{COMMAND}`
+             `{PREFIX}{COMMAND} @DerJonas`
+             `{PREFIX}{COMMAND} DerJonas`
+             `{PREFIX}{COMMAND} DerJonas#8109`
         """
 
         member = member or ctx.author
-        avatar_png = member.avatar_url_as(static_format="png", size=4096)
-        embed = text.SafeEmbed(title=f"{member.display_name}'s Avatar", url=avatar_png)
+        avatar_png = str(member.avatar_url_as(static_format="png", size=4096))
+        embed = text.SafeEmbed()
         embed.set_image(url=avatar_png)
+        embed.set_author(name=member, icon_url=avatar_png, url=avatar_png)
         await ctx.send(embed=embed)
 
     @commands.command(name="veterans")
@@ -618,9 +619,9 @@ class Utility(context.CustomCog):
         - A dice roll can be followed by an Ln or Hn, where it will discard the lowest n rolls or highest n rolls, respectively. So 2d20L1 means to roll two d20s and discard the lower. I.E advantage.
         - A dice roll can be part of a mathematical expression, such as 1d4 +5.
 
-        **Example:**
-          `-roll 1d6` will roll a d6
-          `-roll (2d20L1) + 1d4 + 5` will roll 2d20s, discard the lower one, and add 1d4 and 5 to the result
+        **Example**
+          `{PREFIX}{COMMAND} 1d6` will roll a d6
+          `{PREFIX}{COMMAND} (2d20L1) + 1d4 + 5` will roll 2d20s, discard the lower one, and add 1d4 and 5 to the result
 
         *Full notation can be found here: https://xdice.readthedocs.io/en/latest/dice_notation.html*
         """

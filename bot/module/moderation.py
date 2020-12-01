@@ -524,12 +524,12 @@ class Moderation(context.CustomCog):
 
         If you want to ban a user that is not in this server, use the user's ID instead.
 
-        **Example:**
-            `-ban @Das` ban by mention
-            `-ban Queen Das` ban by nickname
-            `-ban darthspectrum` ban by username
-            `-ban darthspectrum#4924` ban by username#discriminator
-            `-ban 561280863464062977` ban by ID"""
+        **Example**
+            `{PREFIX}{COMMAND} @Das` ban by mention
+            `{PREFIX}{COMMAND} Queen Das` ban by nickname
+            `{PREFIX}{COMMAND} darthspectrum` ban by username
+            `{PREFIX}{COMMAND} darthspectrum#4924` ban by username#discriminator
+            `{PREFIX}{COMMAND} 561280863464062977` ban by ID"""
 
         if isinstance(member, discord.Member):
             member_object = member
@@ -590,9 +590,9 @@ class Moderation(context.CustomCog):
     async def unban(self, ctx, *, user: UnbanConverter):
         """Unban someone
 
-        **Example:**
-            `-unban darthspectrum` unban by Discord username
-            `-unban 561280863464062977` unban by Discord ID"""
+        **Example**
+            `{PREFIX}{COMMAND} darthspectrum` unban by Discord username
+            `{PREFIX}{COMMAND} 561280863464062977` unban by Discord ID"""
 
         user_object = user
         user_id = user.id
@@ -621,9 +621,9 @@ class Moderation(context.CustomCog):
     async def archivechannel(self, ctx, *, channel: discord.TextChannel):
         """Archive a channel and automatically set the right permissions
 
-        **Example:**
-            `-archivechannel #public-form`
-            `-archivechannel legislature`"""
+        **Example**
+            `{PREFIX}{COMMAND} #public-form`
+            `{PREFIX}{COMMAND} legislature`"""
 
         everyone_perms = discord.PermissionOverwrite(
             read_message_history=False, send_messages=False, read_messages=False

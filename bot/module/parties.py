@@ -1,3 +1,4 @@
+import asyncio
 import contextlib
 import logging
 import re
@@ -21,6 +22,10 @@ from utils.exceptions import ForbiddenTask
 
 class Party(context.CustomCog, name="Political Parties"):
     """Interact with the political parties of {NATION_NAME}."""
+
+    def __init__(self, bot):
+        super().__init__(bot)
+        self._party_lock = asyncio.Lock()
 
     async def collect_parties_and_members(self) -> typing.List[typing.Tuple[str, int]]:
         """Returns all parties with a role on the Democraciv server and their amount of members for -members."""
@@ -72,7 +77,8 @@ class Party(context.CustomCog, name="Political Parties"):
         if party.leaders:
             embed.add_field(
                 name="Leaders or Representatives",
-                value="\n".join([f"{leader.mention} {leader}" for leader in party.leaders]),
+                value="\n".join([f"{leader.mention} {leader}" for leader in party.leaders],),
+                inline=False
             )
 
         if party.aliases is not None:
@@ -97,42 +103,50 @@ class Party(context.CustomCog, name="Political Parties"):
                    WHERE party_join_request_message.request_id = party_join_request.id
                    AND party_join_request_message.message_id = $1"""
 
-        request_match = await self.bot.db.fetchrow(query, payload.message_id)
+        async with self._party_lock:
+            request_match = await self.bot.db.fetchrow(query, payload.message_id)
 
-        if not request_match:
-            return
+            if not request_match:
+                return
 
-        yes_emoji = config.YES
-        no_emoji = config.NO
+            yes_emoji = config.YES
+            no_emoji = config.NO
 
-        try:
-            party = await PoliticalParty.convert(MockContext(self.bot), request_match["party_id"])
-        except commands.BadArgument:
-            return
+            reactor = self.bot.get_user(payload.user_id)
 
-        member = self.bot.dciv.get_member(request_match["requesting_member"])
+            try:
+                party = await PoliticalParty.convert(MockContext(self.bot), request_match["party_id"])
+            except commands.BadArgument:
+                return
 
-        if not party or not party.role or not member:
-            return
+            member = self.bot.dciv.get_member(request_match["requesting_member"])
 
-        if payload.user_id not in [leader.id for leader in party.leaders]:
-            return
+            if not party or not party.role or not member:
+                return
 
-        if str(payload.emoji) == yes_emoji:
-            await member.add_roles(party.role)
-            message = f"{member}'s request to join {party.role.name} was **accepted**."
+            if payload.user_id not in [leader.id for leader in party.leaders]:
+                return
 
-        elif str(payload.emoji) == no_emoji:
-            message = f"{member}'s request to join {party.role.name} was **denied**."
+            if str(payload.emoji) == yes_emoji:
+                await member.add_roles(party.role)
+                message = f"{yes_emoji} `{member}`'s request to join `{party.role.name}` was **accepted**."
+                member_message = f"{yes_emoji} Your request to join the political party `{party.role.name}` was " \
+                                 f"**accepted** by `{reactor}`"
 
-        else:
-            return
+            elif str(payload.emoji) == no_emoji:
+                message = f"{no_emoji} `{member}`'s request to join `{party.role.name}` was **denied**."
+                member_message = f"{no_emoji} Your request to join the political party `{party.role.name}` was " \
+                                 f"**denied** by `{reactor}`"
 
-        await self.bot.db.execute("DELETE FROM party_join_request WHERE id = $1", request_match["id"])
+            else:
+                return
 
-        for leader in party.leaders:
-            with contextlib.suppress(discord.Forbidden):
-                await leader.send(message)
+            await self.bot.db.execute("DELETE FROM party_join_request WHERE id = $1", request_match["id"])
+            await member.send(member_message)
+
+            for leader in party.leaders:
+                with contextlib.suppress(discord.Forbidden):
+                    await leader.send(message)
 
     @commands.Cog.listener(name="on_member_update")
     async def party_join_leave_notification(self, before, after):
@@ -147,7 +161,7 @@ class Party(context.CustomCog, name="Political Parties"):
             for role in after.roles:
                 if role not in before.roles:
                     possible_party = role
-                    message = f"{before} just joined {role.name}."
+                    message = f"{before.display_name} just **joined** your political party, `{role.name}`."
                     break
 
         else:
@@ -155,7 +169,7 @@ class Party(context.CustomCog, name="Political Parties"):
             for role in before.roles:
                 if role not in after.roles:
                     possible_party = role
-                    message = f"{before} just left {role.name}."
+                    message = f"{before.display_name} just **left** your political party, `{role.name}`."
                     break
 
         if not possible_party or not message:
@@ -166,8 +180,11 @@ class Party(context.CustomCog, name="Political Parties"):
         except commands.BadArgument:
             return
 
+        embed = SafeEmbed(description=message)
+        embed.set_author(name=f"{config.JOIN}  {before}", icon_url=before.avatar_url_as(static_format="png"))
+
         for leader in party.leaders:
-            await self.bot.safe_send_dm(target=leader, message=message, reason="party_join_leave")
+            await self.bot.safe_send_dm(target=leader, embed=embed, reason="party_join_leave")
 
     @commands.command(name="join")
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -184,7 +201,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
         if party.join_mode is PoliticalPartyJoinMode.PRIVATE:
             return await ctx.send(
-                f"{config.NO} {party.role.name} is a private party. " f"Contact the party leaders for further information."
+                f"{config.NO} {party.role.name} is a private party. Contact the party leaders for further information."
             )
 
         elif party.join_mode is PoliticalPartyJoinMode.REQUEST:
@@ -206,8 +223,8 @@ class Party(context.CustomCog, name="Political Parties"):
             for leader in party.leaders:
                 try:
                     message = await leader.send(
-                        f"{ctx.author} wants to join your party, {party.role.name}. "
-                        f"Do you want to accept their request?"
+                        f"{config.USER_INTERACTION_REQUIRED} `{ctx.author}` wants to join your political "
+                        f"party, `{party.role.name}`. Do you want to accept their request?"
                     )
                     await message.add_reaction(config.YES)
                     await message.add_reaction(config.NO)
@@ -338,8 +355,11 @@ class Party(context.CustomCog, name="Political Parties"):
 
         leaders_text = (
             await ctx.input(
-                f"{config.USER_INTERACTION_REQUIRED} Reply with the name or mention of the party's leader or representative. "
-                "If this party has multiple leaders, separate them with a newline."
+                f"{config.USER_INTERACTION_REQUIRED} Reply with the names or mentions of the party's leaders or "
+                f"representatives. If this party has multiple leaders, separate them with a newline.\n"
+                f"{config.HELP_BOT_HELP} Party leaders get DM notifications by me when someone joins or leaves their "
+                f"party, and they are the ones that can accept and deny join requests if the party's join mode "
+                f"is request-based."
             )
         ).splitlines()
 
@@ -352,8 +372,8 @@ class Party(context.CustomCog, name="Political Parties"):
                     leaders.append(converted.id)
 
         party_invite = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the invite link to the party's Discord server. If they don't have one, "
-            "just reply with gibberish."
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the invite link to the party's Discord server. "
+            f"If they don't have one, just reply with gibberish."
         )
 
         discord_invite_pattern = re.compile(r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
@@ -427,8 +447,8 @@ class Party(context.CustomCog, name="Political Parties"):
     async def deleteparty(self, ctx, *, party: PoliticalParty):
         """Delete a political party
 
-        **Usage:**
-         `-party delete <party>`
+        **Usage**
+         `{PREFIX}{COMMAND} <party>`
         """
 
         name = party.role.name

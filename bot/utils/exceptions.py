@@ -126,16 +126,16 @@ class ForbiddenError(DemocracivBotException):
             self.message = f"{config.NO} I'm missing the required permissions to delete the `{detail}` role."
 
         elif task == ForbiddenTask.MESSAGE_DELETE:
-            self.message = "{config.NO} I'm missing the required permissions to delete that message."
+            self.message = f"{config.NO} I'm missing the required permissions to delete that message."
 
         elif task == ForbiddenTask.MESSAGE_SEND:
-            self.message = "{config.NO} I'm missing the required permissions to send messages in this channel."
+            self.message = f"{config.NO} I'm missing the required permissions to send messages in this channel."
 
         elif task == ForbiddenTask.MEMBER_BAN:
-            self.message = "{config.NO} I'm not allowed to ban or unban that person."
+            self.message = f"{config.NO} I'm not allowed to ban or unban that person."
 
         elif task == ForbiddenTask.MEMBER_KICK:
-            self.message = "{config.NO} I'm not allowed to kick that person."
+            self.message = f"{config.NO} I'm not allowed to kick that person."
 
         else:
-            self.message = "{config.NO} Discord didn't allow me to perform this action."
+            self.message = f"{config.NO} Discord didn't allow me to perform this action."

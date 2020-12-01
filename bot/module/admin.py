@@ -40,7 +40,7 @@ class Admin(
     @commands.command(name="addbilltag", aliases=["lt", 'addlawtag', 'bt'])
     @commands.is_owner()
     async def billtag(self, ctx, bill: models.Bill, tag: str):
-        """Add a search tag to a law to be used in `-bill/laws search`"""
+        """Add a search tag to a law to be used in `{PREFIX}bill/laws search`"""
 
         await self.bot.db.execute(
             "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2)",

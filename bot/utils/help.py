@@ -145,6 +145,7 @@ class GroupHelpPageSource(menus.ListPageSource):
                             inline=False)
 
         maximum = self.get_max_pages()
+
         if maximum > 1:
             embed.set_footer(text=f"Page {menu.current_page + 1}/{maximum} ({len(self.entries)} commands)")
 
@@ -270,7 +271,9 @@ class PaginatedHelpCommand(commands.HelpCommand):
     async def send_command_help(self, command):
         embed = text.SafeEmbed()
         self.common_command_formatting(embed, command)
-        aliases = [f"`{config.BOT_PREFIX}{command.full_parent_name} {a}`" for a in command.aliases]
+
+        parent_name = f"{command.full_parent_name} " if command.full_parent_name else ''
+        aliases = [f"`{config.BOT_PREFIX}{parent_name}{a}`" for a in command.aliases]
 
         if aliases:
             embed.add_field(name="Aliases", value=', '.join(aliases))

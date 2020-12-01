@@ -48,7 +48,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
     async def law(self, ctx, *, law_id: models.Law = None):
         """List all laws in {NATION_NAME} or get details about a specific law
 
-        **Usage:**
+        **Usage**
             `{PREFIX}{COMMAND}` will list every law in our nation
             `{PREFIX}{COMMAND} 48` will give you detailed information about Law #48"""
 
@@ -138,6 +138,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             value=result["response"]["result"]["view"],
             inline=False,
         )
+
         await ctx.send(embed=embed)
 
     @law.command(name="from", aliases=["f", "by"])
@@ -160,7 +161,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
     async def removelaw(self, ctx: context.CustomContext, law_ids: Greedy[models.Law]):
         """Repeal one or multiple laws
 
-        **Example:**
+        **Example**
             `{PREFIX}{COMMAND} 24` will repeal law #24
             `{PREFIX}{COMMAND} 56 57 58 12 13` will repeal all those laws"""
 

@@ -149,7 +149,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
     async def veto(self, ctx: context.CustomContext, bill_ids: Greedy[models.Bill]):
         """Veto one or multiple bills
 
-        **Example:**
+        **Example**
             `{PREFIX}{COMMAND} 12` will veto Bill #12
             `{PREFIX}{COMMAND} 45 46 49 51 52` will veto all those bills"""
 
@@ -179,7 +179,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
     async def pass_bill(self, ctx, bill_ids: Greedy[models.Bill]):
         """Pass one or multiple bills into law
 
-        **Example:**
+        **Example**
             `{PREFIX}{COMMAND} 12` will pass Bill #12 into law
             `{PREFIX}{COMMAND} 45 46 49 51 52` will pass all those bills into law"""
 

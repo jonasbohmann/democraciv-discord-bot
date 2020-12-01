@@ -238,16 +238,16 @@ class _Guild(context.CustomCog, name="Server"):
 
         Both text channels and entire categories can be excluded.
 
-         **Usage:**
-             `-server exclude` to see all excluded channels
-             `-server exclude <channel>` to add/remove a channel to/from the excluded channels list
+         **Usage**
+             `{PREFIX}{COMMAND}` to see all excluded channels
+             `{PREFIX}{COMMAND} <channel>` to add/remove a channel to/from the excluded channels list
         """
         settings = await self.ensure_guild_settings(ctx.guild.id)
         current_logging_channel = await self.bot.get_logging_channel(ctx.guild)
 
         if current_logging_channel is None:
             return await ctx.send(
-                f"{config.NO} This server currently has no logging channel. Please set one with `-server logs`."
+                f"{config.NO} This server currently has no logging channel. Please set one with `{config.BOT_PREFIX}server logs`."
             )
 
         help_description = (
@@ -422,7 +422,7 @@ class _Guild(context.CustomCog, name="Server"):
 
             reaction = await ctx.choose(
                 f"{config.USER_INTERACTION_REQUIRED} Who should be able to create new tags "
-                f"on this server with `-tag add`, "
+                f"on this server with `{config.BOT_PREFIX}tag add`, "
                 f"**everyone** or **just the Administrators** of this server?\n\n"
                 f"React with {everyone} for everyone, or with {only_admins} for just "
                 f"Administrators.",
@@ -437,7 +437,7 @@ class _Guild(context.CustomCog, name="Server"):
                     "UPDATE guild SET tag_creation_allowed = true WHERE id = $1",
                     ctx.guild.id,
                 )
-                await ctx.send(f"{config.YES} Everyone can now make tags with `-tag add` on this server.")
+                await ctx.send(f"{config.YES} Everyone can now make tags with `{config.BOT_PREFIX}tag add` on this server.")
 
             elif str(reaction) == only_admins:
                 await self.bot.db.execute(

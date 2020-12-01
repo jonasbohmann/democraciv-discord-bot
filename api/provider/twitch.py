@@ -41,7 +41,7 @@ class TwitchManager(ProviderManager):
     def __init__(self, db):
         super().__init__(db=db)
         self._webhooks: typing.Dict[str, set] = {}
-        self._get_token()
+        #self._get_token()
 
     def _get_token(self):
         with open("api/token.json", "r") as token_file:

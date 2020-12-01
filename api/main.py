@@ -2,8 +2,15 @@ import asyncio
 import logging
 import asyncpg
 import pydantic
-import typing
+import uvicorn
 import xdice
+
+try:
+    import uvloop
+    uvloop.install()
+except ImportError:
+    pass
+
 
 from api.provider import RedditManager, TwitchManager
 from fastapi import FastAPI, BackgroundTasks, Request
@@ -61,14 +68,14 @@ class Database:
         await self.pool.execute(schema)
 
     async def make_pool(self):
-        self.pool = await asyncpg.create_pool(dsn=self.dsn, loop=self._loop)
+        self.pool = await asyncpg.create_pool(host="db", user="postgres", password="pw", database="api_test")
         await self.apply_schema()
         self.ready = True
         return self.pool
 
 
 app = FastAPI()
-db = Database(dsn="postgres://postgres:pw@localhost/api_test")
+db = Database(dsn="postgres://postgres:pw@db/api_test")
 reddit_manager = RedditManager(db=db)
 twitch_manager = TwitchManager(db=db)
 
@@ -106,7 +113,7 @@ class SubmitRedditPost(pydantic.BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    await db.make_pool()
+    #await db.make_pool()
     logging.info("API ready to serve")
 
 
@@ -196,10 +203,8 @@ async def twitch_subscription_verify(request: Request, background_tasks: Backgro
         background_tasks.add_task(twitch_manager.process_incoming_notification, js['event'])
         return "ok"
 
-
-@app.post("/roll")
-def roll_dice(dice_to_roll: Dice):
-    dice_pattern = xdice.Pattern(dice_to_roll.dices)
+def _roll_dice(dice_to_roll: str):
+    dice_pattern = xdice.Pattern(dice_to_roll)
 
     # Ensure the number of dice the user asked to roll is reasonable
     total_dice = 0
@@ -251,9 +256,23 @@ def roll_dice(dice_to_roll: Dice):
     rolls = format_string.format(*roll_information)
 
     rolls = rolls if len(rolls) < 1800 else "*rolls omitted*"
-    msg = f"`{dice_to_roll.dices}` = {rolls} = {roll}"
+    msg = f"`{dice_to_roll}` = {rolls} = {roll}"
 
     if special_message:
         msg = f"{msg}\n{special_message}"
 
     return {"ok": "ok", "result": msg}
+
+
+@app.post("/roll")
+def roll_dice(dice_to_roll: Dice):
+    try:
+        return {"ok": "ok", "result": _roll_dice(dice_to_roll.dices)}
+    except (SyntaxError, TypeError, ValueError):
+        return {"error": "invalid dice syntax"}
+
+
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(db.make_pool())
+    uvicorn.run(app=app, host="0.0.0.0", port="8000")

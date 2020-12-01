@@ -85,7 +85,7 @@ discord.abc.Messageable.send = safe_send
 
 
 class DemocracivBot(commands.Bot):
-    BASE_API = "http://127.0.0.1:8000"
+    BASE_API = "http://api:8000"
 
     def __init__(self):
         self.start_time = time.time()
@@ -123,6 +123,9 @@ class DemocracivBot(commands.Bot):
         self.loop.create_task(self.fetch_owner())
         self.loop.create_task(self.update_guild_config_cache())
 
+        self.is_api_running = False
+        self.loop.create_task(self.check_api_running())
+
         for extension in initial_extensions:
             try:
                 self.load_extension(extension)
@@ -131,10 +134,21 @@ class DemocracivBot(commands.Bot):
                 logging.error(f"Failed to load module {extension}.")
                 traceback.print_exc()
 
+    async def check_api_running(self):
+        try:
+            async with self.session.get(self.BASE_API) as response:
+                if response.status == 200:
+                    self.is_api_running = True
+        except aiohttp.ClientConnectionError:
+            logging.warning(f"Internal api at {self.BASE_API} is not running, bot is running "
+                            f"with limited functionality.")
+
     async def api_request(self, method: str, route: str, **kwargs):
+        if not self.is_api_running:
+            raise exceptions.DemocracivBotAPIError(f"{config.NO} API is not running.")
+
         async with self.session.request(method, f"{self.BASE_API}/{route}", **kwargs) as response:
             js = await response.json()
-            print(js)
             if response.status == 200:
                 return js
 
@@ -505,8 +519,7 @@ class DemocracivBot(commands.Bot):
             emoji_availability = check_custom_emoji(emoji)
             if not emoji_availability:
                 setattr(config, attr, default)
-
-            logging.warning(f"Reverting to standard Unicode emoji for {emoji}")
+                logging.warning(f"Reverting to standard Unicode emoji for {emoji}")
 
     async def connect_to_db(self):
         """Attempt to connect to PostgreSQL database with specified credentials from token.py.
@@ -637,10 +650,13 @@ class DemocracivBot(commands.Bot):
         if not is_enabled:
             return
 
+        base_msg = f"*Hint: You can enable and disable these DM notifications based on their subject. " \
+                   f"Check `{p}dms` for more information.*"
+
         if message:
-            message = f"{message}\n\n*If you want to enable or disable specific DMs from me, check `{p}help dms`.*"
+            message = f"{message}\n\n{base_msg}"
         else:
-            message = f"*If you want to enable or disable specific DMs from me, check `{p}help dms`.*"
+            message = base_msg
 
         try:
             await target.send(content=message, embed=embed)
@@ -663,7 +679,7 @@ class DemocracivBot(commands.Bot):
     async def on_ready(self):
         if not self.db_ready:
             logging.error("Fatal error while connecting to database. Closing bot...")
-            return await self.close()
+            #return await self.close()
 
         logging.info(f"Logged in as {self.user.name} with discord.py {discord.__version__}")
 

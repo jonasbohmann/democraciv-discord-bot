@@ -41,10 +41,10 @@ class EditTagMenu(menus.Menu):
         embed = text.SafeEmbed(
             title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
             description=f"Select as many things as you want, then click "
-            f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
-            f":one: Send Tag as embed or plain text\n"
-            f":two: Tag Title\n"
-            f":three: Tag Content",
+                        f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
+                        f":one: Send Tag as embed or plain text\n"
+                        f":two: Tag Title\n"
+                        f":three: Tag Content",
         )
         return await ctx.send(embed=embed)
 
@@ -88,7 +88,7 @@ class Tags(context.CustomCog):
     async def tags(self, ctx: context.CustomContext, tag: Tag = None):
         """Access a tag or list all tags on this server
 
-        **Example:**
+        **Example**
             `{PREFIX}{COMMAND}` to get a list of all tags on this server
             `{PREFIX}{COMMAND} constitution` to see the {PREFIX}constitution tag"""
 
@@ -172,10 +172,10 @@ class Tags(context.CustomCog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def _from(
-        self,
-        ctx: context.CustomContext,
-        *,
-        member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser] = None,
+            self,
+            ctx: context.CustomContext,
+            *,
+            member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser] = None,
     ):
         """List the tags that someone made"""
 
@@ -206,7 +206,8 @@ class Tags(context.CustomCog):
     async def addtagalias(self, ctx: context.CustomContext, *, tag: OwnedTag):
         """Add a new alias to a tag"""
 
-        alias = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the new alias for `{config.BOT_PREFIX}{tag.name}`.")
+        alias = await ctx.input(
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the new alias for `{config.BOT_PREFIX}{tag.name}`.")
 
         if not await self.validate_tag_name(ctx, alias.lower()):
             return
@@ -291,7 +292,8 @@ class Tags(context.CustomCog):
 
         if tags:
             await ctx.send(
-                f"{config.NO} A global tag with that name, or a tag/alias on this server with that name, " "already exists."
+                f"{config.NO} A global tag from the {self.bot.dciv.name} server with that name, "
+                f"or a local tag/alias from this server with that name, already exists."
             )
             return False
 
@@ -309,9 +311,13 @@ class Tags(context.CustomCog):
         """Add a tag for this server"""
 
         name = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the **name** of the tag. This will be used to access the"
-            " tag via the bot's prefix."
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the **name** of the tag. This will be used to access the "
+            f"tag via my `{config.BOT_PREFIX}` prefix."
         )
+
+        if name.startswith(config.BOT_PREFIX):
+            name = name[len(config.BOT_PREFIX):]
+            await ctx.send(f"*Note: The leading `{config.BOT_PREFIX}` was automatically removed from your tag name.*")
 
         if not await self.validate_tag_name(ctx, name.lower()):
             return
@@ -386,8 +392,8 @@ class Tags(context.CustomCog):
             embed.add_field(
                 name="Author",
                 value=f"*The author of this tag left this server.*\n"
-                f"*You can claim this tag to make it yours with*\n"
-                f"`{config.BOT_PREFIX}tag claim {tag.name}`",
+                      f"*You can claim this tag to make it yours with*\n"
+                      f"`{config.BOT_PREFIX}tag claim {tag.name}`",
                 inline=False,
             )
             embed.set_author(
@@ -399,8 +405,8 @@ class Tags(context.CustomCog):
             embed.add_field(
                 name="Author",
                 value=f"*The author of this tag left this server.*\n"
-                f"*You can claim this tag to make it yours with*\n"
-                f"`{config.BOT_PREFIX}tag claim {tag.name}`",
+                      f"*You can claim this tag to make it yours with*\n"
+                      f"`{config.BOT_PREFIX}tag claim {tag.name}`",
                 inline=False,
             )
 
@@ -432,11 +438,11 @@ class Tags(context.CustomCog):
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def transfer(
-        self,
-        ctx: context.CustomContext,
-        to_person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser],
-        *,
-        tag: OwnedTag,
+            self,
+            ctx: context.CustomContext,
+            to_person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser],
+            *,
+            tag: OwnedTag,
     ):
         """Transfer a tag of yours to someone else"""
 
@@ -480,7 +486,8 @@ class Tags(context.CustomCog):
             is_embedded = tag.is_embedded
 
         if to_change["title"]:
-            new_title = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the updated **title** of this tag.")
+            new_title = await ctx.input(
+                f"{config.USER_INTERACTION_REQUIRED} Reply with the updated **title** of this tag.")
 
             if len(new_title) > 256:
                 return await ctx.send(f"{config.NO} The title cannot be longer than 256 characters.")
@@ -490,7 +497,7 @@ class Tags(context.CustomCog):
 
         if to_change["content"]:
             new_content = await ctx.input(
-               f"{config.USER_INTERACTION_REQUIRED} Reply with the updated **content** of this tag.",
+                f"{config.USER_INTERACTION_REQUIRED} Reply with the updated **content** of this tag.",
                 image_allowed=True,
             )
 

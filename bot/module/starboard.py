@@ -51,21 +51,6 @@ class Starboard(context.CustomCog):
                 logging.warning(
                     "Starboard Reddit post is enabled but no subreddit was provided in config.py!"
                 )
-            elif not token.REDDIT_CLIENT_ID:
-                logging.warning(
-                    "Starboard Reddit post is enabled but no Reddit Client ID "
-                    "was provided in token.py!"
-                )
-            elif not token.REDDIT_CLIENT_SECRET:
-                logging.warning(
-                    "Starboard Reddit post is enabled but no Reddit Client Secret was provided "
-                    "in token.py!"
-                )
-            elif not token.REDDIT_REFRESH_TOKEN:
-                logging.warning(
-                    "Starboard Reddit post is enabled but no Reddit Refresh Token was provided"
-                    " in token.py!"
-                )
             else:
                 self.weekly_starboard_to_reddit_task.start()
 
@@ -499,9 +484,9 @@ class Starboard(context.CustomCog):
     ):
         """Statistics about our Starboard
 
-        **Usage:**
-             `-star stats` for statistics on the general starboard usage
-             `-star stats <member>` for statistics on the starboard usage of a specific member"""
+        **Usage**
+             `{PREFIX}{COMMAND}` for statistics on the general starboard usage
+             `{PREFIX}{COMMAND} <member>` for statistics on the starboard usage of a specific member"""
         if member is None:
             await self.star_overall_stats(ctx)
         else:
