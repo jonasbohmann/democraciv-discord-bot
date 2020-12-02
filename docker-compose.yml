@@ -9,11 +9,12 @@ services:
       - ./docker-postgresql-multiple-databases:/docker-entrypoint-initdb.d
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=pw
+      - POSTGRES_PASSWORD=ehre
       - POSTGRES_MULTIPLE_DATABASES=democraciv,api_test
 
   api:
     build: ./api/
+    restart: on-failure
     ports:
       - "8000:8000"
     depends_on:

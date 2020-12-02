@@ -124,7 +124,7 @@ class DemocracivBot(commands.Bot):
         self.loop.create_task(self.update_guild_config_cache())
 
         self.is_api_running = False
-        self.loop.create_task(self.check_api_running())
+        self.loop.create_task(self.check_api_running(first_time=True))
 
         for extension in initial_extensions:
             try:
@@ -134,7 +134,10 @@ class DemocracivBot(commands.Bot):
                 logging.error(f"Failed to load module {extension}.")
                 traceback.print_exc()
 
-    async def check_api_running(self):
+    async def check_api_running(self, first_time=False):
+        if first_time:
+            await asyncio.sleep(5)
+
         try:
             async with self.session.get(self.BASE_API) as response:
                 if response.status == 200:
@@ -145,12 +148,14 @@ class DemocracivBot(commands.Bot):
 
     async def api_request(self, method: str, route: str, **kwargs):
         if not self.is_api_running:
-            raise exceptions.DemocracivBotAPIError(f"{config.NO} API is not running.")
+            self.loop.create_task(self.check_api_running())
+            raise exceptions.DemocracivBotAPIError(f"{config.NO} Internal API is not running, try again later.")
 
         async with self.session.request(method, f"{self.BASE_API}/{route}", **kwargs) as response:
-            js = await response.json()
+            response.raise_for_status()
+
             if response.status == 200:
-                return js
+                return await response.json()
 
             raise exceptions.DemocracivBotAPIError(f"{config.NO} Something went wrong.")
 
@@ -679,7 +684,7 @@ class DemocracivBot(commands.Bot):
     async def on_ready(self):
         if not self.db_ready:
             logging.error("Fatal error while connecting to database. Closing bot...")
-            #return await self.close()
+            # return await self.close()
 
         logging.info(f"Logged in as {self.user.name} with discord.py {discord.__version__}")
 

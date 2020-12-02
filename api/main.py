@@ -11,7 +11,6 @@ try:
 except ImportError:
     pass
 
-
 from api.provider import RedditManager, TwitchManager
 from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.responses import PlainTextResponse
@@ -25,6 +24,7 @@ class Database:
         self._loop = asyncio.get_event_loop()
         self.pool = None
         self.ready = False
+        self._loop.create_task(self.make_pool())
 
     async def apply_schema(self):
         schema = """CREATE TABLE IF NOT EXISTS reddit_webhook(
@@ -67,15 +67,25 @@ class Database:
 
         await self.pool.execute(schema)
 
-    async def make_pool(self):
-        self.pool = await asyncpg.create_pool(host="db", user="postgres", password="pw", database="api_test")
+    async def make_pool(self, retry=False):
+        # todo - why does this throw ConnectionRefusedError on the first try with docker-compose
+
+        try:
+            self.pool = await asyncpg.create_pool(self.dsn)
+        except ConnectionRefusedError:
+            if not retry:
+                await asyncio.sleep(3)
+                await self.make_pool(retry=True)
+                return
+            raise
+
         await self.apply_schema()
         self.ready = True
         return self.pool
 
 
 app = FastAPI()
-db = Database(dsn="postgres://postgres:pw@db/api_test")
+db = Database(dsn="postgres://postgres:ehre@db:5432/api_test")
 reddit_manager = RedditManager(db=db)
 twitch_manager = TwitchManager(db=db)
 
@@ -113,7 +123,7 @@ class SubmitRedditPost(pydantic.BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    #await db.make_pool()
+    await db.make_pool()
     logging.info("API ready to serve")
 
 
@@ -203,6 +213,7 @@ async def twitch_subscription_verify(request: Request, background_tasks: Backgro
         background_tasks.add_task(twitch_manager.process_incoming_notification, js['event'])
         return "ok"
 
+
 def _roll_dice(dice_to_roll: str):
     dice_pattern = xdice.Pattern(dice_to_roll)
 
@@ -273,6 +284,4 @@ def roll_dice(dice_to_roll: Dice):
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(db.make_pool())
     uvicorn.run(app=app, host="0.0.0.0", port="8000")
