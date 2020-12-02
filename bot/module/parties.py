@@ -128,8 +128,8 @@ class Party(context.CustomCog, name="Political Parties"):
 
         if party.leaders:
             embed.add_field(
-                name="Leaders or Representatives",
-                value="\n".join([f"{leader.mention} {leader}" for leader in party.leaders], ),
+                name="Leaders",
+                value="\n".join([f"{leader.mention} {leader}" for leader in party.leaders]),
                 inline=False
             )
 
@@ -180,7 +180,13 @@ class Party(context.CustomCog, name="Political Parties"):
                 return
 
             if str(payload.emoji) == yes_emoji:
-                await member.add_roles(party.role)
+                try:
+                    await member.add_roles(party.role)
+                except discord.Forbidden:
+                    return await reactor.send(f"{config.NO} I don't have `Manage Roles` permissions "
+                                              f"on the {self.bot.dciv.name} server, so unfortunately I cannot give "
+                                              f"`{member}` your party's role. Please contact Moderation.")
+
                 message = f"{yes_emoji} `{member}`'s request to join `{party.role.name}` was **accepted**."
                 member_message = f"{yes_emoji} Your request to join the political party `{party.role.name}` was " \
                                  f"**accepted** by `{reactor}`"
@@ -272,6 +278,11 @@ class Party(context.CustomCog, name="Political Parties"):
                 ctx.author.id,
             )
 
+            await ctx.send(
+                f"{config.YES} Your request to join {party.role.name} was sent to their leaders. "
+                f"Once they accept or deny your request, I'll notify you."
+            )
+
             for leader in party.leaders:
                 try:
                     message = await leader.send(
@@ -290,10 +301,7 @@ class Party(context.CustomCog, name="Political Parties"):
                     message.id,
                 )
 
-            return await ctx.send(
-                f"{config.YES} Your request to join {party.role.name} was sent to their leaders. "
-                f"Once they accept or deny your request, I'll notify you."
-            )
+            return
 
         elif party.join_mode is PoliticalPartyJoinMode.PUBLIC:
             try:
@@ -430,10 +438,14 @@ class Party(context.CustomCog, name="Political Parties"):
             leaders = []
 
             for leader in leaders_text:
-                with contextlib.suppress(commands.BadArgument):
+                try:
                     converted = await converter.CaseInsensitiveMember().convert(ctx, leader.strip())
+
                     if not converted.bot:
                         leaders.append(converted.id)
+
+                except commands.BadArgument:
+                    continue
 
             result['leaders'] = leaders
 
@@ -551,9 +563,9 @@ class Party(context.CustomCog, name="Political Parties"):
                     new_join_mode,
                 )
 
-                for leader in new_leaders:
-                    await connection.execute("DELETE FROM party_leader WHERE party_id = $1", result['role'].id)
+                await connection.execute("DELETE FROM party_leader WHERE party_id = $1", party.role.id)
 
+                for leader in new_leaders:
                     await connection.execute(
                         "INSERT INTO party_leader (party_id, leader_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
                         party.role.id,
