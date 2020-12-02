@@ -117,9 +117,6 @@ class _Guild(context.CustomCog, name="Server"):
                 f"React with {config.YES} to enable welcome messages, or with {config.NO} to disable welcome messages."
             )
 
-            if reaction is None:
-                return
-
             if reaction:
                 await self.bot.db.execute(
                     "UPDATE guild SET welcome_enabled = true WHERE id = $1",
@@ -191,9 +188,6 @@ class _Guild(context.CustomCog, name="Server"):
             reaction = await ctx.confirm(
                 f"React with {config.YES} to enable logging, or with {config.NO} to disable logging."
             )
-
-            if reaction is None:
-                return
 
             if reaction:
                 await self.bot.db.execute(
@@ -343,9 +337,6 @@ class _Guild(context.CustomCog, name="Server"):
                 f"React with {config.YES} to enable the default role, or with {config.NO} to disable the default role."
             )
 
-            if reaction is None:
-                return
-
             if reaction:
                 await self.bot.db.execute(
                     "UPDATE guild SET default_role_enabled = true WHERE id = $1",
@@ -428,9 +419,6 @@ class _Guild(context.CustomCog, name="Server"):
                 f"Administrators.",
                 reactions=[everyone, only_admins],
             )
-
-            if reaction is None:
-                return
 
             if str(reaction) == everyone:
                 await self.bot.db.execute(

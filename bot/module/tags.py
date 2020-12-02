@@ -4,7 +4,7 @@ import enum
 import typing
 import discord
 
-from bot.config import config, mk
+from bot.config import config
 from discord.ext import commands, menus
 from bot.utils import context, checks
 from bot.utils.converter import (

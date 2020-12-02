@@ -46,13 +46,14 @@ class PoliticalParty(commands.Converter):
         self._leaders: typing.List[int] = kwargs.get("leaders")
         self._id: int = kwargs.get("id")
         self._bot = kwargs.get("bot")
+        self.is_independent = kwargs.get("ind", False)
 
         if kwargs.get("role"):
             self._id = kwargs.get("role").id
 
     @property
     def leaders(self) -> typing.List[typing.Union[discord.Member, discord.User, None]]:
-        return [self._bot.dciv.get_member(leader) or self._bot.get_user(leader) for leader in self._leaders]
+        return list(filter(None, [self._bot.dciv.get_member(leader) or self._bot.get_user(leader) for leader in self._leaders]))
 
     @property
     def role(self) -> typing.Optional[discord.Role]:
@@ -88,7 +89,7 @@ class PoliticalParty(commands.Converter):
             return cls(
                 role=discord.utils.get(ctx.bot.dciv.roles, name="Independent"),
                 join_mode=PoliticalPartyJoinMode.PUBLIC,
-                bot=ctx.bot,
+                bot=ctx.bot, ind=True
             )
 
         party = await ctx.bot.db.fetchrow(
@@ -307,7 +308,7 @@ class CaseInsensitiveMember(commands.MemberConverter):
             arg = argument.lower()
 
             def predicate(m):
-                return m.name.lower() == arg or (m.nick and m.nick.lower() == arg) or str(m) == arg
+                return m.name.lower() == arg or (m.nick and m.nick.lower() == arg) or str(m).lower() == arg
 
             member = discord.utils.find(predicate, ctx.guild.members)
 
@@ -325,7 +326,7 @@ class CaseInsensitiveUser(commands.UserConverter):
             arg = argument.lower()
 
             def predicate(m):
-                return m.name.lower() == arg or str(m) == arg
+                return m.name.lower() == arg or str(m).lower() == arg
 
             user = discord.utils.find(predicate, ctx.bot.users)
 
