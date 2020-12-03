@@ -50,7 +50,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         self.pass_scheduler = LawPassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.veto_scheduler = LawVetoScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
-    async def get_pretty_vetos(self) -> typing.Optional[typing.List[str]]:
+    async def get_pretty_vetos(self) -> typing.List[str]:
         """Gets all bills that passed the Legislature, are vetoable and were not yet voted on by the Ministry"""
 
         open_bills = await self.bot.db.fetch(
@@ -59,7 +59,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         )
 
         if not open_bills:
-            return None
+            return []
 
         pretty_bills = []
         b_ids = []
@@ -104,7 +104,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
 
         pretty_bills = await self.get_pretty_vetos()
 
-        if pretty_bills is None:
+        if not pretty_bills:
             pretty_bills = "There are no new bills to vote on."
         else:
             pretty_bills = (

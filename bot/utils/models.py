@@ -1,11 +1,10 @@
-import abc
+
 import datetime
-import functools
 import enum
 import textwrap
 from collections import namedtuple
 
-import asyncpg
+
 import typing
 import discord
 
@@ -15,10 +14,6 @@ from discord.utils import maybe_coroutine
 from bot.config import config, mk
 from bot.utils import context, exceptions
 from bot.utils.exceptions import DemocracivBotException, NotFoundError
-
-
-class NonePassed(exceptions.DemocracivBotException):
-    pass
 
 
 class SessionStatus(enum.Enum):
@@ -255,7 +250,7 @@ class Motion(commands.Converter):
     @property
     def link(self) -> str:
         # If the motion's description is just a Google Docs link, use that link instead of the paste link
-        is_google_docs = self._bot.laws.is_google_doc_link(self.description) and len(self.description) <= 100
+        is_google_docs = self._bot.get_cog("Law").is_google_doc_link(self.description) and len(self.description) <= 100
         return self.description if is_google_docs else self._link
 
     @classmethod

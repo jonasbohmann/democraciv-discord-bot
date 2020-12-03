@@ -701,7 +701,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
                 f"{config.USER_INTERACTION_REQUIRED} Do you want to submit a motion or a bill?"
                 f" React with {config.LEG_SUBMIT_BILL} for bill, and with "
                 f"{config.LEG_SUBMIT_MOTION} for a motion."
-                f"\n\n{config.HINT} Motions lack some features that bills have, for example they cannot be  ",
+                f"\n\n{config.HINT} *Motions lack a lot of features that bills have, "
+                f"for example they cannot be passed into Law by the Government. They will not "
+                f"show up in `{config.BOT_PREFIX}laws`, nor will they make it on the Legal Code. "
+                f"If you want to submit something small "
+                f"that results in some __temporary__ action, use a motion, otherwise use a bill. "
+                f"\nCommon examples for motions: `Motion to repeal Law #12`, or "
+                f"`Motion to recall {self.bot.mk.legislator_term} XY`.*",
                 reactions=[config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION],
             )
 
@@ -812,12 +818,12 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
         last_leg_session = await self.get_last_leg_session()
 
-        def verify_object(to_verify) -> str:
+        def verify_object(_ctx, to_verify) -> str:
             if not to_verify.session.is_active:
                 return f"The session during which this {obj_name} was submitted is not open anymore."
 
-            if not self.is_cabinet(ctx.author):
-                if to_verify.submitter is not None and ctx.author.id == to_verify.submitter.id:
+            if not self.is_cabinet(_ctx.author):
+                if to_verify.submitter is not None and _ctx.author.id == to_verify.submitter.id:
                     if last_leg_session.status is SessionStatus.SUBMISSION_PERIOD:
                         allowed = True
                     else:
@@ -829,7 +835,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
             if not allowed:
                 return (
-                    f"Only the {self.bot.mk.LEGISLATURE_CABINET_NAME} and the original submitter "
+                    f"Only the {_ctx.bot.mk.LEGISLATURE_CABINET_NAME} and the original submitter "
                     f"of this {obj_name} can withdraw it."
                 )
 
