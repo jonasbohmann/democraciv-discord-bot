@@ -3,6 +3,8 @@ import datetime
 import functools
 import enum
 import textwrap
+from collections import namedtuple
+
 import asyncpg
 import typing
 import discord
@@ -92,6 +94,9 @@ class Session(commands.Converter):
         return cls(**session, bills=bills, motions=motions, bot=ctx.bot, session_status=status)
 
 
+BillHistoryEntry = namedtuple("BillHistoryEntry", "before after date")
+
+
 class Bill(commands.Converter):
     """
     Represents a bill that someone submitted to a session of the Legislature.
@@ -103,17 +108,17 @@ class Bill(commands.Converter):
     """
 
     def __init__(self, **kwargs):
-        self.id: int = kwargs.get("id", 0)
-        self.name: str = kwargs.get("name", None)
-        self.session: Session = kwargs.get("session", None)
+        self.id: int = kwargs.get("id")
+        self.name: str = kwargs.get("name")
+        self.session: Session = kwargs.get("session")
         self.link: str = kwargs.get("link")
-        self.tiny_link: str = kwargs.get("tiny_link", None)
-        self.description: str = kwargs.get("submitter_description", None)
-        self.is_vetoable: bool = kwargs.get("is_vetoable", None)
+        self.tiny_link: str = kwargs.get("tiny_link")
+        self.description: str = kwargs.get("submitter_description")
+        self.is_vetoable: bool = kwargs.get("is_vetoable")
         self.status: BillStatus = kwargs.get("status", None)
-        self.repealed_on: typing.Optional[datetime] = kwargs.get("repealed_on", None)
-        self._submitter: int = kwargs.get("submitter", None)
+        self._submitter: int = kwargs.get("submitter")
         self._bot = kwargs.get("bot")
+        self.history = kwargs.get("history", None)
 
     async def fetch_name_and_keywords(self) -> typing.Tuple[str, typing.List[str]]:
 
@@ -134,12 +139,14 @@ class Bill(commands.Converter):
         async with self._bot.session.post(
                 "http://yake.inesctec.pt/yake/v2/extract_keywords?max_ngram_size=2&number_of_keywords=20&highlight=false",
                 data={'content': self.description}) as r:
-            js = await r.json()
 
-            try:
-                keywords.extend([word['ngram'] for word in js['keywords'] if word['ngram']])
-            except KeyError:
-                pass
+            if r.status == 200:
+                js = await r.json()
+
+                try:
+                    keywords.extend([word['ngram'] for word in js['keywords'] if word['ngram']])
+                except KeyError:
+                    pass
 
         name_abbreviation = "".join([c[0].lower() for c in self.name.split()])
 
@@ -181,6 +188,18 @@ class Bill(commands.Converter):
         obj = cls(**bill, session=session, bot=ctx.bot)
         status = BillStatus.from_flag_value(bill["status"])(ctx.bot, obj)
         obj.status = status
+
+        history_record = await ctx.bot.db.fetch("SELECT * FROM bill_history WHERE bill_id = $1 ORDER BY date DESC",
+                                                obj.id)
+        history = []
+
+        for record in history_record:
+            entry = BillHistoryEntry(date=datetime.datetime.utcfromtimestamp(record['date']),
+                                     before=BillStatus.from_flag_value(record['before'])(ctx.bot, obj),
+                                     after=BillStatus.from_flag_value(record['after'])(ctx.bot, obj))
+            history.append(entry)
+
+        obj.history = history
         return obj
 
 

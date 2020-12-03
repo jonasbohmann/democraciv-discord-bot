@@ -102,7 +102,7 @@ class DemocracivBot(commands.Bot):
             intents=intents,
             allowed_mentions=discord.AllowedMentions.none(),
             activity=discord.Game(
-                name=f"{config.BOT_PREFIX}help | {config.BOT_PREFIX}commands |" f" {config.BOT_PREFIX}about"
+                name=f"{config.BOT_PREFIX}help | {config.BOT_PREFIX}commands | {config.BOT_PREFIX}about"
             ),
         )
 
@@ -190,19 +190,18 @@ class DemocracivBot(commands.Bot):
 
         embed = text.SafeEmbed(title=f"{config.NO}  Command Error")
 
-        embed.add_field(name="Error", value=f"{error.__class__.__name__}: {error}", inline=False)
+        embed.add_field(name="Error", value=f"```{error.__class__.__name__}: {error}```", inline=False)
         embed.add_field(name="Channel", value=ctx.channel.mention, inline=True)
         embed.add_field(name="Context", value=f"[Jump]({ctx.message.jump_url})", inline=True)
-        embed.add_field(name="Caused by", value=ctx.message.clean_content, inline=False)
+        caused_by = ctx.message.clean_content if len(ctx.message.clean_content) < 500 else "*too long*"
+        embed.add_field(name="Caused by", value=caused_by, inline=False)
 
         if to_context:
             local_embed = text.SafeEmbed(
                 title=":warning:  Something went wrong",
-                description=f"An unexpected error occurred while"
-                            f" performing this command. The developer"
-                            f" has been notified."
-                            f"\n\n```{error.__class__.__name__}:"
-                            f" {error}```",
+                description=f"An unexpected error occurred while performing this command. "
+                            f"The developer has been notified. Sorry!\n\n"
+                            f"```{error.__class__.__name__}: {error}```",
             )
             await ctx.send(embed=local_embed)
 
@@ -213,7 +212,7 @@ class DemocracivBot(commands.Bot):
                 await log_channel.send(embed=embed)
 
         if to_owner:
-            embed.add_field(name="Guild", value=ctx.guild.name, inline=False)
+            embed.add_field(name="Guild", value=f"{ctx.guild.name} ({ctx.guild.id})", inline=False)
             pretty_traceback = "".join(traceback.format_exception(type(error), error, error.__traceback__))
             embed.add_field(name="Traceback", value=f"```py\n{pretty_traceback}```")
             await self.owner.send(embed=embed)
@@ -428,11 +427,14 @@ class DemocracivBot(commands.Bot):
         return to_return
 
     async def _populate_guild_config_cache(self, record: asyncpg.Record):
-        settings = {k: v for k, v in record.items() if k != "id"}
+        settings = dict(record)
+        settings.pop("id")
+
         private_channels = await self.db.fetch(
             "SELECT channel_id FROM guild_private_channel WHERE guild_id = $1",
             record["id"],
         )
+
         settings["private_channels"] = [r["channel_id"] for r in private_channels]
         return settings
 
@@ -477,7 +479,6 @@ class DemocracivBot(commands.Bot):
 
     async def fetch_owner(self):
         await self.wait_until_ready()
-
         self.owner: discord.User = (await self.application_info()).owner
         self.owner_id: int = self.owner.id
 
@@ -537,26 +538,24 @@ class DemocracivBot(commands.Bot):
                 database=token.POSTGRESQL_DATABASE,
                 host=token.POSTGRESQL_HOST,
             )
-        except Exception as e:
+        except Exception:
             logging.error("Unexpected error occurred while connecting to PostgreSQL database.")
             self.db_ready = False
-            raise e
+            raise
 
         with open("db/schema.sql") as sql:
             try:
                 await self.db.execute(sql.read())
-            except asyncpg.InsufficientPrivilegeError as e:
+            except asyncpg.InsufficientPrivilegeError:
                 logging.error("Could not create extension 'pg_trgm' as this user. Login as the"
                               " postgres user and manually create extension on database."
                               )
                 self.db_ready = False
-                await asyncio.sleep(5)
-                raise e
-
-            except Exception as e:
+                raise
+            except Exception:
                 logging.error("Unexpected error occurred while executing default schema on PostgreSQL database")
                 self.db_ready = False
-                raise e
+                raise
 
         logging.info("Successfully initialised database")
         self.db_ready = True
@@ -655,7 +654,7 @@ class DemocracivBot(commands.Bot):
         if not is_enabled:
             return
 
-        base_msg = f"*Hint: You can enable and disable these DM notifications based on their subject. " \
+        base_msg = f"{config.HINT} *You can enable and disable these DM notifications based on their subject. " \
                    f"Check `{p}dms` for more information.*"
 
         if message:

@@ -77,12 +77,10 @@ class GovernmentMixin:
                 inline=False,
             )
 
-            if obj.repealed_on:
-                embed.add_field(
-                    name="Repealed On",
-                    value=obj.repealed_on.strftime("%A, %B %d %Y"),
-                    inline=True,
-                )
+            history = [f"{entry.date.strftime('%d %b %y')} - {entry.after}" for entry in obj.history[:3]]
+
+            if history:
+                embed.add_field(name="History", value="\n".join(history))
 
             if obj.status.is_law:
                 embed.set_footer(text="This is an active law.")

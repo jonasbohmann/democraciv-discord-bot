@@ -128,6 +128,15 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
         return await self._detail_view(ctx, obj=bill_id)
 
+    @bill.command(name="history", aliases=["h"])
+    async def b_history(self, ctx: context.CustomContext, *, bill_id: models.Bill):
+        """Search for a bill"""
+        fmt_history = [f"**{entry.date.strftime('%d %B %Y')}** - {entry.after}   " 
+                       f"({entry.after.emojified_status(verbose=False)})\n" for entry in bill_id.history]
+
+        pages = paginator.SimplePages(entries=fmt_history, title=bill_id.name, title_url=bill_id.link)
+        await pages.start(ctx)
+
     @bill.command(name="search", aliases=["s"])
     async def b_search(self, ctx: context.CustomContext, *, query: str):
         """Search for a bill"""
