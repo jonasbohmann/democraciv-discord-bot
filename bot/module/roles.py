@@ -1,5 +1,3 @@
-import typing
-
 import asyncpg
 import discord
 import bot.utils.exceptions as exceptions
@@ -108,7 +106,7 @@ class Selfroles(context.CustomCog):
         try:
             await self.bot.db.execute(
                 "INSERT INTO selfrole (guild_id, role_id, join_message) VALUES ($1, $2, $3) "
-                "ON CONFLICT (guild_id, role_id) DO UPDATE set join_message = $3",
+                "ON CONFLICT (guild_id, role_id) DO UPDATE SET join_message = $3",
                 ctx.guild.id,
                 discord_role.id,
                 role_join_message,
@@ -116,10 +114,25 @@ class Selfroles(context.CustomCog):
         except asyncpg.UniqueViolationError:
             return await ctx.send(f"{config.NO} `{discord_role.name}` is already a selfrole on this server.")
 
-        await ctx.send(
-            f"{config.YES} `{discord_role.name}` was added as a selfrole or its join message was "
-            f"updated in case the selfrole already existed."
-        )
+        await ctx.send(f"{config.YES} `{discord_role.name}` was added as a selfrole.")
+
+    @roles.command(name="edit", aliases=["change"])
+    @commands.guild_only()
+    @commands.has_guild_permissions(manage_roles=True)
+    async def editrole(self, ctx: context.CustomContext, *, role: Selfrole):
+        """Edit the join message of a selfrole
+
+        **Usage**
+         `{PREFIX}{COMMAND} <role>`
+        """
+
+        new_join_message = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the new join message "
+                                           f"for `{role.role.name}`.")
+
+        await self.bot.db.execute("UPDATE selfrole SET join_message = $1 WHERE role_id = $2", new_join_message,
+                                  role.role.id)
+
+        await ctx.send(f"{config.YES} The join message for `{role.role.name}` was updated.")
 
     @roles.command(name="delete", aliases=["remove"])
     @commands.guild_only()
@@ -137,9 +150,9 @@ class Selfroles(context.CustomCog):
             return await ctx.send(f"{config.NO} This server has no selfrole that matches `{role}`.")
 
         if selfrole.role:
-            hard_delete = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Should I also delete the "
-                                          f"Discord role `{selfrole.role.name}`, instead of just removing it from the "
-                                          f"list of selfroles in `{config.BOT_PREFIX}roles`?")
+            hard_delete = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should I also delete the "
+                                            f"Discord role `{selfrole.role.name}`, instead of just removing it from the "
+                                            f"list of selfroles in `{config.BOT_PREFIX}roles`?")
         else:
             hard_delete = False
 

@@ -59,24 +59,26 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         # If the user did specify a law_id, send details about that law
         law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
 
-        embed = text.SafeEmbed(title=f"{self.bot.mk.NATION_EMOJI}  Law #{law.id}")
+        embed = text.SafeEmbed(title=f"{law.name} (#{law.id})",
+                               description=law.description,
+                               url=law.link)
 
         if law.submitter is not None:
             embed.set_author(
-                name=law.submitter.name,
+                name=f"Written by {law.submitter.name}",
                 icon_url=law.submitter.avatar_url_as(static_format="png"),
             )
             submitted_by_value = f"{law.submitter.mention} (during Session #{law.session.id})"
         else:
             submitted_by_value = f"*Person left {self.bot.dciv.name}* (during Session #{law.session.id})"
 
-        if law.passed_on is None:
-            law.passed_on = law.session.closed_on
+        embed.add_field(name="Author", value=submitted_by_value, inline=False)
 
-        embed.add_field(name="Name", value=f"[{law.name}]({law.link})")
-        embed.add_field(name="Description", value=law.description, inline=False)
-        embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
-        embed.add_field(name="Law Since", value=law.passed_on.strftime("%A, %B %d %Y"), inline=False)
+        history = [f"{entry.date.strftime('%d %b %y')} - {entry.after}" for entry in law.history[:3]]
+
+        if history:
+            embed.add_field(name="History", value="\n".join(history))
+
         embed.set_footer(text=f"All dates are in UTC. Associated Bill: #{law.id}")
         await ctx.send(embed=embed)
 

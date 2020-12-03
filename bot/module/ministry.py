@@ -163,6 +163,9 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         if consumer.failed:
             await ctx.send(f":warning: The following bills can not be vetoed.\n{consumer.failed_formatted}")
 
+        if not consumer.passed:
+            return
+
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to veto the following bills?"
             f"\n{consumer.passed_formatted}"
@@ -190,6 +193,9 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
 
         if consumer.failed:
             await ctx.send(f":warning: The following bills can not be passed into law.\n{consumer.failed_formatted}")
+
+        if not consumer.passed:
+            return
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "

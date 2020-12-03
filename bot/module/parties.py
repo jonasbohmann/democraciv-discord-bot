@@ -4,6 +4,8 @@ import contextlib
 import logging
 import re
 import typing
+
+import asyncpg
 import discord
 
 from discord.ext import commands, menus
@@ -479,23 +481,30 @@ class Party(context.CustomCog, name="Political Parties"):
         if commit:
             async with self.bot.db.acquire() as connection:
                 async with connection.transaction():
-                    await connection.execute(
-                        "INSERT INTO party (id, discord_invite, join_mode) VALUES ($1, $2, $3)"
-                        "ON CONFLICT (id) DO UPDATE SET discord_invite = $2, join_mode = $3 WHERE party.id = $1",
-                        result['role'].id,
-                        result['invite'],
-                        result['join_mode'],
-                    )
+                    try:
+                        await connection.execute(
+                            "INSERT INTO party (id, discord_invite, join_mode) VALUES ($1, $2, $3)"
+                            "ON CONFLICT (id) DO UPDATE SET discord_invite = $2, join_mode = $3 WHERE party.id = $1",
+                            result['role'].id,
+                            result['invite'],
+                            result['join_mode'],
+                        )
+                    except asyncpg.UniqueViolationError:
+                        raise exceptions.DemocracivBotException(f"{config.NO} `{result['role'].name}` already is a "
+                                                                f"political party. If you "
+                                                                f"want to edit it, use `{config.BOT_PREFIX}party edit "
+                                                                f"{result['role'].name}` "
+                                                                f"instead. ")
 
                     await connection.execute(
-                        "INSERT INTO party_alias (party_id, alias) VALUES ($1, $2)" " ON CONFLICT DO NOTHING ",
+                        "INSERT INTO party_alias (party_id, alias) VALUES ($1, $2) ON CONFLICT DO NOTHING ",
                         result['role'].id,
                         result['role'].name.lower(),
                     )
 
                     for leader in result['leaders']:
                         await connection.execute(
-                            "INSERT INTO party_leader (party_id, leader_id) VALUES ($1, $2)" " ON CONFLICT DO NOTHING ",
+                            "INSERT INTO party_leader (party_id, leader_id) VALUES ($1, $2) ON CONFLICT DO NOTHING ",
                             result['role'].id,
                             leader,
                         )
@@ -596,7 +605,7 @@ class Party(context.CustomCog, name="Political Parties"):
                 await connection.execute("DELETE FROM party_alias WHERE party_id = $1", party.role.id)
                 await connection.execute("DELETE FROM party WHERE id = $1", party.role.id)
 
-        if delete_role_too:
+        if delete_role_too and party.role:
             try:
                 await party.role.delete()
             except discord.Forbidden:

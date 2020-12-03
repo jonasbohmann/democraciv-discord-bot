@@ -128,13 +128,15 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
         return await self._detail_view(ctx, obj=bill_id)
 
-    @bill.command(name="history", aliases=["h"])
+    @bill.command(name="history", aliases=['h'])
     async def b_history(self, ctx: context.CustomContext, *, bill_id: models.Bill):
         """Search for a bill"""
         fmt_history = [f"**{entry.date.strftime('%d %B %Y')}** - {entry.after}   " 
-                       f"({entry.after.emojified_status(verbose=False)})\n" for entry in bill_id.history]
+                       f"({entry.after.emojified_status(verbose=False)})" for entry in bill_id.history]
+        fmt_history.insert(0, "All dates are in UTC.\n")
 
-        pages = paginator.SimplePages(entries=fmt_history, title=bill_id.name, title_url=bill_id.link)
+        pages = paginator.SimplePages(entries=fmt_history, title=f"{bill_id.name} (#{bill_id.id})",
+                                      title_url=bill_id.link)
         await pages.start(ctx)
 
     @bill.command(name="search", aliases=["s"])
@@ -206,7 +208,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
             for bill_id in session.bills:
                 bill = await Bill.convert(ctx, bill_id)
-                if await bill.is_law():
+                if bill.status.is_law:
                     pretty_bills.append(f"__Bill #{bill.id}__ - [{bill.short_name}]({bill.tiny_link})")
                 else:
                     pretty_bills.append(f"Bill #{bill.id} - [{bill.short_name}]({bill.tiny_link})")
@@ -577,6 +579,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
                 tiny_url
             )
 
+            bill.id = bill_id
+            await bill.status.log_history(old_status=models.BillSubmitted.flag, new_status=models.BillSubmitted.flag)
+
             id_with_tags = [(bill_id, tag) for tag in tags]
             self.bot.loop.create_task(self.bot.db.executemany("INSERT INTO bill_lookup_tag (bill_id, tag) VALUES "
                                                               "($1, $2) ON CONFLICT DO NOTHING ", id_with_tags))
@@ -668,7 +673,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         return embed
 
     @legislature.command(name="submit")
-    @commands.cooldown(1, 180, commands.BucketType.user)
+    @commands.cooldown(1, 60, commands.BucketType.user)
     @commands.max_concurrency(1, per=commands.BucketType.guild, wait=False)
     @checks.is_democraciv_guild()
     async def submit(self, ctx):
@@ -683,9 +688,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         current_leg_session = await self.get_active_leg_session()
 
         if current_leg_session is None:
+            ctx.command.reset_cooldown(ctx)
             return await ctx.send(f"{config.NO} There is no active session.")
 
         if current_leg_session.status is not SessionStatus.SUBMISSION_PERIOD:
+            ctx.command.reset_cooldown(ctx)
             return await ctx.send(
                 f"{config.NO} The submission period for session #{current_leg_session.id} is already over.")
 
@@ -693,7 +700,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             reaction = await ctx.choose(
                 f"{config.USER_INTERACTION_REQUIRED} Do you want to submit a motion or a bill?"
                 f" React with {config.LEG_SUBMIT_BILL} for bill, and with "
-                f"{config.LEG_SUBMIT_MOTION} for a motion.",
+                f"{config.LEG_SUBMIT_MOTION} for a motion."
+                f"\n\n{config.HINT} Motions lack some features that bills have, for example they cannot be  ",
                 reactions=[config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION],
             )
 
@@ -766,6 +774,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         if consumer.failed:
             await ctx.send(f":warning: The following bills can not be passed.\n{consumer.failed_formatted}")
 
+        if not consumer.passed:
+            return
+
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
             f"to mark the following bills as passed from the {self.bot.mk.LEGISLATURE_NAME}?"
@@ -829,6 +840,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             await ctx.send(
                 f":warning: The following {obj_name}s can not be withdrawn by you.\n{consumer.failed_formatted}"
             )
+
+        if not consumer.passed:
+            return
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want"
@@ -907,6 +921,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
                 f":warning: The vetoes of the following bills can not be overridden.\n{consumer.failed_formatted}"
             )
 
+        if not consumer.passed:
+            return
+
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
             f"to override the {self.bot.mk.MINISTRY_NAME}'s veto of the following "
@@ -917,7 +934,41 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             return
 
         await consumer.consume(scheduler=self.override_scheduler)
-        await ctx.send(f"{config.YES} The vetos of all bills were overridden.")
+        await ctx.send(f"{config.YES} The vetoes of all bills were overridden.")
+
+    @legislature.command(name="resubmit", aliases=["rs"])
+    @checks.has_any_democraciv_role(DemocracivRole.SPEAKER, DemocracivRole.VICE_SPEAKER)
+    async def resubmit(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
+        """Resubmit any bills that failed in the {LEGISLATURE_NAME} or {MINISTRY_NAME} to the currently active session
+
+        **Example**
+           `{PREFIX}{COMMAND} 56`
+           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
+
+        if not bill_ids:
+            return await ctx.send_help(ctx.command)
+
+        consumer = models.LegalConsumer(ctx=ctx, objects=bill_ids, action=models.BillStatus.resubmit)
+        await consumer.filter()
+
+        if consumer.failed:
+            await ctx.send(
+                f":warning: The following bills cannot be resubmitted.\n{consumer.failed_formatted}"
+            )
+
+        if not consumer.passed:
+            return
+
+        reaction = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
+            f"to resubmit the following bills to?\n{consumer.passed_formatted}"
+        )
+
+        if not reaction:
+            return
+
+        await consumer.consume()
+        await ctx.send(f"{config.YES} All bills were resubmitted to the current session.")
 
     def _format_stats(self, *, record: asyncpg.Record, record_key: str, stats_name: str) -> str:
         """Prettifies the dicts used in generate_leg_statistics() to strings"""

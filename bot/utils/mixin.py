@@ -50,27 +50,25 @@ class GovernmentMixin:
         await pages.start(ctx)
 
     async def _detail_view(self, ctx, *, obj: typing.Union[models.Bill, models.Motion]):
-        cls_name = obj.__class__.__name__
-
-        embed = text.SafeEmbed(title=f"{self.bot.mk.NATION_EMOJI}  {cls_name} #{obj.id}")
+        embed = text.SafeEmbed(title=f"{obj.name} (#{obj.id})",
+                               description=obj.description,
+                               url=obj.link)
 
         if obj.submitter is not None:
             embed.set_author(
-                name=obj.submitter.name,
+                name=f"Submitted by {obj.submitter.name}",
                 icon_url=obj.submitter.avatar_url_as(static_format="png"),
             )
             submitted_by_value = f"{obj.submitter.mention} (during Session #{obj.session.id})"
         else:
             submitted_by_value = f"*Person left {self.bot.dciv.name}* (during Session #{obj.session.id})"
 
-        embed.add_field(name="Name", value=f"[{obj.name}]({obj.link})")
-        embed.add_field(name="Description", value=obj.description, inline=False)
-        embed.add_field(name="Submitter", value=submitted_by_value, inline=False)
+        embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
 
         if isinstance(obj, models.Bill):
             is_vetoable = "Yes" if obj.is_vetoable else "No"
 
-            embed.add_field(name="Veto-able", value=is_vetoable, inline=False)
+            embed.add_field(name="Veto-able", value=is_vetoable, inline=True)
             embed.add_field(
                 name="Status",
                 value=obj.status.emojified_status(verbose=True),

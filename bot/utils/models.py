@@ -120,6 +120,9 @@ class Bill(commands.Converter):
         self._bot = kwargs.get("bot")
         self.history = kwargs.get("history", None)
 
+        if self.status is None:
+            self.status = BillStatus(self._bot, self)
+
     async def fetch_name_and_keywords(self) -> typing.Tuple[str, typing.List[str]]:
 
         try:
@@ -194,9 +197,9 @@ class Bill(commands.Converter):
         history = []
 
         for record in history_record:
-            entry = BillHistoryEntry(date=datetime.datetime.utcfromtimestamp(record['date']),
-                                     before=BillStatus.from_flag_value(record['before'])(ctx.bot, obj),
-                                     after=BillStatus.from_flag_value(record['after'])(ctx.bot, obj))
+            entry = BillHistoryEntry(date=record['date'],
+                                     before=BillStatus.from_flag_value(record['before_status'])(ctx.bot, obj),
+                                     after=BillStatus.from_flag_value(record['after_status'])(ctx.bot, obj))
             history.append(entry)
 
         obj.history = history
@@ -214,6 +217,8 @@ class Law(Bill):
 
         if not bill.status.is_law:
             raise commands.BadArgument(f"{config.NO} `{bill.name}` (#{bill.id}) is not an active law.")
+
+        return bill
 
 
 class Motion(commands.Converter):
@@ -281,6 +286,7 @@ class LegalConsumer:
         self.ctx = ctx
         self.action = action
         self._filtered_out_objs = set()
+        self._errors = {}
 
     async def filter(self, *, filter_func: typing.Callable = None, **kwargs):
         for obj in self.objects:
@@ -288,21 +294,23 @@ class LegalConsumer:
                 fail = await maybe_coroutine(filter_func, self.ctx, obj, **kwargs)
 
                 if fail:
-                    self._filtered_out_objs.add((obj, fail))
+                    self._filtered_out_objs.add(obj)
+                    self._errors[obj] = fail
 
-            try:
-                await maybe_coroutine(self.action(obj.status), dry=True)
-            except IllegalOperation as e:
-                self._filtered_out_objs.add((obj, e.message))
+            if obj not in self._filtered_out_objs:
+                try:
+                    action = getattr(obj.status, self.action.__name__)  # this is some bullshit
+                    await maybe_coroutine(action, dry=True)
+                except IllegalOperation as e:
+                    self._filtered_out_objs.add(obj)
+                    self._errors[obj] = e.message
 
         self._passed_objs = self.objects - self._filtered_out_objs
 
-        if not self._passed_objs:
-            raise NonePassed("")
-
     async def consume(self, *, scheduler=None):
         for obj in self.passed:
-            await maybe_coroutine(self.action(obj.status), dry=False)
+            action = getattr(obj.status, self.action.__name__)
+            await maybe_coroutine(action, dry=False)
 
             if scheduler:
                 scheduler.add(obj)
@@ -321,7 +329,7 @@ class LegalConsumer:
 
     @property
     def failed_formatted(self) -> str:
-        return "\n".join([f"-  **{obj.name}** (#{obj.id}): _{reason}_" for obj, reason in self.failed])
+        return "\n".join([f"-  **{obj.name}** (#{obj.id}): _{reason}_" for obj, reason in self._errors.items()])
 
 
 class _BillStatusFlag(enum.Enum):
@@ -338,13 +346,13 @@ class IllegalOperation(DemocracivBotException):
 
 
 class IllegalBillOperation(IllegalOperation):
-    pass
+    def __init__(self, message="You cannot perform this action on this bill in its current state."):
+        self.message = message
 
 
-class BillStatus(abc.ABC):
+class BillStatus:
     flag: _BillStatusFlag
     verbose_name: str
-    stale: bool = False
     is_law: bool = False
 
     GREEN = config.LEG_BILL_STATUS_GREEN
@@ -379,7 +387,7 @@ class BillStatus(abc.ABC):
         return self.verbose_name
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} flag={self.flag} stale={self.stale}>"
+        return f"<{self.__class__.__name__} flag={self.flag}"
 
     async def log_history(self, old_status: _BillStatusFlag, new_status: _BillStatusFlag):
         await self._bot.db.execute(
@@ -390,36 +398,37 @@ class BillStatus(abc.ABC):
             new_status.value,
         )
 
+        self._bill.status = BillStatus.from_flag_value(new_status.value)(self._bot, self._bill)
+
     async def veto(self, dry=False):
-        raise IllegalBillOperation("")
+        raise IllegalBillOperation()
 
     async def withdraw(self, dry=False):
-        raise IllegalBillOperation("")
+        raise IllegalBillOperation()
 
     async def pass_into_law(self, dry=False):
-        raise IllegalBillOperation("")
+        raise IllegalBillOperation()
 
     async def pass_from_legislature(self, dry=False):
-        raise IllegalBillOperation("")
+        raise IllegalBillOperation()
 
     async def fail_in_legislature(self, dry=False):
-        raise IllegalBillOperation("")
+        raise IllegalBillOperation()
 
     async def override_veto(self, dry=False):
-        raise IllegalBillOperation("")
+        raise IllegalBillOperation()
 
     async def repeal(self, dry=False):
-        raise IllegalBillOperation("")
+        raise IllegalBillOperation()
 
     async def resubmit(self, dry=False):
-        raise IllegalBillOperation("")
+        raise IllegalBillOperation()
 
     async def amend(self, *, dry=False, new_link: str):
-        raise IllegalBillOperation("")
+        raise IllegalBillOperation()
 
-    @abc.abstractmethod
     def emojified_status(self, verbose=True):
-        pass
+        raise NotImplementedError()
 
 
 class BillSubmitted(BillStatus):
@@ -428,35 +437,60 @@ class BillSubmitted(BillStatus):
     verbose_name = "Submitted"
 
     async def withdraw(self, dry=False):
-        try:
-            await self._bot.db.execute("DELETE FROM bill WHERE id = $1", self._bill.id)
-        except asyncpg.ForeignKeyViolationError:  # ? not needed
-            raise IllegalBillOperation(f":warning: Bill #{self._bill.id} is already a law and cannot be withdrawn.")
+        if dry:
+            return
+
+        await self._bot.db.execute("DELETE FROM bill WHERE id = $1", self._bill.id)
 
     async def fail_in_legislature(self, dry=False):
+        if dry:
+            return
+
         await self._bot.db.execute(
             "UPDATE bill SET status = $1 WHERE id = $2",
             _BillStatusFlag.LEG_FAILED.value,
             self._bill.id,
         )
 
+        await self.log_history(self.flag, _BillStatusFlag.LEG_FAILED)
+
     async def pass_from_legislature(self, dry=False):
-        await self._bot.db.execute(
-            "UPDATE bill SET status = $1 WHERE id = $2",
-            _BillStatusFlag.LEG_PASSED.value,
-            self._bill.id,
-        )
-        await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
+        if dry:
+            return
+
+        if self._bill.is_vetoable:
+            await self._bot.db.execute(
+                "UPDATE bill SET status = $1 WHERE id = $2",
+                _BillStatusFlag.LEG_PASSED.value,
+                self._bill.id,
+            )
+
+            await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
+
+        else:
+            await self._bot.db.execute(
+                "UPDATE bill SET status = $1 WHERE id = $2",
+                _BillStatusFlag.MIN_PASSED.value,
+                self._bill.id,
+            )
+
+            await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
+            await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
 
     def emojified_status(self, verbose=True):
         if verbose:
+            if self._bill.is_vetoable:
+                min = f"{self._bot.mk.MINISTRY_NAME}: {self.YELLOW} *(Waiting on {self._bot.mk.LEGISLATURE_NAME})*\n"
+            else:
+                min = f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Not Veto-able)*\n"
+
             return (
                 f"{self._bot.mk.LEGISLATURE_NAME}: {self.YELLOW} *(Not Voted On Yet)*\n"
-                f"{self._bot.mk.MINISTRY_NAME}: {self.YELLOW} *(Waiting on {self._bot.mk.LEGISLATURE_NAME})*\n"
+                f"{min}"
                 f"Law: {self.GRAY}\n"
             )
 
-        return f"{self.YELLOW}{self.YELLOW}{self.GRAY}"
+        return f"{self.YELLOW}{self.YELLOW if self._bill.is_vetoable else self.GRAY}{self.GRAY}"
 
 
 class BillFailedLegislature(BillStatus):
@@ -464,8 +498,47 @@ class BillFailedLegislature(BillStatus):
     flag = _BillStatusFlag.LEG_FAILED
     verbose_name = f"Failed in the {mk.MarkConfig.LEGISLATURE_NAME}"
 
+    async def pass_from_legislature(self, dry=False):
+        if dry:
+            return
+
+        if self._bill.is_vetoable:
+            await self._bot.db.execute(
+                "UPDATE bill SET status = $1 WHERE id = $2",
+                _BillStatusFlag.LEG_PASSED.value,
+                self._bill.id,
+            )
+
+            await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
+
+        else:
+            await self._bot.db.execute(
+                "UPDATE bill SET status = $1 WHERE id = $2",
+                _BillStatusFlag.MIN_PASSED.value,
+                self._bill.id,
+            )
+
+            await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
+            await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
+
     async def resubmit(self, dry=False):
-        pass
+        session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE is_active = true")
+
+        if not session:
+            raise IllegalBillOperation(f"{config.NO} There is no active session right now, "
+                                       f"so the bill cannot be resubmitted.")
+
+        if dry:
+            return
+
+        await self._bot.db.execute(
+            "UPDATE bill SET status = $1, leg_session = $3 WHERE id = $2",
+            _BillStatusFlag.SUBMITTED.value,
+            self._bill.id,
+            session
+        )
+
+        await self.log_history(self.flag, _BillStatusFlag.SUBMITTED)
 
     def emojified_status(self, verbose=True):
         if verbose:
@@ -484,8 +557,8 @@ class BillPassedLegislature(BillStatus):
     verbose_name = f"Passed the {mk.MarkConfig.LEGISLATURE_NAME}"
 
     async def veto(self, dry=False):
-        if not self._bill.is_vetoable:
-            raise IllegalBillOperation("")
+        if dry:
+            return
 
         await self._bot.db.execute(
             "UPDATE bill SET status = $1 WHERE id = $2",
@@ -495,6 +568,9 @@ class BillPassedLegislature(BillStatus):
         await self.log_history(self.flag, _BillStatusFlag.MIN_FAILED)
 
     async def pass_into_law(self, dry=False):
+        if dry:
+            return
+
         await self._bot.db.execute(
             "UPDATE bill SET status = $1 WHERE id = $2",
             _BillStatusFlag.MIN_PASSED.value,
@@ -519,7 +595,16 @@ class BillVetoed(BillStatus):
     verbose_name = f"Vetoed by the {mk.MarkConfig.MINISTRY_NAME}"
 
     async def override_veto(self, dry=False):
-        pass
+        if dry:
+            return
+
+        await self._bot.db.execute(
+            "UPDATE bill SET status = $1 WHERE id = $2",
+            _BillStatusFlag.MIN_PASSED.value,
+            self._bill.id,
+        )
+
+        await self.log_history(self.flag, _BillStatusFlag.MIN_PASSED)
 
     def emojified_status(self, verbose=True):
         if verbose:
@@ -535,30 +620,46 @@ class BillVetoed(BillStatus):
 class BillPassedMinistry(BillStatus):
     is_law = True
     flag = _BillStatusFlag.MIN_PASSED
-    verbose_name = "Active Law"
+    verbose_name = "Passed into Law"
 
     async def repeal(self, dry=False):
-        pass
+        if dry:
+            return
+
+        await self._bot.db.execute(
+            "UPDATE bill SET status = $1 WHERE id = $2",
+            _BillStatusFlag.REPEALED.value,
+            self._bill.id,
+        )
+
+        await self.log_history(self.flag, _BillStatusFlag.REPEALED)
 
     async def amend(self, *, dry=False, new_link: str):
-        if not dry:
-            new_tiny = await self._bot.tinyurl(new_link)
-            await self._bot.db.execute(
-                "UPDATE bill SET link = $1, tiny_link = $2 WHERE id = $3",
-                new_link,
-                new_tiny,
-                self._bill.id,
-            )
+        if dry:
+            return
+
+        new_tiny = await self._bot.tinyurl(new_link)
+        await self._bot.db.execute(
+            "UPDATE bill SET link = $1, tiny_link = $2 WHERE id = $3",
+            new_link,
+            new_tiny,
+            self._bill.id,
+        )
 
     def emojified_status(self, verbose=True):
         if verbose:
+            if self._bill.is_vetoable:
+                min = f"{self._bot.mk.MINISTRY_NAME}: {self.GREEN} *(Passed)*\n"
+            else:
+                min = f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Not Veto-able)*\n"
+
             return (
                 f"{self._bot.mk.LEGISLATURE_NAME}: {self.GREEN} *(Passed)*\n"
-                f"{self._bot.mk.MINISTRY_NAME}: {self.GREEN} *(Passed)*\n"
+                f"{min}"
                 f"Law: {self.GREEN} *(Active Law)*\n"
             )
 
-        return f"{self.GREEN}{self.GREEN}{self.GREEN}"
+        return f"{self.GREEN}{self.GREEN if self._bill.is_vetoable else self.GRAY}{self.GREEN}"
 
 
 BillIsLaw = BillPassedMinistry
@@ -570,7 +671,23 @@ class BillRepealed(BillStatus):
     verbose_name = "Repealed"
 
     async def resubmit(self, dry=False):
-        pass
+        session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE is_active = true")
+
+        if not session:
+            raise IllegalBillOperation(f"{config.NO} There is no active session right now, "
+                                       f"so the bill cannot be resubmitted.")
+
+        if dry:
+            return
+
+        await self._bot.db.execute(
+            "UPDATE bill SET status = $1, leg_session = $3 WHERE id = $2",
+            _BillStatusFlag.SUBMITTED.value,
+            self._bill.id,
+            session
+        )
+
+        await self.log_history(self.flag, _BillStatusFlag.SUBMITTED)
 
     def emojified_status(self, verbose=True):
         if verbose:
