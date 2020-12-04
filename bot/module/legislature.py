@@ -1001,6 +1001,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
     async def _generate_leg_statistics(self):
         """Generates statistics for the -legislature stats command"""
 
+        # todo fix this
+
         query = """SELECT COUNT(id) AS sessions FROM legislature_session
                 UNION
                 SELECT COUNT(id) AS bills FROM bill
