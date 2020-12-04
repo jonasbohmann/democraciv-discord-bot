@@ -6,8 +6,7 @@ from discord.ext import commands
 from bot.utils import exceptions, text, context, checks
 from bot.config import token, config, mk
 from bot.utils.exceptions import ForbiddenTask
-from bot.utils.converter import UnbanConverter, BanConverter, CaseInsensitiveMember, CaseInsensitiveUser, \
-    CaseInsensitiveRole
+from bot.utils.converter import UnbanConverter, BanConverter, CaseInsensitiveMember, CaseInsensitiveUser, CaseInsensitiveRole
 from utils import paginator
 
 
@@ -165,6 +164,11 @@ class Moderation(context.CustomCog):
         if mod_role is None:
             return
 
+        mod_channel = self.bot.get_democraciv_channel(mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL)
+
+        if not mod_channel:
+            return
+
         if mod_role in message.role_mentions:
             embed = text.SafeEmbed(
                 title=f":pushpin:  New Request in #{message.channel.name}",
@@ -172,9 +176,7 @@ class Moderation(context.CustomCog):
             )
             embed.add_field(name="From", value=message.author.mention)
             embed.add_field(name="Original", value=f"[Jump to Message]({message.jump_url})")
-            await self.bot.get_democraciv_channel(mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
-                embed=embed
-            )
+            await mod_channel.send(embed=embed)
 
     @commands.Cog.listener(name="on_member_join")
     async def possible_alt_listener(self, member):
@@ -421,13 +423,11 @@ class Moderation(context.CustomCog):
         if muted_role is None:
             try:
                 muted_role = await guild.create_role(name="Muted")
-                for channel in guild.text_channels:
-                    try:
-                        await channel.set_permissions(muted_role, send_messages=False, add_reactions=False)
-                    except discord.HTTPException:
-                        continue
             except discord.Forbidden:
-                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted")
+                return
+
+        for channel in guild.text_channels:
+            self.bot.loop.create_task(channel.set_permissions(muted_role, send_messages=False, add_reactions=False))
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
@@ -444,11 +444,7 @@ class Moderation(context.CustomCog):
     @commands.command(name="mute")
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
-    async def mute(
-            self,
-            ctx, *,
-            member: CaseInsensitiveMember
-    ):
+    async def mute(self, ctx, *, member: CaseInsensitiveMember):
         """Mute someone"""
 
         muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
@@ -457,7 +453,8 @@ class Moderation(context.CustomCog):
             try:
                 muted_role = await ctx.guild.create_role(name="Muted")
                 for channel in ctx.guild.text_channels:
-                    await channel.set_permissions(muted_role, send_messages=False)
+                    self.bot.loop.create_task(channel.set_permissions(muted_role, send_messages=False,
+                                                                      add_reactions=False))
             except discord.Forbidden:
                 raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted")
 
@@ -659,7 +656,7 @@ class Moderation(context.CustomCog):
         """Move all channels in the Government category and #propaganda into the Archives and set the right permissions"""
 
         reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want archive every " f"government channel?"
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want archive every government channel?"
         )
 
         if not reaction:

@@ -100,7 +100,23 @@ class PoliticalParty(commands.Converter):
         )
 
         if not party or not ctx.bot.dciv.get_role(party["id"]):
-            raise exceptions.PartyNotFoundError(argument)
+            parties = await ctx.bot.db.fetch("SELECT id FROM party")
+            parties = [record["id"] for record in parties]
+            msg = []
+
+            for party in parties:
+                role = ctx.bot.dciv.get_role(party)
+                if role is not None:
+                    msg.append(role.name)
+
+            if msg:
+                msg = '\n'.join(msg)
+                message = f"{config.NO} There is no political party that matches `{argument}`.\n" \
+                          f"{config.HINT} Try one of these:\n{msg}"
+            else:
+                message = f"{config.NO} There is no political party that matches `{argument}`."
+
+            raise exceptions.NotFoundError(message)
 
         aliases = await ctx.bot.db.fetch("SELECT alias FROM party_alias WHERE party_id = $1", party["id"])
         aliases = [record["alias"] for record in aliases]
@@ -151,8 +167,8 @@ class Selfrole(commands.Converter):
 
         if not role:
             raise exceptions.NotFoundError(
-                f"{config.NO} There is no selfrole on this server that matches `{argument}`. "
-                f"If you're trying to join or leave a political party,"
+                f"{config.NO} There is no selfrole on this server that matches `{argument}`.\n"
+                f"{config.HINT} If you're trying to join or leave a political party,"
                 f" check `{config.BOT_PREFIX}help Political Parties`"
             )
 
@@ -161,9 +177,9 @@ class Selfrole(commands.Converter):
 
         if not role_record:
             raise exceptions.NotFoundError(
-                f"{config.NO} There is no selfrole on this server that matches `{argument}`. "
-                f"If you're trying to join or leave a political party,"
-                f" check `{config.BOT_PREFIX}help Political Parties`"
+                f"{config.NO} There is no selfrole on this server that matches `{argument}`.\n"
+                f"{config.HINT} If you're trying to join or leave a political party, "
+                f"check `{config.BOT_PREFIX}help Political Parties`"
             )
 
         return cls(**role_record, bot=ctx.bot)

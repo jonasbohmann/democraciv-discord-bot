@@ -151,8 +151,8 @@ class Selfroles(context.CustomCog):
 
         if selfrole.role:
             hard_delete = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should I also delete the "
-                                            f"Discord role `{selfrole.role.name}`, instead of just removing it from the "
-                                            f"list of selfroles in `{config.BOT_PREFIX}roles`?")
+                                            f"Discord role `{selfrole.role.name}`, instead of just removing the "
+                                            f"selfrole from the list of selfroles in `{config.BOT_PREFIX}roles`?")
         else:
             hard_delete = False
 

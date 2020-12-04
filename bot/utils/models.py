@@ -1,18 +1,16 @@
-
 import datetime
 import enum
 import textwrap
-from collections import namedtuple
-
-
 import typing
 import discord
+
+from collections import namedtuple
 
 from discord.ext import commands
 from discord.utils import maybe_coroutine
 
 from bot.config import config, mk
-from bot.utils import context, exceptions
+from bot.utils import context
 from bot.utils.exceptions import DemocracivBotException, NotFoundError
 
 
@@ -39,7 +37,7 @@ class Session(commands.Converter):
         self.voting_started_on: datetime = kwargs.get("voting_started_on", None)
         self.closed_on: datetime = kwargs.get("closed_on", None)
         self.bills: typing.List[int] = kwargs.get("bills")
-        self.motions: typing.List[int] = kwargs.get("motions")  # weakref ? TODO
+        self.motions: typing.List[int] = kwargs.get("motions")
         self._speaker: int = kwargs.get("speaker")
         self._bot = kwargs.get("bot")
 

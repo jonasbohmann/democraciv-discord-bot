@@ -3,7 +3,7 @@ from jishaku.cog import JishakuBase, jsk
 from jishaku.metacog import GroupCogMeta
 
 from bot.utils import models
-from config import config
+from config import config, token
 
 
 class Admin(
@@ -15,6 +15,14 @@ class Admin(
     """Administrative commands to debug and monitor the bot."""
 
     hidden = True
+
+    @commands.command(name="backup")
+    @commands.is_owner()
+    async def backup(self, ctx):
+        """Trigger a database backup"""
+        await self.bot.do_db_backup(token.POSTGRESQL_DATABASE)
+        # await self.bot.do_db_backup("api")
+        await ctx.send(config.YES)
 
     @commands.command(name="sql")
     @commands.is_owner()

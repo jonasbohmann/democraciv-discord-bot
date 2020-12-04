@@ -1,26 +1,21 @@
-import logging
-
 import discord
 import datetime
-import bot.utils.text as utils
 
-from bot.config import config
 from discord.ext import commands
 
-from bot.utils import context
-from bot.utils import text
+from bot.utils import context, text
 
 
 class Log(context.CustomCog):
     hidden = True
 
     async def log_event(
-        self,
-        guild: discord.Guild,
-        title: str,
-        fields: dict,
-        thumbnail: str = None,
-        to_owner: bool = False,
+            self,
+            guild: discord.Guild,
+            title: str,
+            fields: dict,
+            thumbnail: str = None,
+            to_owner: bool = False,
     ):
 
         if guild is None:
@@ -29,7 +24,7 @@ class Log(context.CustomCog):
         if not await self.bot.get_guild_setting(guild.id, "logging_enabled"):
             return
 
-        embed = utils.SafeEmbed(title=title)
+        embed = text.SafeEmbed(title=title)
 
         for field in fields:
             embed.add_field(name=field, value=fields[field][0], inline=fields[field][1])
@@ -122,7 +117,7 @@ class Log(context.CustomCog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        embed_fields = {"Name": [str(member), False], "ID": [member.id, False]}
+        embed_fields = {"Name": [member, False], "ID": [member.id, False]}
 
         await self.log_event(
             member.guild,
@@ -196,7 +191,7 @@ class Log(context.CustomCog):
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild, user):
-        embed_fields = {"Name": [str(user), True]}
+        embed_fields = {"Name": [user, True]}
 
         await self.log_event(
             guild,
@@ -208,7 +203,7 @@ class Log(context.CustomCog):
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild, user):
-        embed_fields = {"Name": [str(user), True]}
+        embed_fields = {"Name": [user, True]}
 
         await self.log_event(
             guild,

@@ -50,11 +50,11 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         self.pass_scheduler = LawPassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.veto_scheduler = LawVetoScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
-    async def get_pretty_vetos(self) -> typing.List[str]:
-        """Gets all bills that passed the Legislature, are vetoable and were not yet voted on by the Ministry"""
+    async def get_pretty_vetoes(self) -> typing.List[str]:
+        """Gets all bills that passed the Legislature, are veto-able and were not yet voted on by the Ministry"""
 
         open_bills = await self.bot.db.fetch(
-            "SELECT id, name, link, tiny_link FROM bill " "WHERE is_vetoable = true AND status = $1 ORDER BY id",
+            "SELECT id, name, link, tiny_link FROM bill WHERE is_vetoable = true AND status = $1 ORDER BY id",
             models.BillPassedLegislature.flag.value,
         )
 
@@ -71,8 +71,8 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
             pretty_bills.append(f"Bill #{record['id']} - [{record['name']}]({record['tiny_link']})")
 
         exported = [
-            f"Export of Vetoable Bills -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n",
-            "----- Vetoable Bills -----\n",
+            f"Export of Veto-able Bills -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n",
+            "----- Veto-able Bills -----\n",
         ]
 
         exported.extend(b_ids)
@@ -84,7 +84,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         if link:
             pretty_bills.insert(
                 0,
-                f"[View this list in Google Spreadsheets formatting for" f" easy copy & pasting]({link})\n",
+                f"[*View this list in Google Spreadsheets formatting for" f" easy copy & pasting*]({link})\n",
             )
 
         return pretty_bills
@@ -99,10 +99,10 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         """Dashboard for {minister_term} with important links and updates on new bills"""
 
         embed = text.SafeEmbed(
-            title=f"{self.bot.mk.NATION_EMOJI}  The {self.bot.mk.MINISTRY_NAME} of " f"{self.bot.mk.NATION_FULL_NAME}"
+            title=f"{self.bot.mk.NATION_EMOJI}  The {self.bot.mk.MINISTRY_NAME} of {self.bot.mk.NATION_FULL_NAME}"
         )
 
-        pretty_bills = await self.get_pretty_vetos()
+        pretty_bills = await self.get_pretty_vetoes()
 
         if not pretty_bills:
             pretty_bills = "There are no new bills to vote on."
@@ -126,7 +126,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         embed.add_field(name=self.bot.mk.MINISTRY_LEADERSHIP_NAME, value="\n".join(minister_value))
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n" f"[Legal Code]({self.bot.mk.LEGAL_CODE})\n",
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})\n",
             inline=True,
         )
         embed.add_field(name="Veto-able Bills", value=pretty_bills, inline=False)
@@ -136,7 +136,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
     async def bills(self, ctx):
         """See all open bills from the {LEGISLATURE_NAME} to vote on"""
 
-        pretty_bills = await self.get_pretty_vetos()
+        pretty_bills = await self.get_pretty_vetoes()
         pages = paginator.SimplePages(
             entries=pretty_bills,
             title=f"{self.bot.mk.NATION_EMOJI}  Open Bills to Vote On",

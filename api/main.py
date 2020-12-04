@@ -17,6 +17,11 @@ from fastapi.responses import PlainTextResponse
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [API] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
 
+# todo
+REDDIT_LOGO = "<:reddit:660114002533285888>"
+YOUTUBE_LOGO_UPLOAD = "<:youtubeiconwhite:660114810444447774>"
+YOUTUBE_LOGO_STREAM = "<:youtubeiconred:660897027114401792>"
+TWITCH_LOGO = "<:twitch:660116652012077080>"
 
 class Database:
     def __init__(self, *, dsn):
@@ -284,4 +289,5 @@ def roll_dice(dice_to_roll: Dice):
 
 
 if __name__ == "__main__":
+    # todo weird logging error
     uvicorn.run(app=app, host="0.0.0.0", port="8000")

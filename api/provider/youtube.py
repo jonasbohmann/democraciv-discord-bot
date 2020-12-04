@@ -7,12 +7,16 @@ import discord
 from discord.ext import tasks
 
 
+# todo post to reddit?
+
+
 YOUTUBE_VIDEO_UPLOADS_TO_REDDIT = True
 YOUTUBE_CHANNEL_ID = "UC-NukxPakwQIvx73VjtIPnw"
 YOUTUBE_CHANNEL_UPLOADS_PLAYLIST = "UU-NukxPakwQIvx73VjtIPnw"
 YOUTUBE_LOGO_UPLOAD = "<:youtubeiconwhite:660114810444447774>"
 YOUTUBE_LOGO_STREAM = "<:youtubeiconred:660897027114401792>"
 
+# todo fix
 
 class YouTubeManager:
 

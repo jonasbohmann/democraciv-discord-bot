@@ -1,18 +1,17 @@
 import io
 import typing
 import random
-from urllib import parse
 import discord
 import operator
 import datetime
 import re
 
-from bot.config import config, token
 from discord.ext import commands
+from urllib import parse
 
+from bot.config import config, token
 from bot.utils import context, paginator, text
 from bot.utils.converter import (
-    CaseInsensitiveRole,
     PoliticalParty,
     CaseInsensitiveMember, CaseInsensitiveUser, DemocracivCaseInsensitiveRole,
 )
@@ -44,8 +43,6 @@ class Utility(context.CustomCog):
         async with self.bot.session.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{query}") as response:
             if response.status == 200:
                 return await response.json()
-            else:
-                return None
 
     async def get_wikipedia_suggested_articles(self, query):
         """This uses the older MediaWiki Action API to query their site.
@@ -61,8 +58,6 @@ class Utility(context.CustomCog):
         ) as response:
             if response.status == 200:
                 return await response.json()
-            else:
-                return None
 
     @commands.command(name="wikipedia")
     async def wikipedia(self, ctx, *, topic: str):
@@ -88,7 +83,8 @@ class Utility(context.CustomCog):
                 result = await self.get_wikipedia_result_with_rest_api(suggested_query_name)
 
                 if result is None or not result:
-                    return await ctx.send(f"{config.NO} Didn't find any article that's related to `{topic}`")
+                    return await ctx.send(f"{config.NO} Wikipedia couldn't suggest me any articles that are "
+                                          f"related to `{topic}`.")
 
             title = result["title"]
             summary = result["extract"]
@@ -122,7 +118,8 @@ class Utility(context.CustomCog):
             zone = zone.upper()
 
         if not token.TIMEZONEDB_API_KEY:
-            return await ctx.send(f"{config.NO} Invalid TimeZoneDB API key.")
+            await self.bot.owner.send(f"Invalid TimeZoneDB API key in `bot/config/token.py`")
+            return await ctx.send(f"{config.NO} This command cannot be used right now.")
 
         query_base = (
             f"https://api.timezonedb.com/v2.1/get-time-zone?key={token.TIMEZONEDB_API_KEY}&format=json&"
@@ -183,11 +180,13 @@ class Utility(context.CustomCog):
     async def get_member_join_position(self, user, members: list):
         if user.guild.id == self.bot.dciv.id:
             row = await self.bot.db.fetchrow(
-                "SELECT join_position, max(join_position) AS all_members FROM original_join_date WHERE member = $1",
+                "SELECT join_position FROM original_join_date WHERE member = $1",
                 user.id)
 
+            all_members = await self.bot.db.fetchval("SELECT max(join_position) FROM original_join_date")
+
             if row:
-                return row['join_position'], row['all_members']
+                return row['join_position'], all_members
 
         joins = tuple(sorted(members, key=operator.attrgetter("joined_at")))
 
@@ -224,14 +223,16 @@ class Utility(context.CustomCog):
         """
 
         def _get_roles(roles):
-            string = ""
+            fmt = []
+
             for role in roles[::-1]:
                 if not role.is_default():
-                    string += f"{role.mention}, "
-            if string == "":
+                    fmt.append(role.mention)
+
+            if not fmt:
                 return "-"
             else:
-                return string[:-2]
+                return ', '.join(fmt)
 
         if isinstance(member, discord.Role):
             return await self.role_info(ctx, member)
@@ -353,30 +354,33 @@ class Utility(context.CustomCog):
                 if response.status == 200:
                     lyrics = await response.json()
                 else:
-                    return await ctx.send(f"{config.NO} Couldn't find anything that matches `{query}`.")
+                    return await ctx.send(f"{config.NO} Genius could not suggest me anything related to `{query}`.")
 
         try:
             lyrics["lyrics"] = lyrics["lyrics"].replace("[", "**[").replace("]", "]**")
 
             if len(lyrics["lyrics"]) <= 2048:
                 embed = text.SafeEmbed(
-                    title=f"{lyrics['title']} by {lyrics['author']}",
+                    title=lyrics['title'],
                     description=lyrics["lyrics"],
                     colour=0x2F3136,
+                    url=lyrics["links"]["genius"]
                 )
-                embed.url = lyrics["links"]["genius"]
+                embed.set_author(name=lyrics['author'])
                 embed.set_thumbnail(url=lyrics["thumbnail"]["genius"])
                 return await ctx.send(embed=embed)
 
             pages = paginator.SimplePages(
                 entries=lyrics["lyrics"].splitlines(),
-                title=f"{lyrics['title']} by {lyrics['author']}",
+                title=lyrics['title'],
                 title_url=lyrics["links"]["genius"],
+                author=lyrics['author'],
                 thumbnail=lyrics["thumbnail"]["genius"],
-                colour=0x2F3136,
+                colour=0x2F3136
             )
+
         except KeyError:
-            return await ctx.send(f"{config.NO} Couldn't find anything that matches `{query}`.")
+            return await ctx.send(f"{config.NO} Genius could not suggest me anything related to `{query}`.")
 
         await pages.start(ctx)
 
@@ -511,9 +515,9 @@ class Utility(context.CustomCog):
             pretty = "not passed"
 
         embed = text.SafeEmbed(
-            title=":flushed:  Vibe Check",
-            description=f"{member.mention} has **{pretty}** the vibe check!",
+            title=f"{member} has __{pretty}__ the vibe check",
         )
+
         embed.set_image(url=image)
         await ctx.send(embed=embed)
 
@@ -554,7 +558,7 @@ class Utility(context.CustomCog):
                 async with ctx.typing():
                     async with self.bot.session.get(url) as other:
                         if other.status != 200:
-                            return await ctx.send("{config.NO} Could not download dog video :(")
+                            return await ctx.send(f"{config.NO} Could not download dog video :(")
 
                         if int(other.headers["Content-Length"]) >= filesize:
                             return await ctx.send(
@@ -596,7 +600,7 @@ class Utility(context.CustomCog):
 
         async with self.bot.session.get("https://api.thecatapi.com/v1/images/search") as response:
             if response.status != 200:
-                return await ctx.send("{config.NO} No cat found :(")
+                return await ctx.send(f"{config.NO} No cat found :(")
 
             js = await response.json()
 

@@ -8,6 +8,7 @@ from api.provider.abc import ProviderManager
 
 StreamContext = namedtuple("StreamContext", "webhook_url everyone_ping")
 
+# todo post to reddit?
 
 class TwitchStream:
     def __init__(self, **kwargs):

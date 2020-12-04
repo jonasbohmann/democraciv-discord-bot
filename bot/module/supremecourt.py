@@ -4,10 +4,11 @@ from bot.utils import exceptions, context
 from discord.ext import commands
 from bot.utils.mixin import GovernmentMixin
 from bot.utils import text
+from config import mk
 
 
-class SupremeCourt(context.CustomCog, GovernmentMixin, name="Supreme Court"):
-    """Useful information about the Supreme Court of this nation."""
+class SupremeCourt(context.CustomCog, GovernmentMixin, name=mk.MarkConfig.courts_term):
+    """Useful information about the {courts_term} of this nation."""
 
     def get_justices(self):
         try:
@@ -40,7 +41,7 @@ class SupremeCourt(context.CustomCog, GovernmentMixin, name="Supreme Court"):
         invoke_without_command=True
     )
     async def court(self, ctx):
-        """Dashboard for Supreme Court Justices"""
+        """Dashboard for {justice_term}"""
 
         embed = text.SafeEmbed(
             title=f"{self.bot.mk.NATION_EMOJI}  " f"{self.bot.mk.courts_term} of the {self.bot.mk.NATION_FULL_NAME}"
@@ -64,7 +65,8 @@ class SupremeCourt(context.CustomCog, GovernmentMixin, name="Supreme Court"):
 
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n" f"[Legal Code]({self.bot.mk.LEGAL_CODE})",
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
+                  f"[Legal Code]({self.bot.mk.LEGAL_CODE})",
             inline=False,
         )
 

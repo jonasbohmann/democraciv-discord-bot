@@ -207,35 +207,7 @@ class Bank(context.CustomCog):
 
     @tasks.loop(hours=config.DATABASE_DAILY_BACKUP_INTERVAL)
     async def bank_db_backup(self):
-        # Unique filenames with current UNIX timestamp
-        now = time.time()
-        pretty_time = datetime.datetime.utcfromtimestamp(now).strftime("%A, %B %d %Y %H:%M:%S")
-        backup_channel = self.bot.get_channel(config.DATABASE_DAILY_BACKUP_DISCORD_CHANNEL)
-        path = "bot/ext/democracivbank/db/"
-
-        if not os.path.isdir(path):
-            os.mkdir(path)
-
-        fn = f"bank-of-democraciv-backup-{now}"
-
-        command = (
-            f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump -Fc live_bank > {path}{fn} '
-            f"-U {token.POSTGRESQL_USER} -h {token.POSTGRESQL_HOST} -w"
-        )
-
-        await asyncio.create_subprocess_shell(command)
-        await asyncio.sleep(20)
-
-        if backup_channel is None:
-            logging.warning(
-                f"Couldn't find Backup Discord channel for democracivbank.com backup '{path}{fn}'.")
-            return
-
-        file = discord.File(f"{path}{fn}")
-        await backup_channel.send(
-            f"---- democracivbank.com Database Backup from {pretty_time} (UTC) ----",
-            file=file,
-        )
+        await self.bot.do_db_backup("live_bank")
 
     async def is_connected_with_bank_user(self, ctx):
         response = await self.request(BankRoute("HEAD", f"discord_user/{ctx.author.id}/"))
@@ -356,7 +328,6 @@ class Bank(context.CustomCog):
         case_insensitive=True,
         invoke_without_command=True,
     )
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def bank(self, ctx):
         """The Bank of Arabia"""
 
@@ -389,7 +360,6 @@ class Bank(context.CustomCog):
         name="organization",
         aliases=["org", "corp", "company", "corporation", "marketplace", "m"],
     )
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def organization(self, ctx, organization: BankCorporation = None):
         """Details about a specific organization or corporation on the Marketplace"""
         if organization is None:
@@ -450,7 +420,6 @@ class Bank(context.CustomCog):
         name="accounts",
         aliases=["bal", "money", "cash", "b", "account", "balance", "a", "acc"],
     )
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def accounts(self, ctx):
         """See the balance of every bank account you have access to"""
         await self.is_connected_with_bank_user(ctx)
@@ -511,7 +480,6 @@ class Bank(context.CustomCog):
         await pages.start(ctx)
 
     @bank.command(name="send", aliases=["s", "transfer", "t", "give"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def send(
             self,
             ctx,
@@ -575,7 +543,6 @@ class Bank(context.CustomCog):
         await ctx.send(embed=embed)
 
     @bank.command(name="applyottomantax", aliases=["applyottomanformula"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.OTTOMAN_TAX_OFFICER)
     async def apply_ottoman_formula(self, ctx):
         """See the outcome of a dry-run of the tax on all bank accounts with the Ottoman currency and then apply that tax """
@@ -616,7 +583,6 @@ class Bank(context.CustomCog):
         await ctx.send(f"{config.YES} Tax was applied to all accounts with the Ottoman currency.")
 
     @bank.command(name="liracirculation")
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.OTTOMAN_TAX_OFFICER)
     async def ottoman_circulation(self, ctx):
         """See how much Lira is currently in circulation"""
@@ -631,7 +597,6 @@ class Bank(context.CustomCog):
         await ctx.send(embed=embed)
 
     @bank.command(name="listottomanvariable", aliases=["listottomanvariables"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.OTTOMAN_TAX_OFFICER)
     async def list_ottoman_ibal(self, ctx):
         """List all bank accounts with the Ottoman currency and check their Equilibrium variable"""
@@ -663,7 +628,6 @@ class Bank(context.CustomCog):
             "editottomanvariable",
         ],
     )
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.OTTOMAN_TAX_OFFICER)
     async def edit_ottoman_ibal(self, ctx, iban: uuid.UUID, new_ibal: decimal.Decimal):
         """Change the Equilibrium variable of a bank account with the Ottoman currency

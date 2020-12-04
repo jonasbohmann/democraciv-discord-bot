@@ -3,7 +3,6 @@ import inspect
 import typing
 
 from bot.utils import exceptions
-from bot.config import config
 
 
 class DemocracivRole(enum.Enum):
@@ -65,7 +64,7 @@ class MarkConfig:
     NATION_ADJECTIVE = "Arabian"
     NATION_FLAG_URL = "https://i.imgur.com/M97zPrP.jpg"
     NATION_ICON_URL = ""
-    NATION_EMOJI = config.NATION_FLAG
+    NATION_EMOJI = "<:arabia:721366589861265429>"
 
     LEGISLATURE_NAME = "Legislature"
     LEGISLATURE_COMMAND = "legislature"

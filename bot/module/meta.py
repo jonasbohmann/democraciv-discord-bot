@@ -5,7 +5,6 @@ from bot.config import config, exceptions
 from discord.ext import commands
 from bot.utils import context, help
 from bot.utils.text import SafeEmbed
-from utils import models
 
 
 class Meta(context.CustomCog):

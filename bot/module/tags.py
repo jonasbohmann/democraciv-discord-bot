@@ -84,7 +84,6 @@ class Tags(context.CustomCog):
         invoke_without_command=True,
         case_insensitive=True,
     )
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def tags(self, ctx: context.CustomContext, tag: Tag = None):
         """Access a tag or list all tags on this server
 
@@ -115,7 +114,8 @@ class Tags(context.CustomCog):
         pretty_tags = []
 
         if global_tags:
-            pretty_tags = ["**__Global Tags__**"]
+            pretty_tags = [f"**__Global Tags__**\n*Tags can only be made global by {self.bot.dciv.name} "
+                           f"Moderation. Global tags work in every server I am in, as well as in DMs with me.*\n"]
 
         for record in global_tags:
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
@@ -126,7 +126,9 @@ class Tags(context.CustomCog):
                 ctx.guild.id,
             )
             if all_tags:
-                pretty_tags.append("\n\n**__Local Tags__**")
+                pretty_tags.append(f"\n\n**__Local Tags__**\n*Every Tag that was not explicitly made global by "
+                                   f"{self.bot.dciv.name} Moderation is a local tag, "
+                                   f"and only works in the server it was made in.*\n")
 
             for record in all_tags:
                 pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
@@ -146,7 +148,6 @@ class Tags(context.CustomCog):
         await pages.start(ctx)
 
     @tags.command(name="local", aliases=["l"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def local(self, ctx: context.CustomContext):
         """List all non-global tags on this server"""
@@ -169,7 +170,6 @@ class Tags(context.CustomCog):
         await pages.start(ctx)
 
     @tags.command(name="from", aliases=["by"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def _from(
             self,
@@ -200,7 +200,6 @@ class Tags(context.CustomCog):
         await pages.start(ctx)
 
     @tags.command(name="addalias")
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @checks.tag_check()
     async def addtagalias(self, ctx: context.CustomContext, *, tag: OwnedTag):
@@ -234,7 +233,6 @@ class Tags(context.CustomCog):
         )
 
     @tags.command(name="removealias", aliases=["deletealias", "ra", "da"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @checks.tag_check()
     async def removetagalias(self, ctx: context.CustomContext, *, alias: OwnedTag):
@@ -304,7 +302,6 @@ class Tags(context.CustomCog):
         return True
 
     @tags.command(name="add", aliases=["make", "create", "a"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @checks.tag_check()
     async def addtag(self, ctx: context.CustomContext):
@@ -325,7 +322,8 @@ class Tags(context.CustomCog):
         if not await self.validate_tag_name(ctx, name.lower()):
             return
 
-        file = await self.bot.make_file_from_image_link("https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png")
+        file = await self.bot.make_file_from_image_link(
+            "https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png")
 
         embed_q = await ctx.send(f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?"
                                  f"\n{config.HINT} *Embeds behave differently than plain text, see the image below "
@@ -351,7 +349,6 @@ class Tags(context.CustomCog):
         if ctx.guild.id == self.bot.dciv.id and (ctx.author.guild_permissions.administrator or
                                                  self.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
                                                  in ctx.author.roles):
-
             is_global = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should this tag be global?"
                                           f"\n{config.HINT} *Only {self.bot.dciv.name} Moderators and Nation Admins "
                                           f"can make global tags. "
@@ -389,7 +386,6 @@ class Tags(context.CustomCog):
         await ctx.send(f"{config.YES} The `{config.BOT_PREFIX}{name}` tag was added.")
 
     @tags.command(name="info", aliases=["about", "i"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def taginfo(self, ctx: context.CustomContext, *, tag: Tag):
         """Info about a tag"""
@@ -437,7 +433,6 @@ class Tags(context.CustomCog):
         await ctx.send(embed=embed)
 
     @tags.command(name="claim")
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def claim(self, ctx: context.CustomContext, *, tag: Tag):
         """Claim a tag if the original tag author left this server"""
@@ -455,7 +450,6 @@ class Tags(context.CustomCog):
         return await ctx.send(f"{config.YES} You are now the owner `{config.BOT_PREFIX}{tag.name}`.")
 
     @tags.command(name="transfer")
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def transfer(
             self,
@@ -473,7 +467,6 @@ class Tags(context.CustomCog):
         return await ctx.send(f"{config.YES} {to_person} is now the owner of `{config.BOT_PREFIX}{tag.name}`.")
 
     @tags.command(name="raw")
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def raw(self, ctx: context.CustomContext, *, tag: Tag):
         """Raw markdown of a tag
@@ -484,13 +477,13 @@ class Tags(context.CustomCog):
         return await ctx.send(f"```{safe_content}```")
 
     @tags.command(name="edit", aliases=["change"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @checks.tag_check()
     async def edittag(self, ctx: context.CustomContext, *, tag: OwnedTag):
         """Edit one of your tags"""
 
         result = await EditTagMenu().prompt(ctx)
+        p = config.BOT_PREFIX
 
         if not result.confirmed:
             return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
@@ -501,13 +494,22 @@ class Tags(context.CustomCog):
             return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
 
         if to_change["embed"]:
-            is_embedded = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?")
+            file = await self.bot.make_file_from_image_link(
+                "https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png")
+
+            embed_q = await ctx.send(f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?"
+                                     f"\n{config.HINT} *Embeds behave differently than plain text, see the image below "
+                                     f"for the key differences.*", file=file)
+            is_embedded = await ctx.confirm(message=embed_q)
         else:
             is_embedded = tag.is_embedded
 
         if to_change["title"]:
             new_title = await ctx.input(
-                f"{config.USER_INTERACTION_REQUIRED} Reply with the updated **title** of this tag.")
+                f"{config.USER_INTERACTION_REQUIRED} Reply with the updated **title** of the tag."
+                f"\n{config.HINT} *This will be displayed next to the tag's name, "
+                f"`{tag.name}`, in the `{p}tags`, `{p}tags search` and `{p}tags from` commands. It will "
+                f"also be the title of the embed, if you decided to send this tag as an embed.*")
 
             if len(new_title) > 256:
                 return await ctx.send(f"{config.NO} The title cannot be longer than 256 characters.")
@@ -527,7 +529,7 @@ class Tags(context.CustomCog):
             new_content = tag.content
 
         are_you_sure = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit your " f"`{config.BOT_PREFIX}{tag.name}` tag?"
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit your `{config.BOT_PREFIX}{tag.name}` tag?"
         )
 
         if not are_you_sure:
@@ -543,7 +545,6 @@ class Tags(context.CustomCog):
         await ctx.send(f"{config.YES} Your tag was edited.")
 
     @tags.command(name="search", aliases=["s"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def search(self, ctx: context.CustomContext, *, query: str):
         """Search for a global or local tag on this server"""
 
@@ -575,7 +576,6 @@ class Tags(context.CustomCog):
         await pages.start(ctx)
 
     @tags.command(name="toggleglobal")
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @checks.moderation_or_nation_leader()
     async def toggleglobal(self, ctx: context.CustomContext, *, tag: Tag):
@@ -592,7 +592,6 @@ class Tags(context.CustomCog):
             await ctx.send(f"{config.YES} `{config.BOT_PREFIX}{tag.name}` is no longer a global tag.")
 
     @tags.command(name="remove", aliases=["delete"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     @checks.tag_check()
     async def removetag(self, ctx: context.CustomContext, *, tag: OwnedTag):

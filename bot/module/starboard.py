@@ -47,7 +47,7 @@ class Starboard(context.CustomCog):
         self.star_threshold = config.STARBOARD_MIN_STARS
 
         if config.STARBOARD_ENABLED and config.STARBOARD_REDDIT_SUMMARY_ENABLED:
-            if not config.REDDIT_SUBREDDIT:
+            if not config.STARBOARD_REDDIT_SUBREDDIT:
                 logging.warning(
                     "Starboard Reddit post is enabled but no subreddit was provided in config.py!"
                 )
@@ -172,7 +172,7 @@ class Starboard(context.CustomCog):
                 try:
                     if (
                         post["data"]["title"].startswith("Weekly Discord News")
-                        and post["data"]["subreddit"] == config.REDDIT_SUBREDDIT
+                        and post["data"]["subreddit"] == config.STARBOARD_REDDIT_SUBREDDIT
                     ):
                         time = datetime.date.fromtimestamp(post["data"]["created_utc"])
                         if time == datetime.date.today():
@@ -214,7 +214,7 @@ class Starboard(context.CustomCog):
         title = f"Weekly Discord News - {start_of_last_week.strftime('%B %d')} to {today.strftime('%B %d')}"
 
         js = {
-            "subreddit": config.REDDIT_SUBREDDIT,
+            "subreddit": config.STARBOARD_REDDIT_SUBREDDIT,
             "title": title,
             "content": post_content
         }
@@ -474,7 +474,6 @@ class Starboard(context.CustomCog):
         case_insensitive=True,
         invoke_without_command=True,
     )
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @commands.guild_only()
     async def starboard(
         self,

@@ -106,7 +106,6 @@ class Party(context.CustomCog, name="Political Parties"):
         return parties_and_members
 
     @commands.group(name="party", case_insensitive=True, invoke_without_command=True)
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def party(self, ctx, *, party: PoliticalParty = None):
         """Detailed information about a single political party"""
 
@@ -208,6 +207,8 @@ class Party(context.CustomCog, name="Political Parties"):
                 with contextlib.suppress(discord.Forbidden):
                     await leader.send(message)
 
+    # todo fix design
+
     @commands.Cog.listener(name="on_member_update")
     async def party_join_leave_notification(self, before, after):
         if before.guild.id != self.bot.dciv.id or before.roles == after.roles:
@@ -247,7 +248,6 @@ class Party(context.CustomCog, name="Political Parties"):
             await self.bot.safe_send_dm(target=leader, embed=embed, reason="party_join_leave")
 
     @commands.command(name="join")
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def join(self, ctx, *, party: PoliticalParty):
         """Join a political party"""
 
@@ -322,7 +322,6 @@ class Party(context.CustomCog, name="Political Parties"):
             await ctx.send(message)
 
     @commands.command(name="leave")
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def leave(self, ctx, *, party: PoliticalParty):
         """Leave a political party"""
 
@@ -350,7 +349,6 @@ class Party(context.CustomCog, name="Political Parties"):
         name="parties",
         aliases=["rank", "ranks", "members", "member", "rankings", "ranking"],
     )
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def parties(self, ctx):
         """Ranking of political parties by their amount of members"""
 
@@ -514,7 +512,6 @@ class Party(context.CustomCog, name="Political Parties"):
         return result
 
     @party.command(name="add", aliases=["create", "make"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.moderation_or_nation_leader()
     async def addparty(self, ctx):
         """Add a new political party"""
@@ -522,7 +519,6 @@ class Party(context.CustomCog, name="Political Parties"):
         await ctx.send(f"{config.YES} `{party.role.name}` was added as a new Political Party.")
 
     @party.command(name="edit", aliases=["change"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.moderation_or_nation_leader()
     async def changeparty(self, ctx, *, party: PoliticalParty):
         """Edit an existing political party
@@ -584,7 +580,6 @@ class Party(context.CustomCog, name="Political Parties"):
         await ctx.send(f"{config.YES} `{party.role.name}` was edited.")
 
     @party.command(name="delete", aliases=["remove"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.moderation_or_nation_leader()
     async def deleteparty(self, ctx, *, party: PoliticalParty):
         """Delete a political party
@@ -614,7 +609,6 @@ class Party(context.CustomCog, name="Political Parties"):
         await ctx.send(f"{config.YES} `{name}` and all its aliases were deleted.")
 
     @party.command(name="addalias")
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.moderation_or_nation_leader()
     async def addalias(self, ctx, *, party: PoliticalParty):
         """Add a new alias to a political party"""
@@ -635,23 +629,23 @@ class Party(context.CustomCog, name="Political Parties"):
         await ctx.send(f"{config.YES} Alias `{alias}` for party `{party.role.name}` was added.")
 
     @party.command(name="deletealias", aliases=["removealias"])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.moderation_or_nation_leader()
     async def deletealias(self, ctx, *, alias: str):
         """Delete a party's alias"""
         try:
             await PoliticalParty.convert(ctx, alias)
-        except exceptions.PartyNotFoundError:
+        except exceptions.NotFoundError:
             return await ctx.send(f"{config.NO} `{alias}` is not an alias of any party.")
 
         await self.bot.db.execute("DELETE FROM party_alias WHERE alias = $1", alias.lower())
         await ctx.send(f"{config.YES} Alias `{alias}` was deleted.")
 
     @party.command(name="merge")
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.moderation_or_nation_leader()
     async def mergeparties(self, ctx, amount_of_parties: int):
         """Merge one or multiple parties into a single, new party"""
+
+        # todo
 
         to_be_merged = []
 
@@ -664,7 +658,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
             try:
                 party = await PoliticalParty.convert(ctx, name)
-            except exceptions.PartyNotFoundError:
+            except exceptions.NotFoundError:
                 return await ctx.send(f"{config.NO} There is no party that matches `{name}`. Aborted.")
 
             to_be_merged.append(party)

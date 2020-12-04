@@ -50,15 +50,16 @@ class _Guild(context.CustomCog, name="Server"):
         excluded_channels = len(settings["private_channels"])
 
         embed = text.SafeEmbed(
-            title=ctx.guild.name,
-            description=f"Check `{config.BOT_PREFIX}help server` for help on " f"how to configure me for this server.",
+            description=f"Check **`{config.BOT_PREFIX}help server`** to see how you can configure me for this server.",
         )
+
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild_icon)
 
         embed.add_field(
             name="Settings",
             value=f"{is_welcome_enabled} Welcome Messages\n"
-                  f"{is_logging_enabled} Logging ({excluded_channels} excluded channels)\n"
-                  f"{is_default_role_enabled} Default Role\n"
+                  f"{is_logging_enabled} Logging ({excluded_channels} hidden channels)\n"
+                  f"{is_default_role_enabled} Role on Join\n"
                   f"{is_tag_creation_allowed} Tag Creation by Everyone",
         )
         embed.add_field(
@@ -69,7 +70,7 @@ class _Guild(context.CustomCog, name="Server"):
                   f"{len(ctx.guild.emojis)} custom emojis",
         )
         embed.set_footer(text=f"Server was created on {ctx.guild.created_at.strftime('%A, %B %d %Y')}")
-        embed.set_thumbnail(url=ctx.guild.icon_url_as(static_format="png"))
+        embed.set_thumbnail(url=ctx.guild_icon)
         await ctx.send(embed=embed)
 
     @commands.Cog.listener(name="on_member_join")
@@ -102,7 +103,7 @@ class _Guild(context.CustomCog, name="Server"):
             current_welcome_message = textwrap.shorten(current_welcome_message, 1024)
 
         embed = text.SafeEmbed(
-            description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to change" f" these settings.",
+            description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to change these settings.",
         )
 
         embed.set_author(name=f"Welcome Messages on {ctx.guild.name}", icon_url=ctx.guild_icon)
@@ -143,8 +144,8 @@ class _Guild(context.CustomCog, name="Server"):
                 # Get new welcome message
                 welcome_message = await ctx.input(
                     f"{config.USER_INTERACTION_REQUIRED} Reply with the message that should be sent to {channel_object.mention} "
-                    f"every time a new member joins.\n\nWrite `{{member}}` "
-                    f"to make the Bot mention the user."
+                    f"every time a new person joins.\n{config.HINT} You can write `{{member}}` to make me mention "
+                    f"the person that just joined."
                 )
 
                 await self.bot.db.execute(
@@ -224,36 +225,47 @@ class _Guild(context.CustomCog, name="Server"):
 
             await self.bot.update_guild_config_cache()
 
-    @guild.command(name="exclude")
+    @guild.command(name="hidechannel", aliases=['exclude', 'private', 'hiddenchannels', 'hide'])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
-    async def exclude(self, ctx, channel: str = None):
-        """Exclude message edits & deletions in a channel from showing up in your server's log channel
+    async def exclude(self, ctx, channel: converter.CaseInsensitiveTextChannelOrCategoryChannel = None):
+        """Hide a channel from your server's log channel
 
-        Both text channels and entire categories can be excluded.
+        Both text channels and entire categories can be hidden.
 
          **Usage**
-             `{PREFIX}{COMMAND}` to see all excluded channels
-             `{PREFIX}{COMMAND} <channel>` to add/remove a channel to/from the excluded channels list
+             `{PREFIX}{COMMAND}` to see all hidden channels/categories
+             `{PREFIX}{COMMAND} <channel>` to hide or unhide a channel or category
         """
         settings = await self.ensure_guild_settings(ctx.guild.id)
         current_logging_channel = await self.bot.get_logging_channel(ctx.guild)
 
         if current_logging_channel is None:
             return await ctx.send(
-                f"{config.NO} This server currently has no logging channel. Please set one with `{config.BOT_PREFIX}server logs`."
+                f"{config.NO} This server currently has no logging channel. "
+                f"Please set one with `{config.BOT_PREFIX}server logs`."
             )
 
         help_description = (
-            f"Add or remove a channel to the excluded channels with:\n`{config.BOT_PREFIX}server exclude [channel_name]`\n\n"
+            f"When you hide a channel, it will no longer show up in {current_logging_channel.mention}.\n\nAdditionally, "
+            f":star: reactions for the starboard will no longer count in that channel.\n\nYou can hide a channel, "
+            f"or even an entire category at once, with `{config.BOT_PREFIX}server hidechannel <channel_name>`\n\n__**Hidden Channels**__"
         )
+
         private_channels = settings["private_channels"]
 
         if not channel:
             current_excluded_channels_by_name = [help_description]
 
             if not private_channels:
-                return await ctx.send("There are no from logging excluded channels on this server.")
+                return await ctx.send(f"{config.NO} There are no hidden channels on this server yet. "
+                                      f"You can hide a channel so that it no longer shows up in "
+                                      f"{current_logging_channel.mention} with "
+                                      f"`{config.BOT_PREFIX}server hidechannel <channel_name>`."
+                                      f"\n{config.HINT} You can also hide entire categories! Just hide the category "
+                                      f"and every channel in that category will be hidden automatically. "
+                                      f"Note that if channel is hidden, :star: reactions for the starboard will no "
+                                      f"longer count in it.")
 
             for channel_id in private_channels:
                 channel = self.bot.get_channel(channel_id)
@@ -262,39 +274,59 @@ class _Guild(context.CustomCog, name="Server"):
 
             pages = paginator.SimplePages(
                 entries=current_excluded_channels_by_name,
-                author=f"Logging-Excluded Channels on {ctx.guild.name}",
-                icon=ctx.guild.icon_url_as(static_format="png"),
+                author=f"Hidden Channels on {ctx.guild.name}",
+                icon=ctx.guild_icon,
+                empty_message="There are no hidden channels on this server.",
             )
             return await pages.start(ctx)
 
         else:
-            try:
-                channel_object = await converter.CaseInsensitiveTextChannelOrCategoryChannel().convert(ctx, channel)
-            except commands.BadArgument:
-                raise exceptions.ChannelNotFoundError(channel)
+            is_category = isinstance(channel, discord.CategoryChannel)
 
             # Remove channel
-            if channel_object.id in private_channels:
+            if channel.id in private_channels:
                 await self.bot.db.execute(
                     "DELETE FROM guild_private_channel WHERE guild_id = $1 AND channel_id = $2",
                     ctx.guild.id,
-                    channel_object.id,
+                    channel.id,
                 )
                 await self.bot.update_guild_config_cache()
-                await ctx.send(
-                    f"{config.YES} {channel_object.mention} is no longer excluded from showing up in {current_logging_channel.mention}."
-                )
+
+                if is_category:
+                    star = f"\n{config.HINT} *Note that :star: reactions for the starboard will now count again in every one of these channels.*" if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED else ""
+                    await ctx.send(
+                        f"{config.YES} The {channel} category is no longer hidden, and all channels in it "
+                        f"will show up in {current_logging_channel.mention} again.{star}"
+                    )
+                else:
+                    star = f"\n{config.HINT} *Note that :star: reactions for the starboard will now count again in this channel.*" if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED else ""
+                    await ctx.send(
+                        f"{config.YES} {channel.mention} is no longer hidden, "
+                        f"and it will show up in {current_logging_channel.mention} again.{star}"
+                    )
 
             # Add channel
-            elif channel_object.id not in private_channels:
+            elif channel.id not in private_channels:
                 await self.bot.db.execute(
                     "INSERT INTO guild_private_channel (guild_id, channel_id) VALUES ($1, $2)",
                     ctx.guild.id,
-                    channel_object.id,
+                    channel.id,
                 )
-                await ctx.send(
-                    f"{config.YES} Excluded channel {channel_object.mention} from showing up in {current_logging_channel.mention}."
-                )
+
+                if is_category:
+                    star = f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in any of these channels." if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED else ""
+
+                    await ctx.send(
+                        f"{config.YES} The {channel} category is now hidden, and all the channel in it "
+                        f"will no longer show up in {current_logging_channel.mention}.{star}"
+                    )
+                else:
+                    star = f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in this channel." if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED else ""
+
+                    await ctx.send(
+                        f"{config.YES} {channel.mention} is now hidden and will no longer show up "
+                        f"in {current_logging_channel.mention}.{star}"
+                    )
                 await self.bot.update_guild_config_cache()
 
     @commands.Cog.listener(name="on_member_join")
@@ -312,11 +344,11 @@ class _Guild(context.CustomCog, name="Server"):
             except discord.Forbidden:
                 raise exceptions.ForbiddenError(exceptions.ForbiddenTask.ADD_ROLE, default_role.name)
 
-    @guild.command(name="defaultrole")
+    @guild.command(name="joinrole", aliases=['defaultrole'])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def defaultrole(self, ctx: context.CustomContext):
-        """Give every new member a specific role once they join this server"""
+        """Give every new person that joins a specific role"""
 
         settings = await self.ensure_guild_settings(ctx.guild.id)
         is_default_role_enabled = self.emojify_settings(settings["default_role_enabled"])
@@ -324,17 +356,17 @@ class _Guild(context.CustomCog, name="Server"):
         current_default_role_value = "-" if not current_default_role else current_default_role.mention
 
         embed = text.SafeEmbed(
-            description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to" f" change these settings.",
+            description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to change these settings.",
         )
-        embed.set_author(name=f"Default Role on {ctx.guild.name}", icon_url=ctx.guild_icon)
+        embed.set_author(name=f"Role on Join on {ctx.guild.name}", icon_url=ctx.guild_icon)
         embed.add_field(name="Enabled", value=is_default_role_enabled)
-        embed.add_field(name="Default Role", value=current_default_role_value)
+        embed.add_field(name="Role", value=current_default_role_value)
 
         info_embed = await ctx.send(embed=embed)
 
         if await ctx.ask_to_continue(message=info_embed, emoji=config.GUILD_SETTINGS_GEAR):
             reaction = await ctx.confirm(
-                f"React with {config.YES} to enable the default role, or with {config.NO} to disable the default role."
+                f"React with {config.YES} to enable Role on Join, or with {config.NO} to disable it."
             )
 
             if reaction:
@@ -342,19 +374,19 @@ class _Guild(context.CustomCog, name="Server"):
                     "UPDATE guild SET default_role_enabled = true WHERE id = $1",
                     ctx.guild.id,
                 )
-                await ctx.send(f"{config.YES} Default role was enabled on this server.")
+                await ctx.send(f"{config.YES} Role on Join was enabled on this server.")
 
                 new_default_role = await ctx.converted_input(
                     f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the role that every "
-                    "new member should get once they join.",
+                    "new person should get once they join this server.",
                     converter=converter.CaseInsensitiveRole,
                 )
 
                 if isinstance(new_default_role, str):
                     await ctx.send(
-                        f"{config.YES} I will **create a new role** on this server named `{new_default_role}`"
-                        f" for the default role."
+                        f"{config.YES} I will **create a new role** on this server named `{new_default_role}`."
                     )
+
                     try:
                         new_default_role_object = await ctx.guild.create_role(name=new_default_role)
                     except discord.Forbidden:
@@ -365,7 +397,7 @@ class _Guild(context.CustomCog, name="Server"):
 
                     await ctx.send(
                         f"{config.YES} I'll use the **pre-existing role** named "
-                        f"`{new_default_role_object.name}` for the default role."
+                        f"`{new_default_role_object.name}` for this."
                     )
 
                 await self.bot.db.execute(
@@ -375,7 +407,7 @@ class _Guild(context.CustomCog, name="Server"):
                 )
 
                 await ctx.send(
-                    f"{config.YES} The default role was set to `{new_default_role_object.name}` on this server."
+                    f"{config.YES} Every new person that joins will now get the `{new_default_role_object.name}` role."
                 )
 
             elif not reaction:
@@ -383,7 +415,7 @@ class _Guild(context.CustomCog, name="Server"):
                     "UPDATE guild SET default_role_enabled = false WHERE id = $1",
                     ctx.guild.id,
                 )
-                await ctx.send(f"{config.YES} Default role was disabled on this server.")
+                await ctx.send(f"{config.YES} Role on Join was disabled on this server.")
 
             await self.bot.update_guild_config_cache()
 

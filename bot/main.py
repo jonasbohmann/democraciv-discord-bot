@@ -1,7 +1,6 @@
 import io
 import os
 import re
-import sys
 import time
 import math
 import asyncio
@@ -97,7 +96,6 @@ class DemocracivBot(commands.Bot):
 
         super().__init__(
             command_prefix=commands.when_mentioned_or(config.BOT_PREFIX),
-            description=config.BOT_DESCRIPTION,
             case_insensitive=True,
             intents=intents,
             allowed_mentions=discord.AllowedMentions.none(),
@@ -391,24 +389,6 @@ class DemocracivBot(commands.Bot):
         elif isinstance(error, commands.DisabledCommand):
             return await ctx.send(f"{config.NO} This command has been disabled.")
 
-        elif isinstance(error, exceptions.PartyNotFoundError):
-            parties = await self.db.fetch("SELECT id FROM party")
-            parties = [record["id"] for record in parties]
-            msg = []
-
-            for party in parties:
-                role = self.dciv.get_role(party)
-                if role is not None:
-                    msg.append(role.name)
-
-            if msg:
-                message = f"{config.NO} There is no political party named `{error.party}`.\nTry one of these:\n" + '\n'.join(
-                    msg)
-            else:
-                message = f"{config.NO} There is no political party named `{error.party}`."
-
-            return await ctx.send(message)
-
         # This includes all exceptions declared in utils.exceptions.py
         elif isinstance(error, exceptions.DemocracivBotException):
             return await ctx.send(error.message)
@@ -483,9 +463,6 @@ class DemocracivBot(commands.Bot):
         self.owner_id: int = self.owner.id
 
     async def initialize_aiohttp_session(self):
-        """Initialize a shared aiohttp ClientSession to be used for -wikipedia, -leg submit and reddit & twitch requests
-        aiohttp needs to have this in an async function, that's why it's separated from __init__()"""
-
         self.session: aiohttp.ClientSession = aiohttp.ClientSession()
 
     async def check_custom_emoji_availability(self):
@@ -517,7 +494,8 @@ class DemocracivBot(commands.Bot):
             "GUILD_SETTINGS_GEAR": "\U00002699",
             "NO": ":x:",
             "YES": ":white_check_mark:",
-            "USER_INTERACTION_REQUIRED": ":information_source:"
+            "USER_INTERACTION_REQUIRED": ":speech_balloon:",
+            "HINT": ":information_source:"
         }
 
         for attr, default in emojis.items():
@@ -575,14 +553,14 @@ class DemocracivBot(commands.Bot):
                 "      I will use the first guild that I can see to be used for my Democraciv-specific features."
             )
 
-            dciv_guild = self.guilds[0]
-
-            if dciv_guild is None:
-                raise exceptions.GuildNotFoundError(config.DEMOCRACIV_GUILD_ID)
+            try:
+                dciv_guild = self.guilds[0]
+            except IndexError:
+                raise RuntimeError("no guild to use as Democraciv Guild")
 
         config.DEMOCRACIV_GUILD_ID = dciv_guild.id
         self.democraciv_guild_id = dciv_guild.id
-        logging.info(f"Using '{dciv_guild.name}' as Democraciv guild.")
+        logging.info(f"Using '{dciv_guild.name}' ({dciv_guild.id}) as Democraciv guild.")
 
     @property
     def uptime(self):
@@ -739,7 +717,7 @@ class DemocracivBot(commands.Bot):
             await guild.leave()
             return
 
-        #introduction_channel = guild.system_channel or guild.text_channels[0]
+        # introduction_channel = guild.system_channel or guild.text_channels[0]
         introduction_channel = self.get_channel(499669824847478785)
 
         # Alert owner of this bot that the bot was invited to some place
@@ -769,40 +747,38 @@ class DemocracivBot(commands.Bot):
         except discord.Forbidden:
             pass
 
-    @tasks.loop(hours=config.DATABASE_DAILY_BACKUP_INTERVAL)
-    async def daily_db_backup(self):
-        """This task makes a backup of the bot's PostgreSQL database every 24hours and uploads
-        that backup to the #backup channel to the Democraciv Discord guild."""
-
-        # Unique filenames with current UNIX timestamp
+    async def do_db_backup(self, database_name: str):
         now = time.time()
         pretty_time = datetime.datetime.utcfromtimestamp(now).strftime("%A, %B %d %Y %H:%M:%S")
-        file_name = f"democraciv-bot-database-backup-{now}"
+        file_name = f"{database_name}-backup-{now}"
 
-        # Use pg_dump to dumb the database as raw SQL
-        # Login with credentials provided in token.py
         command = (
-            f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump -Fc {token.POSTGRESQL_DATABASE} > '
-            f"bot/database/backup/{file_name} -U {token.POSTGRESQL_USER} "
+            f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump -Fc {database_name} > '
+            f"bot/db/backup/{database_name}/{file_name} -U {token.POSTGRESQL_USER} "
             f"-h {token.POSTGRESQL_HOST} -w"
         )
 
-        # Check if backup dir exists
-        if not os.path.isdir("bot/database/backup"):
-            os.mkdir("db/backup")
+        if not os.path.isdir(f"bot/db/backup/{database_name}"):
+            os.mkdir(f"bot/db/backup/{database_name}")
 
-        # Run the command and save the backup files in database/backup/
         await asyncio.create_subprocess_shell(command)
         backup_channel = self.get_channel(config.DATABASE_DAILY_BACKUP_DISCORD_CHANNEL)
         await asyncio.sleep(20)
 
-        file = discord.File(f"bot/database/backup/{file_name}")
+        file = discord.File(f"bot/db/backup/{database_name}/{file_name}")
 
         if backup_channel is None:
-            logging.warning(f"Couldn't find Backup Discord channel for database backup 'database/backup/{file_name}'.")
+            logging.warning(f"Couldn't find Backup Discord channel for database backup 'database/backup/{database_name}/{file_name}'.")
             return
 
         await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)
+
+    @tasks.loop(hours=config.DATABASE_DAILY_BACKUP_INTERVAL)
+    async def daily_db_backup(self):
+        """This task makes a backup of the bot's PostgreSQL database every 24hours and uploads
+        that backup to the #backup channel to the Democraciv Discord guild."""
+        await self.do_db_backup(token.POSTGRESQL_DATABASE)
+        # await self.do_db_backup("api")
 
     async def get_logging_channel(self, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
         channel = await self.get_guild_setting(guild.id, "logging_channel")
