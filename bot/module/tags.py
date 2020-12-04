@@ -4,7 +4,7 @@ import enum
 import typing
 import discord
 
-from bot.config import config
+from bot.config import config, mk
 from discord.ext import commands, menus
 from bot.utils import context, checks
 from bot.utils.converter import (
@@ -218,7 +218,7 @@ class Tags(context.CustomCog):
         )
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         async with self.bot.db.acquire() as con:
             async with con.transaction():
@@ -253,7 +253,7 @@ class Tags(context.CustomCog):
         )
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         async with self.bot.db.acquire() as con:
             async with con.transaction():
@@ -310,40 +310,61 @@ class Tags(context.CustomCog):
     async def addtag(self, ctx: context.CustomContext):
         """Add a tag for this server"""
 
+        p = config.BOT_PREFIX
+
         name = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the **name** of the tag. This will be used to access the "
-            f"tag via my `{config.BOT_PREFIX}` prefix."
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the **name** of the tag.\n{config.HINT} *This will be "
+            f"used to access the tag via my `{p}` prefix, so you do __not__ have to add "
+            f"`{p}` in front of it.*"
         )
 
-        if name.startswith(config.BOT_PREFIX):
-            name = name[len(config.BOT_PREFIX):]
-            await ctx.send(f"*Note: The leading `{config.BOT_PREFIX}` was automatically removed from your tag name.*")
+        if name.startswith(p):
+            name = name[len(p):]
+            await ctx.send(f"*Note: The leading `{p}` was automatically removed from your tag name.*")
 
         if not await self.validate_tag_name(ctx, name.lower()):
             return
 
-        is_embedded = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?")
-        title = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the **title** of the tag.")
+        file = await self.bot.make_file_from_image_link("https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png")
+
+        embed_q = await ctx.send(f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?"
+                                 f"\n{config.HINT} *Embeds behave differently than plain text, see the image below "
+                                 f"for the key differences.*", file=file)
+
+        is_embedded = await ctx.confirm(message=embed_q)
+
+        title = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the **title** of the tag."
+                                f"\n{config.HINT} *This will be displayed next to the tag's name, "
+                                f"`{name}`, in the `{p}tags`, `{p}tags search` and `{p}tags from` commands. It will "
+                                f"also be the title of the embed, if you decided to send this tag as an embed.*")
 
         if len(title) > 256:
             return await ctx.send(f"{config.NO} The title cannot be longer than 256 characters.")
 
         content = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the **content** of the tag.")
 
-        if len(content) > 2048:
-            return await ctx.send(f"{config.NO} The content cannot be longer than 2048 characters.")
+        if len(content) > 2000:
+            return await ctx.send(f"{config.NO} The content cannot be longer than 2000 characters.")
 
         is_global = False
 
-        if ctx.author.guild_permissions.administrator and ctx.guild.id == self.bot.dciv.id:
-            is_global = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should this tag be global?")
+        if ctx.guild.id == self.bot.dciv.id and (ctx.author.guild_permissions.administrator or
+                                                 self.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
+                                                 in ctx.author.roles):
+
+            is_global = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should this tag be global?"
+                                          f"\n{config.HINT} *Only {self.bot.dciv.name} Moderators and Nation Admins "
+                                          f"can make global tags. "
+                                          f"If a tag is global, it can be used in every server I am in, as well as in "
+                                          f"DMs with me. If a tag is not global, called a 'local' tag, "
+                                          f"it can only be used in the server it was made in.*")
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to add the tag " f"`{config.BOT_PREFIX}{name}`?"
         )
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         async with self.bot.db.acquire() as con:
             async with con.transaction():
@@ -375,8 +396,7 @@ class Tags(context.CustomCog):
 
         pretty_aliases = (", ".join([f"`{config.BOT_PREFIX}{alias}`" for alias in tag.aliases])) or "None"
 
-        embed = text.SafeEmbed(title="Tag Information")
-        embed.add_field(name="Title", value=tag.title, inline=False)
+        embed = text.SafeEmbed(title=tag.title)
 
         is_global = "Yes" if tag.is_global else "No"
         is_embedded = "Yes" if tag.is_embedded else "No"
@@ -501,8 +521,8 @@ class Tags(context.CustomCog):
                 image_allowed=True,
             )
 
-            if len(new_content) > 2048:
-                return await ctx.send(f"{config.NO} The content cannot be longer than 2048 characters.")
+            if len(new_content) > 2000:
+                return await ctx.send(f"{config.NO} The content cannot be longer than 2000 characters.")
         else:
             new_content = tag.content
 
@@ -511,7 +531,7 @@ class Tags(context.CustomCog):
         )
 
         if not are_you_sure:
-            return
+            return await ctx.send("Cancelled.")
 
         await self.bot.db.execute(
             "UPDATE tag SET content = $1, title = $3, is_embedded = $4 WHERE id = $2",
@@ -582,7 +602,7 @@ class Tags(context.CustomCog):
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to remove the tag " f"`{config.BOT_PREFIX}{tag.name}`?"
         )
         if not are_you_sure:
-            return
+            return await ctx.send("Cancelled.")
 
         async with self.bot.db.acquire() as con:
             async with con.transaction():

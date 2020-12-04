@@ -85,7 +85,7 @@ discord.abc.Messageable.send = safe_send
 
 
 class DemocracivBot(commands.Bot):
-    BASE_API = "http://api:8000"
+    BASE_API = "http://localhost:8000"
 
     def __init__(self):
         self.start_time = time.time()
@@ -737,6 +737,37 @@ class DemocracivBot(commands.Bot):
                 await guild.system_channel.send(embed=embed)
 
             await guild.leave()
+            return
+
+        #introduction_channel = guild.system_channel or guild.text_channels[0]
+        introduction_channel = self.get_channel(499669824847478785)
+
+        # Alert owner of this bot that the bot was invited to some place
+        await self.owner.send(f"{config.HINT} I was added to {guild.name} ({guild.id}).")
+        p = config.BOT_PREFIX
+
+        introduction_message = (
+            f"You can check `{p}help` or `{p}commands` to get more "
+            f"information about me.\nUse the `{p}server` command to configure me for this server."
+            f"\n\n__**Icon Guide**__\n"
+            f"{config.YES} - Confirm, Accept or \"Success\"\n"
+            f"{config.NO} - Cancel, Decline or \"Error\"\n"
+            f"{config.HINT} - Hint, Tip or additional information to explain something\n"
+            f"{config.USER_INTERACTION_REQUIRED} - User reply is needed. You should reply with something, or confirm something"
+            f"\n\nIf you have any questions or suggestions, send a DM to {self.owner.mention} ({self.owner})."
+        )
+
+        # Send introduction message to random guild channel
+        embed = text.SafeEmbed(title="Thanks for inviting me!", description=introduction_message)
+
+        # Add new guild to database
+        await self.db.execute("INSERT INTO guild (id) VALUES ($1) ON CONFLICT DO NOTHING ", guild.id)
+        await self.update_guild_config_cache()
+
+        try:
+            await introduction_channel.send(embed=embed)
+        except discord.Forbidden:
+            pass
 
     @tasks.loop(hours=config.DATABASE_DAILY_BACKUP_INTERVAL)
     async def daily_db_backup(self):

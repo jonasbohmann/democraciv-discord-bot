@@ -81,7 +81,9 @@ class GovernmentMixin:
                 embed.add_field(name="History", value="\n".join(history))
 
             if obj.status.is_law:
-                embed.set_footer(text="This is an active law.")
+                embed.set_footer(text="All dates are in UTC. This is an active law.")
+            else:
+                embed.set_footer(text="All dates are in UTC.")
 
         await ctx.send(embed=embed)
 

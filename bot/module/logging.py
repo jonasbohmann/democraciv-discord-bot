@@ -218,34 +218,6 @@ class Log(context.CustomCog):
             to_owner=True,
         )
 
-    # -- Guild Events --
-
-    @commands.Cog.listener()
-    async def on_guild_join(self, guild: discord.Guild):
-        introduction_channel = guild.system_channel or guild.text_channels[0]
-
-        # Alert owner of this bot that the bot was invited to some place
-        await self.bot.owner.send(f":warning:  I was added to {guild.name} ({guild.id}).")
-        p = config.BOT_PREFIX
-
-        introduction_message = (
-            f"Thanks for inviting me!\n\nYou can check `{p}help` or `{p}commands` to get more "
-            f"information about me.\n\nUse the `{p}server` command to configure me for this server."
-            f"\n\nIf you have any questions or suggestions, send a DM to {self.bot.owner.mention}!"
-        )
-
-        # Send introduction message to random guild channel
-        embed = text.SafeEmbed(title=":two_hearts: Hey there!", description=introduction_message)
-
-        # Add new guild to database
-        await self.bot.db.execute("INSERT INTO guild (id) VALUES ($1) ON CONFLICT DO NOTHING ", guild.id)
-        await self.bot.update_guild_config_cache()
-
-        try:
-            await introduction_channel.send(embed=embed)
-        except discord.Forbidden:
-            logging.warning(f"Got Forbidden while sending my introduction message on {guild.name} ({guild.id})")
-
     @commands.Cog.listener()
     async def on_guild_role_create(self, role):
         # Handle exception if bot was just added to new guild

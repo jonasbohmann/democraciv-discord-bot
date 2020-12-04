@@ -179,7 +179,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         )
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         await consumer.consume(scheduler=self.repeal_scheduler)
         msg = f"1 law was repealed." if len(law_ids) == 1 else f"{len(law_ids)} laws were repealed."
@@ -205,7 +205,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         )
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         await law.status.amend(new_link=new_link)
         law = await models.Law.convert(ctx, law.id)

@@ -172,7 +172,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         )
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         await consumer.consume(scheduler=self.veto_scheduler)
         await ctx.send(f"{config.YES} All bills were vetoed.")
@@ -204,7 +204,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         )
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         await consumer.consume(scheduler=self.pass_scheduler)
         await ctx.send(f"{config.YES} All bills were passed into law.")

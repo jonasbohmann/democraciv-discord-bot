@@ -5,7 +5,7 @@ from bot.utils import context, text
 
 
 class Profile(context.CustomCog):
-    """Organize personal settings"""
+    """Manage personal settings"""
     async def ensure_dm_settings(self, user: int):
         settings = await self.bot.db.fetchrow("SELECT * FROM dm_setting WHERE user_id = $1", user)
 

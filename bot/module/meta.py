@@ -1,7 +1,7 @@
 import time
 import discord
 
-from bot.config import config
+from bot.config import config, exceptions
 from discord.ext import commands
 from bot.utils import context, help
 from bot.utils.text import SafeEmbed
@@ -20,18 +20,6 @@ class Meta(context.CustomCog):
     def cog_unload(self):
         self.bot.help_command = self.old_help_command
 
-    @commands.command(name="gc", hidden=True)
-    @commands.is_owner()
-    async def gc(self, ctx):
-        kwargs = {
-            "submitter_description": "Section 2: Duties of the Ministry The Ministry shall have sole power to wager trades and conduct diplomacy with other Nations, except in circumstances in which they must first seek the approval of Parliament. These cases include: The Denouncement and Declaration of Warfare against other Nations; The Continued Agreement to Defensive Pacts, Open Borders, and Alliances among computer-controlled Nations, and Potential Agreement in any such capacity among player-controlled Nations; The Proposal and Ratification of motions to the World Congress, particularly those which may trigger Offensive Action upon another Nation;",
-            "link": "https://docs.google.com/document/d/1proo_j4h3iemMk1KBlVDaktSjl1sQRQCTruVo1Yd4ac/edit",
-            "bot": self.bot
-        }
-
-        b = models.Bill(**kwargs)
-        await ctx.send(await b.fetch_name_and_keywords())
-
     # shortcut to '-jsk reload ~' for faster debugging
     @commands.command(name="r", hidden=True)
     @commands.is_owner()
@@ -48,22 +36,18 @@ class Meta(context.CustomCog):
         invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
 
         embed = SafeEmbed(
-            title="About This Bot",
             description=f"[Invite this bot to your Discord Server.]({invite_url})",
         )
-        embed.add_field(name="Developer", value="DerJonas#8036 (u/Jovanos)", inline=True)
+
+        embed.add_field(name="Developer", value="DerJonas#8036 (u/Jovanos)", inline=False)
         embed.add_field(name="Version", value=config.BOT_VERSION, inline=True)
-        embed.add_field(name="Library", value=f"discord.py {discord.__version__}", inline=True)
         embed.add_field(name="Servers", value=len(self.bot.guilds), inline=True)
-        embed.add_field(name="Users", value=len(self.bot.users), inline=True)
         embed.add_field(name="Prefix", value=f"`{config.BOT_PREFIX}`", inline=True)
-        embed.add_field(name="Uptime", value=self.bot.uptime, inline=True)
-        embed.add_field(name="Ping", value=f"{self.bot.ping}ms", inline=True)
 
         embed.add_field(
             name="Source Code",
             value="[Link](https://github.com/jonasbohmann/democraciv-discord-bot)",
-            inline=True,
+            inline=False,
         )
 
         embed.add_field(
@@ -76,6 +60,9 @@ class Meta(context.CustomCog):
             icon_url=self.bot.owner.avatar_url_as(static_format="png"),
             name=f"Made by {self.bot.owner}",
         )
+
+        embed.set_footer(text=f"Assisting {self.bot.dciv.name} since")
+        embed.timestamp = self.bot.user.created_at
         await ctx.send(embed=embed)
 
     @commands.command(name="ping", aliases=["pong"])
@@ -88,18 +75,23 @@ class Meta(context.CustomCog):
         end = time.perf_counter()
         discord_http = (end - start) * 1000
 
-        start = time.perf_counter()
-        await self.bot.api_request("GET", "")
-        end = time.perf_counter()
-        api_http = (end - start) * 1000
+        try:
+            start = time.perf_counter()
+            await self.bot.api_request("GET", "")
+            end = time.perf_counter()
+            api_http = (end - start) * 1000
+        except exceptions.DemocracivBotAPIError:
+            api_http = None
 
         embed = SafeEmbed(
             title=f":ping_pong:  {title}",
-            description=f"Discord HTTP API: {discord_http:.0f}ms\n"
-                        f"Discord Gateway Websocket: {self.bot.ping}ms\n"
-                        f"[Discord Status](https://status.discord.com/)\n\n"
-                        f"Democraciv Discord Bot API: {api_http:.0f}ms",
+            description="[**status.discord.com**](https://status.discord.com/)\n\n"
         )
+        embed.add_field(name="Discord",
+                        value=f"HTTP API: {discord_http:.0f}ms\nGateway Websocket: {self.bot.ping}ms\n", inline=False)
+
+        embed.add_field(name="Internal API",
+                        value=f"{api_http:.0f}ms" if api_http else "*not running*")
         await message.edit(content=None, embed=embed)
 
     @commands.command(name="commands", aliases=["cmd", "cmds"])

@@ -152,6 +152,28 @@ class GroupHelpPageSource(menus.ListPageSource):
         return embed
 
 
+class CogHelpPageSource(menus.ListPageSource):
+    def __init__(self, group, commands, *, prefix):
+        super().__init__(entries=commands, per_page=6)
+        self.group = group
+        self.prefix = prefix
+        self.title = f"{self.group.qualified_name} | Help"
+        self.description = self.group.description
+
+    async def format_page(self, menu, commands):
+        embed = text.SafeEmbed(title=self.title, description=self.description)
+
+        for command in commands:
+            signature = f"__{config.BOT_PREFIX}{command.qualified_name} {command.signature}__"
+            embed.add_field(name=signature, value=command.short_doc or 'No help given.', inline=False)
+
+        maximum = self.get_max_pages()
+        if maximum > 1:
+            embed.set_footer(text=f"Page {menu.current_page + 1}/{maximum} ({len(self.entries)} commands)")
+
+        return embed
+
+
 class HelpMenu(Pages, inherit_buttons=False):
     def __init__(self, source, *, send_intro=True):
         super().__init__(source)
@@ -250,13 +272,13 @@ class PaginatedHelpCommand(commands.HelpCommand):
             except KeyError:
                 all_commands[command.cog] = [command]
 
-        menu = HelpMenu(BotHelpPageSource(self, all_commands))
+        menu = HelpMenu(BotHelpPageSource(self, all_commands), send_intro=False)
         await menu.start(self.context)
 
     async def send_cog_help(self, cog):
         entries = await self.filter_commands(cog.walk_commands(), sort=True, key=lambda c: c.qualified_name)
         menu = HelpMenu(
-            GroupHelpPageSource(cog, entries, prefix=self.clean_prefix),
+            CogHelpPageSource(cog, entries, prefix=self.clean_prefix),
             send_intro=False,
         )
         await menu.start(self.context)

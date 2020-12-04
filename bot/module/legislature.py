@@ -790,7 +790,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         )
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         await consumer.consume(scheduler=self.pass_scheduler)
         await ctx.send(f"{config.YES} All bills were marked as passed from the {self.bot.mk.LEGISLATURE_NAME}.")
@@ -857,7 +857,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         )
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         await consumer.consume()
         await ctx.send(f"{config.YES} All {obj_name}s were withdrawn.")
@@ -937,7 +937,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         )
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         await consumer.consume(scheduler=self.override_scheduler)
         await ctx.send(f"{config.YES} The vetoes of all bills were overridden.")
@@ -971,7 +971,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         )
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         await consumer.consume()
         await ctx.send(f"{config.YES} All bills were resubmitted to the current session.")

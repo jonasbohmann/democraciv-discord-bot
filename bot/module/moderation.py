@@ -230,7 +230,7 @@ class Moderation(context.CustomCog):
         )
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         embed = text.SafeEmbed(title=":exclamation: New Report", description=content)
 
@@ -663,7 +663,7 @@ class Moderation(context.CustomCog):
         )
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         async with ctx.typing():
             government_category: discord.CategoryChannel = discord.utils.get(

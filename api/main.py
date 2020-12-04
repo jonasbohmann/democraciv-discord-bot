@@ -15,7 +15,7 @@ from api.provider import RedditManager, TwitchManager
 from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.responses import PlainTextResponse
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [API] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
 
 
 class Database:
@@ -85,7 +85,7 @@ class Database:
 
 
 app = FastAPI()
-db = Database(dsn="postgres://postgres:ehre@db:5432/api_test")
+db = Database(dsn="postgres://postgres:ehre@localhost:5432/api_test")
 reddit_manager = RedditManager(db=db)
 twitch_manager = TwitchManager(db=db)
 

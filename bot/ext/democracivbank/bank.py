@@ -606,7 +606,7 @@ class Bank(context.CustomCog):
         reaction = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Do you want to apply the changes now?")
 
         if not reaction:
-            return
+            return await ctx.send("Cancelled.")
 
         response = await self.request(BankRoute("POST", "ottoman/apply/"))
 
