@@ -7,7 +7,7 @@ from bot.utils import text
 from config import mk
 
 
-class SupremeCourt(context.CustomCog, GovernmentMixin, name=mk.MarkConfig.courts_term):
+class SupremeCourt(context.CustomCog, GovernmentMixin, name=mk.MarkConfig.COURT_NAME):
     """Useful information about the {courts_term} of this nation."""
 
     def get_justices(self):

@@ -426,8 +426,9 @@ class Moderation(context.CustomCog):
             except discord.Forbidden:
                 return
 
-        for channel in guild.text_channels:
-            self.bot.loop.create_task(channel.set_permissions(muted_role, send_messages=False, add_reactions=False))
+        if guild.id != self.bot.dciv.id:
+            for channel in guild.text_channels:
+                self.bot.loop.create_task(channel.set_permissions(muted_role, send_messages=False, add_reactions=False))
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):

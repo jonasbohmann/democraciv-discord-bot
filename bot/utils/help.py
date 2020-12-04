@@ -29,6 +29,7 @@ from bot.utils import text
 from bot.utils.paginator import Pages
 from discord.ext import commands, menus
 
+
 BOT_INTRO = f"""Hey, thanks for using me!
 
 I'm the Democraciv Bot, and was designed specifically for the [Discord server](https://discord.gg/AK7dYMG) of the [r/Democraciv](https://reddit.com/r/democraciv) community.

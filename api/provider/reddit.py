@@ -2,8 +2,6 @@ import copy
 import datetime
 import html
 import json
-import logging
-import pathlib
 import typing
 import aiohttp
 
@@ -12,6 +10,7 @@ from discord import Embed
 
 from api.provider.abc import ProviderManager
 
+from fastapi.logger import logger
 
 class RedditManager(ProviderManager):
     provider = "Reddit"
@@ -94,7 +93,7 @@ class RedditManager(ProviderManager):
                     await self.refresh_reddit_bearer_token()
                     return await self.post_to_reddit(subreddit=subreddit, title=title, content=content, retry=True)
 
-                logging.warning("got 403 while posting to reddit")
+                logger.warning("got 403 while posting to reddit")
 
             return await response.json()
 
@@ -108,7 +107,7 @@ class RedditManager(ProviderManager):
                 self._webhooks[target] = scraper
                 scraper.start()
 
-            logging.info(f"Added subreddit scraper for r/{target} to {webhook_url}")
+            logger.info(f"Added subreddit scraper for r/{target} to {webhook_url}")
 
     async def _remove_webhook(self, *, target: str, webhook_url: str):
         if target not in self._webhooks:
@@ -183,7 +182,7 @@ class SubredditScraper:
         for webhook in self.webhook_urls:
             async with self._session.post(url=webhook, json=post_data) as response:
                 if response.status not in (200, 204):
-                    logging.error(f"Error while sending reddit webhook: {response.status} {await response.text()}")
+                    logger.error(f"Error while sending reddit webhook: {response.status} {await response.text()}")
 
     async def get_newest_reddit_post(self) -> typing.Optional[typing.Dict]:
         async with self._session.get(

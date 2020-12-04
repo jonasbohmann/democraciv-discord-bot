@@ -2,7 +2,6 @@ import asyncio
 import logging
 import asyncpg
 import pydantic
-import uvicorn
 import xdice
 
 try:
@@ -14,6 +13,7 @@ except ImportError:
 from api.provider import RedditManager, TwitchManager
 from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.responses import PlainTextResponse
+from fastapi.logger import logger
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [API] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
 
@@ -22,6 +22,7 @@ REDDIT_LOGO = "<:reddit:660114002533285888>"
 YOUTUBE_LOGO_UPLOAD = "<:youtubeiconwhite:660114810444447774>"
 YOUTUBE_LOGO_STREAM = "<:youtubeiconred:660897027114401792>"
 TWITCH_LOGO = "<:twitch:660116652012077080>"
+
 
 class Database:
     def __init__(self, *, dsn):
@@ -129,7 +130,7 @@ class SubmitRedditPost(pydantic.BaseModel):
 @app.on_event("startup")
 async def startup_event():
     await db.make_pool()
-    logging.info("API ready to serve")
+    logger.info("API ready to serve")
 
 
 @app.get("/")
@@ -286,8 +287,3 @@ def roll_dice(dice_to_roll: Dice):
         return {"ok": "ok", "result": _roll_dice(dice_to_roll.dices)}
     except (SyntaxError, TypeError, ValueError):
         return {"error": "invalid dice syntax"}
-
-
-if __name__ == "__main__":
-    # todo weird logging error
-    uvicorn.run(app=app, host="0.0.0.0", port="8000")

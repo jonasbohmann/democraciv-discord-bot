@@ -483,6 +483,8 @@ class DemocracivBot(commands.Bot):
 
             return False
 
+        # alternative has to be unicode endpoint
+
         emojis = {
             "HELP_FIRST": "\N{BLACK LEFT-POINTING DOUBLE TRIANGLE WITH VERTICAL BAR}",
             "HELP_PREVIOUS": "\N{BLACK LEFT-POINTING TRIANGLE}",
@@ -492,10 +494,10 @@ class DemocracivBot(commands.Bot):
             "LEG_SUBMIT_BILL": "\U0001f1e7",
             "LEG_SUBMIT_MOTION": "\U0001f1f2",
             "GUILD_SETTINGS_GEAR": "\U00002699",
-            "NO": ":x:",
-            "YES": ":white_check_mark:",
-            "USER_INTERACTION_REQUIRED": ":speech_balloon:",
-            "HINT": ":information_source:"
+            "NO": "\U0000274c",
+            "YES": "\U00002705",
+            "USER_INTERACTION_REQUIRED": "\U0001f4ac",
+            "HINT": "\U00002139"
         }
 
         for attr, default in emojis.items():
@@ -503,7 +505,9 @@ class DemocracivBot(commands.Bot):
             emoji_availability = check_custom_emoji(emoji)
             if not emoji_availability:
                 setattr(config, attr, default)
-                logging.warning(f"Reverting to standard Unicode emoji for {emoji}")
+                logging.warning(f"Reverting to standard Unicode emoji for {emoji}. "
+                                f"Menus, paginator and ctx.confirm & ctx.choose might not work correctly unless "
+                                f"you replace the emojis in /bot/config/config.py/ to emojis that exist!")
 
     async def connect_to_db(self):
         """Attempt to connect to PostgreSQL database with specified credentials from token.py.
@@ -717,8 +721,7 @@ class DemocracivBot(commands.Bot):
             await guild.leave()
             return
 
-        # introduction_channel = guild.system_channel or guild.text_channels[0]
-        introduction_channel = self.get_channel(499669824847478785)
+        introduction_channel = guild.system_channel or guild.text_channels[0]
 
         # Alert owner of this bot that the bot was invited to some place
         await self.owner.send(f"{config.HINT} I was added to {guild.name} ({guild.id}).")

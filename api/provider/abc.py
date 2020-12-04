@@ -1,8 +1,9 @@
 import abc
 import asyncio
-import logging
 import typing
 import aiohttp
+
+from fastapi.logger import logger
 
 
 class ProviderManager(abc.ABC):
@@ -31,7 +32,7 @@ class ProviderManager(abc.ABC):
             self._loop.create_task(self._start_webhook(target=webhook[self.target],
                                                        webhook_url=webhook['webhook_url']))
 
-        logging.info(f"started {len(webhooks)} {self.provider} hooks")
+        logger.info(f"started {len(webhooks)} {self.provider} hooks")
 
     async def add_webhook(self, config):
         await self.db.pool.execute(f"INSERT INTO {self.table} ({self.target}, webhook_id, webhook_url, "

@@ -1,12 +1,14 @@
-import logging
 import json
 import typing
 
 from collections import namedtuple
 from discord import Embed
+from fastapi.logger import logger
+
 from api.provider.abc import ProviderManager
 
 StreamContext = namedtuple("StreamContext", "webhook_url everyone_ping")
+
 
 # todo post to reddit?
 
@@ -129,7 +131,7 @@ class TwitchManager(ProviderManager):
         if not user_id:
             return {"error": "invalid streamer name"}
 
-        logging.info(f"[Twitch] subscribing to {stream}")
+        logger.info(f"[Twitch] subscribing to {stream}")
 
         js = {
             "type": "stream.online",
@@ -163,7 +165,8 @@ class TwitchManager(ProviderManager):
 
         await self.db.pool.execute("INSERT INTO twitch_eventsub_subscription "
                                    "(twitch_subscription_id, streamer, streamer_id) "
-                                   "VALUES ($1, $2, $3) ON CONFLICT DO NOTHING ", subscription_id, streamer, streamer_id)
+                                   "VALUES ($1, $2, $3) ON CONFLICT DO NOTHING ", subscription_id, streamer,
+                                   streamer_id)
 
     async def process_incoming_notification(self, event: typing.Dict):
         js = await self.twitch_request("GET", f"{self.API_STREAM_ENDPOINT}{event['broadcaster_user_id']}")
@@ -204,4 +207,4 @@ class TwitchManager(ProviderManager):
 
         async with self._session.post(context.webhook_url, json=js) as response:
             if response.status not in (200, 204):
-                logging.error(f"Error while sending reddit webhook: {response.status} {await response.text()}")
+                logger.error(f"Error while sending Twitch webhook: {response.status} {await response.text()}")
