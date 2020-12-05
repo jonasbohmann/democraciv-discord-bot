@@ -11,6 +11,17 @@ class Nation(context.CustomCog):
 
     @commands.group(name="nation", aliases=['civ'], case_insensitive=True, invoke_without_command=True)
     async def nation(self, ctx):
+        """{NATION_NAME}"""
+
+        embed = text.SafeEmbed()
+        embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
+
+
+
+        await ctx.send(embed=embed)
+
+    @nation.command(name="admin")
+    async def admin(self, ctx):
         """What is a Nation Admin?"""
 
         p = config.BOT_PREFIX

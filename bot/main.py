@@ -84,6 +84,16 @@ async def safe_send(self, content=None, **kwargs) -> discord.Message:
 discord.abc.Messageable.send = safe_send
 
 
+def get_prefix(bot, msg):
+    for prefix in config.BOT_ADDITIONAL_PREFIXES:
+        r = re.compile(f'^({prefix}).*', flags=re.I)
+        m = r.match(msg.content)
+        if m:
+            return commands.when_mentioned_or(m.group(1))(bot, msg)
+
+    return commands.when_mentioned_or(config.BOT_PREFIX)(bot, msg)
+
+
 class DemocracivBot(commands.Bot):
     BASE_API = "http://localhost:8000"
 
@@ -96,7 +106,7 @@ class DemocracivBot(commands.Bot):
         intents.members = True
 
         super().__init__(
-            command_prefix=commands.when_mentioned_or(config.BOT_PREFIX),
+            command_prefix=get_prefix,
             case_insensitive=True,
             intents=intents,
             allowed_mentions=discord.AllowedMentions.none(),
@@ -773,7 +783,8 @@ class DemocracivBot(commands.Bot):
         file = discord.File(f"bot/db/backup/{database_name}/{file_name}")
 
         if backup_channel is None:
-            logging.warning(f"Couldn't find Backup Discord channel for database backup 'database/backup/{database_name}/{file_name}'.")
+            logging.warning(
+                f"Couldn't find Backup Discord channel for database backup 'database/backup/{database_name}/{file_name}'.")
             return
 
         await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)
@@ -829,7 +840,7 @@ class DemocracivBot(commands.Bot):
 
                 if tiny_url == "Error":
                     raise exceptions.DemocracivBotException(
-                       f"{config.NO} tinyurl.com returned an error, try again later.")
+                        f"{config.NO} tinyurl.com returned an error, try again later.")
 
                 return tiny_url
 
