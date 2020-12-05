@@ -822,6 +822,7 @@ class DemocracivBot(commands.Bot):
 
                 return f"https://mystb.in/{key}"
 
+    @alru_cache(cache_exceptions=False)
     async def tinyurl(self, url: str) -> typing.Optional[str]:
         async with self.session.get(f"https://tinyurl.com/api-create.php?url={url}") as response:
             if response.status == 200:
@@ -829,7 +830,7 @@ class DemocracivBot(commands.Bot):
 
                 if tiny_url == "Error":
                     raise exceptions.DemocracivBotException(
-                        "{config.NO} tinyurl.com returned an error, try again later.")
+                       f"{config.NO} tinyurl.com returned an error, try again later.")
 
                 return tiny_url
 
