@@ -30,6 +30,7 @@ from googleapiclient import errors
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport import requests
+from async_lru import alru_cache
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [BOT] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
 
@@ -437,10 +438,11 @@ class DemocracivBot(commands.Bot):
         logging.info("Guild config cache was updated.")
         return guild_config
 
+    @alru_cache(cache_exceptions=False)
     async def make_file_from_image_link(self, url: str):
         async with self.session.get(url) as response:
             image = await response.read()
-            return discord.File(io.BytesIO(image), filename="image.png")
+            return io.BytesIO(image)
 
     async def get_guild_setting(self, guild_id: int, setting: str) -> typing.Union[typing.Any, typing.List]:
         if not self.is_ready():
