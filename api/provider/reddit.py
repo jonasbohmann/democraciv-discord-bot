@@ -12,6 +12,7 @@ from api.provider.abc import ProviderManager
 
 from fastapi.logger import logger
 
+
 class RedditManager(ProviderManager):
     provider = "Reddit"
     target = "subreddit"

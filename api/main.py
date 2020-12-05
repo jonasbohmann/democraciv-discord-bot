@@ -1,17 +1,22 @@
 import asyncio
+import json
 import logging
 import pathlib
 import sys
 
 import asyncpg
 import pydantic
+import uvicorn
 import xdice
 
 try:
     import uvloop
+
     uvloop.install()
 except ImportError:
     pass
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [API] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
 
 sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
@@ -20,17 +25,20 @@ from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.responses import PlainTextResponse
 from fastapi.logger import logger
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [API] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
-
 
 class Database:
-    def __init__(self, *, dsn):
-        self.dsn = dsn
+    def __init__(self):
+        self.get_dsn()
         self._loop = asyncio.get_event_loop()
         self.pool = None
         self.ready = False
         self._loop.create_task(self.make_pool())
         self._lock = asyncio.Lock()
+
+    def get_dsn(self):
+        with open("token.json", "r") as token_file:
+            token_json = json.load(token_file)
+            self.dsn = token_json['db']['dsn']
 
     async def apply_schema(self):
         schema = """CREATE TABLE IF NOT EXISTS reddit_webhook(
@@ -92,7 +100,7 @@ class Database:
 
 
 app = FastAPI()
-db = Database(dsn="postgres://postgres:ehre@localhost:5432/api_test")
+db = Database()
 reddit_manager = RedditManager(db=db)
 twitch_manager = TwitchManager(db=db)
 
@@ -287,3 +295,8 @@ def roll_dice(dice_to_roll: Dice):
         return {"ok": "ok", "result": _roll_dice(dice_to_roll.dices)}
     except (SyntaxError, TypeError, ValueError):
         return {"error": "invalid dice syntax"}
+
+
+if __name__ == '__main__':
+    logger.info("Starting app...")
+    uvicorn.run(app, host="0.0.0.0", port="8000")

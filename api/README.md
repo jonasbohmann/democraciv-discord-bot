@@ -13,6 +13,33 @@ block the bot's event loop if it did them itself.
 
 Run `pip install -r requirements.txt` to install all required dependencies.
 
+## Installation
+
+After installing all the dependencies, create a `token.json` in the root /api folder.
+
+The file should look like this:
+
+```
+{
+  "db": {
+    "dsn": ""
+  },
+  
+  "twitch": {
+    "client_id": "",
+    "client_secret": "",
+    "oauth_token": ""
+  },
+
+  "reddit": {
+    "client_id": "",
+    "client_secret": "",
+    "refresh_token": "",
+    "bearer_token": ""
+  }
+}
+```
+
 #### Docker
 
 You can use the supplied Dockerfile to run the API as a Docker container.

@@ -541,7 +541,7 @@ class DemocracivBot(commands.Bot):
             self.db_ready = False
             raise
 
-        with open("bot/db/schema.sql") as sql:
+        with open("db/schema.sql") as sql:
             try:
                 await self.db.execute(sql.read())
             except asyncpg.InsufficientPrivilegeError:
