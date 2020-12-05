@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+discord.py>=1.5.1
+asyncpg
+xdice

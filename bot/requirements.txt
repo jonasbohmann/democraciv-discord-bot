@@ -1,0 +1,10 @@
+discord.py>=1.5.1
+aiodns
+cchardet
+git+https://github.com/Rapptz/discord-ext-menus
+jishaku
+psutil
+asyncpg
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
