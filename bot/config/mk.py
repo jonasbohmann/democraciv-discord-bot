@@ -31,6 +31,7 @@ class DemocracivRole(enum.Enum):
 
     # multiciv
     NATION_ADMIN = 784596362338631690
+    NATION_CITIZEN = 741468287421906984
 
 
 class DemocracivChannel(enum.Enum):
