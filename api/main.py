@@ -1,5 +1,8 @@
 import asyncio
 import logging
+import pathlib
+import sys
+
 import asyncpg
 import pydantic
 import xdice
@@ -9,6 +12,8 @@ try:
     uvloop.install()
 except ImportError:
     pass
+
+sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
 from api.provider import RedditManager, TwitchManager
 from fastapi import FastAPI, BackgroundTasks, Request

@@ -1,6 +1,8 @@
 import io
 import os
+import pathlib
 import re
+import sys
 import time
 import math
 import asyncio
@@ -20,6 +22,8 @@ import asyncpg
 import logging
 import datetime
 import traceback
+
+sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
 from typing import Optional, Union
 from discord.ext import commands, tasks
