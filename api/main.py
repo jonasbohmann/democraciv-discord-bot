@@ -30,6 +30,7 @@ class Database:
         self.pool = None
         self.ready = False
         self._loop.create_task(self.make_pool())
+        self._lock = asyncio.Lock()
 
     async def apply_schema(self):
         schema = """CREATE TABLE IF NOT EXISTS reddit_webhook(
@@ -75,18 +76,19 @@ class Database:
     async def make_pool(self, retry=False):
         # todo - why does this throw ConnectionRefusedError on the first try with docker-compose
 
-        try:
-            self.pool = await asyncpg.create_pool(self.dsn)
-        except ConnectionRefusedError:
-            if not retry:
-                await asyncio.sleep(3)
-                await self.make_pool(retry=True)
-                return
-            raise
+        async with self._lock:
+            try:
+                self.pool = await asyncpg.create_pool(self.dsn)
+            except ConnectionRefusedError:
+                if not retry:
+                    await asyncio.sleep(3)
+                    await self.make_pool(retry=True)
+                    return
+                raise
 
-        await self.apply_schema()
-        self.ready = True
-        return self.pool
+            await self.apply_schema()
+            self.ready = True
+            return self.pool
 
 
 app = FastAPI()
