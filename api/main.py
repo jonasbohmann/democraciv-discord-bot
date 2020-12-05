@@ -278,7 +278,7 @@ def _roll_dice(dice_to_roll: str):
     if special_message:
         msg = f"{msg}\n{special_message}"
 
-    return {"ok": "ok", "result": msg}
+    return msg
 
 
 @app.post("/roll")
