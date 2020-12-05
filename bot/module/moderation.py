@@ -6,59 +6,11 @@ from discord.ext import commands
 from bot.utils import exceptions, text, context, checks
 from bot.config import token, config, mk
 from bot.utils.exceptions import ForbiddenTask
-from bot.utils.converter import UnbanConverter, BanConverter, CaseInsensitiveMember, CaseInsensitiveUser, CaseInsensitiveRole
-from utils import paginator
+from bot.utils.converter import UnbanConverter, BanConverter, CaseInsensitiveMember, CaseInsensitiveUser
 
 
 class Moderation(context.CustomCog):
     """Commands for the Mod Team of this server and the Nation Admins"""
-
-    @commands.command(name="togglerole")
-    @checks.moderation_or_nation_leader()
-    async def toggle_role(self, ctx, member: CaseInsensitiveMember, *, role: CaseInsensitiveRole):
-        """Give someone a role, or remove that from from them
-
-        **Example**:
-            `{PREFIX}{COMMAND} @DerJonas Rome - Builder` will give DerJonas the 'Rome - Builder' role"""
-
-        if not role.name.lower().startswith(self.bot.mk.NATION_ROLE_PREFIX.lower()):
-            return await ctx.send(f"{config.NO} You're not allowed to give someone the `{role.name}` role.")
-
-        if role not in member.roles:
-            await member.add_roles(role)
-            await ctx.send(f"{config.YES} The `{role.name}` role was given to {member}.")
-        else:
-            await member.remove_roles(role)
-            await ctx.send(f"{config.YES} The `{role.name}` role was removed from {member}.")
-
-    @commands.command(name="nationroles", aliases=['nationrole'])
-    @checks.moderation_or_nation_leader()
-    async def nationroles(self, ctx):
-        """List all nation-specific roles that can be given out with `{PREFIX}togglerole`"""
-
-        predicate = lambda r: r.name.lower().startswith(self.bot.mk.NATION_ROLE_PREFIX.lower())
-        found = filter(predicate, ctx.guild.roles)
-        fmt = [r.mention for r in found]
-        fmt.insert(0, f"These roles can be given out with `{config.BOT_PREFIX}togglerole` by you.\n")
-
-        pages = paginator.SimplePages(entries=fmt, author=f"Nation Roles",
-                                      icon=self.bot.mk.safe_flag,
-                                      empty_message="There are no roles that you can give out.")
-        await pages.start(ctx)
-
-    @commands.command(name="makerole", aliases=['makenrole'])
-    @checks.moderation_or_nation_leader()
-    async def create_new_nation_role(self, ctx, *, name: str):
-        """List all nation-specific roles that can be given out with `{PREFIX}togglerole`"""
-
-        if name.lower().startswith(self.bot.mk.NATION_ROLE_PREFIX.lower()):
-            role_name = name
-        else:
-            role_name = f"{self.bot.mk.NATION_ROLE_PREFIX}{name}"
-
-        role = await ctx.guild.create_role(name=role_name)
-        await ctx.send(f"{config.YES} The role was created, you can now give it to people with "
-                       f"`{config.BOT_PREFIX}togglerole <person> {role.name}`.")
 
     async def calculate_alt_chance(self, member: discord.Member) -> (int, str):
         is_alt_chance = 0

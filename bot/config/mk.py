@@ -30,7 +30,7 @@ class DemocracivRole(enum.Enum):
     OTTOMAN_TAX_OFFICER = 744983252854636675
 
     # multiciv
-    NATION_ADMIN = 0
+    NATION_ADMIN = 784596362338631690
 
 
 class DemocracivChannel(enum.Enum):
@@ -58,6 +58,7 @@ class MarkConfig:
     # -- Government Names --
 
     NATION_ROLE_PREFIX = ""
+    NATION_CATEGORIES = []
 
     NATION_NAME = "Arabia"
     NATION_FULL_NAME = "Arabian People’s Democratic Union"

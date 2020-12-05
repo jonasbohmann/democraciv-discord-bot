@@ -7,9 +7,8 @@ from discord.ext import commands
 from discord.ext.commands import Greedy
 
 from bot.config import *
-from bot.utils import models, text, paginator, context, mixin, checks
+from bot.utils import models, text, paginator, context, mixin, checks, converter
 from bot.utils.models import Bill, Session, Motion, SessionStatus
-from utils.converter import CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty
 
 
 class PassScheduler(text.AnnouncementScheduler):
@@ -149,7 +148,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             self,
             ctx: context.CustomContext,
             *,
-            member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty] = None,
+            member_or_party: typing.Union[converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty] = None,
     ):
         """List all bills that a specific person or Political Party submitted"""
         return await self._from_person_model(ctx, member_or_party=member_or_party, model=models.Bill)
@@ -173,7 +172,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             self,
             ctx: context.CustomContext,
             *,
-            member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty] = None,
+            member_or_party: typing.Union[converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty] = None,
     ):
         """List all motions that a specific person or Political Party submitted"""
         return await self._from_person_model(ctx, model=models.Motion, member_or_party=member_or_party)

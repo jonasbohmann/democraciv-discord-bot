@@ -1,6 +1,5 @@
 import typing
 import discord
-import bot
 
 from discord.embeds import EmptyEmbed
 
@@ -14,7 +13,7 @@ def _make_property(role: mk.DemocracivRole):
 
 class GovernmentMixin:
     def __init__(self, b):
-        self.bot: "bot.DemocracivBot" = b
+        self.bot = b
 
     def _safe_get_member(self, role) -> typing.Optional[discord.Member]:
         try:

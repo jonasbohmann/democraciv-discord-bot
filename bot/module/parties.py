@@ -188,26 +188,36 @@ class Party(context.CustomCog, name="Political Parties"):
                                               f"on the {self.bot.dciv.name} server, so unfortunately I cannot give "
                                               f"`{member}` your party's role. Please contact Moderation.")
 
-                message = f"{yes_emoji} `{member}`'s request to join `{party.role.name}` was **accepted**."
-                member_message = f"{yes_emoji} Your request to join the political party `{party.role.name}` was " \
-                                 f"**accepted** by `{reactor}`"
+                message = f"{config.HINT}  {member.display_name}'s request to join {party.role.name} was " \
+                          f"accepted by {reactor.display_name}."
+
+                if party.discord_invite:
+                    invite_fmt = f"\n\nGo ahead and join their Discord server if you haven't already: {party.discord_invite}"
+                else:
+                    invite_fmt = ""
+
+                member_embed = text.SafeEmbed(title=f"{yes_emoji}  Party Join Request Accepted",
+                                              description=f"Your request to join **{party.role.name}** was accepted by "
+                                                          f"{reactor}.{invite_fmt}")
 
             elif str(payload.emoji) == no_emoji:
-                message = f"{no_emoji} `{member}`'s request to join `{party.role.name}` was **denied**."
-                member_message = f"{no_emoji} Your request to join the political party `{party.role.name}` was " \
-                                 f"**denied** by `{reactor}`"
+                message = f"{config.HINT}  {member.display_name}'s request to join {party.role.name} was " \
+                          f"denied by {reactor.display_name}."
+
+                member_embed = text.SafeEmbed(title=f"{no_emoji}  Party Join Request Denied",
+                                              description=f"Your request to join **{party.role.name}** was denied by {reactor}.")
 
             else:
                 return
 
             await self.bot.db.execute("DELETE FROM party_join_request WHERE id = $1", request_match["id"])
-            await member.send(member_message)
+            await member.send(embed=member_embed)
 
             for leader in party.leaders:
-                with contextlib.suppress(discord.Forbidden):
-                    await leader.send(message)
-
-    # todo fix design
+                try:
+                    await leader.send(embed=text.SafeEmbed(title=message))
+                except discord.Forbidden:
+                    continue
 
     @commands.Cog.listener(name="on_member_update")
     async def party_join_leave_notification(self, before, after):
@@ -222,7 +232,7 @@ class Party(context.CustomCog, name="Political Parties"):
             for role in after.roles:
                 if role not in before.roles:
                     possible_party = role
-                    message = f"{before.display_name} just **joined** your political party, `{role.name}`."
+                    message = f"{config.JOIN}  {before.display_name} just joined your political party **{role.name}**."
                     break
 
         else:
@@ -230,7 +240,7 @@ class Party(context.CustomCog, name="Political Parties"):
             for role in before.roles:
                 if role not in after.roles:
                     possible_party = role
-                    message = f"{before.display_name} just **left** your political party, `{role.name}`."
+                    message = f"{config.LEAVE}  {before.display_name} just left your political party **{role.name}**."
                     break
 
         if not possible_party or not message:
@@ -242,7 +252,7 @@ class Party(context.CustomCog, name="Political Parties"):
             return
 
         embed = SafeEmbed(description=message)
-        embed.set_author(name=f"{config.JOIN}  {before}", icon_url=before.avatar_url_as(static_format="png"))
+        embed.set_author(name=before, icon_url=before.avatar_url_as(static_format="png"))
 
         for leader in party.leaders:
             await self.bot.safe_send_dm(target=leader, embed=embed, reason="party_join_leave")
@@ -257,7 +267,7 @@ class Party(context.CustomCog, name="Political Parties"):
             return await ctx.send(f"{config.NO} You're not in the {self.bot.dciv.name} server.")
 
         if party.role in person_in_dciv.roles:
-            return await ctx.send(f"{config.NO} You're already part of {party.role.name}.")
+            return await ctx.send(f"{config.NO} You're already part of `{party.role.name}`.")
 
         if party.join_mode is PoliticalPartyJoinMode.PRIVATE:
             return await ctx.send(
@@ -270,7 +280,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
             if existing_request:
                 return await ctx.send(
-                    f"{config.NO} You already requested to join {party.role.name}. Once the leaders "
+                    f"{config.NO} You already requested to join `{party.role.name}`. Once the leaders "
                     f"accept or deny your request, I will notify you."
                 )
 
@@ -280,17 +290,35 @@ class Party(context.CustomCog, name="Political Parties"):
                 ctx.author.id,
             )
 
+            fmt_leader = ', '.join([f"`{leader}`" for leader in party.leaders])
+
             await ctx.send(
-                f"{config.YES} Your request to join {party.role.name} was sent to their leaders. "
+                f"{config.YES} Your request to join `{party.role.name}` was sent to their leaders ({fmt_leader}). "
                 f"Once they accept or deny your request, I'll notify you."
             )
 
             for leader in party.leaders:
                 try:
-                    message = await leader.send(
-                        f"{config.USER_INTERACTION_REQUIRED} `{ctx.author}` wants to join your political "
-                        f"party, `{party.role.name}`. Do you want to accept their request?"
-                    )
+                    other_leaders = party.leaders
+                    other_leaders.remove(leader)
+
+                    if other_leaders:
+                        other_leaders_fmt = ', '.join([f"`{le}`" for le in other_leaders])
+                        other_help = f"\nThe other party leaders, {other_leaders_fmt}, also received this message. " \
+                                     f"Once any of you either accept or deny, that is the final decision."
+
+                    else:
+                        other_help = ""
+
+                    embed = text.SafeEmbed(title=f"Request to join {party.role.name}",
+                                           description=f"{ctx.author.display_name} wants to join your political "
+                                                       f"party **{party.role.name}**. Do you want to accept "
+                                                       f"their request?\n\n{config.HINT} This has no timeout, so "
+                                                       f"you don't have to decide immediately. {other_help}")
+
+                    embed.set_author(name=ctx.author, icon_url=ctx.author_icon)
+
+                    message = await leader.send(embed=embed)
                     await message.add_reaction(config.YES)
                     await message.add_reaction(config.NO)
 
@@ -425,14 +453,16 @@ class Party(context.CustomCog, name="Political Parties"):
             result['role'] = discord_role
 
         if leaders:
+            await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Reply with the names or mentions of the party's leaders or "
+                f"representatives. If this party has multiple leaders, separate them with a newline, like in the "
+                f"image below.\n\n "
+                f"{config.HINT} *Party leaders get DM notifications by me when someone joins or leaves their "
+                f"party, and they are the ones that can accept and deny join requests if the party's join mode "
+                f"is request-based.*", file=await self.bot.make_file_from_image_link("https://cdn.discordapp.com/attachments/499669824847478785/784584955921301554/partyjoin.PNG"))
+
             leaders_text = (
-                await ctx.input(
-                    f"{config.USER_INTERACTION_REQUIRED} Reply with the names or mentions of the party's leaders or "
-                    f"representatives. If this party has multiple leaders, separate them with a newline.\n\n"
-                    f"{config.HINT} *Party leaders get DM notifications by me when someone joins or leaves their "
-                    f"party, and they are the ones that can accept and deny join requests if the party's join mode "
-                    f"is request-based.*"
-                )
+                await ctx.input()
             ).splitlines()
 
             leaders = []
@@ -469,7 +499,10 @@ class Party(context.CustomCog, name="Political Parties"):
             }
 
             reaction = await ctx.choose(
-                f"{config.USER_INTERACTION_REQUIRED} Should this party be public, request-based, or private?\n\n",
+                f"{config.USER_INTERACTION_REQUIRED} Should this party be public, request-based, or private?\n"
+                f"\n\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467 - **Public**: Everyone can join\n"
+                f"\U0001f4e9 - **Request-based**: Everyone can request to join this party, and the party's leaders can then accept/deny each request\n"
+                f"\U0001f575 - **Private**: No one can join, and only {self.bot.dciv.name} Moderation can give out the party's role",
                 reactions=reactions.keys(),
             )
 

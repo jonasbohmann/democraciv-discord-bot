@@ -84,8 +84,8 @@ def tag_check():
         else:
             raise exceptions.DemocracivBotException(
                 message=f"{config.NO} Only Administrators can add or remove tags on this server."
-                " Administrators can change this setting in "
-                f"`{config.BOT_PREFIX}server tagcreation`."
+                        " Administrators can change this setting in "
+                        f"`{config.BOT_PREFIX}server tagcreation`."
             )
 
     return commands.check(check)

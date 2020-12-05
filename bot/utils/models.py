@@ -206,7 +206,10 @@ class Law(Bill):
 
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str]):
-        bill = await super().convert(ctx, argument)
+        try:
+            bill = await super().convert(ctx, argument)
+        except NotFoundError:
+            raise NotFoundError(f"{config.NO} There is no law that matches `{argument}`.")
 
         if not bill.status.is_law:
             raise commands.BadArgument(f"{config.NO} `{bill.name}` (#{bill.id}) is not an active law.")

@@ -53,7 +53,8 @@ class PoliticalParty(commands.Converter):
 
     @property
     def leaders(self) -> typing.List[typing.Union[discord.Member, discord.User, None]]:
-        return list(filter(None, [self._bot.dciv.get_member(leader) or self._bot.get_user(leader) for leader in self._leaders]))
+        return list(
+            filter(None, [self._bot.dciv.get_member(leader) or self._bot.get_user(leader) for leader in self._leaders]))
 
     @property
     def role(self) -> typing.Optional[discord.Role]:
@@ -107,12 +108,12 @@ class PoliticalParty(commands.Converter):
             for party in parties:
                 role = ctx.bot.dciv.get_role(party)
                 if role is not None:
-                    msg.append(role.name)
+                    msg.append(f"`{role.name}`")
 
             if msg:
-                msg = '\n'.join(msg)
+                msg = ', '.join(msg)
                 message = f"{config.NO} There is no political party that matches `{argument}`.\n" \
-                          f"{config.HINT} Try one of these:\n{msg}"
+                          f"{config.HINT} Try one of these: {msg}"
             else:
                 message = f"{config.NO} There is no political party that matches `{argument}`."
 
@@ -251,27 +252,35 @@ class CaseInsensitiveTextChannel(commands.TextChannelConverter):
             raise BadArgument(f"{config.NO} There is no channel named `{argument}` on this server.")
 
 
+class CaseInsensitiveCategoryChannel(commands.CategoryChannelConverter):
+    async def convert(self, ctx, argument):
+        try:
+            return await super().convert(ctx, argument)
+        except BadArgument:
+            arg = argument.lower()
+
+            if arg.startswith("#"):
+                arg = arg[1:]
+
+            def predicate(c):
+                return c.name.lower() == arg
+
+            channel = discord.utils.find(predicate, ctx.guild.categories)
+
+            if channel:
+                return channel
+
+            raise BadArgument(f"{config.NO} There is no category named `{argument}` on this server.")
+
+
 class CaseInsensitiveTextChannelOrCategoryChannel(CaseInsensitiveTextChannel):
     async def convert(self, ctx, argument):
         try:
             return await super().convert(ctx, argument)
         except BadArgument:
             try:
-                return await commands.CategoryChannelConverter().convert(ctx, argument)
+                return await CaseInsensitiveCategoryChannel().convert(ctx, argument)
             except BadArgument:
-                arg = argument.lower()
-
-                if arg.startswith("#"):
-                    arg = arg[1:]
-
-                def predicate(c):
-                    return c.name.lower() == arg
-
-                channel = discord.utils.find(predicate, ctx.guild.categories)
-
-                if channel:
-                    return channel
-
                 raise BadArgument(f"{config.NO} There is no channel or category named `{argument}` on this server.")
 
 
