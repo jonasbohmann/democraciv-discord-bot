@@ -248,7 +248,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
         try:
             party = await PoliticalParty.convert(MockContext(self.bot), possible_party.id)
-        except commands.BadArgument:
+        except exceptions.NotFoundError:
             return
 
         embed = SafeEmbed(description=message)
