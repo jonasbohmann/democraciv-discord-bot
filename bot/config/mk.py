@@ -10,22 +10,22 @@ class DemocracivRole(enum.Enum):
     MODERATION = 319663296728924160
 
     # Executive
-    MINISTER = 639438027852087297
-    GOVERNOR = 639438794239639573
-    PRIME_MINISTER = 639438159498838016
-    LT_PRIME_MINISTER = 646677815755931659
+    MINISTER = 745751525971722341
+    GOVERNOR = 745731318079422594
+    PRIME_MINISTER = 741485246465310740
+    LT_PRIME_MINISTER = 745731318079422594
 
     # Legislature
-    SPEAKER = 639438304705642506
-    VICE_SPEAKER = 639439805729734656
-    LEGISLATOR = 639438268601204737
+    SPEAKER = 741485176726749216
+    VICE_SPEAKER = 0
+    LEGISLATOR = 741485036267634688
 
     # Courts
-    CHIEF_JUSTICE = 639442447721562122
-    JUSTICE = 639438578304417792
-    JUDGE = 668544161884143657
+    CHIEF_JUSTICE = 0
+    JUSTICE = 744356946580209815
+    JUDGE = 0
 
-    GOVERNMENT = 641077467204943916
+    GOVERNMENT = 740454521934970901
 
     OTTOMAN_TAX_OFFICER = 744983252854636675
 
@@ -40,10 +40,7 @@ class DemocracivChannel(enum.Enum):
     MODERATION_NOTIFICATIONS_CHANNEL = 661201604493443092
 
     # Government
-    GOV_ANNOUNCEMENTS_CHANNEL = 647469752767479809
-
-    # Executive
-    EXECUTIVE_CHANNEL = 637051136955777049
+    GOV_ANNOUNCEMENTS_CHANNEL = 784604314727088128
 
 
 def _make_property(role: DemocracivRole, alt: str):
@@ -53,25 +50,25 @@ def _make_property(role: DemocracivRole, alt: str):
 class MarkConfig:
     MARK = "7"
     CIV_GAME = "Sid Meier's Civilization 6"
-    IS_MULTICIV = False
+    IS_MULTICIV = True
 
     # -- Government Names --
 
-    NATION_ROLE_PREFIX = ""
-    NATION_CATEGORIES = []
+    NATION_ROLE_PREFIX = "Canada - "
+    NATION_CATEGORIES = [741477020659089538]
 
-    NATION_NAME = "Arabia"
-    NATION_FULL_NAME = "Arabian People’s Democratic Union"
-    NATION_ADJECTIVE = "Arabian"
-    NATION_FLAG_URL = "https://i.imgur.com/M97zPrP.jpg"
-    NATION_ICON_URL = ""
-    NATION_EMOJI = "<:arabia:721366589861265429>"
+    NATION_NAME = "Canada"
+    NATION_FULL_NAME = "Republic of Canada"
+    NATION_ADJECTIVE = "Canadian"
+    NATION_FLAG_URL = "https://cdn.discordapp.com/avatars/742114080860536903/bd7e62e00c96e0b77d6c43da5f5f10f6.png?size=4096"
+    NATION_ICON_URL = "https://cdn.discordapp.com/avatars/742114080860536903/bd7e62e00c96e0b77d6c43da5f5f10f6.png?size=4096"
+    NATION_EMOJI = "<:canada:784603515270987796>"
 
     LEGISLATURE_NAME = "Legislature"
     LEGISLATURE_COMMAND = "legislature"
     LEGISLATURE_ADJECTIVE = "Legislative"
     LEGISLATURE_CABINET_NAME = "Legislative Cabinet"
-    LEGISLATURE_LEGISLATOR_NAME = "Legislator"
+    LEGISLATURE_LEGISLATOR_NAME = "MP"
     LEGISLATURE_SPEAKER_NAME = "Speaker"
     LEGISLATURE_VICE_SPEAKER_NAME = "Vice-Speaker"
     LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS = True
@@ -83,17 +80,17 @@ class MarkConfig:
     MINISTRY_LEADERSHIP_NAME = "Head of State"
     MINISTRY_MINISTER_NAME = "Minister"
     MINISTRY_PRIME_MINISTER_NAME = "Prime Minister"
-    MINISTRY_VICE_PRIME_MINISTER_NAME = "Lt. Prime Minister"
+    MINISTRY_VICE_PRIME_MINISTER_NAME = "Premier"
 
     COURT_NAME = "Supreme Court"
-    COURT_HAS_INFERIOR_COURT = True
+    COURT_HAS_INFERIOR_COURT = False
     COURT_CHIEF_JUSTICE_NAME = "Chief Justice"
-    COURT_INFERIOR_NAME = "Appeals Court"
+    COURT_INFERIOR_NAME = ""
     COURT_JUSTICE_NAME = "Justice"
     COURT_JUDGE_NAME = "Judge"
 
     # -- Links --
-    CONSTITUTION = "https://docs.google.com/document/d/1deWktyhCDWlmC88C2eP7vjpH6sP6NuJ7KfrXX8kcO-s/edit"
+    CONSTITUTION = "https://docs.google.com/document/d/1N-kREZoRQcyt4E8_jemIF0RtYroiupE-f64p-niRC8Q/edit"
     LEGAL_CODE = "https://docs.google.com/document/d/1nmDfOy3DypadML817J_d2pCc8FpDlO7HUUhHOajWG2o/edit?usp=sharing"
     POLITICAL_PARTIES = "https://www.reddit.com/r/democraciv/wiki/parties"
 

@@ -96,7 +96,7 @@ class DemocracivBot(commands.Bot):
         intents.members = True
 
         super().__init__(
-            command_prefix=commands.when_mentioned_or(config.BOT_PREFIX),
+            command_prefix=commands.when_mentioned_or(config.BOT_PREFIX, "canada-", "can-", "C-"),
             case_insensitive=True,
             intents=intents,
             allowed_mentions=discord.AllowedMentions.none(),
