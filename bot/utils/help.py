@@ -307,7 +307,6 @@ class PaginatedHelpCommand(commands.HelpCommand):
         # The end user doesn't know the difference between a Group and a Command. To avoid confusion, just show them
         # the whole cog
         if group in (self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} withdraw"),
-                     self.context.bot.get_command("dms"),
                      self.context.bot.get_command("random")):
             return await self._send_group_help(group)
 

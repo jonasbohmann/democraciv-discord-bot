@@ -43,7 +43,6 @@ initial_extensions = [
     "bot.module.guild",
     "bot.module.admin",
     "bot.module.nation",
-    "bot.module.profile",
     "bot.module.tags",
     "bot.module.starboard",
     "bot.module.moderation",
