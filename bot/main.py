@@ -95,7 +95,7 @@ def get_prefix(bot, msg):
 
 
 class DemocracivBot(commands.Bot):
-    BASE_API = "http://localhost:8000"
+    BASE_API = config.API_URL
 
     def __init__(self):
         self.start_time = time.time()
@@ -122,8 +122,8 @@ class DemocracivBot(commands.Bot):
         self.db_ready = False
         self.loop.create_task(self.connect_to_db())
 
-        # if config.DATABASE_DAILY_BACKUP_ENABLED:
-        #    self.daily_db_backup.start()
+        if config.DATABASE_DAILY_BACKUP_ENABLED:
+            self.daily_db_backup.start()
 
         self.loop.create_task(self.initialize_democraciv_guild())
         self.mk = mk.MarkConfig(self)

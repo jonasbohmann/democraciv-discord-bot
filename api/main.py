@@ -17,12 +17,6 @@ from fastapi.logger import logger
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [API] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
 
-# todo
-REDDIT_LOGO = "<:reddit:660114002533285888>"
-YOUTUBE_LOGO_UPLOAD = "<:youtubeiconwhite:660114810444447774>"
-YOUTUBE_LOGO_STREAM = "<:youtubeiconred:660897027114401792>"
-TWITCH_LOGO = "<:twitch:660116652012077080>"
-
 
 class Database:
     def __init__(self, *, dsn):
@@ -135,8 +129,7 @@ async def startup_event():
 
 @app.get("/")
 async def ok():
-    y = [r.subreddit for k, r in reddit_manager._webhooks.items()]
-    return {"ok": y}
+    return {"ok": "ok"}
 
 
 @app.get("/reddit/list/{guild_id}")

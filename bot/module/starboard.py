@@ -162,7 +162,7 @@ class Starboard(context.CustomCog):
         return "\n\n".join(markdown)
 
     async def has_posted_to_reddit_today(self) -> bool:
-        async with self.bot.session.get(f"https://www.reddit.com/user/{token.REDDIT_USERNAME}.json?limit=15") as resp:
+        async with self.bot.session.get(f"https://www.reddit.com/user/{config.STARBOARD_REDDIT_USERNAME}.json?limit=15") as resp:
             if resp.status == 200:
                 json_data = await resp.json()
             else:

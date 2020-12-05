@@ -116,7 +116,7 @@ class RedditManager(ProviderManager):
         async with self._lock:
             if len(self._webhooks[target].webhook_urls) == 1 and webhook_url in self._webhooks[target].webhook_urls:
                 self._webhooks[target].stop()
-                print(f"stopping {self._webhooks[target]} ({self._webhooks[target].subreddit})")
+                logger.info(f"stopping {self._webhooks[target]} ({self._webhooks[target].subreddit})")
                 del self._webhooks[target]
             else:
                 self._webhooks[target].webhook_urls.remove(webhook_url)
