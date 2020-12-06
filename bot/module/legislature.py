@@ -2,19 +2,20 @@ import collections
 import datetime
 import asyncpg
 import discord
+import typing
 
 from discord.ext import commands
 from discord.ext.commands import Greedy
 
-from bot.config import *
-from bot.utils import models, text, paginator, context, mixin, checks, converter
+from bot.config import config, mk
+from bot.utils import models, text, paginator, context, mixin, checks, converter, exceptions
 from bot.utils.models import Bill, Session, Motion, SessionStatus
 
 
 class PassScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
         message = [
-            f"{self.bot.get_democraciv_role(DemocracivRole.MINISTER).mention}, "
+            f"{self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER).mention}, "
             f"the following bills were **passed by the {self.bot.mk.LEGISLATURE_NAME}**.\n"
         ]
 
@@ -34,7 +35,7 @@ class PassScheduler(text.AnnouncementScheduler):
 class OverrideScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
         message = [
-            f"{self.bot.get_democraciv_role(DemocracivRole.GOVERNMENT).mention}, "
+            f"{self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT).mention}, "
             f"the {self.bot.mk.MINISTRY_NAME}'s **veto of the following bills were overridden** "
             f"by the {self.bot.mk.LEGISLATURE_NAME}.\n"
         ]
@@ -46,13 +47,13 @@ class OverrideScheduler(text.AnnouncementScheduler):
         return "\n".join(message)
 
 
-class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGISLATURE_NAME):
+class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.LEGISLATURE_NAME):
     """Allows the Government to organize {LEGISLATURE_ADJECTIVE} sessions and their submitted bills"""
 
     def __init__(self, bot):
         super().__init__(bot)
-        self.pass_scheduler = PassScheduler(bot, DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
-        self.override_scheduler = OverrideScheduler(bot, DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+        self.pass_scheduler = PassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+        self.override_scheduler = OverrideScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.illegal_tags = (
             "act",
             "the",
@@ -73,7 +74,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw").remove_command("motion")
 
     @commands.group(
-        name=MarkConfig.LEGISLATURE_NAME.lower(),
+        name=mk.MarkConfig.LEGISLATURE_NAME.lower(),
         aliases=["leg", "legislature"],
         case_insensitive=True,
         invoke_without_command=True,
@@ -88,10 +89,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         else:
             current_session_value = f"Session #{active_leg_session.id} - {active_leg_session.status.value}"
 
-        embed = text.SafeEmbed(
-            title=f"{self.bot.mk.NATION_EMOJI}  The {self.bot.mk.LEGISLATURE_NAME} "
-                  f"of {self.bot.mk.NATION_FULL_NAME}"
-        )
+        embed = text.SafeEmbed()
+        embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL,
+                         name=f"The {self.bot.mk.LEGISLATURE_NAME} of {self.bot.mk.NATION_FULL_NAME}")
         speaker_value = []
 
         if isinstance(self.speaker, discord.Member):
@@ -125,7 +125,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
     @bill.command(name="history", aliases=['h'])
     async def b_history(self, ctx: context.CustomContext, *, bill_id: models.Bill):
         """See when a bill was first introduced, passed into Law, vetoed, etc."""
-        fmt_history = [f"**{entry.date.strftime('%d %B %Y')}** - {entry.after}   " 
+        fmt_history = [f"**{entry.date.strftime('%d %B %Y')}** - {entry.after}   "
                        f"({entry.after.emojified_status(verbose=False)})" for entry in bill_id.history]
         fmt_history.insert(0, "All dates are in UTC.\n")
 
@@ -143,7 +143,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             self,
             ctx: context.CustomContext,
             *,
-            member_or_party: typing.Union[converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty] = None,
+            member_or_party: typing.Union[
+                converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty] = None,
     ):
         """List all bills that a specific person or Political Party submitted"""
         return await self._from_person_model(ctx, member_or_party=member_or_party, model=models.Bill)
@@ -167,7 +168,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             self,
             ctx: context.CustomContext,
             *,
-            member_or_party: typing.Union[converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty] = None,
+            member_or_party: typing.Union[
+                converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty] = None,
     ):
         """List all motions that a specific person or Political Party submitted"""
         return await self._from_person_model(ctx, model=models.Motion, member_or_party=member_or_party)
@@ -209,7 +211,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         else:
             pretty_bills = ["-"]
 
-        embed = text.SafeEmbed(title=f"{self.bot.mk.NATION_EMOJI}  Legislative Session #{session.id}")
+        embed = text.SafeEmbed()
+        embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL, name=f"Legislative Session #{session.id}")
 
         if session.speaker is not None:
             embed.add_field(name="Opened by", value=session.speaker.mention)
@@ -258,7 +261,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         await ctx.send(embed=embed)
 
     @leg_session.command(name="open", aliases=["o"])
-    @checks.has_any_democraciv_role(DemocracivRole.SPEAKER, DemocracivRole.VICE_SPEAKER)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
 
@@ -290,7 +293,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         )
 
     @leg_session.command(name="vote", aliases=["u", "v", "update"])
-    @checks.has_any_democraciv_role(DemocracivRole.SPEAKER, DemocracivRole.VICE_SPEAKER)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def updatesession(self, ctx: context.CustomContext):
         """Changes the current session's status to be open for voting"""
 
@@ -330,7 +333,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         )
 
     @leg_session.command(name="close", aliases=["c"])
-    @checks.has_any_democraciv_role(DemocracivRole.SPEAKER, DemocracivRole.VICE_SPEAKER)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def closesession(self, ctx):
         """Closes the current session"""
 
@@ -489,8 +492,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
         pages = paginator.SimplePages(
             entries=pretty_sessions,
-            title=f"{self.bot.mk.NATION_EMOJI}  All Sessions of the {self.bot.mk.NATION_ADJECTIVE}"
-                  f" {self.bot.mk.LEGISLATURE_NAME}",
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"All Sessions of the {self.bot.mk.NATION_ADJECTIVE} {self.bot.mk.LEGISLATURE_NAME}",
             empty_message="There hasn't been a session yet.",
         )
         await pages.start(ctx)
@@ -748,7 +751,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
                 await self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_submit", embed=embed)
 
     @legislature.command(name="pass", aliases=["p"])
-    @checks.has_any_democraciv_role(DemocracivRole.SPEAKER, DemocracivRole.VICE_SPEAKER)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def pass_bill(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Mark one or multiple bills as passed from the {LEGISLATURE_NAME}
 
@@ -902,7 +905,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         await self.withdraw_objects(ctx, motion_ids)
 
     @legislature.command(name="override", aliases=["ov"])
-    @checks.has_any_democraciv_role(DemocracivRole.SPEAKER, DemocracivRole.VICE_SPEAKER)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def override(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Override the veto of one or multiple bills to pass them into law
 
@@ -937,7 +940,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
         await ctx.send(f"{config.YES} The vetoes of all bills were overridden.")
 
     @legislature.command(name="resubmit", aliases=["rs"])
-    @checks.has_any_democraciv_role(DemocracivRole.SPEAKER, DemocracivRole.VICE_SPEAKER)
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def resubmit(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Resubmit any bills that failed in the {LEGISLATURE_NAME} or {MINISTRY_NAME} to the currently active session
 
@@ -1039,11 +1042,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
         stats = await self._generate_leg_statistics()
 
-        embed = text.SafeEmbed(
-            title=f"{self.bot.mk.NATION_EMOJI}  Statistics for the "
-                  f"{self.bot.mk.NATION_ADJECTIVE} "
-                  f"{self.bot.mk.LEGISLATURE_NAME}"
-        )
+        embed = text.SafeEmbed()
+        embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL,
+                         name=f"Statistics for the "
+                              f"{self.bot.mk.NATION_ADJECTIVE} "
+                              f"{self.bot.mk.LEGISLATURE_NAME}")
 
         general_value = (
             f"Sessions: {stats['sessions']}\nSubmitted Bills: {stats['bills']}\n"

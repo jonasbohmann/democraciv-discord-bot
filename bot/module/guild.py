@@ -316,14 +316,14 @@ class _Guild(context.CustomCog, name="Server"):
                 )
 
                 if is_category:
-                    star = f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in any of these channels." if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED else ""
+                    star = f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in any of these channels.*" if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED else ""
 
                     await ctx.send(
                         f"{config.YES} The {channel} category is now hidden, and all the channel in it "
                         f"will no longer show up in {current_logging_channel.mention}.{star}"
                     )
                 else:
-                    star = f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in this channel." if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED else ""
+                    star = f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in this channel.*" if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED else ""
 
                     await ctx.send(
                         f"{config.YES} {channel.mention} is now hidden and will no longer show up "

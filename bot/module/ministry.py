@@ -98,9 +98,9 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
     async def ministry(self, ctx):
         """Dashboard for the {minister_term} with important links and updates on new bills"""
 
-        embed = text.SafeEmbed(
-            title=f"{self.bot.mk.NATION_EMOJI}  The {self.bot.mk.MINISTRY_NAME} of {self.bot.mk.NATION_FULL_NAME}"
-        )
+        embed = text.SafeEmbed()
+        embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL,
+                         name=f"The {self.bot.mk.MINISTRY_NAME} of {self.bot.mk.NATION_FULL_NAME}")
 
         pretty_bills = await self.get_pretty_vetoes()
 
@@ -134,7 +134,8 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         pretty_bills = await self.get_pretty_vetoes()
         pages = paginator.SimplePages(
             entries=pretty_bills,
-            title=f"{self.bot.mk.NATION_EMOJI}  Open Bills to Vote On",
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Open Bills to Vote On",
             empty_message="There are no new bills to vote on.",
         )
         await pages.start(ctx)

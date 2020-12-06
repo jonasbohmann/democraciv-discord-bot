@@ -43,9 +43,9 @@ class SupremeCourt(context.CustomCog, GovernmentMixin, name=mk.MarkConfig.COURT_
     async def court(self, ctx):
         """Dashboard for {justice_term}"""
 
-        embed = text.SafeEmbed(
-            title=f"{self.bot.mk.NATION_EMOJI}  " f"{self.bot.mk.courts_term} of the {self.bot.mk.NATION_FULL_NAME}"
-        )
+        embed = text.SafeEmbed()
+        embed.set_author(name=f"{self.bot.mk.courts_term} of the {self.bot.mk.NATION_FULL_NAME}",
+                         icon_url=self.bot.mk.NATION_ICON_URL)
 
         justices = self.get_justices() or ["-"]
         judges = self.get_judges() or ["-"]
