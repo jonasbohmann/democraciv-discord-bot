@@ -499,7 +499,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
             discord_invite_pattern = re.compile(r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
             if not discord_invite_pattern.fullmatch(party_invite):
-                party_invite = None
+                party_invite = "None"
 
             result['invite'] = party_invite
 
@@ -523,6 +523,10 @@ class Party(context.CustomCog, name="Political Parties"):
 
         if commit:
             async with self.bot.db.acquire() as connection:
+
+                if result['invite'] == "None":
+                    result['invite'] = None
+
                 async with connection.transaction():
                     try:
                         await connection.execute(
@@ -600,7 +604,13 @@ class Party(context.CustomCog, name="Political Parties"):
         if not are_you_sure:
             return await ctx.send("Cancelled.")
 
-        new_invite = updated_party['invite'] or party.discord_invite
+        if updated_party['invite'] == "None":
+            new_invite = None
+        elif not updated_party:
+            new_invite = party.discord_invite
+        else:
+            new_invite = updated_party['invite']
+
         new_join_mode = updated_party['join_mode'] or party.join_mode.value
         new_leaders = updated_party['leaders'] or party._leaders
 
