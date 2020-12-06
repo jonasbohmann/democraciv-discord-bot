@@ -3,8 +3,8 @@
 API_URL = "http://localhost:8000"
 DEMOCRACIV_GUILD_ID = 208984105310879744  # dciv
 
-BOT_PREFIX = "-"
-BOT_ADDITIONAL_PREFIXES = [BOT_PREFIX]
+BOT_PREFIX = "c-"
+BOT_ADDITIONAL_PREFIXES = [BOT_PREFIX, "canada- ", "canada-", "canada ", "canada", "can- ", "can-", "can ", "can"]
 
 BOT_COMMAND_COOLDOWN = 1.5  # in seconds
 BOT_VERSION = "2.0.0-beta"
@@ -56,7 +56,7 @@ DATABASE_DAILY_BACKUP_DISCORD_CHANNEL = 738903909535318086
 DATABASE_DAILY_BACKUP_INTERVAL = 72  # hours
 
 # Google Cloud Platform
-GOOGLE_CLOUD_PLATFORM_CLIENT_SECRETS_FILE = "config/google_client_secret.json"
+GOOGLE_CLOUD_PLATFORM_CLIENT_SECRETS_FILE = "bot/config/google_client_secret.json"
 GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES = [
     "https://www.googleapis.com/auth/forms",
     "https://www.googleapis.com/auth/documents",

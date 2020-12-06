@@ -82,8 +82,10 @@ class _Guild(context.CustomCog, name="Server"):
 
         welcome_channel = await self.bot.get_welcome_channel(member.guild)
 
-        if welcome_channel is not None:
-            welcome_message = settings[member.guild.id]["welcome_message"].replace("{member}", member.mention)
+        message = settings["welcome_message"]
+
+        if welcome_channel and message:
+            welcome_message = message.replace("{member}", member.mention)
             await welcome_channel.send(welcome_message, allowed_mentions=discord.AllowedMentions(users=True))
 
     @guild.command(name="welcome")

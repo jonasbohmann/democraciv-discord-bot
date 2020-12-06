@@ -12,7 +12,7 @@ from bot.utils import text, paginator, checks, context, mixin, models
 class LawPassScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
         message = [
-            f"{self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
+            f"{self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT).mention}, "
             f"the following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"
         ]
 
