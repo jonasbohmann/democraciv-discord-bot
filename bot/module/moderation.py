@@ -10,7 +10,7 @@ from bot.utils.converter import UnbanConverter, BanConverter, CaseInsensitiveMem
 
 
 class Moderation(context.CustomCog):
-    """Commands for the Mod Team of this server and the Nation Admins"""
+    """Commands for the Mod Team of this server"""
 
     async def calculate_alt_chance(self, member: discord.Member) -> (int, str):
         is_alt_chance = 0
