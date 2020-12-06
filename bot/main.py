@@ -803,7 +803,6 @@ class DemocracivBot(commands.Bot):
         """This task makes a backup of the bot's PostgreSQL database every 24hours and uploads
         that backup to the #backup channel to the Democraciv Discord guild."""
         await self.do_db_backup(token.POSTGRESQL_DATABASE)
-        await self.do_db_backup("api_test")
 
     async def get_logging_channel(self, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
         channel = await self.get_guild_setting(guild.id, "logging_channel")
