@@ -110,6 +110,7 @@ class DemocracivBot(commands.Bot):
         intents.members = True
 
         super().__init__(
+            max_messages=100,
             command_prefix=get_prefix,
             case_insensitive=True,
             intents=intents,
