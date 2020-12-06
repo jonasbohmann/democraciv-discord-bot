@@ -162,6 +162,18 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         await ctx.send(f"{config.YES} The role was created, you can now give it to people with "
                        f"`{config.BOT_PREFIX}nation roles toggle <person> {role.name}`.")
 
+    @nationroles.command(name="delete", aliases=['remove'])
+    @checks.moderation_or_nation_leader()
+    async def delete_nation_role(self, ctx, *, nation_role: NationRoleConverter):
+        """Delete a nation role
+
+        **Example**:
+            `{PREFIX}{COMMAND} Rome - Builder` will delete the 'Rome - Builder' role"""
+
+        name = nation_role.name
+        await nation_role.delete()
+        await ctx.send(f"{config.YES} `{name}` was deleted.")
+
     @nation.group(name="createchannel", aliases=['channel'])
     @checks.moderation_or_nation_leader()
     async def channel(self, ctx, *, category: CaseInsensitiveCategoryChannel = None):
