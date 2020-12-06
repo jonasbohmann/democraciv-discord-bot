@@ -284,6 +284,12 @@ class Party(context.CustomCog, name="Political Parties"):
                     f"accept or deny your request, I will notify you."
                 )
 
+            if not party.leaders:
+                return await ctx.send(f"{config.NO} I was not told who `{party.role.name}`'s leaders are, so "
+                                      f"I can't send your join request to anyone. Please tell {self.bot.dciv.name} "
+                                      f"Moderation to add the leaders with `{config.BOT_PREFIX}party edit "
+                                      f"{party.role.name}`, then try again.")
+
             request_id = await self.bot.db.fetchval(
                 "INSERT INTO party_join_request (party_id, requesting_member) VALUES ($1, $2) RETURNING id",
                 party.role.id,
@@ -314,7 +320,7 @@ class Party(context.CustomCog, name="Political Parties"):
                                            description=f"{ctx.author.display_name} wants to join your political "
                                                        f"party **{party.role.name}**. Do you want to accept "
                                                        f"their request?\n\n{config.HINT} This has no timeout, so "
-                                                       f"you don't have to decide immediately. {other_help}")
+                                                       f"you don't have to decide immediately.{other_help}")
 
                     embed.set_author(name=ctx.author, icon_url=ctx.author_icon)
 
@@ -453,13 +459,16 @@ class Party(context.CustomCog, name="Political Parties"):
             result['role'] = discord_role
 
         if leaders:
+            img = await self.bot.make_file_from_image_link("https://cdn.discordapp.com/attachments/499669824847478785/784584955921301554/partyjoin.PNG")
+            img.seek(0)
+            file = discord.File(img, filename="image.png")
             await ctx.send(
                 f"{config.USER_INTERACTION_REQUIRED} Reply with the names or mentions of the party's leaders or "
                 f"representatives. If this party has multiple leaders, separate them with a newline, like in the "
                 f"image below.\n\n "
                 f"{config.HINT} *Party leaders get DM notifications by me when someone joins or leaves their "
                 f"party, and they are the ones that can accept and deny join requests if the party's join mode "
-                f"is request-based.*", file=await self.bot.make_file_from_image_link("https://cdn.discordapp.com/attachments/499669824847478785/784584955921301554/partyjoin.PNG"))
+                f"is request-based.*", file=file)
 
             leaders_text = (
                 await ctx.input()
@@ -476,6 +485,9 @@ class Party(context.CustomCog, name="Political Parties"):
 
                 except commands.BadArgument:
                     continue
+
+            if not leaders:
+                leaders.append(0)
 
             result['leaders'] = leaders
 

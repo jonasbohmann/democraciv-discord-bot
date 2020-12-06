@@ -2,15 +2,58 @@ import discord
 from discord.ext import commands
 
 from bot.config import config, mk, exceptions
-from bot.utils import context, checks, paginator, text
+from bot.utils import context, checks, paginator, text, mixin
 from bot.utils.converter import CaseInsensitiveMember, CaseInsensitiveRole, CaseInsensitiveCategoryChannel
 
 
-class Nation(context.CustomCog):
+class Nation(context.CustomCog, mixin.GovernmentMixin):
     """Useful commands for Nation Admins to manage their nation in Multiciv."""
 
-    @commands.group(name="nation", aliases=['civ'], case_insensitive=True, invoke_without_command=True)
+    @commands.group(name="nation", aliases=['civ', 'n'], case_insensitive=True, invoke_without_command=True)
     async def nation(self, ctx):
+        """{NATION_NAME}"""
+
+        description = ""
+        nation_wiki = self.bot.mk.NATION_NAME.lower()
+
+        embed = text.SafeEmbed(description=f"{description}\n\n[Constitution]({self.bot.mk.CONSTITUTION})\n"
+                                           f"[Wiki](https://reddit.com/r/democraciv/wiki/{nation_wiki})")
+        embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
+
+        try:
+            legislators = len(self.legislator_role.members)
+        except exceptions.RoleNotFoundError:
+            legislators = 0
+
+        try:
+            citizens = self.bot.get_democraciv_role(mk.DemocracivRole.NATION_CITIZEN)
+            embed.add_field(name="Population", value=len(citizens.members))
+        except exceptions.RoleNotFoundError:
+            pass
+
+        parties = await self.bot.db.fetchval("SELECT COUNT(id) FROM party")
+        embed.add_field(name="Political Parties", value=parties)
+
+        if isinstance(self.speaker, discord.Member):
+            speaker = f"{self.bot.mk.speaker_term}: {self.speaker.mention} ({self.speaker})"
+        else:
+            speaker = f"{self.bot.mk.speaker_term}: -"
+
+        if isinstance(self.prime_minister, discord.Member):
+            prime_minister = f"{self.bot.mk.pm_term}: {self.prime_minister.mention} ({self.prime_minister})"
+        else:
+            prime_minister = f"{self.bot.mk.pm_term}: -"
+
+        embed.add_field(name="Government",
+                        value=f"{prime_minister}\n"
+                              f"{speaker}\n"
+                              f"Amount of {self.bot.mk.legislator_term}s: {legislators}",
+                        inline=False)
+
+        await ctx.send(embed=embed)
+
+    @nation.command(name="admin")
+    async def admin(self, ctx):
         """What is a Nation Admin?"""
 
         p = config.BOT_PREFIX

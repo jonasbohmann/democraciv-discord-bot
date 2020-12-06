@@ -515,9 +515,10 @@ class _Guild(context.CustomCog, name="Server"):
     async def _remove_webhook(self, ctx, *, hook_id: int = None, endpoint: str, webhook_name: str, command_name: str,
                               success_fmt: typing.Callable):
         if not hook_id:
-            file = await self.bot.make_file_from_image_link(
-                "https://cdn.discordapp.com/attachments/499669824847478785/778778261450653706/redditds.PNG"
-            )
+            img = await self.bot.make_file_from_image_link(
+                "https://cdn.discordapp.com/attachments/499669824847478785/778778261450653706/redditds.PNG")
+            img.seek(0)
+            file = discord.File(img, filename="image.png")
 
             await ctx.send(
                 f"{config.USER_INTERACTION_REQUIRED} What's the ID of the {webhook_name} you want to remove? "

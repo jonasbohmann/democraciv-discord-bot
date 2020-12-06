@@ -1,6 +1,8 @@
 import io
 import os
+import pathlib
 import re
+import sys
 import time
 import math
 import asyncio
@@ -21,6 +23,8 @@ import logging
 import datetime
 import traceback
 
+sys.path.append(str(pathlib.Path(__file__).parent.parent))
+
 from typing import Optional, Union
 from discord.ext import commands, tasks
 from bot.utils import exceptions, text, context
@@ -30,6 +34,7 @@ from googleapiclient import errors
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport import requests
+from async_lru import alru_cache
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [BOT] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
 
@@ -42,7 +47,6 @@ initial_extensions = [
     "bot.module.guild",
     "bot.module.admin",
     "bot.module.nation",
-    "bot.module.profile",
     "bot.module.tags",
     "bot.module.starboard",
     "bot.module.moderation",
@@ -84,8 +88,18 @@ async def safe_send(self, content=None, **kwargs) -> discord.Message:
 discord.abc.Messageable.send = safe_send
 
 
+def get_prefix(bot, msg):
+    for prefix in config.BOT_ADDITIONAL_PREFIXES:
+        r = re.compile(f'^({prefix}).*', flags=re.I)
+        m = r.match(msg.content)
+        if m:
+            return commands.when_mentioned_or(m.group(1))(bot, msg)
+
+    return commands.when_mentioned_or(config.BOT_PREFIX)(bot, msg)
+
+
 class DemocracivBot(commands.Bot):
-    BASE_API = "http://localhost:8000"
+    BASE_API = config.API_URL
 
     def __init__(self):
         self.start_time = time.time()
@@ -96,7 +110,7 @@ class DemocracivBot(commands.Bot):
         intents.members = True
 
         super().__init__(
-            command_prefix=commands.when_mentioned_or(config.BOT_PREFIX, "canada-", "can-", "C-"),
+            command_prefix=get_prefix,
             case_insensitive=True,
             intents=intents,
             allowed_mentions=discord.AllowedMentions.none(),
@@ -112,8 +126,8 @@ class DemocracivBot(commands.Bot):
         self.db_ready = False
         self.loop.create_task(self.connect_to_db())
 
-        # if config.DATABASE_DAILY_BACKUP_ENABLED:
-        #    self.daily_db_backup.start()
+        if config.DATABASE_DAILY_BACKUP_ENABLED:
+            self.daily_db_backup.start()
 
         self.loop.create_task(self.initialize_democraciv_guild())
         self.mk = mk.MarkConfig(self)
@@ -437,10 +451,11 @@ class DemocracivBot(commands.Bot):
         logging.info("Guild config cache was updated.")
         return guild_config
 
+    @alru_cache(cache_exceptions=False)
     async def make_file_from_image_link(self, url: str):
         async with self.session.get(url) as response:
             image = await response.read()
-            return discord.File(io.BytesIO(image), filename="image.png")
+            return io.BytesIO(image)
 
     async def get_guild_setting(self, guild_id: int, setting: str) -> typing.Union[typing.Any, typing.List]:
         if not self.is_ready():
@@ -772,7 +787,8 @@ class DemocracivBot(commands.Bot):
         file = discord.File(f"bot/db/backup/{database_name}/{file_name}")
 
         if backup_channel is None:
-            logging.warning(f"Couldn't find Backup Discord channel for database backup 'database/backup/{database_name}/{file_name}'.")
+            logging.warning(
+                f"Couldn't find Backup Discord channel for database backup 'database/backup/{database_name}/{file_name}'.")
             return
 
         await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)
@@ -820,6 +836,7 @@ class DemocracivBot(commands.Bot):
 
                 return f"https://mystb.in/{key}"
 
+    @alru_cache(cache_exceptions=False)
     async def tinyurl(self, url: str) -> typing.Optional[str]:
         async with self.session.get(f"https://tinyurl.com/api-create.php?url={url}") as response:
             if response.status == 200:
@@ -827,7 +844,7 @@ class DemocracivBot(commands.Bot):
 
                 if tiny_url == "Error":
                     raise exceptions.DemocracivBotException(
-                        "{config.NO} tinyurl.com returned an error, try again later.")
+                        f"{config.NO} tinyurl.com returned an error, try again later.")
 
                 return tiny_url
 

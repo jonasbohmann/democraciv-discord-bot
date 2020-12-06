@@ -28,3 +28,7 @@ services:
     depends_on:
       - db
       - api
+
+volumes:
+  postgresdata:
+      external: true

@@ -322,8 +322,10 @@ class Tags(context.CustomCog):
         if not await self.validate_tag_name(ctx, name.lower()):
             return
 
-        file = await self.bot.make_file_from_image_link(
+        img = await self.bot.make_file_from_image_link(
             "https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png")
+        img.seek(0)
+        file = discord.File(img, filename="image.png")
 
         embed_q = await ctx.send(f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?"
                                  f"\n{config.HINT} *Embeds behave differently than plain text, see the image below "
@@ -494,8 +496,11 @@ class Tags(context.CustomCog):
             return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
 
         if to_change["embed"]:
-            file = await self.bot.make_file_from_image_link(
+            img = await self.bot.make_file_from_image_link(
                 "https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png")
+            img.seek(0)
+
+            file = discord.File(img, filename="image.png")
 
             embed_q = await ctx.send(f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?"
                                      f"\n{config.HINT} *Embeds behave differently than plain text, see the image below "

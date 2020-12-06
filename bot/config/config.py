@@ -1,11 +1,13 @@
 # Democraciv Discord Bot
 
-
+API_URL = "http://localhost:8000"
 DEMOCRACIV_GUILD_ID = 208984105310879744  # dciv
 
 BOT_PREFIX = "c-"
+BOT_ADDITIONAL_PREFIXES = [BOT_PREFIX, "canada", "canada ", "c- ", "canada-", "canada- ", "can-", "can- ", "can ", "can"]
+
 BOT_COMMAND_COOLDOWN = 1.5  # in seconds
-BOT_VERSION = "2.0.0a"
+BOT_VERSION = "2.0.0-beta"
 BOT_EMBED_COLOUR = 0x1B1C20
 BOT_TECHNICAL_NOTIFICATIONS_CHANNEL = 661201604493443092
 
@@ -17,6 +19,7 @@ STARBOARD_MIN_STARS = 5  # How many star reactions does a message need to be add
 STARBOARD_MAX_AGE = 7  # Messages older than X days won't be allowed into the starboard
 STARBOARD_REDDIT_SUMMARY_ENABLED = True
 STARBOARD_REDDIT_SUBREDDIT = "democraciv"
+STARBOARD_REDDIT_USERNAME = "DerJonasBot"
 
 # Custom Emojis
 YES = "<:green:783014904613437501>"

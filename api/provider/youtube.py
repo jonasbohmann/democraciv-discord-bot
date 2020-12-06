@@ -6,7 +6,6 @@ import discord
 
 from discord.ext import tasks
 
-
 # todo post to reddit?
 
 
@@ -15,6 +14,7 @@ YOUTUBE_CHANNEL_ID = "UC-NukxPakwQIvx73VjtIPnw"
 YOUTUBE_CHANNEL_UPLOADS_PLAYLIST = "UU-NukxPakwQIvx73VjtIPnw"
 YOUTUBE_LOGO_UPLOAD = "<:youtubeiconwhite:660114810444447774>"
 YOUTUBE_LOGO_STREAM = "<:youtubeiconred:660897027114401792>"
+
 
 # todo fix
 
@@ -102,7 +102,6 @@ class YouTubeManager:
         if thumbnail.startswith("https://"):
             embed.set_image(url=thumbnail)
 
-
     async def get_newest_upload(self) -> typing.Optional[typing.Dict]:
         async with self.session.get(
                 "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet"
@@ -168,4 +167,3 @@ class YouTubeManager:
             embed.add_field(name="Title", value=f"[{title}]({video_link})", inline=False)
             embed.add_field(name="Description", value=self.reduce_youtube_description(description), inline=False)
             embed.set_image(url=thumbnail_url)
-
