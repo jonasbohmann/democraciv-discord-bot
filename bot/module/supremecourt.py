@@ -35,8 +35,8 @@ class SupremeCourt(context.CustomCog, GovernmentMixin, name=mk.MarkConfig.COURT_
         return [judge.mention for judge in _judges.members]
 
     @commands.group(
-        name="court",
-        aliases=["sc", "courts", "j", "judicial"],
+        name="yargıtayt",
+        aliases=["court", "sc", "courts", "j", "judicial"],
         case_insensitive=True,
         invoke_without_command=True
     )

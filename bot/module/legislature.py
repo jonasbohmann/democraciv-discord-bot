@@ -74,7 +74,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
     @commands.group(
         name=MarkConfig.LEGISLATURE_NAME.lower(),
-        aliases=["leg"],
+        aliases=["leg", "legislature"],
         case_insensitive=True,
         invoke_without_command=True,
     )
@@ -98,11 +98,6 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
             speaker_value.append(f"{self.bot.mk.speaker_term}: {self.speaker.mention}")
         else:
             speaker_value.append(f"{self.bot.mk.speaker_term}: -")
-
-        if isinstance(self.vice_speaker, discord.Member):
-            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention}")
-        else:
-            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
 
         embed.add_field(name=self.bot.mk.LEGISLATURE_CABINET_NAME, value="\n".join(speaker_value))
         embed.add_field(
