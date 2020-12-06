@@ -718,7 +718,11 @@ class DemocracivBot(commands.Bot):
         await self.process_commands(message)
 
     async def on_message_edit(self, before, after):
-        await self.process_commands(after)
+        if before.author.bot:
+            return
+
+        if before.content and after.content and before.content != after.content:
+            await self.process_commands(after)
 
     async def on_guild_join(self, guild: discord.Guild):
         if len(self.guilds) >= 70:
