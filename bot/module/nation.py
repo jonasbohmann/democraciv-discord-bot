@@ -6,6 +6,20 @@ from bot.utils import context, checks, paginator, text, mixin
 from bot.utils.converter import CaseInsensitiveMember, CaseInsensitiveRole, CaseInsensitiveCategoryChannel
 
 
+class NationRoleConverter(CaseInsensitiveRole):
+    async def convert(self, ctx: context.CustomContext, argument):
+        try:
+            role = await super().convert(ctx, argument)
+        except commands.BadArgument:
+            arg = f"{ctx.bot.mk.NATION_ROLE_PREFIX}{argument}"
+            role = await super().convert(ctx, arg)
+
+        if not role.name.lower().startswith(ctx.bot.mk.NATION_ROLE_PREFIX.lower()):
+            raise commands.BadArgument(f"{config.NO} You're not allowed to give someone the `{role.name}` role.")
+
+        return role
+
+
 class Nation(context.CustomCog, mixin.GovernmentMixin):
     """Useful commands for Nation Admins to manage their nation in Multiciv."""
 
@@ -108,21 +122,28 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
     @nationroles.command(name="toggle")
     @checks.moderation_or_nation_leader()
-    async def toggle_role(self, ctx, member: CaseInsensitiveMember, *, role: CaseInsensitiveRole):
+    async def toggle_role(self, ctx, people: commands.Greedy[CaseInsensitiveMember], *, role: NationRoleConverter):
         """Give someone a role, or remove one from them
 
         **Example**:
-            `{PREFIX}{COMMAND} @DerJonas Rome - Builder` will give DerJonas the 'Rome - Builder' role"""
+            `{PREFIX}{COMMAND} @DerJonas Rome - Builder` will give DerJonas the 'Rome - Builder' role
+            `{PREFIX}{COMMAND} @DerJonas @Archwizard @Bird @WesGutt Rome - Builder` will give those 4 people the 'Rome - Builder' role"""
 
-        if not role.name.lower().startswith(self.bot.mk.NATION_ROLE_PREFIX.lower()):
-            return await ctx.send(f"{config.NO} You're not allowed to give someone the `{role.name}` role.")
+        if not people:
+            raise commands.BadArgument()
 
-        if role not in member.roles:
-            await member.add_roles(role)
-            await ctx.send(f"{config.YES} The `{role.name}` role was given to {member}.")
-        else:
-            await member.remove_roles(role)
-            await ctx.send(f"{config.YES} The `{role.name}` role was removed from {member}.")
+        fmt = []
+
+        for member in people:
+            if role not in member.roles:
+                await member.add_roles(role)
+                fmt.append(f"`{role.name}` was given to {member}")
+            else:
+                await member.remove_roles(role)
+                fmt.append(f"`{role.name}` was removed from {member}")
+
+        fmt = "\n".join(fmt)
+        await ctx.send(f"{config.YES} {fmt}")
 
     @nationroles.command(name="add", aliases=['create', 'make'])
     @checks.moderation_or_nation_leader()
@@ -157,7 +178,8 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         channel_name = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} What should be the name of the new channel?")
 
-        await category.create_text_channel(name=channel_name)
+        channel = await category.create_text_channel(name=channel_name)
+        await channel.edit(sync_permissions=True)
         await ctx.send(f"{config.YES} Done.")
 
 
