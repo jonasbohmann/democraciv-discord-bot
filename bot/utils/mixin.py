@@ -39,13 +39,14 @@ class GovernmentMixin:
             formatted.append(obj.formatted)
 
         if model is models.Law:
-            title = f"{self.bot.mk.NATION_EMOJI}  All Laws in {self.bot.mk.NATION_NAME}"
+            title = f"All Laws in {self.bot.mk.NATION_NAME}"
             empty_message = f"There are now laws yet."
         else:
-            title = f"{self.bot.mk.NATION_EMOJI}  All Submitted {model.__name__}s"
+            title = f"All Submitted {model.__name__}s"
             empty_message = f"No one has submitted any {model.__name__.lower()}s yet."
 
-        pages = paginator.SimplePages(entries=formatted, title=title, empty_message=empty_message)
+        pages = paginator.SimplePages(entries=formatted, icon=self.bot.mk.NATION_ICON_URL, author=title,
+                                      empty_message=empty_message)
         await pages.start(ctx)
 
     async def _detail_view(self, ctx, *, obj: typing.Union[models.Bill, models.Motion]):
@@ -137,7 +138,8 @@ class GovernmentMixin:
 
         pages = paginator.SimplePages(
             entries=formatted,
-            title=f"{self.bot.mk.NATION_EMOJI}  {model.__name__}s matching '{query}'",
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"{model.__name__}s matching '{query}'",
             empty_message="Nothing found.",
         )
         await pages.start(ctx)
