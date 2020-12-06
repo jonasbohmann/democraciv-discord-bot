@@ -36,7 +36,7 @@ class Database:
         self._lock = asyncio.Lock()
 
     def get_dsn(self):
-        with open("token.json", "r") as token_file:
+        with open("api/token.json", "r") as token_file:
             token_json = json.load(token_file)
             self.dsn = token_json['db']['dsn']
 

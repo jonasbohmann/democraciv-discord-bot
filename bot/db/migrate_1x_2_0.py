@@ -3,8 +3,8 @@ import asyncpg
 
 
 async def main():
-    old_db = await asyncpg.create_pool("")
-    new_db = await asyncpg.create_pool("")
+    old_db = await asyncpg.create_pool("postgres://jonas:ehrenbruder@localhost/democraciv")
+    new_db = await asyncpg.create_pool("postgres://jonas:ehrenbruder@localhost/dciv_two")
 
     guilds = await old_db.fetch("SELECT * FROM guilds")
 
