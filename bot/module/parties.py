@@ -430,9 +430,12 @@ class Party(context.CustomCog, name="Political Parties"):
         party_list_embed_content = "\n\n".join(party_list_embed_content)
 
         embed = SafeEmbed(
-            title=f"{self.bot.mk.NATION_EMOJI}  Ranking of Political Parties in " f"{self.bot.mk.NATION_NAME}",
             description=f"[Party Platforms]({self.bot.mk.POLITICAL_PARTIES})\n\n{party_list_embed_content}",
         )
+
+        embed.set_author(name=f"Ranking of Political Parties in {self.bot.mk.NATION_NAME}",
+                         icon_url=self.bot.mk.NATION_ICON_URL)
+
         embed.set_footer(text=f"For more information about a party, use: {config.BOT_PREFIX}party <party>")
         return await ctx.send(embed=embed)
 
