@@ -85,7 +85,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
             `{PREFIX}{COMMAND} https://discord.com/channels/208984105310879744/499669824847478785/784598328666619934` use the message's URL
 
         """
-        if ctx.channel.category_id not in ctx.bot.mk.NATION_CATEGORIES:
+        if message.channel.category_id not in self.bot.mk.NATION_CATEGORIES:
             raise exceptions.DemocracivBotException(f"{config.NO} You're not allowed to pin messages in this channel.")
 
         await message.pin()
