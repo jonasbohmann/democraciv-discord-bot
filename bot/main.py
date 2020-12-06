@@ -11,7 +11,6 @@ import pickle
 
 try:
     import uvloop
-
     uvloop.install()
 except ImportError:
     pass
@@ -23,18 +22,18 @@ import logging
 import datetime
 import traceback
 
-sys.path.append(str(pathlib.Path(__file__).parent.parent))
-
 from typing import Optional, Union
 from discord.ext import commands, tasks
-from bot.utils import exceptions, text, context
-from bot.config import token, config, mk
-
 from googleapiclient import errors
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport import requests
 from async_lru import alru_cache
+
+sys.path.append(str(pathlib.Path(__file__).parent.parent))
+
+from bot.utils import exceptions, text, context
+from bot.config import token, config, mk
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [BOT] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
 
@@ -779,18 +778,22 @@ class DemocracivBot(commands.Bot):
             f"-h {token.POSTGRESQL_HOST} -w"
         )
 
+        if not os.path.isdir(f"bot/db/backup"):
+            os.mkdir(f"bot/db/backup")
+
         if not os.path.isdir(f"bot/db/backup/{database_name}"):
             os.mkdir(f"bot/db/backup/{database_name}")
 
         await asyncio.create_subprocess_shell(command)
-        backup_channel = self.get_channel(config.DATABASE_DAILY_BACKUP_DISCORD_CHANNEL)
         await asyncio.sleep(20)
 
         file = discord.File(f"bot/db/backup/{database_name}/{file_name}")
 
+        backup_channel = self.get_channel(config.DATABASE_DAILY_BACKUP_DISCORD_CHANNEL)
+
         if backup_channel is None:
             logging.warning(
-                f"Couldn't find Backup Discord channel for database backup 'database/backup/{database_name}/{file_name}'.")
+                f"Couldn't find Backup Discord channel for database backup 'bot/db/backup/{database_name}/{file_name}'")
             return
 
         await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)
@@ -800,7 +803,7 @@ class DemocracivBot(commands.Bot):
         """This task makes a backup of the bot's PostgreSQL database every 24hours and uploads
         that backup to the #backup channel to the Democraciv Discord guild."""
         await self.do_db_backup(token.POSTGRESQL_DATABASE)
-        # await self.do_db_backup("api")
+        await self.do_db_backup("api_test")
 
     async def get_logging_channel(self, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
         channel = await self.get_guild_setting(guild.id, "logging_channel")

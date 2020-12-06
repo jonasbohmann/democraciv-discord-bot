@@ -82,8 +82,10 @@ class _Guild(context.CustomCog, name="Server"):
 
         welcome_channel = await self.bot.get_welcome_channel(member.guild)
 
-        if welcome_channel is not None:
-            welcome_message = settings[member.guild.id]["welcome_message"].replace("{member}", member.mention)
+        message = settings["welcome_message"]
+
+        if welcome_channel and message:
+            welcome_message = message.replace("{member}", member.mention)
             await welcome_channel.send(welcome_message, allowed_mentions=discord.AllowedMentions(users=True))
 
     @guild.command(name="welcome")
@@ -228,7 +230,7 @@ class _Guild(context.CustomCog, name="Server"):
     @guild.command(name="hidechannel", aliases=['exclude', 'private', 'hiddenchannels', 'hide'])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
-    async def exclude(self, ctx, channel: converter.CaseInsensitiveTextChannelOrCategoryChannel = None):
+    async def exclude(self, ctx, *, channel: converter.CaseInsensitiveTextChannelOrCategoryChannel = None):
         """Hide a channel from your server's log channel
 
         Both text channels and entire categories can be hidden.
@@ -585,6 +587,8 @@ class _Guild(context.CustomCog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def reddit(self, ctx: context.CustomContext):
+        """List all active subreddit feeds on this server"""
+
         def fmt(webhook, discord_webhook):
             return f"**#{webhook['id']}**  -  [r/{webhook['subreddit']}](https://reddit.com/r/{webhook['subreddit']}) to {discord_webhook.channel.mention}"
 
@@ -597,6 +601,8 @@ class _Guild(context.CustomCog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def reddit_add(self, ctx: context.CustomContext):
+        """Add a subreddit feeds to this server"""
+
         subreddit = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the subreddit, **without the leading /r/**."
         )
@@ -632,6 +638,8 @@ class _Guild(context.CustomCog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def reddit_remove(self, ctx: context.CustomContext, subreddit_feed_id: converter.InternalAPIWebhookConverter = None):
+        """Remove a subreddit feeds from this server"""
+
         def fmt(response, channel_fmt):
             return f"{config.YES} New posts from `r/{response['subreddit']}` will no longer be posted to {channel_fmt}."
 
@@ -645,12 +653,14 @@ class _Guild(context.CustomCog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def reddit_clear(self, ctx: context.CustomContext):
+        """Remove all subreddit feeds on this server"""
         await self._clear_webhooks(ctx, endpoint="reddit/clear", webhook_name="subreddit feed(s)")
 
     @guild.group(name="twitch", case_insensitive=True, invoke_without_command=True, aliases=["t"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch(self, ctx: context.CustomContext):
+        """List all active twitch notifications on this server"""
         def fmt(webhook, discord_webhook):
             return f"**#{webhook['id']}**  -  [twitch.tv/{webhook['streamer']}]" \
                    f"(https://twitch.tv/{webhook['streamer']}) to {discord_webhook.channel.mention}"
@@ -664,6 +674,8 @@ class _Guild(context.CustomCog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch_add(self, ctx: context.CustomContext):
+        """Add a twitch notification to this server"""
+
         streamer = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the streamer.")
 
         channel = await ctx.converted_input(
@@ -701,6 +713,7 @@ class _Guild(context.CustomCog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch_remove(self, ctx: context.CustomContext, notification_id: converter.InternalAPIWebhookConverter = None):
+        """Remove a twitch notification from this server"""
         def fmt(response, channel_fmt):
             return f"{config.YES} Notifications for when `{response['streamer']}` goes live will no longer be posted to {channel_fmt}."
 
@@ -714,6 +727,7 @@ class _Guild(context.CustomCog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch_clear(self, ctx: context.CustomContext):
+        """Remove all twitch notifications on this server"""
         await self._clear_webhooks(ctx, endpoint="twitch/clear", webhook_name="twitch notifications")
 
 
