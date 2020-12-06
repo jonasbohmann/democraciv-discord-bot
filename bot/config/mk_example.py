@@ -1,3 +1,5 @@
+# Adjust MarkConfig and rename this to mk.py
+
 import enum
 import inspect
 import typing
@@ -10,28 +12,28 @@ class DemocracivRole(enum.Enum):
     MODERATION = 319663296728924160
 
     # Executive
-    MINISTER = 742941704469872711
-    GOVERNOR = 742941704469872711
-    PRIME_MINISTER = 742941826608005190
-    LT_PRIME_MINISTER = 0
+    MINISTER = 745751525971722341
+    GOVERNOR = 745731318079422594
+    PRIME_MINISTER = 741485246465310740
+    LT_PRIME_MINISTER = 745731318079422594
 
     # Legislature
-    SPEAKER = 742941979066761337
-    VICE_SPEAKER = 742942042824638496
-    LEGISLATOR = 740454667045044265
+    SPEAKER = 741467894759686236
+    VICE_SPEAKER = 0
+    LEGISLATOR = 741485036267634688
 
     # Courts
     CHIEF_JUSTICE = 0
-    JUSTICE = 777697682696699944
+    JUSTICE = 744356946580209815
     JUDGE = 0
 
-    GOVERNMENT = 740454667045044265
+    GOVERNMENT = 740454521934970901
 
     OTTOMAN_TAX_OFFICER = 744983252854636675
 
     # multiciv
     NATION_ADMIN = 784596362338631690
-    NATION_CITIZEN = 740452398824161290
+    NATION_CITIZEN = 0
 
 
 class DemocracivChannel(enum.Enum):
@@ -55,33 +57,33 @@ class MarkConfig:
 
     # -- Government Names --
 
-    NATION_ROLE_PREFIX = "Maori - "
-    NATION_CATEGORIES = [741479405968162897]
+    NATION_ROLE_PREFIX = "Ottoman - "
+    NATION_CATEGORIES = [741477020659089538]
 
-    NATION_NAME = "Maori"
-    NATION_FULL_NAME = "United Iwi of the Maori Commonwealth"
-    NATION_ADJECTIVE = "Maori"
-    NATION_FLAG_URL = "https://cdn.discordapp.com/avatars/742114210615656470/0c2ef881582e4c77a7efaeb190452e77.png?size=1024"
-    NATION_ICON_URL = "https://cdn.discordapp.com/avatars/742114210615656470/0c2ef881582e4c77a7efaeb190452e77.png?size=1024"
-    NATION_EMOJI = "<:maori:747281783191633922>"
+    NATION_NAME = "Ottoman Mercantile Divan"
+    NATION_FULL_NAME = "Ottoman Mercantile Divan"
+    NATION_ADJECTIVE = "Ottoman"
+    NATION_FLAG_URL = "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=1024"
+    NATION_ICON_URL = "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=102496"
+    NATION_EMOJI = "<:ottoman:784984719728836638>>"
 
-    LEGISLATURE_NAME = "Legislature"
-    LEGISLATURE_COMMAND = "legislature"
+    LEGISLATURE_NAME = "Grand Divan"
+    LEGISLATURE_COMMAND = "divan"
     LEGISLATURE_ADJECTIVE = "Legislative"
     LEGISLATURE_CABINET_NAME = "Legislative Cabinet"
-    LEGISLATURE_LEGISLATOR_NAME = "Citizen"
-    LEGISLATURE_SPEAKER_NAME = "Speaker"
-    LEGISLATURE_VICE_SPEAKER_NAME = "Vice-Speaker"
+    LEGISLATURE_LEGISLATOR_NAME = "Legislator"
+    LEGISLATURE_SPEAKER_NAME = "Grand Vizier"
+    LEGISLATURE_VICE_SPEAKER_NAME = ""
     LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS = True
     LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS = True
     LEGISLATURE_MOTIONS_EXIST = True
 
-    MINISTRY_NAME = "Ariki"
-    MINISTRY_COMMAND = "ariki"
-    MINISTRY_LEADERSHIP_NAME = "Arikinui & Ariki"
-    MINISTRY_MINISTER_NAME = "Ariki"
-    MINISTRY_PRIME_MINISTER_NAME = "Arikinui"
-    MINISTRY_VICE_PRIME_MINISTER_NAME = ""
+    MINISTRY_NAME = "Ministry"
+    MINISTRY_COMMAND = "ministry"
+    MINISTRY_LEADERSHIP_NAME = "Head of State"
+    MINISTRY_MINISTER_NAME = "Minister"
+    MINISTRY_PRIME_MINISTER_NAME = "Sultan"
+    MINISTRY_VICE_PRIME_MINISTER_NAME = "Premier"
 
     COURT_NAME = "Supreme Court"
     COURT_HAS_INFERIOR_COURT = False
@@ -91,22 +93,22 @@ class MarkConfig:
     COURT_JUDGE_NAME = "Judge"
 
     # -- Links --
-    CONSTITUTION = "https://docs.google.com/document/d/1Bz_yCic_uyrkhiJbE1On8kZIoHuxNY1hFWlYi4oaMs8/edit"
-    LEGAL_CODE = ""
+    CONSTITUTION = "https://docs.google.com/document/d/1N-kREZoRQcyt4E8_jemIF0RtYroiupE-f64p-niRC8Q/edit"
+    LEGAL_CODE = "https://docs.google.com/document/d/1nmDfOy3DypadML817J_d2pCc8FpDlO7HUUhHOajWG2o/edit?usp=sharing"
     POLITICAL_PARTIES = "https://www.reddit.com/r/democraciv/wiki/parties"
 
     LEGISLATURE_DOCKET = (
-        ""
+        "https://docs.google.com/spreadsheets/d/1k3NkAbh-32ciHMqboZRQVXXkdjT1T21qhtdom0JSm-Q/edit?usp=sharing"
     )
     LEGISLATURE_PROCEDURES = (
-        ""
+        "https://docs.google.com/document/d/1vUGVIv0F0ZK2cAJrhaDaOS02iKIz8KOXSwjoZZgnEmo/edit?usp=sharing"
     )
 
     MINISTRY_WORKSHEET = (
-        ""
+        "https://docs.google.com/spreadsheets/d/1hrBA2yftAilQFhPwCDtm74YBVFWRce5l41wRsKf9qdI/edit?usp=sharing"
     )
     MINISTRY_PROCEDURES = (
-        "g"
+        "https://docs.google.com/document/d/1c6HtdY7urz4F3fH9Nra83Qc1bNVrp_O9zmaeFs6szgA/edit?usp=sharing"
     )
 
     def __init__(self, bot):

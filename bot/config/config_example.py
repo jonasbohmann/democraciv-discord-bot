@@ -1,3 +1,5 @@
+# Rename this to config.py
+
 # Democraciv Discord Bot
 
 API_URL = "http://localhost:8000"
