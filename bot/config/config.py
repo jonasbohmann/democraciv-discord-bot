@@ -4,7 +4,7 @@ API_URL = "http://localhost:8000"
 DEMOCRACIV_GUILD_ID = 208984105310879744  # dciv
 
 BOT_PREFIX = "c-"
-BOT_ADDITIONAL_PREFIXES = [BOT_PREFIX, "canada- ", "canada-", "canada ", "canada", "can- ", "can-", "can ", "can"]
+BOT_ADDITIONAL_PREFIXES = [BOT_PREFIX, "canada- ", "canada-", "canada ", "canada", "cana- ", "cana-"]
 
 BOT_COMMAND_COOLDOWN = 1.5  # in seconds
 BOT_VERSION = "2.0.0-beta"
