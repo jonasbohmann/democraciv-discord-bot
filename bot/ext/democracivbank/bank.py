@@ -172,7 +172,7 @@ class BankCorporation(commands.Converter):
         response = await ctx.bot.get_cog("Bank").request(BankRoute("GET", f"corporation/{argument}/"))
 
         if response.status == 404:
-            raise commands.BadArgument(f":x: {argument} is either not the abbreviation of an existing "
+            raise commands.BadArgument(f"{config.NO} {argument} is either not the abbreviation of an existing "
                                        f"organization, or they decided not to publish their organization.")
 
         elif response.status == 200:
@@ -206,7 +206,7 @@ class Bank(context.CustomCog):
         response = await self.request(BankRoute("HEAD", f"discord_user/{ctx.author.id}/"))
 
         if response.status != 200:
-            raise BankDiscordUserNotConnected(f":x: {ctx.author.mention}, your Discord account is not connected to any "
+            raise BankDiscordUserNotConnected(f"{config.NO} {ctx.author.mention}, your Discord account is not connected to any "
                                               f"user on <https://democracivbank.com>.\n\nYou can connect here: "
                                               f"<https://democracivbank.com/me>")
 
@@ -216,7 +216,7 @@ class Bank(context.CustomCog):
                                                   data=kwargs.get('data', None),
                                                   params=kwargs.get('params', None))
         if response.status >= 500:
-            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!\n`Status >= 500`")
+            raise BankConnectionError(f"{config.NO} {self.bot.owner.mention}, something went wrong!\n`Status >= 500`")
 
         return response
 
@@ -224,7 +224,7 @@ class Bank(context.CustomCog):
         response = await self.request(BankRoute("GET", f"account/{iban}/"))
 
         if response.status != 200:
-            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
+            raise BankConnectionError(f"{config.NO} {self.bot.owner.mention}, something went wrong!")
 
         json = await response.json()
         return json['balance_currency']
@@ -246,30 +246,30 @@ class Bank(context.CustomCog):
         elif response.status == 404:
             if 'discord_id' in get_params:
                 name = self.bot.get_user(get_params['discord_id'])
-                raise BankDiscordUserNotConnected(f":x: {name} is not connected with any user account on "
+                raise BankDiscordUserNotConnected(f"{config.NO} {name} is not connected with any user account on "
                                                   f"<https://democracivbank.com>. Tell them to connect their "
                                                   f"Discord account here: <https://democracivbank.com/me>")
 
             else:
-                raise BankNoAccountFound(f":x: {member_id_or_corp} is either not the abbreviation of an existing "
+                raise BankNoAccountFound(f"{config.NO} {member_id_or_corp} is either not the abbreviation of an existing "
                                          f"organization, or they decided not to publish their organization.")
 
         elif response.status == 400:
             if 'discord_id' in get_params:
                 if not is_sender:
                     name = self.bot.get_user(get_params['discord_id'])
-                    raise BankNoDefaultAccountForCurrency(f":x: **{name}** does not have a default bank account "
+                    raise BankNoDefaultAccountForCurrency(f"{config.NO} **{name}** does not have a default bank account "
                                                           f"for this currency. Tell them to set a default bank "
                                                           f"account for this currency on "
                                                           f"<https://democracivbank.com>.")
                 if is_sender:
-                    raise BankNoDefaultAccountForCurrency(":x: You do not have a default bank account for "
+                    raise BankNoDefaultAccountForCurrency(f"{config.NO} You do not have a default bank account for "
                                                           "this currency. You can make one of your personal "
                                                           "bank accounts that holds this currency to be the "
                                                           "default bank account for this currency on "
                                                           "<https://democracivbank.com>.")
             else:
-                raise BankNoDefaultAccountForCurrency(f":x: This organization does not have a default bank account "
+                raise BankNoDefaultAccountForCurrency(f"{config.NO} This organization does not have a default bank account "
                                                       f"for this currency.")
 
     async def send_money(self, from_discord, from_iban, to_iban, amount, purpose):
@@ -284,7 +284,7 @@ class Bank(context.CustomCog):
 
         elif response.status == 400:
             if "non_field_errors" in json:
-                message = [":x: The transaction could not be completed, take a look at the error(s):"]
+                message = [f"{config.NO} The transaction could not be completed, take a look at the error(s):"]
 
                 for error in json['non_field_errors']:
                     message.append(f"- {error}")
@@ -292,7 +292,7 @@ class Bank(context.CustomCog):
                 raise BankTransactionError('\n'.join(message))
 
             else:
-                raise BankTransactionError(f":x: The transaction could not be completed, please notify "
+                raise BankTransactionError(f"{config.NO} The transaction could not be completed, please notify "
                                            f"{self.bot.owner}.")
 
     @commands.group(name='bank', aliases=['b', 'economy', 'cash', 'currency'], case_insensitive=True,
@@ -397,7 +397,7 @@ class Bank(context.CustomCog):
 
         response = await self.request(BankRoute("GET", f"accounts/{ctx.author.id}/"))
         if response.status != 200:
-            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
+            raise BankConnectionError(f"{config.NO} {self.bot.owner.mention}, something went wrong!")
 
         json = await response.json()
         desc = ["\n"]
@@ -452,7 +452,7 @@ class Bank(context.CustomCog):
             currency = await CurrencySelector().prompt(ctx)
 
             if not currency:
-                return await ctx.send(":x: You did not select a currency, the transaction was cancelled.")
+                return await ctx.send(f"{config.NO} You did not select a currency, the transaction was cancelled.")
 
             from_iban = await self.resolve_iban(ctx.author.id, currency, is_sender=True)
 
@@ -463,7 +463,7 @@ class Bank(context.CustomCog):
         else:
             # is UUID
             if to_member_or_iban_or_organization.version != 4:
-                raise BankInvalidIBANFormat(":x: That is not a valid IBAN, it needs to be in this "
+                raise BankInvalidIBANFormat(f"{config.NO} That is not a valid IBAN, it needs to be in this "
                                             "format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`")
 
             to_iban = str(to_member_or_iban_or_organization)
@@ -490,7 +490,7 @@ class Bank(context.CustomCog):
         response = await self.request(BankRoute("GET", 'ottoman/apply/'))
 
         if response.status != 200:
-            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
+            raise BankConnectionError(f"{config.NO} {self.bot.owner.mention}, something went wrong!")
 
         dry_run_results = await response.json()
         desc = ["This is just a dry run, the changes have not been applied yet. Double check the results and once "
@@ -516,9 +516,9 @@ class Bank(context.CustomCog):
         response = await self.request(BankRoute("POST", 'ottoman/apply/'))
 
         if response.status != 200:
-            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
+            raise BankConnectionError(f"{config.NO} {self.bot.owner.mention}, something went wrong!")
 
-        await ctx.send(":white_check_mark: Tax was applied to all accounts with the Ottoman currency.")
+        await ctx.send(f"{config.YES} Tax was applied to all accounts with the Ottoman currency.")
 
     @bank.command(name='circulation', aliases=['total'])
     @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
@@ -546,7 +546,7 @@ class Bank(context.CustomCog):
         response = await self.request(BankRoute("GET", 'ottoman/threshold/'))
 
         if response.status != 200:
-            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
+            raise BankConnectionError(f"{config.NO} {self.bot.owner.mention}, something went wrong!")
 
         json = await response.json()
         desc = []
@@ -572,14 +572,14 @@ class Bank(context.CustomCog):
         """
 
         if iban.version != 4:
-            raise BankInvalidIBANFormat(":x: That is not a valid IBAN, it needs to be in this "
+            raise BankInvalidIBANFormat(f"{config.NO} That is not a valid IBAN, it needs to be in this "
                                         "format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`")
 
         payload = {'iban': str(iban), 'new': new_ibal}
         response = await self.request(BankRoute("POST", 'ottoman/threshold/'), data=payload)
 
         if response.status != 200:
-            raise BankConnectionError(f":x: {self.bot.owner.mention}, something went wrong!")
+            raise BankConnectionError(f"{config.NO} {self.bot.owner.mention}, something went wrong!")
 
         json = await response.json()
         p_or_c = "Personal" if json['individual_holder'] else "Corporate"

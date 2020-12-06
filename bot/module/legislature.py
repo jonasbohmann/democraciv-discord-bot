@@ -129,7 +129,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=MarkConfig.LEGI
 
     @bill.command(name="history", aliases=['h'])
     async def b_history(self, ctx: context.CustomContext, *, bill_id: models.Bill):
-        """Search for a bill"""
+        """See when a bill was first introduced, passed into Law, vetoed, etc."""
         fmt_history = [f"**{entry.date.strftime('%d %B %Y')}** - {entry.after}   " 
                        f"({entry.after.emojified_status(verbose=False)})" for entry in bill_id.history]
         fmt_history.insert(0, "All dates are in UTC.\n")
