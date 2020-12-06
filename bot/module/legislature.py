@@ -14,7 +14,7 @@ from bot.utils.models import Bill, Session, Motion, SessionStatus
 class PassScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
         message = [
-            f"{self.bot.get_democraciv_role(DemocracivRole.MINISTER_ROLE).mention}, "
+            f"{self.bot.get_democraciv_role(DemocracivRole.MINISTER).mention}, "
             f"the following bills were **passed by the {self.bot.mk.LEGISLATURE_NAME}**.\n"
         ]
 
@@ -34,7 +34,7 @@ class PassScheduler(text.AnnouncementScheduler):
 class OverrideScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
         message = [
-            f"{self.bot.get_democraciv_role(DemocracivRole.GOVERNMENT_ROLE).mention}, "
+            f"{self.bot.get_democraciv_role(DemocracivRole.GOVERNMENT).mention}, "
             f"the {self.bot.mk.MINISTRY_NAME}'s **veto of the following bills were overridden** "
             f"by the {self.bot.mk.LEGISLATURE_NAME}.\n"
         ]

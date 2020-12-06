@@ -16,7 +16,7 @@ from bot.utils.converter import (
 class RepealScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
         message = [
-            f"{self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT_ROLE).mention}, "
+            f"{self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT).mention}, "
             f"the following laws were **repealed**.\n"
         ]
 
