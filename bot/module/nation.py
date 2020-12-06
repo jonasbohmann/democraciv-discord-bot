@@ -35,12 +35,12 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         embed.add_field(name="Political Parties", value=parties)
 
         if isinstance(self.speaker, discord.Member):
-            speaker = f"{self.bot.mk.speaker_term}: {self.speaker.mention} ({self.speaker})"
+            speaker = f"{self.bot.mk.speaker_term}: {self.speaker.mention}"
         else:
             speaker = f"{self.bot.mk.speaker_term}: -"
 
         if isinstance(self.prime_minister, discord.Member):
-            prime_minister = f"{self.bot.mk.pm_term}: {self.prime_minister.mention} ({self.prime_minister})"
+            prime_minister = f"{self.bot.mk.pm_term}: {self.prime_minister.mention}"
         else:
             prime_minister = f"{self.bot.mk.pm_term}: -"
 
