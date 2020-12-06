@@ -143,7 +143,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
                 fmt.append(f"`{role.name}` was removed from {member}")
 
         fmt = "\n".join(fmt)
-        await ctx.send(f"{config.YES} {fmt}")
+        await ctx.send(fmt)
 
     @nationroles.command(name="add", aliases=['create', 'make'])
     @checks.moderation_or_nation_leader()

@@ -213,9 +213,13 @@ class Party(context.CustomCog, name="Political Parties"):
             await self.bot.db.execute("DELETE FROM party_join_request WHERE id = $1", request_match["id"])
             await member.send(embed=member_embed)
 
-            for leader in party.leaders:
+            leaders_without_reactor = [l.id for l in party.leaders]
+            leaders_without_reactor.remove(reactor.id)
+
+            for leader in leaders_without_reactor:
                 try:
-                    await leader.send(embed=text.SafeEmbed(title=message))
+                    leader_obj = self.bot.get_user(leader)
+                    await leader_obj.send(embed=text.SafeEmbed(title=message))
                 except discord.Forbidden:
                     continue
 
@@ -275,6 +279,16 @@ class Party(context.CustomCog, name="Political Parties"):
             )
 
         elif party.join_mode is PoliticalPartyJoinMode.REQUEST:
+            if person_in_dciv in party.leaders:
+
+                try:
+                    await person_in_dciv.add_roles(party.role)
+                except discord.Forbidden:
+                    raise exceptions.ForbiddenError(ForbiddenTask.ADD_ROLE, party.role.name)
+
+                return await ctx.send(f"{config.YES} You joined {party.role.name}.\n{config.HINT} "
+                                      f"*As you're a leader of this party, you skipped the request step.*\n")
+
             query = """SELECT * FROM party_join_request WHERE party_id = $1 AND requesting_member = $2"""
             existing_request = await self.bot.db.fetchrow(query, party.role.id, ctx.author.id)
 
@@ -348,7 +362,7 @@ class Party(context.CustomCog, name="Political Parties"):
             if party.role.name == "Independent":
                 return await ctx.send(f"{config.YES} You are now an {party.role.name}.")
 
-            message = f"{config.YES} You've joined {party.role.name}!"
+            message = f"{config.YES} You've joined {party.role.name}."
 
             if party.discord_invite:
                 message = f"{message} Now head to their Discord Server and introduce yourself: {party.discord_invite}"
@@ -416,9 +430,12 @@ class Party(context.CustomCog, name="Political Parties"):
         party_list_embed_content = "\n\n".join(party_list_embed_content)
 
         embed = SafeEmbed(
-            title=f"{self.bot.mk.NATION_EMOJI}  Ranking of Political Parties in " f"{self.bot.mk.NATION_NAME}",
             description=f"[Party Platforms]({self.bot.mk.POLITICAL_PARTIES})\n\n{party_list_embed_content}",
         )
+
+        embed.set_author(name=f"Ranking of Political Parties in {self.bot.mk.NATION_NAME}",
+                         icon_url=self.bot.mk.NATION_ICON_URL)
+
         embed.set_footer(text=f"For more information about a party, use: {config.BOT_PREFIX}party <party>")
         return await ctx.send(embed=embed)
 
@@ -459,7 +476,8 @@ class Party(context.CustomCog, name="Political Parties"):
             result['role'] = discord_role
 
         if leaders:
-            img = await self.bot.make_file_from_image_link("https://cdn.discordapp.com/attachments/499669824847478785/784584955921301554/partyjoin.PNG")
+            img = await self.bot.make_file_from_image_link(
+                "https://cdn.discordapp.com/attachments/499669824847478785/784584955921301554/partyjoin.PNG")
             img.seek(0)
             file = discord.File(img, filename="image.png")
             await ctx.send(
