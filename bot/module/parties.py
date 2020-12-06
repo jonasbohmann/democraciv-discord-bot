@@ -653,6 +653,7 @@ class Party(context.CustomCog, name="Political Parties"):
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():
                 await connection.execute("DELETE FROM party_alias WHERE party_id = $1", party.role.id)
+                await connection.execute("DELETE FROM party_leader WHERE party_id = $1", party.role.id)
                 await connection.execute("DELETE FROM party WHERE id = $1", party.role.id)
 
         if delete_role_too and party.role:
