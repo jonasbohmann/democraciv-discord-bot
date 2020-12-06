@@ -144,3 +144,5 @@ bot/config/google_oauth_token.pickle
 bot/config/google_client_secret.json
 bot/config/config.py
 /bot/config/config.py
+bot/config/mk.py
+/bot/config/mk.py

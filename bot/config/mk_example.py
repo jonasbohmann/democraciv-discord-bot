@@ -1,3 +1,5 @@
+# Adjust MarkConfig and rename this to mk.py
+
 import enum
 import inspect
 import typing
