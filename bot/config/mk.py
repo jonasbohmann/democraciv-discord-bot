@@ -31,7 +31,7 @@ class DemocracivRole(enum.Enum):
 
     # multiciv
     NATION_ADMIN = 784596362338631690
-    NATION_CITIZEN = 740451794437537934
+    NATION_CITIZEN = 0
 
 
 class DemocracivChannel(enum.Enum):
@@ -41,7 +41,7 @@ class DemocracivChannel(enum.Enum):
     MODERATION_NOTIFICATIONS_CHANNEL = 661201604493443092
 
     # Government
-    GOV_ANNOUNCEMENTS_CHANNEL = 784604314727088128
+    GOV_ANNOUNCEMENTS_CHANNEL = 0
 
 
 def _make_property(role: DemocracivRole, alt: str):
