@@ -781,6 +781,9 @@ class DemocracivBot(commands.Bot):
             f"-h {token.POSTGRESQL_HOST} -w"
         )
 
+        if not os.path.isdir(f"bot/db/backup"):
+            os.mkdir(f"bot/db/backup")
+
         if not os.path.isdir(f"bot/db/backup/{database_name}"):
             os.mkdir(f"bot/db/backup/{database_name}")
 
