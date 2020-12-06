@@ -16,7 +16,7 @@ class DemocracivRole(enum.Enum):
     LT_PRIME_MINISTER = 745731318079422594
 
     # Legislature
-    SPEAKER = 741485176726749216
+    SPEAKER = 741467894759686236
     VICE_SPEAKER = 0
     LEGISLATOR = 741485036267634688
 
@@ -55,23 +55,23 @@ class MarkConfig:
 
     # -- Government Names --
 
-    NATION_ROLE_PREFIX = "Canada - "
+    NATION_ROLE_PREFIX = "Ottoman - "
     NATION_CATEGORIES = [741477020659089538]
 
-    NATION_NAME = "Canada"
-    NATION_FULL_NAME = "Republic of Canada"
-    NATION_ADJECTIVE = "Canadian"
-    NATION_FLAG_URL = "https://cdn.discordapp.com/avatars/742114080860536903/bd7e62e00c96e0b77d6c43da5f5f10f6.png?size=4096"
-    NATION_ICON_URL = "https://cdn.discordapp.com/avatars/742114080860536903/bd7e62e00c96e0b77d6c43da5f5f10f6.png?size=4096"
-    NATION_EMOJI = "<:canada:784603515270987796>"
+    NATION_NAME = "Ottoman Mercantile Divan"
+    NATION_FULL_NAME = "Ottoman Mercantile Divan"
+    NATION_ADJECTIVE = "Ottoman"
+    NATION_FLAG_URL = "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=1024"
+    NATION_ICON_URL = "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=102496"
+    NATION_EMOJI = "<:ottoman:784984719728836638>>"
 
-    LEGISLATURE_NAME = "Legislature"
-    LEGISLATURE_COMMAND = "legislature"
+    LEGISLATURE_NAME = "Grand Divan"
+    LEGISLATURE_COMMAND = "divan"
     LEGISLATURE_ADJECTIVE = "Legislative"
     LEGISLATURE_CABINET_NAME = "Legislative Cabinet"
-    LEGISLATURE_LEGISLATOR_NAME = "MP"
-    LEGISLATURE_SPEAKER_NAME = "Speaker"
-    LEGISLATURE_VICE_SPEAKER_NAME = "Vice-Speaker"
+    LEGISLATURE_LEGISLATOR_NAME = "Legislator"
+    LEGISLATURE_SPEAKER_NAME = "Grand Vizier"
+    LEGISLATURE_VICE_SPEAKER_NAME = ""
     LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS = True
     LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS = True
     LEGISLATURE_MOTIONS_EXIST = True
@@ -80,7 +80,7 @@ class MarkConfig:
     MINISTRY_COMMAND = "ministry"
     MINISTRY_LEADERSHIP_NAME = "Head of State"
     MINISTRY_MINISTER_NAME = "Minister"
-    MINISTRY_PRIME_MINISTER_NAME = "Prime Minister"
+    MINISTRY_PRIME_MINISTER_NAME = "Sultan"
     MINISTRY_VICE_PRIME_MINISTER_NAME = "Premier"
 
     COURT_NAME = "Supreme Court"
