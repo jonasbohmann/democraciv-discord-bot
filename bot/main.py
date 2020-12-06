@@ -48,14 +48,11 @@ initial_extensions = [
     "bot.module.admin",
     "bot.module.nation",
     "bot.module.tags",
-    "bot.module.starboard",
-    "bot.module.moderation",
     "bot.module.parties",
     "bot.module.legislature",
     "bot.module.laws",
     "bot.module.ministry",
     "bot.module.supremecourt",
-    "bot.ext.democracivbank.bank",
 ]
 
 # monkey patch dpy's send
