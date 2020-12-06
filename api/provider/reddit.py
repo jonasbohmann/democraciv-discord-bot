@@ -29,7 +29,7 @@ class RedditManager(ProviderManager):
         self._get_token()
 
     def _get_token(self):
-        with open("token.json", "r") as token_file:
+        with open("api/token.json", "r") as token_file:
             token_json = json.load(token_file)
             self.REDDIT_CLIENT_ID = token_json['reddit']['client_id']
             self.REDDIT_CLIENT_SECRET = token_json['reddit']['client_secret']
@@ -37,12 +37,12 @@ class RedditManager(ProviderManager):
             self.REDDIT_BEARER_TOKEN = token_json['reddit']['bearer_token']
 
     def _save_token(self):
-        with open("token.json", "r") as token_file:
+        with open("api/token.json", "r") as token_file:
             js = json.load(token_file)
 
         js['reddit']['bearer_token'] = self.REDDIT_BEARER_TOKEN
 
-        with open("token.json", "w") as token_file:
+        with open("api/token.json", "w") as token_file:
             json.dump(js, token_file)
 
     async def refresh_reddit_bearer_token(self):
