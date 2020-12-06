@@ -230,7 +230,7 @@ class _Guild(context.CustomCog, name="Server"):
     @guild.command(name="hidechannel", aliases=['exclude', 'private', 'hiddenchannels', 'hide'])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
-    async def exclude(self, ctx, channel: converter.CaseInsensitiveTextChannelOrCategoryChannel = None):
+    async def exclude(self, ctx, *, channel: converter.CaseInsensitiveTextChannelOrCategoryChannel = None):
         """Hide a channel from your server's log channel
 
         Both text channels and entire categories can be hidden.

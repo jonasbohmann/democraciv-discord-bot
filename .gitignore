@@ -142,3 +142,5 @@ bot/config/google_cloud_platform_client_secret.json
 bot/config/google_cloud_platform_oauth2_credentials.json
 bot/config/google_oauth_token.pickle
 bot/config/google_client_secret.json
+bot/config/config.py
+/bot/config/config.py
