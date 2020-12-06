@@ -541,7 +541,7 @@ class DemocracivBot(commands.Bot):
             self.db_ready = False
             raise
 
-        with open("db/schema.sql") as sql:
+        with open("bot/db/schema.sql") as sql:
             try:
                 await self.db.execute(sql.read())
             except asyncpg.InsufficientPrivilegeError:
@@ -612,8 +612,8 @@ class DemocracivBot(commands.Bot):
     def _execute_apps_script(self, script_id, function, parameters):
         google_credentials = None
 
-        if os.path.exists('config/google_oauth_token.pickle'):
-            with open('config/google_oauth_token.pickle', 'rb') as google_token:
+        if os.path.exists('bot/config/google_oauth_token.pickle'):
+            with open('bot/config/google_oauth_token.pickle', 'rb') as google_token:
                 google_credentials = pickle.load(google_token)
 
         if not google_credentials or not google_credentials.valid:
@@ -625,7 +625,7 @@ class DemocracivBot(commands.Bot):
                     config.GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES)
                 google_credentials = flow.run_local_server(port=0)
 
-            with open('config/google_oauth_token.pickle', 'wb') as google_token:
+            with open('bot/config/google_oauth_token.pickle', 'wb') as google_token:
                 pickle.dump(google_credentials, google_token)
 
         service = build("script", "v1", credentials=google_credentials, cache_discovery=False)

@@ -61,7 +61,7 @@ class BotHelpPageSource(menus.ListPageSource):
         super().__init__(entries=sorted(commands.keys(), key=lambda c: c.qualified_name), per_page=6)
         self.commands = commands
         self.help_command = help_command
-        self.prefix = help_command.clean_prefix
+        self.prefix = config.BOT_PREFIX
 
     def format_commands(self, cog, commands):
         # A field can only have 1024 characters so we need to paginate a bit
@@ -101,7 +101,7 @@ class BotHelpPageSource(menus.ListPageSource):
         return short_doc + "  ".join(page) + "\n" + (ending_note % hidden)
 
     async def format_page(self, menu, cogs):
-        prefix = menu.ctx.prefix
+        prefix = config.BOT_PREFIX
         description = f"Use `{prefix}help thing` for more info on a category or command.\n"
 
         embed = text.SafeEmbed(title="All Categories | Help", description=description)
@@ -258,7 +258,7 @@ class PaginatedHelpCommand(commands.HelpCommand):
     def get_command_signature(self, command):
         parent = command.full_parent_name
         alias = command.name if not parent else f"{parent} {command.name}"
-        return f"{self.clean_prefix}{alias} {command.signature}"
+        return f"{config.BOT_PREFIX}{alias} {command.signature}"
 
     async def send_bot_help(self, mapping):
         bot = self.context.bot
@@ -279,7 +279,7 @@ class PaginatedHelpCommand(commands.HelpCommand):
     async def send_cog_help(self, cog):
         entries = await self.filter_commands(cog.walk_commands(), sort=True, key=lambda c: c.qualified_name)
         menu = HelpMenu(
-            CogHelpPageSource(cog, entries, prefix=self.clean_prefix),
+            CogHelpPageSource(cog, entries, prefix=config.BOT_PREFIX),
             send_intro=False,
         )
         await menu.start(self.context)
@@ -321,7 +321,7 @@ class PaginatedHelpCommand(commands.HelpCommand):
         if len(entries) == 0:
             return await self.send_command_help(group)
 
-        source = GroupHelpPageSource(group, entries, prefix=self.clean_prefix)
+        source = GroupHelpPageSource(group, entries, prefix=config.BOT_PREFIX)
         self.common_command_formatting(source, group)
         menu = HelpMenu(source, send_intro=False)
         await menu.start(self.context)
