@@ -16,12 +16,19 @@ class Admin(
 
     hidden = True
 
+    @commands.command(name="restart", aliases=["stop"])
+    @commands.is_owner()
+    async def restart(self, ctx):
+        """Restarts the bot"""
+        await ctx.send(":wave: Restarting...")
+        await self.bot.close()
+
     @commands.command(name="backup")
     @commands.is_owner()
     async def backup(self, ctx):
         """Trigger a database backup"""
         await self.bot.do_db_backup(token.POSTGRESQL_DATABASE)
-        # await self.bot.do_db_backup("api")
+        await self.bot.do_db_backup("api_test")
         await ctx.send(config.YES)
 
     @commands.command(name="sql")
