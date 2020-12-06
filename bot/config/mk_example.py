@@ -1,3 +1,5 @@
+# Adjust MarkConfig and rename this to mk.py
+
 import enum
 import inspect
 import typing
@@ -10,28 +12,28 @@ class DemocracivRole(enum.Enum):
     MODERATION = 319663296728924160
 
     # Executive
-    MINISTER = 768678167875026966
-    GOVERNOR = 0
-    PRIME_MINISTER = 768678167875026966
-    LT_PRIME_MINISTER = 0
+    MINISTER = 745751525971722341
+    GOVERNOR = 745731318079422594
+    PRIME_MINISTER = 741485246465310740
+    LT_PRIME_MINISTER = 745731318079422594
 
     # Legislature
-    SPEAKER = 785004152111628298
+    SPEAKER = 741467894759686236
     VICE_SPEAKER = 0
-    LEGISLATOR = 746195001796722728
+    LEGISLATOR = 741485036267634688
 
     # Courts
     CHIEF_JUSTICE = 0
-    JUSTICE = 768678188624248864
+    JUSTICE = 744356946580209815
     JUDGE = 0
 
-    GOVERNMENT = 740454620307914772
+    GOVERNMENT = 740454521934970901
 
     OTTOMAN_TAX_OFFICER = 744983252854636675
 
     # multiciv
     NATION_ADMIN = 784596362338631690
-    NATION_CITIZEN = 740452229638651917
+    NATION_CITIZEN = 0
 
 
 class DemocracivChannel(enum.Enum):
@@ -41,10 +43,7 @@ class DemocracivChannel(enum.Enum):
     MODERATION_NOTIFICATIONS_CHANNEL = 661201604493443092
 
     # Government
-    GOV_ANNOUNCEMENTS_CHANNEL = 647469752767479809
-
-    # Executive
-    EXECUTIVE_CHANNEL = 637051136955777049
+    GOV_ANNOUNCEMENTS_CHANNEL = 0
 
 
 def _make_property(role: DemocracivRole, alt: str):
@@ -54,62 +53,62 @@ def _make_property(role: DemocracivRole, alt: str):
 class MarkConfig:
     MARK = "7"
     CIV_GAME = "Sid Meier's Civilization 6"
-    IS_MULTICIV = False
+    IS_MULTICIV = True
 
     # -- Government Names --
 
-    NATION_ROLE_PREFIX = "Rome - "
-    NATION_CATEGORIES = [741457565837295678, 741469523198345218, 741469670300713001, 754396775409778849, 777609612752453652, 741469854363549716]
+    NATION_ROLE_PREFIX = "Ottoman - "
+    NATION_CATEGORIES = [741477020659089538]
 
-    NATION_NAME = "Rome"
-    NATION_FULL_NAME = "Rome"
-    NATION_ADJECTIVE = "Rome"
-    NATION_FLAG_URL = "https://cdn.discordapp.com/avatars/742114483798933605/abf918799b657f618aeb0a061088fd5a.png?size=1024"
-    NATION_ICON_URL = "https://cdn.discordapp.com/avatars/742114483798933605/abf918799b657f618aeb0a061088fd5a.png?size=1024"
-    NATION_EMOJI = "<:rome:784999996159819786>"
+    NATION_NAME = "Ottoman Mercantile Divan"
+    NATION_FULL_NAME = "Ottoman Mercantile Divan"
+    NATION_ADJECTIVE = "Ottoman"
+    NATION_FLAG_URL = "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=1024"
+    NATION_ICON_URL = "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=102496"
+    NATION_EMOJI = "<:ottoman:784984719728836638>>"
 
-    LEGISLATURE_NAME = "Senate"
-    LEGISLATURE_COMMAND = "senate"
+    LEGISLATURE_NAME = "Grand Divan"
+    LEGISLATURE_COMMAND = "divan"
     LEGISLATURE_ADJECTIVE = "Legislative"
     LEGISLATURE_CABINET_NAME = "Legislative Cabinet"
-    LEGISLATURE_LEGISLATOR_NAME = "Senator"
-    LEGISLATURE_SPEAKER_NAME = "Consul"
-    LEGISLATURE_VICE_SPEAKER_NAME = "Vice-Speaker"
+    LEGISLATURE_LEGISLATOR_NAME = "Legislator"
+    LEGISLATURE_SPEAKER_NAME = "Grand Vizier"
+    LEGISLATURE_VICE_SPEAKER_NAME = ""
     LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS = True
     LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS = True
     LEGISLATURE_MOTIONS_EXIST = True
 
-    MINISTRY_NAME = "Rex"
-    MINISTRY_COMMAND = "rex"
+    MINISTRY_NAME = "Ministry"
+    MINISTRY_COMMAND = "ministry"
     MINISTRY_LEADERSHIP_NAME = "Head of State"
-    MINISTRY_MINISTER_NAME = ""
-    MINISTRY_PRIME_MINISTER_NAME = "Rex"
-    MINISTRY_VICE_PRIME_MINISTER_NAME = ""
+    MINISTRY_MINISTER_NAME = "Minister"
+    MINISTRY_PRIME_MINISTER_NAME = "Sultan"
+    MINISTRY_VICE_PRIME_MINISTER_NAME = "Premier"
 
-    COURT_NAME = "Court"
+    COURT_NAME = "Supreme Court"
     COURT_HAS_INFERIOR_COURT = False
-    COURT_CHIEF_JUSTICE_NAME = "Decemvir"
-    COURT_INFERIOR_NAME = "Appeals Court"
+    COURT_CHIEF_JUSTICE_NAME = "Chief Justice"
+    COURT_INFERIOR_NAME = ""
     COURT_JUSTICE_NAME = "Justice"
     COURT_JUDGE_NAME = "Judge"
 
     # -- Links --
-    CONSTITUTION = "https://docs.google.com/document/d/1deWktyhCDWlmC88C2eP7vjpH6sP6NuJ7KfrXX8kcO-s/edit"
-    LEGAL_CODE = "g"
+    CONSTITUTION = "https://docs.google.com/document/d/1N-kREZoRQcyt4E8_jemIF0RtYroiupE-f64p-niRC8Q/edit"
+    LEGAL_CODE = "https://docs.google.com/document/d/1nmDfOy3DypadML817J_d2pCc8FpDlO7HUUhHOajWG2o/edit?usp=sharing"
     POLITICAL_PARTIES = "https://www.reddit.com/r/democraciv/wiki/parties"
 
     LEGISLATURE_DOCKET = (
-        ""
+        "https://docs.google.com/spreadsheets/d/1k3NkAbh-32ciHMqboZRQVXXkdjT1T21qhtdom0JSm-Q/edit?usp=sharing"
     )
     LEGISLATURE_PROCEDURES = (
-        "g"
+        "https://docs.google.com/document/d/1vUGVIv0F0ZK2cAJrhaDaOS02iKIz8KOXSwjoZZgnEmo/edit?usp=sharing"
     )
 
     MINISTRY_WORKSHEET = (
-        ""
+        "https://docs.google.com/spreadsheets/d/1hrBA2yftAilQFhPwCDtm74YBVFWRce5l41wRsKf9qdI/edit?usp=sharing"
     )
     MINISTRY_PROCEDURES = (
-        ""
+        "https://docs.google.com/document/d/1c6HtdY7urz4F3fH9Nra83Qc1bNVrp_O9zmaeFs6szgA/edit?usp=sharing"
     )
 
     def __init__(self, bot):
