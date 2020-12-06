@@ -220,13 +220,6 @@ class Moderation(context.CustomCog):
         else:
             await ctx.send(embed=embed)
 
-    @commands.command(name="restart", aliases=["stop"])
-    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
-    async def restart(self, ctx):
-        """Restarts the bot"""
-        await ctx.send(":wave: Restarting...")
-        await self.bot.close()
-
     @commands.command(name="say")
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def say(self, ctx, *, content: str):

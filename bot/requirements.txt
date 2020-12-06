@@ -2,6 +2,7 @@ discord.py>=1.5.1
 aiodns
 cchardet
 git+https://github.com/Rapptz/discord-ext-menus
+git+https://github.com/MagicStack/uvloop
 jishaku
 psutil
 asyncpg
