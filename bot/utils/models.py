@@ -254,6 +254,9 @@ class Motion(commands.Converter):
         is_google_docs = self._bot.get_cog("Law").is_google_doc_link(self.description) and len(self.description) <= 100
         return self.description if is_google_docs else self._link
 
+    async def withdraw(self):
+        await self._bot.db.execute("DELETE FROM motion WHERE id = $1", self.id)
+
     @classmethod
     async def convert(cls, ctx, argument: int):
         try:
@@ -275,7 +278,7 @@ class LegalConsumer:
             self,
             *,
             ctx: context.CustomContext,
-            objects: typing.Iterable[typing.Union[Bill, Motion]],
+            objects: typing.Iterable[Bill],
             action: typing.Callable,
     ):
         self.objects = set(objects)
