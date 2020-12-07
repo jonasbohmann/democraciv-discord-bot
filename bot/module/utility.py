@@ -633,7 +633,7 @@ class Utility(context.CustomCog):
         js = await self.bot.api_request("POST", "roll", json={"dices": dices})
 
         if "error" in js:
-            raise commands.BadArgument(js["error"])
+            raise commands.BadArgument()
 
         if "result" in js:
             await ctx.send(js["result"])
