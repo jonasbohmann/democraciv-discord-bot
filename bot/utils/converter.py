@@ -11,6 +11,8 @@ from bot.utils import context, exceptions
 
 
 class InternalAPIWebhookConverter(commands.Converter):
+    model = "notification ID"
+
     @classmethod
     async def convert(cls, ctx, argument):
         if argument.startswith("#"):
@@ -216,11 +218,12 @@ class UnbanConverter(commands.Converter):
         try:
             user = await CaseInsensitiveUser().convert(ctx, argument)
         except commands.BadArgument:
+            bans = await ctx.guild.bans()
             try:
                 argument = int(argument, base=10)
-                ban = discord.utils.find(find_by_id, await ctx.guild.bans())
+                ban = discord.utils.find(find_by_id, bans)
             except ValueError:
-                ban = discord.utils.find(find_by_name, await ctx.guild.bans())
+                ban = discord.utils.find(find_by_name, bans)
 
             if ban:
                 user = ban.user
@@ -232,6 +235,8 @@ class UnbanConverter(commands.Converter):
 
 
 class CaseInsensitiveTextChannel(commands.TextChannelConverter):
+    model = "channel"
+
     async def convert(self, ctx, argument):
         try:
             return await super().convert(ctx, argument)
@@ -253,6 +258,8 @@ class CaseInsensitiveTextChannel(commands.TextChannelConverter):
 
 
 class CaseInsensitiveCategoryChannel(commands.CategoryChannelConverter):
+    model = "category"
+
     async def convert(self, ctx, argument):
         try:
             return await super().convert(ctx, argument)
@@ -274,6 +281,8 @@ class CaseInsensitiveCategoryChannel(commands.CategoryChannelConverter):
 
 
 class CaseInsensitiveTextChannelOrCategoryChannel(CaseInsensitiveTextChannel):
+    model = "channel or category"
+
     async def convert(self, ctx, argument):
         try:
             return await super().convert(ctx, argument)
@@ -285,6 +294,8 @@ class CaseInsensitiveTextChannelOrCategoryChannel(CaseInsensitiveTextChannel):
 
 
 class CaseInsensitiveRole(commands.RoleConverter):
+    model = "role"
+
     async def convert(self, ctx: context.CustomContext, argument):
         try:
             return await super().convert(ctx, argument)
@@ -305,6 +316,13 @@ class CaseInsensitiveRole(commands.RoleConverter):
             raise BadArgument(f"{config.NO} There is no role named `{argument}` on this server.")
 
 
+def find_dciv_role(ctx, argument):
+    def predicate(r):
+        return r.name.lower() == argument
+
+    return discord.utils.find(predicate, ctx.bot.dciv.roles)
+
+
 class DemocracivCaseInsensitiveRole(CaseInsensitiveRole):
     async def convert(self, ctx: context.CustomContext, argument):
         try:
@@ -312,13 +330,18 @@ class DemocracivCaseInsensitiveRole(CaseInsensitiveRole):
         except BadArgument:
             arg = argument.lower()
 
-            def predicate(r):
-                return r.name.lower() == arg
-
-            role = discord.utils.find(predicate, ctx.bot.dciv.roles)
+            role = find_dciv_role(ctx, arg)
 
             if role:
                 return role
+
+            for nation_prefix in ["canada - ", "rome - ", "maori - ", "ottoman - "]:
+                nation_arg = f"{nation_prefix}{arg}"
+
+                role = find_dciv_role(ctx, nation_arg)
+
+                if role:
+                    return role
 
             raise BadArgument(
                 f"{config.NO} There is no role named `{argument}` on this server or the {ctx.bot.dciv.name} server."
@@ -326,6 +349,8 @@ class DemocracivCaseInsensitiveRole(CaseInsensitiveRole):
 
 
 class CaseInsensitiveMember(commands.MemberConverter):
+    model = "person"
+
     async def convert(self, ctx, argument):
         try:
             return await super().convert(ctx, argument)
@@ -344,6 +369,8 @@ class CaseInsensitiveMember(commands.MemberConverter):
 
 
 class CaseInsensitiveUser(commands.UserConverter):
+    model = "person"
+
     async def convert(self, ctx, argument):
         try:
             return await super().convert(ctx, argument)
