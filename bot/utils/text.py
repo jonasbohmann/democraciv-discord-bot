@@ -87,7 +87,7 @@ class AnnouncementScheduler:
     @tasks.loop(seconds=30)
     async def _wait(self):
         if self._last_addition is not None and datetime.datetime.utcnow() - self._last_addition > datetime.timedelta(
-                minutes=10
+                minutes=5
         ):
             self._last_addition = None
             await self.send_messages()
@@ -104,10 +104,10 @@ class SafeEmbed(discord.Embed):
         # called by monkey patched Messageable.send
 
         if len(self.description) > 2048:
-            self.description = f"{self.description[:2045]}..."
+            self.description = f"{self.description[:2040]}..."
 
         if len(self.title) > 256:
-            self.title = f"{self.title[:253]}..."
+            self.title = f"{self.title[:250]}..."
 
     def add_field(
             self,
