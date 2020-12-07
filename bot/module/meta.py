@@ -2,9 +2,9 @@ import collections
 import time
 import discord
 
-from bot.config import config, exceptions
+from bot.config import config
 from discord.ext import commands, menus
-from bot.utils import context, help, text
+from bot.utils import context, help, text, exceptions
 
 
 class EditDMSettingsMenu(menus.Menu):

@@ -53,7 +53,8 @@ def _make_property(role: DemocracivRole, alt: str):
 class MarkConfig:
     MARK = "7"
     CIV_GAME = "Sid Meier's Civilization 6"
-    IS_MULTICIV = True
+
+    IS_NATION_BOT = False
 
     # -- Government Names --
 
@@ -130,7 +131,11 @@ class MarkConfig:
 
     def _dynamic_role_term(self, role: DemocracivRole, alt: str):
         try:
-            return self.bot.get_democraciv_role(role).name
+            name = self.bot.get_democraciv_role(role).name
+
+            if name.lower().startswith(self.NATION_ROLE_PREFIX.lower()):
+                return name[len(self.NATION_ROLE_PREFIX):]
+
         except exceptions.RoleNotFoundError:
             return alt
 
