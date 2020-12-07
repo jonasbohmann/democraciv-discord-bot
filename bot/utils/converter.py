@@ -445,7 +445,7 @@ class OwnedTag(Tag):
                 f"the server they were originally created on."
             )
 
-        if ctx.bot.mk.IS_NATION_ADMIN:
+        if ctx.bot.mk.IS_NATION_BOT:
             nation_admin = ctx.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
 
             if nation_admin in ctx.author.roles:

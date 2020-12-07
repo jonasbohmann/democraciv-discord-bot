@@ -101,6 +101,10 @@ discord.abc.Messageable.send = safe_send
 
 
 def get_prefix(bot, msg):
+    # invoke command in main and all nation bots
+    if msg.author.id == bot.owner.id and msg.content.startswith("a-"):
+        return "a-"
+
     for prefix in config.BOT_ADDITIONAL_PREFIXES:
         r = re.compile(f'^({prefix}).*', flags=re.I)
         m = r.match(msg.content)
