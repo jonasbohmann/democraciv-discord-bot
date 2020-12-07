@@ -362,13 +362,12 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
         await self.gov_announcements_channel.send(
-            f"{self.legislator_role.mention}, {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
-            f"#{active_leg_session.id} has been **closed** by the "
-            f"{self.bot.mk.LEGISLATURE_CABINET_NAME}.", allowed_mentions=discord.AllowedMentions(roles=True)
+            f"{self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{active_leg_session.id} has been **closed** by the "
+            f"{self.bot.mk.LEGISLATURE_CABINET_NAME}."
         )
 
     @leg_session.command(name="export", aliases=["es", "ex", "e"])
-    @commands.cooldown(1, 300, commands.BucketType.user)
+    @commands.cooldown(1, 120, commands.BucketType.user)
     async def exportsession(self, ctx: context.CustomContext, session: Session = None):
         """Export a session's submissions for Google Spreadsheets and generate the Google Forms voting form"""
         if isinstance(session, str):
@@ -432,8 +431,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         elif reaction:
             form_url = await ctx.input(
                 f"{config.USER_INTERACTION_REQUIRED} Reply with an **edit** link to an **empty** Google Forms "
-                "form you created. I will then fill that form to make it the voting form. "
-                "Create a Form here: <https://forms.new>",
+                f"form you created. I will then fill that form to make it the voting form.\n{config.HINT} "
+                "*Create a new Google Form here: <https://forms.new>, then click on the three dots in the upper right, "
+                "then on 'Add collaborators', after which a new window should pop up. "
+                "Click on 'Change' on the bottom left, and change the link from 'Restricted' to the other option. "
+                "Then copy the link and send it here.*",
                 delete_after=True,
             )
 
@@ -467,7 +469,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                             "the form to comply with this nation's laws.\n"
                             "This comes with no guarantees of a form's valid "
                             "legal status.\n\nRemember to change the edit link you "
-                            "gave me earlier to not be public.",
+                            "gave me earlier to be **'Restricted'** again.",
             )
 
             embed.add_field(

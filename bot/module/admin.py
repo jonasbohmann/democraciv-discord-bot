@@ -28,7 +28,10 @@ class Admin(
     async def backup(self, ctx):
         """Trigger a database backup"""
         await self.bot.do_db_backup(token.POSTGRESQL_DATABASE)
-        await self.bot.do_db_backup("api_test")
+
+        if not self.bot.mk.IS_NATION_BOT:
+            await self.bot.do_db_backup("api_test")
+
         await ctx.send(config.YES)
 
     @commands.command(name="sql")
