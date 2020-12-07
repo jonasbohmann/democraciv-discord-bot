@@ -115,7 +115,7 @@ class Tags(context.CustomCog):
 
         if global_tags:
             pretty_tags = [f"**__Global Tags__**\n*Tags can only be made global by {self.bot.dciv.name} "
-                           f"Moderation. Global tags work in every server I am in, as well as in DMs with me.*\n"]
+                           f"Moderation and Nation Admins. Global tags work in every server I am in, as well as in DMs with me.*\n"]
 
         for record in global_tags:
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
@@ -127,7 +127,7 @@ class Tags(context.CustomCog):
             )
             if all_tags:
                 pretty_tags.append(f"\n\n**__Local Tags__**\n*Every Tag that was not explicitly made global by "
-                                   f"{self.bot.dciv.name} Moderation is a local tag, "
+                                   f"{self.bot.dciv.name} Moderation or a Nation Admin is a local tag, "
                                    f"and only works in the server it was made in.*\n")
 
             for record in all_tags:
