@@ -1,13 +1,16 @@
 import discord
 from discord.ext import commands
 
-from bot.config import config, mk, exceptions
-from bot.utils import context, checks, paginator, text, mixin
+from bot.config import config, mk
+from bot.utils import context, checks, paginator, text, mixin, exceptions
 from bot.utils.converter import CaseInsensitiveMember, CaseInsensitiveRole, CaseInsensitiveCategoryChannel
 
 
 class NationRoleConverter(CaseInsensitiveRole):
     async def convert(self, ctx: context.CustomContext, argument):
+        if not ctx.bot.mk.NATION_ROLE_PREFIX:
+            raise exceptions.DemocracivBotException(f"{config.NO} You can't use Nation Roles with this bot.")
+
         try:
             role = await super().convert(ctx, argument)
         except commands.BadArgument:
@@ -18,6 +21,14 @@ class NationRoleConverter(CaseInsensitiveRole):
             raise commands.BadArgument(f"{config.NO} You're not allowed to give someone the `{role.name}` role.")
 
         return role
+
+
+def nation_role_prefix_not_blank():
+    def wrapper(ctx):
+        if not ctx.bot.mk.NATION_ROLE_PREFIX:
+            raise exceptions.DemocracivBotException(f"{config.NO} You can't use Nation Roles with this bot.")
+
+    return commands.check(wrapper)
 
 
 class Nation(context.CustomCog, mixin.GovernmentMixin):
@@ -107,6 +118,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
     @nation.group(name="roles", aliases=['role'], case_insensitive=True, invoke_without_command=True)
     @checks.moderation_or_nation_leader()
+    @nation_role_prefix_not_blank()
     async def nationroles(self, ctx):
         """List all nation-specific roles that can be given out with `{PREFIX}nation roles toggle`"""
 
@@ -122,6 +134,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
     @nationroles.command(name="toggle")
     @checks.moderation_or_nation_leader()
+    @nation_role_prefix_not_blank()
     async def toggle_role(self, ctx, people: commands.Greedy[CaseInsensitiveMember], *, role: NationRoleConverter):
         """Give someone a role, or remove one from them
 
@@ -147,6 +160,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
     @nationroles.command(name="add", aliases=['create', 'make'])
     @checks.moderation_or_nation_leader()
+    @nation_role_prefix_not_blank()
     async def create_new_nation_role(self, ctx, *, name: str = None):
         """Create a new nation-specific roles that can be given out with `{PREFIX}nation roles toggle`"""
 
@@ -164,6 +178,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
     @nationroles.command(name="delete", aliases=['remove'])
     @checks.moderation_or_nation_leader()
+    @nation_role_prefix_not_blank()
     async def delete_nation_role(self, ctx, *, nation_role: NationRoleConverter):
         """Delete a nation role
 
