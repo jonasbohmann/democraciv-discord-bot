@@ -241,9 +241,15 @@ class CustomContext(commands.Context):
             except commands.BadArgument:
                 if return_input_on_fail:
                     return message
-                raise exceptions.InvalidUserInputError(
-                    "{config.NO} Something went wrong while converting your input. " "Are you sure it was right?"
-                )
+                if hasattr(converter, "model"):
+                    error_msg = f"{config.NO} Something went wrong while converting your input " \
+                                f"into a {converter.model}. Are you sure it was right and that " \
+                                f"the {converter.model} exists?"
+                else:
+                    error_msg = f"{config.NO} Something went wrong while converting your input. " \
+                                f"Are you sure it was right?"
+
+                raise exceptions.InvalidUserInputError(error_msg)
         else:
             # fallback
             return converter(message)

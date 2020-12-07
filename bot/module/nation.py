@@ -1,9 +1,14 @@
+import collections
+
 import discord
-from discord.ext import commands
+from discord.ext import commands, menus
 
 from bot.config import config, mk
 from bot.utils import context, checks, paginator, text, mixin, exceptions
-from bot.utils.converter import CaseInsensitiveMember, CaseInsensitiveRole, CaseInsensitiveCategoryChannel
+from bot.utils.converter import (
+    CaseInsensitiveMember, CaseInsensitiveRole, CaseInsensitiveCategoryChannel,
+    CaseInsensitiveTextChannel, DemocracivCaseInsensitiveRole
+)
 
 
 class NationRoleConverter(CaseInsensitiveRole):
@@ -31,6 +36,56 @@ def nation_role_prefix_not_blank():
             return True
 
     return commands.check(wrapper)
+
+
+class PermissionSelectorMenu(menus.Menu):
+    def __init__(self, *, role, channel, overwrites):
+        self.role = role
+        self.channel = channel
+        self.overwrites = overwrites
+        super().__init__(timeout=120.0, delete_message_after=True)
+        self._make_result()
+
+    def _make_result(self):
+        self.result = collections.namedtuple("PermissionSelectorResult", ["confirmed", "result"])
+        self.result.confirmed = False
+        self.result.result = {"read": False, "send": False}
+        return self.result
+
+    async def send_initial_message(self, ctx, channel):
+        read = "Deny" if self.overwrites.read_messages else "Allow"
+        send = "Deny" if self.overwrites.send_messages else "Allow"
+        embed = text.SafeEmbed(
+            title=f"{config.USER_INTERACTION_REQUIRED}  Which Permissions in #{self.channel.name} do you want "
+                  f"to change?",
+            description=f"Select as many things as you want, then click the {config.YES} button to continue, "
+                        f"or {config.NO} to cancel.\n\n"
+                        f":one: {read} Read Messages Permission for `{self.role.name}` in {self.channel.mention}\n"
+                        f":two: {send} Send Messages Permission for `{self.role.name}` in {self.channel.mention}"
+        )
+        return await ctx.send(embed=embed)
+
+    @menus.button("1\N{variation selector-16}\N{combining enclosing keycap}")
+    async def on_first_choice(self, payload):
+        self.result.result["read"] = not self.result.result["read"]
+
+    @menus.button("2\N{variation selector-16}\N{combining enclosing keycap}")
+    async def on_second_choice(self, payload):
+        self.result.result["send"] = not self.result.result["send"]
+
+    @menus.button(config.YES)
+    async def confirm(self, payload):
+        self.result.confirmed = True
+        self.stop()
+
+    @menus.button(config.NO)
+    async def cancel(self, payload):
+        self._make_result()
+        self.stop()
+
+    async def prompt(self, ctx):
+        await self.start(ctx, wait=True)
+        return self.result
 
 
 class Nation(context.CustomCog, mixin.GovernmentMixin):
@@ -191,15 +246,15 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         await nation_role.delete()
         await ctx.send(f"{config.YES} `{name}` was deleted.")
 
-    @nation.group(name="createchannel", aliases=['channel'])
+    @nation.command(name="createchannel", aliases=['channel'])
     @checks.moderation_or_nation_leader()
     async def channel(self, ctx, *, category: CaseInsensitiveCategoryChannel = None):
         """Create a new channel in one of your nation's categories"""
 
         if not category:
-            c_name = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} In which category should "
-                                     f"the channel be created?")
-            category = await CaseInsensitiveCategoryChannel().convert(ctx, c_name)
+            category = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} In which category should "
+                                                 f"the channel be created?", return_input_on_fail=False,
+                                                 converter=CaseInsensitiveCategoryChannel)
 
         if category.id not in self.bot.mk.NATION_CATEGORIES:
             return await ctx.send(f"{config.NO} The `{category.name}` category does not belong to your nation.")
@@ -209,6 +264,41 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         channel = await category.create_text_channel(name=channel_name)
         await channel.edit(sync_permissions=True)
+        await ctx.send(f"{config.YES} Done.")
+
+    @nation.command(name="permissions", aliases=['perms', 'permission', 'perm'])
+    @checks.moderation_or_nation_leader()
+    async def set_channel_perms(self, ctx, *, channel: CaseInsensitiveTextChannel = None):
+        """Toggle Read and/or Send Messages permissions for a role in one of your nation's channels"""
+
+        if not channel:
+            channel = await ctx.converted_input(
+                f"{config.USER_INTERACTION_REQUIRED} Which channel's permissions should be changed?",
+                converter=CaseInsensitiveTextChannel, return_input_on_fail=False)
+
+        if channel.category_id not in self.bot.mk.NATION_CATEGORIES:
+            return await ctx.send(f"{config.NO} The `{channel.name}` channel does not belong to your nation.")
+
+        role = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} For which role should the "
+                                         f"permissions in {channel.mention} be changed?",
+                                         return_input_on_fail=False, converter=DemocracivCaseInsensitiveRole)
+
+        overwrites = channel.overwrites_for(role)
+
+        result = await PermissionSelectorMenu(role=role, channel=channel, overwrites=overwrites).prompt(ctx)
+
+        if not result.confirmed:
+            return await ctx.send(f"{config.NO} You didn't decide on which permission(s) to change.")
+
+        permission_to_change = result.result
+
+        if permission_to_change['read']:
+            overwrites.read_messages = not overwrites.read_messages
+
+        if permission_to_change['send']:
+            overwrites.send_messages = not overwrites.send_messages
+
+        await channel.set_permissions(target=role, overwrite=overwrites)
         await ctx.send(f"{config.YES} Done.")
 
 
