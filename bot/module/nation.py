@@ -27,6 +27,8 @@ def nation_role_prefix_not_blank():
     def wrapper(ctx):
         if not ctx.bot.mk.NATION_ROLE_PREFIX:
             raise exceptions.DemocracivBotException(f"{config.NO} You can't use Nation Roles with this bot.")
+        else:
+            return True
 
     return commands.check(wrapper)
 
