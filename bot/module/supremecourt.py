@@ -44,7 +44,7 @@ class SupremeCourt(context.CustomCog, GovernmentMixin, name=mk.MarkConfig.COURT_
         """Dashboard for {justice_term}"""
 
         embed = text.SafeEmbed()
-        embed.set_author(name=f"{self.bot.mk.courts_term} of the the {self.bot.mk.NATION_FULL_NAME}",
+        embed.set_author(name=f"{self.bot.mk.courts_term} of the {self.bot.mk.NATION_FULL_NAME}",
                          icon_url=self.bot.mk.NATION_ICON_URL)
 
         justices = self.get_justices() or ["-"]
