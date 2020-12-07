@@ -10,6 +10,7 @@ from bot.utils import models
 def split_string(string: str, length: int):
     return list((string[0 + i: length + i] for i in range(0, len(string), length)))
 
+
 # todo fix this shit
 
 def split_string_by_paragraphs(string: str, length: int):

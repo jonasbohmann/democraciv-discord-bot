@@ -843,29 +843,63 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                     f"of this {obj_name} can withdraw it."
                 )
 
-        consumer = models.LegalConsumer(ctx=ctx, objects=objects, action=models.BillStatus.withdraw)
-        await consumer.filter(filter_func=verify_object)
+        if obj_name == "bill":
+            consumer = models.LegalConsumer(ctx=ctx, objects=objects, action=models.BillStatus.withdraw)
+            await consumer.filter(filter_func=verify_object)
 
-        if consumer.failed:
-            await ctx.send(
-                f":warning: The following {obj_name}s can not be withdrawn by you.\n{consumer.failed_formatted}"
+            if consumer.failed:
+                await ctx.send(
+                    f":warning: The following {obj_name}s can not be withdrawn by you.\n{consumer.failed_formatted}"
+                )
+
+            if not consumer.passed:
+                return
+
+            reaction = await ctx.confirm(
+                f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want"
+                f" to withdraw the following {obj_name}s from Session #{last_leg_session.id}?"
+                f"\n{consumer.passed_formatted}"
             )
 
-        if not consumer.passed:
-            return
+            if not reaction:
+                return await ctx.send("Cancelled.")
 
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want"
-            f" to withdraw the following {obj_name}s from Session #{last_leg_session.id}?"
-            f"\n{consumer.passed_formatted}"
-        )
+            await consumer.consume()
+            message = f"The following {obj_name}s were withdrawn by {ctx.author}.\n{consumer.passed_formatted}"
 
-        if not reaction:
-            return await ctx.send("Cancelled.")
+        elif obj_name == "motion":
+            # doing it the old (ugly) way for motions since LegalConsumer is only for bills
+            unverified_objects = []
 
-        await consumer.consume()
+            for obj in objects:
+                error = verify_object(ctx, obj)
+                if error:
+                    unverified_objects.append((obj, error))
+
+            if unverified_objects:
+                objects = [o for o in objects if o not in list(map(list, zip(*unverified_objects)))[0]]
+
+                error_messages = '\n'.join(
+                    [f"-  **{_object.name}** (#{_object.id}): _{reason}_" for _object, reason in unverified_objects])
+                await ctx.send(f":warning: The following {obj_name}s can not be withdrawn by you.\n{error_messages}")
+
+            if not objects:
+                return
+
+            pretty_objects = '\n'.join([f"-  **{_object.name}** (#{_object.id})" for _object in objects])
+            are_you_sure = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want"
+                                             f" to withdraw the following {obj_name}s from Session #{last_leg_session.id}?"
+                                             f"\n{pretty_objects}")
+
+            if not are_you_sure:
+                return await ctx.send("Cancelled.")
+
+            for obj in objects:
+                await obj.withdraw()
+
+            message = f"The following {obj_name}s were withdrawn by {ctx.author}.\n{pretty_objects}"
+
         await ctx.send(f"{config.YES} All {obj_name}s were withdrawn.")
-        message = f"The following {obj_name}s were withdrawn by {ctx.author}.\n{consumer.passed_formatted}"
 
         if not self.is_cabinet(ctx.author):
             if self.speaker is not None:
@@ -971,7 +1005,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to resubmit the following bills to?\n{consumer.passed_formatted}"
+            f"to resubmit the following bills to the current session?\n{consumer.passed_formatted}"
         )
 
         if not reaction:
@@ -1043,7 +1077,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             "top_laws": pretty_top_lawmaker,
         }
 
-    @legislature.command(name="stats", aliases=["stat", "statistics", "statistic"])
+    @legislature.command(name="stats", aliases=["stat", "statistics", "statistic"], enabled=False)
     async def stats(self, ctx):
         """Statistics about the {LEGISLATURE_NAME}"""
 
