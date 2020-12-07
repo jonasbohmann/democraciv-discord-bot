@@ -19,13 +19,27 @@ class NationRoleConverter(CaseInsensitiveRole):
         try:
             role = await super().convert(ctx, argument)
         except commands.BadArgument:
-            arg = f"{ctx.bot.mk.NATION_ROLE_PREFIX}{argument}"
-            role = await super().convert(ctx, arg)
+            try:
+                arg = f"{ctx.bot.mk.NATION_ROLE_PREFIX}{argument}"
+                role = await super().convert(ctx, arg)
+            except commands.BadArgument:
+                arg = f"{ctx.bot.mk.NATION_ROLE_PREFIX[:-2]}{argument}"  # remove the '- '
+                role = await super().convert(ctx, arg)
 
         if not role.name.lower().startswith(ctx.bot.mk.NATION_ROLE_PREFIX.lower()):
             raise commands.BadArgument(f"{config.NO} You're not allowed to give someone the `{role.name}` role.")
 
         return role
+
+
+class CIMemberNoBot(CaseInsensitiveMember):
+    async def convert(self, ctx, argument):
+        member = await super().convert(ctx, argument)
+
+        if member.bot:
+            raise commands.BadArgument(f"{config.NO} You cannot give Nation Roles to bots.")
+
+        return member
 
 
 def nation_role_prefix_not_blank():
@@ -192,12 +206,12 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
     @nationroles.command(name="toggle")
     @checks.moderation_or_nation_leader()
     @nation_role_prefix_not_blank()
-    async def toggle_role(self, ctx, people: commands.Greedy[CaseInsensitiveMember], *, role: NationRoleConverter):
+    async def toggle_role(self, ctx, people: commands.Greedy[CIMemberNoBot], *, role: NationRoleConverter):
         """Give someone a role, or remove one from them
 
         **Example**:
-            `{PREFIX}{COMMAND} @DerJonas Rome - Builder` will give DerJonas the 'Rome - Builder' role
-            `{PREFIX}{COMMAND} @DerJonas @Archwizard @Bird @WesGutt Rome - Builder` will give those 4 people the 'Rome - Builder' role"""
+            `{PREFIX}{COMMAND} @DerJonas Builder` will give DerJonas the 'Rome - Builder' role
+            `{PREFIX}{COMMAND} @DerJonas @Archwizard @Bird Builder` will give those 3 people the 'Rome - Builder' role"""
 
         if not people:
             raise commands.BadArgument()
