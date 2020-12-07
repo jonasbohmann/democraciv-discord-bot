@@ -144,10 +144,15 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         else:
             prime_minister = f"{self.bot.mk.pm_term}: -"
 
+        if isinstance(self.vice_speaker, discord.Member):
+            vspeaker = f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention}"
+        else:
+            vspeaker = f"{self.bot.mk.vice_speaker_term}: -"
+
         embed.add_field(name="Government",
                         value=f"{prime_minister}\n"
                               f"{speaker}\n"
-                              f"Amount of {self.bot.mk.legislator_term}s: {legislators}",
+                              f"{vspeaker}",
                         inline=False)
 
         await ctx.send(embed=embed)
