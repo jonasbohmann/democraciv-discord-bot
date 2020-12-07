@@ -91,7 +91,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         embed = text.SafeEmbed()
         embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL,
-                         name=f"The {self.bot.mk.LEGISLATURE_NAME} of {self.bot.mk.NATION_FULL_NAME}")
+                         name=f"The {self.bot.mk.LEGISLATURE_NAME} of the {self.bot.mk.NATION_FULL_NAME}")
         speaker_value = []
 
         if isinstance(self.speaker, discord.Member):
@@ -99,10 +99,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         else:
             speaker_value.append(f"{self.bot.mk.speaker_term}: -")
 
-        if isinstance(self.vice_speaker, discord.Member):
+        """if isinstance(self.vice_speaker, discord.Member):
             speaker_value.append(f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention}")
         else:
-            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
+            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")"""
 
         embed.add_field(name=self.bot.mk.LEGISLATURE_CABINET_NAME, value="\n".join(speaker_value))
         embed.add_field(
@@ -971,7 +971,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to resubmit the following bills to?\n{consumer.passed_formatted}"
+            f"to resubmit the following bills?\n{consumer.passed_formatted}"
         )
 
         if not reaction:
