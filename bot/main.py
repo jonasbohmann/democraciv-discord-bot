@@ -307,15 +307,21 @@ class DemocracivBot(commands.Bot):
         DEALINGS IN THE SOFTWARE.
         """
 
-        def safe_get_role(r) -> typing.Optional[discord.Role]:
+        class MockRole:
+            name = "*Deleted Role*"
+
+        def safe_get_role(r):
             if isinstance(r, str):
                 found = discord.utils.get(ctx.guild.roles, name=r) or discord.utils.get(ctx.bot.dciv.roles, name=r)
-                if found:
-                    return found
+                return found if found else MockRole()
+
             elif isinstance(r, int):
                 found = ctx.guild.get_role(r) or ctx.bot.dciv.get_role(r)
-                if found:
-                    return found
+                return found if found else MockRole()
+
+            elif isinstance(r, mk.DemocracivRole):
+                found = ctx.guild.get_role(r.value) or ctx.bot.dciv.get_role(r.value)
+                return found if found else MockRole()
 
         missing = [f"`{safe_get_role(role).name}`" for role in missing_roles]
 
@@ -350,7 +356,7 @@ class DemocracivBot(commands.Bot):
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.BadArgument):
-            if error.args and not str(error).startswith("Convert"):  # catching default BadArgument message
+            if error.args and str(error).startswith(config.NO):  # catching default BadArgument message
                 return await ctx.send(error)
 
             await ctx.send(
@@ -361,7 +367,7 @@ class DemocracivBot(commands.Bot):
         elif isinstance(error, commands.BadUnionArgument):
             first_error = error.errors[0]
 
-            if first_error.args and not str(first_error).startswith("Convert"):  # catching default BadArgument message
+            if first_error.args and str(first_error).startswith(config.NO):  # catching default BadArgument message
                 return await ctx.send(first_error)
 
             await ctx.send(
@@ -383,7 +389,14 @@ class DemocracivBot(commands.Bot):
             )
 
         elif isinstance(error, commands.MissingRole):
-            role = ctx.guild.get_role(error.missing_role) or ctx.bot.dciv.get_role(error.missing_role)
+            if isinstance(error.missing_role, mk.DemocracivRole):
+                role_id = error.missing_role.value
+                role = ctx.guild.get_role(role_id) or self.dciv.get_role(role_id)
+            elif isinstance(error.missing_role, str):
+                role = discord.utils.get(ctx.guild.roles, name=error.missing_role) or discord.utils.get(self.dciv.roles, name=error.missing_role)
+            else:
+                role = ctx.guild.get_role(error.missing_role) or self.dciv.get_role(error.missing_role)
+
             return await ctx.send(f"{config.NO} You need the `{role.name}` role in order to use this command.")
 
         elif isinstance(error, commands.MissingAnyRole):
