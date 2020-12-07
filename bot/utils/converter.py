@@ -343,6 +343,12 @@ class DemocracivCaseInsensitiveRole(CaseInsensitiveRole):
                 if role:
                     return role
 
+                nation_arg = f"{nation_prefix[:-2]}{arg}"  # remove the '- '
+                second_try = find_dciv_role(ctx, nation_arg)
+
+                if second_try:
+                    return second_try
+
             raise BadArgument(
                 f"{config.NO} There is no role named `{argument}` on this server or the {ctx.bot.dciv.name} server."
             )
