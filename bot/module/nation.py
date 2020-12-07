@@ -16,15 +16,19 @@ class NationRoleConverter(CaseInsensitiveRole):
         if not ctx.bot.mk.NATION_ROLE_PREFIX:
             raise exceptions.DemocracivBotException(f"{config.NO} You can't use Nation Roles with this bot.")
 
-        try:
-            role = await super().convert(ctx, argument)
-        except commands.BadArgument:
-            try:
-                arg = f"{ctx.bot.mk.NATION_ROLE_PREFIX}{argument}"
-                role = await super().convert(ctx, arg)
-            except commands.BadArgument:
-                arg = f"{ctx.bot.mk.NATION_ROLE_PREFIX[:-2]}{argument}"  # remove the '- '
-                role = await super().convert(ctx, arg)
+        arg = argument.lower()
+        prefix = ctx.bot.mk.NATION_ROLE_PREFIX.lower()
+
+        if arg.startswith(prefix):
+            real_arg = arg
+
+        elif arg.startswith(prefix[:-2]):
+            real_arg = arg.replace(prefix[:-2], prefix)
+
+        else:
+            real_arg = f"{ctx.bot.mk.NATION_ROLE_PREFIX}{argument}"
+
+        role = await super().convert(ctx, real_arg)
 
         if not role.name.lower().startswith(ctx.bot.mk.NATION_ROLE_PREFIX.lower()):
             raise commands.BadArgument(f"{config.NO} You're not allowed to give someone the `{role.name}` role.")
