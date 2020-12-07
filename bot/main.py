@@ -11,6 +11,7 @@ import pickle
 
 try:
     import uvloop
+
     uvloop.install()
 except ImportError:
     pass
@@ -45,17 +46,29 @@ initial_extensions = [
     "bot.module.roles",
     "bot.module.guild",
     "bot.module.admin",
-    "bot.module.nation",
-    "bot.module.tags",
-    "bot.module.starboard",
-    "bot.module.moderation",
-    "bot.module.parties",
-    "bot.module.legislature",
-    "bot.module.laws",
-    "bot.module.ministry",
-    "bot.module.supremecourt",
-    "bot.ext.democracivbank.bank",
+    "bot.module.tags"
 ]
+
+if mk.MarkConfig.IS_NATION_BOT:
+    initial_extensions.extend(
+        [
+            "bot.module.parties",
+            "bot.module.legislature",
+            "bot.module.laws",
+            "bot.module.ministry",
+            "bot.module.supremecourt",
+            "bot.module.nation"
+        ]
+    )
+
+else:
+    initial_extensions.extend(
+        [
+            "bot.module.starboard",
+            "bot.module.moderation",
+            "bot.ext.democracivbank.bank"
+        ]
+    )
 
 # monkey patch dpy's send
 _old_send = discord.abc.Messageable.send
@@ -806,7 +819,9 @@ class DemocracivBot(commands.Bot):
         """This task makes a backup of the bot's PostgreSQL database every 24hours and uploads
         that backup to the #backup channel to the Democraciv Discord guild."""
         await self.do_db_backup(token.POSTGRESQL_DATABASE)
-        await self.do_db_backup("api_test")
+
+        if not self.mk.IS_NATION_BOT:
+            await self.do_db_backup("api_test")
 
     async def get_logging_channel(self, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
         channel = await self.get_guild_setting(guild.id, "logging_channel")

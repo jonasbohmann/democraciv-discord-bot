@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import BadArgument
 
-from bot.config import config
+from bot.config import config, mk
 from bot.utils import context, exceptions
 
 
@@ -445,7 +445,13 @@ class OwnedTag(Tag):
                 f"the server they were originally created on."
             )
 
-        if tag.author.id != ctx.author.id or not ctx.author.guild_permissions.administrator:
-            raise exceptions.TagError(f"{config.NO} That isn't your tag.")
+        if ctx.bot.mk.IS_NATION_ADMIN:
+            nation_admin = ctx.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
 
-        return tag
+            if nation_admin in ctx.author.roles:
+                return tag
+
+        if tag.author.id == ctx.author.id or ctx.author.guild_permissions.administrator:
+            return tag
+
+        raise exceptions.TagError(f"{config.NO} That isn't your tag.")
