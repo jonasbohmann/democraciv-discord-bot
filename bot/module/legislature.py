@@ -32,6 +32,22 @@ class PassScheduler(text.AnnouncementScheduler):
         return "\n".join(message)
 
 
+class SuperPassScheduler(text.AnnouncementScheduler):
+    def get_message(self) -> str:
+        message = [
+            f"{self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT).mention}, "
+            f"the following bills were **passed by the {self.bot.mk.LEGISLATURE_NAME}** with a super-majority.\n"
+        ]
+
+        for obj in self._objects:
+            message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+
+        message.append(
+            f"\nAll bills are now laws."
+        )
+        return "\n".join(message)
+
+
 class OverrideScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
         message = [
@@ -54,6 +70,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         super().__init__(bot)
         self.pass_scheduler = PassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.override_scheduler = OverrideScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+        self.superpass_scheduler = SuperPassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.illegal_tags = (
             "act",
             "the",
@@ -91,7 +108,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         embed = text.SafeEmbed()
         embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL,
-                         name=f"The {self.bot.mk.LEGISLATURE_NAME} of {self.bot.mk.NATION_FULL_NAME}")
+                         name=f"The {self.bot.mk.LEGISLATURE_NAME} of the {self.bot.mk.NATION_FULL_NAME}")
         speaker_value = []
 
         if isinstance(self.speaker, discord.Member):
@@ -357,8 +374,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
         await ctx.send(
-            f"{config.YES} Session #{active_leg_session.id} was closed. "
-            f"Check `{config.BOT_PREFIX}help {self.bot.mk.LEGISLATURE_COMMAND} pass` on what to do next."
+            f"{config.YES} Session #{active_leg_session.id} was closed.\n{config.HINT} Pass the bills that received a super-majority with "
+            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} superpass`, "
+            f"and the bills that did not with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} pass`."
         )
 
         await self.gov_announcements_channel.send(
@@ -764,6 +782,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         If the bill is veto-able, it sends the bill to the {MINISTRY_NAME}. If not, the bill automatically becomes law.
 
+        Note that if a bill passed with a super-majority, you're supposed to use `{PREFIX}{LEGISLATURE_COMMAND} superpass` instead!
+
         **Example**
             `{PREFIX}{COMMAND} 12` will mark Bill #12 as passed from the {LEGISLATURE_NAME}
             `{PREFIX}{COMMAND} 45 46 49 51 52` will mark all those bills as passed"""
@@ -1013,6 +1033,40 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         await consumer.consume()
         await ctx.send(f"{config.YES} All bills were resubmitted to the current session.")
+
+    @legislature.command(name="superpass", aliases=["sp"])
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
+    async def superpass(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
+        """Pass bills that received a super-majority in the {LEGISLATURE_NAME} into law
+
+        **Example**
+           `{PREFIX}{COMMAND} 56`
+           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
+
+        if not bill_ids:
+            return await ctx.send_help(ctx.command)
+
+        consumer = models.LegalConsumer(ctx=ctx, objects=bill_ids, action=models.BillStatus.superpass)
+        await consumer.filter()
+
+        if consumer.failed:
+            await ctx.send(
+                f":warning: The following bills cannot be passed with a super-majority.\n{consumer.failed_formatted}"
+            )
+
+        if not consumer.passed:
+            return
+
+        reaction = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
+            f"to pass the following bills with a super-majority?\n{consumer.passed_formatted}"
+        )
+
+        if not reaction:
+            return await ctx.send("Cancelled.")
+
+        await consumer.consume(scheduler=self.superpass_scheduler)
+        await ctx.send(f"{config.YES} All bills were passed with a super-majority and are now active laws.")
 
     def _format_stats(self, *, record: asyncpg.Record, record_key: str, stats_name: str) -> str:
         """Prettifies the dicts used in generate_leg_statistics() to strings"""

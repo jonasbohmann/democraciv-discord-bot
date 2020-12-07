@@ -91,16 +91,16 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
 
     @commands.group(
         name=mk.MarkConfig.MINISTRY_COMMAND,
-        aliases=["m", "min"],
+        aliases=["m", "min", "executive", "exec"],
         case_insensitive=True,
         invoke_without_command=True,
     )
     async def ministry(self, ctx):
-        """Dashboard for {minister_term} with important links and updates on new bills"""
+        """Dashboard for {minister_term}s with important links and updates on new bills"""
 
         embed = text.SafeEmbed()
         embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL,
-                         name=f"The {self.bot.mk.MINISTRY_NAME} of {self.bot.mk.NATION_FULL_NAME}")
+                         name=f"The {self.bot.mk.MINISTRY_NAME} of the {self.bot.mk.NATION_FULL_NAME}")
 
         pretty_bills = await self.get_pretty_vetoes()
 
@@ -118,10 +118,10 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         else:
             minister_value.append(f"{self.bot.mk.pm_term}: -")
 
-        if isinstance(self.lt_prime_minister, discord.Member):
+        """if isinstance(self.lt_prime_minister, discord.Member):
             minister_value.append(f"{self.bot.mk.lt_pm_term}: {self.lt_prime_minister.mention}")
         else:
-            minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
+            minister_value.append(f"{self.bot.mk.lt_pm_term}: -")"""
 
         embed.add_field(name=self.bot.mk.MINISTRY_LEADERSHIP_NAME, value="\n".join(minister_value))
         embed.add_field(

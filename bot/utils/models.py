@@ -338,6 +338,8 @@ class _BillStatusFlag(enum.Enum):
     MIN_FAILED = 3
     MIN_PASSED = 4
     REPEALED = 5
+    SUPERPASSED = 10
+    LAW = 11
 
 
 class IllegalOperation(DemocracivBotException):
@@ -426,6 +428,9 @@ class BillStatus:
     async def amend(self, *, dry=False, new_link: str):
         raise IllegalBillOperation()
 
+    async def superpass(self, *, dry=False):
+        raise IllegalBillOperation()
+
     def emojified_status(self, verbose=True):
         raise NotImplementedError()
 
@@ -469,12 +474,25 @@ class BillSubmitted(BillStatus):
         else:
             await self._bot.db.execute(
                 "UPDATE bill SET status = $1 WHERE id = $2",
-                _BillStatusFlag.MIN_PASSED.value,
+                _BillStatusFlag.LAW.value,
                 self._bill.id,
             )
 
             await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
-            await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
+            await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.LAW)
+
+    async def superpass(self, *, dry=False):
+        if dry:
+            return
+
+        await self._bot.db.execute(
+            "UPDATE bill SET status = $1 WHERE id = $2",
+            _BillStatusFlag.LAW.value,
+            self._bill.id,
+        )
+
+        await self.log_history(self.flag, _BillStatusFlag.SUPERPASSED)
+        await self.log_history(_BillStatusFlag.SUPERPASSED, _BillStatusFlag.LAW)
 
     def emojified_status(self, verbose=True):
         if verbose:
@@ -513,12 +531,25 @@ class BillFailedLegislature(BillStatus):
         else:
             await self._bot.db.execute(
                 "UPDATE bill SET status = $1 WHERE id = $2",
-                _BillStatusFlag.MIN_PASSED.value,
+                _BillStatusFlag.LAW.value,
                 self._bill.id,
             )
 
             await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
-            await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
+            await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.LAW)
+
+    async def superpass(self, *, dry=False):
+        if dry:
+            return
+
+        await self._bot.db.execute(
+            "UPDATE bill SET status = $1 WHERE id = $2",
+            _BillStatusFlag.LAW.value,
+            self._bill.id,
+        )
+
+        await self.log_history(self.flag, _BillStatusFlag.SUPERPASSED)
+        await self.log_history(_BillStatusFlag.SUPERPASSED, _BillStatusFlag.LAW)
 
     async def resubmit(self, dry=False):
         session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE is_active = true")
@@ -572,10 +603,11 @@ class BillPassedLegislature(BillStatus):
 
         await self._bot.db.execute(
             "UPDATE bill SET status = $1 WHERE id = $2",
-            _BillStatusFlag.MIN_PASSED.value,
+            _BillStatusFlag.LAW.value,
             self._bill.id,
         )
         await self.log_history(self.flag, _BillStatusFlag.MIN_PASSED)
+        await self.log_history(_BillStatusFlag.MIN_PASSED, _BillStatusFlag.LAW)
 
     def emojified_status(self, verbose=True):
         if verbose:
@@ -586,6 +618,51 @@ class BillPassedLegislature(BillStatus):
             )
 
         return f"{self.GREEN}{self.YELLOW}{self.GRAY}"
+
+
+class BillSuperPassed(BillStatus):
+    is_law = True
+    flag = _BillStatusFlag.SUPERPASSED
+    verbose_name = "Passed the Legislature with a Super-Majority"
+
+    async def repeal(self, dry=False):
+        if dry:
+            return
+
+        await self._bot.db.execute(
+            "UPDATE bill SET status = $1 WHERE id = $2",
+            _BillStatusFlag.REPEALED.value,
+            self._bill.id,
+        )
+
+        await self.log_history(self.flag, _BillStatusFlag.REPEALED)
+
+    async def amend(self, *, dry=False, new_link: str):
+        if dry:
+            return
+
+        new_tiny = await self._bot.tinyurl(new_link)
+        await self._bot.db.execute(
+            "UPDATE bill SET link = $1, tiny_link = $2 WHERE id = $3",
+            new_link,
+            new_tiny,
+            self._bill.id,
+        )
+
+    def emojified_status(self, verbose=True):
+        if verbose:
+            if self._bill.is_vetoable:
+                min = f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Passed {self._bot.mk.LEGISLATURE_NAME} with a Super-Majority)*\n"
+            else:
+                min = f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Not Veto-able)*\n"
+
+            return (
+                f"{self._bot.mk.LEGISLATURE_NAME}: {self.GREEN} *(Passed)*\n"
+                f"{min}"
+                f"Law: {self.GREEN} *(Active Law)*\n"
+            )
+
+        return f"{self.GREEN}{self.GRAY}{self.GREEN}"
 
 
 class BillVetoed(BillStatus):
@@ -599,11 +676,11 @@ class BillVetoed(BillStatus):
 
         await self._bot.db.execute(
             "UPDATE bill SET status = $1 WHERE id = $2",
-            _BillStatusFlag.MIN_PASSED.value,
+            _BillStatusFlag.LAW.value,
             self._bill.id,
         )
 
-        await self.log_history(self.flag, _BillStatusFlag.MIN_PASSED)
+        await self.log_history(self.flag, _BillStatusFlag.LAW)
 
     def emojified_status(self, verbose=True):
         if verbose:
@@ -661,7 +738,49 @@ class BillPassedMinistry(BillStatus):
         return f"{self.GREEN}{self.GREEN if self._bill.is_vetoable else self.GRAY}{self.GREEN}"
 
 
-BillIsLaw = BillPassedMinistry
+class BillIsLaw(BillStatus):
+    is_law = True
+    verbose_name = "Active Law"
+    flag = _BillStatusFlag.LAW
+
+    async def repeal(self, dry=False):
+        if dry:
+            return
+
+        await self._bot.db.execute(
+            "UPDATE bill SET status = $1 WHERE id = $2",
+            _BillStatusFlag.REPEALED.value,
+            self._bill.id,
+        )
+
+        await self.log_history(self.flag, _BillStatusFlag.REPEALED)
+
+    async def amend(self, *, dry=False, new_link: str):
+        if dry:
+            return
+
+        new_tiny = await self._bot.tinyurl(new_link)
+        await self._bot.db.execute(
+            "UPDATE bill SET link = $1, tiny_link = $2 WHERE id = $3",
+            new_link,
+            new_tiny,
+            self._bill.id,
+        )
+
+    def emojified_status(self, verbose=True):
+        if verbose:
+            if self._bill.is_vetoable:
+                min = f"{self._bot.mk.MINISTRY_NAME}: {self.GREEN} *(Passed)*\n"
+            else:
+                min = f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Not Veto-able)*\n"
+
+            return (
+                f"{self._bot.mk.LEGISLATURE_NAME}: {self.GREEN} *(Passed)*\n"
+                f"{min}"
+                f"Law: {self.GREEN} *(Active Law)*\n"
+            )
+
+        return f"{self.GREEN}{self.GREEN if self._bill.is_vetoable else self.GRAY}{self.GREEN}"
 
 
 class BillRepealed(BillStatus):
