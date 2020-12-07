@@ -1005,11 +1005,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-<<<<<<< HEAD
-            f"to resubmit the following bills?\n{consumer.passed_formatted}"
-=======
             f"to resubmit the following bills to the current session?\n{consumer.passed_formatted}"
->>>>>>> master
         )
 
         if not reaction:
