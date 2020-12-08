@@ -39,13 +39,8 @@ class GovernmentMixin:
             formatted.append(obj.formatted)
 
         if model is models.Law:
-<<<<<<< HEAD
             title = f"All Laws in the {self.bot.mk.NATION_FULL_NAME}"
-            empty_message = f"There are now laws yet."
-=======
-            title = f"All Laws in {self.bot.mk.NATION_NAME}"
             empty_message = f"There are no laws yet."
->>>>>>> master
         else:
             title = f"All Submitted {model.__name__}s"
             empty_message = f"No one has submitted any {model.__name__.lower()}s yet."
