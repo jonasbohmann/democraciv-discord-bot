@@ -200,7 +200,7 @@ class Starboard(context.CustomCog):
         grouped_stars = self.group_starred_messages_by_day(new_starred_messages)
 
         msg = "Posting last week's starboard to Reddit..."
-        channel = await self.bot.get_channel(config.BOT_TECHNICAL_NOTIFICATIONS_CHANNEL)
+        channel = self.bot.get_channel(config.BOT_TECHNICAL_NOTIFICATIONS_CHANNEL)
 
         if channel:
             await channel.send(embed=text.SafeEmbed(title=msg))
