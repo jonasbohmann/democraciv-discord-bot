@@ -71,7 +71,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw").remove_command("motion")
 
     @commands.group(
-        name=mk.MarkConfig.LEGISLATURE_NAME.lower(),
+        name=mk.MarkConfig.LEGISLATURE_COMMAND.lower(),
         aliases=["leg", "legislature"],
         case_insensitive=True,
         invoke_without_command=True,
