@@ -100,7 +100,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
 
         embed = text.SafeEmbed()
         embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL,
-                         name=f"The {self.bot.mk.MINISTRY_NAME} of {self.bot.mk.NATION_FULL_NAME}")
+                         name=f"The {self.bot.mk.MINISTRY_NAME} of the {self.bot.mk.NATION_FULL_NAME}")
 
         pretty_bills = await self.get_pretty_vetoes()
 
@@ -207,4 +207,6 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
 
 
 def setup(bot):
-    bot.add_cog(Ministry(bot))
+    # ottomans dont have an executive veto
+    # bot.add_cog(Ministry(bot))
+    pass

@@ -92,7 +92,8 @@ CREATE TABLE IF NOT EXISTS bill(
     submitter bigint NOT NULL,
     submitter_description text NOT NULL,
     is_vetoable bool NOT NULL,
-    status int DEFAULT 0 NOT NULL
+    status int DEFAULT 0 NOT NULL,
+    ottoman_id text
 );
 
 CREATE TABLE IF NOT EXISTS bill_history(

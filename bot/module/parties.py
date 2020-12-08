@@ -433,7 +433,7 @@ class Party(context.CustomCog, name="Political Parties"):
             description=f"[Party Platforms]({self.bot.mk.POLITICAL_PARTIES})\n\n{party_list_embed_content}",
         )
 
-        embed.set_author(name=f"Ranking of Political Parties in {self.bot.mk.NATION_NAME}",
+        embed.set_author(name=f"Ranking of Political Parties in the {self.bot.mk.NATION_NAME}",
                          icon_url=self.bot.mk.NATION_ICON_URL)
 
         embed.set_footer(text=f"For more information about a party, use: {config.BOT_PREFIX}party <party>")

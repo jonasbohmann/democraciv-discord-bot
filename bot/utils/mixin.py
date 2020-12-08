@@ -39,7 +39,7 @@ class GovernmentMixin:
             formatted.append(obj.formatted)
 
         if model is models.Law:
-            title = f"All Laws in {self.bot.mk.NATION_NAME}"
+            title = f"All Laws in the {self.bot.mk.NATION_FULL_NAME}"
             empty_message = f"There are now laws yet."
         else:
             title = f"All Submitted {model.__name__}s"
@@ -68,7 +68,7 @@ class GovernmentMixin:
         if isinstance(obj, models.Bill):
             is_vetoable = "Yes" if obj.is_vetoable else "No"
 
-            embed.add_field(name="Veto-able", value=is_vetoable, inline=True)
+            # embed.add_field(name="Veto-able", value=is_vetoable, inline=True)
             embed.add_field(
                 name="Status",
                 value=obj.status.emojified_status(verbose=True),
@@ -76,6 +76,9 @@ class GovernmentMixin:
             )
 
             history = [f"{entry.date.strftime('%d %b %y')} - {entry.after}" for entry in obj.history[:3]]
+
+            if obj.ottoman_id:
+                embed.add_field(name="Ottoman ID", value=obj.ottoman_id, inline=False)
 
             if history:
                 embed.add_field(name="History", value="\n".join(history))

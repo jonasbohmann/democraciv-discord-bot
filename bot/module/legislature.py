@@ -26,8 +26,7 @@ class PassScheduler(text.AnnouncementScheduler):
                 message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>)")
 
         message.append(
-            f"\nAll non veto-able bills are now laws (marked as __underlined__), "
-            f"the others were sent to the {self.bot.mk.MINISTRY_NAME}."
+            f"\nAll bills are now laws."
         )
         return "\n".join(message)
 
@@ -91,7 +90,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         embed = text.SafeEmbed()
         embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL,
-                         name=f"The {self.bot.mk.LEGISLATURE_NAME} of {self.bot.mk.NATION_FULL_NAME}")
+                         name=f"The {self.bot.mk.LEGISLATURE_NAME} of the {self.bot.mk.NATION_FULL_NAME}")
         speaker_value = []
 
         if isinstance(self.speaker, discord.Member):
@@ -540,10 +539,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             ctx.command.reset_cooldown(ctx)
             return
 
+        """
         # Vetoable
         is_vetoable = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Is the {self.bot.mk.MINISTRY_NAME} legally allowed to vote on (veto) this bill?"
-        )
+        )"""
+
+        is_vetoable = False
 
         bill_description = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with a **short** description of what your bill does.",
@@ -593,10 +595,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             embed.add_field(name="Title", value=name, inline=False)
             embed.add_field(name="Author", value=ctx.message.author.name, inline=False)
             embed.add_field(name="Session", value=current_leg_session_id)
-            embed.add_field(
-                name=f"{self.bot.mk.MINISTRY_NAME} Veto Allowed",
-                value="Yes" if is_vetoable else "No",
-            )
+            #embed.add_field(
+            #    name=f"{self.bot.mk.MINISTRY_NAME} Veto Allowed",
+            #    value="Yes" if is_vetoable else "No",
+            #)
             embed.add_field(
                 name="Time of Submission (UTC)",
                 value=datetime.datetime.utcnow(),
@@ -755,9 +757,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     @legislature.command(name="pass", aliases=["p"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def pass_bill(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Mark one or multiple bills as passed from the {LEGISLATURE_NAME}
-
-        If the bill is veto-able, it sends the bill to the {MINISTRY_NAME}. If not, the bill automatically becomes law.
+        """Mark one or multiple bills as passed from the {LEGISLATURE_NAME} to pass them into law
 
         **Example**
             `{PREFIX}{COMMAND} 12` will mark Bill #12 as passed from the {LEGISLATURE_NAME}
@@ -940,7 +940,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         await self.withdraw_objects(ctx, motion_ids)
 
-    @legislature.command(name="override", aliases=["ov"])
+    @legislature.command(name="override", aliases=["ov"], enabled=False)
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def override(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Override the veto of one or multiple bills to pass them into law
@@ -978,7 +978,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     @legislature.command(name="resubmit", aliases=["rs"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def resubmit(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Resubmit any bills that failed in the {LEGISLATURE_NAME} or {MINISTRY_NAME} to the currently active session
+        """Resubmit any bills that failed in the {LEGISLATURE_NAME} to the currently active session
 
         **Example**
            `{PREFIX}{COMMAND} 56`

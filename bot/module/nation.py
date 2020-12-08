@@ -114,7 +114,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         """{NATION_NAME}"""
 
         description = ""
-        nation_wiki = self.bot.mk.NATION_NAME.lower()
+        nation_wiki = "ottoman"
 
         embed = text.SafeEmbed(description=f"{description}\n\n[Constitution]({self.bot.mk.CONSTITUTION})\n"
                                            f"[Wiki](https://reddit.com/r/democraciv/wiki/{nation_wiki})")

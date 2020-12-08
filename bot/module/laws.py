@@ -74,6 +74,9 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
 
         embed.add_field(name="Author", value=submitted_by_value, inline=False)
 
+        if law.ottoman_id:
+            embed.add_field(name="Ottoman ID", value=law.ottoman_id, inline=False)
+
         history = [f"{entry.date.strftime('%d %b %y')} - {entry.after}" for entry in law.history[:3]]
 
         if history:
@@ -107,7 +110,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             f"{config.YES} I will generate an up-to-date Legal Code."
             f"\n:arrows_counterclockwise: This may take a few minutes..."
         )
-
+        # todo
         async with ctx.typing():
             all_laws = await self.bot.db.fetch(
                 "SELECT id, name, link FROM bill WHERE status = $1 ORDER BY id;",
@@ -211,6 +214,29 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         law = await models.Law.convert(ctx, law.id)
         self.amend_scheduler.add(law)
         await ctx.send(f"{config.YES} The link to `{law.name}` was changed.")
+
+    @law.command(name="setid", aliases=["si", "setottomanid"])
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
+    async def set_ottoman_id(self, ctx, law_id: models.Law, *, ottoman_id: str):
+        """Set a nation-specific ID of a law
+
+        **Example**:
+            `{PREFIX}{COMMAND} 16 OTTOMAN-A-23-X`
+            `{PREFIX}{COMMAND} 52 OTTOMAN-C-01-Y`
+        """
+
+        law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
+
+        reaction = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to set the "
+            f"*Ottoman ID* of `{law.name}` (#{law.id}) to `{ottoman_id}`?"
+        )
+
+        if not reaction:
+            return await ctx.send("Cancelled.")
+
+        await self.bot.db.execute("UPDATE bill SET ottoman_id = $2 WHERE id = $1", law.id, ottoman_id)
+        await ctx.send(f"{config.YES} The ID for `{law.name}` was set.")
 
 
 def setup(bot):
