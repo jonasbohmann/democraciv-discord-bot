@@ -15,7 +15,7 @@ from bot.utils.models import Bill, Session, Motion, SessionStatus
 class PassScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
         message = [
-            f"{self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER).mention}, "
+            f"{self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT).mention}, "
             f"the following bills were **passed by the {self.bot.mk.LEGISLATURE_NAME}**.\n"
         ]
 
