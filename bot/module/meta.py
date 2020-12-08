@@ -38,7 +38,7 @@ class EditDMSettingsMenu(menus.Menu):
                         f":five:  -  {self.emojify_settings(self.result.result['leg_session_withdraw'])} "
                         f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when "
                         f"someone withdraws a Bill or Motion\n"
-                        f":six:  -  {self.emojify_settings(self.result.result['party_join_leave'])} *(Party Leaders Only)* DM when someone joins or leaves your political party\n"
+                        f":six:  -  {self.emojify_settings(self.result.result['party_join_leave'])} *(Faction Leaders Only)* DM when someone joins or leaves your religious faction\n"
         )
         embed.set_author(name=self.ctx.author, icon_url=self.ctx.author_icon)
         return embed

@@ -114,10 +114,10 @@ class PoliticalParty(commands.Converter):
 
             if msg:
                 msg = ', '.join(msg)
-                message = f"{config.NO} There is no political party that matches `{argument}`.\n" \
+                message = f"{config.NO} There is no religious faction that matches `{argument}`.\n" \
                           f"{config.HINT} Try one of these: {msg}"
             else:
-                message = f"{config.NO} There is no political party that matches `{argument}`."
+                message = f"{config.NO} There is no religious faction that matches `{argument}`."
 
             raise exceptions.NotFoundError(message)
 

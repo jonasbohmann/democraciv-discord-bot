@@ -55,8 +55,8 @@ if mk.MarkConfig.IS_NATION_BOT:
             "bot.module.parties",
             "bot.module.legislature",
             "bot.module.laws",
-            "bot.module.ministry",
-            "bot.module.supremecourt",
+            #"bot.module.ministry",
+            #"bot.module.supremecourt",
             "bot.module.nation"
         ]
     )
