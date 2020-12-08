@@ -541,7 +541,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
         if not self.is_google_doc_link(google_docs_url):
-            await ctx.send("{config.NO} That doesn't look like a Google Docs URL.")
+            await ctx.send(f"{config.NO} That doesn't look like a Google Docs URL.")
             ctx.command.reset_cooldown(ctx)
             return
 
