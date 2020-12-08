@@ -370,6 +370,8 @@ class BillStatus:
             3: BillVetoed,
             4: BillPassedMinistry,
             5: BillRepealed,
+            10: BillSuperPassed,
+            11: BillIsLaw
         }
 
         return translation[flag]
