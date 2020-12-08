@@ -148,10 +148,10 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             self,
             ctx,
             *,
-            member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty] = None,
+            member_or_faction: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty] = None,
     ):
-        """List the laws a specific person or Political Party authored"""
-        return await self._from_person_model(ctx, model=models.Law, member_or_party=member_or_party)
+        """List the laws a specific person or Religious Faction authored"""
+        return await self._from_person_model(ctx, model=models.Law, member_or_party=member_or_faction)
 
     @law.command(name="search", aliases=["s"])
     async def search(self, ctx, *, query: str):

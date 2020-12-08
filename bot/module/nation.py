@@ -132,7 +132,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
             pass
 
         parties = await self.bot.db.fetchval("SELECT COUNT(id) FROM party")
-        embed.add_field(name="Political Parties", value=parties)
+        embed.add_field(name="Religious Factions", value=parties)
 
         if isinstance(self.speaker, discord.Member):
             speaker = f"{self.bot.mk.speaker_term}: {self.speaker.mention}"
@@ -161,8 +161,8 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         embed = text.SafeEmbed(description=f"Nation Admins are allowed to make roles and "
                                            f"channels on the {self.bot.dciv.name} server that are "
                                            f"specific for their nation (`{p}help Nation`).\n\nAdditionally, they are "
-                                           f"allowed to create, edit and delete political parties "
-                                           f"(`{p}help Political Parties`).\n\nNation Admins can also pin messages "
+                                           f"allowed to create, edit and delete religious factions "
+                                           f"(`{p}help Religion`).\n\nNation Admins can also pin messages "
                                            f"in every category that belongs to their nation.")
 
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)

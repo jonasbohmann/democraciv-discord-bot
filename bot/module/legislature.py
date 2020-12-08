@@ -15,19 +15,16 @@ from bot.utils.models import Bill, Session, Motion, SessionStatus
 class PassScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
         message = [
-            f"{self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER).mention}, "
+            f"{self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT).mention}, "
             f"the following bills were **passed by the {self.bot.mk.LEGISLATURE_NAME}**.\n"
         ]
 
         for obj in self._objects:
-            if obj.is_vetoable:
-                message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
-            else:
-                message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>)")
+            message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
 
         message.append(
-            f"\nAll non veto-able bills are now laws (marked as __underlined__), "
-            f"the others were sent to the {self.bot.mk.MINISTRY_NAME}."
+            f"\nAll bills are now laws and can be found in `{config.BOT_PREFIX}laws` as well "
+            f"as in `{config.BOT_PREFIX}laws search`."
         )
         return "\n".join(message)
 
@@ -48,7 +45,7 @@ class OverrideScheduler(text.AnnouncementScheduler):
 
 
 class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.LEGISLATURE_NAME):
-    """Allows the Government to organize {LEGISLATURE_ADJECTIVE} sessions and their submitted bills"""
+    """Allows the {LEGISLATURE_NAME} to organize {LEGISLATURE_ADJECTIVE} sessions and their submitted bills"""
 
     def __init__(self, bot):
         super().__init__(bot)
@@ -75,7 +72,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
     @commands.group(
         name=mk.MarkConfig.LEGISLATURE_NAME.lower(),
-        aliases=["leg"],
+        aliases=["leg", "legislature", "sen"],
         case_insensitive=True,
         invoke_without_command=True,
     )
@@ -99,10 +96,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         else:
             speaker_value.append(f"{self.bot.mk.speaker_term}: -")
 
-        if isinstance(self.vice_speaker, discord.Member):
+        """if isinstance(self.vice_speaker, discord.Member):
             speaker_value.append(f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention}")
         else:
-            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
+            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")"""
 
         embed.add_field(name=self.bot.mk.LEGISLATURE_CABINET_NAME, value="\n".join(speaker_value))
         embed.add_field(
@@ -148,11 +145,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             self,
             ctx: context.CustomContext,
             *,
-            member_or_party: typing.Union[
+            member_or_faction: typing.Union[
                 converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty] = None,
     ):
-        """List all bills that a specific person or Political Party submitted"""
-        return await self._from_person_model(ctx, member_or_party=member_or_party, model=models.Bill)
+        """List all bills that a specific person or Religious Faction submitted"""
+        return await self._from_person_model(ctx, member_or_party=member_or_faction, model=models.Bill)
 
     @legislature.group(
         name="motion",
@@ -173,11 +170,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             self,
             ctx: context.CustomContext,
             *,
-            member_or_party: typing.Union[
+            member_or_faction: typing.Union[
                 converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty] = None,
     ):
-        """List all motions that a specific person or Political Party submitted"""
-        return await self._from_person_model(ctx, model=models.Motion, member_or_party=member_or_party)
+        """List all motions that a specific person or Religious Faction submitted"""
+        return await self._from_person_model(ctx, model=models.Motion, member_or_party=member_or_faction)
 
     @motion.command(name="search", aliases=["s"])
     async def m_search(self, ctx: context.CustomContext, *, query: str):
@@ -541,14 +538,16 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
         if not self.is_google_doc_link(google_docs_url):
-            await ctx.send("{config.NO} That doesn't look like a Google Docs URL.")
+            await ctx.send(f"{config.NO} That doesn't look like a Google Docs URL.")
             ctx.command.reset_cooldown(ctx)
             return
 
-        # Vetoable
+        """# Vetoable
         is_vetoable = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Is the {self.bot.mk.MINISTRY_NAME} legally allowed to vote on (veto) this bill?"
-        )
+        )"""
+
+        is_vetoable = False
 
         bill_description = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with a **short** description of what your bill does.",
@@ -598,10 +597,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             embed.add_field(name="Title", value=name, inline=False)
             embed.add_field(name="Author", value=ctx.message.author.name, inline=False)
             embed.add_field(name="Session", value=current_leg_session_id)
-            embed.add_field(
+            """embed.add_field(
                 name=f"{self.bot.mk.MINISTRY_NAME} Veto Allowed",
                 value="Yes" if is_vetoable else "No",
-            )
+            )"""
             embed.add_field(
                 name="Time of Submission (UTC)",
                 value=datetime.datetime.utcnow(),
@@ -760,9 +759,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     @legislature.command(name="pass", aliases=["p"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def pass_bill(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Mark one or multiple bills as passed from the {LEGISLATURE_NAME}
-
-        If the bill is veto-able, it sends the bill to the {MINISTRY_NAME}. If not, the bill automatically becomes law.
+        """Mark one or multiple bills as passed from the {LEGISLATURE_NAME} to pass them into law
 
         **Example**
             `{PREFIX}{COMMAND} 12` will mark Bill #12 as passed from the {LEGISLATURE_NAME}
@@ -797,7 +794,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             return await ctx.send("Cancelled.")
 
         await consumer.consume(scheduler=self.pass_scheduler)
-        await ctx.send(f"{config.YES} All bills were marked as passed from the {self.bot.mk.LEGISLATURE_NAME}.")
+        await ctx.send(f"{config.YES} All bills were marked as passed from the {self.bot.mk.LEGISLATURE_NAME} and are now active law.")
 
     @legislature.group(name="withdraw", aliases=["w"], hidden=True)
     @checks.is_democraciv_guild()
@@ -945,7 +942,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         await self.withdraw_objects(ctx, motion_ids)
 
-    @legislature.command(name="override", aliases=["ov"])
+    @legislature.command(name="override", aliases=["ov"], enabled=False)
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def override(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Override the veto of one or multiple bills to pass them into law
