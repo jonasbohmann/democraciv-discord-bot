@@ -176,7 +176,7 @@ class Bill(commands.Converter):
             bill = await ctx.bot.db.fetchrow("SELECT * FROM bill WHERE id = $1", argument)
         except ValueError:
             bill = await ctx.bot.db.fetchrow(
-                "SELECT * FROM bill WHERE" " lower(name) = $2 or link = $1 or tiny_link = $1",
+                "SELECT * FROM bill WHERE lower(name) = $2 or link = $1 or tiny_link = $1 or lower(ottoman_id) = $2",
                 argument,
                 argument.lower(),
             )

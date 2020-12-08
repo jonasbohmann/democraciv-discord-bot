@@ -78,7 +78,7 @@ class GovernmentMixin:
             history = [f"{entry.date.strftime('%d %b %y')} - {entry.after}" for entry in obj.history[:3]]
 
             if obj.ottoman_id:
-                embed.add_field(name="Ottoman ID", value=obj.ottoman_id, inline=False)
+                embed.add_field(name="Code", value=obj.ottoman_id, inline=False)
 
             if history:
                 embed.add_field(name="History", value="\n".join(history))
@@ -192,15 +192,16 @@ class GovernmentMixin:
 
         if search_laws:
             objs = await con.fetch(
-                "SELECT id FROM bill WHERE lower(name) LIKE '%' || $1 || '%' AND status = $2"
-                " ORDER BY similarity(lower(name), $1) DESC LIMIT 10;",
+                "SELECT id FROM bill WHERE lower(name) LIKE '%' || $1 || '%' OR lower(ottoman_id) LIKE '%' || $1 || '%' "
+                "AND status = $2 "
+                "ORDER BY similarity(lower(name), $1) DESC LIMIT 10;",
                 name.lower(),
                 models.BillIsLaw.flag.value,
             )
         else:
             objs = await con.fetch(
-                "SELECT id FROM bill WHERE lower(name) LIKE '%' || $1 || '%'"
-                " ORDER BY similarity(lower(name), $1) DESC LIMIT 10;",
+                "SELECT id FROM bill WHERE lower(name) LIKE '%' || $1 || '%' OR lower(ottoman_id) LIKE '%' || $1 || '%' "
+                "ORDER BY similarity(lower(name), $1) DESC LIMIT 10;",
                 name.lower(),
             )
 

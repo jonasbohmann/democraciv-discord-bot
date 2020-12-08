@@ -20,10 +20,8 @@ class PassScheduler(text.AnnouncementScheduler):
         ]
 
         for obj in self._objects:
-            if obj.is_vetoable:
-                message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
-            else:
-                message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>)")
+            code = obj.ottoman_id if obj.ottoman_id else ""
+            message.append(f"- **{obj.name}** {code} (<{obj.tiny_link}>)")
 
         message.append(
             f"\nAll bills are now laws."

@@ -21,7 +21,8 @@ class RepealScheduler(text.AnnouncementScheduler):
         ]
 
         for obj in self._objects:
-            message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+            code = obj.ottoman_id if obj.ottoman_id else ""
+            message.append(f"-  **{obj.name}** {code} (<{obj.tiny_link}>)")
 
         return "\n".join(message)
 
@@ -31,7 +32,8 @@ class AmendScheduler(text.AnnouncementScheduler):
         message = [f"The links to the following laws were changed by the {self.bot.mk.LEGISLATURE_CABINET_NAME}.\n"]
 
         for obj in self._objects:
-            message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+            code = obj.ottoman_id if obj.ottoman_id else ""
+            message.append(f"-  **{obj.name}** {code} (<{obj.tiny_link}>)")
 
         return "\n".join(message)
 
@@ -75,7 +77,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         embed.add_field(name="Author", value=submitted_by_value, inline=False)
 
         if law.ottoman_id:
-            embed.add_field(name="Ottoman ID", value=law.ottoman_id, inline=False)
+            embed.add_field(name="Code", value=law.ottoman_id, inline=False)
 
         history = [f"{entry.date.strftime('%d %b %y')} - {entry.after}" for entry in law.history[:3]]
 
@@ -113,7 +115,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         # todo
         async with ctx.typing():
             all_laws = await self.bot.db.fetch(
-                "SELECT id, name, link FROM bill WHERE status = $1 ORDER BY id;",
+                "SELECT id, name, link, ottoman_id FROM bill WHERE status = $1 ORDER BY id;",
                 models.BillIsLaw.flag.value,
             )
             ugly_laws = [dict(r) for r in all_laws]
@@ -215,10 +217,10 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         self.amend_scheduler.add(law)
         await ctx.send(f"{config.YES} The link to `{law.name}` was changed.")
 
-    @law.command(name="setid", aliases=["si", "setottomanid"])
+    @law.command(name="code", aliases=["setcode"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
-    async def set_ottoman_id(self, ctx, law_id: models.Law, *, ottoman_id: str):
-        """Set a nation-specific ID of a law
+    async def set_ottoman_id(self, ctx, law_id: models.Law, *, code: str):
+        """Set the nation-specific code of a law
 
         **Example**:
             `{PREFIX}{COMMAND} 16 OTTOMAN-A-23-X`
@@ -229,14 +231,14 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to set the "
-            f"*Ottoman ID* of `{law.name}` (#{law.id}) to `{ottoman_id}`?"
+            f"code of `{law.name}` (#{law.id}) to `{code}`?"
         )
 
         if not reaction:
             return await ctx.send("Cancelled.")
 
-        await self.bot.db.execute("UPDATE bill SET ottoman_id = $2 WHERE id = $1", law.id, ottoman_id)
-        await ctx.send(f"{config.YES} The ID for `{law.name}` was set.")
+        await self.bot.db.execute("UPDATE bill SET ottoman_id = $2 WHERE id = $1", law.id, code)
+        await ctx.send(f"{config.YES} The code for `{law.name}` was set.")
 
 
 def setup(bot):
