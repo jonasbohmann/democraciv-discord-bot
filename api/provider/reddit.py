@@ -27,6 +27,7 @@ class RedditManager(ProviderManager):
         super().__init__(db=db)
         self._webhooks: typing.Dict[str, SubredditScraper] = {}
         self._get_token()
+        self._loop.create_task(self.refresh_reddit_bearer_token())
 
     def _get_token(self):
         with open("api/token.json", "r") as token_file:
@@ -143,8 +144,10 @@ class RedditPost:
         self.timestamp = datetime.datetime.utcfromtimestamp(self._created_utc)
 
     def to_embed(self):
-        e = Embed(title=f"<:reddit:660114002533285888>   New post on r/{self.subreddit}", colour=16723228)
-        e.add_field(name="Thread", value=f"[{self.title}]({self.link})", inline=False)
+        # old colour 16723228
+        e = Embed(title=self.title, url=self.link, colour=0x1B1C20)
+        e.set_author(name=f"New post on r/{self.subreddit}",
+                     icon_url="https://cdn.discordapp.com/attachments/730898526040752291/781547428087201792/Reddit_Mark_OnWhite.png")
         e.add_field(name="Author", value=f"u/{self.author}", inline=False)
         return e.to_dict()
 
