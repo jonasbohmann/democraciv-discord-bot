@@ -40,7 +40,7 @@ class GovernmentMixin:
 
         if model is models.Law:
             title = f"All Laws in {self.bot.mk.NATION_NAME}"
-            empty_message = f"There are now laws yet."
+            empty_message = f"There are no laws yet."
         else:
             title = f"All Submitted {model.__name__}s"
             empty_message = f"No one has submitted any {model.__name__.lower()}s yet."
