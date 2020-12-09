@@ -3,6 +3,7 @@ import datetime
 import asyncpg
 import discord
 import typing
+import re
 
 from discord.ext import commands
 from discord.ext.commands import Greedy
@@ -49,6 +50,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
     def __init__(self, bot):
         super().__init__(bot)
+        self.email_regex = re.compile(r"[^@]+@[^@]+\.[^@]+")
         self.pass_scheduler = PassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.override_scheduler = OverrideScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.illegal_tags = (
@@ -64,6 +66,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             "d/m/y",
             "type",
             "description",
+            "by"
         )
 
         if not self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
@@ -519,6 +522,44 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         """View a history of all previous sessions of the {LEGISLATURE_NAME}"""
         return await self.paginate_all_sessions(ctx)
 
+    async def make_google_docs_bill(self, ctx):
+        name = await ctx.input(f"{config.YES} I will make a Google Docs document for you instead.\n"
+                               f"{config.USER_INTERACTION_REQUIRED} Reply with the **name** of the bill you want to submit.")
+
+        text = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the **text** of your bill.\n\n"
+                               f"{config.HINT} As Discord messages have a limit of 2000 characters, this will "
+                               f"only work for smaller bills. If your bill is longer than that, "
+                               f"you will need to make the Google Docs document yourself.\n"
+                               f"{config.HINT} *This will timeout after 10 minutes of no response from you.*",
+                               timeout=600)
+
+        email = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the **email address** "
+                                f"of your Google Account if I should transfer ownership of the document to you. "
+                                f"If not, just reply with gibberish.", delete_after=True)
+
+        if not self.email_regex.fullmatch(email):
+            email = "No Email"
+
+        author = f"{ctx.author.display_name} ({ctx.author})"
+
+        async with ctx.typing():
+            result = await self.bot.run_apps_script(script_id="M_fLh3UOUzLzW873Z7VZ1emqnXKElby-M",
+                                                    function="make_google_doc",
+                                                    parameters=[name, text, email, author])
+
+            link = result["response"]["result"]["view"]
+            fixed_link = link.replace("open?id=", "document/d/")
+            fixed_link = f"{fixed_link}/edit"
+
+            if "share_error" in result["response"]["result"]:
+                await ctx.send(f"{config.NO} There was an error while setting the link of your "
+                               f"Google Docs document to public. Unfortunately this error just sometimes happens "
+                               f"on Google's side, and there is nothing I can do to circumvent it.\n"
+                               f"Please set the link to public by yourself, or otherwise no one else can "
+                               f"view your bill: <{fixed_link}>")
+
+            return fixed_link
+
     async def submit_bill(
             self, ctx: context.CustomContext, current_leg_session_id: int
     ) -> typing.Optional[discord.Embed]:
@@ -529,13 +570,19 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         # Google Docs Link
         google_docs_url = await ctx.input(
             f"{config.YES} You will submit a **bill**.\n"
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the Google Docs link to the bill you want to submit."
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the Google Docs link to the bill you want to submit.\n\n"
+            f"{config.HINT} If you don't have your bill in a Google Docs document but instead just as text, "
+            f"reply with gibberish to make me generate a Google Docs document for you."
         )
 
         if not self.is_google_doc_link(google_docs_url):
+<<<<<<< HEAD
             await ctx.send(f"{config.NO} That doesn't look like a Google Docs URL.")
             ctx.command.reset_cooldown(ctx)
             return
+=======
+            google_docs_url = await self.make_google_docs_bill(ctx)
+>>>>>>> master
 
         """
         # Vetoable
