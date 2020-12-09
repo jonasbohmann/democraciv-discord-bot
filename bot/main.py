@@ -43,7 +43,6 @@ initial_extensions = [
     "bot.module.logging",
     "bot.module.meta",
     "bot.module.utility",
-    "bot.module.roles",
     "bot.module.guild",
     "bot.module.admin",
     "bot.module.tags"
@@ -66,7 +65,8 @@ else:
         [
             "bot.module.starboard",
             "bot.module.moderation",
-            "bot.ext.democracivbank.bank"
+            "bot.ext.democracivbank.bank",
+            "bot.module.roles"
         ]
     )
 

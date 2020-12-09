@@ -78,6 +78,14 @@ class EditTagMenu(menus.Menu):
 class Tags(context.CustomCog):
     """Create tags for later retrieval of text, images & links. Tags are accessed with the bot's prefix."""
 
+    def __init__(self, bot):
+        super().__init__(bot)
+        self.emoji_pattern = re.compile(r"<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>")
+        self.discord_invite_pattern = re.compile(r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
+        self.url_pattern = re.compile(
+            r"((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*"
+        )
+
     @commands.group(
         name="tag",
         aliases=["tags", "t"],
@@ -618,14 +626,7 @@ class Tags(context.CustomCog):
                 )
                 await ctx.send(f"{config.YES} `{config.BOT_PREFIX}{tag.name}` was removed.")
 
-    @staticmethod
-    def get_tag_content_type(tag_content: str) -> TagContentType:
-        emoji_pattern = re.compile(r"<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>")
-        discord_invite_pattern = re.compile(r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
-        url_pattern = re.compile(
-            r"((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*"
-        )
-
+    def get_tag_content_type(self, tag_content: str) -> TagContentType:
         url_endings_image = (
             ".jpeg",
             ".jpg",
@@ -638,22 +639,22 @@ class Tags(context.CustomCog):
         )
         url_endings_video = (".avi", ".mp4", ".mp3", ".mov", ".flv", ".wmv")
 
-        if url_pattern.fullmatch(tag_content) and (tag_content.lower().endswith(url_endings_image)):
+        if self.url_pattern.fullmatch(tag_content) and (tag_content.lower().endswith(url_endings_image)):
             return TagContentType.IMAGE
 
-        elif url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings_image)):
+        elif self.url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings_image)):
             return TagContentType.PARTIAL_IMAGE
 
-        elif url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings_video)):
+        elif self.url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings_video)):
             return TagContentType.VIDEO
 
         elif any(s in tag_content for s in ["youtube", "youtu.be", "tenor.com", "gph.is", "giphy.com"]):
             return TagContentType.YOUTUBE_TENOR_GIPHY
 
-        elif emoji_pattern.fullmatch(tag_content):
+        elif self.emoji_pattern.fullmatch(tag_content):
             return TagContentType.CUSTOM_EMOJI
 
-        elif discord_invite_pattern.match(tag_content):
+        elif self.discord_invite_pattern.match(tag_content):
             return TagContentType.INVITE
 
         return TagContentType.TEXT

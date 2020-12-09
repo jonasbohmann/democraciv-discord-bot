@@ -79,6 +79,7 @@ class Party(context.CustomCog, name="Religions"):
     def __init__(self, bot):
         super().__init__(bot)
         self._party_lock = asyncio.Lock()
+        self.discord_invite_pattern = re.compile(r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
 
     async def collect_parties_and_members(self) -> typing.List[typing.Tuple[str, int]]:
         """Returns all parties with a role on the Democraciv server and their amount of members for -members."""
@@ -517,8 +518,8 @@ class Party(context.CustomCog, name="Religions"):
                 f"If they don't have one, just reply with gibberish."
             )
 
-            discord_invite_pattern = re.compile(r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
-            if not discord_invite_pattern.fullmatch(party_invite):
+
+            if not self.discord_invite_pattern.fullmatch(party_invite):
                 party_invite = "None"
 
             result['invite'] = party_invite
