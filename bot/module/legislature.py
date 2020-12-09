@@ -584,13 +584,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
         if not self.is_google_doc_link(google_docs_url):
-<<<<<<< HEAD
-            await ctx.send(f"{config.NO} That doesn't look like a Google Docs URL.")
-            ctx.command.reset_cooldown(ctx)
-            return
-=======
             google_docs_url = await self.make_google_docs_bill(ctx)
->>>>>>> master
 
         # Vetoable
         is_vetoable = await ctx.confirm(
