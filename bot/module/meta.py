@@ -262,7 +262,9 @@ class Meta(context.CustomCog):
                         f"\n\n{' '.join(description_text)}",
         )
 
-        embed.add_field(name="\u200b", value=" ".join(field_text))
+        if field_text:
+            embed.add_field(name="\u200b", value=" ".join(field_text))
+
         await ctx.send(embed=embed)
 
     @commands.command(name="addme", aliases=["inviteme", "invite"])
