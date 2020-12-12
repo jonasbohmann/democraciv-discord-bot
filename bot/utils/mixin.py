@@ -294,11 +294,17 @@ class GovernmentMixin:
 
     @property
     def speaker_role(self) -> typing.Optional[discord.Role]:
-        return self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER)
+        try:
+            return self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER)
+        except exceptions.RoleNotFoundError:
+            return None
 
     @property
     def vice_speaker_role(self) -> typing.Optional[discord.Role]:
-        return self.bot.get_democraciv_role(mk.DemocracivRole.VICE_SPEAKER)
+        try:
+            return self.bot.get_democraciv_role(mk.DemocracivRole.VICE_SPEAKER)
+        except exceptions.RoleNotFoundError:
+            return None
 
     @property
     def legislator_role(self) -> typing.Optional[discord.Role]:
