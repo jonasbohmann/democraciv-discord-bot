@@ -40,17 +40,12 @@ class EditPartyMenu(menus.Menu):
             title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
             description=f"Select as many things as you want, then click "
                         f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
-<<<<<<< HEAD
-                        f":one: Discord Server Invite\n"
-                        f":two: Faction Leaders\n"
-                        f":three: Join Mode",
-=======
                         f":one: Name\n"
                         f":two: Discord Server Invite\n"
-                        f":three: Party Leaders\n"
-                        f":four: Join Mode",
->>>>>>> master
+                        f":three: Faction Leaders\n"
+                        f":four: Join Mode"
         )
+
         return await ctx.send(embed=embed)
 
     @menus.button("1\N{variation selector-16}\N{combining enclosing keycap}")
@@ -635,7 +630,7 @@ class Party(context.CustomCog, name="Religions"):
                 pass
 
             if other_exists:
-                return await ctx.send(f"{config.NO} Another political party is already named `{new_name}`.")
+                return await ctx.send(f"{config.NO} Another religious faction is already named `{new_name}`.")
 
             old_name = party.role.name
 
