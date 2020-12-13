@@ -53,21 +53,6 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         self.email_regex = re.compile(r"[^@]+@[^@]+\.[^@]+")
         self.pass_scheduler = PassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.override_scheduler = OverrideScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
-        self.illegal_tags = (
-            "act",
-            "the",
-            "author",
-            "authors",
-            "date",
-            "name",
-            "bill",
-            "law",
-            "and",
-            "d/m/y",
-            "type",
-            "description",
-            "by"
-        )
 
         if not self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
             self.bot.get_command(self.bot.mk.LEGISLATURE_COMMAND).remove_command("motion")
@@ -587,7 +572,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         is_vetoable = False
 
         bill_description = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with a **short** description of what your bill does.",
+            f"{config.USER_INTERACTION_REQUIRED} Reply with a **short** summary of what your bill does.",
             timeout=400,
         )
 

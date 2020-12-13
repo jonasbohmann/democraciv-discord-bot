@@ -395,6 +395,14 @@ class CaseInsensitiveUser(commands.UserConverter):
             raise BadArgument(f"{config.NO} I couldn't find that person.")
 
 
+class CIMemberOrCIRole(DemocracivCaseInsensitiveRole):
+    async def convert(self, ctx: context.CustomContext, argument):
+        try:
+            return await super().convert(ctx, argument)
+        except BadArgument:
+            return await CaseInsensitiveMember().convert(ctx, argument)
+
+
 class Tag(commands.Converter):
     """
     Represents a Tag. Can be global or local.

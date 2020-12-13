@@ -7,7 +7,7 @@ from bot.config import config, mk
 from bot.utils import context, checks, paginator, text, mixin, exceptions
 from bot.utils.converter import (
     CaseInsensitiveMember, CaseInsensitiveRole, CaseInsensitiveCategoryChannel,
-    CaseInsensitiveTextChannel, DemocracivCaseInsensitiveRole
+    CaseInsensitiveTextChannel, CIMemberOrCIRole
 )
 
 
@@ -78,8 +78,8 @@ class PermissionSelectorMenu(menus.Menu):
                   f"to change?",
             description=f"Select as many things as you want, then click the {config.YES} button to continue, "
                         f"or {config.NO} to cancel.\n\n"
-                        f":one: {read} Read Messages Permission for `{self.role.name}` in {self.channel.mention}\n"
-                        f":two: {send} Send Messages Permission for `{self.role.name}` in {self.channel.mention}"
+                        f":one: {read} Read Messages Permission for `{self.role}` in {self.channel.mention}\n"
+                        f":two: {send} Send Messages Permission for `{self.role}` in {self.channel.mention}"
         )
         return await ctx.send(embed=embed)
 
@@ -264,30 +264,40 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         await nation_role.delete()
         await ctx.send(f"{config.YES} `{name}` was deleted.")
 
-    @nation.command(name="createchannel", aliases=['channel'])
+    @nation.command(name="createchannel", aliases=['channel', 'chan', 'cc'])
     @checks.moderation_or_nation_leader()
-    async def channel(self, ctx, *, category: CaseInsensitiveCategoryChannel = None):
+    async def channel(self, ctx):
         """Create a new channel in one of your nation's categories"""
 
-        if not category:
-            category = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} In which category should "
-                                                 f"the channel be created?", return_input_on_fail=False,
+        if len(self.bot.mk.NATION_CATEGORIES) > 1:
+            category = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} In which of your nation's "
+                                                 f"categories should the channel be created?",
+                                                 return_input_on_fail=False,
                                                  converter=CaseInsensitiveCategoryChannel)
 
-        if category.id not in self.bot.mk.NATION_CATEGORIES:
-            return await ctx.send(f"{config.NO} The `{category.name}` category does not belong to your nation.")
+            if category.id not in self.bot.mk.NATION_CATEGORIES:
+                return await ctx.send(f"{config.NO} The `{category.name}` category does not belong to your nation.")
+
+        elif len(self.bot.mk.NATION_CATEGORIES) == 1:
+            category = self.bot.dciv.get_channel(self.bot.mk.NATION_CATEGORIES[0])
+
+        else:
+            return await ctx.send(f"{config.NO} Your nation has no categories for some reason.")
 
         channel_name = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} What should be the name of the new channel?")
 
         channel = await category.create_text_channel(name=channel_name)
         await channel.edit(sync_permissions=True)
-        await ctx.send(f"{config.YES} Done.")
+        await ctx.send(f"{config.YES} Done.\n{config.HINT} The permissions for {channel.mention} were synced with the "
+                       f"permissions of the category `{category}`. In case you still need to adjust "
+                       f"read/write permissions for some roles or people, check out the "
+                       f"`{config.BOT_PREFIX}nation perms` command.")
 
     @nation.command(name="permissions", aliases=['perms', 'permission', 'perm'])
     @checks.moderation_or_nation_leader()
     async def set_channel_perms(self, ctx, *, channel: CaseInsensitiveTextChannel = None):
-        """Toggle Read and/or Send Messages permissions for a role in one of your nation's channels"""
+        """Toggle Read and/or Send Messages permissions for a role or person in one of your nation's channels"""
 
         if not channel:
             channel = await ctx.converted_input(
@@ -297,9 +307,9 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         if channel.category_id not in self.bot.mk.NATION_CATEGORIES:
             return await ctx.send(f"{config.NO} The `{channel.name}` channel does not belong to your nation.")
 
-        role = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} For which role should the "
+        role = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} For which role *or* person should the "
                                          f"permissions in {channel.mention} be changed?",
-                                         return_input_on_fail=False, converter=DemocracivCaseInsensitiveRole)
+                                         return_input_on_fail=False, converter=CIMemberOrCIRole)
 
         overwrites = channel.overwrites_for(role)
 
