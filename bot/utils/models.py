@@ -11,7 +11,7 @@ from discord.utils import maybe_coroutine
 
 from bot.config import config, mk
 from bot.utils import context
-from bot.utils.exceptions import DemocracivBotException, NotFoundError
+from bot.utils.exceptions import DemocracivBotException, NotFoundError, NotLawError
 
 
 class SessionStatus(enum.Enum):
@@ -212,7 +212,7 @@ class Law(Bill):
             raise NotFoundError(f"{config.NO} There is no law that matches `{argument}`.")
 
         if not bill.status.is_law:
-            raise commands.BadArgument(f"{config.NO} `{bill.name}` (#{bill.id}) is not an active law.")
+            raise NotLawError(f"{config.NO} `{bill.name}` (#{bill.id}) is not an active law.")
 
         return bill
 
