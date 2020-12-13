@@ -72,25 +72,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         self.email_regex = re.compile(r"[^@]+@[^@]+\.[^@]+")
         self.pass_scheduler = PassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
         self.override_scheduler = OverrideScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
-<<<<<<< HEAD
         self.superpass_scheduler = SuperPassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
-        self.illegal_tags = (
-            "act",
-            "the",
-            "author",
-            "authors",
-            "date",
-            "name",
-            "bill",
-            "law",
-            "and",
-            "d/m/y",
-            "type",
-            "description",
-            "by"
-        )
-=======
->>>>>>> master
 
         if not self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
             self.bot.get_command(self.bot.mk.LEGISLATURE_COMMAND).remove_command("motion")
