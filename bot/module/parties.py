@@ -32,7 +32,7 @@ class EditPartyMenu(menus.Menu):
     def _make_result(self):
         self.result = collections.namedtuple("EditPartyMenuResult", ["confirmed", "result"])
         self.result.confirmed = False
-        self.result.result = {"invite": False, "leaders": False, "join_mode": False}
+        self.result.result = {"invite": False, "leaders": False, "join_mode": False, "name": False}
         return self.result
 
     async def send_initial_message(self, ctx, channel):
@@ -40,22 +40,27 @@ class EditPartyMenu(menus.Menu):
             title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
             description=f"Select as many things as you want, then click "
                         f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
-                        f":one: Discord Server Invite\n"
-                        f":two: Party Leaders\n"
-                        f":three: Join Mode",
+                        f":one: Name\n"
+                        f":two: Discord Server Invite\n"
+                        f":three: Party Leaders\n"
+                        f":four: Join Mode",
         )
         return await ctx.send(embed=embed)
 
     @menus.button("1\N{variation selector-16}\N{combining enclosing keycap}")
     async def on_first_choice(self, payload):
-        self.result.result["invite"] = not self.result.result["invite"]
+        self.result.result["name"] = not self.result.result["name"]
 
     @menus.button("2\N{variation selector-16}\N{combining enclosing keycap}")
-    async def on_second_choice(self, payload):
-        self.result.result["leaders"] = not self.result.result["leaders"]
+    async def second(self, payload):
+        self.result.result["invite"] = not self.result.result["invite"]
 
     @menus.button("3\N{variation selector-16}\N{combining enclosing keycap}")
-    async def on_third_choice(self, payload):
+    async def third(self, payload):
+        self.result.result["leaders"] = not self.result.result["leaders"]
+
+    @menus.button("4\N{variation selector-16}\N{combining enclosing keycap}")
+    async def fourth(self, payload):
         self.result.result["join_mode"] = not self.result.result["join_mode"]
 
     @menus.button(config.YES)
@@ -516,7 +521,6 @@ class Party(context.CustomCog, name="Political Parties"):
                 f"If they don't have one, just reply with gibberish."
             )
 
-
             if not self.discord_invite_pattern.fullmatch(party_invite):
                 party_invite = "None"
 
@@ -609,19 +613,45 @@ class Party(context.CustomCog, name="Political Parties"):
         if True not in to_change.values():
             return await ctx.send(f"{config.NO} You didn't decide on what to change.")
 
+        if to_change['name']:
+            new_name = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the new "
+                                       f"name for `{party.role.name}`.")
+
+            other_exists = None
+
+            try:
+                other_exists = await PoliticalParty.convert(ctx, new_name)
+            except exceptions.NotFoundError:
+                pass
+
+            if other_exists:
+                return await ctx.send(f"{config.NO} Another political party is already named `{new_name}`.")
+
+            old_name = party.role.name
+
+            if old_name != new_name:
+                await party.role.edit(name=new_name)
+
+                async with self.bot.db.acquire() as connection:
+                    async with connection.transaction():
+                        await connection.execute(
+                            "DELETE FROM party_alias WHERE alias = $1", old_name.lower()
+                        )
+
+                        await connection.execute(
+                            "INSERT INTO party_alias (alias, party_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                            new_name.lower(),
+                            party.role.id,
+                        )
+
+                party = await PoliticalParty.convert(ctx, argument=party.role.id)
+
         updated_party = await self.create_new_party(ctx,
                                                     role=False,
                                                     commit=False,
                                                     invite=to_change['invite'],
                                                     join_mode=to_change['join_mode'],
                                                     leaders=to_change['leaders'])
-
-        are_you_sure = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit `{party.role.name}`?"
-        )
-
-        if not are_you_sure:
-            return await ctx.send("Cancelled.")
 
         if updated_party['invite'] == "None":
             new_invite = None
