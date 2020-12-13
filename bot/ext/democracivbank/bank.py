@@ -35,7 +35,7 @@ class CurrencySelector(menus.Menu):
         self.result = None
 
     async def send_initial_message(self, ctx, channel):
-        embed = text.SafeEmbed(title=":information_source:  Currency Selection")
+        embed = text.SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}  Currency Selection")
         embed.description = "Since you did not specify an IBAN to send the money to, " \
                             "I cannot automatically determine the currency for this " \
                             "transaction. Once you've chosen a currency, I will send the money " \
@@ -365,7 +365,8 @@ class Bank(context.CustomCog):
 
         embed.add_field(name="Description", value=organization.description, inline=False)
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
-        embed.set_footer(text=f"Send money to this organization with: -bank send {organization.abbreviation} <amount>")
+        embed.set_footer(text=f"Send money to this organization with: {config.BOT_PREFIX}bank send "
+                              f"{organization.abbreviation} <amount>")
 
         if organization.discord_server:
             embed.add_field(name="Discord Server", value=organization.discord_server)
@@ -382,7 +383,7 @@ class Bank(context.CustomCog):
         await self.is_connected_with_bank_user(ctx)
 
         if ctx.guild:
-            embed = text.SafeEmbed(title=":information_source:  Privacy Prompt",
+            embed = text.SafeEmbed(title=f"{config.HINT}  Privacy Prompt",
                                    description="Are you sure that you want to proceed?\n\n"
                                                "Everyone in this channel would be able to see information about all bank accounts "
                                                "you have access to, including their IBAN and their balance.\n\n*Using this command "
@@ -474,7 +475,7 @@ class Bank(context.CustomCog):
 
         transaction = await self.send_money(ctx.author.id, from_iban, to_iban, amount, purpose)
 
-        embed = text.SafeEmbed(title="You sent {amount}{_(transaction['amount_currency'])[1]} to "
+        embed = text.SafeEmbed(title=f"You sent {amount}{_(transaction['amount_currency'])[1]} to "
                                      f"{transaction['safe_to_account']}",
                                description=f"[See the transaction details here.](https://democracivbank.com/transaction/{transaction['id']})")
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
@@ -505,7 +506,7 @@ class Bank(context.CustomCog):
         await pages.start(ctx, wait=False)
 
         await asyncio.sleep(5)
-        reaction = await ctx.confirm(":information_source: Do you want to apply the changes now?")
+        reaction = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Do you want to apply the changes now?")
 
         if reaction is None:
             return
