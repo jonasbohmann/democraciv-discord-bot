@@ -264,25 +264,35 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         await nation_role.delete()
         await ctx.send(f"{config.YES} `{name}` was deleted.")
 
-    @nation.command(name="createchannel", aliases=['channel'])
+    @nation.command(name="createchannel", aliases=['channel', 'chan', 'cc'])
     @checks.moderation_or_nation_leader()
-    async def channel(self, ctx, *, category: CaseInsensitiveCategoryChannel = None):
+    async def channel(self, ctx):
         """Create a new channel in one of your nation's categories"""
 
-        if not category:
-            category = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} In which category should "
-                                                 f"the channel be created?", return_input_on_fail=False,
+        if len(self.bot.mk.NATION_CATEGORIES) > 1:
+            category = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} In which of your nation's "
+                                                 f"categories should the channel be created?",
+                                                 return_input_on_fail=False,
                                                  converter=CaseInsensitiveCategoryChannel)
 
-        if category.id not in self.bot.mk.NATION_CATEGORIES:
-            return await ctx.send(f"{config.NO} The `{category.name}` category does not belong to your nation.")
+            if category.id not in self.bot.mk.NATION_CATEGORIES:
+                return await ctx.send(f"{config.NO} The `{category.name}` category does not belong to your nation.")
+
+        elif len(self.bot.mk.NATION_CATEGORIES) == 1:
+            category = self.bot.dciv.get_channel(self.bot.mk.NATION_CATEGORIES[0])
+
+        else:
+            return await ctx.send(f"{config.NO} Your nation has no categories for some reason.")
 
         channel_name = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} What should be the name of the new channel?")
 
         channel = await category.create_text_channel(name=channel_name)
         await channel.edit(sync_permissions=True)
-        await ctx.send(f"{config.YES} Done.")
+        await ctx.send(f"{config.YES} Done.\n{config.HINT} The permissions for {channel.mention} were synced with the "
+                       f"permissions of the category `{category}`. In case you still need to adjust "
+                       f"read/write permissions for some roles or people, check out the "
+                       f"`{config.BOT_PREFIX}nation perms` command.")
 
     @nation.command(name="permissions", aliases=['perms', 'permission', 'perm'])
     @checks.moderation_or_nation_leader()
