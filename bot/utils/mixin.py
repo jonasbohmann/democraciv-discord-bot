@@ -115,18 +115,17 @@ class GovernmentMixin:
                 # Then, search by tag similarity
                 for word in query.split():
                     if len(word) < 3 or word in (
-                        "act",
                         "the",
                         "author",
                         "authors",
                         "date",
                         "name",
-                        "bill",
-                        "law",
                         "and",
                         "d/m/y",
                         "type",
                         "description",
+                        "by",
+                        "generated"
                     ):
                         continue
 
@@ -187,6 +186,9 @@ class GovernmentMixin:
 
         con = connection or self.bot.db
 
+        model = models.Bill if not search_laws else models.Law
+        self.bot.loop.create_task(self.bot.owner.send(f"_search_bill_by_name: {name}, {search_laws}, {model}"))
+
         if search_laws:
             objs = await con.fetch(
                 "SELECT id FROM bill WHERE lower(name) LIKE '%' || $1 || '%' AND status = $2"
@@ -204,7 +206,6 @@ class GovernmentMixin:
         found = {}
 
         for record in objs:
-            model = models.Bill if not search_laws else models.Law
             obj = await model.convert(context.MockContext(self.bot), record["id"])
             found[obj.formatted] = None
 
@@ -223,11 +224,15 @@ class GovernmentMixin:
 
         con = connection or self.bot.db
 
+        model = models.Bill if not search_laws else models.Law
+
+        self.bot.loop.create_task(self.bot.owner.send(f"_search_bill_by_tag: {tag}, {search_laws}, {model}"))
+
         if search_laws:
             found_bills = await con.fetch(
                 "SELECT bill_lookup_tag.bill_id FROM bill_lookup_tag "
                 "JOIN bill on bill_lookup_tag.bill_id=bill.id "
-                "WHERE (bill_lookup_tag.tag % $1 OR tag LIKE '%' || $1 || '%') AND bill.status = $2 ORDER BY tag <-> $1",
+                "WHERE (bill_lookup_tag.tag % $1 OR bill_lookup_tag.tag LIKE '%' || $1 || '%') AND bill.status = $2 ORDER BY bill_lookup_tag.tag <-> $1",
                 tag.lower(),
                 models.BillIsLaw.flag.value,
             )
@@ -241,9 +246,11 @@ class GovernmentMixin:
         formatted = {}
 
         for record in found_bills:
-            model = models.Bill if not search_laws else models.Law
-            obj = await model.convert(context.MockContext(self.bot), record["bill_id"])
-            formatted[obj.formatted] = None
+            try:
+                obj = await model.convert(context.MockContext(self.bot), record["bill_id"])
+                formatted[obj.formatted] = None
+            except exceptions.NotLawError:
+                continue
 
         return formatted
 
