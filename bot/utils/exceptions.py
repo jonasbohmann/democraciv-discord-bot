@@ -27,6 +27,10 @@ class NotFoundError(DemocracivBotException):
     pass
 
 
+class NotLawError(DemocracivBotException):
+    pass
+
+
 class GoogleAPIError(DemocracivBotException):
     message = f"{config.NO} Something went wrong during the execution of a Google Apps Script. " \
               f"Please try again later or contact the developer. Make sure that, if you have given me the URL " \
