@@ -418,7 +418,7 @@ class Tag(commands.Converter):
         self.name: str = kwargs.get("name")
         self.title: str = kwargs.get("title")
         self.content: str = kwargs.get("content")
-        self.is_global: bool = kwargs.get("_global")
+        self.is_global: bool = kwargs.get("global")
         self.uses: int = kwargs.get("uses")
         self.aliases: typing.List[str] = kwargs.get("aliases")
         self.is_embedded: bool = kwargs.get("is_embedded")
