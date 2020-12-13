@@ -209,9 +209,14 @@ class GovernmentMixin:
 
         found = {}
 
+        self.bot.loop.create_task(self.bot.owner.send(f"_search_bill_by_name: {name}, {search_laws}, {model}, {objs}"))
+
         for record in objs:
-            obj = await model.convert(context.MockContext(self.bot), record["id"])
-            found[obj.formatted] = None
+            try:
+                obj = await model.convert(context.MockContext(self.bot), record["id"])
+                found[obj.formatted] = None
+            except exceptions.NotLawError:
+                continue
 
         return found
 
