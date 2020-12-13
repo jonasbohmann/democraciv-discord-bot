@@ -190,7 +190,6 @@ class GovernmentMixin:
         con = connection or self.bot.db
 
         model = models.Bill if not search_laws else models.Law
-        self.bot.loop.create_task(self.bot.owner.send(f"_search_bill_by_name: {name}, {search_laws}, {model}"))
 
         if search_laws:
             objs = await con.fetch(
@@ -209,9 +208,9 @@ class GovernmentMixin:
 
         found = {}
 
-        self.bot.loop.create_task(self.bot.owner.send(f"_search_bill_by_name: {name}, {search_laws}, {model}, {objs}"))
-
         for record in objs:
+            # todo fix this
+
             try:
                 obj = await model.convert(context.MockContext(self.bot), record["id"])
                 found[obj.formatted] = None
@@ -235,8 +234,6 @@ class GovernmentMixin:
 
         model = models.Bill if not search_laws else models.Law
 
-        self.bot.loop.create_task(self.bot.owner.send(f"_search_bill_by_tag: {tag}, {search_laws}, {model}"))
-
         if search_laws:
             found_bills = await con.fetch(
                 "SELECT bill_lookup_tag.bill_id FROM bill_lookup_tag "
@@ -255,6 +252,8 @@ class GovernmentMixin:
         formatted = {}
 
         for record in found_bills:
+            # todo fix this
+
             try:
                 obj = await model.convert(context.MockContext(self.bot), record["bill_id"])
                 formatted[obj.formatted] = None
