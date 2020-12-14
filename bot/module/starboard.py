@@ -20,7 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE."""
-
+import random
 import typing
 import asyncpg
 import discord
@@ -290,10 +290,10 @@ class Starboard(context.CustomCog):
         if payload.channel_id == self.starboard_channel.id:
             return False
 
-        if await self.bot.is_channel_excluded(self.bot.dciv.id, payload.channel_id):
+        if not isinstance(channel, discord.TextChannel):
             return False
 
-        if not isinstance(channel, discord.TextChannel):
+        if await self.bot.is_channel_excluded(self.bot.dciv.id, payload.channel_id):
             return False
 
         return True
@@ -318,6 +318,13 @@ class Starboard(context.CustomCog):
 
         if (not message.content and len(message.attachments) == 0) or message.type is not discord.MessageType.default:
             return
+
+        if await self.bot.is_channel_excluded(self.bot.dciv.id, payload.channel_id):
+            send_only_sometimes = random.getrandbits(1)
+
+            if send_only_sometimes:
+                await channel.send(f"{config.HINT} *Since the administrators of this server marked this channel as "
+                                   f"hidden from logging, :star: reactions will also be ignored here.")
 
         starrer = self.bot.dciv.get_member(payload.user_id)
         await self.star_message(message, starrer)
