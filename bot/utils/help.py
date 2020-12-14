@@ -102,7 +102,16 @@ class BotHelpPageSource(menus.ListPageSource):
 
     async def format_page(self, menu, cogs):
         prefix = config.BOT_PREFIX
-        description = f"Use `{prefix}help thing` for more info on a category or command.\n"
+        description = f"Use `{prefix}help thing` for more info on a category or command." \
+                      f"\n\nRemember that I will always show you only the commands that you are allowed " \
+                      f"to use in this context. If a command requires special permissions or a " \
+                      f"special role, and you do not have those, `{prefix}help` will not show you that command."
+
+        if menu.ctx.guild is None:
+            description = f"{description}\n\n*Since we're in DMs right now, I will only show you the " \
+                          f"commands that also work in DMs. A lot of commands that require special permissions, " \
+                          f"roles or ones that require you to be doing them on the {menu.ctx.bot.dciv.name} server, " \
+                          f"will not be shown here.*"
 
         embed = text.SafeEmbed(title="All Categories | Help", description=description)
 
@@ -245,7 +254,7 @@ class PaginatedHelpCommand(commands.HelpCommand):
             command_attrs={
                 "cooldown": commands.Cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user),
                 "help": "Shows help about the bot, a command, or a category",
-                "aliases": ["man", 'h'],
+                "aliases": ["man", 'manual', 'h'],
             }
         )
 

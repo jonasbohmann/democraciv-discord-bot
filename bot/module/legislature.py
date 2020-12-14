@@ -79,7 +79,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw").remove_command("motion")
 
     @commands.group(
-        name=mk.MarkConfig.LEGISLATURE_NAME.lower(),
+        name=mk.MarkConfig.LEGISLATURE_COMMAND.lower(),
         aliases=["leg"],
         case_insensitive=True,
         invoke_without_command=True,
@@ -417,8 +417,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
             link = await self.bot.make_paste("\n".join(exported))
             txt = (
-                f"**__Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}__**\nSee the video below to see how to speed up "
-                f"your Speaker duties with this command.\n\n**Export:** <{link}>\n\n"
+                f"**__Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}__**\nSee the video below "
+                f"to see how to speed up your Speaker duties with this command.\n\n**Export:** <{link}>\n\n"
                 "https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662/howtoexport.mp4"
             )
             await ctx.send(txt)
@@ -428,7 +428,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             f" voting form for Legislative Session #{session.id} as well?"
         )
 
-        reaction = await ctx.ask_to_continue(message=question, emoji=config.YES, timeout=30)
+        reaction = await ctx.ask_to_continue(message=question, emoji=config.YES, timeout=60)
 
         if not reaction:
             ctx.command.reset_cooldown(ctx)
@@ -442,7 +442,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 "then on 'Add collaborators', after which a new window should pop up. "
                 "Click on 'Change' on the bottom left, and change the link from 'Restricted' to the other option. "
                 "Then copy the link and send it here.*",
-                delete_after=True,
+                delete_after=True, timeout=400
             )
 
             if not form_url:
@@ -475,7 +475,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                             "the form to comply with this nation's laws.\n"
                             "This comes with no guarantees of a form's valid "
                             "legal status.\n\nRemember to change the edit link you "
-                            "gave me earlier to be **'Restricted'** again.",
+                            f"gave me earlier to be **'Restricted'** again.\n\nYou can use this "
+                            f"voting form for `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session vote` "
+                            f"now.",
             )
 
             embed.add_field(
