@@ -60,11 +60,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
     @commands.group(
         name=mk.MarkConfig.LEGISLATURE_COMMAND.lower(),
-<<<<<<< HEAD
         aliases=["leg", "legislature"],
-=======
-        aliases=["leg"],
->>>>>>> master
         case_insensitive=True,
         invoke_without_command=True,
     )
