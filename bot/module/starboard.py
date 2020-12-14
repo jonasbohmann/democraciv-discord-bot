@@ -293,9 +293,6 @@ class Starboard(context.CustomCog):
         if not isinstance(channel, discord.TextChannel):
             return False
 
-        if await self.bot.is_channel_excluded(self.bot.dciv.id, payload.channel_id):
-            return False
-
         return True
 
     @commands.Cog.listener(name="on_raw_reaction_add")
@@ -324,7 +321,9 @@ class Starboard(context.CustomCog):
 
             if send_only_sometimes:
                 await channel.send(f"{config.HINT} *Since the administrators of this server marked this channel as "
-                                   f"hidden from logging, :star: reactions will also be ignored here.")
+                                   f"hidden from logging, :star: reactions will also be ignored here.*")
+
+            return
 
         starrer = self.bot.dciv.get_member(payload.user_id)
         await self.star_message(message, starrer)
@@ -340,6 +339,9 @@ class Starboard(context.CustomCog):
 
         # Do this check here instead of in verify_reaction() to not waste a possibly useless API call
         if payload.user_id == message.author.id:
+            return
+
+        if await self.bot.is_channel_excluded(self.bot.dciv.id, payload.channel_id):
             return
 
         starrer = self.bot.dciv.get_member(payload.user_id)
