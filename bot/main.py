@@ -742,8 +742,14 @@ class DemocracivBot(commands.Bot):
                 21,
                 22,
         ):
+
+            if len(config.BOT_ADDITIONAL_PREFIXES) > 1:
+                prefixes = ", ".join([f'`{p}`' for p in config.BOT_ADDITIONAL_PREFIXES])
+            else:
+                prefixes = f"`{config.BOT_PREFIX}`"
+
             await message.channel.send(
-                f"Hey! :wave:\nMy prefix is: `{config.BOT_PREFIX}`\n"
+                f"Hey! :wave:\nMy prefixes are: {prefixes}\n"
                 f"Try `{config.BOT_PREFIX}help`, `{config.BOT_PREFIX}commands`"
                 f" or `{config.BOT_PREFIX}about` to learn more about me!"
             )
