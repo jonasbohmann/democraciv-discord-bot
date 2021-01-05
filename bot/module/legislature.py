@@ -1098,7 +1098,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             "top_laws": pretty_top_lawmaker,
         }
 
-    @legislature.command(name="stats", aliases=["stat", "statistics", "statistic"], enabled=False)
+    @legislature.command(name="stats", aliases=["stat", "statistics", "statistic"], hidden=True, enabled=False)
     async def stats(self, ctx):
         """Statistics about the {LEGISLATURE_NAME}"""
 
