@@ -434,6 +434,9 @@ class DemocracivBot(commands.Bot):
         elif isinstance(error, commands.DisabledCommand):
             return await ctx.send(f"{config.NO} This command has been disabled.")
 
+        elif isinstance(error, commands.NotOwner):
+            return await ctx.send(f"{config.NO} Only {self.owner} can use this command.")
+
         # This includes all exceptions declared in utils.exceptions.py
         elif isinstance(error, exceptions.DemocracivBotException):
             return await ctx.send(error.message)

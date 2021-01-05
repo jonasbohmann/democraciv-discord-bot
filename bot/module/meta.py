@@ -105,7 +105,7 @@ class Meta(context.CustomCog):
         self.bot.help_command = self.old_help_command
 
     # shortcut to '-jsk reload ~' for faster debugging
-    @commands.command(name="r", hidden=True)
+    @commands.command(name="rr", hidden=True)
     @commands.is_owner()
     async def reload_all(self, ctx):
         """Alias to -jishaku reload ~"""
@@ -254,9 +254,7 @@ class Meta(context.CustomCog):
 
         embed = text.SafeEmbed(
             title=f"All Commands ({amounts})",
-            description=f"This lists every command, regardless whether you can use "
-                        f"it in this context or not.\n\nFor more detailed "
-                        f"explanations and example usage of commands, "
+            description=f"For more detailed explanations and example usage of commands, "
                         f"use `{p}help`, `{p}help <Category>`, "
                         f"or `{p}help <command>`."
                         f"\n\n{' '.join(description_text)}",

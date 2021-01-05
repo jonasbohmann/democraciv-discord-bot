@@ -29,7 +29,6 @@ from bot.utils import text
 from bot.utils.paginator import Pages
 from discord.ext import commands, menus
 
-
 BOT_INTRO = f"""Hey, thanks for using me!
 
 I'm the Democraciv Bot, and was designed specifically for the [Discord server](https://discord.gg/AK7dYMG) of the [r/Democraciv](https://reddit.com/r/democraciv) community.
@@ -102,20 +101,14 @@ class BotHelpPageSource(menus.ListPageSource):
 
     async def format_page(self, menu, cogs):
         prefix = config.BOT_PREFIX
-        description = f"Use `{prefix}help thing` for more info on a category or command." \
-                      f"\n\nRemember that I will always show you only the commands that you are allowed " \
-                      f"to use in this context. If a command requires special permissions or a " \
-                      f"special role, and you do not have those, `{prefix}help` will not show you that command."
-
-        if menu.ctx.guild is None:
-            description = f"{description}\n\n*Since we're in DMs right now, I will only show you the " \
-                          f"commands that also work in DMs. A lot of commands that require special permissions, " \
-                          f"roles or ones that require you to be doing them on the {menu.ctx.bot.dciv.name} server, " \
-                          f"will not be shown here.*"
+        description = f"Use `{prefix}help thing` for more info on a category or command."
 
         embed = text.SafeEmbed(title="All Categories | Help", description=description)
 
         for cog in cogs:
+            if cog.hidden:
+                continue
+
             commands = self.commands.get(cog)
             if commands:
                 # value = self.format_commands(cog, commands)
@@ -168,13 +161,29 @@ class CogHelpPageSource(menus.ListPageSource):
         self.group = group
         self.prefix = prefix
         self.title = f"{self.group.qualified_name} | Help"
-        self.description = self.group.description
+        self.description = f"{self.group.description}\n\n*Commands in italic " \
+                           f"cannot be used by you in the current context due to any " \
+                           f"of these reasons: wrong server, missing role(s), or missing permission(s).*"
 
     async def format_page(self, menu, commands):
         embed = text.SafeEmbed(title=self.title, description=self.description)
 
         for command in commands:
-            signature = f"__{config.BOT_PREFIX}{command.qualified_name} {command.signature}__"
+            try:
+                is_allowed = await command.can_run(menu.ctx)
+            except Exception:
+                is_allowed = False
+
+            if is_allowed:
+                signature = f"__{config.BOT_PREFIX}{command.qualified_name} {command.signature}__"
+            else:
+                default_sig = f"__*{config.BOT_PREFIX}{command.qualified_name} {command.signature}"
+
+                if default_sig.endswith(" "):
+                    default_sig = default_sig[:-1]
+
+                signature = f"{default_sig}*__"
+
             embed.add_field(name=signature, value=command.short_doc or 'No help given.', inline=False)
 
         maximum = self.get_max_pages()
@@ -255,7 +264,8 @@ class PaginatedHelpCommand(commands.HelpCommand):
                 "cooldown": commands.Cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user),
                 "help": "Shows help about the bot, a command, or a category",
                 "aliases": ["man", 'manual', 'h'],
-            }
+            },
+            verify_checks=False
         )
 
     def command_not_found(self, string):
@@ -293,16 +303,26 @@ class PaginatedHelpCommand(commands.HelpCommand):
         )
         await menu.start(self.context)
 
-    def common_command_formatting(self, embed_like, command):
+    async def common_command_formatting(self, embed_like, command):
         embed_like.title = self.get_command_signature(command)
         if command.description:
             embed_like.description = f"{command.description}\n\n{command.help}"
         else:
             embed_like.description = command.help or "No help found."
 
+        try:
+            is_allowed = await command.can_run(self.context)
+        except Exception:
+            is_allowed = False
+
+        if not is_allowed:
+            embed_like.description = f"{embed_like.description}\n\n:warning: *You are not allowed to use " \
+                                     f"this command in this context due to any of these reasons: wrong server, " \
+                                     f"missing role(s), or missing permission(s).*"
+
     async def send_command_help(self, command):
         embed = text.SafeEmbed()
-        self.common_command_formatting(embed, command)
+        await self.common_command_formatting(embed, command)
 
         parent_name = f"{command.full_parent_name} " if command.full_parent_name else ''
         aliases = [f"`{config.BOT_PREFIX}{parent_name}{a}`" for a in command.aliases]
@@ -331,6 +351,6 @@ class PaginatedHelpCommand(commands.HelpCommand):
             return await self.send_command_help(group)
 
         source = GroupHelpPageSource(group, entries, prefix=config.BOT_PREFIX)
-        self.common_command_formatting(source, group)
+        await self.common_command_formatting(source, group)
         menu = HelpMenu(source, send_intro=False)
         await menu.start(self.context)
