@@ -714,7 +714,7 @@ class DemocracivBot(commands.Bot):
     async def on_ready(self):
         if not self.db_ready:
             logging.error("Fatal error while connecting to database. Closing bot...")
-            # return await self.close()
+            return await self.close()
 
         logging.info(f"Logged in as {self.user.name} with discord.py {discord.__version__}")
 
