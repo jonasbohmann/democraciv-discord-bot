@@ -8,31 +8,21 @@ import discord
 import typing
 
 from aiohttp import web
+from dataclasses import dataclass
 from discord.ext import commands, tasks
 from bot.utils import converter, exceptions, text, paginator, checks, context
 from bot.config import config, token, mk
 from discord.ext import menus
 
-CURRENCIES = {
-    'LRA': ('Ottoman Lira', '£'),
-    'MAO': ('Maori Pound', 'P'),
-    'CAN': ('Canadian Loonie', 'Ⱡ'),
-    'CIV': ('Civilization Coin', 'C'),
-    'ROM': ('Ariera', 'Â')
-}
-
-
-def _(y) -> tuple:
-    try:
-        return CURRENCIES[y]
-    except KeyError:
-        return 'Unknown Currency', '?'
-
 
 class CurrencySelector(menus.Menu):
-    def __init__(self):
+    def __init__(self, currencies):
         super().__init__(timeout=120.0, delete_message_after=True)
         self.result = None
+        self.currencies = currencies
+
+    def get_curr_name(self, code):
+        return self.currencies.get(code).name
 
     async def send_initial_message(self, ctx, channel):
         embed = text.SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}  Currency Selection")
@@ -45,13 +35,15 @@ class CurrencySelector(menus.Menu):
                             "recipient have previously selected a default account for the chosen currency on " \
                             "[democracivbank.com](https://democracivbank.com)\n\n" \
                             "__**In which currency would you like to send the money?**__\n" \
-                            f":one:  {_('LRA')[0]}\n" \
-                            f":two:  {_('MAO')[0]}\n" \
-                            f":three:  {_('ROM')[0]}\n" \
-                            f":four:  {_('CAN')[0]}\n" \
-                            f":five: {_('CIV')[0]}"
+                            f":one:  {self.get_curr_name('LRA')}\n" \
+                            f":two:  {self.get_curr_name('MAO')}\n" \
+                            f":three:  {self.get_curr_name('ROM')}\n" \
+                            f":four:  {self.get_curr_name('CAN')}\n" \
+                            f":five: {self.get_curr_name('CIV')}"
 
         return await channel.send(embed=embed)
+
+    # todo add dynamic buttons for currencies
 
     @menus.button('1\N{variation selector-16}\N{combining enclosing keycap}')
     async def on_first_choice(self, payload):
@@ -184,6 +176,28 @@ class BankCorporation(commands.Converter):
         raise commands.BadArgument()
 
 
+@dataclass
+class Currency:
+    code: str
+    name: str
+    prefix: str
+    suffix: str
+
+    def __str__(self):
+        return self.name
+
+    def __eq__(self, other):
+        return isinstance(other, Currency) and self.code == other.code
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def with_amount(self, amount):
+        return f"{self.prefix}{amount}{self.suffix}"
+
+    _ = with_amount
+
+
 class Bank(context.CustomCog):
     """Open as many bank accounts as you want and send money in multiple currencies with democracivbank.com"""
 
@@ -193,6 +207,8 @@ class Bank(context.CustomCog):
         self.BANK_ICON_URL = "https://cdn.discordapp.com/attachments/663076007426785300/717434510861533344/ezgif-5-8a4edb1f0306.png"
         self.bank_listener = BankListener(bot)
         self.bank_db_backup.start()
+        self._currencies = {}
+        self.bot.loop.create_task(self._fetch_currencies())
 
     def cog_unload(self):
         self.bot.loop.create_task(self.bank_listener.shutdown())
@@ -206,9 +222,10 @@ class Bank(context.CustomCog):
         response = await self.request(BankRoute("HEAD", f"discord_user/{ctx.author.id}/"))
 
         if response.status != 200:
-            raise BankDiscordUserNotConnected(f"{config.NO} {ctx.author.mention}, your Discord account is not connected to any "
-                                              f"user on <https://democracivbank.com>.\n\nYou can connect here: "
-                                              f"<https://democracivbank.com/me>")
+            raise BankDiscordUserNotConnected(
+                f"{config.NO} {ctx.author.mention}, your Discord account is not connected to any "
+                f"user on <https://democracivbank.com>.\n\nYou can connect here: "
+                f"<https://democracivbank.com/me>")
 
     async def request(self, route: BankRoute, **kwargs):
         response = await self.bot.session.request(route.method, route.url,
@@ -219,6 +236,26 @@ class Bank(context.CustomCog):
             raise BankConnectionError(f"{config.NO} {self.bot.owner.mention}, something went wrong!\n`Status >= 500`")
 
         return response
+
+    async def _fetch_currencies(self):
+        response = await self.request(BankRoute("GET", f"currencies/"))
+        js = await response.json()
+        currencies = {}
+
+        for curr in js['result']:
+            currencies[curr['code']] = Currency(code=curr['code'],
+                                                name=curr['name'],
+                                                prefix=curr['sign']['prefix'],
+                                                suffix=curr['sign']['suffix'])
+
+        self._currencies = currencies
+
+    def get_currency(self, code) -> Currency:
+        try:
+            return self._currencies[code]
+        except KeyError:
+            self.bot.loop.create_task(self._fetch_currencies())
+            return Currency(code="???", name="Unknown Currency", prefix="", suffix="?")
 
     async def get_currency_from_iban(self, iban: str) -> str:
         response = await self.request(BankRoute("GET", f"account/{iban}/"))
@@ -251,17 +288,19 @@ class Bank(context.CustomCog):
                                                   f"Discord account here: <https://democracivbank.com/me>")
 
             else:
-                raise BankNoAccountFound(f"{config.NO} {member_id_or_corp} is either not the abbreviation of an existing "
-                                         f"organization, or they decided not to publish their organization.")
+                raise BankNoAccountFound(
+                    f"{config.NO} {member_id_or_corp} is either not the abbreviation of an existing "
+                    f"organization, or they decided not to publish their organization.")
 
         elif response.status == 400:
             if 'discord_id' in get_params:
                 if not is_sender:
                     name = self.bot.get_user(get_params['discord_id'])
-                    raise BankNoDefaultAccountForCurrency(f"{config.NO} **{name}** does not have a default bank account "
-                                                          f"for this currency. Tell them to set a default bank "
-                                                          f"account for this currency on "
-                                                          f"<https://democracivbank.com>.")
+                    raise BankNoDefaultAccountForCurrency(
+                        f"{config.NO} **{name}** does not have a default bank account "
+                        f"for this currency. Tell them to set a default bank "
+                        f"account for this currency on "
+                        f"<https://democracivbank.com>.")
                 if is_sender:
                     raise BankNoDefaultAccountForCurrency(f"{config.NO} You do not have a default bank account for "
                                                           "this currency. You can make one of your personal "
@@ -269,8 +308,9 @@ class Bank(context.CustomCog):
                                                           "default bank account for this currency on "
                                                           "<https://democracivbank.com>.")
             else:
-                raise BankNoDefaultAccountForCurrency(f"{config.NO} This organization does not have a default bank account "
-                                                      f"for this currency.")
+                raise BankNoDefaultAccountForCurrency(
+                    f"{config.NO} This organization does not have a default bank account "
+                    f"for this currency.")
 
     async def send_money(self, from_discord, from_iban, to_iban, amount, purpose):
         payload = {'from_account': from_iban, 'to_account': to_iban, 'amount': amount, 'purpose': purpose,
@@ -413,8 +453,10 @@ class Bank(context.CustomCog):
                 else:
                     name = f"__**{account['corporate_holder']['name']}: {account['name']}**__"
 
+            amount = self.get_currency(account['balance_currency']).with_amount(account['balance'])
+
             desc.append(
-                f"{name}\n*{account['iban']}*\n```diff\n+ {account['balance']}{_(account['balance_currency'])[1]}```")
+                f"{name}\n*{account['iban']}*\n```diff\n+ {amount}```")
 
             try:
                 total_per_currency[account['pretty_balance_currency']] += decimal.Decimal(account['balance'])
@@ -450,7 +492,7 @@ class Bank(context.CustomCog):
 
         if not isinstance(to_member_or_iban_or_organization, uuid.UUID):
             # if IBAN, skip currency selection
-            currency = await CurrencySelector().prompt(ctx)
+            currency = await CurrencySelector(self._currencies).prompt(ctx)
 
             if not currency:
                 return await ctx.send(f"{config.NO} You did not select a currency, the transaction was cancelled.")
@@ -472,11 +514,11 @@ class Bank(context.CustomCog):
             from_iban = await self.resolve_iban(ctx.author.id, currency, is_sender=True)
 
         purpose = "Sent via the Democraciv Discord Bot" if not purpose else purpose
-
         transaction = await self.send_money(ctx.author.id, from_iban, to_iban, amount, purpose)
 
-        embed = text.SafeEmbed(title=f"You sent {amount}{_(transaction['amount_currency'])[1]} to "
-                                     f"{transaction['safe_to_account']}",
+        pretty_amount = self.get_currency(transaction['amount_currency']).with_amount(amount)
+
+        embed = text.SafeEmbed(title=f"You sent {pretty_amount} to {transaction['safe_to_account']}",
                                description=f"[See the transaction details here.](https://democracivbank.com/transaction/{transaction['id']})")
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
         await ctx.send(embed=embed)
@@ -499,8 +541,9 @@ class Bank(context.CustomCog):
 
         for result in dry_run_results['results']:
             for k, v in result.items():
-                desc.append(f"__**Bank Account with IBAN {k}**__\nPre-Tax Balance: {v['old']}{_('LRA')[1]}"
-                            f"\nPost-Tax Balance: {v['new']}{_('LRA')[1]}\nEquilibrium variable: {v['ibal']}\n")
+                lira_sign = self.get_currency("LRA").suffix
+                desc.append(f"__**Bank Account with IBAN {k}**__\nPre-Tax Balance: {v['old']}{lira_sign}"
+                            f"\nPost-Tax Balance: {v['new']}{lira_sign}\nEquilibrium variable: {v['ibal']}\n")
 
         pages = paginator.SimplePages(entries=desc, title="Results of Ottoman Tax Dry Run")
         await pages.start(ctx, wait=False)
@@ -531,10 +574,12 @@ class Bank(context.CustomCog):
                                            f"were provided by the {self.BANK_NAME} when this currency "
                                            f"was originally created.")
 
-        for currency in CURRENCIES:
-            response = await self.request(BankRoute("GET", f'circulation/{currency}/'))
-            total = await response.json()
-            embed.add_field(name=_(currency)[0], value=f"{total['result']}{_(currency)[1]}", inline=False)
+        response = await self.request(BankRoute("GET", f'currencies/'))
+        result = await response.json()
+
+        for currency in result['result']:
+            as_object = self.get_currency(currency['code'])
+            embed.add_field(name=currency['name'], value=as_object.with_amount(currency['circulation']), inline=False)
 
         await ctx.send(embed=embed)
 
