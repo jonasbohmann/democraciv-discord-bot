@@ -88,7 +88,12 @@ class RedditManager(ProviderManager):
             "ad": False,
         }
 
+<<<<<<< HEAD
         async with self._session.post("https://oauth.reddit.com/api/submit?raw_json=1", data=data, headers=headers) as response:
+=======
+        async with self._session.post("https://oauth.reddit.com/api/submit?raw_json=1", data=data,
+                                      headers=headers) as response:
+>>>>>>> master
             if response.status == 403:
 
                 if not retry:

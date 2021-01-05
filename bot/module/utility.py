@@ -614,7 +614,7 @@ class Utility(context.CustomCog):
         invite = await ctx.channel.create_invite(max_age=0, unique=False)
         await ctx.send(invite.url)
 
-    @commands.command(name="roll")
+    @commands.command(name="roll", aliases=['r', 'dice'])
     async def roll(self, ctx, *, dices):
         """Roll some dice
 

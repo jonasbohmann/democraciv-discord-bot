@@ -349,7 +349,8 @@ class Tags(context.CustomCog):
         if len(title) > 256:
             return await ctx.send(f"{config.NO} The title cannot be longer than 256 characters.")
 
-        content = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the **content** of the tag.")
+        content = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the **content** of the tag.",
+                                  image_allowed=True)
 
         if len(content) > 2000:
             return await ctx.send(f"{config.NO} The content cannot be longer than 2000 characters.")
@@ -533,7 +534,7 @@ class Tags(context.CustomCog):
         if to_change["content"]:
             new_content = await ctx.input(
                 f"{config.USER_INTERACTION_REQUIRED} Reply with the updated **content** of this tag.",
-                image_allowed=True,
+                image_allowed=True
             )
 
             if len(new_content) > 2000:
@@ -713,12 +714,13 @@ class Tags(context.CustomCog):
                 except discord.HTTPException:
                     await message.channel.send(discord.utils.escape_mentions(tag_details["content"]))
 
-            embed = text.SafeEmbed(
-                title=tag_details["title"],
-                description=tag_details["content"]
-            )
+            else:
+                embed = text.SafeEmbed(
+                    title=tag_details["title"],
+                    description=tag_details["content"]
+                )
 
-            await message.channel.send(embed=embed)
+                await message.channel.send(embed=embed)
 
         else:
             await message.channel.send(discord.utils.escape_mentions(tag_details["content"]))

@@ -389,7 +389,7 @@ class Bank(context.CustomCog):
                                                "you have access to, including their IBAN and their balance.\n\n*Using this command "
                                                "in DMs with me does not trigger this question.*")
             privacy_q = await ctx.send(embed=embed)
-            reaction = await ctx.confirm(privacy_q)
+            reaction = await ctx.confirm(message=privacy_q)
 
             if not reaction:
                 return
