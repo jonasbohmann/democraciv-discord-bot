@@ -231,7 +231,7 @@ class Moderation(context.CustomCog):
 
         await ctx.send(content)
 
-    @commands.command(name="alt")
+    @commands.command(name="alt", hidden=True)
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def alt(self, ctx, *, member: CaseInsensitiveMember):
         """Check if someone is an alt"""

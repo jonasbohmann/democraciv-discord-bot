@@ -88,7 +88,8 @@ class RedditManager(ProviderManager):
             "ad": False,
         }
 
-        async with self._session.post("https://oauth.reddit.com/api/submit", data=data, headers=headers) as response:
+        async with self._session.post("https://oauth.reddit.com/api/submit?raw_json=1", data=data,
+                                      headers=headers) as response:
             if response.status == 403:
 
                 if not retry:
@@ -97,7 +98,10 @@ class RedditManager(ProviderManager):
 
                 logger.warning("got 403 while posting to reddit")
 
-            return await response.json()
+            try:
+                return await response.json()
+            except aiohttp.ContentTypeError:
+                return
 
     async def _start_webhook(self, *, target: str, webhook_url: str):
         async with self._lock:
