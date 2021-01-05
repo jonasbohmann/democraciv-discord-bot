@@ -101,7 +101,9 @@ class BotHelpPageSource(menus.ListPageSource):
 
     async def format_page(self, menu, cogs):
         prefix = config.BOT_PREFIX
-        description = f"Use `{prefix}help thing` for more info on a category or command."
+        description = f"Use `{prefix}help thing` for more info on a category or command.\nOptionally, [this guide]" \
+                      f"(https://drive.google.com/file/d/1fUWBeRPszLolRtX47OyhAMALudjqWaXc/view?usp=sharing) " \
+                      f"explains some additional topics of the bot."
 
         embed = text.SafeEmbed(title="All Categories | Help", description=description)
 
@@ -229,7 +231,10 @@ class HelpMenu(Pages, inherit_buttons=False):
     async def show_bot_help(self, payload):
         """shows how to use the bot"""
 
-        embed = text.SafeEmbed(title="Using the Democraciv Bot")
+        embed = text.SafeEmbed(title="Using the Democraciv Bot",
+                               description="Optionally, [this guide]"
+                                           f"(https://drive.google.com/file/d/1fUWBeRPszLolRtX47OyhAMALudjqWaXc/view?usp=sharing) "
+                                           f"explains some additional topics of the bot.")
 
         entries = (
             ("<argument>", "This means the argument is __**required**__."),
@@ -269,7 +274,7 @@ class PaginatedHelpCommand(commands.HelpCommand):
         )
 
     def command_not_found(self, string):
-        return f"{config.NO} `{config.BOT_PREFIX}{string}` is not a command."
+        return f"{config.NO} `{string}` is neither a command, nor a category."
 
     def subcommand_not_found(self, command, string):
         return f"{config.NO} `{string}` is not a subcommand of the `{config.BOT_PREFIX}{command.qualified_name}` command."

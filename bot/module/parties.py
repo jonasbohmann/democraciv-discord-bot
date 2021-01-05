@@ -1,6 +1,5 @@
 import asyncio
 import collections
-import contextlib
 import logging
 import re
 import typing
@@ -10,7 +9,7 @@ import discord
 
 from discord.ext import commands, menus
 
-from bot.config import config, mk
+from bot.config import config
 from bot.utils import exceptions, checks, converter, context
 from bot.utils.context import CustomContext
 from bot.utils.converter import (
