@@ -423,9 +423,9 @@ class Bank(context.CustomCog):
         if ctx.guild:
             embed = text.SafeEmbed(title=f"{config.HINT}  Privacy Prompt",
                                    description="Are you sure that you want to proceed?\n\n"
-                                               "Everyone in this channel would be able to see information about all bank accounts "
-                                               "you have access to, including their IBAN and their balance.\n\n*Using this command "
-                                               "in DMs with me does not trigger this question.*")
+                                               "Everyone in this channel would be able to see the balance of all bank accounts "
+                                               "you have access to.\n\n*Using this command in DMs with me does not "
+                                               "trigger this question.*")
             privacy_q = await ctx.send(embed=embed)
             reaction = await ctx.confirm(message=privacy_q)
 
@@ -592,12 +592,12 @@ class Bank(context.CustomCog):
         desc = []
 
         for account in json:
-            p_or_c = "Personal" if account['individual_holder'] else "Corporate"
+            p_or_c = "Personal" if account['individual_holder'] else "Shared (Organization)"
             desc.append(f"__**{p_or_c} Bank Account with IBAN {account['iban']}**__\n"
                         f"Owner: {account['pretty_holder']}\n"
                         f"Equilibrium variable: {account['ottoman_threshold_variable']}\n")
 
-        pages = paginator.SimplePages(entries=desc, title=f"All Bank Accounts with Ottoman Currency ({len(json)})")
+        pages = paginator.SimplePages(entries=desc, title=f"All Bank Accounts with the Ottoman Currency ({len(json)})")
         await pages.start(ctx)
 
     @bank.command(name='changeottomanvariable',
@@ -621,7 +621,7 @@ class Bank(context.CustomCog):
             raise BankConnectionError(f"{config.NO} {self.bot.owner.mention}, something went wrong!")
 
         json = await response.json()
-        p_or_c = "Personal" if json['individual_holder'] else "Corporate"
+        p_or_c = "Personal" if json['individual_holder'] else "Shared (Organization)"
         embed = text.SafeEmbed(title="Updated Ottoman Bank Account",
                                description=f"**IBAN**\n{json['iban']}\n"
                                            f"**Bank Account Type**\n{p_or_c}\n"
