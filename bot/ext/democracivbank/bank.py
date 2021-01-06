@@ -19,55 +19,56 @@ class CurrencySelector(menus.Menu):
     def __init__(self, currencies):
         super().__init__(timeout=120.0, delete_message_after=True)
         self.result = None
-        self.currencies = currencies
+        self.currencies: dict = currencies
+        self._make_buttons()
 
     def get_curr_name(self, code):
         return self.currencies.get(code).name
 
     async def send_initial_message(self, ctx, channel):
         embed = text.SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}  Currency Selection")
-        embed.description = "Since you did not specify an IBAN to send the money to, " \
-                            "I cannot automatically determine the currency for this " \
-                            "transaction. Once you've chosen a currency, I will send the money " \
-                            "from your default account for the chosen currency, to the recipient's default " \
-                            "account for the chosen currency.\n\n" \
-                            "This only works provided that both you and the " \
-                            "recipient have previously selected a default account for the chosen currency on " \
-                            "[democracivbank.com](https://democracivbank.com)\n\n" \
-                            "__**In which currency would you like to send the money?**__\n" \
-                            f":one:  {self.get_curr_name('LRA')}\n" \
-                            f":two:  {self.get_curr_name('MAO')}\n" \
-                            f":three:  {self.get_curr_name('ROM')}\n" \
-                            f":four:  {self.get_curr_name('CAN')}\n" \
-                            f":five: {self.get_curr_name('CIV')}"
+
+        description = "Since you did not specify an IBAN to send the money to, " \
+                      "I cannot automatically determine the currency for this " \
+                      "transaction. Once you've chosen a currency, I will send the money " \
+                      "from your default account for the chosen currency, to the recipient's default " \
+                      "account for the chosen currency.\n\n" \
+                      "This only works provided that both you and the " \
+                      "recipient have previously selected a default account for the chosen currency on " \
+                      "[democracivbank.com](https://democracivbank.com)\n\n" \
+                      "__**In which currency would you like to send the money?**__\n"
+
+        currs = []
+
+        for emoji, code in self.mapping.items():
+            currs.append(f"{emoji}  {self.get_curr_name(code)}")
+
+        currs = '\n'.join(currs)
+
+        embed.description = f"{description}{currs}"
 
         return await channel.send(embed=embed)
 
-    # todo add dynamic buttons for currencies
+    def _make_buttons(self):
+        # make lira the first button, since it's the most popular currency
+        ordered = {
+            "LRA": self.currencies["LRA"]
+        }
 
-    @menus.button('1\N{variation selector-16}\N{combining enclosing keycap}')
-    async def on_first_choice(self, payload):
-        self.result = "LRA"
-        self.stop()
+        ordered.update(self.currencies)
 
-    @menus.button('2\N{variation selector-16}\N{combining enclosing keycap}')
-    async def on_second_choice(self, payload):
-        self.result = "MAO"
-        self.stop()
+        self.mapping = {}
 
-    @menus.button('3\N{variation selector-16}\N{combining enclosing keycap}')
-    async def on_third_choice(self, payload):
-        self.result = "ROM"
-        self.stop()
+        for i, kv in enumerate(ordered.items(), start=1):
+            code, _ = kv
+            emoji = f"{i}\N{variation selector-16}\N{combining enclosing keycap}"
+            button = menus.Button(emoji=emoji, action=self.on_button)
+            self.add_button(button=button)
+            self.mapping[emoji] = code
 
-    @menus.button('4\N{variation selector-16}\N{combining enclosing keycap}')
-    async def on_fourth_choice(self, payload):
-        self.result = "CAN"
-        self.stop()
-
-    @menus.button('5\N{variation selector-16}\N{combining enclosing keycap}')
-    async def on_fifth_choice(self, payload):
-        self.result = "CIV"
+    async def on_button(self, payload):
+        code = self.mapping.get(str(payload.emoji))
+        self.result = code
         self.stop()
 
     async def prompt(self, ctx):
@@ -337,7 +338,6 @@ class Bank(context.CustomCog):
 
     @commands.group(name='bank', aliases=['b', 'economy', 'cash', 'currency'], case_insensitive=True,
                     invoke_without_command=True)
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def bank(self, ctx):
         """The Bank of Democraciv"""
 
@@ -366,7 +366,6 @@ class Bank(context.CustomCog):
         await ctx.send(embed=embed)
 
     @bank.command(name='organization', aliases=['org', 'corp', 'company', 'corporation', 'marketplace', 'm'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def organization(self, ctx, organization: BankCorporation = None):
         """Details about a specific organization or corporation on the Marketplace"""
         if organization is None:
@@ -417,7 +416,6 @@ class Bank(context.CustomCog):
         await ctx.send(embed=embed)
 
     @bank.command(name='accounts', aliases=['bal', 'money', 'cash', 'b', 'account', 'balance', 'a', 'acc'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def accounts(self, ctx):
         """See the balance of every bank account you have access to"""
         await self.is_connected_with_bank_user(ctx)
@@ -474,7 +472,6 @@ class Bank(context.CustomCog):
         await pages.start(ctx)
 
     @bank.command(name='send', aliases=['s', 'transfer', 't', 'give'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def send(self, ctx, to_member_or_iban_or_organization: typing.Union[
         discord.Member, converter.CaseInsensitiveMember, discord.User, uuid.UUID, str]
                    , amount: decimal.Decimal, *, purpose: str = None):
@@ -524,7 +521,6 @@ class Bank(context.CustomCog):
         await ctx.send(embed=embed)
 
     @bank.command(name='applyottomantax', aliases=['applyottomanformula'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.OTTOMAN_TAX_OFFICER)
     async def apply_ottoman_formula(self, ctx):
         """See the outcome of a dry-run of the tax on all bank accounts with the Ottoman currency and then apply that tax """
@@ -565,7 +561,6 @@ class Bank(context.CustomCog):
         await ctx.send(f"{config.YES} Tax was applied to all accounts with the Ottoman currency.")
 
     @bank.command(name='circulation', aliases=['total'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     async def circulation(self, ctx):
         """See how much of every currency is currently in circulation"""
 
@@ -584,7 +579,6 @@ class Bank(context.CustomCog):
         await ctx.send(embed=embed)
 
     @bank.command(name='listottomanvariable', aliases=['listottomanvariables'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.OTTOMAN_TAX_OFFICER)
     async def list_ottoman_ibal(self, ctx):
         """List all bank accounts with the Ottoman currency and check their Equilibrium variable"""
@@ -608,7 +602,6 @@ class Bank(context.CustomCog):
 
     @bank.command(name='changeottomanvariable',
                   aliases=['changeottomanvariables', 'editottomanvariables', 'editottomanvariable'])
-    @commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
     @checks.has_democraciv_role(mk.DemocracivRole.OTTOMAN_TAX_OFFICER)
     async def edit_ottoman_ibal(self, ctx, iban: uuid.UUID, new_ibal: decimal.Decimal):
         """Change the Equilibrium variable of a bank account with the Ottoman currency
