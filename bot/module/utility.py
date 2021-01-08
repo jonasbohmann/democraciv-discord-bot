@@ -636,7 +636,7 @@ class Utility(context.CustomCog):
             raise commands.BadArgument()
 
         if "result" in js:
-            await ctx.send(js["result"])
+            await ctx.reply(js["result"])
 
 
 def setup(bot):
