@@ -615,19 +615,22 @@ class Utility(context.CustomCog):
         await ctx.send(invite.url)
 
     @commands.command(name="roll", aliases=['r', 'dice'])
-    async def roll(self, ctx, *, dices):
+    async def roll(self, ctx, *, dices="1d20"):
         """Roll some dice
 
         **Supported Notation**
-        - Dice rolls take the form NdX, where N is the number of dice to roll, and X are the faces of the dice. For example, 1d6 is one six-sided die.
-        - A dice roll can be followed by an Ln or Hn, where it will discard the lowest n rolls or highest n rolls, respectively. So 2d20L1 means to roll two d20s and discard the lower. I.E advantage.
-        - A dice roll can be part of a mathematical expression, such as 1d4 +5.
+        - Dice rolls take the form `NdX`, where `N` is the number of dice to roll, and `X` are the faces of the dice. For example, `1d6` is one six-sided die.
+
+        - A dice roll can be followed by an `Ln` or `Hn`, where it will discard the lowest `n` rolls or highest `n` rolls, respectively. So `2d20L1` means to roll two `d20`s and discard the lower one (advantage).
+
+        - A dice roll can be part of a mathematical expression, such as `1d4 + 5`.
 
         **Example**
+          `{PREFIX}{COMMAND}` will roll 1d20
           `{PREFIX}{COMMAND} 1d6` will roll a d6
           `{PREFIX}{COMMAND} (2d20L1) + 1d4 + 5` will roll 2d20s, discard the lower one, and add 1d4 and 5 to the result
 
-        *Full notation can be found here: https://xdice.readthedocs.io/en/latest/dice_notation.html*
+        *Full notation can be found [here.](https://xdice.readthedocs.io/en/latest/dice_notation.html)*
         """
 
         js = await self.bot.api_request("POST", "roll", json={"dices": dices})
