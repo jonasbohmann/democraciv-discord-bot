@@ -232,7 +232,7 @@ def _roll_dice(dice_to_roll: str):
     dice_pattern = xdice.Pattern(dice_to_roll)
 
     # Ensure the number of dice the user asked to roll is reasonable
-    total_dice = 0
+    # total_dice = 0
 
     # for dice in dice_pattern.dices:
     #    total_dice += dice.amount
@@ -282,7 +282,13 @@ def _roll_dice(dice_to_roll: str):
     rolls, _, _ = rolls.partition("#")
 
     rolls = rolls if len(rolls) < 1800 else "*rolls omitted*"
-    msg = f"`{dice_to_roll}` = {rolls} = {roll}"
+
+    pretty_dice_to_roll, _, comment = dice_to_roll.partition("#")
+
+    if comment:
+        msg = f"`{pretty_dice_to_roll.strip()}` {comment.strip()} = {rolls} = {roll}"
+    else:
+        msg = f"`{dice_to_roll}` = {rolls} = {roll}"
 
     if special_message:
         msg = f"{msg}\n{special_message}"
