@@ -279,6 +279,7 @@ def _roll_dice(dice_to_roll: str):
 
     # Format the intermediate text using the previous template
     rolls = format_string.format(*roll_information)
+    rolls, _, _ = rolls.partition("#")
 
     rolls = rolls if len(rolls) < 1800 else "*rolls omitted*"
     msg = f"`{dice_to_roll}` = {rolls} = {roll}"
@@ -293,7 +294,7 @@ def _roll_dice(dice_to_roll: str):
 def roll_dice(dice_to_roll: Dice):
     try:
         return {"ok": "ok", "result": _roll_dice(dice_to_roll.dices)}
-    except (SyntaxError, TypeError, ValueError):
+    except (SyntaxError, TypeError, ValueError, IndexError):
         return {"error": "invalid dice syntax"}
 
 
