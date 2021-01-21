@@ -249,33 +249,11 @@ class DemocracivBot(commands.Bot):
 
     @staticmethod
     def format_permissions(missing_perms: list) -> str:
-        """
-        The MIT License (MIT)
-
-        Copyright (c) 2015-2019 Rapptz
-
-        Permission is hereby granted, free of charge, to any person obtaining a
-        copy of this software and associated documentation files (the "Software"),
-        to deal in the Software without restriction, including without limitation
-        the rights to use, copy, modify, merge, publish, distribute, sublicense,
-        and/or sell copies of the Software, and to permit persons to whom the
-        Software is furnished to do so, subject to the following conditions:
-
-        The above copyright notice and this permission notice shall be included in
-        all copies or substantial portions of the Software.
-
-        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-        FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-        DEALINGS IN THE SOFTWARE.
-        """
         missing = [f"`{perm.replace('_', ' ').replace('guild', 'server').title()}`" for perm in missing_perms]
 
         if len(missing) > 2:
-            fmt = "{}, and {}".format(", ".join(missing[:-1]), missing[-1])
+            first = ", ".join(missing[:-1])
+            fmt = f"{first}, and {missing[-1]}"
         else:
             fmt = " and ".join(missing)
 
@@ -283,30 +261,6 @@ class DemocracivBot(commands.Bot):
 
     @staticmethod
     def format_roles(ctx, missing_roles: list) -> str:
-        """
-        The MIT License (MIT)
-
-        Copyright (c) 2015-2019 Rapptz
-
-        Permission is hereby granted, free of charge, to any person obtaining a
-        copy of this software and associated documentation files (the "Software"),
-        to deal in the Software without restriction, including without limitation
-        the rights to use, copy, modify, merge, publish, distribute, sublicense,
-        and/or sell copies of the Software, and to permit persons to whom the
-        Software is furnished to do so, subject to the following conditions:
-
-        The above copyright notice and this permission notice shall be included in
-        all copies or substantial portions of the Software.
-
-        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-        FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-        DEALINGS IN THE SOFTWARE.
-        """
-
         class MockRole:
             name = "*Deleted Role*"
 
@@ -326,7 +280,8 @@ class DemocracivBot(commands.Bot):
         missing = [f"`{safe_get_role(role).name}`" for role in missing_roles]
 
         if len(missing) > 2:
-            fmt = "{}, or {}".format(", ".join(missing[:-1]), missing[-1])
+            first = ", ".join(missing[:-1])
+            fmt = f"{first}, or {missing[-1]}"
         else:
             fmt = " or ".join(missing)
 

@@ -1,3 +1,11 @@
+"""
+This Source Code Form is subject to the terms of the Mozilla Public
+License, v. 2.0. If a copy of the MPL was not distributed with this
+file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+The -cat and -dog commands are based on RoboDanny by Rapptz: https://github.com/Rapptz/RoboDanny/blob/rewrite/LICENSE.txt
+"""
+
 import io
 import typing
 import random
@@ -525,28 +533,6 @@ class Utility(context.CustomCog):
     async def dog(self, ctx):
         """Just for Tay: A random image or video of a dog"""
 
-        """The MIT License (MIT)
-
-        Copyright (c) 2015 Rapptz
-        
-        Permission is hereby granted, free of charge, to any person obtaining a
-        copy of this software and associated documentation files (the "Software"),
-        to deal in the Software without restriction, including without limitation
-        the rights to use, copy, modify, merge, publish, distribute, sublicense,
-        and/or sell copies of the Software, and to permit persons to whom the
-        Software is furnished to do so, subject to the following conditions:
-        
-        The above copyright notice and this permission notice shall be included in
-        all copies or substantial portions of the Software.
-        
-        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-        FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-        DEALINGS IN THE SOFTWARE."""
-
         async with self.bot.session.get("https://random.dog/woof") as resp:
             if resp.status != 200:
                 return await ctx.send(f"{config.NO} No dog found :(")
@@ -554,6 +540,7 @@ class Utility(context.CustomCog):
             filename = await resp.text()
             url = f"https://random.dog/{filename}"
             filesize = ctx.guild.filesize_limit if ctx.guild else 8388608
+
             if filename.endswith((".mp4", ".webm")):
                 async with ctx.typing():
                     async with self.bot.session.get(url) as other:
@@ -575,28 +562,6 @@ class Utility(context.CustomCog):
     @commands.command(name="cat", aliases=["cats"])
     async def cat(self, ctx):
         """A random cat"""
-
-        """The MIT License (MIT)
-
-        Copyright (c) 2015 Rapptz
-
-        Permission is hereby granted, free of charge, to any person obtaining a
-        copy of this software and associated documentation files (the "Software"),
-        to deal in the Software without restriction, including without limitation
-        the rights to use, copy, modify, merge, publish, distribute, sublicense,
-        and/or sell copies of the Software, and to permit persons to whom the
-        Software is furnished to do so, subject to the following conditions:
-
-        The above copyright notice and this permission notice shall be included in
-        all copies or substantial portions of the Software.
-
-        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-        OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-        FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-        DEALINGS IN THE SOFTWARE."""
 
         async with self.bot.session.get("https://api.thecatapi.com/v1/images/search") as response:
             if response.status != 200:
