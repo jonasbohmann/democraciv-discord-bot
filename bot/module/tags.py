@@ -92,7 +92,7 @@ class Tags(context.CustomCog):
         invoke_without_command=True,
         case_insensitive=True,
     )
-    async def tags(self, ctx: context.CustomContext, tag: Tag = None):
+    async def tags(self, ctx: context.CustomContext, *, tag: Tag = None):
         """Access a tag or list all tags on this server
 
         **Example**
