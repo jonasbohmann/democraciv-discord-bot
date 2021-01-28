@@ -464,8 +464,12 @@ class Tag(commands.Converter):
         tag_record = await ctx.bot.db.fetchrow(sql, argument.lower(), guild_id)
 
         if tag_record is None:
-            raise exceptions.TagError(f"{config.NO} There is no global tag from the {ctx.bot.dciv.name} server nor a "
-                                      f"local tag from this server named `{argument}`.")
+            if ctx.guild:
+                msg = f"{config.NO} There is no global tag from the {ctx.bot.dciv.name} server nor a local tag from this server named `{argument}`."
+            else:
+                msg = f"{config.NO} There is no global tag from the {ctx.bot.dciv.name} named `{argument}`."
+
+            raise exceptions.TagError(msg)
 
         aliases = await ctx.bot.db.fetch("SELECT alias FROM tag_lookup WHERE tag_id = $1", tag_record["id"])
         aliases = [record["alias"] for record in aliases]
