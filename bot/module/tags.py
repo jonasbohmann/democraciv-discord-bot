@@ -13,7 +13,7 @@ from bot.utils.converter import (
     CaseInsensitiveMember,
     CaseInsensitiveUser,
 )
-from bot.utils import text, paginator
+from bot.utils import text, paginator, exceptions
 
 
 class TagContentType(enum.Enum):
@@ -357,15 +357,20 @@ class Tags(context.CustomCog):
 
         is_global = False
 
-        if ctx.guild.id == self.bot.dciv.id and (ctx.author.guild_permissions.administrator or
-                                                 self.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
-                                                 in ctx.author.roles):
-            is_global = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should this tag be global?"
-                                          f"\n{config.HINT} *Only {self.bot.dciv.name} Moderators and Nation Admins "
-                                          f"can make global tags. "
-                                          f"If a tag is global, it can be used in every server I am in, as well as in "
-                                          f"DMs with me. If a tag is not global, called a 'local' tag, "
-                                          f"it can only be used in the server it was made in.*")
+        if ctx.guild.id == self.bot.dciv.id:
+            try:
+                nation_admin = self.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
+            except exceptions.RoleNotFoundError:
+                nation_admin = None
+
+            if ctx.author.guild_permissions.administrator or (
+                    self.bot.mk.IS_NATION_BOT and nation_admin and nation_admin in ctx.author.roles):
+                is_global = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should this tag be global?"
+                                              f"\n{config.HINT} *Only {self.bot.dciv.name} Moderators and Nation "
+                                              f"Admins can make global tags. If a tag is global, it can be used "
+                                              f"in every server I am in, as well as in "
+                                              f"DMs with me. If a tag is not global, called a 'local' tag, "
+                                              f"it can only be used in the server it was made in.*")
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to add the tag " f"`{config.BOT_PREFIX}{name}`?"
