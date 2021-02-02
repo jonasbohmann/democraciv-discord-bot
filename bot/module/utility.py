@@ -15,10 +15,11 @@ import datetime
 import re
 
 from discord.ext import commands
+from discord_slash import SlashCommand, SlashContext, cog_ext, manage_commands
 from urllib import parse
 
 from bot.config import config, token
-from bot.utils import context, paginator, text
+from bot.utils import context, paginator, text, exceptions
 from bot.utils.converter import (
     PoliticalParty,
     CaseInsensitiveMember, CaseInsensitiveUser, DemocracivCaseInsensitiveRole,
@@ -31,6 +32,13 @@ class Utility(context.CustomCog):
     def __init__(self, bot):
         super().__init__(bot)
         self.cached_sorted_veterans_on_democraciv = []
+
+        if not hasattr(bot, "slash"):
+            bot.slash = SlashCommand(bot, override_type=True)
+
+        self.bot = bot
+        self.bot.slash.get_cog_commands(self)
+        self.bot.loop.create_task(self.bot.slash.register_all_commands())
 
     @staticmethod
     def percentage_encode_url(link: str) -> str:
@@ -605,6 +613,23 @@ class Utility(context.CustomCog):
 
         if "result" in js:
             await ctx.reply(js["result"])
+
+    @cog_ext.cog_slash(name="roll",
+                       description="Roll some dice. Supported notation: https://tinyurl.com/y32jz4tp",
+                       options=[manage_commands.create_option(name="dice",
+                                                              description="The dice to roll.",
+                                                              required=False,
+                                                              option_type=3)])
+    async def slash_roll(self, ctx: SlashContext, dice="1d20"):
+        try:
+            js = await self.bot.api_request("POST", "roll", json={"dices": dice})
+        except exceptions.DemocracivBotAPIError:
+            await ctx.send(content=f"{config.NO} Something went wrong.")
+        else:
+            if "error" in js:
+                await ctx.send(content=f"{config.NO} Something went wrong.")
+            elif "result" in js:
+                await ctx.send(content=js["result"])
 
 
 def setup(bot):

@@ -9,3 +9,4 @@ google-api-python-client
 google-auth-oauthlib
 google-auth-httplib2
 async-lru
+discord-py-slash-command
