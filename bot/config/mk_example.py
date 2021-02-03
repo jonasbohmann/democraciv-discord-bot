@@ -54,6 +54,7 @@ class MarkConfig:
     MARK = "7"
     CIV_GAME = "Sid Meier's Civilization 6"
 
+    IS_MULTICIV = False
     IS_NATION_BOT = False
 
     # -- Government Names --
