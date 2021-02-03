@@ -12,7 +12,7 @@ import random
 import discord
 import operator
 import datetime
-import re
+import textwrap
 
 from discord.ext import commands
 from urllib import parse
@@ -62,12 +62,12 @@ class Utility(context.CustomCog):
 
         async with self.bot.session.get(
                 f"https://en.wikipedia.org/w/api.php?format=json&action=query&list=search"
-                f"&srinfo=suggestion&srprop&srsearch={query}"
+                f"&srinfo=suggestion&srsearch={query}"
         ) as response:
             if response.status == 200:
                 return await response.json()
 
-    @commands.command(name="wikipedia")
+    @commands.command(name="wikipedia", aliases=['define', 'definition'])
     async def wikipedia(self, ctx, *, topic: str):
         """Search for an article on Wikipedia"""
         async with ctx.typing():  # Show typing status so that user knows that stuff is happening
@@ -77,42 +77,45 @@ class Utility(context.CustomCog):
 
                 # Fall back to MediaWiki Action API and ask for article suggestions as there's probably a typo in
                 # 'topic'
-                suggested_pages = await self.get_wikipedia_suggested_articles(topic)
-
                 try:
-                    suggested_query_name = suggested_pages["query"]["search"][0]["title"]
-                except (IndexError, KeyError):
+                    suggested_pages = await self.get_wikipedia_suggested_articles(topic)
+
+                    for suggested_page in suggested_pages["query"]["search"]:
+                        page_info = await self.get_wikipedia_result_with_rest_api(suggested_page['title'])
+
+                        if page_info and page_info['type'] != "disambiguation":
+                            result = page_info
+                            break
+                        else:
+                            continue
+
+                except (TypeError, KeyError):
                     return await ctx.send(
                         f"{config.NO} Wikipedia could not suggest me anything. "
                         "Did you search for something in a language other than English?"
                     )
 
-                # Retry with new suggested article title
-                result = await self.get_wikipedia_result_with_rest_api(suggested_query_name)
-
-                if result is None or not result:
-                    return await ctx.send(f"{config.NO} Wikipedia couldn't suggest me any articles that are "
+                if not result:
+                    return await ctx.send(f"{config.NO} Wikipedia could not suggest me any articles that are "
                                           f"related to `{topic}`.")
 
             title = result["title"]
             summary = result["extract"]
-            summary_in_2_sentences = " ".join(re.split(r"(?<=[.?!])\s+", summary, 2)[:-1])
             url = result["content_urls"]["desktop"]["page"]
-            thumbnail_url = ""
+            thumbnail_url = None
 
             try:
                 thumbnail_url = result["thumbnail"]["source"]
             except KeyError:
                 pass
 
-            embed = text.SafeEmbed(
-                title=f"{config.WIKIPEDIA_LOGO}  {title}",
-                description=summary_in_2_sentences
-            )
+            embed = text.SafeEmbed(description=textwrap.shorten(summary, 500, placeholder="..."))
+            embed.set_author(name=title, icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
+                                                  "806577378314289162/Wikipedia-logo-v2.png")
 
-            embed.add_field(name="Link", value=self.percentage_encode_url(url))
+            embed.add_field(name="Link", value=f"[{url}]({self.percentage_encode_url(url)})")
 
-            if thumbnail_url.startswith("https://"):
+            if isinstance(thumbnail_url, str):
                 embed.set_thumbnail(url=thumbnail_url)
 
         await ctx.send(embed=embed)
