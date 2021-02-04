@@ -54,7 +54,7 @@ class PoliticalParty(commands.Converter):
             self._id = kwargs.get("role").id
 
     @property
-    def leaders(self) -> typing.List[typing.Union[discord.Member, discord.User, None]]:
+    def leaders(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
         return list(
             filter(None, [self._bot.dciv.get_member(leader) or self._bot.get_user(leader) for leader in self._leaders]))
 

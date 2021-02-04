@@ -1008,8 +1008,45 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         await consumer.consume(scheduler=self.override_scheduler)
         await ctx.send(f"{config.YES} The vetoes of all bills were overridden.")
 
+    @legislature.command(name="sponsor", aliases=["sp"])
+    async def sponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
+        """Show your support for one or multiple bills by sponsoring them
+
+        **Example**
+           `{PREFIX}{COMMAND} 56`
+           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
+
+        if not bill_ids:
+            return await ctx.send_help(ctx.command)
+
+        consumer = models.LegalConsumer(ctx=ctx, objects=bill_ids, action=models.BillStatus.sponsor)
+
+        def filter_sponsor(_ctx, _bill, **kwargs):
+            if _ctx.author.id == _bill.submitter.id:
+                return "The bill's author cannot sponsor their own bill."
+
+        await consumer.filter(filter_func=filter_sponsor, sponsor=ctx.author)
+
+        if consumer.failed:
+            await ctx.send(
+                f":warning: The following bills cannot be sponsored.\n{consumer.failed_formatted}"
+            )
+
+        if not consumer.passed:
+            return
+
+        reaction = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
+            f"to sponsor the following bills?\n{consumer.passed_formatted}"
+        )
+
+        if not reaction:
+            return await ctx.send("Cancelled.")
+
+        await consumer.consume(sponsor=ctx.author)
+        await ctx.send(f"{config.YES} All bills were sponsored by you.")
+
     @legislature.command(name="resubmit", aliases=["rs"])
-    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def resubmit(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Resubmit any bills that failed in the {LEGISLATURE_NAME} or {MINISTRY_NAME} to the currently active session
 

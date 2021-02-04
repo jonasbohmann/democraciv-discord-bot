@@ -209,7 +209,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
 
         await law.status.amend(new_link=new_link)
         law = await models.Law.convert(ctx, law.id)
-        self.amend_scheduler.add(law)
+        # self.amend_scheduler.add(law)
         await ctx.send(f"{config.YES} The link to `{law.name}` was changed.")
 
 

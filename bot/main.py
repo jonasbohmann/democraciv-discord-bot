@@ -610,9 +610,10 @@ class DemocracivBot(commands.Bot):
 
     def _execute_apps_script(self, script_id, function, parameters):
         google_credentials = None
+        path = str(pathlib.Path(__file__).parent) + '/config/google_oauth_token.pickle'
 
-        if os.path.exists('bot/config/google_oauth_token.pickle'):
-            with open('bot/config/google_oauth_token.pickle', 'rb') as google_token:
+        if os.path.exists(path):
+            with open(path, 'rb') as google_token:
                 google_credentials = pickle.load(google_token)
 
         if not google_credentials or not google_credentials.valid:
@@ -624,7 +625,7 @@ class DemocracivBot(commands.Bot):
                     config.GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES)
                 google_credentials = flow.run_local_server(port=0)
 
-            with open('bot/config/google_oauth_token.pickle', 'wb') as google_token:
+            with open(path, 'wb') as google_token:
                 pickle.dump(google_credentials, google_token)
 
         service = build("script", "v1", credentials=google_credentials, cache_discovery=False)
