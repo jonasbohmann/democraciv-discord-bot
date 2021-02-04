@@ -63,7 +63,7 @@ class CustomCog(commands.Cog):
         doc = inspect.getdoc(self)
         if doc is not None:
             cleaned = doc.format_map(self.bot.mk.to_dict())
-            self.__cog_description__ = cleaned
+            self.description = cleaned
 
     async def _transform_command_help(self, command: commands.Command):
         if not self._bot_is_ready:
