@@ -75,58 +75,76 @@ class Utility(context.CustomCog):
             if response.status == 200:
                 return await response.json()
 
+    async def _do_wikipedia_search(self, ctx, topic):
+        result = await self.get_wikipedia_result_with_rest_api(topic)
+
+        if result is None or result["type"] == "disambiguation":
+
+            # Fall back to MediaWiki Action API and ask for article suggestions as there's probably a typo in
+            # 'topic'
+            try:
+                suggested_pages = await self.get_wikipedia_suggested_articles(topic)
+
+                for suggested_page in suggested_pages["query"]["search"]:
+                    page_info = await self.get_wikipedia_result_with_rest_api(suggested_page['title'])
+
+                    if page_info and page_info['type'] != "disambiguation":
+                        result = page_info
+                        break
+                    else:
+                        continue
+
+            except (TypeError, KeyError):
+                return await ctx.send(content=
+                                      f"{config.NO} Wikipedia could not suggest me anything. "
+                                      "Did you search for something in a language other than English?"
+                                      )
+
+            if not result:
+                return await ctx.send(content=f"{config.NO} Wikipedia could not suggest me any articles that are "
+                                              f"related to `{topic}`.")
+
+        title = result["title"]
+        summary = result["extract"]
+        url = result["content_urls"]["desktop"]["page"]
+        thumbnail_url = None
+
+        try:
+            thumbnail_url = result["thumbnail"]["source"]
+        except KeyError:
+            pass
+
+        embed = text.SafeEmbed(description=textwrap.shorten(summary, 500, placeholder="..."))
+        embed.set_author(name=title, icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
+                                              "806577378314289162/Wikipedia-logo-v2.png")
+
+        embed.add_field(name="Link", value=f"[{url}]({self.percentage_encode_url(url)})")
+
+        if isinstance(thumbnail_url, str):
+            embed.set_thumbnail(url=thumbnail_url)
+
+        return embed
+
     @commands.command(name="wikipedia", aliases=['define', 'definition'])
     async def wikipedia(self, ctx, *, topic: str):
         """Search for an article on Wikipedia"""
         async with ctx.typing():  # Show typing status so that user knows that stuff is happening
-            result = await self.get_wikipedia_result_with_rest_api(topic)
+            embed = await self._do_wikipedia_search(ctx, topic)
 
-            if result is None or result["type"] == "disambiguation":
+        if isinstance(embed, discord.Embed):
+            await ctx.send(embed=embed)
 
-                # Fall back to MediaWiki Action API and ask for article suggestions as there's probably a typo in
-                # 'topic'
-                try:
-                    suggested_pages = await self.get_wikipedia_suggested_articles(topic)
+    @cog_ext.cog_slash(name="wikipedia",
+                       description="Search for an article on Wikipedia",
+                       options=[manage_commands.create_option(name="topic",
+                                                              description="The topic to search for.",
+                                                              required=True,
+                                                              option_type=3)])
+    async def slash_wikipedia(self, ctx: SlashContext, topic):
+        embed = await self._do_wikipedia_search(ctx, topic)
 
-                    for suggested_page in suggested_pages["query"]["search"]:
-                        page_info = await self.get_wikipedia_result_with_rest_api(suggested_page['title'])
-
-                        if page_info and page_info['type'] != "disambiguation":
-                            result = page_info
-                            break
-                        else:
-                            continue
-
-                except (TypeError, KeyError):
-                    return await ctx.send(
-                        f"{config.NO} Wikipedia could not suggest me anything. "
-                        "Did you search for something in a language other than English?"
-                    )
-
-                if not result:
-                    return await ctx.send(f"{config.NO} Wikipedia could not suggest me any articles that are "
-                                          f"related to `{topic}`.")
-
-            title = result["title"]
-            summary = result["extract"]
-            url = result["content_urls"]["desktop"]["page"]
-            thumbnail_url = None
-
-            try:
-                thumbnail_url = result["thumbnail"]["source"]
-            except KeyError:
-                pass
-
-            embed = text.SafeEmbed(description=textwrap.shorten(summary, 500, placeholder="..."))
-            embed.set_author(name=title, icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
-                                                  "806577378314289162/Wikipedia-logo-v2.png")
-
-            embed.add_field(name="Link", value=f"[{url}]({self.percentage_encode_url(url)})")
-
-            if isinstance(thumbnail_url, str):
-                embed.set_thumbnail(url=thumbnail_url)
-
-        await ctx.send(embed=embed)
+        if isinstance(embed, discord.Embed):
+            await ctx.send(embeds=[embed])
 
     @commands.command(name="time", aliases=["clock", "tz"])
     async def time(self, ctx, *, zone: str):
