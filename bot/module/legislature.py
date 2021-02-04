@@ -1009,7 +1009,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         await consumer.consume(scheduler=self.override_scheduler)
         await ctx.send(f"{config.YES} The vetoes of all bills were overridden.")
 
-    @legislature.command(name="sponsor", aliases=["sp"])
+    @legislature.command(name="sponsor", aliases=["sp", "cosponsor", "second"])
     async def sponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Show your support for one or multiple bills by sponsoring them
 
@@ -1025,6 +1025,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         def filter_sponsor(_ctx, _bill, **kwargs):
             if _ctx.author.id == _bill.submitter.id:
                 return "The bill's author cannot sponsor their own bill."
+
+            if _ctx.author in _bill.sponsors:
+                return "You already sponsored this bill."
 
         await consumer.filter(filter_func=filter_sponsor, sponsor=ctx.author)
 
@@ -1046,6 +1049,44 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         await consumer.consume(sponsor=ctx.author)
         await ctx.send(f"{config.YES} All bills were sponsored by you.")
+
+    @legislature.command(name="unsponsor", aliases=["usp"])
+    async def unsponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
+        """Remove yourself from the list of sponsors of one or multiple bills
+
+        **Example**
+           `{PREFIX}{COMMAND} 56`
+           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
+
+        if not bill_ids:
+            return await ctx.send_help(ctx.command)
+
+        consumer = models.LegalConsumer(ctx=ctx, objects=bill_ids, action=models.BillStatus.unsponsor)
+
+        def filter_sponsor(_ctx, _bill, **kwargs):
+            if _ctx.author not in _bill.sponsors:
+                return "You are not a sponsor of this bill."
+
+        await consumer.filter(filter_func=filter_sponsor, sponsor=ctx.author)
+
+        if consumer.failed:
+            await ctx.send(
+                f":warning: The following bills cannot be unsponsored.\n{consumer.failed_formatted}"
+            )
+
+        if not consumer.passed:
+            return
+
+        reaction = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
+            f"to remove yourself from the list of sponsors of the following bills?\n{consumer.passed_formatted}"
+        )
+
+        if not reaction:
+            return await ctx.send("Cancelled.")
+
+        await consumer.consume(sponsor=ctx.author)
+        await ctx.send(f"{config.YES} You were removed from the list of sponsors from all bills.")
 
     @legislature.command(name="resubmit", aliases=["rs"])
     async def resubmit(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):

@@ -440,6 +440,9 @@ class BillStatus:
     async def sponsor(self, *, dry=False, sponsor: discord.Member):
         raise IllegalBillOperation(f"You can only sponsor recently submitted bills that were not voted on yet.")
 
+    async def unsponsor(self, *, dry=False, sponsor: discord.Member):
+        raise IllegalBillOperation(f"You can only unsponsor recently submitted bills that were not voted on yet.")
+
     def emojified_status(self, verbose=True):
         raise NotImplementedError()
 
@@ -495,6 +498,14 @@ class BillSubmitted(BillStatus):
             return
 
         await self._bot.db.execute("INSERT INTO bill_sponsor (bill_id, sponsor) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                                   self._bill.id,
+                                   sponsor.id)
+
+    async def unsponsor(self, *, dry=False, sponsor: discord.Member):
+        if dry:
+            return
+
+        await self._bot.db.execute("DELETE FROM bill_sponsor WHERE bill_id = $1 AND sponsor = $2",
                                    self._bill.id,
                                    sponsor.id)
 

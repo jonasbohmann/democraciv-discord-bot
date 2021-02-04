@@ -10,3 +10,6 @@ google-auth-oauthlib
 google-auth-httplib2
 async-lru
 discord-py-slash-command
+fuzzywuzzy
+python-Levenshtein
+
