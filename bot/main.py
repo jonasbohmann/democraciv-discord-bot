@@ -78,7 +78,7 @@ if mk.MarkConfig.IS_MULTICIV:
         }
 
 else:
-    initial_extensions = all_extensions
+    initial_extensions = all_extensions - {"bot.module.nation"}
 
 # monkey patch dpy's send
 _old_send = discord.abc.Messageable.send
