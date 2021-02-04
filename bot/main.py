@@ -38,37 +38,47 @@ from bot.config import token, config, mk
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [BOT] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
 
-# List of cogs that will be loaded on startup
-initial_extensions = [
+all_extensions = {
     "bot.module.logging",
     "bot.module.meta",
     "bot.module.utility",
     "bot.module.guild",
     "bot.module.admin",
-    "bot.module.tags"
-]
+    "bot.module.tags",
+    "bot.module.starboard",
+    "bot.module.moderation",
+    "bot.ext.democracivbank.bank",
+    "bot.module.roles",
+    "bot.module.parties",
+    "bot.module.legislature",
+    "bot.module.laws",
+    "bot.module.ministry",
+    "bot.module.supremecourt",
+    "bot.module.nation"
+}
 
-if mk.MarkConfig.IS_NATION_BOT:
-    initial_extensions.extend(
-        [
+if mk.MarkConfig.IS_MULTICIV:
+    initial_extensions = all_extensions
+
+    if mk.MarkConfig.IS_NATION_BOT:
+        initial_extensions = initial_extensions - {
+            "bot.module.starboard",
+            "bot.module.moderation",
+            "bot.ext.democracivbank.bank",
+            "bot.module.roles"
+        }
+    else:
+        initial_extensions = initial_extensions - {
             "bot.module.parties",
             "bot.module.legislature",
             "bot.module.laws",
             "bot.module.ministry",
             "bot.module.supremecourt",
             "bot.module.nation"
-        ]
-    )
+        }
 
 else:
-    initial_extensions.extend(
-        [
-            "bot.module.starboard",
-            "bot.module.moderation",
-            "bot.ext.democracivbank.bank",
-            "bot.module.roles"
-        ]
-    )
+    initial_extensions = all_extensions
 
 # monkey patch dpy's send
 _old_send = discord.abc.Messageable.send
@@ -126,7 +136,7 @@ class DemocracivBot(commands.Bot):
         intents.members = True
 
         super().__init__(
-            max_messages=100,
+            max_messages=100 if mk.MarkConfig.IS_NATION_BOT else 1000,
             command_prefix=get_prefix,
             case_insensitive=True,
             intents=intents,
@@ -348,7 +358,8 @@ class DemocracivBot(commands.Bot):
                 role_id = error.missing_role.value
                 role = ctx.guild.get_role(role_id) or self.dciv.get_role(role_id)
             elif isinstance(error.missing_role, str):
-                role = discord.utils.get(ctx.guild.roles, name=error.missing_role) or discord.utils.get(self.dciv.roles, name=error.missing_role)
+                role = discord.utils.get(ctx.guild.roles, name=error.missing_role) or discord.utils.get(self.dciv.roles,
+                                                                                                        name=error.missing_role)
             else:
                 role = ctx.guild.get_role(error.missing_role) or self.dciv.get_role(error.missing_role)
 
@@ -529,7 +540,7 @@ class DemocracivBot(commands.Bot):
             self.db_ready = False
             raise
 
-        with open("bot/db/schema.sql") as sql:
+        with open(str(pathlib.Path(__file__).parent) + "/db/schema.sql") as sql:
             try:
                 await self.db.execute(sql.read())
             except asyncpg.InsufficientPrivilegeError:

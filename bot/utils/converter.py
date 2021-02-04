@@ -172,7 +172,7 @@ class Selfrole(commands.Converter):
             raise exceptions.NotFoundError(
                 f"{config.NO} There is no selfrole on this server that matches `{argument}`.\n"
                 f"{config.HINT} If you're trying to join or leave a political party,"
-                f" check `{config.BOT_PREFIX}help Political Parties`"
+                f" check `{config.BOT_PREFIX}help party`"
             )
 
         role_record = await ctx.bot.db.fetchrow("SELECT * FROM selfrole WHERE guild_id = $1 AND role_id = $2",
@@ -182,7 +182,7 @@ class Selfrole(commands.Converter):
             raise exceptions.NotFoundError(
                 f"{config.NO} There is no selfrole on this server that matches `{argument}`.\n"
                 f"{config.HINT} If you're trying to join or leave a political party, "
-                f"check `{config.BOT_PREFIX}help Political Parties`"
+                f"check `{config.BOT_PREFIX}help party`"
             )
 
         return cls(**role_record, bot=ctx.bot)
@@ -350,9 +350,12 @@ class DemocracivCaseInsensitiveRole(CaseInsensitiveRole):
                 if role:
                     return role
 
-            raise BadArgument(
-                f"{config.NO} There is no role named `{argument}` on this server or the {ctx.bot.dciv.name} server."
-            )
+            if ctx.guild.id == ctx.bot.dciv.id:
+                msg = f"{config.NO} There is no role named `{argument}` on this server."
+            else:
+                msg = f"{config.NO} There is no role named `{argument}` on this server or the {ctx.bot.dciv.name} server."
+
+            raise BadArgument(msg)
 
 
 class CaseInsensitiveMember(commands.MemberConverter):
