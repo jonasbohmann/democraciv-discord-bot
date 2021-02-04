@@ -19,7 +19,7 @@ from bot.config import config
 from discord.ext import commands, tasks
 
 from bot.utils import context
-from bot.utils.converter import CaseInsensitiveMember, CaseInsensitiveUser
+from bot.utils.converter import CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember
 from bot.utils import text
 
 
@@ -477,7 +477,7 @@ class Starboard(context.CustomCog):
         self,
         ctx,
         *,
-        member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser] = None,
+        member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
     ):
         """Statistics about our Starboard
 

@@ -5,9 +5,11 @@ import discord
 
 from discord.ext import commands
 from discord.ext.commands import BadArgument
+from fuzzywuzzy import process
 
 from bot.config import config, mk
 from bot.utils import context, exceptions
+from utils import text
 
 
 class InternalAPIWebhookConverter(commands.Converter):
@@ -234,6 +236,14 @@ class UnbanConverter(commands.Converter):
         raise BadArgument(f"{config.NO} I couldn't find that person.")
 
 
+async def fuzzy_search(ctx, arg, iterable, model):
+    match = process.extract(arg, iterable, limit=5)
+
+    menu = text.FuzzyChoose(question=f"Which {model} did you mean?",
+                            choices=[mtch for mtch, _ in match])
+    return await menu.prompt(ctx)
+
+
 class CaseInsensitiveTextChannel(commands.TextChannelConverter):
     model = "channel"
 
@@ -327,7 +337,10 @@ class DemocracivCaseInsensitiveRole(CaseInsensitiveRole):
     async def convert(self, ctx: context.CustomContext, argument):
         try:
             return await super().convert(ctx, argument)
-        except BadArgument:
+        except BadArgument as e:
+            if ctx.guild.id == ctx.bot.dciv.id:
+                raise e
+
             arg = argument.lower()
 
             role = find_dciv_role(ctx, arg)
@@ -335,7 +348,7 @@ class DemocracivCaseInsensitiveRole(CaseInsensitiveRole):
             if role:
                 return role
 
-            for nation_prefix in ["canada - ", "rome - ", "maori - ", "ottoman - "]:
+            """for nation_prefix in ["canada - ", "rome - ", "maori - ", "ottoman - "]:
                 if arg.startswith(nation_prefix):
                     nation_arg = arg
 
@@ -348,14 +361,55 @@ class DemocracivCaseInsensitiveRole(CaseInsensitiveRole):
                 role = find_dciv_role(ctx, nation_arg)
 
                 if role:
-                    return role
+                    return role"""
 
-            if ctx.guild.id == ctx.bot.dciv.id:
-                msg = f"{config.NO} There is no role named `{argument}` on this server."
-            else:
-                msg = f"{config.NO} There is no role named `{argument}` on this server or the {ctx.bot.dciv.name} server."
+            raise BadArgument(f"{config.NO} There is no role named `{argument}` on this "
+                              f"server or the {ctx.bot.dciv.name} server.")
 
-            raise BadArgument(msg)
+
+class FuzzyCIRole(commands.Converter):
+    async def convert(self, ctx: context.CustomContext, argument):
+        roles = [role.name for role in ctx.guild.roles]
+        role_name = await fuzzy_search(ctx, argument, roles, "role")
+
+        if not role_name:
+            raise BadArgument(f"{config.NO} There is no role named `{argument}` on this "
+                              f"server")
+
+        role = discord.utils.get(ctx.guild.roles, name=role_name)
+
+        if role:
+            return role
+
+        raise BadArgument(f"{config.NO} There is no role named `{argument}` on this "
+                          f"server")
+
+
+class FuzzyDemocracivCIRole(commands.Converter):
+    async def convert(self, ctx: context.CustomContext, argument):
+        if ctx.guild.id == ctx.bot.dciv.id:
+            return await FuzzyCIRole().convert(ctx, argument)
+
+        roles = [role.name for role in ctx.guild.roles]
+        roles.extend([role.name for role in ctx.bot.dciv.roles])
+        role_name = await fuzzy_search(ctx, argument, roles, "role")
+
+        if not role_name:
+            raise BadArgument(f"{config.NO} There is no role named `{argument}` on this "
+                              f"server or the {ctx.bot.dciv.name} server.")
+
+        role = discord.utils.get(ctx.guild.roles, name=role_name)
+
+        if role:
+            return role
+
+        role = discord.utils.get(ctx.bot.dciv.roles, name=role_name)
+
+        if role:
+            return role
+
+        raise BadArgument(f"{config.NO} There is no role named `{argument}` on this "
+                          f"server or the {ctx.bot.dciv.name} server.")
 
 
 class CaseInsensitiveMember(commands.MemberConverter):
@@ -376,6 +430,42 @@ class CaseInsensitiveMember(commands.MemberConverter):
                 return member
 
             raise BadArgument(f"{config.NO} I couldn't find that person.")
+
+
+class FuzzyCIMember(commands.Converter):
+    async def convert(self, ctx, argument):
+        # todo - make this not bad
+
+        members = {}
+        all_tries = []
+
+        for member in ctx.guild.members:
+            all_tries.append(member.name)
+
+            if member.nick:
+                members[member.nick] = member.id
+                all_tries.append(member.nick)
+
+            members[member.name] = member.id
+
+        match = process.extract(argument, all_tries, limit=10)
+
+        fmt = {}
+
+        for m, _ in match:
+            person = ctx.guild.get_member(members[m])
+            fmt[person] = None
+
+        fmt = list(fmt.keys())[:5]
+
+        menu = text.FuzzyChoose(question=f"Who did you mean?",
+                                choices=fmt)
+        result = await menu.prompt(ctx)
+
+        if result:
+            return result
+
+        raise BadArgument(f"{config.NO} I couldn't find that person.")
 
 
 class CaseInsensitiveUser(commands.UserConverter):

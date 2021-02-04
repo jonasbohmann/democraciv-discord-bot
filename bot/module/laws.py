@@ -9,7 +9,7 @@ from bot.utils import text, checks, context, models, mixin
 from bot.utils.converter import (
     CaseInsensitiveMember,
     PoliticalParty,
-    CaseInsensitiveUser,
+    CaseInsensitiveUser, FuzzyCIMember,
 )
 
 
@@ -148,7 +148,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             self,
             ctx,
             *,
-            member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty] = None,
+            member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty, FuzzyCIMember] = None,
     ):
         """List the laws a specific person or Political Party authored"""
         return await self._from_person_model(ctx, model=models.Law, member_or_party=member_or_party)

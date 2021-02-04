@@ -137,7 +137,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             ctx: context.CustomContext,
             *,
             member_or_party: typing.Union[
-                converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty] = None,
+                converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty, converter.FuzzyCIMember] = None,
     ):
         """List all bills that a specific person or Political Party submitted"""
         return await self._from_person_model(ctx, member_or_party=member_or_party, model=models.Bill)
@@ -162,7 +162,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             ctx: context.CustomContext,
             *,
             member_or_party: typing.Union[
-                converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty] = None,
+                converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty, converter.FuzzyCIMember] = None,
     ):
         """List all motions that a specific person or Political Party submitted"""
         return await self._from_person_model(ctx, model=models.Motion, member_or_party=member_or_party)

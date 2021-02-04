@@ -507,7 +507,13 @@ class Party(context.CustomCog, name="Political Parties"):
                         leaders.append(converted.id)
 
                 except commands.BadArgument:
-                    continue
+                    try:
+                        converted = await converter.FuzzyCIMember().convert(ctx, leader.strip())
+
+                        if not converted.bot:
+                            leaders.append(converted.id)
+                    except commands.BadArgument:
+                        continue
 
             if not leaders:
                 leaders.append(0)

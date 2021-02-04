@@ -150,7 +150,7 @@ class BankRoute:
                         "User-Agent": self.user_agent}
 
 
-class BankCorporation(commands.Converter):
+class BankCorporationMarketplace(commands.Converter):
     def __init__(self, **kwargs):
         self.name = kwargs.get('name')
         self.abbreviation = kwargs.get('abbreviation')
@@ -161,7 +161,7 @@ class BankCorporation(commands.Converter):
         self.industry = kwargs.get('industry')
 
     @classmethod
-    async def convert(cls, ctx, argument):
+    async def convert(cls, ctx, argument, *, allow_private=False):
         response = await ctx.bot.get_cog("Bank").request(BankRoute("GET", f"corporation/{argument}/"))
 
         if response.status == 404:
@@ -171,10 +171,21 @@ class BankCorporation(commands.Converter):
         elif response.status == 200:
             json = await response.json()
 
-            if json['is_public_viewable']:
+            if json['is_public_viewable'] or allow_private:
                 return cls(**json)
 
-        raise commands.BadArgument()
+        raise commands.BadArgument(f"{config.NO} {argument} is either not the abbreviation of an existing "
+                                   "organization, or they decided not to publish their organization.")
+
+
+class BankCorporationAbbreviation:
+    @classmethod
+    async def convert(cls, ctx, argument):
+        try:
+            corp = await BankCorporationMarketplace.convert(ctx, argument, allow_private=True)
+            return corp.abbreviation
+        except commands.BadArgument:
+            raise commands.BadArgument(f"{config.NO} {argument} is not the abbreviation of an existing organization.")
 
 
 @dataclass
@@ -366,7 +377,7 @@ class Bank(context.CustomCog):
         await ctx.send(embed=embed)
 
     @bank.command(name='organization', aliases=['org', 'corp', 'company', 'corporation', 'marketplace', 'm'])
-    async def organization(self, ctx, organization: BankCorporation = None):
+    async def organization(self, ctx, organization: BankCorporationMarketplace = None):
         """Details about a specific organization or corporation on the Marketplace"""
         if organization is None:
             response = await self.request(BankRoute("GET", 'featured_corporation/'))
@@ -472,8 +483,11 @@ class Bank(context.CustomCog):
         await pages.start(ctx)
 
     @bank.command(name='send', aliases=['s', 'transfer', 't', 'give'])
-    async def send(self, ctx, to_member_or_iban_or_organization: typing.Union[
-        discord.Member, converter.CaseInsensitiveMember, discord.User, uuid.UUID, str]
+    async def send(self, ctx, to_member_or_iban_or_organization: typing.Union[converter.CaseInsensitiveMember,
+                                                                              converter.CaseInsensitiveUser,
+                                                                              uuid.UUID,
+                                                                              BankCorporationAbbreviation,
+                                                                              converter.FuzzyCIMember]
                    , amount: decimal.Decimal, *, purpose: str = None):
         """Send money to a specific bank account, organization, or person on this server
 

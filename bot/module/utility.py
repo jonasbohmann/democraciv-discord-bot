@@ -16,16 +16,14 @@ import textwrap
 import pytz
 
 from fuzzywuzzy import process
-
 from discord.ext import commands
 from discord_slash import SlashCommand, SlashContext, cog_ext, manage_commands
 from urllib import parse
 
-from bot.config import config, token
+from bot.config import config
 from bot.utils import context, paginator, text, exceptions
 from bot.utils.converter import (
-    PoliticalParty,
-    CaseInsensitiveMember, CaseInsensitiveUser, DemocracivCaseInsensitiveRole,
+    PoliticalParty, CaseInsensitiveUser, FuzzyCIMember, DemocracivCaseInsensitiveRole, FuzzyDemocracivCIRole, CaseInsensitiveMember
 )
 
 
@@ -166,6 +164,10 @@ class Utility(context.CustomCog):
             menu = text.FuzzyChoose(question="Which time zone did you mean?",
                                     choices=[zone for zone, _ in match])
             zone = await menu.prompt(ctx)
+
+            if not zone:
+                return await ctx.send("Cancelled.")
+
             tz = pytz.timezone(zone)
 
         title = str(tz)
@@ -246,6 +248,7 @@ class Utility(context.CustomCog):
                 CaseInsensitiveMember,
                 DemocracivCaseInsensitiveRole,
                 PoliticalParty,
+                FuzzyCIMember
             ] = None,
     ):
         """Get detailed information about a member of this server
@@ -304,7 +307,7 @@ class Utility(context.CustomCog):
 
     @commands.command(name="avatar", aliases=['pfp'])
     @commands.guild_only()
-    async def avatar(self, ctx, *, member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser] = None):
+    async def avatar(self, ctx, *, member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None):
         """View someone's avatar in detail
 
         **Example**
@@ -425,8 +428,7 @@ class Utility(context.CustomCog):
     async def tinyurl(self, ctx, *, url: str):
         """Shorten a link with tinyurl"""
         if len(url) <= 3:
-            await ctx.send(f"{config.NO} That doesn't look like a valid URL.")
-            return
+            return await ctx.send(f"{config.NO} That doesn't look like a valid URL.")
 
         tiny_url = await self.bot.tinyurl(url)
 
@@ -441,7 +443,7 @@ class Utility(context.CustomCog):
             self,
             ctx,
             *,
-            role: typing.Union[DemocracivCaseInsensitiveRole, PoliticalParty],
+            role: typing.Union[DemocracivCaseInsensitiveRole, PoliticalParty, FuzzyDemocracivCIRole],
     ):
         """Detailed information about a role"""
 
@@ -513,7 +515,7 @@ class Utility(context.CustomCog):
 
     @commands.command(name="vibecheck", hidden=True)
     @commands.guild_only()
-    async def vibecheck(self, ctx, *, member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser] = None):
+    async def vibecheck(self, ctx, *, member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None):
         """vibecheck"""
 
         member = member or ctx.author

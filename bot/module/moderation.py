@@ -6,7 +6,8 @@ from discord.ext import commands
 from bot.utils import exceptions, text, context, checks
 from bot.config import token, config, mk
 from bot.utils.exceptions import ForbiddenTask
-from bot.utils.converter import UnbanConverter, BanConverter, CaseInsensitiveMember, CaseInsensitiveUser
+from bot.utils.converter import UnbanConverter, BanConverter, CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember, \
+    CaseInsensitiveTextChannel, CaseInsensitiveCategoryChannel
 
 
 class Moderation(context.CustomCog):
@@ -306,7 +307,7 @@ class Moderation(context.CustomCog):
     @commands.guild_only()
     @commands.bot_has_permissions(kick_members=True)
     @commands.has_permissions(kick_members=True)
-    async def kick(self, ctx, *, member: CaseInsensitiveMember):
+    async def kick(self, ctx, *, member: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
         """Kick someone"""
         if member == ctx.author:
             return await ctx.send(f"{config.NO} You can't kick yourself.")
@@ -343,7 +344,7 @@ class Moderation(context.CustomCog):
             self,
             ctx,
             amount: int, *,
-            target: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser] = None,
+            target: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
     ):
         """Purge an amount of messages in the current channel"""
         if amount > 500 or amount < 0:
@@ -390,7 +391,7 @@ class Moderation(context.CustomCog):
     @commands.command(name="mute")
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
-    async def mute(self, ctx, *, member: CaseInsensitiveMember):
+    async def mute(self, ctx, *, member: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
         """Mute someone"""
 
         muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
@@ -434,7 +435,7 @@ class Moderation(context.CustomCog):
     @commands.command(name="unmute")
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
-    async def unmute(self, ctx, *, member: CaseInsensitiveMember):
+    async def unmute(self, ctx, *, member: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
         """Unmute someone"""
 
         muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
@@ -561,7 +562,7 @@ class Moderation(context.CustomCog):
 
     @commands.command(name="archivechannel")
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
-    async def archivechannel(self, ctx, *, channel: discord.TextChannel):
+    async def archivechannel(self, ctx, *, channel: CaseInsensitiveTextChannel):
         """Archive a channel and automatically set the right permissions
 
         **Example**
@@ -569,11 +570,12 @@ class Moderation(context.CustomCog):
             `{PREFIX}{COMMAND} legislature`"""
 
         everyone_perms = discord.PermissionOverwrite(
-            read_message_history=False, send_messages=False, read_messages=False
+            read_message_history=False, send_messages=False, read_messages=False, add_reactions=False
         )
         everyone_role = self.bot.dciv.default_role
 
-        archive_perms = discord.PermissionOverwrite(read_message_history=True, send_messages=False, read_messages=True)
+        archive_perms = discord.PermissionOverwrite(read_message_history=True, send_messages=False,
+                                                    read_messages=True, add_reactions=False)
         archives_role = discord.utils.get(self.bot.dciv.roles, name="Archives")
 
         def predicate(c):
@@ -598,23 +600,17 @@ class Moderation(context.CustomCog):
 
     @commands.command(name="archiveoldgov")
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
-    async def archiveoldgov(self, ctx: context.CustomContext):
-        """Move all channels in the Government category and #propaganda into the Archives and set the right permissions"""
+    async def archivecategory(self, ctx: context.CustomContext, *, category: CaseInsensitiveCategoryChannel):
+        """Move all channels in a category into the Archives and set the right permissions"""
 
         reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want archive every government channel?"
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want archive every channel in `{category}`?"
         )
 
         if not reaction:
             return await ctx.send("Cancelled.")
 
         async with ctx.typing():
-            government_category: discord.CategoryChannel = discord.utils.get(
-                self.bot.dciv.categories, name="Government"
-            )
-
-            if government_category is None:
-                return await ctx.send(f"{config.NO} There is no category named `Government` for me to archive.")
 
             def predicate(c):
                 return c.name.lower() == f"mk{self.bot.mk.MARK}-archive"
@@ -626,18 +622,18 @@ class Moderation(context.CustomCog):
                     f"{config.NO} There is no category named `MK{self.bot.mk.MARK}-Archive` for me to use.")
 
             everyone_perms = discord.PermissionOverwrite(
-                read_message_history=False, send_messages=False, read_messages=False
+                read_message_history=False, send_messages=False, read_messages=False, add_reactions=False
             )
             everyone_role = self.bot.dciv.default_role
             archive_perms = discord.PermissionOverwrite(
-                read_message_history=True, send_messages=False, read_messages=True
+                read_message_history=True, send_messages=False, read_messages=True, add_reactions=False
             )
             archives_role = discord.utils.get(self.bot.dciv.roles, name="Archives")
 
             if archives_role is None:
                 return await ctx.send(f"{config.NO} There is no role named `Archives` for me to use.")
 
-            for channel in government_category.text_channels:
+            for channel in category.text_channels:
                 await channel.send(f":tada: Thanks for playing Democraciv MK{self.bot.mk.MARK}!")
                 await channel.edit(
                     name=f"mk{self.bot.mk.MARK}-{channel.name}",
@@ -646,30 +642,6 @@ class Moderation(context.CustomCog):
                         archives_role: archive_perms,
                     },
                     category=archive_category,
-                )
-
-            propaganda_channel = discord.utils.get(self.bot.dciv.text_channels, name="propaganda")
-
-            if propaganda_channel is not None:
-                await propaganda_channel.edit(
-                    name=f"mk{self.bot.mk.MARK}-propaganda",
-                    category=archive_category,
-                    overwrites={
-                        everyone_role: everyone_perms,
-                        archives_role: archive_perms,
-                    },
-                )
-
-            press_channel = discord.utils.get(self.bot.dciv.text_channels, name="press")
-
-            if press_channel is not None:
-                await press_channel.edit(
-                    name=f"mk{self.bot.mk.MARK}-press",
-                    category=archive_category,
-                    overwrites={
-                        everyone_role: everyone_perms,
-                        archives_role: archive_perms,
-                    },
                 )
 
         await ctx.send(f"{config.YES} Done.")

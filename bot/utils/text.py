@@ -142,7 +142,7 @@ class SafeEmbed(discord.Embed):
 
 
 class FuzzyChoose(menus.Menu):
-    def __init__(self, question: str, choices: typing.List):
+    def __init__(self, question: str, choices: typing.Iterable):
         super().__init__(timeout=120.0, delete_message_after=True)
         self.question = question
         self.choices = choices
@@ -155,10 +155,13 @@ class FuzzyChoose(menus.Menu):
             self.add_button(button=button)
             self._mapping[emoji] = choice
 
+        cancel = menus.Button(emoji=config.NO, action=self.cancel)
+        self.add_button(button=cancel)
+
     async def send_initial_message(self, ctx, channel):
         embed = SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}  {self.question}")
 
-        fmt = []
+        fmt = [f"Click {config.NO} to cancel.\n"]
 
         for emoji, choice in self._mapping.items():
             fmt.append(f"{emoji}  {choice}")
@@ -170,6 +173,10 @@ class FuzzyChoose(menus.Menu):
 
     async def on_button(self, payload):
         self.result = self._mapping[str(payload.emoji)]
+        self.stop()
+
+    async def cancel(self, payload):
+        self.result = None
         self.stop()
 
     async def prompt(self, ctx):

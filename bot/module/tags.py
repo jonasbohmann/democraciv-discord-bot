@@ -11,7 +11,7 @@ from bot.utils.converter import (
     Tag,
     OwnedTag,
     CaseInsensitiveMember,
-    CaseInsensitiveUser,
+    CaseInsensitiveUser, FuzzyCIMember,
 )
 from bot.utils import text, paginator, exceptions
 
@@ -183,7 +183,7 @@ class Tags(context.CustomCog):
             self,
             ctx: context.CustomContext,
             *,
-            member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser] = None,
+            member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
     ):
         """List the tags that someone made"""
 
@@ -470,7 +470,7 @@ class Tags(context.CustomCog):
     async def transfer(
             self,
             ctx: context.CustomContext,
-            to_person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser],
+            to_person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember],
             *,
             tag: OwnedTag,
     ):
