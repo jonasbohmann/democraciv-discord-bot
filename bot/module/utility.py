@@ -79,6 +79,7 @@ class Utility(context.CustomCog):
                 # 'topic'
                 try:
                     suggested_pages = await self.get_wikipedia_suggested_articles(topic)
+                    result = None
 
                     for suggested_page in suggested_pages["query"]["search"]:
                         page_info = await self.get_wikipedia_result_with_rest_api(suggested_page['title'])
