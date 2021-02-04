@@ -111,10 +111,16 @@ class Bill(commands.Converter):
         self.status: BillStatus = kwargs.get("status", None)
         self._submitter: int = kwargs.get("submitter")
         self._bot = kwargs.get("bot")
+        self._sponsors: typing.List[int] = kwargs.get("sponsors")
+
         self.history = kwargs.get("history", None)
 
         if self.status is None:
             self.status = BillStatus(self._bot, self)
+
+    @property
+    def sponsors(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
+        return list(filter(None, [self._bot.dciv.get_member(sponsor) or self._bot.get_user(sponsor) for sponsor in self._sponsors]))
 
     async def fetch_name_and_keywords(self) -> typing.Tuple[str, typing.List[str]]:
 
@@ -181,7 +187,12 @@ class Bill(commands.Converter):
             raise NotFoundError(f"{config.NO} There is no bill that matches `{argument}`.")
 
         session = await Session.convert(ctx, bill["leg_session"])
-        obj = cls(**bill, session=session, bot=ctx.bot)
+
+        sponsors = await ctx.bot.db.fetch("SELECT sponsor FROM bill_sponsor WHERE bill_id = $1", bill['id'])
+        sponsors = [record['sponsor'] for record in sponsors]
+
+        obj = cls(**bill, session=session, bot=ctx.bot, sponsors=sponsors)
+
         status = BillStatus.from_flag_value(bill["status"])(ctx.bot, obj)
         obj.status = status
 
@@ -299,17 +310,17 @@ class LegalConsumer:
             if obj not in self._filtered_out_objs:
                 try:
                     action = getattr(obj.status, self.action.__name__)  # this is some bullshit
-                    await maybe_coroutine(action, dry=True)
+                    await maybe_coroutine(action, dry=True, **kwargs)
                 except IllegalOperation as e:
                     self._filtered_out_objs.add(obj)
                     self._errors[obj] = e.message
 
         self._passed_objs = self.objects - self._filtered_out_objs
 
-    async def consume(self, *, scheduler=None):
+    async def consume(self, *, scheduler=None, **kwargs):
         for obj in self.passed:
             action = getattr(obj.status, self.action.__name__)
-            await maybe_coroutine(action, dry=False)
+            await maybe_coroutine(action, dry=False, **kwargs)
 
             if scheduler:
                 scheduler.add(obj)
@@ -426,6 +437,9 @@ class BillStatus:
     async def amend(self, *, dry=False, new_link: str):
         raise IllegalBillOperation()
 
+    async def sponsor(self, *, dry=False, sponsor: discord.Member):
+        raise IllegalBillOperation(f"You can only sponsor recently submitted bills that were not voted on yet.")
+
     def emojified_status(self, verbose=True):
         raise NotImplementedError()
 
@@ -475,6 +489,14 @@ class BillSubmitted(BillStatus):
 
             await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
             await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
+
+    async def sponsor(self, *, dry=False, sponsor: discord.Member):
+        if dry:
+            return
+
+        await self._bot.db.execute("INSERT INTO bill_sponsor (bill_id, sponsor) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                                   self._bill.id,
+                                   sponsor.id)
 
     def emojified_status(self, verbose=True):
         if verbose:

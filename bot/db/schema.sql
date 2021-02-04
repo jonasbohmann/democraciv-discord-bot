@@ -95,6 +95,13 @@ CREATE TABLE IF NOT EXISTS bill(
     status int DEFAULT 0 NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS bill_sponsor(
+    id serial UNIQUE PRIMARY KEY,
+    bill_id serial references bill(id) ON DELETE CASCADE,
+    sponsor bigint NOT NULL,
+    UNIQUE (bill_id, sponsor)
+);
+
 CREATE TABLE IF NOT EXISTS bill_history(
     id serial UNIQUE PRIMARY KEY,
     bill_id serial references bill(id) ON DELETE CASCADE,

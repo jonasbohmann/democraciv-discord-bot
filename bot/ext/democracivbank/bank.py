@@ -200,7 +200,7 @@ class Currency:
 
 
 class Bank(context.CustomCog):
-    """Open as many bank accounts as you want and send money in multiple currencies with democracivbank.com"""
+    """Open as many bank accounts as you want and send money in multiple currencies with https://democracivbank.com"""
 
     def __init__(self, bot):
         super().__init__(bot)
