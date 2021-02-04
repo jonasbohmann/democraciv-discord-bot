@@ -2,7 +2,8 @@ import copy
 import datetime
 import typing
 import discord
-from discord.ext import tasks
+
+from discord.ext import tasks, menus
 from bot.config import config, mk
 from bot.utils import models
 
@@ -116,7 +117,7 @@ class SafeEmbed(discord.Embed):
             name: typing.Any,
             value: typing.Any,
             inline: bool = True,
-            too_long_value: str = None,
+            too_long_value: str = "*Too long to display.*",
     ):
         field_index = len(self.fields)
         name = str(name)
@@ -137,5 +138,40 @@ class SafeEmbed(discord.Embed):
             for _ in self.fields:
                 self.remove_field(field_index)
 
-            v = too_long_value if too_long_value else "*Too long to display.*"
-            super().add_field(name=name, value=v, inline=inline)
+            super().add_field(name=name, value=too_long_value, inline=inline)
+
+
+class FuzzyChoose(menus.Menu):
+    def __init__(self, question: str, choices: typing.List):
+        super().__init__(timeout=120.0, delete_message_after=True)
+        self.question = question
+        self.choices = choices
+        self.result = None
+        self._mapping = {}
+
+        for i, choice in enumerate(choices, start=1):
+            emoji = f"{i}\N{variation selector-16}\N{combining enclosing keycap}"
+            button = menus.Button(emoji=emoji, action=self.on_button)
+            self.add_button(button=button)
+            self._mapping[emoji] = choice
+
+    async def send_initial_message(self, ctx, channel):
+        embed = SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}  {self.question}")
+
+        fmt = []
+
+        for emoji, choice in self._mapping.items():
+            fmt.append(f"{emoji}  {choice}")
+
+        fmt = '\n'.join(fmt)
+
+        embed.description = fmt
+        return await ctx.send(embed=embed)
+
+    async def on_button(self, payload):
+        self.result = self._mapping[str(payload.emoji)]
+        self.stop()
+
+    async def prompt(self, ctx):
+        await self.start(ctx, wait=True)
+        return self.result

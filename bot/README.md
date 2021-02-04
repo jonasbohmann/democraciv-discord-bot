@@ -47,7 +47,6 @@ The file should look like this:
 ```
 # Token
 TOKEN = ""
-TIMEZONEDB_API_KEY = ""
 
 # PostgreSQL config
 POSTGRESQL_USER = ""
@@ -56,7 +55,7 @@ POSTGRESQL_HOST = ""
 POSTGRESQL_DATABASE = ""
 ```
 
-Add the token of your Discord App, a TimeZoneDB API Key, and your PostgreSQL configuration like above. 
+Add the token of your Discord App and your PostgreSQL configuration like above. 
 
 Once `token.py` is set up, take a look at `config_example.py` and `mk_example.py` in the same folder and adjust everything to your needs.
 

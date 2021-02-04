@@ -13,6 +13,9 @@ import discord
 import operator
 import datetime
 import textwrap
+import pytz
+
+from fuzzywuzzy import process
 
 from discord.ext import commands
 from urllib import parse
@@ -121,50 +124,45 @@ class Utility(context.CustomCog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(name="time", aliases=["clock", "tz"])
+    @commands.command(name="time", aliases=["clock", "tz", "timezone"])
     async def time(self, ctx, *, zone: str):
-        """Displays the current time of a specified timezone"""
+        """Displays the current time of a specified time zone"""
 
-        # If input is an abbreviation (UTC, EST etc.), make it uppercase for the TimeZoneDB request to work
-        if len(zone) <= 5:
-            zone = zone.upper()
+        # catch bird time - otherwise 'msk' would be matched to Asia/Omsk, not Moscow
+        if zone.lower() == "msk":
+            zone = "Europe/Moscow"
 
-        if not token.TIMEZONEDB_API_KEY:
-            await self.bot.owner.send(f"Invalid TimeZoneDB API key in `bot/config/token.py`")
-            return await ctx.send(f"{config.NO} This command cannot be used right now.")
+        try:
+            tz = pytz.timezone(zone)
+        except pytz.UnknownTimeZoneError:
+            match = process.extract(zone, pytz.all_timezones, limit=5)
 
-        query_base = (
-            f"https://api.timezonedb.com/v2.1/get-time-zone?key={token.TIMEZONEDB_API_KEY}&format=json&"
-            f"by=zone&zone={zone}"
-        )
+            menu = text.FuzzyChoose(question="Which time zone did you mean?",
+                                    choices=[zone for zone, _ in match])
+            zone = await menu.prompt(ctx)
+            tz = pytz.timezone(zone)
 
-        async with ctx.typing():
-            async with self.bot.session.get(query_base) as response:
-                if response.status == 200:
-                    time_response = await response.json()
+        title = str(tz)
 
-            if time_response["status"] != "OK":
-                return await ctx.send(
-                    f"{config.NO} `{zone}` is not a valid time zone or area code. "
-                    f"See the list of available time zones here: "
-                    f"<https://timezonedb.com/time-zones>"
-                )
+        # blame POSIX for this
+        # https://stackoverflow.com/a/4009126
 
-            date = datetime.datetime.utcfromtimestamp(time_response["timestamp"]).strftime("%A, %B %d %Y")
-            us_time = datetime.datetime.utcfromtimestamp(time_response["timestamp"]).strftime("%I:%M:%S %p")
-            eu_time = datetime.datetime.utcfromtimestamp(time_response["timestamp"]).strftime("%H:%M:%S")
+        if "+" in zone:
+            title = zone
+            fixed = zone.replace("+", "-")
+            tz = pytz.timezone(fixed)
+        elif "-" in zone:
+            title = zone
+            fixed = zone.replace("-", "+")
+            tz = pytz.timezone(fixed)
 
-            if zone.lower() == "utc":
-                title = f":clock1:  Current Time in UTC"
-            else:
-                title = f":clock1:  Current Time in {time_response['abbreviation']}"
+        utc_now = datetime.datetime.now(tz=datetime.timezone.utc)
+        date = utc_now.astimezone(tz)
 
-            embed = text.SafeEmbed(title=title, description="")
-            embed.add_field(name="Date", value=date, inline=False)
-            embed.add_field(name="Time (12-Hour Clock)", value=us_time, inline=False)
-            embed.add_field(name="Time (24-Hour Clock)", value=eu_time, inline=False)
-            embed.set_footer(text="See 'timezonedb.com/time-zones' for a list of available time zones.")
-
+        embed = text.SafeEmbed(title=f":clock1:  Current Time in {title}")
+        embed.add_field(name="Date", value=date.strftime("%A, %B %d %Y"), inline=False)
+        embed.add_field(name="Time (12-Hour Clock)", value=date.strftime("%I:%M:%S %p"), inline=False)
+        embed.add_field(name="Time (24-Hour Clock)", value=date.strftime("%H:%M:%S"), inline=False)
         await ctx.send(embed=embed)
 
     @commands.Cog.listener(name="on_member_join")
