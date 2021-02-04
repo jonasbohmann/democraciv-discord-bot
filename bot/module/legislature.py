@@ -403,7 +403,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 f"to see how to speed up your Speaker duties with this command.\n\n**Export:** <{link}>\n\n"
                 "https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662/howtoexport.mp4"
             )
-            await ctx.send(txt)
+
+        await ctx.send(txt)
 
         question = await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Do you want me to generate the Google Forms"

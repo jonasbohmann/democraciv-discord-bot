@@ -303,11 +303,14 @@ class Starboard(context.CustomCog):
             return
 
         if await self.bot.is_channel_excluded(self.bot.dciv.id, payload.channel_id):
-            send_only_sometimes = random.getrandbits(1)
+            send_only_sometimes = True if random.randrange(1, stop=100) >= 70 else False
+            log_channel = await self.bot.get_logging_channel(self.bot.dciv)
+            fmt = f" ({log_channel.mention})" if log_channel else ""
 
             if send_only_sometimes:
                 await channel.send(f"{config.HINT} *Since the administrators of this server marked this channel as "
-                                   f"hidden from logging, :star: reactions will also be ignored here.*")
+                                   f"hidden from logging{fmt}, :star: reactions will also be ignored here.*",
+                                   delete_after=5)
 
             return
 

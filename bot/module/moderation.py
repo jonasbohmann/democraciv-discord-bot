@@ -672,7 +672,7 @@ class Moderation(context.CustomCog):
                     },
                 )
 
-            await ctx.send(f"{config.YES} Done.")
+        await ctx.send(f"{config.YES} Done.")
 
 
 def setup(bot):

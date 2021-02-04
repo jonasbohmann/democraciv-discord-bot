@@ -92,4 +92,7 @@ def tag_check():
 
 
 def moderation_or_nation_leader():
-    return has_any_democraciv_role(mk.DemocracivRole.MODERATION, mk.DemocracivRole.NATION_ADMIN)
+    if mk.MarkConfig.IS_MULTICIV:
+        return has_any_democraciv_role(mk.DemocracivRole.MODERATION, mk.DemocracivRole.NATION_ADMIN)
+    else:
+        return has_democraciv_role(mk.DemocracivRole.MODERATION)
