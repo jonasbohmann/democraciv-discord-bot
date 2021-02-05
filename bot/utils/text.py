@@ -72,7 +72,7 @@ class AnnouncementScheduler:
 
         return list(split_into_2000.values())
 
-    def add(self, obj: typing.Union[models.Bill, models.Session]):
+    def add(self, obj: models.Bill):
         if len(self._objects) == 0:
             self._task = copy.copy(self._wait)
             self._task.start()

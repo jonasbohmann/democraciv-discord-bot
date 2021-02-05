@@ -557,10 +557,12 @@ class Tag(commands.Converter):
         tag_record = await ctx.bot.db.fetchrow(sql, argument.lower(), guild_id)
 
         if tag_record is None:
-            if ctx.guild:
+            if ctx.guild and ctx.guild.id != ctx.bot.dciv.id:
                 msg = f"{config.NO} There is no global tag from the {ctx.bot.dciv.name} server nor a local tag from this server named `{argument}`."
+            elif ctx.guild and ctx.guild.id == ctx.bot.dciv.id:
+                msg = f"{config.NO} There is no tag from this server named `{argument}`."
             else:
-                msg = f"{config.NO} There is no global tag from the {ctx.bot.dciv.name} named `{argument}`."
+                msg = f"{config.NO} There is no global tag from the {ctx.bot.dciv.name} server named `{argument}`."
 
             raise exceptions.TagError(msg)
 
@@ -585,10 +587,13 @@ class OwnedTag(Tag):
             )
 
         if ctx.bot.mk.IS_NATION_BOT:
-            nation_admin = ctx.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
+            try:
+                nation_admin = ctx.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
 
-            if nation_admin in ctx.author.roles:
-                return tag
+                if nation_admin in ctx.author.roles:
+                    return tag
+            except exceptions.RoleNotFoundError:
+                pass
 
         if tag.author.id == ctx.author.id or ctx.author.guild_permissions.administrator:
             return tag
