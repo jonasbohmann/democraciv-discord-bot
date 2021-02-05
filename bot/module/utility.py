@@ -17,13 +17,13 @@ import pytz
 
 from fuzzywuzzy import process
 from discord.ext import commands
-from discord_slash import SlashCommand, SlashContext, cog_ext, manage_commands
 from urllib import parse
 
 from bot.config import config
 from bot.utils import context, paginator, text, exceptions
 from bot.utils.converter import (
-    PoliticalParty, CaseInsensitiveUser, FuzzyCIMember, DemocracivCaseInsensitiveRole, FuzzyDemocracivCIRole, CaseInsensitiveMember
+    PoliticalParty, CaseInsensitiveUser, FuzzyCIMember, DemocracivCaseInsensitiveRole, FuzzyDemocracivCIRole,
+    CaseInsensitiveMember
 )
 
 
@@ -33,13 +33,6 @@ class Utility(context.CustomCog):
     def __init__(self, bot):
         super().__init__(bot)
         self.cached_sorted_veterans_on_democraciv = []
-
-        if not hasattr(bot, "slash"):
-            bot.slash = SlashCommand(bot, override_type=True)
-
-        self.bot = bot
-        self.bot.slash.get_cog_commands(self)
-        self.bot.loop.create_task(self.bot.slash.register_all_commands())
 
     @staticmethod
     def percentage_encode_url(link: str) -> str:
@@ -76,77 +69,59 @@ class Utility(context.CustomCog):
             if response.status == 200:
                 return await response.json()
 
-    async def _do_wikipedia_search(self, ctx, topic):
-        result = await self.get_wikipedia_result_with_rest_api(topic)
-
-        if result is None or result["type"] == "disambiguation":
-
-            # Fall back to MediaWiki Action API and ask for article suggestions as there's probably a typo in
-            # 'topic'
-            try:
-                suggested_pages = await self.get_wikipedia_suggested_articles(topic)
-                result = None
-
-                for suggested_page in suggested_pages["query"]["search"]:
-                    page_info = await self.get_wikipedia_result_with_rest_api(suggested_page['title'])
-
-                    if page_info and page_info['type'] != "disambiguation":
-                        result = page_info
-                        break
-                    else:
-                        continue
-
-            except (TypeError, KeyError):
-                return await ctx.send(content=
-                                      f"{config.NO} Wikipedia could not suggest me anything. "
-                                      "Did you search for something in a language other than English?"
-                                      )
-
-            if not result:
-                return await ctx.send(content=f"{config.NO} Wikipedia could not suggest me any articles that are "
-                                              f"related to `{topic}`.")
-
-        title = result["title"]
-        summary = result["extract"]
-        url = result["content_urls"]["desktop"]["page"]
-        thumbnail_url = None
-
-        try:
-            thumbnail_url = result["thumbnail"]["source"]
-        except KeyError:
-            pass
-
-        embed = text.SafeEmbed(description=textwrap.shorten(summary, 500, placeholder="..."))
-        embed.set_author(name=title, icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
-                                              "806577378314289162/Wikipedia-logo-v2.png")
-
-        embed.add_field(name="Link", value=f"[{url}]({self.percentage_encode_url(url)})")
-
-        if isinstance(thumbnail_url, str):
-            embed.set_thumbnail(url=thumbnail_url)
-
-        return embed
-
     @commands.command(name="wikipedia", aliases=['define', 'definition'])
     async def wikipedia(self, ctx, *, topic: str):
         """Search for an article on Wikipedia"""
         async with ctx.typing():  # Show typing status so that user knows that stuff is happening
-            embed = await self._do_wikipedia_search(ctx, topic)
+            result = await self.get_wikipedia_result_with_rest_api(topic)
 
-        if isinstance(embed, discord.Embed):
-            await ctx.send(embed=embed)
+            if result is None or result["type"] == "disambiguation":
 
-    @cog_ext.cog_slash(name="wikipedia",
-                       description="Search for an article on Wikipedia",
-                       options=[manage_commands.create_option(name="topic",
-                                                              description="The topic to search for.",
-                                                              required=True,
-                                                              option_type=3)])
-    async def slash_wikipedia(self, ctx: SlashContext, topic):
-        embed = await self._do_wikipedia_search(ctx, topic)
+                # Fall back to MediaWiki Action API and ask for article suggestions as there's probably a typo in
+                # 'topic'
+                try:
+                    suggested_pages = await self.get_wikipedia_suggested_articles(topic)
+                    result = None
 
-        if isinstance(embed, discord.Embed):
-            await ctx.send(embeds=[embed])
+                    for suggested_page in suggested_pages["query"]["search"]:
+                        page_info = await self.get_wikipedia_result_with_rest_api(suggested_page['title'])
+
+                        if page_info and page_info['type'] != "disambiguation":
+                            result = page_info
+                            break
+                        else:
+                            continue
+
+                except (TypeError, KeyError):
+                    return await ctx.send(
+                        f"{config.NO} Wikipedia could not suggest me anything. "
+                        "Did you search for something in a language other than English?"
+                    )
+
+                if not result:
+                    return await ctx.send(f"{config.NO} Wikipedia could not suggest me any articles that are "
+                                          f"related to `{topic}`.")
+
+            title = result["title"]
+            summary = result["extract"]
+            url = result["content_urls"]["desktop"]["page"]
+            thumbnail_url = None
+
+            try:
+                thumbnail_url = result["thumbnail"]["source"]
+            except KeyError:
+                pass
+
+            embed = text.SafeEmbed(description=textwrap.shorten(summary, 500, placeholder="..."))
+            embed.set_author(name=title, icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
+                                                  "806577378314289162/Wikipedia-logo-v2.png")
+
+            embed.add_field(name="Link", value=f"[{url}]({self.percentage_encode_url(url)})")
+
+            if isinstance(thumbnail_url, str):
+                embed.set_thumbnail(url=thumbnail_url)
+
+        await ctx.send(embed=embed)
 
     @commands.command(name="time", aliases=["clock", "tz", "timezone"])
     async def time(self, ctx, *, zone: str):
@@ -307,7 +282,8 @@ class Utility(context.CustomCog):
 
     @commands.command(name="avatar", aliases=['pfp'])
     @commands.guild_only()
-    async def avatar(self, ctx, *, member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None):
+    async def avatar(self, ctx, *,
+                     member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None):
         """View someone's avatar in detail
 
         **Example**
@@ -515,7 +491,8 @@ class Utility(context.CustomCog):
 
     @commands.command(name="vibecheck", hidden=True)
     @commands.guild_only()
-    async def vibecheck(self, ctx, *, member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None):
+    async def vibecheck(self, ctx, *,
+                        member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None):
         """vibecheck"""
 
         member = member or ctx.author
@@ -633,23 +610,6 @@ class Utility(context.CustomCog):
 
         if "result" in js:
             await ctx.reply(js["result"])
-
-    @cog_ext.cog_slash(name="roll",
-                       description="Roll some dice. Supported notation: https://tinyurl.com/y32jz4tp",
-                       options=[manage_commands.create_option(name="dice",
-                                                              description="The dice to roll.",
-                                                              required=False,
-                                                              option_type=3)])
-    async def slash_roll(self, ctx: SlashContext, dice="1d20"):
-        try:
-            js = await self.bot.api_request("POST", "roll", json={"dices": dice})
-        except exceptions.DemocracivBotAPIError:
-            await ctx.send(content=f"{config.NO} Something went wrong.")
-        else:
-            if "error" in js:
-                await ctx.send(content=f"{config.NO} Something went wrong.")
-            elif "result" in js:
-                await ctx.send(content=js["result"])
 
 
 def setup(bot):
