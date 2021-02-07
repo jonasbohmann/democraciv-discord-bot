@@ -219,14 +219,6 @@ class Tags(context.CustomCog):
         if not await self.validate_tag_name(ctx, alias.lower()):
             return
 
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to add the "
-            f"`{config.BOT_PREFIX}{alias}` alias to `{config.BOT_PREFIX}{tag.name}`?"
-        )
-
-        if not reaction:
-            return await ctx.send("Cancelled.")
-
         async with self.bot.db.acquire() as con:
             async with con.transaction():
                 await con.execute(
@@ -297,10 +289,13 @@ class Tags(context.CustomCog):
         )
 
         if tags:
-            await ctx.send(
-                f"{config.NO} A global tag from the {self.bot.dciv.name} server with that name, "
-                f"or a local tag/alias from this server with that name, already exists."
-            )
+            if ctx.guild.id == self.bot.dciv.id:
+                msg = f"{config.NO} A tag or tag alias from this server with that name already exists."
+            else:
+                msg = f"{config.NO} A global tag from the {self.bot.dciv.name} server with that name, or a local " \
+                      f"tag or tag alias from this server with that name, already exists."
+
+            await ctx.send(msg)
             return False
 
         if len(tag_name) > 50:
@@ -487,7 +482,7 @@ class Tags(context.CustomCog):
     async def raw(self, ctx: context.CustomContext, *, tag: Tag):
         """Raw markdown of a tag
 
-        Useful when you want to update a tag with -tag edit
+        Useful when you want to update a tag with `-tag edit`
         """
         safe_content = tag.clean_content.replace("```", "'")
         return await ctx.send(f"```{safe_content}```")

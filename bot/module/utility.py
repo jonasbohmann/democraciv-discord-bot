@@ -20,7 +20,7 @@ from discord.ext import commands
 from urllib import parse
 
 from bot.config import config
-from bot.utils import context, paginator, text, exceptions
+from bot.utils import context, paginator, text
 from bot.utils.converter import (
     PoliticalParty, CaseInsensitiveUser, FuzzyCIMember, DemocracivCaseInsensitiveRole, FuzzyDemocracivCIRole,
     CaseInsensitiveMember
