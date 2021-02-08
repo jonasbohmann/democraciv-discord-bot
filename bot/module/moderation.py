@@ -598,7 +598,7 @@ class Moderation(context.CustomCog):
 
         await ctx.send(f"{config.YES} Channel was archived.")
 
-    @commands.command(name="archiveoldgov")
+    @commands.command(name="archivecategory")
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def archivecategory(self, ctx: context.CustomContext, *, category: CaseInsensitiveCategoryChannel):
         """Move all channels in a category into the Archives and set the right permissions"""

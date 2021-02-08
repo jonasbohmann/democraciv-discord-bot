@@ -12,8 +12,7 @@ from bot.utils import text, paginator, checks, context, mixin, models
 class LawPassScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
         message = [
-            f"{self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT).mention}, "
-            f"the following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"
+            f"The following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"
         ]
 
         for obj in self._objects:
@@ -32,8 +31,7 @@ class LawPassScheduler(text.AnnouncementScheduler):
 class LawVetoScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
         message = [
-            f"{self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER).mention}, "
-            f"the following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"
+            f"The following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"
         ]
 
         for obj in self._objects:

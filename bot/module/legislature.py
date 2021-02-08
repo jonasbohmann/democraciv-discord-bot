@@ -16,8 +16,7 @@ from bot.utils.models import Bill, Session, Motion, SessionStatus
 class PassScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
         message = [
-            f"{self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER).mention}, "
-            f"the following bills were **passed by the {self.bot.mk.LEGISLATURE_NAME}**.\n"
+            f"The following bills were **passed by the {self.bot.mk.LEGISLATURE_NAME}**.\n"
         ]
 
         for obj in self._objects:
@@ -36,8 +35,7 @@ class PassScheduler(text.AnnouncementScheduler):
 class OverrideScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
         message = [
-            f"{self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT).mention}, "
-            f"the {self.bot.mk.MINISTRY_NAME}'s **veto of the following bills were overridden** "
+            f"The {self.bot.mk.MINISTRY_NAME}'s **veto of the following bills were overridden** "
             f"by the {self.bot.mk.LEGISLATURE_NAME}.\n"
         ]
 
@@ -241,7 +239,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         pretty_bills = "\n".join(pretty_bills)
         too_long_ = (
-            f"This text was too long for Discord, so I put it on " f"[here.]({await self.bot.make_paste(pretty_bills)})"
+            f"This text was too long for Discord, so I put it on [here.]({await self.bot.make_paste(pretty_bills)})"
         )
         embed.add_field(
             name="Submitted Bills",
