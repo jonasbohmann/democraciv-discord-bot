@@ -382,11 +382,11 @@ class Bank(context.CustomCog):
 
         embed = text.SafeEmbed(
             description=f"The {self.BANK_NAME} provides the international community with free financial "
-            f"services: Personal & Shared Bank Accounts with complete transaction records, a "
-            f"corporate registry, personalized notifications, support for multiple currencies and a "
-            f"deep integration into the Democraciv Discord Bot.\n\nSign up for an account over at "
-            f"[democracivbank.com](https://democracivbank.com) and connect your Discord Account on "
-            f"[democracivbank.com/me](https://democracivbank.com/me) for the full experience."
+                        f"services: Personal & Shared Bank Accounts with complete transaction records, a "
+                        f"corporate registry, personalized notifications, support for multiple currencies and a "
+                        f"deep integration into the Democraciv Discord Bot.\n\nSign up for an account over at "
+                        f"[democracivbank.com](https://democracivbank.com) and connect your Discord Account on "
+                        f"[democracivbank.com/me](https://democracivbank.com/me) for the full experience."
         )
 
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
@@ -411,9 +411,9 @@ class Bank(context.CustomCog):
 
             embed = text.SafeEmbed(
                 description="Check out all corporations and organizations from around"
-                " the world and what they have to offer on "
-                "[**democracivbank.com/marketplace**]"
-                "(https://democracivbank.com/marketplace)",
+                            " the world and what they have to offer on "
+                            "[**democracivbank.com/marketplace**]"
+                            "(https://democracivbank.com/marketplace)",
                 url="https://democracivbank.com/marketplace",
             )
 
@@ -453,7 +453,7 @@ class Bank(context.CustomCog):
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
         embed.set_footer(
             text=f"Send money to this organization with: {config.BOT_PREFIX}bank send "
-            f"{organization.abbreviation} <amount>"
+                 f"{organization.abbreviation} <amount>"
         )
 
         if organization.discord_server:
@@ -473,9 +473,9 @@ class Bank(context.CustomCog):
             embed = text.SafeEmbed(
                 title=f"{config.HINT}  Privacy Prompt",
                 description="Are you sure that you want to proceed?\n\n"
-                "Everyone in this channel would be able to see the balance of all bank accounts "
-                "you have access to.\n\n*Using this command in DMs with me does not "
-                "trigger this question.*",
+                            "Everyone in this channel would be able to see the balance of all bank accounts "
+                            "you have access to.\n\n*Using this command in DMs with me does not "
+                            "trigger this question.*",
             )
             privacy_q = await ctx.send(embed=embed)
             reaction = await ctx.confirm(message=privacy_q)
@@ -524,18 +524,18 @@ class Bank(context.CustomCog):
 
     @bank.command(name="send", aliases=["s", "transfer", "t", "give"])
     async def send(
-        self,
-        ctx,
-        to_member_or_iban_or_organization: typing.Union[
-            converter.CaseInsensitiveMember,
-            converter.CaseInsensitiveUser,
-            uuid.UUID,
-            BankCorporationAbbreviation,
-            converter.FuzzyCIMember,
-        ],
-        amount: decimal.Decimal,
-        *,
-        purpose: str = None,
+            self,
+            ctx,
+            to_member_or_iban_or_organization: typing.Union[
+                converter.CaseInsensitiveMember,
+                converter.CaseInsensitiveUser,
+                uuid.UUID,
+                BankCorporationAbbreviation,
+                converter.FuzzyCIMember,
+            ],
+            amount: decimal.Decimal,
+            *,
+            purpose: str = None,
     ):
         """Send money to a specific bank account, organization, or person on this server
 
@@ -586,50 +586,6 @@ class Bank(context.CustomCog):
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
         await ctx.send(embed=embed)
 
-    @bank.command(name="applyottomantax", aliases=["applyottomanformula"])
-    @checks.has_democraciv_role(mk.DemocracivRole.OTTOMAN_TAX_OFFICER)
-    async def apply_ottoman_formula(self, ctx):
-        """See the outcome of a dry-run of the tax on all bank accounts with the Ottoman currency and then apply that tax """
-
-        # Do the dry run first
-        response = await self.request(BankRoute("GET", "ottoman/apply/"))
-
-        if response.status != 200:
-            raise BankConnectionError(f"{config.NO} {self.bot.owner.mention}, something went wrong!")
-
-        dry_run_results = await response.json()
-        desc = [
-            "This is just a dry run, the changes have not been applied yet. Double check the results and once "
-            "you're ready, confirm that you actually want to apply the changes.\n"
-        ]
-
-        for result in dry_run_results["results"]:
-            for k, v in result.items():
-                lira_sign = self.get_currency("LRA").suffix
-                desc.append(
-                    f"__**Bank Account with IBAN {k}**__\nPre-Tax Balance: {v['old']}{lira_sign}"
-                    f"\nPost-Tax Balance: {v['new']}{lira_sign}\nEquilibrium variable: {v['ibal']}\n"
-                )
-
-        pages = paginator.SimplePages(entries=desc, title="Results of Ottoman Tax Dry Run")
-        await pages.start(ctx, wait=False)
-
-        await asyncio.sleep(5)
-        reaction = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Do you want to apply the changes now?")
-
-        if reaction is None:
-            return
-
-        if not reaction:
-            return await ctx.send("Aborted. Taxes were not applied.")
-
-        response = await self.request(BankRoute("POST", "ottoman/apply/"))
-
-        if response.status != 200:
-            raise BankConnectionError(f"{config.NO} {self.bot.owner.mention}, something went wrong!")
-
-        await ctx.send(f"{config.YES} Tax was applied to all accounts with the Ottoman currency.")
-
     @bank.command(name="circulation", aliases=["total"])
     async def circulation(self, ctx):
         """See how much of every currency is currently in circulation"""
@@ -637,8 +593,8 @@ class Bank(context.CustomCog):
         embed = text.SafeEmbed(
             title="Currency Circulation",
             description=f"This does not include any currency reserves that "
-            f"were provided by the {self.BANK_NAME} when this currency "
-            f"was originally created.",
+                        f"were provided by the {self.BANK_NAME} when this currency "
+                        f"was originally created.",
         )
 
         response = await self.request(BankRoute("GET", f"currencies/"))
@@ -648,65 +604,6 @@ class Bank(context.CustomCog):
             as_object = self.get_currency(currency["code"])
             embed.add_field(name=currency["name"], value=as_object.with_amount(currency["circulation"]), inline=False)
 
-        await ctx.send(embed=embed)
-
-    @bank.command(name="listottomanvariable", aliases=["listottomanvariables"])
-    @checks.has_democraciv_role(mk.DemocracivRole.OTTOMAN_TAX_OFFICER)
-    async def list_ottoman_ibal(self, ctx):
-        """List all bank accounts with the Ottoman currency and check their Equilibrium variable"""
-
-        response = await self.request(BankRoute("GET", "ottoman/threshold/"))
-
-        if response.status != 200:
-            raise BankConnectionError(f"{config.NO} {self.bot.owner.mention}, something went wrong!")
-
-        json = await response.json()
-        desc = []
-
-        for account in json:
-            p_or_c = "Personal" if account["individual_holder"] else "Shared (Organization)"
-            desc.append(
-                f"__**{p_or_c} Bank Account with IBAN {account['iban']}**__\n"
-                f"Owner: {account['pretty_holder']}\n"
-                f"Equilibrium variable: {account['ottoman_threshold_variable']}\n"
-            )
-
-        pages = paginator.SimplePages(entries=desc, title=f"All Bank Accounts with the Ottoman Currency ({len(json)})")
-        await pages.start(ctx)
-
-    @bank.command(
-        name="changeottomanvariable", aliases=["changeottomanvariables", "editottomanvariables", "editottomanvariable"]
-    )
-    @checks.has_democraciv_role(mk.DemocracivRole.OTTOMAN_TAX_OFFICER)
-    async def edit_ottoman_ibal(self, ctx, iban: uuid.UUID, new_ibal: decimal.Decimal):
-        """Change the Equilibrium variable of a bank account with the Ottoman currency
-
-        **Example**
-            `-bank changeottomanvariable c4a3ec17-cba4-462f-bdda-05620f574dce 200` their new variable will be 200
-        """
-
-        if iban.version != 4:
-            raise BankInvalidIBANFormat(
-                f"{config.NO} That is not a valid IBAN, it needs to be in this "
-                "format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`"
-            )
-
-        payload = {"iban": str(iban), "new": new_ibal}
-        response = await self.request(BankRoute("POST", "ottoman/threshold/"), data=payload)
-
-        if response.status != 200:
-            raise BankConnectionError(f"{config.NO} {self.bot.owner.mention}, something went wrong!")
-
-        json = await response.json()
-        p_or_c = "Personal" if json["individual_holder"] else "Shared (Organization)"
-        embed = text.SafeEmbed(
-            title="Updated Ottoman Bank Account",
-            description=f"**IBAN**\n{json['iban']}\n"
-            f"**Bank Account Type**\n{p_or_c}\n"
-            f"**Owner**\n{json['pretty_holder']}\n"
-            f"**Equilibrium variable**\n"
-            f"{json['ottoman_threshold_variable']}",
-        )
         await ctx.send(embed=embed)
 
 
