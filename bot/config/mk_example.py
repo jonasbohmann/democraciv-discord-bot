@@ -61,6 +61,7 @@ class MarkConfig:
 
     NATION_ROLE_PREFIX = "Ottoman - "
     NATION_CATEGORIES = [741477020659089538]
+    PRESS_CHANNEL = []
 
     NATION_NAME = "Ottoman Mercantile Divan"
     NATION_FULL_NAME = "Ottoman Mercantile Divan"

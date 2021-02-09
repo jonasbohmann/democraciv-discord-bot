@@ -208,3 +208,9 @@ class TwitchManager(ProviderManager):
         async with self._session.post(context.webhook_url, json=js) as response:
             if response.status not in (200, 204):
                 logger.error(f"Error while sending Twitch webhook: {response.status} {await response.text()}")
+
+            if response.status == 404:
+                # webhook was deleted
+                await self._remove_webhook(target=stream.streamer, webhook_url=context.webhook_url)
+                logger.info(f"removed deleted webhook_url {context.webhook_url} for {stream.streamer}")
+

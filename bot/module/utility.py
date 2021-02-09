@@ -5,7 +5,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 The -cat and -dog commands are based on RoboDanny by Rapptz: https://github.com/Rapptz/RoboDanny/blob/rewrite/LICENSE.txt
 """
-
+import asyncio
 import io
 import typing
 import random
@@ -33,6 +33,131 @@ class Utility(context.CustomCog):
     def __init__(self, bot):
         super().__init__(bot)
         self.cached_sorted_veterans_on_democraciv = []
+        self.active_press_flows: typing.Set[int] = set()
+
+    @commands.Cog.listener(name="on_message")
+    async def on_press_message(self, message: discord.Message):
+        if message.author.bot or message.guild.id != self.bot.dciv.id or message.channel.id not in self.bot.mk.PRESS_CHANNEL:
+            return
+
+        if message.author.id in self.active_press_flows:
+            return
+
+        never_role_name = "Reddit Press"
+        never_role = discord.utils.get(self.bot.dciv.roles, name=never_role_name)
+
+        if never_role and never_role in message.author.roles:
+            return
+
+        self.active_press_flows.add(message.author.id)
+        # wait for any other messages from same author
+        start = datetime.datetime.utcnow()
+        messages = [message]
+
+        while True:
+            try:
+                _m = await self.bot.wait_for("message",
+                                             check=lambda
+                                                 m: m.author == message.author and m.channel == message.channel,
+                                             timeout=60)
+                messages.append(_m)
+                start = datetime.datetime.utcnow()
+            except asyncio.TimeoutError:
+                if datetime.datetime.utcnow() - start >= datetime.timedelta(minutes=1):
+                    break
+                else:
+                    continue
+
+        confirm = await message.channel.send(
+            f"{config.USER_INTERACTION_REQUIRED} {message.author.mention}, do you want "
+            f"me to post these last {len(messages)} messages from you to our "
+            f"subreddit **r/{config.DEMOCRACIV_SUBREDDIT}** in one, single press post?"
+            f"\n{config.HINT} *You have 30 seconds to decide. After that with no reaction from you I "
+            f"will cancel this process and delete this message.*"
+            f"\n{config.HINT} *I will stop asking you this if you have the `{never_role_name}` role. "
+            f"That role is a selfrole, so you can get it with `{config.BOT_PREFIX}role {never_role_name}`.*",
+            allowed_mentions=discord.AllowedMentions(users=True),
+            delete_after=30)
+
+        yes_emoji = config.YES
+        no_emoji = config.NO
+
+        await confirm.add_reaction(yes_emoji)
+        await confirm.add_reaction(no_emoji)
+
+        try:
+            reaction, user = await self.bot.wait_for(
+                "reaction_add",
+                check=lambda r, u: u.id == message.author.id and r.message.id == confirm.id,
+                timeout=30,
+            )
+        except asyncio.TimeoutError:
+            self.active_press_flows.remove(message.author.id)
+            return
+        else:
+            if not reaction or str(reaction.emoji) != yes_emoji:
+                self.active_press_flows.remove(message.author.id)
+                return
+
+        title_q = await message.channel.send(
+            f"{config.USER_INTERACTION_REQUIRED} {message.author.mention}, what should be the "
+            f"title of the Reddit post?\n{config.HINT} *You have 60 seconds to respond. "
+            f"After that with no reply from you I will cancel this process and delete this message.*",
+            allowed_mentions=discord.AllowedMentions(users=True),
+            delete_after=60)
+
+        try:
+            title_message = await self.bot.wait_for("message",
+                                                    check=lambda
+                                                        m: m.author == message.author and m.channel == message.channel,
+                                                    timeout=60)
+
+        except asyncio.TimeoutError:
+            self.active_press_flows.remove(message.author.id)
+            return
+
+        else:
+            if not title_message.content:
+                self.active_press_flows.remove(message.author.id)
+                return
+
+        title = f"{title_message.clean_content} - from {message.author}"
+        cleaned_up = []
+
+        for mes in messages:
+            cntn = ""
+
+            if mes.content:
+                cntn = mes.clean_content.replace("\n", "\n\n")
+
+            if mes.attachments:
+                cntn = f"{cntn}\n[*Attachment*]({mes.attachments[0].url})\n"
+
+            cleaned_up.append(cntn)
+
+        outro = f"""\n\n &nbsp; \n\n --- \n\n*This is an automated press post from our Discord server. I am a 
+        [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) and this is an automated service. 
+        Contact u/Jovanos (DerJonas#8036 on Discord) for further questions or bug reports.*\n&nbsp;\n*A_ID: 
+        {message.author.id}*"""
+
+        cleaned_up.append(outro)
+
+        content = "\n\n  &nbsp; \n\n".join(cleaned_up)
+
+        js = {
+            "subreddit": config.DEMOCRACIV_SUBREDDIT,
+            "title": title,
+            "content": content
+        }
+
+        self.active_press_flows.remove(message.author.id)
+        await self.bot.api_request("POST", "reddit/post", json=js)
+        await message.channel.send(f"{config.YES} {message.author.mention}, posted to reddit.",
+                                   allowed_mentions=discord.AllowedMentions(users=True),
+                                   delete_after=5)
+        self.bot.loop.create_task(confirm.delete())
+        self.bot.loop.create_task(title_q.delete())
+        self.bot.loop.create_task(title_message.delete())
 
     @staticmethod
     def percentage_encode_url(link: str) -> str:

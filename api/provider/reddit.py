@@ -103,12 +103,36 @@ class RedditManager(ProviderManager):
             except aiohttp.ContentTypeError:
                 return
 
+    async def delete_reddit_post(self, *, post_id: str, retry=False):
+        headers = {
+            "Authorization": f"bearer {self.REDDIT_BEARER_TOKEN}",
+            "User-Agent": "democraciv-discord-bot by DerJonas - u/Jovanos",
+        }
+
+        data = {
+            "id": post_id
+        }
+
+        async with self._session.post("https://oauth.reddit.com/api/del?raw_json=1", data=data,
+                                      headers=headers) as response:
+            if response.status == 403:
+                if not retry:
+                    await self.refresh_reddit_bearer_token()
+                    return await self.delete_reddit_post(post_id=post_id, retry=True)
+
+                logger.warning("got 403 while posting to reddit")
+
+            try:
+                return await response.json()
+            except aiohttp.ContentTypeError:
+                return
+
     async def _start_webhook(self, *, target: str, webhook_url: str):
         async with self._lock:
             if target in self._webhooks:
                 self._webhooks[target].webhook_urls.add(webhook_url)
             else:
-                scraper = SubredditScraper(db=self.db, session=self._session, subreddit=target)
+                scraper = SubredditScraper(db=self.db, session=self._session, subreddit=target, manager=self)
                 scraper.webhook_urls.add(webhook_url)
                 self._webhooks[target] = scraper
                 scraper.start()
@@ -164,13 +188,14 @@ class RedditPost:
 
 
 class SubredditScraper:
-    def __init__(self, *, db, subreddit: str, session: aiohttp.ClientSession, post_limit: int = 1):
+    def __init__(self, *, db, subreddit: str, session: aiohttp.ClientSession, post_limit: int = 1, manager: RedditManager):
         self.subreddit = subreddit
         self.webhook_urls = set()
         self.db = db
         self.post_limit = post_limit
         self._session = session
         self._task = None
+        self.manager = manager
 
     def __del__(self):
         self.stop()
@@ -191,6 +216,11 @@ class SubredditScraper:
             async with self._session.post(url=webhook, json=post_data) as response:
                 if response.status not in (200, 204):
                     logger.error(f"Error while sending reddit webhook: {response.status} {await response.text()}")
+
+                if response.status == 404:
+                    # webhook was deleted
+                    await self.manager._remove_webhook(target=self.subreddit, webhook_url=webhook)
+                    logger.info(f"removed deleted webhook_url {webhook} for r/{self.subreddit}")
 
     async def get_newest_reddit_post(self) -> typing.Optional[typing.Dict]:
         async with self._session.get(

@@ -5,6 +5,8 @@ import pathlib
 
 API_URL = "http://localhost:8000"
 DEMOCRACIV_GUILD_ID = 208984105310879744  # dciv
+DEMOCRACIV_SUBREDDIT = "democraciv"
+
 
 BOT_PREFIX = "-"
 BOT_ADDITIONAL_PREFIXES = [BOT_PREFIX]
@@ -21,7 +23,7 @@ STARBOARD_CHANNEL = 680565146133069873  # The Discord channel for the starboard
 STARBOARD_MIN_STARS = 5  # How many star reactions does a message need to be added to the starboard
 STARBOARD_MAX_AGE = 7  # Messages older than X days won't be allowed into the starboard
 STARBOARD_REDDIT_SUMMARY_ENABLED = True
-STARBOARD_REDDIT_SUBREDDIT = "democraciv"
+STARBOARD_REDDIT_SUBREDDIT = DEMOCRACIV_SUBREDDIT
 STARBOARD_REDDIT_USERNAME = "DerJonasBot"
 
 # Custom Emojis

@@ -136,6 +136,10 @@ class SubmitRedditPost(pydantic.BaseModel):
     content: str
 
 
+class DeleteRedditPost(pydantic.BaseModel):
+    id: str
+
+
 @app.on_event("startup")
 async def startup_event():
     await db.make_pool()
@@ -175,6 +179,11 @@ async def reddit_post(submission: SubmitRedditPost):
     return await reddit_manager.post_to_reddit(subreddit=submission.subreddit,
                                                title=submission.title,
                                                content=submission.content)
+
+
+@app.post("/reddit/post/delete")
+async def reddit_post(post: DeleteRedditPost):
+    return await reddit_manager.delete_reddit_post(post_id=post.id)
 
 
 @app.post("/reddit/clear")
