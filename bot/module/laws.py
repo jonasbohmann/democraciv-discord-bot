@@ -22,6 +22,8 @@ class RepealScheduler(text.AnnouncementScheduler):
         for obj in self._objects:
             message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
 
+        message.append(f"\nThe laws were removed from `{config.BOT_PREFIX}laws`.")
+
         return "\n".join(message)
 
 
@@ -147,7 +149,8 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             self,
             ctx,
             *,
-            member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty, FuzzyCIMember] = None,
+            member_or_party: typing.Union[
+                CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty, FuzzyCIMember] = None,
     ):
         """List the laws a specific person or Political Party authored"""
         return await self._from_person_model(ctx, model=models.Law, member_or_party=member_or_party)
@@ -182,7 +185,9 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
 
         await consumer.consume(scheduler=self.repeal_scheduler)
         msg = f"1 law was repealed." if len(law_ids) == 1 else f"{len(law_ids)} laws were repealed."
-        return await ctx.send(f"{config.YES} {msg}")
+        return await ctx.send(f"{config.YES} {msg}\n{config.HINT} If the Legal Code needs to "
+                              f"be updated to remove the repealed law(s), the {self.bot.mk.speaker_term} can use my "
+                              f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code.")
 
     @law.command(name="updatelink", aliases=["ul", "amend"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)

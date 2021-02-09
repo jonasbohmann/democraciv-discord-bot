@@ -119,17 +119,17 @@ class GovernmentMixin:
                 # Then, search by tag similarity
                 for word in query.split():
                     if len(word) < 3 or word in (
-                        "the",
-                        "author",
-                        "authors",
-                        "date",
-                        "name",
-                        "and",
-                        "d/m/y",
-                        "type",
-                        "description",
-                        "by",
-                        "generated"
+                            "the",
+                            "author",
+                            "authors",
+                            "date",
+                            "name",
+                            "and",
+                            "d/m/y",
+                            "type",
+                            "description",
+                            "by",
+                            "generated"
                     ):
                         continue
 
@@ -184,7 +184,7 @@ class GovernmentMixin:
         await pages.start(ctx)
 
     async def _search_bill_by_name(
-        self, name: str, connection=None, search_laws: bool = False
+            self, name: str, connection=None, search_laws: bool = False
     ) -> typing.Dict[str, None]:
         """Search for bills by their name, returns list with prettified strings of found bills"""
 
@@ -297,9 +297,19 @@ class GovernmentMixin:
         if session_id is not None:
             return await models.Session.convert(context.MockContext(self.bot), session_id)
 
+    class MockChannel:
+        id = 0
+        name = mention = "deleted channel"
+
+        async def send(self, *args, **kwargs):
+            pass
+
     @property
-    def gov_announcements_channel(self) -> typing.Optional[discord.TextChannel]:
-        return self.bot.get_democraciv_channel(mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+    def gov_announcements_channel(self) -> typing.Union[discord.TextChannel, MockChannel]:
+        try:
+            return self.bot.get_democraciv_channel(mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+        except exceptions.ChannelNotFoundError:
+            return self.MockChannel()
 
     speaker = _make_property(mk.DemocracivRole.SPEAKER)
     vice_speaker = _make_property(mk.DemocracivRole.VICE_SPEAKER)

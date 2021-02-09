@@ -82,7 +82,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         if link:
             pretty_bills.insert(
                 0,
-                f"[*View this list in Google Spreadsheets formatting for" f" easy copy & pasting*]({link})\n",
+                f"[*View this list in Google Spreadsheets formatting for easy copy & pasting*]({link})\n",
             )
 
         return pretty_bills
@@ -174,7 +174,12 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
             return await ctx.send("Cancelled.")
 
         await consumer.consume(scheduler=self.veto_scheduler)
-        await ctx.send(f"{config.YES} All bills were vetoed.")
+        await ctx.send(f"{config.YES} All bills were vetoed.\n{config.HINT} In case the "
+                       f"{self.bot.mk.LEGISLATURE_NAME} wants to give these bills a second chance, a veto can be "
+                       f"overridden with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} override`, or, if the "
+                       f"votes to override were not enough, the bill can be "
+                       f"resubmitted to the next legislative session with "
+                       f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`.")
 
     @ministry.command(name="pass", aliases=["p"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER, mk.DemocracivRole.LT_PRIME_MINISTER)
@@ -206,7 +211,9 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
             return await ctx.send("Cancelled.")
 
         await consumer.consume(scheduler=self.pass_scheduler)
-        await ctx.send(f"{config.YES} All bills were passed into law.")
+        await ctx.send(f"{config.YES} All bills were passed into law.\n{config.HINT} If the Legal Code needs to "
+                       f"be updated, the {self.bot.mk.speaker_term} can use my "
+                       f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code. ")
 
 
 def setup(bot):

@@ -25,9 +25,12 @@ class PassScheduler(text.AnnouncementScheduler):
             else:
                 message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>)")
 
+        p = config.BOT_PREFIX
         message.append(
-            f"\nAll non veto-able bills are now laws (marked as __underlined__), "
-            f"the others were sent to the {self.bot.mk.MINISTRY_NAME}."
+            f"\nAll non veto-able bills are now laws (marked as __underlined__) and can be found in `{p}laws`, "
+            f"as well with `{p}laws search`. The others were sent to the {self.bot.mk.MINISTRY_NAME} "
+            f"(`{p}{self.bot.mk.MINISTRY_COMMAND} bills`) to either pass "
+            f"(`{p}{self.bot.mk.MINISTRY_COMMAND} pass`) or veto (`{p}{self.bot.mk.MINISTRY_COMMAND} veto`) them."
         )
         return "\n".join(message)
 
@@ -42,7 +45,9 @@ class OverrideScheduler(text.AnnouncementScheduler):
         for obj in self._objects:
             message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
 
-        message.append("\nAll of the above bills are now law.")
+        message.append(f"\nAll of the above bills are now law and can be found in `{config.BOT_PREFIX}laws`, "
+                       f"as well with `{config.BOT_PREFIX}laws search`.")
+
         return "\n".join(message)
 
 
@@ -260,15 +265,52 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         if active_leg_session is not None:
             return await ctx.send(
-                f"{config.NO} There is still an open session, close session #{active_leg_session.id} first!")
+                f"{config.NO} There is still an open session, close session #{active_leg_session.id} "
+                f"first with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session close`.")
 
         new_session = await self.bot.db.fetchval(
-            "INSERT INTO legislature_session (speaker, is_active, opened_on)" "VALUES ($1, true, $2) RETURNING id",
+            "INSERT INTO legislature_session (speaker, is_active, opened_on) VALUES ($1, true, $2) RETURNING id",
             ctx.author.id,
             datetime.datetime.utcnow(),
         )
 
-        await ctx.send(f"{config.YES} The **submission period** for session #{new_session} was opened.")
+        p = config.BOT_PREFIX
+        l = self.bot.mk.LEGISLATURE_COMMAND
+        info = text.SafeEmbed(title=f"{config.HINT}  Government System:  Legislative Sessions",
+                              description=f"Once you feel like enough time has passed for people to "
+                                          f"submit their bills and motions, you can lock submissions by either:\n\n1.  "
+                                          f"*(Optional)* Set the session into *Voting Period* with "
+                                          f"`{p}{l} session vote`. The only advantage of setting a session into Voting "
+                                          f"Period instead of directly closing it, is that I will DM every legislator "
+                                          f"a reminder to vote and the link to the voting form, and the voting form "
+                                          f"will be displayed in `{p}{l} session`.\n\n"
+                                          f"2. Close the session entirely with "
+                                          f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session close`.")
+
+        info.add_field(name="Optional: Voting Form",
+                       value="If you want to use Google Forms to vote, "
+                             "I can generate that Google Form for you and fill "
+                             f"it with all the bills and motions that were submitted. "
+                             f"Take a look at `{p}{l} session export`. You can use my generated Google Form "
+                             f"for the `{p}{l} session vote` command.",
+                       inline=False)
+
+        info.add_field(name="Bill & Motion Submissions",
+                       value=f"As {self.bot.mk.speaker_term}, you can remove any bill or "
+                             f"motion from this session with `{p}{l} withdraw`. Everyone else can use that command "
+                             f"too, but they're only allowed to withdraw the bills/motions that they "
+                             f"themselves also submitted.",
+                       inline=False)
+
+        info.add_field(name="Failed Bills from previous Sessions",
+                       value="Are there any bills from last session that "
+                             f"failed, that you want to give a second chance in this session? Don't bother "
+                             f"doing `{p}{l} submit` all over again, instead use `{p}{l} resubmit <bill_ids>` to "
+                             f"move any old, failed bills to this session.",
+                       inline=False)
+
+        await ctx.send(f"{config.YES} The **submission period** for session #{new_session} was opened, and bills can "
+                       f"now be submitted.", embed=info)
 
         await self.gov_announcements_channel.send(
             f"The **submission period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
@@ -280,7 +322,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             reason="leg_session_open",
             message=f":envelope_with_arrow: The **submission period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
                     f" #{new_session} has started! Submit your bills with "
-                    f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit` on the {self.bot.dciv.name} server.",
+                    f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit` on the {self.bot.dciv.name} server."
         )
 
     @leg_session.command(name="vote", aliases=["u", "v", "update"])
@@ -309,7 +351,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         await active_leg_session.start_voting(voting_form)
 
-        await ctx.send(f"{config.YES} Session #{active_leg_session.id} is now in **voting period**.")
+        p = config.BOT_PREFIX
+        l = self.bot.mk.LEGISLATURE_COMMAND
+
+        await ctx.send(
+            f"{config.YES} Session #{active_leg_session.id} is now in **voting period**.\n{config.HINT} Once you feel "
+            f"like enough time has passed for people to vote, close this session with `{p}{l} session close`. "
+            f"I'll go over what happens after that once you close the session.")
 
         await self.gov_announcements_channel.send(
             f"The **voting period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
@@ -342,9 +390,52 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             active_leg_session.id,
         )
 
+        p = config.BOT_PREFIX
+        l = self.bot.mk.LEGISLATURE_COMMAND
+        info = text.SafeEmbed(title=f"{config.HINT}  Government System:  Legislative Sessions",
+                              description=f"Now, tally the results and tell me which bills passed with "
+                                          f"`{p}{l} pass <bill_ids>`.\n\nYou do not have to tell me which bills "
+                                          f"failed in the vote, I will "
+                                          f"automatically set every bill from this session that you do not "
+                                          f"explicitly pass with `{p}{l} pass <bill_ids>` as failed.")
+
+        info.add_field(name="Why can't I pass motions?",
+                       value="Motions are intended for short-term, temporary actions that do not "
+                             f"require to be kept as record in `{p}laws`. As such, they lack some features that bills "
+                             f"have, "
+                             "such as passing them into law.\n\nAn example for a use case for motions could be a "
+                             "'Motion to recall Minister XY' motion, because if that motion to recall passes, "
+                             "why would we need to keep that motion as a record on our Legal Code, it's a "
+                             "one-and-done thing.",
+                       inline=False)
+
+        info.add_field(name="Updating the Legal Code",
+                       value=f"As {self.bot.mk.speaker_term}, one of your obligations is "
+                             f"probably to make sure our Legal Code is up-to-date. "
+                             f"While my `{p}laws` command is an always up-to-date legal code, some people might "
+                             f"prefer one as an old-fashioned document.\n\nYou can use my `{p}laws export` command to "
+                             f"make me generate that for you! Just give me the link to a Google Docs document "
+                             f"and I will make that an up-to-date Legal Code.",
+                       inline=False)
+
+        info.add_field(name="'Help! Someone submitted a bill as not veto-able but it's not' or vice-versa",
+                       value="Don't worry, while there isn't a command (yet) for you to fix that, "
+                             f"you can just ping {self.bot.owner.mention} to fix this.",
+                       inline=False)
+
+        info.add_field(name="Keep it rolling",
+                       value=f"Now that you've closed the last session, you can keep your "
+                             f"{self.bot.mk.legislator_term} busy by opening the next session "
+                             f"with `{p}{l} session open` right away. It doesn't matter how long the "
+                             f"Submission Period is, and it doesn't hurt anyone that they can submit bills "
+                             f"around the clock.\n\nJust sit back, let submissions come in and once you're ready to "
+                             f"'start' the session 'for real', tell your {self.bot.mk.legislator_term}s that "
+                             f"submissions will be locked soon, and schedule a few debates. Now that everyone already "
+                             f"had days to write and submit their bills, more time is left for debate, discussion and "
+                             f"collective brainstorming once the session really 'starts'.")
+
         await ctx.send(
-            f"{config.YES} Session #{active_leg_session.id} was closed. "
-            f"Check `{config.BOT_PREFIX}help {self.bot.mk.LEGISLATURE_COMMAND} pass` on what to do next."
+            f"{config.YES} Session #{active_leg_session.id} was closed.", embed=info
         )
 
         await self.gov_announcements_channel.send(
@@ -397,7 +488,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
             link = await self.bot.make_paste("\n".join(exported))
             txt = (
-                f"**__Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}__**\nSee the video below "
+                f"**__Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}__**\nI exported this "
+                f"session's bills and motions into a format that you can easily copy & paste into "
+                f"Google Spreadsheets, for example for a Legislative Docket. See the video below "
                 f"to see how to speed up your Speaker duties with this command.\n\n**Export:** <{link}>\n\n"
                 "https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662/howtoexport.mp4"
             )
@@ -636,10 +729,46 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             )
             embed.add_field(name="URL", value=google_docs_url, inline=False)
 
-        await ctx.send(
-            f"{config.YES} Your bill `{name}` was submitted for session #{current_leg_session_id}."
-        )
+        p = config.BOT_PREFIX
+        l = self.bot.mk.LEGISLATURE_COMMAND
+        info = text.SafeEmbed(title=f"{config.HINT}  Government System:  Bill Submissions",
+                              description=f"The {self.bot.mk.speaker_term} has been informed about your "
+                                          f"bill submission.")
 
+        info.add_field(name="Sponsors",
+                       value="Depending on current legislative procedures or laws, your bill might need a specific "
+                             f"amount of sponsors before the Speaker allows a vote on it. "
+                             f"Tell your supporters to sponsor your bill with `{p}{l} sponsor {bill_id}`. The list "
+                             f"of sponsors will be displayed on your bill's detail page, `{p}{l} bill {bill_id}`.",
+                       inline=False)
+
+        info.add_field(name="I want to change something in my bill",
+                       value=f"During the Submission Period, you __do not__ have to withdraw your bill and submit it "
+                             f"as a new bill again if you want to keep working on your bill and do some changes, "
+                             f"based on feedback for example.\n\nUntil the Voting Period, just make your changes in "
+                             f"the Google Docs document. It would be fair to your colleagues to inform them on any "
+                             f"changes to your bill, though.\n\nDo __not__ edit your bill if the session is already in "
+                             f"Voting Period and people are already voting on it, as a way to mislead them or "
+                             f"to sneak anything secret in.",
+                       inline=False)
+
+        info.add_field(name="Withdrawing a Bill",
+                       value=f"If, for whatever reason, you want to withdraw your bill from this "
+                             f"session, use the `{p}{l} withdraw bill {bill_id}` command.\n\n"
+                             f"You can only withdraw your bills during the Submission Period of a legislative session, "
+                             f"while the {self.bot.mk.speaker_term} can withdraw _every_ bill, at any time.",
+                       inline=False)
+
+        info.add_field(name="Additional Commands",
+                       value=f"Congratulations! Your submitted bill will now show up in the detail page "
+                             f"for the current session `{p}{l} session`, in `{p}{l} bills from {ctx.author.display_name}` and "
+                             f"`{p}{l} bills from <your_party>` if you belong to a political party, and "
+                             f"everyone can search for it based on matching keywords "
+                             f"with `{p}{l} bill search <keyword>`.")
+        await ctx.send(
+            f"{config.YES} Your bill `{name}` was submitted for session #{current_leg_session_id}.",
+            embed=info
+        )
         return embed
 
     async def submit_motion(
@@ -720,7 +849,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         if current_leg_session is None:
             ctx.command.reset_cooldown(ctx)
-            return await ctx.send(f"{config.NO} There is no active session.")
+            return await ctx.send(f"{config.NO} There is no open session.\n{config.HINT} The "
+                                  f"{self.bot.mk.speaker_term} can open the next session with "
+                                  f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session open` at any time.")
 
         if current_leg_session.status is not SessionStatus.SUBMISSION_PERIOD:
             ctx.command.reset_cooldown(ctx)
@@ -751,7 +882,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
                     if self.legislator_role not in ctx.author.roles:
                         return await ctx.send(
-                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} are allowed to " f"submit bills."
+                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} are allowed to submit bills."
                         )
 
                 embed = await self.submit_bill(ctx, current_leg_session.id)
@@ -762,7 +893,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS:
                     if self.legislator_role not in ctx.author.roles:
                         return await ctx.send(
-                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} are allowed to " f"submit motions."
+                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} are allowed to submit motions."
                         )
 
                 embed = await self.submit_motion(ctx, current_leg_session.id)
@@ -770,7 +901,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
                 if self.legislator_role not in ctx.author.roles:
                     return await ctx.send(
-                        f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} are allowed to " f"submit bills."
+                        f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} are allowed to submit bills."
                     )
 
             embed = await self.submit_bill(ctx, current_leg_session.id)
@@ -824,7 +955,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             return await ctx.send("Cancelled.")
 
         await consumer.consume(scheduler=self.pass_scheduler)
-        await ctx.send(f"{config.YES} All bills were marked as passed from the {self.bot.mk.LEGISLATURE_NAME}.")
+        await ctx.send(f"{config.YES} All bills were marked as passed from the {self.bot.mk.LEGISLATURE_NAME}.\n"
+                       f"{config.HINT} If the Legal Code needs to "
+                       f"be updated, the {self.bot.mk.speaker_term} can use my "
+                       f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code. ")
 
     @legislature.group(name="withdraw", aliases=["w"], hidden=True)
     @checks.is_democraciv_guild()
@@ -1046,7 +1180,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             return await ctx.send("Cancelled.")
 
         await consumer.consume(sponsor=ctx.author)
-        await ctx.send(f"{config.YES} All bills were sponsored by you.")
+        await ctx.send(f"{config.YES} All bills were sponsored by you. Your name is now on the list of "
+                       f"sponsors on the detail pages `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} "
+                       f"bill <bill_id>` for these bills.")
 
     @legislature.command(name="unsponsor", aliases=["usp"])
     async def unsponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
@@ -1182,7 +1318,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             "top_laws": pretty_top_lawmaker,
         }
 
-    @legislature.command(name="stats", aliases=["stat", "statistics", "statistic"], hidden=True, enabled=False)
+    @legislature.command(name="statistics", aliases=["stat", "stats", "statistic"], hidden=True, enabled=False)
     async def stats(self, ctx):
         """Statistics about the {LEGISLATURE_NAME}"""
 
