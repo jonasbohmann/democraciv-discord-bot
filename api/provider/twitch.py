@@ -212,5 +212,6 @@ class TwitchManager(ProviderManager):
             if response.status == 404:
                 # webhook was deleted
                 await self._remove_webhook(target=stream.streamer, webhook_url=context.webhook_url)
+                await self.db.pool.execute(f"DELETE FROM {self.table} WHERE webhook_url = $1", context.webhook_url)
                 logger.info(f"removed deleted webhook_url {context.webhook_url} for {stream.streamer}")
 

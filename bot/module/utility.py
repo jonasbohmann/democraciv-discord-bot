@@ -43,6 +43,11 @@ class Utility(context.CustomCog):
         if message.author.id in self.active_press_flows:
             return
 
+        ctx = await self.bot.get_context(message)
+
+        if ctx.valid:
+            return
+
         never_role_name = "Reddit Press"
         never_role = discord.utils.get(self.bot.dciv.roles, name=never_role_name)
 
@@ -60,6 +65,12 @@ class Utility(context.CustomCog):
                                              check=lambda
                                                  m: m.author == message.author and m.channel == message.channel,
                                              timeout=60)
+
+                _ctx = await self.bot.get_context(_m)
+
+                if _ctx.valid:
+                    continue
+
                 messages.append(_m)
                 start = datetime.datetime.utcnow()
             except asyncio.TimeoutError:

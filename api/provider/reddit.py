@@ -220,6 +220,7 @@ class SubredditScraper:
                 if response.status == 404:
                     # webhook was deleted
                     await self.manager._remove_webhook(target=self.subreddit, webhook_url=webhook)
+                    await self.db.pool.execute(f"DELETE FROM {self.manager.table} WHERE webhook_url = $1", webhook)
                     logger.info(f"removed deleted webhook_url {webhook} for r/{self.subreddit}")
 
     async def get_newest_reddit_post(self) -> typing.Optional[typing.Dict]:
