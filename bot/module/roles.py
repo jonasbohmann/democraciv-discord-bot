@@ -84,9 +84,7 @@ class Selfroles(context.CustomCog):
         role_name = await ctx.converted_input(converter=converter.CaseInsensitiveRole)
 
         if isinstance(role_name, str):
-            await ctx.send(
-                f"{config.YES} I will **create a new role** on this server named `{role_name}` for this."
-            )
+            await ctx.send(f"{config.YES} I will **create a new role** on this server named `{role_name}` for this.")
             try:
                 discord_role = await ctx.guild.create_role(name=role_name)
             except discord.Forbidden:
@@ -95,9 +93,7 @@ class Selfroles(context.CustomCog):
         else:
             discord_role = role_name
 
-            await ctx.send(
-                f"{config.YES} I'll use the **pre-existing role** named `{discord_role.name}` for this."
-            )
+            await ctx.send(f"{config.YES} I'll use the **pre-existing role** named `{discord_role.name}` for this.")
 
         role_join_message = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with a short message the user should see when they get the role."
@@ -126,11 +122,13 @@ class Selfroles(context.CustomCog):
          `{PREFIX}{COMMAND} <role>`
         """
 
-        new_join_message = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the new join message "
-                                           f"for `{role.role.name}`.")
+        new_join_message = await ctx.input(
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the new join message " f"for `{role.role.name}`."
+        )
 
-        await self.bot.db.execute("UPDATE selfrole SET join_message = $1 WHERE role_id = $2", new_join_message,
-                                  role.role.id)
+        await self.bot.db.execute(
+            "UPDATE selfrole SET join_message = $1 WHERE role_id = $2", new_join_message, role.role.id
+        )
 
         await ctx.send(f"{config.YES} The join message for `{role.role.name}` was updated.")
 
@@ -150,9 +148,11 @@ class Selfroles(context.CustomCog):
             return await ctx.send(f"{config.NO} This server has no selfrole that matches `{role}`.")
 
         if selfrole.role:
-            hard_delete = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should I also delete the "
-                                            f"Discord role `{selfrole.role.name}`, instead of just removing the "
-                                            f"selfrole from the list of selfroles in `{config.BOT_PREFIX}roles`?")
+            hard_delete = await ctx.confirm(
+                f"{config.USER_INTERACTION_REQUIRED} Should I also delete the "
+                f"Discord role `{selfrole.role.name}`, instead of just removing the "
+                f"selfrole from the list of selfroles in `{config.BOT_PREFIX}roles`?"
+            )
         else:
             hard_delete = False
 

@@ -17,15 +17,15 @@ from config import config
 
 class Pages(menus.MenuPages):
     def __init__(
-            self,
-            source,
-            *,
-            title=EmptyEmbed,
-            author="",
-            icon=EmptyEmbed,
-            title_url=EmptyEmbed,
-            colour=config.BOT_EMBED_COLOUR,
-            thumbnail=None,
+        self,
+        source,
+        *,
+        title=EmptyEmbed,
+        author="",
+        icon=EmptyEmbed,
+        title_url=EmptyEmbed,
+        colour=config.BOT_EMBED_COLOUR,
+        thumbnail=None,
     ):
         super().__init__(source=source, check_embeds=True)
         self.embed = SafeEmbed(title=title, url=title_url, colour=colour)

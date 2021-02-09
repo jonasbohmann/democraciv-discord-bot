@@ -23,14 +23,14 @@ class GovernmentMixin:
 
     async def _paginate_all_(self, ctx, *, model):
         if model is models.Bill:
-            all_objects = await self.bot.db.fetch(f"SELECT id FROM bill ORDER BY id;")
+            all_objects = await self.bot.db.fetch("SELECT id FROM bill ORDER BY id;")
         elif model is models.Law:
             all_objects = await self.bot.db.fetch(
-                f"SELECT id FROM bill WHERE status = $1 ORDER BY id;",
+                "SELECT id FROM bill WHERE status = $1 ORDER BY id;",
                 models.BillIsLaw.flag.value,
             )
         elif model is models.Motion:
-            all_objects = await self.bot.db.fetch(f"SELECT id FROM motion ORDER BY id;")
+            all_objects = await self.bot.db.fetch("SELECT id FROM motion ORDER BY id;")
 
         formatted = []
 
@@ -45,14 +45,13 @@ class GovernmentMixin:
             title = f"All Submitted {model.__name__}s"
             empty_message = f"No one has submitted any {model.__name__.lower()}s yet."
 
-        pages = paginator.SimplePages(entries=formatted, icon=self.bot.mk.NATION_ICON_URL, author=title,
-                                      empty_message=empty_message)
+        pages = paginator.SimplePages(
+            entries=formatted, icon=self.bot.mk.NATION_ICON_URL, author=title, empty_message=empty_message
+        )
         await pages.start(ctx)
 
     async def _detail_view(self, ctx, *, obj: typing.Union[models.Bill, models.Motion]):
-        embed = text.SafeEmbed(title=f"{obj.name} (#{obj.id})",
-                               description=obj.description,
-                               url=obj.link)
+        embed = text.SafeEmbed(title=f"{obj.name} (#{obj.id})", description=obj.description, url=obj.link)
 
         if obj.submitter is not None:
             embed.set_author(
@@ -119,17 +118,17 @@ class GovernmentMixin:
                 # Then, search by tag similarity
                 for word in query.split():
                     if len(word) < 3 or word in (
-                            "the",
-                            "author",
-                            "authors",
-                            "date",
-                            "name",
-                            "and",
-                            "d/m/y",
-                            "type",
-                            "description",
-                            "by",
-                            "generated"
+                        "the",
+                        "author",
+                        "authors",
+                        "date",
+                        "name",
+                        "and",
+                        "d/m/y",
+                        "type",
+                        "description",
+                        "by",
+                        "generated",
                     ):
                         continue
 
@@ -184,7 +183,7 @@ class GovernmentMixin:
         await pages.start(ctx)
 
     async def _search_bill_by_name(
-            self, name: str, connection=None, search_laws: bool = False
+        self, name: str, connection=None, search_laws: bool = False
     ) -> typing.Dict[str, None]:
         """Search for bills by their name, returns list with prettified strings of found bills"""
 

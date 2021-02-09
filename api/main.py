@@ -16,7 +16,7 @@ try:
 except ImportError:
     pass
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [API] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [API] %(message)s", datefmt="%d.%m.%Y %H:%M:%S")
 
 sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
@@ -38,7 +38,7 @@ class Database:
     def get_dsn(self):
         with open("api/token.json", "r") as token_file:
             token_json = json.load(token_file)
-            self.dsn = token_json['db']['dsn']
+            self.dsn = token_json["db"]["dsn"]
 
     async def apply_schema(self):
         schema = """CREATE TABLE IF NOT EXISTS reddit_webhook(
@@ -176,13 +176,13 @@ async def reddit_remove(reddit_config: RemoveWebhook):
 
 @app.post("/reddit/post")
 async def reddit_post(submission: SubmitRedditPost):
-    return await reddit_manager.post_to_reddit(subreddit=submission.subreddit,
-                                               title=submission.title,
-                                               content=submission.content)
+    return await reddit_manager.post_to_reddit(
+        subreddit=submission.subreddit, title=submission.title, content=submission.content
+    )
 
 
 @app.post("/reddit/post/delete")
-async def reddit_post(post: DeleteRedditPost):
+async def reddit_post_delete(post: DeleteRedditPost):
     return await reddit_manager.delete_reddit_post(post_id=post.id)
 
 
@@ -227,13 +227,15 @@ async def twitch_subscription_verify(request: Request, background_tasks: Backgro
     print(js)
 
     if "challenge" in js:
-        background_tasks.add_task(twitch_manager.add_twitch_subscription_id,
-                                  js['subscription']['condition']['broadcaster_user_id'],
-                                  js['subscription']['id'])
-        return js['challenge']
+        background_tasks.add_task(
+            twitch_manager.add_twitch_subscription_id,
+            js["subscription"]["condition"]["broadcaster_user_id"],
+            js["subscription"]["id"],
+        )
+        return js["challenge"]
 
     elif "event" in js:
-        background_tasks.add_task(twitch_manager.process_incoming_notification, js['event'])
+        background_tasks.add_task(twitch_manager.process_incoming_notification, js["event"])
         return "ok"
 
 
@@ -313,6 +315,6 @@ def roll_dice(dice_to_roll: Dice):
         return {"error": "invalid dice syntax"}
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logger.info("Starting app...")
     uvicorn.run(app, host="0.0.0.0", port="8000")

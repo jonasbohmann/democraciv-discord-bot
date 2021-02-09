@@ -113,12 +113,12 @@ class CustomContext(commands.Context):
         return check
 
     async def choose(
-            self,
-            text=None,
-            *,
-            reactions: typing.Iterable[typing.Any],
-            message: discord.Message = None,
-            timeout: int = 300,
+        self,
+        text=None,
+        *,
+        reactions: typing.Iterable[typing.Any],
+        message: discord.Message = None,
+        timeout: int = 300,
     ) -> discord.Reaction:
 
         if text:
@@ -128,7 +128,7 @@ class CustomContext(commands.Context):
             await message.add_reaction(reaction)
 
         try:
-            reaction, user = await self.bot.wait_for(
+            reaction, _ = await self.bot.wait_for(
                 "reaction_add",
                 check=self._wait_for_reaction_check(original_message=message),
                 timeout=timeout,
@@ -194,12 +194,12 @@ class CustomContext(commands.Context):
             await message.delete()
 
     async def input(
-            self,
-            text=None,
-            *,
-            timeout: int = 300,
-            delete_after: bool = False,
-            image_allowed: bool = False,
+        self,
+        text=None,
+        *,
+        timeout: int = 300,
+        delete_after: bool = False,
+        image_allowed: bool = False,
     ) -> str:
         """Waits for a reply by the original user in the original channel and returns reply as string.
 
@@ -223,18 +223,18 @@ class CustomContext(commands.Context):
             if delete_after:
                 try:
                     await message.delete()
-                except Exception:
+                except discord.HTTPException:
                     pass
 
             return message.content
 
     async def converted_input(
-            self,
-            text=None,
-            *,
-            converter,
-            timeout: int = 300,
-            return_input_on_fail: bool = True,
+        self,
+        text=None,
+        *,
+        converter,
+        timeout: int = 300,
+        return_input_on_fail: bool = True,
     ):
         if text:
             await self.send(text)
@@ -248,12 +248,15 @@ class CustomContext(commands.Context):
                 if return_input_on_fail:
                     return message
                 if hasattr(converter, "model"):
-                    error_msg = f"{config.NO} Something went wrong while converting your input " \
-                                f"into a {converter.model}. Are you sure it was right and that " \
-                                f"the {converter.model} exists?"
+                    error_msg = (
+                        f"{config.NO} Something went wrong while converting your input "
+                        f"into a {converter.model}. Are you sure it was right and that "
+                        f"the {converter.model} exists?"
+                    )
                 else:
-                    error_msg = f"{config.NO} Something went wrong while converting your input. " \
-                                f"Are you sure it was right?"
+                    error_msg = (
+                        f"{config.NO} Something went wrong while converting your input. " f"Are you sure it was right?"
+                    )
 
                 raise exceptions.InvalidUserInputError(error_msg)
         else:

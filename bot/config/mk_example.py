@@ -66,8 +66,12 @@ class MarkConfig:
     NATION_NAME = "Ottoman Mercantile Divan"
     NATION_FULL_NAME = "Ottoman Mercantile Divan"
     NATION_ADJECTIVE = "Ottoman"
-    NATION_FLAG_URL = "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=1024"
-    NATION_ICON_URL = "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=102496"
+    NATION_FLAG_URL = (
+        "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=1024"
+    )
+    NATION_ICON_URL = (
+        "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=102496"
+    )
     NATION_EMOJI = "<:ottoman:784984719728836638>>"
 
     LEGISLATURE_NAME = "Grand Divan"
@@ -136,7 +140,7 @@ class MarkConfig:
             name = self.bot.get_democraciv_role(role).name
 
             if name.lower().startswith(self.NATION_ROLE_PREFIX.lower()):
-                return name[len(self.NATION_ROLE_PREFIX):]
+                return name[len(self.NATION_ROLE_PREFIX) :]
 
         except exceptions.RoleNotFoundError:
             return alt

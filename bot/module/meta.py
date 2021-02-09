@@ -17,28 +17,30 @@ class EditDMSettingsMenu(menus.Menu):
         self.result = collections.namedtuple("EditDMSettingsMenuResult", ["confirmed", "result"])
         self.result.confirmed = False
 
-        self.result.result = {"mute_kick_ban": self.settings["ban_kick_mute"],
-                              "leg_session_open": self.settings["leg_session_open"],
-                              "leg_session_update": self.settings["leg_session_update"],
-                              "leg_session_submit": self.settings["leg_session_submit"],
-                              "leg_session_withdraw": self.settings["leg_session_withdraw"],
-                              "party_join_leave": self.settings["party_join_leave"]}
+        self.result.result = {
+            "mute_kick_ban": self.settings["ban_kick_mute"],
+            "leg_session_open": self.settings["leg_session_open"],
+            "leg_session_update": self.settings["leg_session_update"],
+            "leg_session_submit": self.settings["leg_session_submit"],
+            "leg_session_withdraw": self.settings["leg_session_withdraw"],
+            "party_join_leave": self.settings["party_join_leave"],
+        }
 
         return self.result
 
     def _make_embed(self):
         embed = text.SafeEmbed(
             description=f"You can toggle each notification on and off. Once you're done, hit {config.YES} to confirm, or {config.NO} to cancel.\n\n"
-                        f":one:  -  {self.emojify_settings(self.result.result['mute_kick_ban'])} DM when you get muted, kicked or banned\n"
-                        f":two:  -  {self.emojify_settings(self.result.result['leg_session_open'])} *({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when a {self.bot.mk.LEGISLATURE_ADJECTIVE} Session opens\n"
-                        f":three:  -  {self.emojify_settings(self.result.result['leg_session_update'])} *({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when voting starts for a {self.bot.mk.LEGISLATURE_ADJECTIVE} Session\n"
-                        f":four:  -  {self.emojify_settings(self.result.result['leg_session_submit'])} "
-                        f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when "
-                        f"someone submits a Bill or Motion\n"
-                        f":five:  -  {self.emojify_settings(self.result.result['leg_session_withdraw'])} "
-                        f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when "
-                        f"someone withdraws a Bill or Motion\n"
-                        f":six:  -  {self.emojify_settings(self.result.result['party_join_leave'])} *(Party Leaders Only)* DM when someone joins or leaves your political party\n"
+            f":one:  -  {self.emojify_settings(self.result.result['mute_kick_ban'])} DM when you get muted, kicked or banned\n"
+            f":two:  -  {self.emojify_settings(self.result.result['leg_session_open'])} *({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when a {self.bot.mk.LEGISLATURE_ADJECTIVE} Session opens\n"
+            f":three:  -  {self.emojify_settings(self.result.result['leg_session_update'])} *({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when voting starts for a {self.bot.mk.LEGISLATURE_ADJECTIVE} Session\n"
+            f":four:  -  {self.emojify_settings(self.result.result['leg_session_submit'])} "
+            f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when "
+            f"someone submits a Bill or Motion\n"
+            f":five:  -  {self.emojify_settings(self.result.result['leg_session_withdraw'])} "
+            f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when "
+            f"someone withdraws a Bill or Motion\n"
+            f":six:  -  {self.emojify_settings(self.result.result['party_join_leave'])} *(Party Leaders Only)* DM when someone joins or leaves your political party\n"
         )
         embed.set_author(name=self.ctx.author, icon_url=self.ctx.author_icon)
         return embed
@@ -122,20 +124,20 @@ class Meta(context.CustomCog):
 
         return settings
 
-    @commands.command(
-        name="dms",
-        aliases=["dm", "pm", "dmsettings", "dm-settings", "dmsetting"]
-    )
+    @commands.command(name="dms", aliases=["dm", "pm", "dmsettings", "dm-settings", "dmsetting"])
     async def dmsettings(self, ctx):
         """Manage your DM notifications from me"""
         settings = await self.ensure_dm_settings(ctx.author.id)
         result = await EditDMSettingsMenu(settings).prompt(ctx)
 
         if result.confirmed:
-            await self.bot.db.execute("UPDATE dm_setting SET ban_kick_mute = $1, leg_session_open = $2, "
-                                      "leg_session_update = $3, leg_session_submit = $4, "
-                                      "leg_session_withdraw = $5, party_join_leave = $6 WHERE user_id = $7",
-                                      *result.result.values(), ctx.author.id)
+            await self.bot.db.execute(
+                "UPDATE dm_setting SET ban_kick_mute = $1, leg_session_open = $2, "
+                "leg_session_update = $3, leg_session_submit = $4, "
+                "leg_session_withdraw = $5, party_join_leave = $6 WHERE user_id = $7",
+                *result.result.values(),
+                ctx.author.id,
+            )
 
             await ctx.send(f"{config.YES} Your settings were updated.")
         else:
@@ -195,14 +197,15 @@ class Meta(context.CustomCog):
             api_http = None
 
         embed = text.SafeEmbed(
-            title=f":ping_pong:  {title}",
-            description="[**status.discord.com**](https://status.discord.com/)\n\n"
+            title=f":ping_pong:  {title}", description="[**status.discord.com**](https://status.discord.com/)\n\n"
         )
-        embed.add_field(name="Discord",
-                        value=f"HTTP API: {discord_http:.0f}ms\nGateway Websocket: {self.bot.ping}ms\n", inline=False)
+        embed.add_field(
+            name="Discord",
+            value=f"HTTP API: {discord_http:.0f}ms\nGateway Websocket: {self.bot.ping}ms\n",
+            inline=False,
+        )
 
-        embed.add_field(name="Internal API",
-                        value=f"{api_http:.0f}ms" if api_http else "*not running*")
+        embed.add_field(name="Internal API", value=f"{api_http:.0f}ms" if api_http else "*not running*")
         await message.edit(content=None, embed=embed)
 
     @commands.command(name="commands", aliases=["cmd", "cmds"])
@@ -221,11 +224,7 @@ class Meta(context.CustomCog):
                 continue
 
             cog_cmds = sorted(
-                [
-                    command
-                    for command in cog.walk_commands()
-                    if not command.hidden
-                ],
+                [command for command in cog.walk_commands() if not command.hidden],
                 key=lambda c: c.qualified_name,
             )
 
@@ -255,9 +254,9 @@ class Meta(context.CustomCog):
         embed = text.SafeEmbed(
             title=f"All Commands ({amounts})",
             description=f"For more detailed explanations and example usage of commands, "
-                        f"use `{p}help`, `{p}help <Category>`, "
-                        f"or `{p}help <command>`."
-                        f"\n\n{' '.join(description_text)}",
+            f"use `{p}help`, `{p}help <Category>`, "
+            f"or `{p}help <command>`."
+            f"\n\n{' '.join(description_text)}",
         )
 
         if field_text:

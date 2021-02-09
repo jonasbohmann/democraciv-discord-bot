@@ -120,33 +120,38 @@ class Bill(commands.Converter):
 
     @property
     def sponsors(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
-        return list(filter(None, [self._bot.dciv.get_member(sponsor) or self._bot.get_user(sponsor) for sponsor in self._sponsors]))
+        return list(
+            filter(
+                None, [self._bot.dciv.get_member(sponsor) or self._bot.get_user(sponsor) for sponsor in self._sponsors]
+            )
+        )
 
     async def fetch_name_and_keywords(self) -> typing.Tuple[str, typing.List[str]]:
 
         try:
             response: typing.Dict = await self._bot.run_apps_script(
-                script_id="MtyscpHHIi0Ck1h8XfuBIn2qnXKElby-M",
-                function="main",
-                parameters=[self.link])
+                script_id="MtyscpHHIi0Ck1h8XfuBIn2qnXKElby-M", function="main", parameters=[self.link]
+            )
 
-            self.name = name = response['response']['result']['title']
-            keywords = [word['ngram'] for word in response['response']['result']['keywords']['keywords'] if
-                        word['ngram']]
+            self.name = name = response["response"]["result"]["title"]
+            keywords = [
+                word["ngram"] for word in response["response"]["result"]["keywords"]["keywords"] if word["ngram"]
+            ]
 
         except (DemocracivBotException, KeyError):
             keywords = []
             self.name = name = ""
 
         async with self._bot.session.post(
-                "http://yake.inesctec.pt/yake/v2/extract_keywords?max_ngram_size=2&number_of_keywords=20&highlight=false",
-                data={'content': self.description}) as r:
+            "http://yake.inesctec.pt/yake/v2/extract_keywords?max_ngram_size=2&number_of_keywords=20&highlight=false",
+            data={"content": self.description},
+        ) as r:
 
             if r.status == 200:
                 js = await r.json()
 
                 try:
-                    keywords.extend([word['ngram'] for word in js['keywords'] if word['ngram']])
+                    keywords.extend([word["ngram"] for word in js["keywords"] if word["ngram"]])
                 except KeyError:
                     pass
 
@@ -188,22 +193,25 @@ class Bill(commands.Converter):
 
         session = await Session.convert(ctx, bill["leg_session"])
 
-        sponsors = await ctx.bot.db.fetch("SELECT sponsor FROM bill_sponsor WHERE bill_id = $1", bill['id'])
-        sponsors = [record['sponsor'] for record in sponsors]
+        sponsors = await ctx.bot.db.fetch("SELECT sponsor FROM bill_sponsor WHERE bill_id = $1", bill["id"])
+        sponsors = [record["sponsor"] for record in sponsors]
 
         obj = cls(**bill, session=session, bot=ctx.bot, sponsors=sponsors)
 
         status = BillStatus.from_flag_value(bill["status"])(ctx.bot, obj)
         obj.status = status
 
-        history_record = await ctx.bot.db.fetch("SELECT * FROM bill_history WHERE bill_id = $1 ORDER BY date DESC",
-                                                obj.id)
+        history_record = await ctx.bot.db.fetch(
+            "SELECT * FROM bill_history WHERE bill_id = $1 ORDER BY date DESC", obj.id
+        )
         history = []
 
         for record in history_record:
-            entry = BillHistoryEntry(date=record['date'],
-                                     before=BillStatus.from_flag_value(record['before_status'])(ctx.bot, obj),
-                                     after=BillStatus.from_flag_value(record['after_status'])(ctx.bot, obj))
+            entry = BillHistoryEntry(
+                date=record["date"],
+                before=BillStatus.from_flag_value(record["before_status"])(ctx.bot, obj),
+                after=BillStatus.from_flag_value(record["after_status"])(ctx.bot, obj),
+            )
             history.append(entry)
 
         obj.history = history
@@ -286,11 +294,11 @@ class Motion(commands.Converter):
 
 class LegalConsumer:
     def __init__(
-            self,
-            *,
-            ctx: context.CustomContext,
-            objects: typing.Iterable[Bill],
-            action: typing.Callable,
+        self,
+        *,
+        ctx: context.CustomContext,
+        objects: typing.Iterable[Bill],
+        action: typing.Callable,
     ):
         self.objects = set(objects)
         self.ctx = ctx
@@ -497,28 +505,32 @@ class BillSubmitted(BillStatus):
         if dry:
             return
 
-        await self._bot.db.execute("INSERT INTO bill_sponsor (bill_id, sponsor) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-                                   self._bill.id,
-                                   sponsor.id)
+        await self._bot.db.execute(
+            "INSERT INTO bill_sponsor (bill_id, sponsor) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            self._bill.id,
+            sponsor.id,
+        )
 
     async def unsponsor(self, *, dry=False, sponsor: discord.Member):
         if dry:
             return
 
-        await self._bot.db.execute("DELETE FROM bill_sponsor WHERE bill_id = $1 AND sponsor = $2",
-                                   self._bill.id,
-                                   sponsor.id)
+        await self._bot.db.execute(
+            "DELETE FROM bill_sponsor WHERE bill_id = $1 AND sponsor = $2", self._bill.id, sponsor.id
+        )
 
     def emojified_status(self, verbose=True):
         if verbose:
             if self._bill.is_vetoable:
-                min = f"{self._bot.mk.MINISTRY_NAME}: {self.YELLOW} *(Waiting on {self._bot.mk.LEGISLATURE_NAME})*\n"
+                ministry = (
+                    f"{self._bot.mk.MINISTRY_NAME}: {self.YELLOW} *(Waiting on {self._bot.mk.LEGISLATURE_NAME})*\n"
+                )
             else:
-                min = f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Not Veto-able)*\n"
+                ministry = f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Not Veto-able)*\n"
 
             return (
                 f"{self._bot.mk.LEGISLATURE_NAME}: {self.YELLOW} *(Not Voted On Yet)*\n"
-                f"{min}"
+                f"{ministry}"
                 f"Law: {self.GRAY}\n"
             )
 
@@ -557,8 +569,9 @@ class BillFailedLegislature(BillStatus):
         session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE is_active = true")
 
         if not session:
-            raise IllegalBillOperation(f"{config.NO} There is no active session right now, "
-                                       f"so the bill cannot be resubmitted.")
+            raise IllegalBillOperation(
+                f"{config.NO} There is no active session right now, " f"so the bill cannot be resubmitted."
+            )
 
         if dry:
             return
@@ -567,7 +580,7 @@ class BillFailedLegislature(BillStatus):
             "UPDATE bill SET status = $1, leg_session = $3 WHERE id = $2",
             _BillStatusFlag.SUBMITTED.value,
             self._bill.id,
-            session
+            session,
         )
 
         await self.log_history(self.flag, _BillStatusFlag.SUBMITTED)
@@ -681,13 +694,13 @@ class BillPassedMinistry(BillStatus):
     def emojified_status(self, verbose=True):
         if verbose:
             if self._bill.is_vetoable:
-                min = f"{self._bot.mk.MINISTRY_NAME}: {self.GREEN} *(Passed)*\n"
+                ministry = f"{self._bot.mk.MINISTRY_NAME}: {self.GREEN} *(Passed)*\n"
             else:
-                min = f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Not Veto-able)*\n"
+                ministry = f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Not Veto-able)*\n"
 
             return (
                 f"{self._bot.mk.LEGISLATURE_NAME}: {self.GREEN} *(Passed)*\n"
-                f"{min}"
+                f"{ministry}"
                 f"Law: {self.GREEN} *(Active Law)*\n"
             )
 
@@ -706,8 +719,9 @@ class BillRepealed(BillStatus):
         session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE is_active = true")
 
         if not session:
-            raise IllegalBillOperation(f"{config.NO} There is no active session right now, "
-                                       f"so the bill cannot be resubmitted.")
+            raise IllegalBillOperation(
+                f"{config.NO} There is no active session right now, " f"so the bill cannot be resubmitted."
+            )
 
         if dry:
             return
@@ -716,7 +730,7 @@ class BillRepealed(BillStatus):
             "UPDATE bill SET status = $1, leg_session = $3 WHERE id = $2",
             _BillStatusFlag.SUBMITTED.value,
             self._bill.id,
-            session
+            session,
         )
 
         await self.log_history(self.flag, _BillStatusFlag.SUBMITTED)

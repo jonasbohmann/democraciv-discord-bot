@@ -6,8 +6,11 @@ from discord.ext import commands, menus
 from bot.config import config, mk
 from bot.utils import context, checks, paginator, text, mixin, exceptions
 from bot.utils.converter import (
-    CaseInsensitiveMember, CaseInsensitiveRole, CaseInsensitiveCategoryChannel,
-    CaseInsensitiveTextChannel, CIMemberOrCIRole
+    CaseInsensitiveMember,
+    CaseInsensitiveRole,
+    CaseInsensitiveCategoryChannel,
+    CaseInsensitiveTextChannel,
+    CIMemberOrCIRole,
 )
 
 
@@ -75,11 +78,11 @@ class PermissionSelectorMenu(menus.Menu):
         send = "Deny" if self.overwrites.send_messages else "Allow"
         embed = text.SafeEmbed(
             title=f"{config.USER_INTERACTION_REQUIRED}  Which Permissions in #{self.channel.name} do you want "
-                  f"to change?",
+            f"to change?",
             description=f"Select as many things as you want, then click the {config.YES} button to continue, "
-                        f"or {config.NO} to cancel.\n\n"
-                        f":one: {read} Read Messages Permission for `{self.role}` in {self.channel.mention}\n"
-                        f":two: {send} Send Messages Permission for `{self.role}` in {self.channel.mention}"
+            f"or {config.NO} to cancel.\n\n"
+            f":one: {read} Read Messages Permission for `{self.role}` in {self.channel.mention}\n"
+            f":two: {send} Send Messages Permission for `{self.role}` in {self.channel.mention}",
         )
         return await ctx.send(embed=embed)
 
@@ -109,15 +112,17 @@ class PermissionSelectorMenu(menus.Menu):
 class Nation(context.CustomCog, mixin.GovernmentMixin):
     """Useful commands for Nation Admins to manage their nation in Multiciv."""
 
-    @commands.group(name="nation", aliases=['civ', 'n'], case_insensitive=True, invoke_without_command=True)
+    @commands.group(name="nation", aliases=["civ", "n"], case_insensitive=True, invoke_without_command=True)
     async def nation(self, ctx):
         """{NATION_NAME}"""
 
         description = ""
         nation_wiki = self.bot.mk.NATION_NAME.lower()
 
-        embed = text.SafeEmbed(description=f"{description}\n\n[Constitution]({self.bot.mk.CONSTITUTION})\n"
-                                           f"[Wiki](https://reddit.com/r/democraciv/wiki/{nation_wiki})")
+        embed = text.SafeEmbed(
+            description=f"{description}\n\n[Constitution]({self.bot.mk.CONSTITUTION})\n"
+            f"[Wiki](https://reddit.com/r/democraciv/wiki/{nation_wiki})"
+        )
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
 
         try:
@@ -144,11 +149,11 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         else:
             prime_minister = f"{self.bot.mk.pm_term}: -"
 
-        embed.add_field(name="Government",
-                        value=f"{prime_minister}\n"
-                              f"{speaker}\n"
-                              f"Amount of {self.bot.mk.legislator_term}s: {legislators}",
-                        inline=False)
+        embed.add_field(
+            name="Government",
+            value=f"{prime_minister}\n" f"{speaker}\n" f"Amount of {self.bot.mk.legislator_term}s: {legislators}",
+            inline=False,
+        )
 
         await ctx.send(embed=embed)
 
@@ -158,19 +163,21 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         p = config.BOT_PREFIX
 
-        embed = text.SafeEmbed(description=f"Nation Admins are allowed to make roles and "
-                                           f"channels on the {self.bot.dciv.name} server that are "
-                                           f"specific for their nation (`{p}help Nation`).\n\nAdditionally, they are "
-                                           f"allowed to create, edit and delete political parties "
-                                           f"(`{p}help Political Parties`).\n\nNation Admins can also pin messages "
-                                           f"in every category that belongs to their nation.")
+        embed = text.SafeEmbed(
+            description=f"Nation Admins are allowed to make roles and "
+            f"channels on the {self.bot.dciv.name} server that are "
+            f"specific for their nation (`{p}help Nation`).\n\nAdditionally, they are "
+            f"allowed to create, edit and delete political parties "
+            f"(`{p}help Political Parties`).\n\nNation Admins can also pin messages "
+            f"in every category that belongs to their nation."
+        )
 
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
 
         role = self.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
 
         if role:
-            fmt = [m.mention for m in role.members] or ['-']
+            fmt = [m.mention for m in role.members] or ["-"]
             embed.add_field(name="Nation Admins", value="\n".join(fmt))
 
         await ctx.send(embed=embed)
@@ -191,7 +198,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         await message.pin()
         await ctx.send(f"{config.YES} Done.")
 
-    @nation.group(name="roles", aliases=['role'], case_insensitive=True, invoke_without_command=True)
+    @nation.group(name="roles", aliases=["role"], case_insensitive=True, invoke_without_command=True)
     @checks.moderation_or_nation_leader()
     @nation_role_prefix_not_blank()
     async def nationroles(self, ctx):
@@ -202,9 +209,12 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         fmt = [r.mention for r in found]
         fmt.insert(0, f"These roles can be given out with `{config.BOT_PREFIX}nation roles toggle` by you.\n")
 
-        pages = paginator.SimplePages(entries=fmt, author=f"Nation Roles",
-                                      icon=self.bot.mk.safe_flag,
-                                      empty_message="There are no roles that you can give out.")
+        pages = paginator.SimplePages(
+            entries=fmt,
+            author=f"Nation Roles",
+            icon=self.bot.mk.safe_flag,
+            empty_message="There are no roles that you can give out.",
+        )
         await pages.start(ctx)
 
     @nationroles.command(name="toggle")
@@ -233,7 +243,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         fmt = "\n".join(fmt)
         await ctx.send(fmt)
 
-    @nationroles.command(name="add", aliases=['create', 'make'])
+    @nationroles.command(name="add", aliases=["create", "make"])
     @checks.moderation_or_nation_leader()
     @nation_role_prefix_not_blank()
     async def create_new_nation_role(self, ctx, *, name: str = None):
@@ -248,10 +258,12 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
             role_name = f"{self.bot.mk.NATION_ROLE_PREFIX}{name}"
 
         role = await ctx.guild.create_role(name=role_name)
-        await ctx.send(f"{config.YES} The role was created, you can now give it to people with "
-                       f"`{config.BOT_PREFIX}nation roles toggle <person> {role.name}`.")
+        await ctx.send(
+            f"{config.YES} The role was created, you can now give it to people with "
+            f"`{config.BOT_PREFIX}nation roles toggle <person> {role.name}`."
+        )
 
-    @nationroles.command(name="delete", aliases=['remove'])
+    @nationroles.command(name="delete", aliases=["remove"])
     @checks.moderation_or_nation_leader()
     @nation_role_prefix_not_blank()
     async def delete_nation_role(self, ctx, *, nation_role: NationRoleConverter):
@@ -264,16 +276,18 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         await nation_role.delete()
         await ctx.send(f"{config.YES} `{name}` was deleted.")
 
-    @nation.command(name="createchannel", aliases=['channel', 'chan', 'cc'])
+    @nation.command(name="createchannel", aliases=["channel", "chan", "cc"])
     @checks.moderation_or_nation_leader()
     async def channel(self, ctx):
         """Create a new channel in one of your nation's categories"""
 
         if len(self.bot.mk.NATION_CATEGORIES) > 1:
-            category = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} In which of your nation's "
-                                                 f"categories should the channel be created?",
-                                                 return_input_on_fail=False,
-                                                 converter=CaseInsensitiveCategoryChannel)
+            category = await ctx.converted_input(
+                f"{config.USER_INTERACTION_REQUIRED} In which of your nation's "
+                f"categories should the channel be created?",
+                return_input_on_fail=False,
+                converter=CaseInsensitiveCategoryChannel,
+            )
 
             if category.id not in self.bot.mk.NATION_CATEGORIES:
                 return await ctx.send(f"{config.NO} The `{category.name}` category does not belong to your nation.")
@@ -285,16 +299,19 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
             return await ctx.send(f"{config.NO} Your nation has no categories for some reason.")
 
         channel_name = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} What should be the name of the new channel?")
+            f"{config.USER_INTERACTION_REQUIRED} What should be the name of the new channel?"
+        )
 
         channel = await category.create_text_channel(name=channel_name)
         await channel.edit(sync_permissions=True)
-        await ctx.send(f"{config.YES} Done.\n{config.HINT} The permissions for {channel.mention} were synced with the "
-                       f"permissions of the category `{category}`. In case you still need to adjust "
-                       f"read/write permissions for some roles or people, check out the "
-                       f"`{config.BOT_PREFIX}nation perms` command.")
+        await ctx.send(
+            f"{config.YES} Done.\n{config.HINT} The permissions for {channel.mention} were synced with the "
+            f"permissions of the category `{category}`. In case you still need to adjust "
+            f"read/write permissions for some roles or people, check out the "
+            f"`{config.BOT_PREFIX}nation perms` command."
+        )
 
-    @nation.command(name="permissions", aliases=['perms', 'permission', 'perm'])
+    @nation.command(name="permissions", aliases=["perms", "permission", "perm"])
     @checks.moderation_or_nation_leader()
     async def set_channel_perms(self, ctx, *, channel: CaseInsensitiveTextChannel = None):
         """Toggle Read and/or Send Messages permissions for a role or person in one of your nation's channels"""
@@ -302,14 +319,19 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         if not channel:
             channel = await ctx.converted_input(
                 f"{config.USER_INTERACTION_REQUIRED} Which channel's permissions should be changed?",
-                converter=CaseInsensitiveTextChannel, return_input_on_fail=False)
+                converter=CaseInsensitiveTextChannel,
+                return_input_on_fail=False,
+            )
 
         if channel.category_id not in self.bot.mk.NATION_CATEGORIES:
             return await ctx.send(f"{config.NO} The `{channel.name}` channel does not belong to your nation.")
 
-        role = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} For which role *or* person should the "
-                                         f"permissions in {channel.mention} be changed?",
-                                         return_input_on_fail=False, converter=CIMemberOrCIRole)
+        role = await ctx.converted_input(
+            f"{config.USER_INTERACTION_REQUIRED} For which role *or* person should the "
+            f"permissions in {channel.mention} be changed?",
+            return_input_on_fail=False,
+            converter=CIMemberOrCIRole,
+        )
 
         overwrites = channel.overwrites_for(role)
 
@@ -320,10 +342,10 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         permission_to_change = result.result
 
-        if permission_to_change['read']:
+        if permission_to_change["read"]:
             overwrites.read_messages = not overwrites.read_messages
 
-        if permission_to_change['send']:
+        if permission_to_change["send"]:
             overwrites.send_messages = not overwrites.send_messages
 
         await channel.set_permissions(target=role, overwrite=overwrites)

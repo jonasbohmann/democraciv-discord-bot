@@ -35,17 +35,16 @@ class SupremeCourt(context.CustomCog, GovernmentMixin, name=mk.MarkConfig.COURT_
         return [judge.mention for judge in _judges.members]
 
     @commands.group(
-        name="court",
-        aliases=["sc", "courts", "j", "judicial"],
-        case_insensitive=True,
-        invoke_without_command=True
+        name="court", aliases=["sc", "courts", "j", "judicial"], case_insensitive=True, invoke_without_command=True
     )
     async def court(self, ctx):
         """Dashboard for {justice_term}"""
 
         embed = text.SafeEmbed()
-        embed.set_author(name=f"{self.bot.mk.courts_term} of the {self.bot.mk.NATION_FULL_NAME}",
-                         icon_url=self.bot.mk.NATION_ICON_URL)
+        embed.set_author(
+            name=f"{self.bot.mk.courts_term} of the {self.bot.mk.NATION_FULL_NAME}",
+            icon_url=self.bot.mk.NATION_ICON_URL,
+        )
 
         justices = self.get_justices() or ["-"]
         judges = self.get_judges() or ["-"]
@@ -65,8 +64,7 @@ class SupremeCourt(context.CustomCog, GovernmentMixin, name=mk.MarkConfig.COURT_
 
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
-                  f"[Legal Code]({self.bot.mk.LEGAL_CODE})",
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n" f"[Legal Code]({self.bot.mk.LEGAL_CODE})",
             inline=False,
         )
 

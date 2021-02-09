@@ -11,7 +11,8 @@ from bot.utils.converter import (
     Tag,
     OwnedTag,
     CaseInsensitiveMember,
-    CaseInsensitiveUser, FuzzyCIMember,
+    CaseInsensitiveUser,
+    FuzzyCIMember,
 )
 from bot.utils import text, paginator, exceptions
 
@@ -41,10 +42,10 @@ class EditTagMenu(menus.Menu):
         embed = text.SafeEmbed(
             title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
             description=f"Select as many things as you want, then click "
-                        f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
-                        f":one: Send Tag as embed or plain text\n"
-                        f":two: Tag Title\n"
-                        f":three: Tag Content",
+            f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
+            f":one: Send Tag as embed or plain text\n"
+            f":two: Tag Title\n"
+            f":three: Tag Content",
         )
         return await ctx.send(embed=embed)
 
@@ -122,8 +123,10 @@ class Tags(context.CustomCog):
         pretty_tags = []
 
         if global_tags:
-            pretty_tags = [f"**__Global Tags__**\n*Tags can only be made global by {self.bot.dciv.name} "
-                           f"Moderation and Nation Admins. Global tags work in every server I am in, as well as in DMs with me.*\n"]
+            pretty_tags = [
+                f"**__Global Tags__**\n*Tags can only be made global by {self.bot.dciv.name} "
+                f"Moderation and Nation Admins. Global tags work in every server I am in, as well as in DMs with me.*\n"
+            ]
 
         for record in global_tags:
             pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
@@ -134,9 +137,11 @@ class Tags(context.CustomCog):
                 ctx.guild.id,
             )
             if all_tags:
-                pretty_tags.append(f"\n\n**__Local Tags__**\n*Every Tag that was not explicitly made global by "
-                                   f"{self.bot.dciv.name} Moderation or a Nation Admin is a local tag, "
-                                   f"and only works in the server it was made in.*\n")
+                pretty_tags.append(
+                    f"\n\n**__Local Tags__**\n*Every Tag that was not explicitly made global by "
+                    f"{self.bot.dciv.name} Moderation or a Nation Admin is a local tag, "
+                    f"and only works in the server it was made in.*\n"
+                )
 
             for record in all_tags:
                 pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
@@ -180,10 +185,10 @@ class Tags(context.CustomCog):
     @tags.command(name="from", aliases=["by"])
     @commands.guild_only()
     async def _from(
-            self,
-            ctx: context.CustomContext,
-            *,
-            member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
+        self,
+        ctx: context.CustomContext,
+        *,
+        member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
     ):
         """List the tags that someone made"""
 
@@ -214,7 +219,8 @@ class Tags(context.CustomCog):
         """Add a new alias to a tag"""
 
         alias = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the new alias for `{config.BOT_PREFIX}{tag.name}`.")
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the new alias for `{config.BOT_PREFIX}{tag.name}`."
+        )
 
         if not await self.validate_tag_name(ctx, alias.lower()):
             return
@@ -228,8 +234,7 @@ class Tags(context.CustomCog):
                 )
 
         await ctx.send(
-            f"{config.YES} The `{config.BOT_PREFIX}{alias}` alias was added to "
-            f"`{config.BOT_PREFIX}{tag.name}`."
+            f"{config.YES} The `{config.BOT_PREFIX}{alias}` alias was added to " f"`{config.BOT_PREFIX}{tag.name}`."
         )
 
     @tags.command(name="removealias", aliases=["deletealias", "ra", "da"])
@@ -292,8 +297,10 @@ class Tags(context.CustomCog):
             if ctx.guild.id == self.bot.dciv.id:
                 msg = f"{config.NO} A tag or tag alias from this server with that name already exists."
             else:
-                msg = f"{config.NO} A global tag from the {self.bot.dciv.name} server with that name, or a local " \
-                      f"tag or tag alias from this server with that name, already exists."
+                msg = (
+                    f"{config.NO} A global tag from the {self.bot.dciv.name} server with that name, or a local "
+                    f"tag or tag alias from this server with that name, already exists."
+                )
 
             await ctx.send(msg)
             return False
@@ -319,33 +326,40 @@ class Tags(context.CustomCog):
         )
 
         if name.startswith(p):
-            name = name[len(p):]
+            name = name[len(p) :]
             await ctx.send(f"*Note: The leading `{p}` was automatically removed from your tag name.*")
 
         if not await self.validate_tag_name(ctx, name.lower()):
             return
 
         img = await self.bot.make_file_from_image_link(
-            "https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png")
+            "https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png"
+        )
         img.seek(0)
         file = discord.File(img, filename="image.png")
 
-        embed_q = await ctx.send(f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?"
-                                 f"\n{config.HINT} *Embeds behave differently than plain text, see the image below "
-                                 f"for the key differences.*", file=file)
+        embed_q = await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?"
+            f"\n{config.HINT} *Embeds behave differently than plain text, see the image below "
+            f"for the key differences.*",
+            file=file,
+        )
 
         is_embedded = await ctx.confirm(message=embed_q)
 
-        title = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the **title** of the tag."
-                                f"\n{config.HINT} *This will be displayed next to the tag's name, "
-                                f"`{name}`, in the `{p}tags`, `{p}tags search` and `{p}tags from` commands. It will "
-                                f"also be the title of the embed, if you decided to send this tag as an embed.*")
+        title = await ctx.input(
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the **title** of the tag."
+            f"\n{config.HINT} *This will be displayed next to the tag's name, "
+            f"`{name}`, in the `{p}tags`, `{p}tags search` and `{p}tags from` commands. It will "
+            f"also be the title of the embed, if you decided to send this tag as an embed.*"
+        )
 
         if len(title) > 256:
             return await ctx.send(f"{config.NO} The title cannot be longer than 256 characters.")
 
-        content = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the **content** of the tag.",
-                                  image_allowed=True)
+        content = await ctx.input(
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the **content** of the tag.", image_allowed=True
+        )
 
         if len(content) > 2000:
             return await ctx.send(f"{config.NO} The content cannot be longer than 2000 characters.")
@@ -359,16 +373,20 @@ class Tags(context.CustomCog):
                 nation_admin = None
 
             if ctx.author.guild_permissions.administrator or (
-                    self.bot.mk.IS_NATION_BOT and nation_admin and nation_admin in ctx.author.roles):
-                is_global = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should this tag be global?"
-                                              f"\n{config.HINT} *Only {self.bot.dciv.name} Moderators and Nation "
-                                              f"Admins can make global tags. If a tag is global, it can be used "
-                                              f"in every server I am in, as well as in "
-                                              f"DMs with me. If a tag is not global, called a 'local' tag, "
-                                              f"it can only be used in the server it was made in.*")
+                self.bot.mk.IS_NATION_BOT and nation_admin and nation_admin in ctx.author.roles
+            ):
+                is_global = await ctx.confirm(
+                    f"{config.USER_INTERACTION_REQUIRED} Should this tag be global?"
+                    f"\n{config.HINT} *Only {self.bot.dciv.name} Moderators and Nation "
+                    f"Admins can make global tags. If a tag is global, it can be used "
+                    f"in every server I am in, as well as in "
+                    f"DMs with me. If a tag is not global, called a 'local' tag, "
+                    f"it can only be used in the server it was made in.*"
+                )
 
         reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to add the tag " f"`{config.BOT_PREFIX}{name}`?"
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to add the tag "
+            f"`{config.BOT_PREFIX}{name}`?"
         )
 
         if not reaction:
@@ -419,8 +437,8 @@ class Tags(context.CustomCog):
             embed.add_field(
                 name="Author",
                 value=f"*The author of this tag left this server.*\n"
-                      f"*You can claim this tag to make it yours with*\n"
-                      f"`{config.BOT_PREFIX}tag claim {tag.name}`",
+                f"*You can claim this tag to make it yours with*\n"
+                f"`{config.BOT_PREFIX}tag claim {tag.name}`",
                 inline=False,
             )
             embed.set_author(
@@ -432,8 +450,8 @@ class Tags(context.CustomCog):
             embed.add_field(
                 name="Author",
                 value=f"*The author of this tag left this server.*\n"
-                      f"*You can claim this tag to make it yours with*\n"
-                      f"`{config.BOT_PREFIX}tag claim {tag.name}`",
+                f"*You can claim this tag to make it yours with*\n"
+                f"`{config.BOT_PREFIX}tag claim {tag.name}`",
                 inline=False,
             )
 
@@ -463,11 +481,11 @@ class Tags(context.CustomCog):
     @tags.command(name="transfer")
     @commands.guild_only()
     async def transfer(
-            self,
-            ctx: context.CustomContext,
-            to_person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember],
-            *,
-            tag: OwnedTag,
+        self,
+        ctx: context.CustomContext,
+        to_person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember],
+        *,
+        tag: OwnedTag,
     ):
         """Transfer a tag of yours to someone else"""
 
@@ -506,14 +524,18 @@ class Tags(context.CustomCog):
 
         if to_change["embed"]:
             img = await self.bot.make_file_from_image_link(
-                "https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png")
+                "https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png"
+            )
             img.seek(0)
 
             file = discord.File(img, filename="image.png")
 
-            embed_q = await ctx.send(f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?"
-                                     f"\n{config.HINT} *Embeds behave differently than plain text, see the image below "
-                                     f"for the key differences.*", file=file)
+            embed_q = await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?"
+                f"\n{config.HINT} *Embeds behave differently than plain text, see the image below "
+                f"for the key differences.*",
+                file=file,
+            )
             is_embedded = await ctx.confirm(message=embed_q)
         else:
             is_embedded = tag.is_embedded
@@ -523,7 +545,8 @@ class Tags(context.CustomCog):
                 f"{config.USER_INTERACTION_REQUIRED} Reply with the updated **title** of the tag."
                 f"\n{config.HINT} *This will be displayed next to the tag's name, "
                 f"`{tag.name}`, in the `{p}tags`, `{p}tags search` and `{p}tags from` commands. It will "
-                f"also be the title of the embed, if you decided to send this tag as an embed.*")
+                f"also be the title of the embed, if you decided to send this tag as an embed.*"
+            )
 
             if len(new_title) > 256:
                 return await ctx.send(f"{config.NO} The title cannot be longer than 256 characters.")
@@ -534,7 +557,7 @@ class Tags(context.CustomCog):
         if to_change["content"]:
             new_content = await ctx.input(
                 f"{config.USER_INTERACTION_REQUIRED} Reply with the updated **content** of this tag.",
-                image_allowed=True
+                image_allowed=True,
             )
 
             if len(new_content) > 2000:
@@ -612,7 +635,8 @@ class Tags(context.CustomCog):
         """Remove a tag"""
 
         are_you_sure = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to remove the tag " f"`{config.BOT_PREFIX}{tag.name}`?"
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to remove the tag "
+            f"`{config.BOT_PREFIX}{tag.name}`?"
         )
         if not are_you_sure:
             return await ctx.send("Cancelled.")
@@ -666,7 +690,7 @@ class Tags(context.CustomCog):
     async def resolve_tag_name(self, query: str, guild: typing.Optional[discord.Guild]):
         query = query.lower()
 
-        sql = """SELECT 
+        sql = """SELECT
                     tag.id, tag.is_embedded, tag.title, tag.content
                  FROM tag
                  INNER JOIN
@@ -696,7 +720,7 @@ class Tags(context.CustomCog):
         if ctx.valid or not ctx.prefix:
             return
 
-        tag_name = message.content[len(ctx.prefix):]
+        tag_name = message.content[len(ctx.prefix) :]
         tag_details = await self.resolve_tag_name(tag_name, message.guild)
 
         if tag_details is None:
@@ -715,10 +739,7 @@ class Tags(context.CustomCog):
                     await message.channel.send(discord.utils.escape_mentions(tag_details["content"]))
 
             else:
-                embed = text.SafeEmbed(
-                    title=tag_details["title"],
-                    description=tag_details["content"]
-                )
+                embed = text.SafeEmbed(title=tag_details["title"], description=tag_details["content"])
 
                 await message.channel.send(embed=embed)
 

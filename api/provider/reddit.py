@@ -32,16 +32,16 @@ class RedditManager(ProviderManager):
     def _get_token(self):
         with open("api/token.json", "r") as token_file:
             token_json = json.load(token_file)
-            self.REDDIT_CLIENT_ID = token_json['reddit']['client_id']
-            self.REDDIT_CLIENT_SECRET = token_json['reddit']['client_secret']
-            self.REDDIT_REFRESH_TOKEN = token_json['reddit']['refresh_token']
-            self.REDDIT_BEARER_TOKEN = token_json['reddit']['bearer_token']
+            self.REDDIT_CLIENT_ID = token_json["reddit"]["client_id"]
+            self.REDDIT_CLIENT_SECRET = token_json["reddit"]["client_secret"]
+            self.REDDIT_REFRESH_TOKEN = token_json["reddit"]["refresh_token"]
+            self.REDDIT_BEARER_TOKEN = token_json["reddit"]["bearer_token"]
 
     def _save_token(self):
         with open("api/token.json", "r") as token_file:
             js = json.load(token_file)
 
-        js['reddit']['bearer_token'] = self.REDDIT_BEARER_TOKEN
+        js["reddit"]["bearer_token"] = self.REDDIT_BEARER_TOKEN
 
         with open("api/token.json", "w") as token_file:
             json.dump(js, token_file)
@@ -60,10 +60,10 @@ class RedditManager(ProviderManager):
         headers = {"User-Agent": "democraciv-discord-bot by DerJonas - u/Jovanos"}
 
         async with self._session.post(
-                "https://www.reddit.com/api/v1/access_token",
-                data=post_data,
-                auth=auth,
-                headers=headers,
+            "https://www.reddit.com/api/v1/access_token",
+            data=post_data,
+            auth=auth,
+            headers=headers,
         ) as response:
             if response.status == 200:
                 r = await response.json()
@@ -88,8 +88,9 @@ class RedditManager(ProviderManager):
             "ad": False,
         }
 
-        async with self._session.post("https://oauth.reddit.com/api/submit?raw_json=1", data=data,
-                                      headers=headers) as response:
+        async with self._session.post(
+            "https://oauth.reddit.com/api/submit?raw_json=1", data=data, headers=headers
+        ) as response:
             if response.status == 403:
 
                 if not retry:
@@ -109,12 +110,11 @@ class RedditManager(ProviderManager):
             "User-Agent": "democraciv-discord-bot by DerJonas - u/Jovanos",
         }
 
-        data = {
-            "id": post_id
-        }
+        data = {"id": post_id}
 
-        async with self._session.post("https://oauth.reddit.com/api/del?raw_json=1", data=data,
-                                      headers=headers) as response:
+        async with self._session.post(
+            "https://oauth.reddit.com/api/del?raw_json=1", data=data, headers=headers
+        ) as response:
             if response.status == 403:
                 if not retry:
                     await self.refresh_reddit_bearer_token()
@@ -174,8 +174,10 @@ class RedditPost:
     def to_embed(self):
         # old colour 16723228
         e = Embed(title=self.title, url=self.link, colour=0x1B1C20)
-        e.set_author(name=f"New post on r/{self.subreddit}",
-                     icon_url="https://cdn.discordapp.com/attachments/730898526040752291/781547428087201792/Reddit_Mark_OnWhite.png")
+        e.set_author(
+            name=f"New post on r/{self.subreddit}",
+            icon_url="https://cdn.discordapp.com/attachments/730898526040752291/781547428087201792/Reddit_Mark_OnWhite.png",
+        )
         e.add_field(name="Author", value=f"u/{self.author}", inline=False)
         return e.to_dict()
 
@@ -188,7 +190,9 @@ class RedditPost:
 
 
 class SubredditScraper:
-    def __init__(self, *, db, subreddit: str, session: aiohttp.ClientSession, post_limit: int = 1, manager: RedditManager):
+    def __init__(
+        self, *, db, subreddit: str, session: aiohttp.ClientSession, post_limit: int = 1, manager: RedditManager
+    ):
         self.subreddit = subreddit
         self.webhook_urls = set()
         self.db = db
@@ -225,7 +229,7 @@ class SubredditScraper:
 
     async def get_newest_reddit_post(self) -> typing.Optional[typing.Dict]:
         async with self._session.get(
-                f"https://www.reddit.com/r/{self.subreddit}/new.json?limit={self.post_limit}"
+            f"https://www.reddit.com/r/{self.subreddit}/new.json?limit={self.post_limit}"
         ) as response:
             if response.status == 200:
                 return await response.json()
@@ -241,8 +245,9 @@ class SubredditScraper:
             reddit_post_json = post_json["data"]
             post_id = reddit_post_json["id"]
 
-            status = await self.db.pool.execute("INSERT INTO reddit_post (id) VALUES ($1) ON CONFLICT DO NOTHING",
-                                                post_id)
+            status = await self.db.pool.execute(
+                "INSERT INTO reddit_post (id) VALUES ($1) ON CONFLICT DO NOTHING", post_id
+            )
             is_new = False if status == "INSERT 0 0" else True
 
             if not is_new:

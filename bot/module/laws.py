@@ -9,15 +9,14 @@ from bot.utils import text, checks, context, models, mixin
 from bot.utils.converter import (
     CaseInsensitiveMember,
     PoliticalParty,
-    CaseInsensitiveUser, FuzzyCIMember,
+    CaseInsensitiveUser,
+    FuzzyCIMember,
 )
 
 
 class RepealScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
-        message = [
-            f"The following laws were **repealed**.\n"
-        ]
+        message = [f"The following laws were **repealed**.\n"]
 
         for obj in self._objects:
             message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
@@ -60,9 +59,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         # If the user did specify a law_id, send details about that law
         law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
 
-        embed = text.SafeEmbed(title=f"{law.name} (#{law.id})",
-                               description=law.description,
-                               url=law.link)
+        embed = text.SafeEmbed(title=f"{law.name} (#{law.id})", description=law.description, url=law.link)
 
         if law.submitter is not None:
             embed.set_author(
@@ -130,10 +127,10 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         embed = text.SafeEmbed(
             title=f"Generated Legal Code",
             description="This Legal Code is not guaranteed to be correct. Its "
-                        f"content is based entirely on the list of Laws "
-                        f"in `{config.BOT_PREFIX}laws`."
-                        "\n\nRemember to change the edit link you "
-                        "gave me earlier to not be public.",
+            f"content is based entirely on the list of Laws "
+            f"in `{config.BOT_PREFIX}laws`."
+            "\n\nRemember to change the edit link you "
+            "gave me earlier to not be public.",
         )
 
         embed.add_field(
@@ -146,11 +143,10 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
 
     @law.command(name="from", aliases=["f", "by"])
     async def _from(
-            self,
-            ctx,
-            *,
-            member_or_party: typing.Union[
-                CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty, FuzzyCIMember] = None,
+        self,
+        ctx,
+        *,
+        member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty, FuzzyCIMember] = None,
     ):
         """List the laws a specific person or Political Party authored"""
         return await self._from_person_model(ctx, model=models.Law, member_or_party=member_or_party)
@@ -185,9 +181,11 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
 
         await consumer.consume(scheduler=self.repeal_scheduler)
         msg = f"1 law was repealed." if len(law_ids) == 1 else f"{len(law_ids)} laws were repealed."
-        return await ctx.send(f"{config.YES} {msg}\n{config.HINT} If the Legal Code needs to "
-                              f"be updated to remove the repealed law(s), the {self.bot.mk.speaker_term} can use my "
-                              f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code.")
+        return await ctx.send(
+            f"{config.YES} {msg}\n{config.HINT} If the Legal Code needs to "
+            f"be updated to remove the repealed law(s), the {self.bot.mk.speaker_term} can use my "
+            f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code."
+        )
 
     @law.command(name="updatelink", aliases=["ul", "amend"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
@@ -205,7 +203,8 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
 
         law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
         reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to change the link to " f"`{law.name}` (#{law.id})?"
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to change the link to "
+            f"`{law.name}` (#{law.id})?"
         )
 
         if not reaction:

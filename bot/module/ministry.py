@@ -11,9 +11,7 @@ from bot.utils import text, paginator, checks, context, mixin, models
 
 class LawPassScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
-        message = [
-            f"The following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"
-        ]
+        message = [f"The following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"]
 
         for obj in self._objects:
             message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
@@ -30,9 +28,7 @@ class LawPassScheduler(text.AnnouncementScheduler):
 
 class LawVetoScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
-        message = [
-            f"The following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"
-        ]
+        message = [f"The following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"]
 
         for obj in self._objects:
             message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
@@ -97,8 +93,10 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         """Dashboard for {minister_term} with important links and updates on new bills"""
 
         embed = text.SafeEmbed()
-        embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL,
-                         name=f"The {self.bot.mk.MINISTRY_NAME} of {self.bot.mk.NATION_FULL_NAME}")
+        embed.set_author(
+            icon_url=self.bot.mk.NATION_ICON_URL,
+            name=f"The {self.bot.mk.MINISTRY_NAME} of {self.bot.mk.NATION_FULL_NAME}",
+        )
 
         pretty_bills = await self.get_pretty_vetoes()
 
@@ -174,12 +172,14 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
             return await ctx.send("Cancelled.")
 
         await consumer.consume(scheduler=self.veto_scheduler)
-        await ctx.send(f"{config.YES} All bills were vetoed.\n{config.HINT} In case the "
-                       f"{self.bot.mk.LEGISLATURE_NAME} wants to give these bills a second chance, a veto can be "
-                       f"overridden with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} override`, or, if the "
-                       f"votes to override are not enough, the bill can be "
-                       f"resubmitted to the next legislative session with "
-                       f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`.")
+        await ctx.send(
+            f"{config.YES} All bills were vetoed.\n{config.HINT} In case the "
+            f"{self.bot.mk.LEGISLATURE_NAME} wants to give these bills a second chance, a veto can be "
+            f"overridden with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} override`, or, if the "
+            f"votes to override are not enough, the bill can be "
+            f"resubmitted to the next legislative session with "
+            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`."
+        )
 
     @ministry.command(name="pass", aliases=["p"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER, mk.DemocracivRole.LT_PRIME_MINISTER)
@@ -211,10 +211,12 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
             return await ctx.send("Cancelled.")
 
         await consumer.consume(scheduler=self.pass_scheduler)
-        await ctx.send(f"{config.YES} All bills were passed into law and can now be found in `{config.BOT_PREFIX}laws`."
-                       f"\n{config.HINT} If the Legal Code needs to "
-                       f"be updated, the {self.bot.mk.speaker_term} can use my "
-                       f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code. ")
+        await ctx.send(
+            f"{config.YES} All bills were passed into law and can now be found in `{config.BOT_PREFIX}laws`."
+            f"\n{config.HINT} If the Legal Code needs to "
+            f"be updated, the {self.bot.mk.speaker_term} can use my "
+            f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code. "
+        )
 
 
 def setup(bot):

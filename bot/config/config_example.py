@@ -64,5 +64,5 @@ GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES = [
     "https://www.googleapis.com/auth/forms",
     "https://www.googleapis.com/auth/documents",
     "https://www.googleapis.com/auth/script.external_request",
-    "https://www.googleapis.com/auth/drive"
+    "https://www.googleapis.com/auth/drive",
 ]

@@ -34,9 +34,7 @@ class Starboard(context.CustomCog):
 
         if config.STARBOARD_ENABLED and config.STARBOARD_REDDIT_SUMMARY_ENABLED:
             if not config.STARBOARD_REDDIT_SUBREDDIT:
-                logging.warning(
-                    "Starboard Reddit post is enabled but no subreddit was provided in config.py!"
-                )
+                logging.warning("Starboard Reddit post is enabled but no subreddit was provided in config.py!")
             else:
                 self.weekly_starboard_to_reddit_task.start()
 
@@ -59,7 +57,7 @@ class Starboard(context.CustomCog):
 
         groups = []
 
-        for k, g in itertools.groupby(starred_messages, get_date):
+        for _, g in itertools.groupby(starred_messages, get_date):
             groups.append(list(g))
 
         return groups
@@ -110,7 +108,9 @@ class Starboard(context.CustomCog):
 
                 author = self.bot.dciv.get_member(record["author_id"])
                 author = (
-                    f"**{author.display_name}** ({str(author)})" if author is not None else f"_Author left {self.bot.dciv.name}_"
+                    f"**{author.display_name}** ({str(author)})"
+                    if author is not None
+                    else f"_Author left {self.bot.dciv.name}_"
                 )
 
                 fmt_channel = f"**#{channel.name}**" if channel is not None else "_channel was deleted_"
@@ -148,7 +148,9 @@ class Starboard(context.CustomCog):
         return "\n\n".join(markdown)
 
     async def has_posted_to_reddit_today(self) -> bool:
-        async with self.bot.session.get(f"https://www.reddit.com/user/{config.STARBOARD_REDDIT_USERNAME}.json?limit=15") as resp:
+        async with self.bot.session.get(
+            f"https://www.reddit.com/user/{config.STARBOARD_REDDIT_USERNAME}.json?limit=15"
+        ) as resp:
             if resp.status == 200:
                 json_data = await resp.json()
             else:
@@ -199,11 +201,7 @@ class Starboard(context.CustomCog):
         post_content = await self.get_reddit_post_content(grouped_stars)
         title = f"Weekly Discord News - {start_of_last_week.strftime('%B %d')} to {today.strftime('%B %d')}"
 
-        js = {
-            "subreddit": config.STARBOARD_REDDIT_SUBREDDIT,
-            "title": title,
-            "content": post_content
-        }
+        js = {"subreddit": config.STARBOARD_REDDIT_SUBREDDIT, "title": title, "content": post_content}
 
         await self.bot.api_request("POST", "reddit/post", json=js)
 
@@ -308,9 +306,11 @@ class Starboard(context.CustomCog):
             fmt = f" ({log_channel.mention})" if log_channel else ""
 
             if send_only_sometimes:
-                await channel.send(f"{config.HINT} *Since the administrators of this server marked this channel as "
-                                   f"hidden from logging{fmt}, :star: reactions will also be ignored here.*",
-                                   delete_after=5)
+                await channel.send(
+                    f"{config.HINT} *Since the administrators of this server marked this channel as "
+                    f"hidden from logging{fmt}, :star: reactions will also be ignored here.*",
+                    delete_after=5,
+                )
 
             return
 
@@ -523,7 +523,7 @@ class Starboard(context.CustomCog):
         top_three_starred = await self.bot.db.fetch(
             """SELECT starboard_entry.message_jump_url, COUNT(*) AS "stars"
                                                             FROM starboard_starrer
-                                                            INNER JOIN starboard_entry 
+                                                            INNER JOIN starboard_entry
                                                             ON starboard_entry.id=starboard_starrer.entry_id
                                                             WHERE starboard_entry.author_id=$1
                                                             GROUP BY starboard_entry.message_jump_url

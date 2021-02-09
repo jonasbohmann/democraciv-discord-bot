@@ -36,7 +36,7 @@ sys.path.append(str(pathlib.Path(__file__).parent.parent))
 from bot.utils import exceptions, text, context
 from bot.config import token, config, mk
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [BOT] %(message)s', datefmt='%d.%m.%Y %H:%M:%S')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [BOT] %(message)s", datefmt="%d.%m.%Y %H:%M:%S")
 
 all_extensions = {
     "bot.module.logging",
@@ -54,7 +54,7 @@ all_extensions = {
     "bot.module.laws",
     "bot.module.ministry",
     "bot.module.supremecourt",
-    "bot.module.nation"
+    "bot.module.nation",
 }
 
 if mk.MarkConfig.IS_MULTICIV:
@@ -65,7 +65,7 @@ if mk.MarkConfig.IS_MULTICIV:
             "bot.module.starboard",
             "bot.module.moderation",
             "bot.ext.democracivbank.bank",
-            "bot.module.roles"
+            "bot.module.roles",
         }
     else:
         initial_extensions = initial_extensions - {
@@ -74,7 +74,7 @@ if mk.MarkConfig.IS_MULTICIV:
             "bot.module.laws",
             "bot.module.ministry",
             "bot.module.supremecourt",
-            "bot.module.nation"
+            "bot.module.nation",
         }
 
 else:
@@ -116,7 +116,7 @@ def get_prefix(bot, msg):
         return "a-"
 
     for prefix in config.BOT_ADDITIONAL_PREFIXES:
-        r = re.compile(f'^({prefix}).*', flags=re.I)
+        r = re.compile(f"^({prefix}).*", flags=re.I)
         m = r.match(msg.content)
         if m:
             return commands.when_mentioned_or(m.group(1))(bot, msg)
@@ -183,8 +183,9 @@ class DemocracivBot(commands.Bot):
                 if response.status == 200:
                     self.is_api_running = True
         except aiohttp.ClientConnectionError:
-            logging.warning(f"Internal api at {self.BASE_API} is not running, bot is running "
-                            f"with limited functionality.")
+            logging.warning(
+                f"Internal api at {self.BASE_API} is not running, bot is running " f"with limited functionality."
+            )
 
     async def api_request(self, method: str, route: str, **kwargs):
         if not self.is_api_running:
@@ -218,12 +219,12 @@ class DemocracivBot(commands.Bot):
         return to_return
 
     async def log_error(
-            self,
-            ctx,
-            error,
-            to_log_channel: bool = True,
-            to_owner: bool = False,
-            to_context: bool = False,
+        self,
+        ctx,
+        error,
+        to_log_channel: bool = True,
+        to_owner: bool = False,
+        to_context: bool = False,
     ):
         if ctx.guild is None:
             return
@@ -240,8 +241,8 @@ class DemocracivBot(commands.Bot):
             local_embed = text.SafeEmbed(
                 title=":warning:  Something went wrong",
                 description=f"An unexpected error occurred while performing this command. "
-                            f"The developer has been notified. Sorry!\n\n"
-                            f"```{error.__class__.__name__}: {error}```",
+                f"The developer has been notified. Sorry!\n\n"
+                f"```{error.__class__.__name__}: {error}```",
             )
             await ctx.send(embed=local_embed)
 
@@ -345,8 +346,10 @@ class DemocracivBot(commands.Bot):
             return await ctx.send(f"{config.NO} You are on cooldown! Try again in {error.retry_after:.2f} seconds.")
 
         elif isinstance(error, commands.MaxConcurrencyReached):
-            return await ctx.send(f"{config.NO} This command can only be used by one person at the same time, and it "
-                                  f"is already being used right now. Try again later.")
+            return await ctx.send(
+                f"{config.NO} This command can only be used by one person at the same time, and it "
+                f"is already being used right now. Try again later."
+            )
 
         elif isinstance(error, commands.MissingPermissions):
             return await ctx.send(
@@ -358,8 +361,9 @@ class DemocracivBot(commands.Bot):
                 role_id = error.missing_role.value
                 role = ctx.guild.get_role(role_id) or self.dciv.get_role(role_id)
             elif isinstance(error.missing_role, str):
-                role = discord.utils.get(ctx.guild.roles, name=error.missing_role) or discord.utils.get(self.dciv.roles,
-                                                                                                        name=error.missing_role)
+                role = discord.utils.get(ctx.guild.roles, name=error.missing_role) or discord.utils.get(
+                    self.dciv.roles, name=error.missing_role
+                )
             else:
                 role = ctx.guild.get_role(error.missing_role) or self.dciv.get_role(error.missing_role)
 
@@ -382,7 +386,8 @@ class DemocracivBot(commands.Bot):
             role = ctx.guild.get_role(error.missing_role) or ctx.bot.dciv.get_role(error.missing_role)
             await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
             return await ctx.send(
-                f"{config.NO} I need the `{role.name}` role in order to perform this" f" action for you.")
+                f"{config.NO} I need the `{role.name}` role in order to perform this" f" action for you."
+            )
 
         elif isinstance(error, commands.BotMissingAnyRole):
             await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
@@ -409,7 +414,7 @@ class DemocracivBot(commands.Bot):
 
         else:
             await self.log_error(ctx, error, to_log_channel=False, to_owner=True, to_context=True)
-            logging.error(f'Ignoring exception in command {ctx.command}:')
+            logging.error(f"Ignoring exception in command {ctx.command}:")
             traceback.print_exception(type(error), error, error.__traceback__)
 
     def get_democraciv_channel(self, channel: mk.DemocracivChannel) -> typing.Optional[discord.TextChannel]:
@@ -512,7 +517,7 @@ class DemocracivBot(commands.Bot):
             "NO": "\U0000274c",
             "YES": "\U00002705",
             "USER_INTERACTION_REQUIRED": "\U0001f4ac",
-            "HINT": "\U00002139"
+            "HINT": "\U00002139",
         }
 
         for attr, default in emojis.items():
@@ -520,9 +525,11 @@ class DemocracivBot(commands.Bot):
             emoji_availability = check_custom_emoji(emoji)
             if not emoji_availability:
                 setattr(config, attr, default)
-                logging.warning(f"Reverting to standard Unicode emoji for {emoji}. "
-                                f"Menus, paginator and ctx.confirm & ctx.choose might not work correctly unless "
-                                f"you replace the emojis in /bot/config/config.py/ to emojis that exist!")
+                logging.warning(
+                    f"Reverting to standard Unicode emoji for {emoji}. "
+                    f"Menus, paginator and ctx.confirm & ctx.choose might not work correctly unless "
+                    f"you replace the emojis in /bot/config/config.py/ to emojis that exist!"
+                )
 
     async def connect_to_db(self):
         """Attempt to connect to PostgreSQL database with specified credentials from token.py.
@@ -544,9 +551,10 @@ class DemocracivBot(commands.Bot):
             try:
                 await self.db.execute(sql.read())
             except asyncpg.InsufficientPrivilegeError:
-                logging.error("Could not create extension 'pg_trgm' as this user. Login as the"
-                              " postgres user and manually create extension on database."
-                              )
+                logging.error(
+                    "Could not create extension 'pg_trgm' as this user. Login as the"
+                    " postgres user and manually create extension on database."
+                )
                 self.db_ready = False
                 raise
             except Exception:
@@ -596,8 +604,7 @@ class DemocracivBot(commands.Bot):
 
     async def run_apps_script(self, script_id, function, parameters):
         try:
-            result = await self.loop.run_in_executor(None, self._execute_apps_script, script_id, function,
-                                                     parameters)
+            result = await self.loop.run_in_executor(None, self._execute_apps_script, script_id, function, parameters)
 
             if "error" in result:
                 raise exceptions.GoogleAPIError()
@@ -610,10 +617,10 @@ class DemocracivBot(commands.Bot):
 
     def _execute_apps_script(self, script_id, function, parameters):
         google_credentials = None
-        path = str(pathlib.Path(__file__).parent) + '/config/google_oauth_token.pickle'
+        path = str(pathlib.Path(__file__).parent) + "/config/google_oauth_token.pickle"
 
         if os.path.exists(path):
-            with open(path, 'rb') as google_token:
+            with open(path, "rb") as google_token:
                 google_credentials = pickle.load(google_token)
 
         if not google_credentials or not google_credentials.valid:
@@ -621,11 +628,11 @@ class DemocracivBot(commands.Bot):
                 google_credentials.refresh(requests.Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    config.GOOGLE_CLOUD_PLATFORM_CLIENT_SECRETS_FILE,
-                    config.GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES)
+                    config.GOOGLE_CLOUD_PLATFORM_CLIENT_SECRETS_FILE, config.GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES
+                )
                 google_credentials = flow.run_local_server(port=0)
 
-            with open(path, 'wb') as google_token:
+            with open(path, "wb") as google_token:
                 pickle.dump(google_credentials, google_token)
 
         service = build("script", "v1", credentials=google_credentials, cache_discovery=False)
@@ -633,11 +640,11 @@ class DemocracivBot(commands.Bot):
         return service.scripts().run(body=request, scriptId=script_id).execute()
 
     async def safe_send_dm(
-            self,
-            target: Union[discord.User, discord.Member],
-            reason: str = None,
-            message: str = None,
-            embed: discord.Embed = None,
+        self,
+        target: Union[discord.User, discord.Member],
+        reason: str = None,
+        message: str = None,
+        embed: discord.Embed = None,
     ):
         dm_settings = await self.db.fetchrow("SELECT * FROM dm_setting WHERE user_id = $1", target.id)
         p = config.BOT_PREFIX
@@ -652,8 +659,10 @@ class DemocracivBot(commands.Bot):
         if not is_enabled:
             return
 
-        base_msg = f"{config.HINT} *You can enable and disable these DM notifications based on their subject. " \
-                   f"Check `{p}dms` for more information.*"
+        base_msg = (
+            f"{config.HINT} *You can enable and disable these DM notifications based on their subject. "
+            f"Check `{p}dms` for more information.*"
+        )
 
         if message:
             message = f"{message}\n\n{base_msg}"
@@ -705,13 +714,13 @@ class DemocracivBot(commands.Bot):
             return
 
         if self.user.id in message.raw_mentions and len(message.content) in (
-                20,
-                21,
-                22,
+            20,
+            21,
+            22,
         ):
 
             if len(config.BOT_ADDITIONAL_PREFIXES) > 1:
-                prefixes = ", ".join([f'`{p}`' for p in config.BOT_ADDITIONAL_PREFIXES])
+                prefixes = ", ".join([f"`{p}`" for p in config.BOT_ADDITIONAL_PREFIXES])
             else:
                 prefixes = f"`{config.BOT_PREFIX}`"
 
@@ -733,14 +742,16 @@ class DemocracivBot(commands.Bot):
     async def on_guild_join(self, guild: discord.Guild):
         if len(self.guilds) >= 70:
             if guild.system_channel:
-                embed = text.SafeEmbed(title=":pensive:  Sorry!",
-                                       description="Discord requires bot developers to hand over their passport "
-                                                   "once their bot reaches about ~75 servers. If they refuse to, "
-                                                   f"the bot cannot be invited anymore and Discord takes away some "
-                                                   f"critical features that the Democraciv Bot needs in order "
-                                                   f"to work properly. I **do not want to give Discord my "
-                                                   f"passport.**\n\nThis is the 70th server the bot is in, "
-                                                   f"and as a precaution **the bot is leaving this server** again.")
+                embed = text.SafeEmbed(
+                    title=":pensive:  Sorry!",
+                    description="Discord requires bot developers to hand over their passport "
+                    "once their bot reaches about ~75 servers. If they refuse to, "
+                    f"the bot cannot be invited anymore and Discord takes away some "
+                    f"critical features that the Democraciv Bot needs in order "
+                    f"to work properly. I **do not want to give Discord my "
+                    f"passport.**\n\nThis is the 70th server the bot is in, "
+                    f"and as a precaution **the bot is leaving this server** again.",
+                )
 
                 await guild.system_channel.send(embed=embed)
 
@@ -757,8 +768,8 @@ class DemocracivBot(commands.Bot):
             f"You can check `{p}help` or `{p}commands` to get more "
             f"information about me.\nUse the `{p}server` command to configure me for this server."
             f"\n\n__**Icon Guide**__\n"
-            f"{config.YES} - Confirm, Accept or \"Success\"\n"
-            f"{config.NO} - Cancel, Decline or \"Error\"\n"
+            f'{config.YES} - Confirm, Accept or "Success"\n'
+            f'{config.NO} - Cancel, Decline or "Error"\n'
             f"{config.HINT} - Hint, Tip or additional information to explain something\n"
             f"{config.USER_INTERACTION_REQUIRED} - User reply is needed. You should reply with something, or confirm something"
             f"\n\nIf you have any questions or suggestions, send a DM to {self.owner.mention} ({self.owner})."
@@ -802,7 +813,8 @@ class DemocracivBot(commands.Bot):
 
         if backup_channel is None:
             logging.warning(
-                f"Couldn't find Backup Discord channel for database backup 'bot/db/backup/{database_name}/{file_name}'")
+                f"Couldn't find Backup Discord channel for database backup 'bot/db/backup/{database_name}/{file_name}'"
+            )
             return
 
         await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)
@@ -860,7 +872,8 @@ class DemocracivBot(commands.Bot):
 
                 if tiny_url == "Error":
                     raise exceptions.DemocracivBotException(
-                        f"{config.NO} tinyurl.com returned an error, try again later.")
+                        f"{config.NO} tinyurl.com returned an error, try again later."
+                    )
 
                 return tiny_url
 

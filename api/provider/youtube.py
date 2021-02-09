@@ -18,8 +18,8 @@ YOUTUBE_LOGO_STREAM = "<:youtubeiconred:660897027114401792>"
 
 # todo fix
 
-class YouTubeManager:
 
+class YouTubeManager:
     def __init__(self, db):
         self.db = db
         self.header = {"Accept": "application/json"}
@@ -42,10 +42,10 @@ class YouTubeManager:
         API key."""
 
         async with self.session.get(
-                f"https://www.googleapis.com/youtube/v3/search?"
-                f"part=snippet&channelId={YOUTUBE_CHANNEL_ID}"
-                f"&type=video&eventType=live&maxResults=1&key={self.api_key}",
-                headers=self.header,
+            f"https://www.googleapis.com/youtube/v3/search?"
+            f"part=snippet&channelId={YOUTUBE_CHANNEL_ID}"
+            f"&type=video&eventType=live&maxResults=1&key={self.api_key}",
+            headers=self.header,
         ) as response:
             if response.status == 200:
                 stream_data = await response.json()
@@ -55,16 +55,17 @@ class YouTubeManager:
         except (IndexError, KeyError):
             return None
 
-        status = await self.db.pool.execute("INSERT INTO youtube_stream (id) VALUES ($1) ON CONFLICT DO NOTHING",
-                                            stream_id)
+        status = await self.db.pool.execute(
+            "INSERT INTO youtube_stream (id) VALUES ($1) ON CONFLICT DO NOTHING", stream_id
+        )
 
         # ID already in database -> stream already announced
         if status == "INSERT 0 0":
             return None
 
         async with self.session.get(
-                f"https://www.googleapis.com/youtube/v3/videos?part=snippet&" f"id={stream_id}&key={self.api_key}",
-                headers=self.header,
+            f"https://www.googleapis.com/youtube/v3/videos?part=snippet&" f"id={stream_id}&key={self.api_key}",
+            headers=self.header,
         ) as response:
             if response.status == 200:
                 return await response.json()
@@ -104,10 +105,10 @@ class YouTubeManager:
 
     async def get_newest_upload(self) -> typing.Optional[typing.Dict]:
         async with self.session.get(
-                "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet"
-                f"&maxResults=3&playlistId={YOUTUBE_CHANNEL_UPLOADS_PLAYLIST}"
-                f"&key={self.api_key}",
-                headers=self.header,
+            "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet"
+            f"&maxResults=3&playlistId={YOUTUBE_CHANNEL_UPLOADS_PLAYLIST}"
+            f"&key={self.api_key}",
+            headers=self.header,
         ) as response:
             if response.status == 200:
                 return await response.json()

@@ -32,9 +32,11 @@ class NotLawError(DemocracivBotException):
 
 
 class GoogleAPIError(DemocracivBotException):
-    message = f"{config.NO} Something went wrong during the execution of a Google Apps Script. " \
-              f"Please try again later or contact the developer. Make sure that, if you have given me the URL " \
-              f"of a Google Docs or Google Forms, I have edit permissions on this document if needed."
+    message = (
+        f"{config.NO} Something went wrong during the execution of a Google Apps Script. "
+        f"Please try again later or contact the developer. Make sure that, if you have given me the URL "
+        f"of a Google Docs or Google Forms, I have edit permissions on this document if needed."
+    )
 
 
 class RoleNotFoundError(NotFoundError):
@@ -61,10 +63,14 @@ class NotDemocracivGuildError(DemocracivBotException):
 
 
 class ForbiddenTask(enum.Enum):
-    ADD_ROLE = "{x} Either the `{detail}` role is higher than my top role, or " \
-               "I'm missing the required permissions to give you the role."
-    REMOVE_ROLE = "{x} Either the `{detail}` role is higher than my top role, or " \
-                  "I'm missing required permissions to remove the role from you."
+    ADD_ROLE = (
+        "{x} Either the `{detail}` role is higher than my top role, or "
+        "I'm missing the required permissions to give you the role."
+    )
+    REMOVE_ROLE = (
+        "{x} Either the `{detail}` role is higher than my top role, or "
+        "I'm missing required permissions to remove the role from you."
+    )
     CREATE_ROLE = "{x} I'm missing the required permissions to create the `{detail}` role."
     DELETE_ROLE = "{x} I'm missing the required permissions to delete the `{detail}` role."
     MESSAGE_SEND = "{x} I'm missing the required permissions to send messages in this channel."

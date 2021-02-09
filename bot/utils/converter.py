@@ -58,7 +58,8 @@ class PoliticalParty(commands.Converter):
     @property
     def leaders(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
         return list(
-            filter(None, [self._bot.dciv.get_member(leader) or self._bot.get_user(leader) for leader in self._leaders]))
+            filter(None, [self._bot.dciv.get_member(leader) or self._bot.get_user(leader) for leader in self._leaders])
+        )
 
     @property
     def role(self) -> typing.Optional[discord.Role]:
@@ -84,17 +85,18 @@ class PoliticalParty(commands.Converter):
             arg_as_int = 0
 
         if argument.lower() in (
-                "independent",
-                "independant",
-                "ind",
-                "ind.",
-                "independents",
-                "independants",
+            "independent",
+            "independant",
+            "ind",
+            "ind.",
+            "independents",
+            "independants",
         ):
             return cls(
                 role=discord.utils.get(ctx.bot.dciv.roles, name="Independent"),
                 join_mode=PoliticalPartyJoinMode.PUBLIC,
-                bot=ctx.bot, ind=True
+                bot=ctx.bot,
+                ind=True,
             )
 
         party = await ctx.bot.db.fetchrow(
@@ -115,9 +117,11 @@ class PoliticalParty(commands.Converter):
                     msg.append(f"`{role.name}`")
 
             if msg:
-                msg = ', '.join(msg)
-                message = f"{config.NO} There is no political party that matches `{argument}`.\n" \
-                          f"{config.HINT} Try one of these: {msg}"
+                msg = ", ".join(msg)
+                message = (
+                    f"{config.NO} There is no political party that matches `{argument}`.\n"
+                    f"{config.HINT} Try one of these: {msg}"
+                )
             else:
                 message = f"{config.NO} There is no political party that matches `{argument}`."
 
@@ -177,8 +181,9 @@ class Selfrole(commands.Converter):
                 f" check `{config.BOT_PREFIX}help party`"
             )
 
-        role_record = await ctx.bot.db.fetchrow("SELECT * FROM selfrole WHERE guild_id = $1 AND role_id = $2",
-                                                ctx.guild.id, role.id)
+        role_record = await ctx.bot.db.fetchrow(
+            "SELECT * FROM selfrole WHERE guild_id = $1 AND role_id = $2", ctx.guild.id, role.id
+        )
 
         if not role_record:
             raise exceptions.NotFoundError(
@@ -239,8 +244,7 @@ class UnbanConverter(commands.Converter):
 async def fuzzy_search(ctx, arg, iterable, model):
     match = process.extract(arg, iterable, limit=5)
 
-    menu = text.FuzzyChoose(question=f"Which {model} did you mean?",
-                            choices=[mtch for mtch, _ in match])
+    menu = text.FuzzyChoose(question=f"Which {model} did you mean?", choices=[mtch for mtch, _ in match])
     return await menu.prompt(ctx)
 
 
@@ -363,8 +367,9 @@ class DemocracivCaseInsensitiveRole(CaseInsensitiveRole):
                 if role:
                     return role"""
 
-            raise BadArgument(f"{config.NO} There is no role named `{argument}` on this "
-                              f"server or the {ctx.bot.dciv.name} server.")
+            raise BadArgument(
+                f"{config.NO} There is no role named `{argument}` on this " f"server or the {ctx.bot.dciv.name} server."
+            )
 
 
 class FuzzyCIRole(commands.Converter):
@@ -373,16 +378,14 @@ class FuzzyCIRole(commands.Converter):
         role_name = await fuzzy_search(ctx, argument, roles, "role")
 
         if not role_name:
-            raise BadArgument(f"{config.NO} There is no role named `{argument}` on this "
-                              f"server")
+            raise BadArgument(f"{config.NO} There is no role named `{argument}` on this " f"server")
 
         role = discord.utils.get(ctx.guild.roles, name=role_name)
 
         if role:
             return role
 
-        raise BadArgument(f"{config.NO} There is no role named `{argument}` on this "
-                          f"server")
+        raise BadArgument(f"{config.NO} There is no role named `{argument}` on this " f"server")
 
 
 class FuzzyDemocracivCIRole(commands.Converter):
@@ -395,8 +398,9 @@ class FuzzyDemocracivCIRole(commands.Converter):
         role_name = await fuzzy_search(ctx, argument, roles, "role")
 
         if not role_name:
-            raise BadArgument(f"{config.NO} There is no role named `{argument}` on this "
-                              f"server or the {ctx.bot.dciv.name} server.")
+            raise BadArgument(
+                f"{config.NO} There is no role named `{argument}` on this " f"server or the {ctx.bot.dciv.name} server."
+            )
 
         role = discord.utils.get(ctx.guild.roles, name=role_name)
 
@@ -408,8 +412,9 @@ class FuzzyDemocracivCIRole(commands.Converter):
         if role:
             return role
 
-        raise BadArgument(f"{config.NO} There is no role named `{argument}` on this "
-                          f"server or the {ctx.bot.dciv.name} server.")
+        raise BadArgument(
+            f"{config.NO} There is no role named `{argument}` on this " f"server or the {ctx.bot.dciv.name} server."
+        )
 
 
 class CaseInsensitiveMember(commands.MemberConverter):
@@ -458,8 +463,7 @@ class FuzzyCIMember(commands.Converter):
 
         fmt = list(fmt.keys())[:5]
 
-        menu = text.FuzzyChoose(question=f"Who did you mean?",
-                                choices=fmt)
+        menu = text.FuzzyChoose(question=f"Who did you mean?", choices=fmt)
         result = await menu.prompt(ctx)
 
         if result:

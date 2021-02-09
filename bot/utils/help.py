@@ -85,9 +85,11 @@ class BotHelpPageSource(menus.ListPageSource):
 
     async def format_page(self, menu, cogs):
         prefix = config.BOT_PREFIX
-        description = f"Use `{prefix}help thing` for more info on a category or command.\nOptionally, [this guide]" \
-                      f"(https://drive.google.com/file/d/1fUWBeRPszLolRtX47OyhAMALudjqWaXc/view?usp=sharing) " \
-                      f"explains some additional topics of the bot."
+        description = (
+            f"Use `{prefix}help thing` for more info on a category or command.\nOptionally, [this guide]"
+            f"(https://drive.google.com/file/d/1fUWBeRPszLolRtX47OyhAMALudjqWaXc/view?usp=sharing) "
+            f"explains some additional topics of the bot."
+        )
 
         embed = text.SafeEmbed(title="All Categories | Help", description=description)
 
@@ -129,9 +131,7 @@ class GroupHelpPageSource(menus.ListPageSource):
             fmt_commands.append(f"__**{config.BOT_PREFIX}{command.qualified_name} {command.signature}**__\n{hlp}\n")
 
         if fmt_commands:
-            embed.add_field(name="Subcommands",
-                            value='\n'.join(fmt_commands),
-                            inline=False)
+            embed.add_field(name="Subcommands", value="\n".join(fmt_commands), inline=False)
 
         maximum = self.get_max_pages()
 
@@ -147,9 +147,11 @@ class CogHelpPageSource(menus.ListPageSource):
         self.group = group
         self.prefix = prefix
         self.title = f"{self.group.qualified_name} | Help"
-        self.description = f"{self.group.description}\n\n*Commands in italic " \
-                           f"cannot be used by you in the current context due to any " \
-                           f"of these reasons: wrong server, missing role(s), or missing permission(s).*"
+        self.description = (
+            f"{self.group.description}\n\n*Commands in italic "
+            f"cannot be used by you in the current context due to any "
+            f"of these reasons: wrong server, missing role(s), or missing permission(s).*"
+        )
 
     async def format_page(self, menu, commands):
         embed = text.SafeEmbed(title=self.title, description=self.description)
@@ -170,7 +172,7 @@ class CogHelpPageSource(menus.ListPageSource):
 
                 signature = f"{default_sig}*__"
 
-            embed.add_field(name=signature, value=command.short_doc or 'No help given.', inline=False)
+            embed.add_field(name=signature, value=command.short_doc or "No help given.", inline=False)
 
         maximum = self.get_max_pages()
         if maximum > 1:
@@ -215,10 +217,12 @@ class HelpMenu(Pages, inherit_buttons=False):
     async def show_bot_help(self, payload):
         """shows how to use the bot"""
 
-        embed = text.SafeEmbed(title="Using the Democraciv Bot",
-                               description="Optionally, [this guide]"
-                                           f"(https://drive.google.com/file/d/1fUWBeRPszLolRtX47OyhAMALudjqWaXc/view?usp=sharing) "
-                                           f"explains some additional topics of the bot.")
+        embed = text.SafeEmbed(
+            title="Using the Democraciv Bot",
+            description="Optionally, [this guide]"
+            f"(https://drive.google.com/file/d/1fUWBeRPszLolRtX47OyhAMALudjqWaXc/view?usp=sharing) "
+            f"explains some additional topics of the bot.",
+        )
 
         entries = (
             ("<argument>", "This means the argument is __**required**__."),
@@ -252,16 +256,18 @@ class PaginatedHelpCommand(commands.HelpCommand):
             command_attrs={
                 "cooldown": commands.Cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user),
                 "help": "Shows help about the bot, a command, or a category",
-                "aliases": ["man", 'manual', 'h'],
+                "aliases": ["man", "manual", "h"],
             },
-            verify_checks=False
+            verify_checks=False,
         )
 
     def command_not_found(self, string):
         return f"{config.NO} `{string}` is neither a command, nor a category."
 
     def subcommand_not_found(self, command, string):
-        return f"{config.NO} `{string}` is not a subcommand of the `{config.BOT_PREFIX}{command.qualified_name}` command."
+        return (
+            f"{config.NO} `{string}` is not a subcommand of the `{config.BOT_PREFIX}{command.qualified_name}` command."
+        )
 
     def get_command_signature(self, command):
         parent = command.full_parent_name
@@ -305,27 +311,31 @@ class PaginatedHelpCommand(commands.HelpCommand):
             is_allowed = False
 
         if not is_allowed:
-            embed_like.description = f"{embed_like.description}\n\n:warning: *You are not allowed to use " \
-                                     f"this command in this context due to any of these reasons: wrong server, " \
-                                     f"missing role(s), or missing permission(s).*"
+            embed_like.description = (
+                f"{embed_like.description}\n\n:warning: *You are not allowed to use "
+                f"this command in this context due to any of these reasons: wrong server, "
+                f"missing role(s), or missing permission(s).*"
+            )
 
     async def send_command_help(self, command):
         embed = text.SafeEmbed()
         await self.common_command_formatting(embed, command)
 
-        parent_name = f"{command.full_parent_name} " if command.full_parent_name else ''
+        parent_name = f"{command.full_parent_name} " if command.full_parent_name else ""
         aliases = [f"`{config.BOT_PREFIX}{parent_name}{a}`" for a in command.aliases]
 
         if aliases:
-            embed.add_field(name="Aliases", value=', '.join(aliases))
+            embed.add_field(name="Aliases", value=", ".join(aliases))
 
         await self.context.send(embed=embed)
 
     async def send_group_help(self, group):
         # The end user doesn't know the difference between a Group and a Command. To avoid confusion, just show them
         # the whole cog
-        if group in (self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} withdraw"),
-                     self.context.bot.get_command("random")):
+        if group in (
+            self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} withdraw"),
+            self.context.bot.get_command("random"),
+        ):
             return await self._send_group_help(group)
 
         await self.send_cog_help(group.cog)
