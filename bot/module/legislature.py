@@ -193,7 +193,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             session = await self.get_last_leg_session()
 
             if session is None:
-                return await ctx.send(embed=text.SafeEmbed(title="There hasn't been a session yet."))
+                return await ctx.send(embed=text.SafeEmbed(title="There hasn't been a session yet.",
+                                                           description=f"The {self.bot.mk.speaker_term} can open "
+                                                                       f"one at any time with "
+                                                                       f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session open`."))
 
         if len(session.bills) > 0:
             pretty_bills = []
@@ -276,14 +279,17 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         p = config.BOT_PREFIX
         l = self.bot.mk.LEGISLATURE_COMMAND
-        info = text.SafeEmbed(title=f"{config.HINT}  Government System:  Legislative Sessions",
+        info = text.SafeEmbed(title=f"{config.HINT}  Help | Government System:  Legislative Sessions",
                               description=f"Once you feel like enough time has passed for people to "
-                                          f"submit their bills and motions, you can lock submissions by either:\n\n1.  "
+                                          f"submit their bills and motions, you can lock submissions by doing either "
+                                          f"one of these options:\n\n1.  "
                                           f"*(Optional)* Set the session into *Voting Period* with "
                                           f"`{p}{l} session vote`. The only advantage of setting a session into Voting "
                                           f"Period instead of directly closing it, is that I will DM every legislator "
                                           f"a reminder to vote and the link to the voting form, and the voting form "
-                                          f"will be displayed in `{p}{l} session`.\n\n"
+                                          f"will be displayed in `{p}{l} session`. After enough time has passed for "
+                                          f"everyone to vote, you would close the session as described in the "
+                                          f"next step.\n\n"
                                           f"2. Close the session entirely with "
                                           f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session close`.")
 
@@ -309,19 +315,21 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                              f"move any old, failed bills to this session.",
                        inline=False)
 
-        await ctx.send(f"{config.YES} The **submission period** for session #{new_session} was opened, and bills can "
-                       f"now be submitted.", embed=info)
+        await ctx.send(f"{config.YES} The **submission period** for session #{new_session} was opened, and bills & "
+                       f"motions can now be submitted.")
+
+        self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
 
         await self.gov_announcements_channel.send(
             f"The **submission period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
-            f"#{new_session} has started! Bills can be "
+            f"#{new_session} has started! Bills and motions can be "
             f"submitted with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit`."
         )
 
         await self.dm_legislators(
             reason="leg_session_open",
             message=f":envelope_with_arrow: The **submission period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
-                    f" #{new_session} has started! Submit your bills with "
+                    f" #{new_session} has started! Submit your bills and motions with "
                     f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit` on the {self.bot.dciv.name} server."
         )
 
@@ -331,9 +339,12 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         """Changes the current session's status to be open for voting"""
 
         active_leg_session = await self.get_active_leg_session()
+        p = config.BOT_PREFIX
+        l = self.bot.mk.LEGISLATURE_COMMAND
 
         if active_leg_session is None:
-            return await ctx.send(f"{config.NO} There is no open session.")
+            return await ctx.send(f"{config.NO} There is no open session.\n{config.HINT} You can open a new session "
+                                  f"at any time with `{p}{l} session open`.")
 
         if active_leg_session.status is SessionStatus.VOTING_PERIOD:
             return await ctx.send(f"{config.NO} This session is already in the Voting Period.")
@@ -350,9 +361,6 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             return await ctx.send(f"{config.NO} That doesn't look like a Google Docs URL.")
 
         await active_leg_session.start_voting(voting_form)
-
-        p = config.BOT_PREFIX
-        l = self.bot.mk.LEGISLATURE_COMMAND
 
         await ctx.send(
             f"{config.YES} Session #{active_leg_session.id} is now in **voting period**.\n{config.HINT} Once you feel "
@@ -378,8 +386,12 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         active_leg_session = await self.get_active_leg_session()
 
+        p = config.BOT_PREFIX
+        l = self.bot.mk.LEGISLATURE_COMMAND
+
         if active_leg_session is None:
-            return await ctx.send(f"{config.NO} There is no open session.")
+            return await ctx.send(f"{config.NO} There is no open session.\n{config.HINT} You can open a new "
+                                  f"session with `{p}{l} session open` at any time.")
 
         await active_leg_session.close()
 
@@ -390,9 +402,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             active_leg_session.id,
         )
 
-        p = config.BOT_PREFIX
-        l = self.bot.mk.LEGISLATURE_COMMAND
-        info = text.SafeEmbed(title=f"{config.HINT}  Government System:  Legislative Sessions",
+        info = text.SafeEmbed(title=f"{config.HINT}  Help | Government System:  Legislative Sessions",
                               description=f"Now, tally the results and tell me which bills passed with "
                                           f"`{p}{l} pass <bill_ids>`.\n\nYou do not have to tell me which bills "
                                           f"failed in the vote, I will "
@@ -435,8 +445,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                              f"collective brainstorming once the session really 'starts'.")
 
         await ctx.send(
-            f"{config.YES} Session #{active_leg_session.id} was closed.", embed=info
+            f"{config.YES} Session #{active_leg_session.id} was closed."
         )
+
+        self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
 
         await self.gov_announcements_channel.send(
             f"{self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{active_leg_session.id} has been **closed** by the "
@@ -498,8 +510,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         await ctx.send(txt)
 
         question = await ctx.send(
-            f"{config.USER_INTERACTION_REQUIRED} Do you want me to generate the Google Forms"
-            f" voting form for Legislative Session #{session.id} as well?"
+            f"{config.USER_INTERACTION_REQUIRED} Do you want me to generate the Google Forms "
+            f"voting form for Legislative Session #{session.id} as well? "
         )
 
         reaction = await ctx.ask_to_continue(message=question, emoji=config.YES, timeout=60)
@@ -650,9 +662,6 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     async def submit_bill(
             self, ctx: context.CustomContext, current_leg_session_id: int
     ) -> typing.Optional[discord.Embed]:
-        """Submits a bill to a session that is in Submission Period. Uses the Flow API to get the bill
-        details via Discord. Returns the message and formatted Embed that will be sent to
-         the Cabinet upon submission."""
 
         # Google Docs Link
         google_docs_url = await ctx.input(
@@ -731,7 +740,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         p = config.BOT_PREFIX
         l = self.bot.mk.LEGISLATURE_COMMAND
-        info = text.SafeEmbed(title=f"{config.HINT}  Government System:  Bill Submissions",
+        info = text.SafeEmbed(title=f"{config.HINT}  Help | Government System:  Bill Submissions",
                               description=f"The {self.bot.mk.speaker_term} has been informed about your "
                                           f"bill submission.")
 
@@ -761,22 +770,21 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         info.add_field(name="Additional Commands",
                        value=f"Congratulations! Your submitted bill will now show up in the detail page "
-                             f"for the current session `{p}{l} session`, in `{p}{l} bills from {ctx.author.display_name}` and "
+                             f"for the current session `{p}{l} session`, in `{p}{l} bills`, "
+                             f"`{p}{l} bills from {ctx.author.display_name}` and "
                              f"`{p}{l} bills from <your_party>` if you belong to a political party, and "
                              f"everyone can search for it based on matching keywords "
                              f"with `{p}{l} bill search <keyword>`.")
         await ctx.send(
             f"{config.YES} Your bill `{name}` was submitted for session #{current_leg_session_id}.",
-            embed=info
         )
+
+        self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
         return embed
 
     async def submit_motion(
             self, ctx: context.CustomContext, current_leg_session_id: int
     ) -> typing.Optional[discord.Embed]:
-        """Submits a motion to a session that is in Submission Period. Uses the Flow API to get the bill
-        details via Discord. Returns the message and formatted Embed that will be sent to
-        the Cabinet upon submission."""
 
         title = await ctx.input(
             f"{config.YES} You will submit a **motion**.\n"
@@ -1139,7 +1147,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             return await ctx.send("Cancelled.")
 
         await consumer.consume(scheduler=self.override_scheduler)
-        await ctx.send(f"{config.YES} The vetoes of all bills were overridden.")
+        await ctx.send(f"{config.YES} The vetoes of all bills were overridden, and all bills are active laws and in "
+                       f"`{config.BOT_PREFIX}laws` now.")
 
     @legislature.command(name="sponsor", aliases=["sp", "cosponsor", "second"])
     async def sponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
@@ -1275,7 +1284,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
                 fmt.append(f"{i}. {self.bot.get_user(key).mention} with {value} {sts_name}")
 
-        return "\n".join(fmt)
+        return "\n".join(fmt) or "None"
 
     async def _get_leg_stats(self, ctx):
         # todo fix this
@@ -1323,14 +1332,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
         embed.add_field(name="Top Bill Submitters", value=pretty_top_submitter, inline=False)
         embed.add_field(name="Top Lawmakers", value=pretty_top_lawmaker, inline=False)
-
-        try:
-            await ctx.send(embed=embed)
-        except discord.HTTPException:
-            await ctx.send(f"{config.NO} There has to be activity in the {self.bot.mk.LEGISLATURE_NAME} first.")
+        await ctx.send(embed=embed)
 
     @legislature.command(name="statistics", aliases=["stat", "stats", "statistic"])
-    async def stats(self, ctx, *, person: typing.Union[converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.FuzzyCIMember] = None):
+    async def stats(self, ctx, *, person: typing.Union[
+        converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.FuzzyCIMember] = None):
         """Statistics about the {LEGISLATURE_NAME} or a specific person
 
         **Example**
@@ -1360,8 +1366,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         embed.add_field(name="Bill Submissions", value=_stats[0]['count'], inline=True)
         embed.add_field(name="Motion Submissions", value=_stats[2]['count'], inline=True)
-        embed.add_field(name="Amount of authored Laws", value=_stats[1]['count'], inline=False)
-        embed.add_field(name="Amount of Bills Sponsored", value=_stats[3]['count'], inline=False)
+        embed.add_field(name="Amount of Laws written", value=_stats[1]['count'], inline=False)
+        embed.add_field(name="Amount of Bills sponsored", value=_stats[3]['count'], inline=False)
         embed.add_field(name="Amount of Sponsors for own Bills", value=_stats[4]['count'], inline=False)
         await ctx.send(embed=embed)
 

@@ -177,7 +177,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         await ctx.send(f"{config.YES} All bills were vetoed.\n{config.HINT} In case the "
                        f"{self.bot.mk.LEGISLATURE_NAME} wants to give these bills a second chance, a veto can be "
                        f"overridden with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} override`, or, if the "
-                       f"votes to override were not enough, the bill can be "
+                       f"votes to override are not enough, the bill can be "
                        f"resubmitted to the next legislative session with "
                        f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`.")
 
@@ -211,7 +211,8 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
             return await ctx.send("Cancelled.")
 
         await consumer.consume(scheduler=self.pass_scheduler)
-        await ctx.send(f"{config.YES} All bills were passed into law.\n{config.HINT} If the Legal Code needs to "
+        await ctx.send(f"{config.YES} All bills were passed into law and can now be found in `{config.BOT_PREFIX}laws`."
+                       f"\n{config.HINT} If the Legal Code needs to "
                        f"be updated, the {self.bot.mk.speaker_term} can use my "
                        f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code. ")
 
