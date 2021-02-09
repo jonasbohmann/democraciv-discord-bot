@@ -620,7 +620,7 @@ class Bank(context.CustomCog):
     async def edit_ottoman_ibal(self, ctx, iban: uuid.UUID, new_ibal: decimal.Decimal):
         """Change the Equilibrium variable of a bank account with the Ottoman currency
 
-        **Example:**
+        **Example**
             `-bank changeottomanvariable c4a3ec17-cba4-462f-bdda-05620f574dce 200` their new variable will be 200
         """
 

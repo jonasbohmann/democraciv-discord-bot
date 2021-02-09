@@ -1255,7 +1255,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         await consumer.consume()
         await ctx.send(f"{config.YES} All bills were resubmitted to the current session.")
 
-    def _format_stats(self, *, record: asyncpg.Record, record_key: str, stats_name: str) -> str:
+    def _format_stats(self, *, record: typing.List[asyncpg.Record], record_key: str, stats_name: str) -> str:
         """Prettifies the dicts used in generate_leg_statistics() to strings"""
 
         record_as_list = [r[record_key] for r in record]
@@ -1263,7 +1263,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         sorted_dict = {k: v for k, v in sorted(counter.items(), key=lambda item: item[1], reverse=True)}
         fmt = []
 
-        for i, key, value in enumerate(sorted_dict.items(), start=1):
+        for i, (key, value) in enumerate(sorted_dict.items(), start=1):
             if self.bot.get_user(key) is not None:
                 if i > 5:
                     break
@@ -1277,52 +1277,31 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         return "\n".join(fmt)
 
-    async def _generate_leg_statistics(self):
-        """Generates statistics for the -legislature stats command"""
-
+    async def _get_leg_stats(self, ctx):
         # todo fix this
 
-        query = """SELECT COUNT(id) AS sessions FROM legislature_session
-                UNION
-                SELECT COUNT(id) AS bills FROM bill
-                UNION
-                SELECT COUNT(id) AS laws FROM bill WHERE status = $1
-                UNION
-                SELECT COUNT(id) AS motions FROM motion
-                UNION 
-                SELECT submitter AS b_submitters from bill
-                UNION 
-                SELECT speaker AS speakers from legislature_session
-                UNION 
-                SELECT submitter AS l_submitters from bill WHERE status = $1;"""
+        query = """SELECT COUNT(id) FROM legislature_session
+                   UNION ALL
+                   SELECT COUNT(id) FROM bill
+                   UNION ALL
+                   SELECT COUNT(id) FROM bill WHERE status = $1
+                   UNION ALL
+                   SELECT COUNT(id) FROM motion"""
 
-        amounts = await self.bot.db.fetchrow(query, models.BillIsLaw.flag.value)
+        amounts = await self.bot.db.fetch(query, models.BillIsLaw.flag.value)
 
+        submitter = await self.bot.db.fetch("SELECT submitter from bill")
         pretty_top_submitter = self._format_stats(
-            record=amounts["b_submitters"], record_key="submitter", stats_name="bills"
+            record=submitter, record_key="submitter", stats_name="bills"
         )
 
-        pretty_top_speaker = self._format_stats(record=amounts["speakers"], record_key="speaker", stats_name="sessions")
+        speaker = await self.bot.db.fetch("SELECT speaker from legislature_session")
+        pretty_top_speaker = self._format_stats(record=speaker, record_key="speaker", stats_name="sessions")
 
+        lawmaker = await self.bot.db.fetch("SELECT submitter from bill WHERE status = $1", models.BillIsLaw.flag.value)
         pretty_top_lawmaker = self._format_stats(
-            record=amounts["l_submitters"], record_key="submitter", stats_name="laws"
+            record=lawmaker, record_key="submitter", stats_name="laws"
         )
-
-        return {
-            "sessions": amounts["sessions"],
-            "bills": amounts["bills"],
-            "motions": amounts["motions"],
-            "laws": amounts["laws"],
-            "top_bills": pretty_top_submitter,
-            "top_speaker": pretty_top_speaker,
-            "top_laws": pretty_top_lawmaker,
-        }
-
-    @legislature.command(name="statistics", aliases=["stat", "stats", "statistic"], hidden=True, enabled=False)
-    async def stats(self, ctx):
-        """Statistics about the {LEGISLATURE_NAME}"""
-
-        stats = await self._generate_leg_statistics()
 
         embed = text.SafeEmbed()
         embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL,
@@ -1331,24 +1310,60 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                               f"{self.bot.mk.LEGISLATURE_NAME}")
 
         general_value = (
-            f"Sessions: {stats['sessions']}\nSubmitted Bills: {stats['bills']}\n"
-            f"Submitted Motions: {stats['motions']}\nActive Laws: {stats['laws']}"
+            f"Sessions: {amounts[0]['count']}\nSubmitted Bills: {amounts[1]['count']}\n"
+            f"Submitted Motions: {amounts[3]['count']}\nActive Laws: {amounts[2]['count']}"
         )
 
         embed.add_field(name="General Statistics", value=general_value)
         embed.add_field(
             name=f"Top {self.bot.mk.speaker_term}s or {self.bot.mk.vice_speaker_term}s of "
                  f"the {self.bot.mk.LEGISLATURE_NAME}",
-            value=stats["top_speaker"],
+            value=pretty_top_speaker,
             inline=False,
         )
-        embed.add_field(name="Top Bill Submitters", value=stats["top_bills"], inline=False)
-        embed.add_field(name="Top Lawmakers", value=stats["top_laws"], inline=False)
+        embed.add_field(name="Top Bill Submitters", value=pretty_top_submitter, inline=False)
+        embed.add_field(name="Top Lawmakers", value=pretty_top_lawmaker, inline=False)
 
         try:
             await ctx.send(embed=embed)
         except discord.HTTPException:
             await ctx.send(f"{config.NO} There has to be activity in the {self.bot.mk.LEGISLATURE_NAME} first.")
+
+    @legislature.command(name="statistics", aliases=["stat", "stats", "statistic"])
+    async def stats(self, ctx, *, person: typing.Union[converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.FuzzyCIMember] = None):
+        """Statistics about the {LEGISLATURE_NAME} or a specific person
+
+        **Example**
+        `{PREFIX}{COMMAND}` to get the overall statistics about the {LEGISLATURE_NAME}
+        `{PREFIX}{COMMAND} DerJonas` to get personalized statistics for that person"""
+
+        if not person:
+            return await self._get_leg_stats(ctx)
+
+        query = """SELECT COUNT(*) FROM bill WHERE submitter = $1
+                   UNION ALL
+                   SELECT COUNT(*) FROM bill WHERE submitter = $1 AND status = $2
+                   UNION ALL
+                   SELECT COUNT(*) FROM motion WHERE submitter = $1
+                   UNION ALL
+                   SELECT COUNT(id) FROM bill_sponsor WHERE sponsor = $1
+                   UNION ALL
+                   SELECT COUNT(bill_sponsor.sponsor) FROM bill_sponsor JOIN bill ON bill_sponsor.bill_id = bill.id WHERE bill.submitter = $1"""
+
+        _stats = await self.bot.db.fetch(query, person.id, models.BillIsLaw.flag.value)
+
+        embed = text.SafeEmbed()
+        embed.set_author(icon_url=person.avatar_url_as(static_format="png"),
+                         name=f"{person.display_name} in the "
+                              f"{self.bot.mk.NATION_ADJECTIVE} "
+                              f"{self.bot.mk.LEGISLATURE_NAME}")
+
+        embed.add_field(name="Bill Submissions", value=_stats[0]['count'], inline=True)
+        embed.add_field(name="Motion Submissions", value=_stats[2]['count'], inline=True)
+        embed.add_field(name="Amount of authored Laws", value=_stats[1]['count'], inline=False)
+        embed.add_field(name="Amount of Bills Sponsored", value=_stats[3]['count'], inline=False)
+        embed.add_field(name="Amount of Sponsors for own Bills", value=_stats[4]['count'], inline=False)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):
