@@ -237,7 +237,9 @@ class Party(context.CustomCog, name="Political Parties"):
             for leader in leaders_without_reactor:
                 try:
                     leader_obj = self.bot.get_user(leader)
-                    await leader_obj.send(embed=text.SafeEmbed(title=message))
+
+                    if leader_obj:
+                        await leader_obj.send(embed=text.SafeEmbed(title=message))
                 except discord.Forbidden:
                     continue
 
@@ -277,6 +279,9 @@ class Party(context.CustomCog, name="Political Parties"):
         embed.set_author(name=before, icon_url=before.avatar_url_as(static_format="png"))
 
         for leader in party.leaders:
+            if leader.id == before.id:
+                continue
+
             await self.bot.safe_send_dm(target=leader, embed=embed, reason="party_join_leave")
 
     @commands.command(name="join")
