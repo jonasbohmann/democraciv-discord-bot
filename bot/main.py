@@ -39,7 +39,7 @@ from bot.config import token, config, mk
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [BOT] %(message)s", datefmt="%d.%m.%Y %H:%M:%S")
 
 all_extensions = {
-    "bot.module.logging",
+    "bot.module.logs",
     "bot.module.meta",
     "bot.module.utility",
     "bot.module.guild",

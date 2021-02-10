@@ -7,6 +7,8 @@ The -cat and -dog commands are based on RoboDanny by Rapptz: https://github.com/
 """
 import asyncio
 import io
+import logging
+import traceback
 import typing
 import random
 import discord
@@ -20,7 +22,7 @@ from discord.ext import commands
 from urllib import parse
 
 from bot.config import config
-from bot.utils import context, paginator, text
+from bot.utils import context, paginator, text, exceptions
 from bot.utils.converter import (
     PoliticalParty,
     CaseInsensitiveUser,
@@ -42,9 +44,9 @@ class Utility(context.CustomCog):
     @commands.Cog.listener(name="on_message")
     async def on_press_message(self, message: discord.Message):
         if (
-            message.author.bot
-            or message.guild.id != self.bot.dciv.id
-            or message.channel.id not in self.bot.mk.PRESS_CHANNEL
+                message.author.bot
+                or message.guild.id != self.bot.dciv.id
+                or message.channel.id not in self.bot.mk.PRESS_CHANNEL
         ):
             return
 
@@ -112,10 +114,12 @@ class Utility(context.CustomCog):
             )
         except asyncio.TimeoutError:
             self.active_press_flows.remove(message.author.id)
+            self.bot.loop.create_task(confirm.delete())
             return
         else:
             if not reaction or str(reaction.emoji) != yes_emoji:
                 self.active_press_flows.remove(message.author.id)
+                self.bot.loop.create_task(confirm.delete())
                 return
 
         title_q = await message.channel.send(
@@ -140,8 +144,9 @@ class Utility(context.CustomCog):
                 self.active_press_flows.remove(message.author.id)
                 return
 
-        title = f"{title_message.clean_content} - from {message.author}"
-        cleaned_up = []
+        title = f"{title_message.clean_content} — by {message.author}"
+        cleaned_up = [f"*The following was written by the journalist {message.author.display_name} ({message.author}) "
+                      f"in #{message.channel.name} on our [Discord server](https://discord.gg/AK7dYMG)*."]
 
         for mes in messages:
             cntn = ""
@@ -156,7 +161,7 @@ class Utility(context.CustomCog):
 
         outro = f"""\n\n &nbsp; \n\n --- \n\n*This is an automated press post from our Discord server. I am a 
         [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) and this is an automated service. 
-        Contact u/Jovanos (DerJonas#8036 on Discord) for further questions or bug reports.*\n&nbsp;\n*A_ID: 
+        Contact u/Jovanos (DerJonas#8036 on Discord) for further questions or bug reports.*\n\n &nbsp; \n\n *!A_ID: 
         {message.author.id}*"""
 
         cleaned_up.append(outro)
@@ -164,14 +169,21 @@ class Utility(context.CustomCog):
         content = "\n\n  &nbsp; \n\n".join(cleaned_up)
 
         js = {"subreddit": config.DEMOCRACIV_SUBREDDIT, "title": title, "content": content}
-
         self.active_press_flows.remove(message.author.id)
-        await self.bot.api_request("POST", "reddit/post", json=js)
-        await message.channel.send(
-            f"{config.YES} {message.author.mention}, posted to reddit.",
-            allowed_mentions=discord.AllowedMentions(users=True),
-            delete_after=5,
-        )
+
+        try:
+            await self.bot.api_request("POST", "reddit/post", json=js)
+        except Exception as e:
+            await message.channel.send(f"{config.NO} {message.author}, something went wrong, your article was not "
+                                       f"posted to Reddit.", delete_after=10)
+            logging.warning(f"Failed to post press article to Reddit: ")
+            traceback.print_exception(type(e), e, e.__traceback__)
+
+        else:
+            await message.channel.send(
+                f"{config.YES} {message.author}, your press article was posted to r/{config.DEMOCRACIV_SUBREDDIT}.",
+                delete_after=5,
+            )
         self.bot.loop.create_task(confirm.delete())
         self.bot.loop.create_task(title_q.delete())
         self.bot.loop.create_task(title_message.delete())
@@ -205,8 +217,8 @@ class Utility(context.CustomCog):
         see: https://en.wikipedia.org/w/api.php"""
 
         async with self.bot.session.get(
-            f"https://en.wikipedia.org/w/api.php?format=json&action=query&list=search"
-            f"&srinfo=suggestion&srsearch={query}"
+                f"https://en.wikipedia.org/w/api.php?format=json&action=query&list=search"
+                f"&srinfo=suggestion&srsearch={query}"
         ) as response:
             if response.status == 200:
                 return await response.json()
@@ -259,7 +271,7 @@ class Utility(context.CustomCog):
             embed.set_author(
                 name=title,
                 icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
-                "806577378314289162/Wikipedia-logo-v2.png",
+                         "806577378314289162/Wikipedia-logo-v2.png",
             )
 
             embed.add_field(name="Link", value=f"[{url}]({self.percentage_encode_url(url)})")
@@ -359,12 +371,12 @@ class Utility(context.CustomCog):
     @commands.command(name="whois")
     @commands.guild_only()
     async def whois(
-        self,
-        ctx,
-        *,
-        member: typing.Union[
-            CaseInsensitiveMember, DemocracivCaseInsensitiveRole, PoliticalParty, FuzzyCIMember
-        ] = None,
+            self,
+            ctx,
+            *,
+            member: typing.Union[
+                CaseInsensitiveMember, DemocracivCaseInsensitiveRole, PoliticalParty, FuzzyCIMember
+            ] = None,
     ):
         """Get detailed information about a member of this server
 
@@ -423,7 +435,7 @@ class Utility(context.CustomCog):
     @commands.command(name="avatar", aliases=["pfp"])
     @commands.guild_only()
     async def avatar(
-        self, ctx, *, member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None
+            self, ctx, *, member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None
     ):
         """View someone's avatar in detail
 
@@ -554,10 +566,10 @@ class Utility(context.CustomCog):
     @commands.command(name="whohas", aliases=["roleinfo"])
     @commands.guild_only()
     async def whohas(
-        self,
-        ctx,
-        *,
-        role: typing.Union[DemocracivCaseInsensitiveRole, PoliticalParty, FuzzyDemocracivCIRole],
+            self,
+            ctx,
+            *,
+            role: typing.Union[DemocracivCaseInsensitiveRole, PoliticalParty, FuzzyDemocracivCIRole],
     ):
         """Detailed information about a role"""
 
@@ -626,7 +638,7 @@ class Utility(context.CustomCog):
     @commands.command(name="vibecheck", hidden=True)
     @commands.guild_only()
     async def vibecheck(
-        self, ctx, *, member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None
+            self, ctx, *, member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None
     ):
         """vibecheck"""
 

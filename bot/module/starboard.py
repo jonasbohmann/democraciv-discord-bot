@@ -115,7 +115,8 @@ class Starboard(context.CustomCog):
 
                 fmt_channel = f"**#{channel.name}**" if channel is not None else "_channel was deleted_"
                 pretty_time = record["message_creation_date"].strftime("%H:%M")
-                quote = [f"> {line}" for line in message.clean_content.splitlines()]
+                cntnt = message.clean_content.replace("\n", "\n\n")
+                quote = [f"> {line}" for line in cntnt.splitlines()]
 
                 image_url = None
 

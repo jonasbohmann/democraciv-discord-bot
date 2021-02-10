@@ -6,7 +6,7 @@ from discord.ext import commands
 from bot.utils import context, text
 
 
-class Log(context.CustomCog):
+class _Log(context.CustomCog):
     hidden = True
 
     async def log_event(
@@ -264,4 +264,4 @@ class Log(context.CustomCog):
 
 
 def setup(bot):
-    bot.add_cog(Log(bot))
+    bot.add_cog(_Log(bot))
