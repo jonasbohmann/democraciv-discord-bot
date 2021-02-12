@@ -42,10 +42,10 @@ class EditTagMenu(menus.Menu):
         embed = text.SafeEmbed(
             title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
             description=f"Select as many things as you want, then click "
-            f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
-            f":one: Send Tag as embed or plain text\n"
-            f":two: Tag Title\n"
-            f":three: Tag Content",
+                        f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
+                        f":one: Send Tag as embed or plain text\n"
+                        f":two: Tag Title\n"
+                        f":three: Tag Content",
         )
         return await ctx.send(embed=embed)
 
@@ -182,13 +182,13 @@ class Tags(context.CustomCog):
         )
         await pages.start(ctx)
 
-    @tags.command(name="from", aliases=["by"])
+    @tags.command(name="from", aliases=["by", "f"])
     @commands.guild_only()
     async def _from(
-        self,
-        ctx: context.CustomContext,
-        *,
-        member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
+            self,
+            ctx: context.CustomContext,
+            *,
+            member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
     ):
         """List the tags that someone made"""
 
@@ -212,7 +212,7 @@ class Tags(context.CustomCog):
         )
         await pages.start(ctx)
 
-    @tags.command(name="addalias")
+    @tags.command(name="addalias", aliases=['alias'])
     @commands.guild_only()
     @checks.tag_check()
     async def addtagalias(self, ctx: context.CustomContext, *, tag: OwnedTag):
@@ -319,6 +319,9 @@ class Tags(context.CustomCog):
 
         p = config.BOT_PREFIX
 
+        if "alias" in ctx.message.content.lower():
+            return await ctx.send(f"{config.HINT} Did you mean the `{p}tag addalias` command?")
+
         name = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the **name** of the tag.\n{config.HINT} *This will be "
             f"used to access the tag via my `{p}` prefix, so you do __not__ have to add "
@@ -326,7 +329,7 @@ class Tags(context.CustomCog):
         )
 
         if name.startswith(p):
-            name = name[len(p) :]
+            name = name[len(p):]
             await ctx.send(f"*Note: The leading `{p}` was automatically removed from your tag name.*")
 
         if not await self.validate_tag_name(ctx, name.lower()):
@@ -373,7 +376,7 @@ class Tags(context.CustomCog):
                 nation_admin = None
 
             if ctx.author.guild_permissions.administrator or (
-                self.bot.mk.IS_NATION_BOT and nation_admin and nation_admin in ctx.author.roles
+                    self.bot.mk.IS_NATION_BOT and nation_admin and nation_admin in ctx.author.roles
             ):
                 is_global = await ctx.confirm(
                     f"{config.USER_INTERACTION_REQUIRED} Should this tag be global?"
@@ -437,8 +440,8 @@ class Tags(context.CustomCog):
             embed.add_field(
                 name="Author",
                 value=f"*The author of this tag left this server.*\n"
-                f"*You can claim this tag to make it yours with*\n"
-                f"`{config.BOT_PREFIX}tag claim {tag.name}`",
+                      f"*You can claim this tag to make it yours with*\n"
+                      f"`{config.BOT_PREFIX}tag claim {tag.name}`",
                 inline=False,
             )
             embed.set_author(
@@ -450,8 +453,8 @@ class Tags(context.CustomCog):
             embed.add_field(
                 name="Author",
                 value=f"*The author of this tag left this server.*\n"
-                f"*You can claim this tag to make it yours with*\n"
-                f"`{config.BOT_PREFIX}tag claim {tag.name}`",
+                      f"*You can claim this tag to make it yours with*\n"
+                      f"`{config.BOT_PREFIX}tag claim {tag.name}`",
                 inline=False,
             )
 
@@ -481,11 +484,11 @@ class Tags(context.CustomCog):
     @tags.command(name="transfer")
     @commands.guild_only()
     async def transfer(
-        self,
-        ctx: context.CustomContext,
-        to_person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember],
-        *,
-        tag: OwnedTag,
+            self,
+            ctx: context.CustomContext,
+            to_person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember],
+            *,
+            tag: OwnedTag,
     ):
         """Transfer a tag of yours to someone else"""
 
@@ -720,7 +723,7 @@ class Tags(context.CustomCog):
         if ctx.valid or not ctx.prefix:
             return
 
-        tag_name = message.content[len(ctx.prefix) :]
+        tag_name = message.content[len(ctx.prefix):]
         tag_details = await self.resolve_tag_name(tag_name, message.guild)
 
         if tag_details is None:

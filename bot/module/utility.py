@@ -144,7 +144,7 @@ class Utility(context.CustomCog):
                 self.active_press_flows.remove(message.author.id)
                 return
 
-        title = f"{title_message.clean_content} — by {message.author}"
+        title = f"{title_message.clean_content} — by {message.author.name}"
         cleaned_up = [f"*The following was written by the journalist {message.author.display_name} ({message.author}) "
                       f"in #{message.channel.name} on our [Discord server](https://discord.gg/AK7dYMG)*."]
 
@@ -167,7 +167,7 @@ class Utility(context.CustomCog):
 
         outro = f"""\n\n &nbsp; \n\n --- \n\n*This is an automated press post from our Discord server. I am a 
         [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) and this is an automated service. 
-        Contact u/Jovanos (DerJonas#8036 on Discord) for further questions or bug reports.*\n\n &nbsp; \n\n *!A_ID: 
+        Contact u/Jovanos (DerJonas#8036 on Discord) for further questions or bug reports. !A_ID: 
         {message.author.id}*"""
 
         cleaned_up.append(outro)
@@ -198,6 +198,43 @@ class Utility(context.CustomCog):
         self.bot.loop.create_task(confirm.delete())
         self.bot.loop.create_task(title_q.delete())
         self.bot.loop.create_task(title_message.delete())
+
+    @commands.command(name="deletepresspost",
+                      aliases=['deletepress', 'removepress', 'removepresspost', 'dpp', 'rpp', 'dp'])
+    async def delete_press_post(self, ctx, *, url):
+
+        # todo make regex
+
+        if f"reddit.com/r/{config.DEMOCRACIV_SUBREDDIT}" not in url and "comments" not in url:
+            return await ctx.send(f"{config.NO} Make sure the link to your Reddit press post is in this exact format: "
+                                  f"`https://www.reddit.com/r/democraciv/comments/ibr37f/"
+                                  f"introducing_the_bank_of_democraciv/`.")
+
+        error_msg = f"{config.NO} Something went wrong. Are you sure that you gave me " \
+                    f"a real link to a press Reddit post?"
+
+        async with self.bot.session.get(url) as response:
+            if response.status != 200:
+                return await ctx.send(error_msg)
+
+            js = await response.json()
+
+        try:
+            post = js[0]['data']['children'][0]['data']
+        except (TypeError, KeyError, IndexError):
+            return await ctx.send(error_msg)
+
+        if post['subreddit'] != config.DEMOCRACIV_SUBREDDIT or post['author'] != config.STARBOARD_REDDIT_USERNAME:
+            return await ctx.send(error_msg)
+
+        content = post['selftext'].strip()
+
+        if f"!A_ID {ctx.author.id}" not in content:
+            # todo wip
+            return await ctx.send(f"{config.NO} You are not the author of that press article.")
+
+        await self.bot.api_request("POST", "reddit/post/delete", json={'id': post['id']})
+        await ctx.send(f"{config.YES} Your press article was removed on Reddit.")
 
     @staticmethod
     def percentage_encode_url(link: str) -> str:

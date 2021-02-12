@@ -124,7 +124,7 @@ class RedditManager(ProviderManager):
                     await self.refresh_reddit_bearer_token()
                     return await self.delete_reddit_post(post_id=post_id, retry=True)
 
-                logger.warning("got 403 while posting to reddit")
+                logger.warning("got 403 while deleting reddit post")
 
             try:
                 return await response.json()
