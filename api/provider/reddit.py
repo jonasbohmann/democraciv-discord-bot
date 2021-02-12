@@ -2,6 +2,7 @@ import copy
 import datetime
 import html
 import json
+import traceback
 import typing
 import aiohttp
 
@@ -60,10 +61,10 @@ class RedditManager(ProviderManager):
         headers = {"User-Agent": "democraciv-discord-bot by DerJonas - u/Jovanos"}
 
         async with self._session.post(
-            "https://www.reddit.com/api/v1/access_token",
-            data=post_data,
-            auth=auth,
-            headers=headers,
+                "https://www.reddit.com/api/v1/access_token",
+                data=post_data,
+                auth=auth,
+                headers=headers,
         ) as response:
             if response.status == 200:
                 r = await response.json()
@@ -89,20 +90,22 @@ class RedditManager(ProviderManager):
         }
 
         async with self._session.post(
-            "https://oauth.reddit.com/api/submit?raw_json=1", data=data, headers=headers
+                "https://oauth.reddit.com/api/submit?raw_json=1", data=data, headers=headers
         ) as response:
-            if response.status == 403:
+
+            if response.status in (401, 403):
 
                 if not retry:
                     await self.refresh_reddit_bearer_token()
                     return await self.post_to_reddit(subreddit=subreddit, title=title, content=content, retry=True)
 
                 logger.warning("got 403 while posting to reddit")
+                return {'error': await response.json()}
 
             try:
                 return await response.json()
             except aiohttp.ContentTypeError:
-                return
+                return {'error': 'error'}
 
     async def delete_reddit_post(self, *, post_id: str, retry=False):
         headers = {
@@ -113,9 +116,10 @@ class RedditManager(ProviderManager):
         data = {"id": post_id}
 
         async with self._session.post(
-            "https://oauth.reddit.com/api/del?raw_json=1", data=data, headers=headers
+                "https://oauth.reddit.com/api/del?raw_json=1", data=data, headers=headers
         ) as response:
-            if response.status == 403:
+
+            if response.status in (401, 403):
                 if not retry:
                     await self.refresh_reddit_bearer_token()
                     return await self.delete_reddit_post(post_id=post_id, retry=True)
@@ -191,7 +195,7 @@ class RedditPost:
 
 class SubredditScraper:
     def __init__(
-        self, *, db, subreddit: str, session: aiohttp.ClientSession, post_limit: int = 1, manager: RedditManager
+            self, *, db, subreddit: str, session: aiohttp.ClientSession, post_limit: int = 1, manager: RedditManager
     ):
         self.subreddit = subreddit
         self.webhook_urls = set()
@@ -224,12 +228,15 @@ class SubredditScraper:
                 if response.status == 404:
                     # webhook was deleted
                     await self.manager._remove_webhook(target=self.subreddit, webhook_url=webhook)
-                    await self.db.pool.execute(f"DELETE FROM {self.manager.table} WHERE webhook_url = $1", webhook)
-                    logger.info(f"removed deleted webhook_url {webhook} for r/{self.subreddit}")
+                    try:
+                        await self.db.pool.execute(f"DELETE FROM {self.manager.table} WHERE webhook_url = $1", webhook)
+                        logger.info(f"removed deleted webhook_url {webhook} for r/{self.subreddit}")
+                    except Exception as e:
+                        traceback.print_exception(type(e), e, e.__traceback__)
 
     async def get_newest_reddit_post(self) -> typing.Optional[typing.Dict]:
         async with self._session.get(
-            f"https://www.reddit.com/r/{self.subreddit}/new.json?limit={self.post_limit}"
+                f"https://www.reddit.com/r/{self.subreddit}/new.json?limit={self.post_limit}"
         ) as response:
             if response.status == 200:
                 return await response.json()

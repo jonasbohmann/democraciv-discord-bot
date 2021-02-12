@@ -22,7 +22,7 @@ from discord.ext import commands
 from urllib import parse
 
 from bot.config import config
-from bot.utils import context, paginator, text, exceptions
+from bot.utils import context, paginator, text
 from bot.utils.converter import (
     PoliticalParty,
     CaseInsensitiveUser,
@@ -72,7 +72,7 @@ class Utility(context.CustomCog):
         while True:
             try:
                 _m = await self.bot.wait_for(
-                    "message", check=lambda m: m.author == message.author and m.channel == message.channel, timeout=60
+                    "message", check=lambda m: m.author == message.author and m.channel == message.channel, timeout=120
                 )
 
                 _ctx = await self.bot.get_context(_m)
@@ -83,7 +83,7 @@ class Utility(context.CustomCog):
                 messages.append(_m)
                 start = datetime.datetime.utcnow()
             except asyncio.TimeoutError:
-                if datetime.datetime.utcnow() - start >= datetime.timedelta(minutes=1):
+                if datetime.datetime.utcnow() - start >= datetime.timedelta(minutes=2):
                     break
                 else:
                     continue
@@ -151,6 +151,12 @@ class Utility(context.CustomCog):
         for mes in messages:
             cntn = ""
 
+            # get message again in case it was edited
+            _mes = discord.utils.get(self.bot.cached_messages, id=mes.id)
+
+            if _mes:
+                mes = _mes
+
             if mes.content:
                 cntn = mes.clean_content.replace("\n", "\n\n")
 
@@ -172,7 +178,11 @@ class Utility(context.CustomCog):
         self.active_press_flows.remove(message.author.id)
 
         try:
-            await self.bot.api_request("POST", "reddit/post", json=js)
+            result = await self.bot.api_request("POST", "reddit/post", json=js)
+
+            if "error" in result:
+                raise RuntimeError(result['error'])
+
         except Exception as e:
             await message.channel.send(f"{config.NO} {message.author}, something went wrong, your article was not "
                                        f"posted to Reddit.", delete_after=10)
@@ -184,6 +194,7 @@ class Utility(context.CustomCog):
                 f"{config.YES} {message.author}, your press article was posted to r/{config.DEMOCRACIV_SUBREDDIT}.",
                 delete_after=5,
             )
+
         self.bot.loop.create_task(confirm.delete())
         self.bot.loop.create_task(title_q.delete())
         self.bot.loop.create_task(title_message.delete())

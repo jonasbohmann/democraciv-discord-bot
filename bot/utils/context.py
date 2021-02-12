@@ -186,12 +186,14 @@ class CustomContext(commands.Context):
             elif str(reaction.emoji) == no_emoji:
                 return False
 
-    async def send_with_timed_delete(self, content=None, *, embed=None, timeout=90):
+    async def send_with_timed_delete(self, content=None, *, embed=None, timeout=200):
         message = await self.send(content=content, embed=embed)
         should_delete = await self.ask_to_continue(message=message, emoji="\U0001f5d1", timeout=timeout)
 
         if should_delete:
             await message.delete()
+        else:
+            await message.remove_reaction(emoji="\U0001f5d1", member=self.guild.me)
 
     async def input(
         self,
