@@ -125,11 +125,12 @@ class RedditManager(ProviderManager):
                     return await self.delete_reddit_post(post_id=post_id, retry=True)
 
                 logger.warning("got 403 while deleting reddit post")
+                return {'error': await response.json()}
 
             try:
                 return await response.json()
             except aiohttp.ContentTypeError:
-                return
+                return {'error': 'error'}
 
     async def _start_webhook(self, *, target: str, webhook_url: str):
         async with self._lock:

@@ -11,6 +11,8 @@ import logging
 import traceback
 import typing
 import random
+
+import aiohttp
 import discord
 import operator
 import datetime
@@ -92,12 +94,12 @@ class Utility(context.CustomCog):
             f"{config.USER_INTERACTION_REQUIRED} {message.author.mention}, do you want "
             f"me to post these last {len(messages)} messages from you to our "
             f"subreddit **r/{config.DEMOCRACIV_SUBREDDIT}** in one, single press post?"
-            f"\n{config.HINT} *You have 30 seconds to decide. After that with no reaction from you I "
+            f"\n{config.HINT} *You have 2 minutes to decide. After that with no reaction from you I "
             f"will cancel this process and delete this message.*"
             f"\n{config.HINT} *I will stop asking you this if you have the `{never_role_name}` role. "
             f"That role is a selfrole, so you can get it with `{config.BOT_PREFIX}role {never_role_name}`.*",
             allowed_mentions=discord.AllowedMentions(users=True),
-            delete_after=30,
+            delete_after=120,
         )
 
         yes_emoji = config.YES
@@ -110,7 +112,7 @@ class Utility(context.CustomCog):
             reaction, user = await self.bot.wait_for(
                 "reaction_add",
                 check=lambda r, u: u.id == message.author.id and r.message.id == confirm.id,
-                timeout=30,
+                timeout=120,
             )
         except asyncio.TimeoutError:
             self.active_press_flows.remove(message.author.id)
@@ -124,15 +126,15 @@ class Utility(context.CustomCog):
 
         title_q = await message.channel.send(
             f"{config.USER_INTERACTION_REQUIRED} {message.author.mention}, what should be the "
-            f"title of the Reddit post?\n{config.HINT} *You have 60 seconds to respond. "
+            f"title of the Reddit post?\n{config.HINT} *You have 3 minutes to respond. "
             f"After that with no reply from you I will cancel this process and delete this message.*",
             allowed_mentions=discord.AllowedMentions(users=True),
-            delete_after=60,
+            delete_after=180,
         )
 
         try:
             title_message = await self.bot.wait_for(
-                "message", check=lambda m: m.author == message.author and m.channel == message.channel, timeout=60
+                "message", check=lambda m: m.author == message.author and m.channel == message.channel, timeout=180
             )
 
         except asyncio.TimeoutError:
@@ -161,14 +163,13 @@ class Utility(context.CustomCog):
                 cntn = mes.clean_content.replace("\n", "\n\n")
 
             if mes.attachments:
-                cntn = f"{cntn}\n[*Attachment*]({mes.attachments[0].url})\n"
+                cntn = f"{cntn} [*Attachment*]({mes.attachments[0].url})"
 
             cleaned_up.append(cntn)
 
         outro = f"""\n\n &nbsp; \n\n --- \n\n*This is an automated press post from our Discord server. I am a 
         [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) and this is an automated service. 
-        Contact u/Jovanos (DerJonas#8036 on Discord) for further questions or bug reports. !A_ID: 
-        {message.author.id}*"""
+        Contact u/Jovanos (DerJonas#8036 on Discord) for further questions or bug reports. !A_ID: {message.author.id}*"""
 
         cleaned_up.append(outro)
 
@@ -191,8 +192,10 @@ class Utility(context.CustomCog):
 
         else:
             await message.channel.send(
-                f"{config.YES} {message.author}, your press article was posted to r/{config.DEMOCRACIV_SUBREDDIT}.",
-                delete_after=5,
+                f"{config.YES} {message.author}, your press article was posted to "
+                f"r/{config.DEMOCRACIV_SUBREDDIT}.\n{config.HINT} Don't like how it turned out? "
+                f"You can make me delete the reddit post with the `{config.BOT_PREFIX}deletepresspost` command.",
+                delete_after=15,
             )
 
         self.bot.loop.create_task(confirm.delete())
@@ -202,10 +205,14 @@ class Utility(context.CustomCog):
     @commands.command(name="deletepresspost",
                       aliases=['deletepress', 'removepress', 'removepresspost', 'dpp', 'rpp', 'dp'])
     async def delete_press_post(self, ctx, *, url):
+        """Make me delete a reddit post that I made out of your #press messages and posted to our subreddit
+
+        **Example**
+        `{PREFIX}{COMMAND} https://www.reddit.com/r/democraciv/comments/ibr37f/introducing_the_bank_of_democraciv/`"""
 
         # todo make regex
 
-        if f"reddit.com/r/{config.DEMOCRACIV_SUBREDDIT}" not in url and "comments" not in url:
+        if f"reddit.com/r/{config.DEMOCRACIV_SUBREDDIT.lower()}" not in url.lower() and "comments" not in url.lower():
             return await ctx.send(f"{config.NO} Make sure the link to your Reddit press post is in this exact format: "
                                   f"`https://www.reddit.com/r/democraciv/comments/ibr37f/"
                                   f"introducing_the_bank_of_democraciv/`.")
@@ -213,28 +220,37 @@ class Utility(context.CustomCog):
         error_msg = f"{config.NO} Something went wrong. Are you sure that you gave me " \
                     f"a real link to a press Reddit post?"
 
-        async with self.bot.session.get(url) as response:
-            if response.status != 200:
-                return await ctx.send(error_msg)
+        try:
+            async with self.bot.session.get(f"{url}.json") as response:
+                if response.status != 200:
+                    return await ctx.send(error_msg)
 
-            js = await response.json()
+                js = await response.json()
+        except aiohttp.ClientError:
+            return await ctx.send(error_msg)
 
         try:
             post = js[0]['data']['children'][0]['data']
+
+            if post['subreddit'].lower() != config.DEMOCRACIV_SUBREDDIT.lower() or post[
+                'author'].lower() != config.STARBOARD_REDDIT_USERNAME.lower():
+                return await ctx.send(error_msg)
+
+            # remove whitespace
+            content = "".join(post['selftext'].split())
+            post_id = post['name']
         except (TypeError, KeyError, IndexError):
             return await ctx.send(error_msg)
 
-        if post['subreddit'] != config.DEMOCRACIV_SUBREDDIT or post['author'] != config.STARBOARD_REDDIT_USERNAME:
-            return await ctx.send(error_msg)
-
-        content = post['selftext'].strip()
-
-        if f"!A_ID {ctx.author.id}" not in content:
-            # todo wip
+        if f"!A_ID:{ctx.author.id}" not in content:
             return await ctx.send(f"{config.NO} You are not the author of that press article.")
 
-        await self.bot.api_request("POST", "reddit/post/delete", json={'id': post['id']})
-        await ctx.send(f"{config.YES} Your press article was removed on Reddit.")
+        resp = await self.bot.api_request("POST", "reddit/post/delete", json={'id': post_id})
+
+        if "error" in resp:
+            return await ctx.send(error_msg)
+
+        await ctx.send(f"{config.YES} Your press article was removed from Reddit.")
 
     @staticmethod
     def percentage_encode_url(link: str) -> str:

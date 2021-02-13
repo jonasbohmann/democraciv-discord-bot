@@ -57,7 +57,7 @@ App Access Tokens expire after around 58 days. If that happens, it will obtain a
 
 Create an app and put its Client ID, Client secret and a **refresh token** (not application token!) in `token.json`. 
 Follow this [guide](https://github.com/reddit-archive/reddit/wiki/OAuth2) on how to get these. 
-Make sure your refresh token has the `submit` scope. 
+Make sure your refresh token has the `submit` and `edit` scopes. 
 
 
 ####  YouTube 
