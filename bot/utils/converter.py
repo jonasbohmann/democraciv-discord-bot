@@ -394,7 +394,7 @@ class FuzzyDemocracivCIRole(commands.Converter):
             return await FuzzyCIRole().convert(ctx, argument)
 
         roles = [role.name for role in ctx.guild.roles]
-        roles.extend([role.name for role in ctx.bot.dciv.roles])
+        roles.extend([f"{role.name} - *{ctx.bot.dciv} Role*" for role in ctx.bot.dciv.roles])
         role_name = await fuzzy_search(ctx, argument, roles, "role")
 
         if not role_name:
