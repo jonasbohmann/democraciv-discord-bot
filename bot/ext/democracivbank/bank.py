@@ -10,8 +10,8 @@ import typing
 from aiohttp import web
 from dataclasses import dataclass
 from discord.ext import commands, tasks
-from bot.utils import converter, exceptions, text, paginator, checks, context
-from bot.config import config, token, mk
+from bot.utils import converter, exceptions, text, paginator, context
+from bot.config import config, token
 from discord.ext import menus
 
 
@@ -247,7 +247,7 @@ class Bank(context.CustomCog):
             raise BankDiscordUserNotConnected(
                 f"{config.NO} {ctx.author.mention}, your Discord account is not connected to any "
                 f"user on <https://democracivbank.com>.\n\nYou can connect here: "
-                f"<https://democracivbank.com/me>"
+                f"https://democracivbank.com/me/discord"
             )
 
     async def request(self, route: BankRoute, **kwargs):
@@ -311,7 +311,7 @@ class Bank(context.CustomCog):
                 raise BankDiscordUserNotConnected(
                     f"{config.NO} {name} is not connected with any user account on "
                     f"<https://democracivbank.com>. Tell them to connect their "
-                    f"Discord account here: <https://democracivbank.com/me>"
+                    f"Discord account here: https://democracivbank.com/me/discord"
                 )
 
             else:
@@ -326,21 +326,19 @@ class Bank(context.CustomCog):
                     name = self.bot.get_user(get_params["discord_id"])
                     raise BankNoDefaultAccountForCurrency(
                         f"{config.NO} **{name}** does not have a default bank account "
-                        f"for this currency. Tell them to set a default bank "
-                        f"account for this currency on "
-                        f"<https://democracivbank.com>."
+                        f"for this currency. Tell them to open a bank account in this currency at "
+                        "https://democracivbank.com/account/new/."
                     )
                 if is_sender:
                     raise BankNoDefaultAccountForCurrency(
                         f"{config.NO} You do not have a default bank account for "
-                        "this currency. You can make one of your personal "
-                        "bank accounts that holds this currency to be the "
-                        "default bank account for this currency on "
-                        "<https://democracivbank.com>."
+                        "this currency. Open a bank account in this currency at "
+                        "https://democracivbank.com/account/new/ and set "
+                        "it as your default bank account for that currency."
                     )
             else:
                 raise BankNoDefaultAccountForCurrency(
-                    f"{config.NO} This organization does not have a default bank account " f"for this currency."
+                    f"{config.NO} This organization does not have a default bank account for this currency."
                 )
 
     async def send_money(self, from_discord, from_iban, to_iban, amount, purpose):
@@ -369,7 +367,7 @@ class Bank(context.CustomCog):
 
             else:
                 raise BankTransactionError(
-                    f"{config.NO} The transaction could not be completed, please notify " f"{self.bot.owner}."
+                    f"{config.NO} The transaction could not be completed, please notify {self.bot.owner}."
                 )
 
     @commands.group(
@@ -386,7 +384,8 @@ class Bank(context.CustomCog):
                         f"corporate registry, personalized notifications, support for multiple currencies and a "
                         f"deep integration into the Democraciv Discord Bot.\n\nSign up for an account over at "
                         f"[democracivbank.com](https://democracivbank.com) and connect your Discord Account on "
-                        f"[democracivbank.com/me](https://democracivbank.com/me) for the full experience."
+                        f"[democracivbank.com/me/discord](https://democracivbank.com/me/discord) for the "
+                        f"full experience."
         )
 
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
