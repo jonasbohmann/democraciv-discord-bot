@@ -90,6 +90,15 @@ class Utility(context.CustomCog):
                 else:
                     continue
 
+        # check if messages were not deleted before asking
+        messages = [discord.utils.get(self.bot.cached_messages, id=mes.id) for mes in messages]
+
+        if not any(messages):
+            self.active_press_flows.remove(message.author.id)
+            return
+
+        messages = list(filter(None, messages))
+
         confirm = await message.channel.send(
             f"{config.USER_INTERACTION_REQUIRED} {message.author.mention}, do you want "
             f"me to post these last {len(messages)} messages from you to our "
@@ -154,10 +163,11 @@ class Utility(context.CustomCog):
             cntn = ""
 
             # get message again in case it was edited
-            _mes = discord.utils.get(self.bot.cached_messages, id=mes.id)
+            mes = discord.utils.get(self.bot.cached_messages, id=mes.id)
 
-            if _mes:
-                mes = _mes
+            # message was deleted
+            if not mes:
+                continue
 
             if mes.content:
                 cntn = mes.clean_content.replace("\n", "\n\n")
@@ -166,6 +176,11 @@ class Utility(context.CustomCog):
                 cntn = f"{cntn} [*Attachment*]({mes.attachments[0].url})"
 
             cleaned_up.append(cntn)
+
+        if len(cleaned_up) == 1:
+            self.active_press_flows.remove(message.author.id)
+            return await ctx.send(f"{config.HINT} {message.author}, you deleted your messages, "
+                                  f"so I cancelled this process.")
 
         outro = f"""\n\n &nbsp; \n\n --- \n\n*This is an automated press post from our Discord server. I am a 
         [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) and this is an automated service. 
