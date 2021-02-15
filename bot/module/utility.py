@@ -283,7 +283,10 @@ class Utility(context.CustomCog):
 
         see: https://www.mediawiki.org/wiki/REST_API"""
 
-        async with self.bot.session.get(f"https://en.wikipedia.org/api/rest_v1/page/summary/{query}") as response:
+        percent_encoded = parse.quote(query.replace(" ", "_"))
+        url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{percent_encoded}"
+
+        async with self.bot.session.get(url) as response:
             if response.status == 200:
                 return await response.json()
 
