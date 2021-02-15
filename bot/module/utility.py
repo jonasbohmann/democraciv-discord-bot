@@ -351,12 +351,13 @@ class Utility(context.CustomCog):
 
             embed = text.SafeEmbed(description=textwrap.shorten(summary, 500, placeholder="..."))
             embed.set_author(
+                url=url,
                 name=title,
                 icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
                          "806577378314289162/Wikipedia-logo-v2.png",
             )
 
-            embed.add_field(name="Link", value=f"[{url}]({self.percentage_encode_url(url)})")
+            embed.add_field(name="Link", value=url)
 
             if isinstance(thumbnail_url, str):
                 embed.set_thumbnail(url=thumbnail_url)
