@@ -286,9 +286,13 @@ class Utility(context.CustomCog):
         percent_encoded = parse.quote(query.replace(" ", "_"))
         url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{percent_encoded}"
 
-        async with self.bot.session.get(url) as response:
-            if response.status == 200:
-                return await response.json()
+        try:
+            async with self.bot.session.get(url) as response:
+                if response.status == 200:
+                    return await response.json()
+
+        except (ValueError, aiohttp.InvalidURL):
+            return None
 
     async def get_wikipedia_suggested_articles(self, query):
         """This uses the older MediaWiki Action API to query their site.
