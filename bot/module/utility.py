@@ -47,6 +47,7 @@ class Utility(context.CustomCog):
     async def on_press_message(self, message: discord.Message):
         if (
                 message.author.bot
+                or not message.guild
                 or message.guild.id != self.bot.dciv.id
                 or message.channel.id not in self.bot.mk.PRESS_CHANNEL
         ):

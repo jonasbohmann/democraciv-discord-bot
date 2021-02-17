@@ -48,21 +48,18 @@ class _Log(context.CustomCog):
             return
 
         if not await self.bot.is_channel_excluded(before.guild.id, before.channel.id):
-            if not before.clean_content or not after.clean_content:
+            if not before.content or not after.content:
                 return
 
             if before.content == after.content:
-                return
-
-            if before.embeds or after.embeds:
                 return
 
             embed_fields = {
                 "Author": [f"{before.author.mention} {before.author}", False],
                 "Channel": [before.channel.mention, True],
                 "Jump": [f"[Link]({before.jump_url})", True],
-                "Before": [before.content, False],
-                "After": [after.content, False],
+                "Before": [before.content[:1020], False],
+                "After": [after.content[:1020], False],
             }
 
             await self.log_event(before.guild, ":pencil2:  Message Edited", embed_fields)
