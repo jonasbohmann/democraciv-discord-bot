@@ -383,13 +383,15 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             return await ctx.send(f"{config.NO} This session is closed.")
 
         voting_form = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the link to this session' Google Forms voting "
-            "form.\n\nHint: You can make me generate that form for you, "
-            f"with the `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session export` command."
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the link to this session's Google Forms voting "
+            f"form.\n{config.HINT} Reply with gibberish if you want me to generate that form for you."
         )
 
         if not self.is_google_doc_link(voting_form):
-            return await ctx.send(f"{config.NO} That doesn't look like a Google Docs URL.")
+            return await ctx.send(f"{config.HINT} Use the "
+                                  f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session export` "
+                                  f"command to make me generate the form for you, then use this command "
+                                  f"again once you're all set.")
 
         await active_leg_session.start_voting(voting_form)
 
@@ -501,7 +503,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     @commands.cooldown(1, 120, commands.BucketType.user)
     async def exportsession(self, ctx: context.CustomContext, session: Session = None):
         """Export a session's submissions for Google Spreadsheets and generate the Google Forms voting form"""
-        if isinstance(session, str):
+        if isinstance(session, str):  # 'all'
             return
 
         session = session or await self.get_last_leg_session()
@@ -510,21 +512,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             return await ctx.send(f"{config.NO} There hasn't been a session yet.")
 
         async with ctx.typing():
-            b_ids = []
-            b_hyperlinks = []
+            bills = [await Bill.convert(ctx, bill_id) for bill_id in session.bills]
+            motions = [await Motion.convert(ctx, motion_id) for motion_id in session.motions]
 
-            m_ids = []
-            m_hyperlinks = []
-
-            for bill_id in session.bills:
-                bill = await Bill.convert(ctx, bill_id)
-                b_ids.append(f"Bill #{bill.id}")
-                b_hyperlinks.append(f'=HYPERLINK("{bill.link}"; "{bill.name}")')
-
-            for motion_id in session.motions:
-                motion = await Motion.convert(ctx, motion_id)
-                m_ids.append(f"Motion #{motion.id}")
-                m_hyperlinks.append(f'=HYPERLINK("{motion.link}"; "{motion.name}")')
+            b_ids = [f"Bill #{bill.id} ({len(bill.sponsors)} sponsors)" for bill in bills]
+            b_hyperlinks = [f'=HYPERLINK("{bill.link}"; "{bill.name}")' for bill in bills]
+            m_ids = [f"Motion #{motion.id}" for motion in motions]
+            m_hyperlinks = [f'=HYPERLINK("{motion.link}"; "{motion.name}")' for motion in motions]
 
             exported = [
                 f"Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session {session.id} -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n",
@@ -540,86 +534,89 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             exported.append("\n")
             exported.extend(m_hyperlinks)
 
-            link = await self.bot.make_paste("\n".join(exported))
-            txt = (
-                f"**__Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}__**\nI exported this "
-                f"session's bills and motions into a format that you can easily copy & paste into "
-                f"Google Spreadsheets, for example for a Legislative Docket. See the video below "
-                f"to see how to speed up your Speaker duties with this command.\n\n**Export:** <{link}>\n\n"
-                "https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662/howtoexport.mp4"
-            )
+            spreadsheet_formatting_link = await self.bot.make_paste("\n".join(exported))
 
-        await ctx.send(txt)
-
-        question = await ctx.send(
-            f"{config.USER_INTERACTION_REQUIRED} Do you want me to generate the Google Forms "
-            f"voting form for Legislative Session #{session.id} as well? "
+        form_url = await ctx.input(
+            f"{config.USER_INTERACTION_REQUIRED} Reply with an **edit** link to an **empty** Google Forms "
+            f"form you created. I will then fill that form to make it the voting form.\n{config.HINT} "
+            "*Create a new Google Form here: <https://forms.new>, then click on the three dots in the upper right, "
+            "then on 'Add collaborators', after which a new window should pop up. "
+            "Click on 'Change' on the bottom left, and change the link from 'Restricted' to the other option. "
+            "Then copy the link and send it here.*",
+            delete_after=True,
+            timeout=400,
         )
 
-        reaction = await ctx.ask_to_continue(message=question, emoji=config.YES, timeout=60)
-
-        if not reaction:
+        if not form_url:
             ctx.command.reset_cooldown(ctx)
             return
 
-        elif reaction:
-            form_url = await ctx.input(
-                f"{config.USER_INTERACTION_REQUIRED} Reply with an **edit** link to an **empty** Google Forms "
-                f"form you created. I will then fill that form to make it the voting form.\n{config.HINT} "
-                "*Create a new Google Form here: <https://forms.new>, then click on the three dots in the upper right, "
-                "then on 'Add collaborators', after which a new window should pop up. "
-                "Click on 'Change' on the bottom left, and change the link from 'Restricted' to the other option. "
-                "Then copy the link and send it here.*",
-                delete_after=True,
-                timeout=400,
+        if not self.is_google_doc_link(form_url):
+            ctx.command.reset_cooldown(ctx)
+            return await ctx.send(f"{config.NO} That doesn't look like a Google Forms URL.")
+
+        min_sponsors = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the minimum amount of "
+                                       f"sponsors a bill needs to be included on the "
+                                       f"Voting Form.\n{config.HINT} If you "
+                                       f"reply with `0`, every bill will be included, "
+                                       f"regardless the amount of sponsors it has."
+                                       f"\n{config.HINT} Motions don't have a lot of the features that bills have. "
+                                       f"Motions cannot be sponsored, so all motions will be on the form.")
+
+        try:
+            min_sponsors = int(min_sponsors)
+        except ValueError:
+            return await ctx.send(f"{config.NO} You didn't reply with a number.")
+
+        bills = list(filter(lambda b: len(b.sponsors) >= min_sponsors, bills))
+
+        generating = await ctx.send(
+            f"{config.YES} I will generate the voting form for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}."
+            f"\n:arrows_counterclockwise: This may take a few minutes..."
+        )
+
+        async with ctx.typing():
+            bills_info = {b.name: b.link for b in bills}
+            motions_info = {m.name: m.link for m in motions}
+
+            result = await self.bot.run_apps_script(
+                script_id="MME1GytLY6YguX02rrXqPiGqnXKElby-M",
+                function="generate_form",
+                parameters=[form_url, session.id, bills_info, motions_info],
             )
 
-            if not form_url:
-                ctx.command.reset_cooldown(ctx)
-                return
+        embed = text.SafeEmbed(
+            title=f"Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}",
+            description="Make sure to double check the form to make sure it's "
+            "correct.\n\nNote that you may have to adjust "
+            "the form to comply with this nation's laws as this comes with no guarantees of a form's valid "
+            "legal status.\n\nRemember to change the edit link you "
+            f"gave me earlier to be **'Restricted'** again.",
+        )
 
-            if not self.is_google_doc_link(form_url):
-                ctx.command.reset_cooldown(ctx)
-                return await ctx.send(f"{config.NO} That doesn't look like a Google Forms URL.")
+        embed.add_field(
+            name="Voting Form",
+            value=f"Link: {result['response']['result']['view']}\n\n"
+                  f"Shortened: {result['response']['result']['short-view']}",
+            inline=False,
+        )
 
-            await ctx.send(
-                f"{config.YES} I will generate the voting form for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}."
-                f"\n:arrows_counterclockwise: This may take a few minutes..."
-            )
+        embed.add_field(
+            name="Legislative Docket",
+            value=f"This session's bills and motions were exported into a format that you can easily copy & "
+                  f"paste into Google Spreadsheets, for example for a Legislative Docket. See "
+                  f"[this video](https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662"
+                  f"/howtoexport.mp4) to see how to speed up your Speaker duties.\n\n"
+                  f"Bills & Motions in Google Spreadsheets formatting: {spreadsheet_formatting_link}",
 
-            async with ctx.typing():
-                bills = {b.name: b.link for b in [await Bill.convert(ctx, _b) for _b in session.bills]}
-                motions = {m.name: m.link for m in [await Motion.convert(ctx, _m) for _m in session.motions]}
+            inline=False,
+        )
 
-                result = await self.bot.run_apps_script(
-                    script_id="MME1GytLY6YguX02rrXqPiGqnXKElby-M",
-                    function="generate_form",
-                    parameters=[form_url, session.id, bills, motions],
-                )
+        embed.set_footer(text="You can use this voting form to start the Voting Period of a session with: "
+                              f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session vote.")
 
-            embed = text.SafeEmbed(
-                title=f"Generated Voting Form for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}",
-                description="Remember to double check the form to make sure it's "
-                "correct.\n\nNote that you may have to adjust "
-                "the form to comply with this nation's laws.\n"
-                "This comes with no guarantees of a form's valid "
-                "legal status.\n\nRemember to change the edit link you "
-                f"gave me earlier to be **'Restricted'** again.\n\nYou can use this "
-                f"voting form for `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session vote` "
-                f"now.",
-            )
-
-            embed.add_field(
-                name="Link to the Voting Form",
-                value=result["response"]["result"]["view"],
-                inline=False,
-            )
-            embed.add_field(
-                name="Shortened Link to the Voting Form",
-                value=result["response"]["result"]["short-view"],
-                inline=False,
-            )
-            await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
+        self.bot.loop.create_task(generating.delete())
 
     async def paginate_all_sessions(self, ctx):
         all_sessions = await self.bot.db.fetch("SELECT id, opened_on, closed_on FROM legislature_session ORDER BY id")

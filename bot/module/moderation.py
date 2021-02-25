@@ -124,9 +124,9 @@ class Moderation(context.CustomCog):
         if mod_role is None:
             return
 
-        mod_channel = self.bot.get_democraciv_channel(mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL)
-
-        if not mod_channel:
+        try:
+            mod_channel = self.bot.get_democraciv_channel(mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL)
+        except exceptions.ChannelNotFoundError:
             return
 
         if mod_role in message.role_mentions:

@@ -279,10 +279,7 @@ class GovernmentMixin:
             "https://goo.gl/forms",
         )
 
-        if len(link) < 15 or not link.startswith(valid_google_docs_url_strings):
-            return False
-        else:
-            return True
+        return len(link) >= 15 and link.startswith(valid_google_docs_url_strings)
 
     async def get_active_leg_session(self) -> typing.Optional[models.Session]:
         session_id = await self.bot.db.fetchval("SELECT id FROM legislature_session WHERE is_active = true")

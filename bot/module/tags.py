@@ -105,7 +105,7 @@ class Tags(context.CustomCog):
 
             if tag.is_embedded:
                 if tag_content_type is TagContentType.IMAGE:
-                    embed = discord.Embed(colour=0x2F3136)
+                    embed = discord.Embed(title=tag.title, colour=0x2F3136)
                     embed.set_image(url=tag.content)
 
                     try:
@@ -733,7 +733,7 @@ class Tags(context.CustomCog):
 
         if tag_details["is_embedded"]:
             if tag_content_type is TagContentType.IMAGE:
-                embed = text.SafeEmbed(colour=0x2F3136)
+                embed = text.SafeEmbed(title=tag_details['title'], colour=0x2F3136)
                 embed.set_image(url=tag_details["content"])
 
                 try:
