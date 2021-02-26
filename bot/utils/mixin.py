@@ -329,16 +329,20 @@ class GovernmentMixin:
 
     @property
     def legislator_role(self) -> typing.Optional[discord.Role]:
-        return self.bot.get_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+        try:
+            return self.bot.get_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+        except exceptions.RoleNotFoundError:
+            return None
 
     async def dm_legislators(self, *, message: str, reason: str):
+        if not self.legislator_role:
+            return
+
         for legislator in self.legislator_role.members:
             await self.bot.safe_send_dm(target=legislator, reason=reason, message=message)
 
     def is_cabinet(self, member: discord.Member) -> bool:
-        if self.speaker_role in member.roles or self.vice_speaker_role in member.roles:
-            return True
-        return False
+        return self.speaker_role in member.roles or self.vice_speaker_role in member.roles
 
     @property
     def justice_role(self) -> typing.Optional[discord.Role]:

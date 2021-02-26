@@ -459,7 +459,7 @@ class Tags(context.CustomCog):
             )
 
         embed.add_field(name="Global Tag", value=is_global, inline=True)
-        embed.add_field(name="Embedded Tag", value=is_embedded, inline=True)
+        embed.add_field(name="Tag Format", value="Embed" if is_embedded else "Plain Text", inline=True)
         embed.add_field(name="Uses", value=tag.uses, inline=False)
         embed.add_field(name="Aliases", value=pretty_aliases, inline=False)
         await ctx.send(embed=embed)

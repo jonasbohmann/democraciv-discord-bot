@@ -208,14 +208,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             session = await self.get_last_leg_session()
 
             if session is None:
-                return await ctx.send(
-                    embed=text.SafeEmbed(
-                        title="There hasn't been a session yet.",
-                        description=f"The {self.bot.mk.speaker_term} can open "
-                                    f"one at any time with "
-                                    f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session open`.",
-                    )
-                )
+                return await ctx.send(f"{config.NO} There hasn't been a session yet.\n{config.HINT} The "
+                                      f"{self.bot.mk.speaker_term} can open one at any time with "
+                                      f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session open`.")
 
         if len(session.bills) > 0:
             pretty_bills = []
@@ -360,7 +355,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             reason="leg_session_open",
             message=f":envelope_with_arrow: The **submission period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
                     f" #{new_session} has started! Submit your bills and motions with "
-                    f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit` on the {self.bot.dciv.name} server.",
+                    f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit` on the {self.bot.dciv.name} server."
         )
 
     @leg_session.command(name="vote", aliases=["u", "v", "update"])
@@ -693,7 +688,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
                 messages.append(_message)
                 await ctx.send(f"{config.YES} That message was added to the text of your bill.\n{config.HINT} You can "
-                               f"continue writing. Write just the word `stop` to stop this process.\n"
+                               f"write more messages if you want. If not, reply with just the word `stop` to stop "
+                               f"and continue with the submission process.\n"
                                f"{config.HINT} If you edit or delete any of your messages, I will also "
                                f"reflect that change in the text of your bill.")
             except asyncio.TimeoutError:
@@ -736,7 +732,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             if mes.content:
                 bill_text.append(mes.clean_content)
 
-        bill_text = "\n".join(bill_text)
+        bill_text = "\n\n".join(bill_text)
 
         async with ctx.typing():
             result = await self.bot.run_apps_script(
@@ -751,9 +747,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         if "share_error" in result["response"]["result"]:
             await ctx.send(
-                f"{config.NO} There was an error while setting the link of your "
-                f"Google Docs document to public. Unfortunately this error just sometimes happens "
-                f"on Google's side, and there is nothing I can do to circumvent it.\n"
+                f"{config.NO} While generating the Google Doc for your bill was successful, there was an error while "
+                f"setting the link of your Google Docs document to public. Unfortunately this error just sometimes "
+                f"happens on Google's side, and there is nothing I can do to circumvent it. "
                 f"Please set the link to public by yourself, or otherwise no one else can "
                 f"view your bill: <{fixed_link}>"
             )
