@@ -733,10 +733,7 @@ class DemocracivBot(commands.Bot):
         await self.process_commands(message)
 
     async def on_message_edit(self, before, after):
-        if before.author.bot:
-            return
-
-        if before.content and after.content and before.content != after.content:
+        if not before.author.bot and before.content and after.content and before.content != after.content:
             await self.process_commands(after)
 
     async def on_guild_join(self, guild: discord.Guild):

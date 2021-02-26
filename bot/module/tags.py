@@ -712,6 +712,11 @@ class Tags(context.CustomCog):
         self.bot.loop.create_task(self._update_tag_uses(tag_record["id"]))
         return tag_record
 
+    @commands.Cog.listener()
+    async def on_message_edit(self, before, after):
+        if not before.author.bot and before.content and after.content and before.content != after.content:
+            await self.tag_listener(after)
+
     @commands.Cog.listener(name="on_message")
     async def tag_listener(self, message):
         if message.author.bot:
