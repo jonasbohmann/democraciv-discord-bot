@@ -106,8 +106,9 @@ class Utility(context.CustomCog):
             f"subreddit **r/{config.DEMOCRACIV_SUBREDDIT}** in one, single press post?"
             f"\n{config.HINT} *You have 2 minutes to decide. After that with no reaction from you I "
             f"will cancel this process and delete this message.*"
-            f"\n{config.HINT} *I will stop asking you this if you have the `{never_role_name}` role. "
-            f"That role is a selfrole, so you can get it with `{config.BOT_PREFIX}role {never_role_name}`.*",
+            f"\n{config.HINT} *If you would like to opt-out from this feature entirely so that I "
+            f"no longer ask you this, give yourself the `{never_role_name}` selfrole with "
+            f"`{config.BOT_PREFIX}role {never_role_name}`.*",
             allowed_mentions=discord.AllowedMentions(users=True),
             delete_after=120,
         )

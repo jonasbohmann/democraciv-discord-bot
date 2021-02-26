@@ -31,7 +31,7 @@ class Selfroles(context.CustomCog):
             name=f"Selfroles in {ctx.guild.name}",
             icon_url=ctx.guild.icon_url_as(static_format="png"),
         )
-        embed.set_footer(text=f"In order to add or remove a role from you, use '{config.BOT_PREFIX}role <role>'")
+        embed.set_footer(text=f"In order to add or remove a role from you, use: {config.BOT_PREFIX}role <role>")
         await ctx.send(embed=embed)
 
     @commands.group(
