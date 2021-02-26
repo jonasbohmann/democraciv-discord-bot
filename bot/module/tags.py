@@ -591,8 +591,8 @@ class Tags(context.CustomCog):
         db_query = """SELECT tag.name, tag.title FROM tag
                       JOIN tag_lookup l on l.tag_id = tag.id
                       WHERE (tag.global = true OR tag.guild_id = $2)
-                      AND (l.alias % $1 OR l.alias LIKE '%' || $1 || '%' OR tag.title LIKE '%' || $1 || '%' 
-                          OR tag.content LIKE '%' || $1 || '%')
+                      AND (lower(l.alias) % $1 OR lower(l.alias) LIKE '%' || $1 || '%' OR lower(tag.title) LIKE '%' || $1 || '%' 
+                          OR lower(tag.content) LIKE '%' || $1 || '%')
                       ORDER BY similarity(l.alias, $1) DESC
                       LIMIT 20
                     """

@@ -599,7 +599,7 @@ class OwnedTag(Tag):
             except exceptions.RoleNotFoundError:
                 pass
 
-        if tag.author.id == ctx.author.id or ctx.author.guild_permissions.administrator:
+        if (tag.author and tag.author.id == ctx.author.id) or ctx.author.guild_permissions.administrator or ctx.author.id == ctx.bot.owner_id:
             return tag
 
         raise exceptions.TagError(f"{config.NO} That isn't your tag.")
