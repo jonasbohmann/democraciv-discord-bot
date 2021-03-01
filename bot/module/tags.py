@@ -427,7 +427,7 @@ class Tags(context.CustomCog):
         embed = text.SafeEmbed(title=tag.title)
 
         is_global = "Yes" if tag.is_global else "No"
-        is_embedded = "Yes" if tag.is_embedded else "No"
+        is_embedded = "Embed" if tag.is_embedded else "Plain Text"
 
         if isinstance(tag.author, discord.Member):
             embed.add_field(name="Author", value=tag.author.mention, inline=False)
@@ -459,7 +459,7 @@ class Tags(context.CustomCog):
             )
 
         embed.add_field(name="Global Tag", value=is_global, inline=True)
-        embed.add_field(name="Tag Format", value="Embed" if is_embedded else "Plain Text", inline=True)
+        embed.add_field(name="Tag Format", value=is_embedded, inline=True)
         embed.add_field(name="Uses", value=tag.uses, inline=False)
         embed.add_field(name="Aliases", value=pretty_aliases, inline=False)
         await ctx.send(embed=embed)
