@@ -44,6 +44,7 @@ all_extensions = {
     "bot.module.utility",
     "bot.module.guild",
     "bot.module.admin",
+    "bot.module.npcs",
     "bot.module.tags",
     "bot.module.starboard",
     "bot.module.moderation",

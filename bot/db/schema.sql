@@ -182,6 +182,40 @@ CREATE TABLE IF NOT EXISTS dm_setting(
     party_join_leave bool DEFAULT TRUE NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS npc(
+    id serial PRIMARY KEY,
+    name text NOT NULL,
+    avatar_url text,
+    owner_id bigint NOT NULL,
+    trigger_phrase text NOT NULL,
+    UNIQUE (owner_id, trigger_phrase),
+    UNIQUE (owner_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS npc_allowed_user(
+    id serial PRIMARY KEY,
+    npc_id serial references npc(id) ON DELETE CASCADE,
+    user_id bigint NOT NULL,
+    UNIQUE (npc_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS npc_automatic_mode(
+    id serial PRIMARY KEY,
+    npc_id serial references npc(id) ON DELETE CASCADE,
+    user_id bigint NOT NULL,
+    channel_id bigint NOT NULL,
+    guild_id bigint NOT NULL,
+    UNIQUE (npc_id, user_id, channeL_id)
+);
+
+
+CREATE TABLE IF NOT EXISTS npc_webhook(
+    guild_id bigint NOT NULL,
+    channel_id bigint PRIMARY KEY NOT NULL,
+    webhook_id bigint NOT NULL,
+    webhook_token text NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS starboard_entry(
     id serial PRIMARY KEY,
     author_id bigint,
