@@ -429,8 +429,8 @@ class NPC(CustomCog):
            `{PREFIX}{COMMAND} 2` using the NPC's ID
            `{PREFIX}{COMMAND} Ecological Democratic Party` using the NPC's name"""
 
-        embed = text.SafeEmbed(description=f"You can edit this NPC with `{config.BOT_PREFIX}npc edit {npc['id']}`, "
-                                           f"or delete it with `{config.BOT_PREFIX}npc delete {npc['id']}`.")
+        embed = text.SafeEmbed(description=f"You can edit the name, avatar and/or the trigger "
+                                           f"phrase of this NPC with `{config.BOT_PREFIX}npc edit {npc['id']}`.")
 
         embed.set_author(name=f"NPC #{npc['id']} - {npc['name']}",
                          icon_url=npc['avatar_url'] or self.bot.user.avatar_url_as(static_format="png"))
@@ -457,6 +457,21 @@ class NPC(CustomCog):
         embed.add_field(name="People with access to this NPC",
                         value="\n".join(pretty_people),
                         inline=False)
+
+        if ctx.guild:
+            automatic_channel = await self.bot.db.fetch(
+                "SELECT channel_id FROM npc_automatic_mode WHERE user_id = $1 AND guild_id = $2 AND npc_id = $3",
+                ctx.author.id, ctx.guild.id, npc['id'])
+
+            pretty_chan = []
+
+            for chan in automatic_channel:
+                c = ctx.guild.get_channel(chan['channel_id'])
+                pretty_chan.append(f"{c.mention if type(c) is discord.TextChannel else f'{c.name} Category'}")
+
+            embed.add_field(name="Automatic Mode",
+                            value="\n".join(pretty_chan) or "You don't have automatic mode enabled for this "
+                                                            "NPC in any channel or channel category on this server.")
         await ctx.send(embed=embed)
 
     @npc.group(name="automatic", aliases=['auto'], invoke_without_command=True, case_insensitive=True)
@@ -470,7 +485,14 @@ class NPC(CustomCog):
             ctx.author.id, ctx.guild.id)
 
         grouped_by_npc = collections.defaultdict(list)
-        pretty = []
+        pretty = [f"If you want to automatically speak as an NPC in a certain channel or channel category "
+                  f"without having to use the trigger phrase, use `{config.BOT_PREFIX}npc automatic "
+                  f"on <npc name>`, or disable it with "
+                  f"`{config.BOT_PREFIX}npc automatic off <npc name>`.\n\nYou can only have one "
+                  f"automatic NPC per channel.\n\nIf you have one NPC as automatic in an entire category, "
+                  f"but a different NPC in a single channel that is that same category, and you write "
+                  f"something in that channel, you will only speak as the NPC for that "
+                  f"specific channel, and not as both NPCs.\n\n"]
 
         for record in automatic_channel:
             grouped_by_npc[record['npc_id']].append(ctx.guild.get_channel(record['channel_id']))
@@ -481,22 +503,16 @@ class NPC(CustomCog):
             pretty_chan = "\n".join(pretty_chan)
             pretty.append(f"**__{npc['name']}__**\n{pretty_chan}\n")
 
-        if pretty:
-            pretty.insert(0, f"If you want to automatically speak as an NPC in a certain channel or channel category "
-                             f"without having to use the trigger phrase, use `{config.BOT_PREFIX}npc automatic "
-                             f"on <npc name>`, or disable it with "
-                             f"`{config.BOT_PREFIX}npc automatic off <npc name>`.\n\nYou can only have one "
-                             f"automatic NPC per channel.\n\nIf you have one NPC as automatic in an entire category, "
-                             f"but a different NPC in a single channel that is that same category, and you write "
-                             f"something in that channel, you will only speak as the NPC for that "
-                             f"specific channel, and not as both NPCs.\n\n")
+        if len(pretty) > 1:
+            pages = paginator.SimplePages(entries=pretty,
+                                          icon=ctx.guild_icon,
+                                          author=f"{ctx.author.display_name}'s Automatic NPCs")
+            await pages.start(ctx)
 
-        pages = paginator.SimplePages(entries=pretty,
-                                      icon=ctx.guild_icon,
-                                      author=f"{ctx.author.display_name}'s Automatic NPCs",
-                                      empty_message="You don't have any automatic NPCs in "
-                                                    "any channel or category on this server.")
-        await pages.start(ctx)
+        else:
+            embed = text.SafeEmbed(description=pretty[0])
+            embed.set_author(name=f"{ctx.author.display_name}'s Automatic NPCs", icon_url=ctx.guild_icon)
+            await ctx.send(embed=embed)
 
     @automatic.command(name="on", aliases=['enable'])
     @commands.guild_only()
