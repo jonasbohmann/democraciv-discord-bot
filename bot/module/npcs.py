@@ -579,6 +579,29 @@ class NPC(CustomCog):
         await ctx.send(f"{config.YES} You will __no longer__ automatically speak as "
                        f"your NPC `{npc['name']}` in those channels or categories.")
 
+    @automatic.command(name="clear", aliases=['remove', 'delete'])
+    @commands.guild_only()
+    async def clear(self, ctx: CustomContext, *, npc: AccessToNPCConverter):
+        """Disable automatic mode for an NPC you have access to in all channels on this server at once
+
+        **Example**
+           `{PREFIX}{COMMAND} 2` using the NPC's ID
+           `{PREFIX}{COMMAND} Ecological Democratic Party` using the NPC's name"""
+
+        channel = await self.bot.db.fetch(
+            "DELETE FROM npc_automatic_mode WHERE npc_id = $1 AND user_id = $2 AND guild_id = $3 RETURNING channel_id",
+            npc['id'], ctx.author.id, ctx.guild.id
+        )
+
+        for record in channel:
+            try:
+                del self._automatic_npc_cache[ctx.author.id][record['channel_id']]
+            except KeyError:
+                continue
+
+        await ctx.send(f"{config.YES} You will __no longer__ automatically speak as "
+                       f"your NPC `{npc['name']}` in any channel on this server.")
+
     async def _get_channel_input(self, ctx):
         channel_text = (await ctx.input()).splitlines()
 
