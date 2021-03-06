@@ -24,7 +24,9 @@ from bot.utils import text
 
 
 class Starboard(context.CustomCog):
-    """The Starboard. If a message on the {democraciv} Server has at least 5 :star: reactions,
+    """The Starboard.
+
+    If a message on the {democraciv} Server has at least 5 :star: reactions,
     it will be posted to the Starboard channel and in a weekly summary to the subreddit every Saturday."""
 
     def __init__(self, bot):

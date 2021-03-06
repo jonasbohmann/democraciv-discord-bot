@@ -194,7 +194,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
 
         Useful for applying amendments to laws if the current Speaker does not own the law's Google Doc.
 
-        **Example**:
+        **Example**
             `{PREFIX}{COMMAND} 16 https://docs.google.com/1/d/ajgh3egfdjfnjdf`
         """
 
