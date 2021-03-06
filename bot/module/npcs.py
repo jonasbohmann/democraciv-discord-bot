@@ -206,7 +206,7 @@ class NPC(CustomCog):
             if webhook:
                 return webhook
 
-    @commands.group(name="npc", invoke_without_command=True, case_insensitive=True)
+    @commands.group(name="npc", aliases=['npcs'], invoke_without_command=True, case_insensitive=True)
     async def npc(self, ctx: CustomContext):
         """What is an NPC?"""
         embed = text.SafeEmbed(title="NPCs", description="This is still in development.")
