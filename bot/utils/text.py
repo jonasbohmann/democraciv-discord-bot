@@ -1,3 +1,4 @@
+import collections
 import copy
 import datetime
 import typing
@@ -9,7 +10,7 @@ from bot.utils import models
 
 
 def split_string(string: str, length: int):
-    return list((string[0 + i : length + i] for i in range(0, len(string), length)))
+    return list((string[0 + i: length + i] for i in range(0, len(string), length)))
 
 
 # todo fix this shit
@@ -90,7 +91,7 @@ class AnnouncementScheduler:
     @tasks.loop(seconds=30)
     async def _wait(self):
         if self._last_addition is not None and datetime.datetime.utcnow() - self._last_addition > datetime.timedelta(
-            minutes=5
+                minutes=5
         ):
             self._last_addition = None
             await self.send_messages()
@@ -113,12 +114,12 @@ class SafeEmbed(discord.Embed):
             self.title = f"{self.title[:250]}..."
 
     def add_field(
-        self,
-        *,
-        name: typing.Any,
-        value: typing.Any,
-        inline: bool = True,
-        too_long_value: str = "*Too long to display.*",
+            self,
+            *,
+            name: typing.Any,
+            value: typing.Any,
+            inline: bool = True,
+            too_long_value: str = "*Too long to display.*",
     ):
         field_index = len(self.fields)
         name = str(name)
@@ -178,6 +179,67 @@ class FuzzyChoose(menus.Menu):
 
     async def cancel(self, payload):
         self.result = None
+        self.stop()
+
+    async def prompt(self, ctx):
+        await self.start(ctx, wait=True)
+        return self.result
+
+
+EditModelResult = collections.namedtuple("EditModelResult", ["confirmed", "choices"])
+
+
+class EditModelMenu(menus.Menu):
+    def __init__(self, choices_with_formatted_explanation: typing.Dict[str, str], *,
+                 title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?"):
+        super().__init__(timeout=120.0, delete_message_after=True)
+        self.choices = choices_with_formatted_explanation
+        self.title = title
+        self._confirmed = False
+        self._result = {choice: False for choice in self.choices.keys()}
+        self._mapping = {}
+        self._make_result()
+
+        for i, choice in enumerate(self.choices.keys(), start=1):
+            emoji = f"{i}\N{variation selector-16}\N{combining enclosing keycap}"
+            button = menus.Button(emoji=emoji, action=self.on_button)
+            self.add_button(button=button)
+            self._mapping[emoji] = choice
+
+        confirm = menus.Button(emoji=config.YES, action=self.confirm)
+        self.add_button(confirm)
+
+        cancel = menus.Button(emoji=config.NO, action=self.cancel)
+        self.add_button(cancel)
+
+    def _make_result(self):
+        self.result = EditModelResult(confirmed=self._confirmed, choices=self._result)
+        return self.result
+
+    async def send_initial_message(self, ctx, channel):
+        embed = SafeEmbed(title=self.title)
+
+        fmt = [f"Select as many things as you want, then click the {config.YES} button to continue, "
+               f"or {config.NO} to cancel.\n"]
+
+        for emoji, choice in self._mapping.items():
+            fmt.append(f"{emoji}  {self.choices[choice]}")
+
+        fmt = "\n".join(fmt)
+        embed.description = fmt
+        return await ctx.send(embed=embed)
+
+    async def on_button(self, payload):
+        choice = self._mapping[str(payload.emoji)]
+        self._result[choice] = not self._result[choice]
+
+    async def confirm(self, payload):
+        self._confirmed = True
+        self._make_result()
+        self.stop()
+
+    async def cancel(self, payload):
+        self._make_result()
         self.stop()
 
     async def prompt(self, ctx):

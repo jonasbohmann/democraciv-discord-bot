@@ -1,11 +1,10 @@
-import collections
 import re
 import enum
 import typing
 import discord
 
 from bot.config import config, mk
-from discord.ext import commands, menus
+from discord.ext import commands
 from bot.utils import context, checks
 from bot.utils.converter import (
     Tag,
@@ -25,55 +24,6 @@ class TagContentType(enum.Enum):
     YOUTUBE_TENOR_GIPHY = 5
     VIDEO = 6
     PARTIAL_IMAGE = 7
-
-
-class EditTagMenu(menus.Menu):
-    def __init__(self):
-        super().__init__(timeout=120.0, delete_message_after=True)
-        self._make_result()
-
-    def _make_result(self):
-        self.result = collections.namedtuple("EditTagMenuResult", ["confirmed", "result"])
-        self.result.confirmed = False
-        self.result.result = {"embed": False, "title": False, "content": False}
-        return self.result
-
-    async def send_initial_message(self, ctx, channel):
-        embed = text.SafeEmbed(
-            title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
-            description=f"Select as many things as you want, then click "
-                        f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
-                        f":one: Send Tag as embed or plain text\n"
-                        f":two: Tag Title\n"
-                        f":three: Tag Content",
-        )
-        return await ctx.send(embed=embed)
-
-    @menus.button("1\N{variation selector-16}\N{combining enclosing keycap}")
-    async def on_first_choice(self, payload):
-        self.result.result["embed"] = not self.result.result["embed"]
-
-    @menus.button("2\N{variation selector-16}\N{combining enclosing keycap}")
-    async def on_second_choice(self, payload):
-        self.result.result["title"] = not self.result.result["title"]
-
-    @menus.button("3\N{variation selector-16}\N{combining enclosing keycap}")
-    async def on_third_choice(self, payload):
-        self.result.result["content"] = not self.result.result["content"]
-
-    @menus.button(config.YES)
-    async def confirm(self, payload):
-        self.result.confirmed = True
-        self.stop()
-
-    @menus.button(config.NO)
-    async def cancel(self, payload):
-        self._make_result()
-        self.stop()
-
-    async def prompt(self, ctx):
-        await self.start(ctx, wait=True)
-        return self.result
 
 
 class Tags(context.CustomCog):
@@ -514,13 +464,15 @@ class Tags(context.CustomCog):
     async def edittag(self, ctx: context.CustomContext, *, tag: OwnedTag):
         """Edit one of your tags"""
 
-        result = await EditTagMenu().prompt(ctx)
+        menu = text.EditModelMenu(choices_with_formatted_explanation={"embed": "Send Tag as embed or plain text",
+                                                                      "title": "Tag Title", "content": "Tag Content"})
+        result = await menu.prompt(ctx)
         p = config.BOT_PREFIX
 
         if not result.confirmed:
             return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
 
-        to_change = result.result
+        to_change = result.choices
 
         if True not in to_change.values():
             return await ctx.send(f"{config.NO} You didn't decide on what to edit.")

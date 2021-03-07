@@ -1,27 +1,35 @@
-import collections
-
+import typing
 import asyncpg
 import discord
-import typing
+import collections
 
-from discord.ext import commands, menus
+from discord.ext import commands
 
 from bot.config import config
 from bot.utils.context import CustomContext, CustomCog
 from bot.utils import text, converter, paginator
 
 # TODO
-# - edit proxy message  (dms by reaction, else ctx)
-# - remove proxy message
-# - reveal proxy message (dms by reaction, else ctx)
-# - npc model
 # - cache or db
-# - EditXMenu superclass
 
 NPCPrefixSuffix = collections.namedtuple("NPCPrefixSuffix", ["npc_id", "prefix", "suffix"])
 
 
-class OwnNPCConverter(commands.Converter):
+class NPCConverter(commands.Converter):
+    """Represents an NPC that the ctx.author owns"""
+
+    def __init__(self, **kwargs):
+        self.id: int = kwargs.get("id")
+        self.name: str = kwargs.get("name")
+        self.avatar_url: str = kwargs.get("avatar_url")
+        self.trigger_phrase: str = kwargs.get("trigger_phrase")
+        self.owner_id: int = kwargs.get("owner_id")
+        self._bot = kwargs.get("bot")
+
+    @property
+    def owner(self) -> typing.Union[discord.Member, discord.User]:
+        return self._bot.dciv.get_member(self.owner_id) or self._bot.get_user(self.owner_id)
+
     @classmethod
     async def convert(cls, ctx, argument):
         arg = argument.lower()
@@ -39,12 +47,12 @@ class OwnNPCConverter(commands.Converter):
                                           arg, arg_id, ctx.author.id)
 
         if match:
-            return dict(match)
+            return cls(**match, bot=ctx.bot)
 
         raise commands.BadArgument(f"{config.NO} You don't have an NPC that matches `{argument}`.")
 
 
-class AccessToNPCConverter(OwnNPCConverter):
+class AccessToNPCConverter(NPCConverter):
     @classmethod
     async def convert(cls, ctx, argument):
         try:
@@ -69,58 +77,9 @@ class AccessToNPCConverter(OwnNPCConverter):
             match = await ctx.bot.db.fetchrow(sql, ctx.author.id, arg, arg_id)
 
             if match:
-                return dict(match)
+                return cls(**match, bot=ctx.bot)
 
             raise commands.BadArgument(f"{config.NO} You don't have access to an NPC that matches `{argument}`.")
-
-
-class EditNPCMenu(menus.Menu):
-    def __init__(self):
-        super().__init__(timeout=120.0, delete_message_after=True)
-        self._make_result()
-
-    def _make_result(self):
-        self.result = collections.namedtuple("EditNPCMenuResult", ["confirmed", "result"])
-        self.result.confirmed = False
-        self.result.result = {"name": False, "avatar": False, "trigger_phrase": False}
-        return self.result
-
-    async def send_initial_message(self, ctx, channel):
-        embed = text.SafeEmbed(
-            title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
-            description=f"Select as many things as you want, then click "
-                        f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
-                        f":one: Name\n"
-                        f":two: Avatar\n"
-                        f":three: Trigger Phrase",
-        )
-        return await ctx.send(embed=embed)
-
-    @menus.button("1\N{variation selector-16}\N{combining enclosing keycap}")
-    async def on_first_choice(self, payload):
-        self.result.result["name"] = not self.result.result["name"]
-
-    @menus.button("2\N{variation selector-16}\N{combining enclosing keycap}")
-    async def on_second_choice(self, payload):
-        self.result.result["avatar"] = not self.result.result["avatar"]
-
-    @menus.button("3\N{variation selector-16}\N{combining enclosing keycap}")
-    async def on_third_choice(self, payload):
-        self.result.result["trigger_phrase"] = not self.result.result["trigger_phrase"]
-
-    @menus.button(config.YES)
-    async def confirm(self, payload):
-        self.result.confirmed = True
-        self.stop()
-
-    @menus.button(config.NO)
-    async def cancel(self, payload):
-        self._make_result()
-        self.stop()
-
-    async def prompt(self, ctx):
-        await self.start(ctx, wait=True)
-        return self.result
 
 
 class NPC(CustomCog):
@@ -139,6 +98,9 @@ class NPC(CustomCog):
 
         # user id -> {channel_id -> npc_id}
         self._automatic_npc_cache: typing.Dict[int, typing.Dict[int, int]] = collections.defaultdict(dict)
+
+        # channel id -> {message id -> real author id}
+        self._recent_npc_messages = collections.defaultdict(dict)
 
         self.bot.loop.create_task(self._make_webhook_adapter())
         self.bot.loop.create_task(self._load_webhook_cache())
@@ -311,22 +273,30 @@ class NPC(CustomCog):
         self._npc_access_cache[ctx.author.id].append(npc_record['id'])
 
         example = trigger_phrase.replace("text", "Hello!")
-        await ctx.send(f"{config.YES} Your NPC `{name}` was created. Try speaking as them with `{example}`.")
+        await ctx.send(f"{config.YES} The NPC #{npc_record['id']} `{name}` was created. Try speaking as them "
+                       f"with `{example}`. \n{config.HINT} You can allow other people to speak as this "
+                       f"NPC with `{config.BOT_PREFIX}npc allow {npc_record['id']}`.\n{config.HINT} The "
+                       f"`{config.BOT_PREFIX}npc automatic` command can be used to let you automatically speak "
+                       f"as this NPC in certain channels, without having to use the trigger phrase.\n{config.HINT} "
+                       f"You can react with :wastebasket: to a message from your NPC to delete it, or with "
+                       f":pencil: to edit it.")
 
     @npc.command(name="edit", aliases=['change', 'update'])
-    async def edit_npc(self, ctx, *, npc: OwnNPCConverter):
+    async def edit_npc(self, ctx, *, npc: NPCConverter):
         """Edit the name, avatar and/or trigger phrase of one of your NPCs
 
         **Example**
            `{PREFIX}{COMMAND} 2` using the NPC's ID
            `{PREFIX}{COMMAND} Ecological Democratic Party` using the NPC's name"""
 
-        result = await EditNPCMenu().prompt(ctx)
+        menu = text.EditModelMenu(choices_with_formatted_explanation={"name": "Name", "avatar": "Avatar",
+                                                                      "trigger_phrase": "Trigger Phrase"})
+        result = await menu.prompt(ctx)
 
         if not result.confirmed:
             return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
 
-        to_change = result.result
+        to_change = result.choices
 
         if True not in to_change.values():
             return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
@@ -334,26 +304,25 @@ class NPC(CustomCog):
         if to_change["name"]:
             name = await ctx.input(
                 f"{config.USER_INTERACTION_REQUIRED} Reply with the new name of your NPC."
-                f"\n{config.HINT} The current name is `{npc['name']}`",
+                f"\n{config.HINT} The current name is `{npc.name}`",
             )
 
             if name.lower() == self.bot.user.name.lower():
                 return await ctx.send(f"{config.NO} You can't have an NPC that is named after me.")
         else:
-            name = npc['name']
-
+            name = npc.name
         if to_change["avatar"]:
             avatar_url = await self._make_avatar(ctx)
         else:
-            avatar_url = npc['avatar_url']
+            avatar_url = npc.avatar_url
 
         if to_change["trigger_phrase"]:
-            trigger_phrase = await self._make_trigger_phrase(ctx, edit=True, old_phrase=npc['trigger_phrase'])
+            trigger_phrase = await self._make_trigger_phrase(ctx, edit=True, old_phrase=npc.trigger_phrase)
         else:
-            trigger_phrase = npc['trigger_phrase']
+            trigger_phrase = npc.trigger_phrase
 
         are_you_sure = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit your NPC `{npc['name']}`?"
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit your NPC `{npc.name}`?"
         )
 
         if not are_you_sure:
@@ -365,26 +334,26 @@ class NPC(CustomCog):
                 name,
                 avatar_url,
                 trigger_phrase,
-                npc['id']
+                npc.id
             )
         except asyncpg.UniqueViolationError:
             return await ctx.send(f"{config.NO} You already have a different NPC with either that same new name, "
                                   f"or that same new trigger phrase.")
 
-        self._npc_cache[npc['id']] = dict(new_npc)
+        self._npc_cache[npc.id] = dict(new_npc)
         await ctx.send(f"{config.YES} Your NPC was edited.")
 
     @npc.command(name="delete", aliases=['remove'])
-    async def remove_npc(self, ctx, *, npc: OwnNPCConverter):
+    async def remove_npc(self, ctx, *, npc: NPCConverter):
         """Delete one of your NPCs
 
         **Example**
            `{PREFIX}{COMMAND} 2` using the NPC's ID
            `{PREFIX}{COMMAND} Ecological Democratic Party` using the NPC's name"""
 
-        await self.bot.db.execute("DELETE FROM npc WHERE name = $1 AND owner_id = $2", npc['name'], ctx.author.id)
-        self._npc_cache.pop(npc['id'])
-        await ctx.send(f"{config.YES} `{npc['name']}` was deleted.")
+        await self.bot.db.execute("DELETE FROM npc WHERE id = $1 AND owner_id = $2", npc.id, ctx.author.id)
+        self._npc_cache.pop(npc.id)
+        await ctx.send(f"{config.YES} `{npc.name}` was deleted.")
 
     @npc.command(name="list")
     async def list_npcs(self, ctx: CustomContext, *, member: typing.Union[
@@ -408,12 +377,17 @@ class NPC(CustomCog):
 
         for record in npcs:
             avatar = f"[Avatar]({record['avatar_url']})\n" if record['avatar_url'] else ""
+
+            owner = ctx.guild.get_member(record['owner_id']) or self.bot.get_user(record['owner_id'])
+            owner_value = "" if not owner else f"Owner: {owner.mention} ({owner})\n"
+
             pretty_npcs.append(
-                f"**__#{record['id']} - {record['name']}__**\n{avatar}Trigger Phrase: `{record['trigger_phrase']}`\n")
+                f"**__NPC #{record['id']} - {record['name']}__**\n{avatar}Trigger Phrase: `{record['trigger_phrase']}`\n{owner_value}")
 
         if pretty_npcs:
-            pretty_npcs.insert(0, f"You can add a new NPC with `{config.BOT_PREFIX}npc add`, "
-                                  f"or edit an existing one with `{config.BOT_PREFIX}npc edit <npc name>`.\n")
+            pretty_npcs.insert(0, f"You can create a new NPC with `{config.BOT_PREFIX}npc create`, "
+                                  f"or edit the name, avatar and/or trigger phrase of an existing one with "
+                                  f"`{config.BOT_PREFIX}npc edit <npc>`.\n")
 
         pages = paginator.SimplePages(author=f"{member.display_name}'s NPCs",
                                       icon=member.avatar_url_as(static_format="png"),
@@ -422,7 +396,7 @@ class NPC(CustomCog):
         await pages.start(ctx)
 
     @npc.command(name="info", aliases=['information', 'show'])
-    async def info(self, ctx, *, npc: OwnNPCConverter):
+    async def info(self, ctx, *, npc: NPCConverter):
         """Detailed information about one of your NPCs
 
         **Example**
@@ -430,22 +404,22 @@ class NPC(CustomCog):
            `{PREFIX}{COMMAND} Ecological Democratic Party` using the NPC's name"""
 
         embed = text.SafeEmbed(description=f"You can edit the name, avatar and/or the trigger "
-                                           f"phrase of this NPC with `{config.BOT_PREFIX}npc edit {npc['id']}`.")
+                                           f"phrase of this NPC with `{config.BOT_PREFIX}npc edit {npc.id}`.")
 
-        embed.set_author(name=f"NPC #{npc['id']} - {npc['name']}",
-                         icon_url=npc['avatar_url'] or self.bot.user.avatar_url_as(static_format="png"))
+        embed.set_author(name=f"NPC #{npc.id} - {npc.name}",
+                         icon_url=npc.avatar_url or "https://cdn.discordapp.com/avatars/487345900239323147/79c38314283392c7e21bab76f77e09e9.png")
 
-        if npc['avatar_url']:
-            embed.set_thumbnail(url=npc['avatar_url'])
+        if npc.avatar_url:
+            embed.set_thumbnail(url=npc.avatar_url)
 
         embed.add_field(name="Trigger Phrase",
-                        value=f"`{npc['trigger_phrase']}`\n\nSend messages as this NPC like this: "
-                              f"`{npc['trigger_phrase'].replace('text', 'Hello!')}`",
+                        value=f"`{npc.trigger_phrase}`\n\nSend messages as this NPC like this: "
+                              f"`{npc.trigger_phrase.replace('text', 'Hello!')}`",
                         inline=False)
 
-        allowed_people = await self.bot.db.fetch("SELECT user_id FROM npc_allowed_user WHERE npc_id = $1", npc['id'])
-        pretty_people = [f"Allow other people to speak as this NPC with `{config.BOT_PREFIX}npc allow {npc['id']}`, "
-                         f"or deny someone you previously allowed with `{config.BOT_PREFIX}npc deny {npc['id']}`.\n",
+        allowed_people = await self.bot.db.fetch("SELECT user_id FROM npc_allowed_user WHERE npc_id = $1", npc.id)
+        pretty_people = [f"Allow other people to speak as this NPC with `{config.BOT_PREFIX}npc allow {npc.id}`, "
+                         f"or deny someone you previously allowed with `{config.BOT_PREFIX}npc deny {npc.id}`.\n",
                          f"{ctx.author.mention} ({ctx.author})"]
 
         for record in allowed_people:
@@ -461,7 +435,7 @@ class NPC(CustomCog):
         if ctx.guild:
             automatic_channel = await self.bot.db.fetch(
                 "SELECT channel_id FROM npc_automatic_mode WHERE user_id = $1 AND guild_id = $2 AND npc_id = $3",
-                ctx.author.id, ctx.guild.id, npc['id'])
+                ctx.author.id, ctx.guild.id, npc.id)
 
             pretty_chan = []
 
@@ -524,7 +498,7 @@ class NPC(CustomCog):
            `{PREFIX}{COMMAND} Ecological Democratic Party` using the NPC's name"""
         await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the names or mentions of the channels or "
-            f"categories in which you should automatically speak as your NPC `{npc['name']}` even if you "
+            f"categories in which you should automatically speak as your NPC `{npc.name}` even if you "
             f"don't use its trigger phrase.\n{config.HINT} To make me give multiple channels or categories "
             f"at once, separate them with a newline."
         )
@@ -536,13 +510,14 @@ class NPC(CustomCog):
 
         for c_id in channel:
             await self.bot.db.execute(
-                "INSERT INTO npc_automatic_mode (npc_id, user_id, channel_id, guild_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING ",
-                npc['id'], ctx.author.id, c_id, ctx.guild.id
+                "INSERT INTO npc_automatic_mode (npc_id, user_id, channel_id, guild_id) "
+                "VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING ",
+                npc.id, ctx.author.id, c_id, ctx.guild.id
             )
 
-            self._automatic_npc_cache[ctx.author.id][c_id] = npc['id']
+            self._automatic_npc_cache[ctx.author.id][c_id] = npc.id
 
-        await ctx.send(f"{config.YES} You will now automatically speak as your NPC `{npc['name']}` "
+        await ctx.send(f"{config.YES} You will now automatically speak as your NPC `{npc.name}` "
                        f"in those channels or categories.")
 
     @automatic.command(name="off", aliases=['disable'])
@@ -555,9 +530,10 @@ class NPC(CustomCog):
            `{PREFIX}{COMMAND} Ecological Democratic Party` using the NPC's name"""
         await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the names or mentions of the channels or "
-            f"categories in which you should __no longer__ automatically speak as your NPC `{npc['name']}`."
+            f"categories in which you should __no longer__ automatically speak as your NPC `{npc.name}`."
             f"\n{config.HINT} To make me give multiple channels or categories "
-            f"at once, separate them with a newline."
+            f"at once, separate them with a newline.\n{config.HINT} If you want to disable automatic mode in every "
+            f"channel on this server, consider using `{config.BOT_PREFIX}npc automatic clear {npc.id}` instead."
         )
 
         channel = await self._get_channel_input(ctx)
@@ -568,7 +544,7 @@ class NPC(CustomCog):
         for c_id in channel:
             await self.bot.db.execute(
                 "DELETE FROM npc_automatic_mode WHERE npc_id = $1 AND user_id = $2 AND channel_id = $3 ",
-                npc['id'], ctx.author.id, c_id
+                npc.id, ctx.author.id, c_id
             )
 
             try:
@@ -577,7 +553,7 @@ class NPC(CustomCog):
                 continue
 
         await ctx.send(f"{config.YES} You will __no longer__ automatically speak as "
-                       f"your NPC `{npc['name']}` in those channels or categories.")
+                       f"your NPC `{npc.name}` in those channels or categories.")
 
     @automatic.command(name="clear", aliases=['remove', 'delete'])
     @commands.guild_only()
@@ -590,7 +566,7 @@ class NPC(CustomCog):
 
         channel = await self.bot.db.fetch(
             "DELETE FROM npc_automatic_mode WHERE npc_id = $1 AND user_id = $2 AND guild_id = $3 RETURNING channel_id",
-            npc['id'], ctx.author.id, ctx.guild.id
+            npc.id, ctx.author.id, ctx.guild.id
         )
 
         for record in channel:
@@ -600,7 +576,7 @@ class NPC(CustomCog):
                 continue
 
         await ctx.send(f"{config.YES} You will __no longer__ automatically speak as "
-                       f"your NPC `{npc['name']}` in any channel on this server.")
+                       f"your NPC `{npc.name}` in any channel on this server.")
 
     async def _get_channel_input(self, ctx):
         channel_text = (await ctx.input()).splitlines()
@@ -616,7 +592,7 @@ class NPC(CustomCog):
 
         return channel
 
-    async def _get_people_input(self, ctx, npc):
+    async def _get_people_input(self, ctx, npc: NPCConverter):
         people_text = (await ctx.input()).splitlines()
 
         people = []
@@ -625,14 +601,14 @@ class NPC(CustomCog):
             try:
                 converted = await converter.CaseInsensitiveMember().convert(ctx, peep.strip())
 
-                if not converted.bot and not converted.id == npc['owner_id']:
+                if not converted.bot and not converted.id == npc.owner_id:
                     people.append(converted.id)
 
             except commands.BadArgument:
                 try:
                     converted = await converter.FuzzyCIMember().convert(ctx, peep.strip())
 
-                    if not converted.bot and not converted.id == npc['owner_id']:
+                    if not converted.bot and not converted.id == npc.owner_id:
                         people.append(converted.id)
                 except commands.BadArgument:
                     continue
@@ -641,7 +617,7 @@ class NPC(CustomCog):
 
     @npc.command(name="allow")
     @commands.guild_only()
-    async def allow(self, ctx, *, npc: OwnNPCConverter):
+    async def allow(self, ctx, *, npc: NPCConverter):
         """Allow other people on this server to also use one of your NPCs and to speak as them
 
         This is especially useful for NPCs representing groups and organizations, like political parties or the government.
@@ -652,7 +628,7 @@ class NPC(CustomCog):
 
         await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the names or mentions of the people that should be able "
-            f"to speak as your NPC `{npc['name']}`.\n{config.HINT} To make me give multiple people at once access to your NPC,"
+            f"to speak as your NPC `{npc.name}`.\n{config.HINT} To make me give multiple people at once access to your NPC,"
             f" separate them with a newline, like in the "
             f"image below."
         )
@@ -665,16 +641,16 @@ class NPC(CustomCog):
         for p_id in people:
             await self.bot.db.execute(
                 "INSERT INTO npc_allowed_user (npc_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING ",
-                npc['id'], p_id,
+                npc.id, p_id,
             )
 
-            self._npc_access_cache[p_id].append(npc['id'])
+            self._npc_access_cache[p_id].append(npc.id)
 
-        await ctx.send(f"{config.YES} Those people can now speak as your NPC `{npc['name']}`.")
+        await ctx.send(f"{config.YES} Those people can now speak as your NPC `{npc.name}`.")
 
     @npc.command(name="deny")
     @commands.guild_only()
-    async def deny(self, ctx, *, npc: OwnNPCConverter):
+    async def deny(self, ctx, *, npc: NPCConverter):
         """Remove access to one of your NPCs from someone that you previously have shared
 
         **Example**
@@ -682,7 +658,7 @@ class NPC(CustomCog):
            `{PREFIX}{COMMAND} Ecological Democratic Party` using the NPC's name"""
         await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the names or mentions of the people that "
-            f"should __no longer__ be able to speak as your NPC `{npc['name']}`.\n{config.HINT} To make me remove "
+            f"should __no longer__ be able to speak as your NPC `{npc.name}`.\n{config.HINT} To make me remove "
             f"the access to your NPC from multiple people at once, separate them with a newline, like in the "
             f"image below."
         )
@@ -695,12 +671,12 @@ class NPC(CustomCog):
         for p_id in people:
             await self.bot.db.execute(
                 "DELETE FROM npc_allowed_user WHERE npc_id = $1 AND user_id = $2",
-                npc['id'], p_id,
+                npc.id, p_id,
             )
 
-            self._npc_access_cache[p_id].remove(npc['id'])
+            self._npc_access_cache[p_id].remove(npc.id)
 
-        await ctx.send(f"{config.YES} Those people can now __no longer__ speak as your NPC `{npc['name']}`.")
+        await ctx.send(f"{config.YES} Those people can now __no longer__ speak as your NPC `{npc.name}`.")
 
     async def _log_npc_usage(self, npc, original_message: discord.Message, npc_message_url: str):
         if not await self.bot.get_guild_setting(original_message.guild.id, "logging_enabled"):
@@ -717,6 +693,75 @@ class NPC(CustomCog):
                         inline=False)
         embed.add_field(name="Message", value=f"[Jump]({npc_message_url})", inline=False)
         await log_channel.send(embed=embed)
+
+    async def _check_recent_npc_messages_size(self, channel):
+        # todo deque lru
+
+        messages = self._recent_npc_messages[channel]
+
+        if len(messages) > 30:
+            self._recent_npc_messages[channel].pop(min(messages.keys()))
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        if not payload.guild_id:
+            return
+
+        try:
+            author = self._recent_npc_messages[payload.channel_id][payload.message_id]
+
+            if author != payload.user_id:
+                return
+        except KeyError:
+            return
+
+        channel = self.bot.get_guild(payload.guild_id).get_channel(payload.channel_id)
+
+        webhook_url = await self._get_webhook(channel)
+
+        if not webhook_url:
+            return
+
+        webhook = discord.Webhook.from_url(webhook_url, adapter=self._adapter)
+
+        if not webhook:
+            return
+
+        user = self.bot.get_user(payload.user_id)
+        jump_url = f'https://discord.com/channels/{payload.guild_id}/{payload.channel_id}/{payload.message_id}'
+
+        if not user:
+            return
+
+        if str(payload.emoji) in ("\U0001f4dd", "\U0000270f\U0000fe0f"):
+            # edit
+
+            await user.send(f"{config.USER_INTERACTION_REQUIRED} Reply with the updated message for "
+                            f"this NPC message: <{jump_url}>\n{config.HINT} This will timeout after 5 minutes.")
+
+            _m = await self.bot.wait_for(
+                "message", check=lambda m: m.author.id == payload.user_id and m.guild is None, timeout=300
+            )
+
+            await webhook.edit_message(payload.message_id,
+                                       content=_m.clean_content,
+                                       allowed_mentions=discord.AllowedMentions.none())
+
+            await user.send(f"{config.YES} The NPC's message was edited: <{jump_url}>")
+
+        elif str(payload.emoji) == "\U0001f5d1\U0000fe0f":
+            # delete
+
+            await webhook.delete_message(payload.message_id)
+
+        elif str(payload.emoji) in ("\U00002754", "\U00002753"):
+            # reveal
+
+            written_by = self.bot.get_user(author)
+
+            if written_by:
+                await user.send(
+                    f"{config.HINT} This NPC message (<{jump_url}>) was written by {written_by.mention} ({written_by}).")
 
     @commands.Cog.listener(name="on_message")
     async def npc_listener(self, message: discord.Message):
@@ -790,11 +835,12 @@ class NPC(CustomCog):
             await message.delete()
         except discord.Forbidden:
             await message.channel.send(f"{config.NO} I don't have Manage Messages permissions here to delete "
-                                       f"your original message.")
+                                       f"your original message.", delete_after=5)
 
         try:
             msg = await webhook.send(username=npc['name'], avatar_url=npc['avatar_url'],
-                                     content=content, file=file, wait=True)
+                                     content=content, file=file, wait=True,
+                                     allowed_mentions=discord.AllowedMentions.none())
         except (discord.NotFound, discord.Forbidden):
             await self.bot.db.execute("DELETE FROM npc_webhook WHERE channel_id = $1 AND webhook_id = $2 AND "
                                       "webhook_token = $3",
@@ -808,10 +854,13 @@ class NPC(CustomCog):
             new_webhook = discord.Webhook.from_url(new_webhook_url, adapter=self._adapter)
 
             msg = await new_webhook.send(username=npc['name'], avatar_url=npc['avatar_url'],
-                                         content=content, file=file, wait=True)
+                                         content=content, file=file, wait=True,
+                                         allowed_mentions=discord.AllowedMentions.none())
 
         jump_url = f'https://discord.com/channels/{message.guild.id}/{message.channel.id}/{msg.id}' if msg else ""
+        self._recent_npc_messages[message.channel.id][msg.id] = message.author.id
         self.bot.loop.create_task(self._log_npc_usage(npc, message, jump_url))
+        self.bot.loop.create_task(self._check_recent_npc_messages_size(message.channel.id))
 
 
 def setup(bot):
