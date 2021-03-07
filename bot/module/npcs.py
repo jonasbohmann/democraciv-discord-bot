@@ -359,6 +359,7 @@ class NPC(CustomCog):
 
         await self.bot.db.execute("DELETE FROM npc WHERE id = $1 AND owner_id = $2", npc.id, ctx.author.id)
         await self._load_npc_cache()
+        await self._load_automatic_trigger_cache()
         await ctx.send(f"{config.YES} `{npc.name}` was deleted.")
 
     @npc.command(name="list")
