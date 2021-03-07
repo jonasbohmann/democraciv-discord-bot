@@ -177,7 +177,23 @@ class NPC(CustomCog):
     @commands.group(name="npc", aliases=['npcs'], invoke_without_command=True, case_insensitive=True)
     async def npc(self, ctx: CustomContext):
         """What is an NPC?"""
-        embed = text.SafeEmbed(title="NPCs", description="This is still in development.")
+
+        p = config.BOT_PREFIX
+        embed = text.SafeEmbed(description=f"NPCs allow you to make it look like you speak as a different character, "
+                                           f"or on behalf of someone else, like an organization or group.\n\n"
+                                           f"This can elevate the role-playing experience by making it clear "
+                                           f"when someone talks in character, or out-of-character (OOC). "
+                                           f"Political parties, newspapers, government departments or other groups can "
+                                           f"use this to release official looking announcements.\n\n"
+                                           f"To get started, you can create a new NPC with `{p}npc create`. NPCs are "
+                                           f"not bound to any server, every NPC that you make on this server can "
+                                           f"also be used in every other server I am in.\n\nServer administrators "
+                                           f"can disable NPC usage on their server for any reason with "
+                                           f"the `{p}server npc` command.\n\n\nSee `{p}help npcs` or "
+                                           f"`{p}commands` to see every NPC-related command and learn more about them.")
+
+        embed.set_author(name="What are NPCs?", icon_url=self.bot.dciv.icon_url_as(static_format="png"))
+        embed.set_image(url="https://cdn.discordapp.com/attachments/818226072805179392/818230819835215882/npc.gif")
         await ctx.send(embed=embed)
 
     async def _make_avatar(self, ctx):
