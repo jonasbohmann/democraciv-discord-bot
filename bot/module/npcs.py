@@ -212,7 +212,7 @@ class NPC(CustomCog):
                 f"\n{config.HINT} This should be a valid URL ending with either `.png`, "
                 f"`.jpeg`, `.jpg`, `.gif` or `.webp`.\n{config.HINT} You can also just upload the "
                 f"avatar image here instead of replying with an URL.\n{config.HINT} If you don't "
-                f"want your NPC to have an avatar (yet), just reply with gibberish.",
+                f"want your NPC to have an avatar, just reply with gibberish.",
                 image_allowed=True)
 
             if avatar.lower().startswith("http") and avatar.lower().endswith(("png", "jpeg", "jpg", "gif", "webp")):
@@ -238,9 +238,9 @@ class NPC(CustomCog):
         trigger_phrase = trigger_phrase.lower()
 
         if trigger_phrase == "text":
-            await ctx.send(f"{config.NO} You have to surround the word `text` with a prefix and/or a suffix."
-                           f"\n{config.HINT} For example, making the trigger phrase `<<text>>` would "
-                           f"mean you had to write `<<Hello!>>` to make your NPC say `Hello!`.")
+            await ctx.send(f"{config.NO} You have to surround the word `text` with a prefix and/or a suffix. "
+                           f"For example, making the trigger phrase `<<text` would "
+                           f"mean you had to write `<<Hello!` to make your NPC say `Hello!`.")
             return
 
         if trigger_phrase.startswith(tuple(config.BOT_ADDITIONAL_PREFIXES)):
@@ -342,6 +342,9 @@ class NPC(CustomCog):
 
         if to_change["trigger_phrase"]:
             trigger_phrase = await self._make_trigger_phrase(ctx, edit=True, old_phrase=npc.trigger_phrase)
+
+            if not trigger_phrase:
+                return
         else:
             trigger_phrase = npc.trigger_phrase
 
@@ -654,8 +657,7 @@ class NPC(CustomCog):
         await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the names or mentions of the people that should be able "
             f"to speak as your NPC `{npc.name}`.\n{config.HINT} To make me give multiple people at once access to your NPC,"
-            f" separate them with a newline, like in the "
-            f"image below."
+            f" separate them with a newline."
         )
 
         people = await self._get_people_input(ctx, npc)
@@ -684,8 +686,7 @@ class NPC(CustomCog):
         await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the names or mentions of the people that "
             f"should __no longer__ be able to speak as your NPC `{npc.name}`.\n{config.HINT} To make me remove "
-            f"the access to your NPC from multiple people at once, separate them with a newline, like in the "
-            f"image below."
+            f"the access to your NPC from multiple people at once, separate them with a newline."
         )
 
         people = await self._get_people_input(ctx, npc)
