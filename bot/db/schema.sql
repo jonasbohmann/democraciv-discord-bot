@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS guild(
     logging_channel bigint,
     default_role_enabled bool DEFAULT FALSE,
     default_role_role bigint,
-    tag_creation_allowed bool DEFAULT TRUE
+    tag_creation_allowed bool DEFAULT TRUE,
+    npc_usage_allowed bool DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS guild_private_channel(

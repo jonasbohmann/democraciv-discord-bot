@@ -48,6 +48,7 @@ class _Guild(context.CustomCog, name="Server"):
         is_default_role_enabled = self.emojify_settings(settings["default_role_enabled"])
         is_tag_creation_allowed = self.emojify_settings(settings["tag_creation_allowed"])
         excluded_channels = len(settings["private_channels"])
+        is_npc_allowed = self.emojify_settings(settings['npc_usage_allowed'])
 
         embed = text.SafeEmbed(
             description=f"Check **`{config.BOT_PREFIX}help server`** to see how you can configure me for this server.",
@@ -60,12 +61,14 @@ class _Guild(context.CustomCog, name="Server"):
             value=f"{is_welcome_enabled} Welcome Messages\n"
             f"{is_logging_enabled} Logging ({excluded_channels} hidden channels)\n"
             f"{is_default_role_enabled} Role on Join\n"
-            f"{is_tag_creation_allowed} Tag Creation by Everyone",
+            f"{is_tag_creation_allowed} Tag Creation by Everyone\n"
+            f"{is_npc_allowed} NPC Usage Allowed",
         )
         embed.add_field(
             name="Statistics",
             value=f"{ctx.guild.member_count} members\n"
             f"{len(ctx.guild.text_channels)} text channels\n"
+            f"{len(ctx.guild.voice_channels)} voice channels\n"
             f"{len(ctx.guild.roles)} roles\n"
             f"{len(ctx.guild.emojis)} custom emojis",
         )
@@ -485,6 +488,51 @@ class _Guild(context.CustomCog, name="Server"):
                     ctx.guild.id,
                 )
                 await ctx.send(f"{config.YES} Only Administrators can now make" " tags with `tag -add` on this server.")
+
+            await self.bot.update_guild_config_cache()
+
+    @guild.command(name="npcs", aliases=['npc'])
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def toggle_npc(self, ctx: context.CustomContext):
+        """Allow or deny the usage of NPCs on this server"""
+
+        settings = await self.ensure_guild_settings(ctx.guild.id)
+        is_allowed = settings["npc_usage_allowed"]
+
+        pretty_is_allowed = self.emojify_settings(is_allowed)
+
+        embed = text.SafeEmbed(
+            description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to change this setting.",
+        )
+
+        embed.set_author(name=f"NPC Usage on {ctx.guild.name}", icon_url=ctx.guild_icon)
+        embed.add_field(name="Allowed", value=pretty_is_allowed)
+
+        info_embed = await ctx.send(embed=embed)
+
+        if await ctx.ask_to_continue(message=info_embed, emoji=config.GUILD_SETTINGS_GEAR):
+            reaction = await ctx.confirm(
+                f"React with {config.YES} to allow everyone to use NPCs on this server, "
+                f"or with {config.NO} to not allow that."
+            )
+
+            if reaction:
+                await self.bot.db.execute(
+                    "UPDATE guild SET npc_usage_allowed = true WHERE id = $1",
+                    ctx.guild.id,
+                )
+                await ctx.send(
+                    f"{config.YES} NPCs can now be used on this server."
+                )
+
+            elif not reaction:
+                await self.bot.db.execute(
+                    "UPDATE guild SET npc_usage_allowed = false WHERE id = $1",
+                    ctx.guild.id,
+                )
+
+                await ctx.send(f"{config.YES} NPCs can __no longer__ be used on this server.")
 
             await self.bot.update_guild_config_cache()
 

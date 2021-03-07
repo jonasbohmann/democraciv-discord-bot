@@ -9,9 +9,6 @@ from bot.config import config
 from bot.utils.context import CustomContext, CustomCog
 from bot.utils import text, converter, paginator
 
-# TODO
-# - cache or db
-
 NPCPrefixSuffix = collections.namedtuple("NPCPrefixSuffix", ["npc_id", "prefix", "suffix"])
 
 
@@ -107,6 +104,15 @@ class NPC(CustomCog):
         self.bot.loop.create_task(self._load_npc_cache())
         self.bot.loop.create_task(self._load_automatic_trigger_cache())
 
+    async def _get_default_webhook_avatar(self) -> bytes:
+        try:
+            return self._default_webhook_avatar
+        except AttributeError:
+            async with self.bot.session.get(
+                    "https://cdn.discordapp.com/avatars/487345900239323147/79c38314283392c7e21bab76f77e09e9.png") as resp:
+                self._default_webhook_avatar = avatar = await resp.read()
+                return avatar
+
     async def _make_webhook_adapter(self):
         await self.bot.wait_until_ready()
         self._adapter = discord.AsyncWebhookAdapter(session=self.bot.session)
@@ -148,7 +154,7 @@ class NPC(CustomCog):
     async def _make_new_webhook(self, channel: discord.TextChannel):
         try:
             webhook: discord.Webhook = await channel.create_webhook(name="NPC Hook",
-                                                                    avatar=await self.bot.avatar_bytes())
+                                                                    avatar=await self._get_default_webhook_avatar())
 
             await self.bot.db.execute("INSERT INTO npc_webhook (guild_id, channel_id, webhook_id, "
                                       "webhook_token) VALUES ($1, $2, $3, $4)", channel.guild.id, channel.id,
@@ -352,7 +358,7 @@ class NPC(CustomCog):
            `{PREFIX}{COMMAND} Ecological Democratic Party` using the NPC's name"""
 
         await self.bot.db.execute("DELETE FROM npc WHERE id = $1 AND owner_id = $2", npc.id, ctx.author.id)
-        self._npc_cache.pop(npc.id)
+        await self._load_npc_cache()
         await ctx.send(f"{config.YES} `{npc.name}` was deleted.")
 
     @npc.command(name="list")
@@ -817,6 +823,13 @@ class NPC(CustomCog):
 
             if match.suffix:
                 content = content[:-len(match.suffix)]
+
+        if not await self.bot.get_guild_setting(message.guild.id, "npc_usage_allowed"):
+            await message.channel.send(f"{config.NO} The administrators of {message.guild.name} don't allow "
+                                       f"the usage of NPCs on their server. This can be changed by server "
+                                       f"administrators with the `{config.BOT_PREFIX}server npcs` command.",
+                                       delete_after=10)
+            return
 
         file = None
 
