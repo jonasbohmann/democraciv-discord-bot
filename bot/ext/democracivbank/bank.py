@@ -52,14 +52,9 @@ class CurrencySelector(menus.Menu):
         return await channel.send(embed=embed)
 
     def _make_buttons(self):
-        # make lira the first button, since it's the most popular currency
-        ordered = {"LRA": self.currencies["LRA"]}
-
-        ordered.update(self.currencies)
-
         self.mapping = {}
 
-        for i, kv in enumerate(ordered.items(), start=1):
+        for i, kv in enumerate(self.currencies.items(), start=1):
             code, _ = kv
             emoji = f"{i}\N{variation selector-16}\N{combining enclosing keycap}"
             button = menus.Button(emoji=emoji, action=self.on_button)
