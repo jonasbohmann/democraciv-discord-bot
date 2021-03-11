@@ -89,12 +89,15 @@ class PoliticalParty(commands.Converter):
             "independents",
             "independants",
         ):
-            return cls(
-                id=discord.utils.get(ctx.bot.dciv.roles, name="Independent").id,
-                join_mode=PoliticalPartyJoinMode.PUBLIC,
-                bot=ctx.bot,
-                ind=True,
-            )
+            ind_role = discord.utils.get(ctx.bot.dciv.roles, name="Independent")
+
+            if ind_role:
+                return cls(
+                    id=ind_role.id,
+                    join_mode=PoliticalPartyJoinMode.PUBLIC,
+                    bot=ctx.bot,
+                    ind=True,
+                )
 
         party = await ctx.bot.db.fetchrow(
             "SELECT party.id, party.discord_invite, party.join_mode FROM party JOIN party_alias a ON "

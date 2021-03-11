@@ -38,11 +38,11 @@ class EditPartyMenu(menus.Menu):
         embed = text.SafeEmbed(
             title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
             description=f"Select as many things as you want, then click "
-            f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
-            f":one: Name\n"
-            f":two: Discord Server Invite\n"
-            f":three: Party Leaders\n"
-            f":four: Join Mode",
+                        f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
+                        f":one: Name\n"
+                        f":two: Discord Server Invite\n"
+                        f":three: Party Leaders\n"
+                        f":four: Join Mode",
         )
         return await ctx.send(embed=embed)
 
@@ -118,38 +118,47 @@ class Party(context.CustomCog, name="Political Parties"):
         if party is None:
             return await ctx.invoke(self.bot.get_command("parties"))
 
-        embed = SafeEmbed(
-            title=party.role.name,
-            description=f"[Platform and Description]({self.bot.mk.POLITICAL_PARTIES})",
-        )
+        embed = SafeEmbed(title=party.role.name)
 
-        thumbnail = await party.get_logo()
+        if not party.is_independent:
+            thumbnail = await party.get_logo()
+            footer_text = f"Join this party with: {config.BOT_PREFIX}join {party.role.name}"
+            embed.description = f"[Platform and Description]({self.bot.mk.POLITICAL_PARTIES})"
+            members_name = "Members"
 
-        if thumbnail:
-            embed.set_thumbnail(url=thumbnail)
+            if thumbnail:
+                embed.set_thumbnail(url=thumbnail)
 
-        invite_value = party.discord_invite if party.discord_invite else "*This party does not have a Discord server.*"
-        embed.add_field(name="Server", value=invite_value)
+            invite_value = party.discord_invite if party.discord_invite else "*This party does not have a Discord server.*"
+            embed.add_field(name="Server", value=invite_value)
 
-        embed.add_field(name="Join Setting", value=party.join_mode.value)
+            embed.add_field(name="Join Setting", value=party.join_mode.value)
 
-        if party.leaders:
-            embed.add_field(
-                name="Leaders",
-                value="\n".join([f"{leader.mention} {leader}" for leader in party.leaders]),
-                inline=False,
-            )
+            if party.leaders:
+                embed.add_field(
+                    name="Leaders",
+                    value="\n".join([f"{leader.mention} {leader}" for leader in party.leaders]),
+                    inline=False,
+                )
 
-        if party.aliases is not None:
-            embed.add_field(name="Aliases", value=", ".join(party.aliases) or "-", inline=False)
+            if party.aliases is not None:
+                embed.add_field(name="Aliases", value=", ".join(party.aliases) or "-", inline=False)
+        else:
+            embed.description = (f"These people have decided to remain Independent and to not join any "
+                                 f"political party.\n\n[Overview of existing Political Parties]"
+                                 f"({self.bot.mk.POLITICAL_PARTIES})")
+
+            footer_text = f"Become an Independent with {config.BOT_PREFIX}join {party.role.name}"
+            members_name = "Independents"
 
         party_members = "\n".join([f"{member.mention} {member}" for member in party.role.members]) or "-"
         embed.add_field(
-            name=f"Members ({len(party.role.members)})",
+            name=f"{members_name} ({len(party.role.members)})",
             value=party_members,
             inline=False,
         )
-        embed.set_footer(text=f"Join this party with: {config.BOT_PREFIX}join {party.role.name}")
+
+        embed.set_footer(text=footer_text)
         await ctx.send(embed=embed)
 
     @commands.Cog.listener(name="on_raw_reaction_add")
@@ -211,7 +220,7 @@ class Party(context.CustomCog, name="Political Parties"):
                 member_embed = text.SafeEmbed(
                     title=f"{yes_emoji}  Party Join Request Accepted",
                     description=f"Your request to join **{party.role.name}** was accepted by "
-                    f"{reactor}.{invite_fmt}",
+                                f"{reactor}.{invite_fmt}",
                 )
 
             elif str(payload.emoji) == no_emoji:
@@ -367,9 +376,9 @@ class Party(context.CustomCog, name="Political Parties"):
                     embed = text.SafeEmbed(
                         title=f"Request to join {party.role.name}",
                         description=f"{ctx.author.display_name} wants to join your political "
-                        f"party **{party.role.name}**. Do you want to accept "
-                        f"their request?\n\n{config.HINT} This has no timeout, so "
-                        f"you don't have to decide immediately.{other_help}",
+                                    f"party **{party.role.name}**. Do you want to accept "
+                                    f"their request?\n\n{config.HINT} This has no timeout, so "
+                                    f"you don't have to decide immediately.{other_help}",
                     )
 
                     embed.set_author(name=ctx.author, icon_url=ctx.author_icon)
@@ -482,7 +491,7 @@ class Party(context.CustomCog, name="Political Parties"):
         return await ctx.send(embed=embed)
 
     async def create_new_party(
-        self, ctx: CustomContext, *, role=True, leaders=True, invite=True, join_mode=True, commit=True
+            self, ctx: CustomContext, *, role=True, leaders=True, invite=True, join_mode=True, commit=True
     ) -> typing.Union[typing.Dict, PoliticalParty]:
 
         result = {"role": None, "invite": None, "leaders": [], "join_mode": None}
