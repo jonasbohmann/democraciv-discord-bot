@@ -284,6 +284,11 @@ class Party(context.CustomCog, name="Political Parties"):
 
             await self.bot.safe_send_dm(target=leader, embed=embed, reason="party_join_leave")
 
+    @party.command(name="join", hidden=True)
+    async def _join_alias(self, ctx, *, party: PoliticalParty):
+        """Join a political party"""
+        return await ctx.invoke(self.bot.get_command("join"), party=party)
+
     @commands.command(name="join")
     async def join(self, ctx, *, party: PoliticalParty):
         """Join a political party"""
@@ -399,6 +404,11 @@ class Party(context.CustomCog, name="Political Parties"):
                 message = f"{message} Now head to their Discord Server and introduce yourself: {party.discord_invite}"
 
             await ctx.send(message)
+
+    @party.command(name="leave", hidden=True)
+    async def _leave_alias(self, ctx, *, party: PoliticalParty):
+        """Leave a political party"""
+        return await ctx.invoke(self.bot.get_command("leave"), party=party)
 
     @commands.command(name="leave")
     async def leave(self, ctx, *, party: PoliticalParty):

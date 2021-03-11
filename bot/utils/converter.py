@@ -45,15 +45,12 @@ class PoliticalParty(commands.Converter):
 
     def __init__(self, **kwargs):
         self.discord_invite: str = kwargs.get("discord_invite")
-        self.aliases: typing.List[str] = kwargs.get("aliases")
+        self.aliases: typing.List[str] = kwargs.get("aliases", [])
         self.join_mode: PoliticalPartyJoinMode = kwargs.get("join_mode")
-        self._leaders: typing.List[int] = kwargs.get("leaders")
+        self._leaders: typing.List[int] = kwargs.get("leaders", [])
         self._id: int = kwargs.get("id")
         self._bot = kwargs.get("bot")
         self.is_independent = kwargs.get("ind", False)
-
-        if kwargs.get("role"):
-            self._id = kwargs.get("role").id
 
     @property
     def leaders(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
@@ -93,7 +90,7 @@ class PoliticalParty(commands.Converter):
             "independants",
         ):
             return cls(
-                role=discord.utils.get(ctx.bot.dciv.roles, name="Independent"),
+                id=discord.utils.get(ctx.bot.dciv.roles, name="Independent").id,
                 join_mode=PoliticalPartyJoinMode.PUBLIC,
                 bot=ctx.bot,
                 ind=True,
