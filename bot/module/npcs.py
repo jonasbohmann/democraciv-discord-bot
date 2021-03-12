@@ -296,9 +296,6 @@ class NPC(CustomCog):
             return await ctx.send(f"{config.NO} You already have an NPC with either that same name, "
                                   f"or that same trigger phrase.")
 
-        self._npc_cache[npc_record['id']] = dict(npc_record)
-        self._npc_access_cache[ctx.author.id].append(npc_record['id'])
-
         example = trigger_phrase.replace("text", "Hello!")
         await ctx.send(f"{config.YES} The NPC #{npc_record['id']} `{name}` was created. Try speaking as them "
                        f"with `{example}`. \n{config.HINT} You can allow other people to speak as this "
@@ -307,6 +304,9 @@ class NPC(CustomCog):
                        f"as this NPC in certain channels, without having to use the trigger phrase.\n{config.HINT} "
                        f"You can react with :wastebasket: to a message from your NPC to delete it, or with "
                        f":pencil: to edit it.")
+
+        self._npc_cache[npc_record['id']] = dict(npc_record)
+        self._npc_access_cache[ctx.author.id].append(npc_record['id'])
 
     @npc.command(name="edit", aliases=['change', 'update'])
     async def edit_npc(self, ctx, *, npc: NPCConverter):
@@ -398,11 +398,7 @@ class NPC(CustomCog):
            `{PREFIX}{COMMAND} Jonas`"""
 
         member = member or ctx.author
-
-        sql = """SELECT npc.id, npc.name, npc.avatar_url, npc.owner_id, npc.trigger_phrase FROM npc 
-        FULL JOIN npc_allowed_user allowed ON allowed.npc_id = npc.id WHERE (npc.owner_id = $1 OR allowed.user_id = $1) ORDER BY npc.id"""
-
-        npcs = await self.bot.db.fetch(sql, member.id)
+        npcs = [self._npc_cache[i] for i in self._npc_access_cache[member.id]]
 
         pretty_npcs = []
 
