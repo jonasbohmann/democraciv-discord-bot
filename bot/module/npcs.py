@@ -285,6 +285,9 @@ class NPC(CustomCog):
         avatar_url = await self._make_avatar(ctx)
         trigger_phrase = await self._make_trigger_phrase(ctx)
 
+        if not trigger_phrase:
+            return
+
         try:
             npc_record = await self.bot.db.fetchrow(
                 "INSERT INTO npc (name, avatar_url, owner_id, trigger_phrase) VALUES ($1, $2, $3, $4) RETURNING *",
