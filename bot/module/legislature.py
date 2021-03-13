@@ -59,7 +59,7 @@ LEG_COMMAND_ALIASES = ["leg", "legislature"] if mk.MarkConfig.LEGISLATURE_COMMAN
 
 
 class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.LEGISLATURE_NAME):
-    """Allows the Government to organize {LEGISLATURE_ADJECTIVE} sessions and their submitted bills"""
+    """Allows the Government to organize legislative sessions and bill & motion submissions"""
 
     def __init__(self, bot):
         super().__init__(bot)
