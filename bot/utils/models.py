@@ -30,12 +30,11 @@ class Session(commands.Converter):
 
     def __init__(self, **kwargs):
         self.id: int = kwargs.get("id")
-        self.is_active: bool = kwargs.get("is_active")
         self.status: SessionStatus = kwargs.get("session_status")
-        self.vote_form: str = kwargs.get("vote_form", None)
+        self.vote_form: str = kwargs.get("vote_form")
         self.opened_on: datetime = kwargs.get("opened_on")
-        self.voting_started_on: datetime = kwargs.get("voting_started_on", None)
-        self.closed_on: datetime = kwargs.get("closed_on", None)
+        self.voting_started_on: datetime = kwargs.get("voting_started_on")
+        self.closed_on: datetime = kwargs.get("closed_on")
         self.bills: typing.List[int] = kwargs.get("bills")
         self.motions: typing.List[int] = kwargs.get("motions")
         self._speaker: int = kwargs.get("speaker")
@@ -58,7 +57,7 @@ class Session(commands.Converter):
 
     async def close(self):
         await self._bot.db.execute(
-            "UPDATE legislature_session SET is_active = false, closed_on = $2," " status = 'Closed' WHERE id = $1",
+            "UPDATE legislature_session SET closed_on = $2, status = 'Closed' WHERE id = $1",
             self.id,
             datetime.datetime.utcnow(),
         )
@@ -583,7 +582,7 @@ class BillFailedLegislature(BillStatus):
         # await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
 
     async def resubmit(self, dry=False):
-        session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE is_active = true")
+        session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE status = 'Submission Period'")
 
         if not session:
             raise IllegalBillOperation(
@@ -756,7 +755,7 @@ class BillRepealed(BillStatus):
     verbose_name = "Repealed"
 
     async def resubmit(self, dry=False):
-        session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE is_active = true")
+        session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE status = 'Submission Period'")
 
         if not session:
             raise IllegalBillOperation(

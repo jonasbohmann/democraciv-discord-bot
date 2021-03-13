@@ -293,7 +293,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             )
 
         new_session = await self.bot.db.fetchval(
-            "INSERT INTO legislature_session (speaker, is_active, opened_on) VALUES ($1, true, $2) RETURNING id",
+            "INSERT INTO legislature_session (speaker, opened_on) VALUES ($1, $2) RETURNING id",
             ctx.author.id,
             datetime.datetime.utcnow(),
         )
@@ -652,7 +652,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                     f"**Voting Started**: {session.voting_started_on.strftime('%A, %B %d %Y at %H:%M')}"
                 )
 
-        if not session.is_active:
+        if session.closed_on:
             # Session is closed
             formatted_time.append(f"**Ended**: {session.closed_on.strftime('%A, %B %d %Y at %H:%M')}")
 
@@ -1117,7 +1117,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         last_leg_session = await self.get_last_leg_session()
 
         def verify_object(_ctx, to_verify) -> str:
-            if not to_verify.session.is_active:
+            if to_verify.session.closed_on:
                 return f"The session during which this {obj_name} was submitted is not open anymore."
 
             if not self.is_cabinet(_ctx.author):

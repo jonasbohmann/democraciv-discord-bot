@@ -76,7 +76,6 @@ END $$;
 CREATE TABLE IF NOT EXISTS legislature_session(
     id serial UNIQUE PRIMARY KEY,
     speaker bigint NOT NULL,
-    is_active bool DEFAULT true NOT NULL,
     status session_status DEFAULT 'Submission Period'::session_status NOT NULL,
     vote_form text,
     opened_on timestamp WITHOUT TIME ZONE NOT NULL,

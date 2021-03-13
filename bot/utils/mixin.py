@@ -282,7 +282,7 @@ class GovernmentMixin:
         return len(link) >= 15 and link.startswith(valid_google_docs_url_strings)
 
     async def get_active_leg_session(self) -> typing.Optional[models.Session]:
-        session_id = await self.bot.db.fetchval("SELECT id FROM legislature_session WHERE is_active = true")
+        session_id = await self.bot.db.fetchval("SELECT id FROM legislature_session WHERE status = 'Submission Period'")
 
         if session_id is not None:
             return await models.Session.convert(context.MockContext(self.bot), session_id)
