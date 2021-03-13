@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS bill(
     id serial UNIQUE PRIMARY KEY,
     leg_session serial references legislature_session(id) NOT NULL,
     name text NOT NULL,
+    content text NOT NULL,
     link text NOT NULL,
     tiny_link text NOT NULL,
     submitter bigint NOT NULL,

@@ -386,7 +386,7 @@ class NPC(CustomCog):
         await self._load_automatic_trigger_cache()
         await ctx.send(f"{config.YES} `{npc.name}` was deleted.")
 
-    @npc.command(name="list")
+    @npc.command(name="list", aliases=['from', 'by'])
     async def list_npcs(self, ctx: CustomContext, *, member: typing.Union[
         converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.FuzzyCIMember] = None):
         """List every NPC you or someone else has access to

@@ -108,12 +108,13 @@ class Bill(commands.Converter):
         self.tiny_link: str = kwargs.get("tiny_link")
         self.description: str = kwargs.get("submitter_description")
         self.is_vetoable: bool = kwargs.get("is_vetoable")
-        self.status: BillStatus = kwargs.get("status", None)
+        self.status: BillStatus = kwargs.get("status")
+        self.content: str = kwargs.get("content")
         self._submitter: int = kwargs.get("submitter")
         self._bot = kwargs.get("bot")
         self._sponsors: typing.List[int] = kwargs.get("sponsors")
 
-        self.history = kwargs.get("history", None)
+        self.history = kwargs.get("history")
 
         if self.status is None:
             self.status = BillStatus(self._bot, self)
@@ -126,7 +127,7 @@ class Bill(commands.Converter):
             )
         )
 
-    async def fetch_name_and_keywords(self) -> typing.Tuple[str, typing.List[str]]:
+    async def fetch_name_and_keywords(self) -> typing.Tuple[str, typing.List[str], str]:
 
         try:
             response: typing.Dict = await self._bot.run_apps_script(
@@ -134,6 +135,7 @@ class Bill(commands.Converter):
             )
 
             self.name = name = response["response"]["result"]["title"]
+            self.content = content = response["response"]["result"]["content"]
             keywords = [
                 word["ngram"] for word in response["response"]["result"]["keywords"]["keywords"] if word["ngram"]
             ]
@@ -141,6 +143,7 @@ class Bill(commands.Converter):
         except (DemocracivBotException, KeyError):
             keywords = []
             self.name = name = ""
+            self.content = content = ""
 
         async with self._bot.session.post(
             "http://yake.inesctec.pt/yake/v2/extract_keywords?max_ngram_size=2&number_of_keywords=20&highlight=false",
@@ -161,7 +164,7 @@ class Bill(commands.Converter):
             keywords.append(name_abbreviation[1:])
 
         keywords.append(name_abbreviation)
-        return name, list(set(keywords))
+        return name, list(set(keywords)), content
 
     @property
     def submitter(self) -> typing.Union[discord.Member, discord.User, None]:
@@ -174,7 +177,7 @@ class Bill(commands.Converter):
 
     @property
     def formatted(self):
-        return f"Bill #{self.id} - [{self.name}]({self.link}) {self.status.emojified_status(verbose=False)}"
+        return f"Bill #{self.id} - [{self.name}]({self.tiny_link}) {self.status.emojified_status(verbose=False)}"
 
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str]):
@@ -221,7 +224,7 @@ class Bill(commands.Converter):
 class Law(Bill):
     @property
     def formatted(self):
-        return f"Law #{self.id} - [{self.name}]({self.link})"
+        return f"Law #{self.id} - [{self.name}]({self.tiny_link})"
 
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str]):

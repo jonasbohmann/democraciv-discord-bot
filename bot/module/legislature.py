@@ -798,11 +798,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 return
 
             bill = models.Bill(bot=self.bot, link=google_docs_url, submitter_description=bill_description)
-            name, tags = await bill.fetch_name_and_keywords()
+            name, tags, content = await bill.fetch_name_and_keywords()
 
             bill_id = await self.bot.db.fetchval(
                 "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, "
-                "submitter_description, tiny_link) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+                "submitter_description, tiny_link, content) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
                 current_leg_session_id,
                 name,
                 google_docs_url,
@@ -810,6 +810,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 is_vetoable,
                 bill_description,
                 tiny_url,
+                content
             )
 
             bill.id = bill_id
