@@ -92,8 +92,8 @@ class NPC(CustomCog):
         # npc id -> npc
         self._npc_cache: typing.Dict[int, typing.Dict] = {}
 
-        # owner_id -> list of NPC ids that owner has access to
-        self._npc_access_cache: typing.Dict[int, typing.List[int]] = collections.defaultdict(list)
+        # owner_id -> set of NPC ids that owner has access to
+        self._npc_access_cache: typing.Dict[int, typing.Set[int]] = collections.defaultdict(set)
 
         # user id -> {channel_id -> npc_id}
         self._automatic_npc_cache: typing.Dict[int, typing.Dict[int, int]] = collections.defaultdict(dict)
@@ -136,19 +136,24 @@ class NPC(CustomCog):
         npcs = await self.bot.db.fetch(
             "SELECT npc.id, npc.name, npc.avatar_url, npc.owner_id, npc.trigger_phrase FROM npc")
 
+        self._npc_cache.clear()
+        self._npc_access_cache.clear()
+
         for record in npcs:
             self._npc_cache[record['id']] = dict(record)
-            self._npc_access_cache[record['owner_id']].append(record['id'])
+            self._npc_access_cache[record['owner_id']].add(record['id'])
 
             others = await self.bot.db.fetch("SELECT user_id FROM npc_allowed_user WHERE npc_id = $1", record['id'])
 
             for other in others:
-                self._npc_access_cache[other['user_id']].append(record['id'])
+                self._npc_access_cache[other['user_id']].add(record['id'])
 
     async def _load_automatic_trigger_cache(self):
         await self.bot.wait_until_ready()
 
         npcs = await self.bot.db.fetch("SELECT * FROM npc_automatic_mode")
+
+        self._automatic_npc_cache.clear()
 
         for record in npcs:
             self._automatic_npc_cache[record['user_id']][record['channel_id']] = record['npc_id']
@@ -306,7 +311,7 @@ class NPC(CustomCog):
                        f":pencil: to edit it.")
 
         self._npc_cache[npc_record['id']] = dict(npc_record)
-        self._npc_access_cache[ctx.author.id].append(npc_record['id'])
+        self._npc_access_cache[ctx.author.id].add(npc_record['id'])
 
     @npc.command(name="edit", aliases=['change', 'update'])
     async def edit_npc(self, ctx, *, npc: NPCConverter):
@@ -347,7 +352,8 @@ class NPC(CustomCog):
             trigger_phrase = await self._make_trigger_phrase(ctx, edit=True, old_phrase=npc.trigger_phrase)
 
             if not trigger_phrase:
-                return
+                await ctx.send(f"{config.HINT} *Using the existing trigger phrase `{npc.trigger_phrase}`.*")
+                trigger_phrase = npc.trigger_phrase
         else:
             trigger_phrase = npc.trigger_phrase
 
@@ -670,7 +676,7 @@ class NPC(CustomCog):
                 npc.id, p_id,
             )
 
-            self._npc_access_cache[p_id].append(npc.id)
+            self._npc_access_cache[p_id].add(npc.id)
 
         await ctx.send(f"{config.YES} Those people can now speak as your NPC `{npc.name}`.")
 
