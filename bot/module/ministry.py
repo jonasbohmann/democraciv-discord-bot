@@ -37,7 +37,7 @@ class LawVetoScheduler(text.AnnouncementScheduler):
 
 
 class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINISTRY_NAME):
-    """Information about the Executive of {NATION_FULLNAME}"""
+    """Information about the Executive of {NATION_FULL_NAME}"""
     # """Allows the {MINISTRY_NAME} to pass and veto bills from the {LEGISLATURE_NAME}."""
 
     def __init__(self, bot):
