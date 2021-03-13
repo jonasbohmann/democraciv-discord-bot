@@ -19,18 +19,21 @@ class PassScheduler(text.AnnouncementScheduler):
         message = [f"The following bills were **passed by the {self.bot.mk.LEGISLATURE_NAME}**.\n"]
 
         for obj in self._objects:
-            if obj.is_vetoable:
-                message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
-            else:
-                message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>)")
+            message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+            # if obj.is_vetoable:
+            #    message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+            # else:
+            #    message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>)")
 
         p = config.BOT_PREFIX
-        message.append(
-            f"\nAll non veto-able bills are now laws (marked as __underlined__) and can be found in `{p}laws`, "
-            f"as well with `{p}laws search`. The others were sent to the {self.bot.mk.MINISTRY_NAME} "
-            f"(`{p}{self.bot.mk.MINISTRY_COMMAND} bills`) to either pass "
-            f"(`{p}{self.bot.mk.MINISTRY_COMMAND} pass`) or veto (`{p}{self.bot.mk.MINISTRY_COMMAND} veto`) them."
-        )
+        # message.append(
+        #    f"\nAll non veto-able bills are now laws (marked as __underlined__) and can be found in `{p}laws`, "
+        #    f"as well with `{p}laws search`. The others were sent to the {self.bot.mk.MINISTRY_NAME} "
+        #    f"(`{p}{self.bot.mk.MINISTRY_COMMAND} bills`) to either pass "
+        #    f"(`{p}{self.bot.mk.MINISTRY_COMMAND} pass`) or veto (`{p}{self.bot.mk.MINISTRY_COMMAND} veto`) them."
+        # )
+
+        message.append(f"\nAll these bills are now laws and can be found in `{p}laws`, as well with `{p}laws search`.")
         return "\n".join(message)
 
 
@@ -52,6 +55,9 @@ class OverrideScheduler(text.AnnouncementScheduler):
         return "\n".join(message)
 
 
+LEG_COMMAND_ALIASES = ["leg", "legislature"] if mk.MarkConfig.LEGISLATURE_COMMAND.lower() != "legislature" else ["leg"]
+
+
 class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.LEGISLATURE_NAME):
     """Allows the Government to organize {LEGISLATURE_ADJECTIVE} sessions and their submitted bills"""
 
@@ -67,12 +73,12 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
     @commands.group(
         name=mk.MarkConfig.LEGISLATURE_COMMAND.lower(),
-        aliases=["leg"],
+        aliases=LEG_COMMAND_ALIASES,
         case_insensitive=True,
         invoke_without_command=True,
     )
     async def legislature(self, ctx):
-        """Dashboard for {legislator_term}s with important links and the status of the current session"""
+        """Dashboard for {LEGISLATURE_LEGISLATOR_NAME_PLURAL} with important links and the status of the current session"""
 
         active_leg_session = await self.get_active_leg_session()
 
@@ -93,10 +99,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         else:
             speaker_value.append(f"{self.bot.mk.speaker_term}: -")
 
-        if isinstance(self.vice_speaker, discord.Member):
-            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention}")
-        else:
-            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
+        # if isinstance(self.vice_speaker, discord.Member):
+        #    speaker_value.append(f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention}")
+        # else:
+        #    speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
 
         embed.add_field(name=self.bot.mk.LEGISLATURE_CABINET_NAME, value="\n".join(speaker_value))
         embed.add_field(
@@ -123,7 +129,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
     @bill.command(name="history", aliases=["h"])
     async def b_history(self, ctx: context.CustomContext, *, bill_id: models.Bill):
-        """See when a bill was first introduced, passed into Law, vetoed, etc."""
+        """See when a bill was first introduced, passed into Law, repealed, etc."""
         fmt_history = [
             f"**{entry.date.strftime('%d %B %Y')}** - {entry.after}   "
             f"({entry.after.emojified_status(verbose=False)})"
@@ -400,7 +406,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         await self.gov_announcements_channel.send(
             f"The **voting period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
             f"Session #{active_leg_session.id} "
-            f"has started!\n{self.bot.mk.legislator_term}s can vote here: <{voting_form}>"
+            f"has started!\n{self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} can vote here: <{voting_form}>"
         )
 
         await self.dm_legislators(
@@ -449,7 +455,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                   f"require to be kept as record in `{p}laws`. As such, they lack some features that bills "
                   f"have, "
                   "such as passing them into law.\n\nAn example for a use case for motions could be a "
-                  "'Motion to recall Minister XY' motion, because if that motion to recall passes, "
+                  "'Motion to recall Person XY' motion, because if that motion to recall passes, "
                   "why would we need to keep that motion as a record on our Legal Code, it's a "
                   "one-and-done thing.",
             inline=False,
@@ -466,21 +472,21 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             inline=False,
         )
 
-        info.add_field(
-            name="'Help! Someone submitted a bill as not veto-able but it's not' or vice-versa",
-            value="Don't worry, while there isn't a command (yet) for you to fix that, "
-                  f"you can just ping {self.bot.owner.mention} to fix this.",
-            inline=False,
-        )
+        # info.add_field(
+        #    name="'Help! Someone submitted a bill as not veto-able but it's not' or vice-versa",
+        #    value="Don't worry, while there isn't a command (yet) for you to fix that, "
+        #          f"you can just ping {self.bot.owner.mention} to fix this.",
+        #    inline=False,
+        # )
 
         info.add_field(
             name="Keep it rolling",
             value=f"Now that you've closed the last session, you can keep your "
-                  f"{self.bot.mk.legislator_term} busy by opening the next session "
+                  f"{self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} busy by opening the next session "
                   f"with `{p}{l} session open` right away. It doesn't matter how long the "
                   f"Submission Period is, and it doesn't hurt anyone that they can submit bills "
                   f"around the clock.\n\nJust sit back, let submissions come in and once you're ready to "
-                  f"'start' the session 'for real', tell your {self.bot.mk.legislator_term}s that "
+                  f"'start' the session 'for real', tell your {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} that "
                   f"submissions will be locked soon, and schedule a few debates. Now that everyone already "
                   f"had days to write and submit their bills, more time is left for debate, discussion and "
                   f"collective brainstorming once the session really 'starts'.",
@@ -774,10 +780,12 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         if not google_docs_url:
             return
 
+        is_vetoable = False
+
         # Vetoable
-        is_vetoable = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Is the {self.bot.mk.MINISTRY_NAME} legally allowed to vote on (veto) this bill?"
-        )
+        # is_vetoable = await ctx.confirm(
+        #   f"{config.USER_INTERACTION_REQUIRED} Is the {self.bot.mk.MINISTRY_NAME} legally allowed to vote on (veto) this bill?"
+        # )
 
         bill_description = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with a **short** summary of what your bill does.",
@@ -832,10 +840,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             embed.add_field(name="Title", value=name, inline=False)
             embed.add_field(name="Author", value=ctx.message.author.name, inline=False)
             embed.add_field(name="Session", value=current_leg_session_id)
-            embed.add_field(
-                name=f"{self.bot.mk.MINISTRY_NAME} Veto Allowed",
-                value="Yes" if is_vetoable else "No",
-            )
+            # embed.add_field(
+            #    name=f"{self.bot.mk.MINISTRY_NAME} Veto Allowed",
+            #    value="Yes" if is_vetoable else "No",
+            # )
             embed.add_field(
                 name="Time of Submission (UTC)",
                 value=datetime.datetime.utcnow(),
@@ -1007,7 +1015,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
                     if self.legislator_role not in ctx.author.roles:
                         return await ctx.send(
-                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} are allowed to submit bills."
+                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} are allowed to submit bills."
                         )
 
                 embed = await self.submit_bill(ctx, current_leg_session.id)
@@ -1018,7 +1026,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS:
                     if self.legislator_role not in ctx.author.roles:
                         return await ctx.send(
-                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} are allowed to submit motions."
+                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} are allowed to submit motions."
                         )
 
                 embed = await self.submit_motion(ctx, current_leg_session.id)
@@ -1026,7 +1034,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
                 if self.legislator_role not in ctx.author.roles:
                     return await ctx.send(
-                        f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} are allowed to submit bills."
+                        f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} are allowed to submit bills."
                     )
 
             embed = await self.submit_bill(ctx, current_leg_session.id)
@@ -1037,15 +1045,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         if not self.is_cabinet(ctx.author):
             if self.speaker is not None:
                 await self.bot.safe_send_dm(target=self.speaker, reason="leg_session_submit", embed=embed)
-            if self.vice_speaker is not None:
-                await self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_submit", embed=embed)
+            # if self.vice_speaker is not None:
+            #    await self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_submit", embed=embed)
 
     @legislature.command(name="pass", aliases=["p"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def pass_bill(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Mark one or multiple bills as passed from the {LEGISLATURE_NAME}
-
-        If the bill is veto-able, it sends the bill to the {MINISTRY_NAME}. If not, the bill automatically becomes law.
+        """Mark one or multiple bills as passed from the {LEGISLATURE_NAME} to pass them into law
 
         **Example**
             `{PREFIX}{COMMAND} 12` will mark Bill #12 as passed from the {LEGISLATURE_NAME}
@@ -1195,19 +1201,19 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         if not self.is_cabinet(ctx.author):
             if self.speaker is not None:
                 await self.bot.safe_send_dm(target=self.speaker, reason="leg_session_withdraw", message=message)
-            if self.vice_speaker is not None:
-                await self.bot.safe_send_dm(
-                    target=self.vice_speaker,
-                    reason="leg_session_withdraw",
-                    message=message,
-                )
+            # if self.vice_speaker is not None:
+            #    await self.bot.safe_send_dm(
+            #        target=self.vice_speaker,
+            #        reason="leg_session_withdraw",
+            #        message=message,
+            #    )
 
     @withdraw.command(name="bill", aliases=["b"])
     @checks.is_democraciv_guild()
     async def withdrawbill(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Withdraw one or multiple bills from the current session
 
-        The {speaker_term} and {vice_speaker_term} can withdraw every submitted bill during both the Submission Period and the Voting Period.
+        The {speaker_term} can withdraw every submitted bill during both the Submission Period and the Voting Period.
            The original submitter of the bill can only withdraw their own bill during the Submission Period.
 
         **Example**
@@ -1224,7 +1230,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     async def withdrawmotion(self, ctx: context.CustomContext, motion_ids: Greedy[Motion]):
         """Withdraw one or multiple motions from the current session
 
-        The {speaker_term} and {vice_speaker_term} can withdraw every submitted motion during both the Submission Period and the Voting Period.
+        The {speaker_term} can withdraw every submitted motion during both the Submission Period and the Voting Period.
            The original submitter of the motion can only withdraw their own motion during the Submission Period.
 
         **Example**
@@ -1236,7 +1242,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         await self.withdraw_objects(ctx, motion_ids)
 
-    @legislature.command(name="override", aliases=["ov"])
+    @legislature.command(name="override", aliases=["ov"], hidden=True, enabled=False)
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def override(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Override the veto of one or multiple bills to pass them into law
@@ -1355,7 +1361,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
     @legislature.command(name="resubmit", aliases=["rs"])
     async def resubmit(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Resubmit any bills that failed in the {LEGISLATURE_NAME} or {MINISTRY_NAME} to the currently active session
+        """Resubmit any bills that failed in the {LEGISLATURE_NAME} to the currently active session
 
         **Example**
            `{PREFIX}{COMMAND} 56`
@@ -1441,8 +1447,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         embed.add_field(name="General Statistics", value=general_value)
         embed.add_field(
-            name=f"Top {self.bot.mk.speaker_term}s or {self.bot.mk.vice_speaker_term}s of "
-                 f"the {self.bot.mk.LEGISLATURE_NAME}",
+            name=f"Top {self.bot.mk.speaker_term}s of the {self.bot.mk.LEGISLATURE_NAME}",
             value=pretty_top_speaker,
             inline=False,
         )

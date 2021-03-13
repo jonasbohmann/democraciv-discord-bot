@@ -65,9 +65,9 @@ class GovernmentMixin:
         embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
 
         if isinstance(obj, models.Bill):
-            is_vetoable = "Yes" if obj.is_vetoable else "No"
+            # is_vetoable = "Yes" if obj.is_vetoable else "No"
 
-            embed.add_field(name="Veto-able", value=is_vetoable, inline=True)
+            # embed.add_field(name="Veto-able", value=is_vetoable, inline=True)
             embed.add_field(
                 name="Status",
                 value=obj.status.emojified_status(verbose=True),

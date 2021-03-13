@@ -37,7 +37,8 @@ class LawVetoScheduler(text.AnnouncementScheduler):
 
 
 class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINISTRY_NAME):
-    """Allows the {MINISTRY_NAME} to pass and veto bills from the {LEGISLATURE_NAME}."""
+    """Information about the Executive of {NATION_FULLNAME}"""
+    # """Allows the {MINISTRY_NAME} to pass and veto bills from the {LEGISLATURE_NAME}."""
 
     def __init__(self, bot):
         super().__init__(bot)
@@ -85,12 +86,14 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
 
     @commands.group(
         name=mk.MarkConfig.MINISTRY_COMMAND,
-        aliases=["m", "min"],
+        aliases=["m", "min", "exec", "cabinet", "minister", "ministry"],
         case_insensitive=True,
         invoke_without_command=True,
     )
     async def ministry(self, ctx):
-        """Dashboard for {minister_term} with important links and updates on new bills"""
+        """Dashboard for {minister_term} with important links"""
+
+        # """Dashboard for {minister_term} with important links and updates on new bills"""
 
         embed = text.SafeEmbed()
         embed.set_author(
@@ -98,14 +101,14 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
             name=f"The {self.bot.mk.MINISTRY_NAME} of {self.bot.mk.NATION_FULL_NAME}",
         )
 
-        pretty_bills = await self.get_pretty_vetoes()
+        # pretty_bills = await self.get_pretty_vetoes()
 
-        if not pretty_bills:
-            pretty_bills = "There are no new bills to vote on."
-        else:
-            pretty_bills = (
-                f"You can vote on new bills, check `{config.BOT_PREFIX}{mk.MarkConfig.MINISTRY_COMMAND} bills`."
-            )
+        # if not pretty_bills:
+        #    pretty_bills = "There are no new bills to vote on."
+        # else:
+        #    pretty_bills = (
+        #        f"You can vote on new bills, check `{config.BOT_PREFIX}{mk.MarkConfig.MINISTRY_COMMAND} bills`."
+        #    )
 
         minister_value = []
 
@@ -114,10 +117,10 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         else:
             minister_value.append(f"{self.bot.mk.pm_term}: -")
 
-        if isinstance(self.lt_prime_minister, discord.Member):
-            minister_value.append(f"{self.bot.mk.lt_pm_term}: {self.lt_prime_minister.mention}")
-        else:
-            minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
+        # if isinstance(self.lt_prime_minister, discord.Member):
+        #    minister_value.append(f"{self.bot.mk.lt_pm_term}: {self.lt_prime_minister.mention}")
+        # else:
+        #    minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
 
         embed.add_field(name=self.bot.mk.MINISTRY_LEADERSHIP_NAME, value="\n".join(minister_value))
         embed.add_field(
@@ -125,98 +128,98 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
             value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})\n",
             inline=True,
         )
-        embed.add_field(name="Veto-able Bills", value=pretty_bills, inline=False)
+        # embed.add_field(name="Veto-able Bills", value=pretty_bills, inline=False)
         await ctx.send(embed=embed)
 
-    @ministry.command(name="bills", aliases=["b"])
-    async def bills(self, ctx):
-        """See all open bills from the {LEGISLATURE_NAME} to vote on"""
+    # @ministry.command(name="bills", aliases=["b"])
+    # async def bills(self, ctx):
+    #     """See all open bills from the {LEGISLATURE_NAME} to vote on"""
+    #
+    #     pretty_bills = await self.get_pretty_vetoes()
+    #     pages = paginator.SimplePages(
+    #         entries=pretty_bills,
+    #         icon=self.bot.mk.NATION_ICON_URL,
+    #         author=f"Open Bills to Vote On",
+    #         empty_message="There are no new bills to vote on.",
+    #     )
+    #     await pages.start(ctx)
 
-        pretty_bills = await self.get_pretty_vetoes()
-        pages = paginator.SimplePages(
-            entries=pretty_bills,
-            icon=self.bot.mk.NATION_ICON_URL,
-            author=f"Open Bills to Vote On",
-            empty_message="There are no new bills to vote on.",
-        )
-        await pages.start(ctx)
-
-    @ministry.command(name="veto", aliases=["v"])
-    @checks.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER, mk.DemocracivRole.LT_PRIME_MINISTER)
-    async def veto(self, ctx: context.CustomContext, bill_ids: Greedy[models.Bill]):
-        """Veto one or multiple bills
-
-        **Example**
-            `{PREFIX}{COMMAND} 12` will veto Bill #12
-            `{PREFIX}{COMMAND} 45 46 49 51 52` will veto all those bills"""
-
-        if not bill_ids:
-            return await ctx.send_help(ctx.command)
-
-        bills = bill_ids
-        consumer = models.LegalConsumer(ctx=ctx, objects=bills, action=models.BillStatus.veto)
-        await consumer.filter()
-
-        if consumer.failed:
-            await ctx.send(f":warning: The following bills can not be vetoed.\n{consumer.failed_formatted}")
-
-        if not consumer.passed:
-            return
-
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to veto the following bills?"
-            f"\n{consumer.passed_formatted}"
-        )
-
-        if not reaction:
-            return await ctx.send("Cancelled.")
-
-        await consumer.consume(scheduler=self.veto_scheduler)
-        await ctx.send(
-            f"{config.YES} All bills were vetoed.\n{config.HINT} In case the "
-            f"{self.bot.mk.LEGISLATURE_NAME} wants to give these bills a second chance, a veto can be "
-            f"overridden with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} override`, or, if the "
-            f"votes to override are not enough, the bill can be "
-            f"resubmitted to the next legislative session with "
-            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`."
-        )
-
-    @ministry.command(name="pass", aliases=["p"])
-    @checks.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER, mk.DemocracivRole.LT_PRIME_MINISTER)
-    async def pass_bill(self, ctx, bill_ids: Greedy[models.Bill]):
-        """Pass one or multiple bills into law
-
-        **Example**
-            `{PREFIX}{COMMAND} 12` will pass Bill #12 into law
-            `{PREFIX}{COMMAND} 45 46 49 51 52` will pass all those bills into law"""
-
-        bills = bill_ids
-
-        consumer = models.LegalConsumer(ctx=ctx, objects=bills, action=models.BillStatus.pass_into_law)
-        await consumer.filter()
-
-        if consumer.failed:
-            await ctx.send(f":warning: The following bills can not be passed into law.\n{consumer.failed_formatted}")
-
-        if not consumer.passed:
-            return
-
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to pass the following bills into law?"
-            f"\n{consumer.passed_formatted}"
-        )
-
-        if not reaction:
-            return await ctx.send("Cancelled.")
-
-        await consumer.consume(scheduler=self.pass_scheduler)
-        await ctx.send(
-            f"{config.YES} All bills were passed into law and can now be found in `{config.BOT_PREFIX}laws`."
-            f"\n{config.HINT} If the Legal Code needs to "
-            f"be updated, the {self.bot.mk.speaker_term} can use my "
-            f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code. "
-        )
+    # @ministry.command(name="veto", aliases=["v"])
+    # @checks.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER, mk.DemocracivRole.LT_PRIME_MINISTER)
+    # async def veto(self, ctx: context.CustomContext, bill_ids: Greedy[models.Bill]):
+    #     """Veto one or multiple bills
+    #
+    #     **Example**
+    #         `{PREFIX}{COMMAND} 12` will veto Bill #12
+    #         `{PREFIX}{COMMAND} 45 46 49 51 52` will veto all those bills"""
+    #
+    #     if not bill_ids:
+    #         return await ctx.send_help(ctx.command)
+    #
+    #     bills = bill_ids
+    #     consumer = models.LegalConsumer(ctx=ctx, objects=bills, action=models.BillStatus.veto)
+    #     await consumer.filter()
+    #
+    #     if consumer.failed:
+    #         await ctx.send(f":warning: The following bills can not be vetoed.\n{consumer.failed_formatted}")
+    #
+    #     if not consumer.passed:
+    #         return
+    #
+    #     reaction = await ctx.confirm(
+    #         f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to veto the following bills?"
+    #         f"\n{consumer.passed_formatted}"
+    #     )
+    #
+    #     if not reaction:
+    #         return await ctx.send("Cancelled.")
+    #
+    #     await consumer.consume(scheduler=self.veto_scheduler)
+    #     await ctx.send(
+    #         f"{config.YES} All bills were vetoed.\n{config.HINT} In case the "
+    #         f"{self.bot.mk.LEGISLATURE_NAME} wants to give these bills a second chance, a veto can be "
+    #         f"overridden with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} override`, or, if the "
+    #         f"votes to override are not enough, the bill can be "
+    #         f"resubmitted to the next legislative session with "
+    #         f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`."
+    #     )
+    #
+    # @ministry.command(name="pass", aliases=["p"])
+    # @checks.has_any_democraciv_role(mk.DemocracivRole.PRIME_MINISTER, mk.DemocracivRole.LT_PRIME_MINISTER)
+    # async def pass_bill(self, ctx, bill_ids: Greedy[models.Bill]):
+    #     """Pass one or multiple bills into law
+    #
+    #     **Example**
+    #         `{PREFIX}{COMMAND} 12` will pass Bill #12 into law
+    #         `{PREFIX}{COMMAND} 45 46 49 51 52` will pass all those bills into law"""
+    #
+    #     bills = bill_ids
+    #
+    #     consumer = models.LegalConsumer(ctx=ctx, objects=bills, action=models.BillStatus.pass_into_law)
+    #     await consumer.filter()
+    #
+    #     if consumer.failed:
+    #         await ctx.send(f":warning: The following bills can not be passed into law.\n{consumer.failed_formatted}")
+    #
+    #     if not consumer.passed:
+    #         return
+    #
+    #     reaction = await ctx.confirm(
+    #         f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
+    #         f"to pass the following bills into law?"
+    #         f"\n{consumer.passed_formatted}"
+    #     )
+    #
+    #     if not reaction:
+    #         return await ctx.send("Cancelled.")
+    #
+    #     await consumer.consume(scheduler=self.pass_scheduler)
+    #     await ctx.send(
+    #         f"{config.YES} All bills were passed into law and can now be found in `{config.BOT_PREFIX}laws`."
+    #         f"\n{config.HINT} If the Legal Code needs to "
+    #         f"be updated, the {self.bot.mk.speaker_term} can use my "
+    #         f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code. "
+    #     )
 
 
 def setup(bot):

@@ -151,7 +151,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         embed.add_field(
             name="Government",
-            value=f"{prime_minister}\n" f"{speaker}\n" f"Amount of {self.bot.mk.legislator_term}s: {legislators}",
+            value=f"{prime_minister}\n" f"{speaker}\n" f"Amount of {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL}: {legislators}",
             inline=False,
         )
 
