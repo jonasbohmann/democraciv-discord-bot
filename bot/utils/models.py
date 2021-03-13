@@ -146,8 +146,8 @@ class Bill(commands.Converter):
             self.content = content = ""
 
         async with self._bot.session.post(
-            "http://yake.inesctec.pt/yake/v2/extract_keywords?max_ngram_size=2&number_of_keywords=20&highlight=false",
-            data={"content": self.description},
+                "http://yake.inesctec.pt/yake/v2/extract_keywords?max_ngram_size=2&number_of_keywords=20&highlight=false",
+                data={"content": self.description},
         ) as r:
 
             if r.status == 200:
@@ -297,11 +297,11 @@ class Motion(commands.Converter):
 
 class LegalConsumer:
     def __init__(
-        self,
-        *,
-        ctx: context.CustomContext,
-        objects: typing.Iterable[Bill],
-        action: typing.Callable,
+            self,
+            *,
+            ctx: context.CustomContext,
+            objects: typing.Iterable[Bill],
+            action: typing.Callable,
     ):
         self.objects = set(objects)
         self.ctx = ctx
@@ -357,8 +357,8 @@ class _BillStatusFlag(enum.Enum):
     SUBMITTED = 0
     LEG_FAILED = 1
     LEG_PASSED = 2
-    MIN_FAILED = 3
-    MIN_PASSED = 4
+    # MIN_FAILED = 3
+    # MIN_PASSED = 4
     REPEALED = 5
 
 
@@ -387,8 +387,8 @@ class BillStatus:
             0: BillSubmitted,
             1: BillFailedLegislature,
             2: BillPassedLegislature,
-            3: BillVetoed,
-            4: BillPassedMinistry,
+            # 3: BillVetoed,
+            # 4: BillPassedMinistry,
             5: BillRepealed,
         }
 
@@ -485,24 +485,33 @@ class BillSubmitted(BillStatus):
         if dry:
             return
 
-        if self._bill.is_vetoable:
-            await self._bot.db.execute(
-                "UPDATE bill SET status = $1 WHERE id = $2",
-                _BillStatusFlag.LEG_PASSED.value,
-                self._bill.id,
-            )
+        # if self._bill.is_vetoable:
+        #     await self._bot.db.execute(
+        #         "UPDATE bill SET status = $1 WHERE id = $2",
+        #         _BillStatusFlag.LEG_PASSED.value,
+        #         self._bill.id,
+        #     )
+        #
+        #     await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
+        #
+        # else:
+        #     await self._bot.db.execute(
+        #         "UPDATE bill SET status = $1 WHERE id = $2",
+        #         _BillStatusFlag.MIN_PASSED.value,
+        #         self._bill.id,
+        #     )
+        #
+        #     await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
+        #     await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
 
-            await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
+        await self._bot.db.execute(
+            "UPDATE bill SET status = $1 WHERE id = $2",
+            _BillStatusFlag.LEG_PASSED.value,
+            self._bill.id,
+        )
 
-        else:
-            await self._bot.db.execute(
-                "UPDATE bill SET status = $1 WHERE id = $2",
-                _BillStatusFlag.MIN_PASSED.value,
-                self._bill.id,
-            )
-
-            await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
-            await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
+        await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
+        # await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
 
     async def sponsor(self, *, dry=False, sponsor: discord.Member):
         if dry:
@@ -524,49 +533,54 @@ class BillSubmitted(BillStatus):
 
     def emojified_status(self, verbose=True):
         if verbose:
-            if self._bill.is_vetoable:
-                ministry = (
-                    f"{self._bot.mk.MINISTRY_NAME}: {self.YELLOW} *(Waiting on {self._bot.mk.LEGISLATURE_NAME})*\n"
-                )
-            else:
-                ministry = f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Not Veto-able)*\n"
+            # if self._bill.is_vetoable:
+            #     ministry = (
+            #         f"{self._bot.mk.MINISTRY_NAME}: {self.YELLOW} *(Waiting on {self._bot.mk.LEGISLATURE_NAME})*\n"
+            #     )
+            # else:
+            #     ministry = f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Not Veto-able)*\n"
 
             return (
                 f"{self._bot.mk.LEGISLATURE_NAME}: {self.YELLOW} *(Not Voted On Yet)*\n"
-                f"{ministry}"
+                # f"{ministry}"
                 f"Law: {self.GRAY}\n"
             )
 
-        return f"{self.YELLOW}{self.YELLOW if self._bill.is_vetoable else self.GRAY}{self.GRAY}"
+        return f"{self.YELLOW}{self.GRAY}"
 
 
 class BillFailedLegislature(BillStatus):
     is_law = False
     flag = _BillStatusFlag.LEG_FAILED
-    verbose_name = f"Failed in the {mk.MarkConfig.LEGISLATURE_NAME}"
+    verbose_name = f"Failed in {mk.MarkConfig.LEGISLATURE_NAME}"
 
     async def pass_from_legislature(self, dry=False):
         if dry:
             return
 
-        if self._bill.is_vetoable:
-            await self._bot.db.execute(
-                "UPDATE bill SET status = $1 WHERE id = $2",
-                _BillStatusFlag.LEG_PASSED.value,
-                self._bill.id,
-            )
+        # if self._bill.is_vetoable:
+        #     await self._bot.db.execute(
+        #         "UPDATE bill SET status = $1 WHERE id = $2",
+        #         _BillStatusFlag.LEG_PASSED.value,
+        #         self._bill.id,
+        #     )
+        #
+        #     await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
+        #
+        # else:
+        #     await self._bot.db.execute(
+        #         "UPDATE bill SET status = $1 WHERE id = $2",
+        #         _BillStatusFlag.MIN_PASSED.value,
+        #         self._bill.id,
+        #     )
+        await self._bot.db.execute(
+            "UPDATE bill SET status = $1 WHERE id = $2",
+            _BillStatusFlag.LEG_PASSED.value,
+            self._bill.id,
+        )
 
-            await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
-
-        else:
-            await self._bot.db.execute(
-                "UPDATE bill SET status = $1 WHERE id = $2",
-                _BillStatusFlag.MIN_PASSED.value,
-                self._bill.id,
-            )
-
-            await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
-            await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
+        await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
+        # await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
 
     async def resubmit(self, dry=False):
         session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE is_active = true")
@@ -592,83 +606,39 @@ class BillFailedLegislature(BillStatus):
         if verbose:
             return (
                 f"{self._bot.mk.LEGISLATURE_NAME}: {self.RED} *(Failed)*\n"
-                f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Failed in the {self._bot.mk.LEGISLATURE_NAME})*\n"
+                # f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Failed in the {self._bot.mk.LEGISLATURE_NAME})*\n"
                 f"Law: {self.GRAY}\n"
             )
 
-        return f"{self.RED}{self.GRAY}{self.GRAY}"
+        return f"{self.RED}{self.GRAY}"
 
 
 class BillPassedLegislature(BillStatus):
-    is_law = False
-    flag = _BillStatusFlag.LEG_PASSED
-    verbose_name = f"Passed the {mk.MarkConfig.LEGISLATURE_NAME}"
-
-    async def veto(self, dry=False):
-        if dry:
-            return
-
-        await self._bot.db.execute(
-            "UPDATE bill SET status = $1 WHERE id = $2",
-            _BillStatusFlag.MIN_FAILED.value,
-            self._bill.id,
-        )
-        await self.log_history(self.flag, _BillStatusFlag.MIN_FAILED)
-
-    async def pass_into_law(self, dry=False):
-        if dry:
-            return
-
-        await self._bot.db.execute(
-            "UPDATE bill SET status = $1 WHERE id = $2",
-            _BillStatusFlag.MIN_PASSED.value,
-            self._bill.id,
-        )
-        await self.log_history(self.flag, _BillStatusFlag.MIN_PASSED)
-
-    def emojified_status(self, verbose=True):
-        if verbose:
-            return (
-                f"{self._bot.mk.LEGISLATURE_NAME}: {self.GREEN} *(Passed)*\n"
-                f"{self._bot.mk.MINISTRY_NAME}: {self.YELLOW} *(Not Voted on Yet)*\n"
-                f"Law: {self.GRAY}\n"
-            )
-
-        return f"{self.GREEN}{self.YELLOW}{self.GRAY}"
-
-
-class BillVetoed(BillStatus):
-    is_law = False
-    flag = _BillStatusFlag.MIN_FAILED
-    verbose_name = f"Vetoed by the {mk.MarkConfig.MINISTRY_NAME}"
-
-    async def override_veto(self, dry=False):
-        if dry:
-            return
-
-        await self._bot.db.execute(
-            "UPDATE bill SET status = $1 WHERE id = $2",
-            _BillStatusFlag.MIN_PASSED.value,
-            self._bill.id,
-        )
-
-        await self.log_history(self.flag, _BillStatusFlag.MIN_PASSED)
-
-    def emojified_status(self, verbose=True):
-        if verbose:
-            return (
-                f"{self._bot.mk.LEGISLATURE_NAME}: {self.GREEN} *(Passed)*\n"
-                f"{self._bot.mk.MINISTRY_NAME}: {self.RED} *(Vetoed)*\n"
-                f"Law: {self.GRAY}\n"
-            )
-
-        return f"{self.GREEN}{self.RED}{self.GRAY}"
-
-
-class BillPassedMinistry(BillStatus):
     is_law = True
-    flag = _BillStatusFlag.MIN_PASSED
-    verbose_name = "Passed into Law"
+    flag = _BillStatusFlag.LEG_PASSED
+    verbose_name = f"Passed into law by {mk.MarkConfig.LEGISLATURE_NAME}"
+
+    # async def veto(self, dry=False):
+    #     if dry:
+    #         return
+    #
+    #     await self._bot.db.execute(
+    #         "UPDATE bill SET status = $1 WHERE id = $2",
+    #         _BillStatusFlag.MIN_FAILED.value,
+    #         self._bill.id,
+    #     )
+    #     await self.log_history(self.flag, _BillStatusFlag.MIN_FAILED)
+
+    # async def pass_into_law(self, dry=False):
+    #     if dry:
+    #         return
+    #
+    #     await self._bot.db.execute(
+    #         "UPDATE bill SET status = $1 WHERE id = $2",
+    #         _BillStatusFlag.MIN_PASSED.value,
+    #         self._bill.id,
+    #     )
+    #     await self.log_history(self.flag, _BillStatusFlag.MIN_PASSED)
 
     async def repeal(self, dry=False):
         if dry:
@@ -696,21 +666,88 @@ class BillPassedMinistry(BillStatus):
 
     def emojified_status(self, verbose=True):
         if verbose:
-            if self._bill.is_vetoable:
-                ministry = f"{self._bot.mk.MINISTRY_NAME}: {self.GREEN} *(Passed)*\n"
-            else:
-                ministry = f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Not Veto-able)*\n"
-
             return (
                 f"{self._bot.mk.LEGISLATURE_NAME}: {self.GREEN} *(Passed)*\n"
-                f"{ministry}"
                 f"Law: {self.GREEN} *(Active Law)*\n"
             )
 
-        return f"{self.GREEN}{self.GREEN if self._bill.is_vetoable else self.GRAY}{self.GREEN}"
+        return f"{self.GREEN}{self.GREEN}"
 
 
-BillIsLaw = BillPassedMinistry
+# class BillVetoed(BillStatus):
+#     is_law = False
+#     flag = _BillStatusFlag.MIN_FAILED
+#     verbose_name = f"Vetoed by the {mk.MarkConfig.MINISTRY_NAME}"
+#
+#     async def override_veto(self, dry=False):
+#         if dry:
+#             return
+#
+#         await self._bot.db.execute(
+#             "UPDATE bill SET status = $1 WHERE id = $2",
+#             _BillStatusFlag.MIN_PASSED.value,
+#             self._bill.id,
+#         )
+#
+#         await self.log_history(self.flag, _BillStatusFlag.MIN_PASSED)
+#
+#     def emojified_status(self, verbose=True):
+#         if verbose:
+#             return (
+#                 f"{self._bot.mk.LEGISLATURE_NAME}: {self.GREEN} *(Passed)*\n"
+#                 f"{self._bot.mk.MINISTRY_NAME}: {self.RED} *(Vetoed)*\n"
+#                 f"Law: {self.GRAY}\n"
+#             )
+#
+#         return f"{self.GREEN}{self.RED}{self.GRAY}"
+#
+#
+# class BillPassedMinistry(BillStatus):
+#     is_law = True
+#     flag = _BillStatusFlag.MIN_PASSED
+#     verbose_name = "Passed into Law"
+#
+#     async def repeal(self, dry=False):
+#         if dry:
+#             return
+#
+#         await self._bot.db.execute(
+#             "UPDATE bill SET status = $1 WHERE id = $2",
+#             _BillStatusFlag.REPEALED.value,
+#             self._bill.id,
+#         )
+#
+#         await self.log_history(self.flag, _BillStatusFlag.REPEALED)
+#
+#     async def amend(self, *, dry=False, new_link: str):
+#         if dry:
+#             return
+#
+#         new_tiny = await self._bot.tinyurl(new_link)
+#         await self._bot.db.execute(
+#             "UPDATE bill SET link = $1, tiny_link = $2 WHERE id = $3",
+#             new_link,
+#             new_tiny,
+#             self._bill.id,
+#         )
+#
+#     def emojified_status(self, verbose=True):
+#         if verbose:
+#             if self._bill.is_vetoable:
+#                 ministry = f"{self._bot.mk.MINISTRY_NAME}: {self.GREEN} *(Passed)*\n"
+#             else:
+#                 ministry = f"{self._bot.mk.MINISTRY_NAME}: {self.GRAY} *(Not Veto-able)*\n"
+#
+#             return (
+#                 f"{self._bot.mk.LEGISLATURE_NAME}: {self.GREEN} *(Passed)*\n"
+#                 f"{ministry}"
+#                 f"Law: {self.GREEN} *(Active Law)*\n"
+#             )
+#
+#         return f"{self.GREEN}{self.GREEN if self._bill.is_vetoable else self.GRAY}{self.GREEN}"
+
+
+BillIsLaw = BillPassedLegislature
 
 
 class BillRepealed(BillStatus):
@@ -723,7 +760,7 @@ class BillRepealed(BillStatus):
 
         if not session:
             raise IllegalBillOperation(
-                f"{config.NO} There is no active session right now, " f"so the bill cannot be resubmitted."
+                f"{config.NO} There is no active session right now, so the bill cannot be resubmitted."
             )
 
         if dry:
@@ -742,8 +779,8 @@ class BillRepealed(BillStatus):
         if verbose:
             return (
                 f"{self._bot.mk.LEGISLATURE_NAME}: {self.GREEN} *(Passed)*\n"
-                f"{self._bot.mk.MINISTRY_NAME}: {self.GREEN} *(Passed)*\n"
+                # f"{self._bot.mk.MINISTRY_NAME}: {self.GREEN} *(Passed)*\n"
                 f"Law: {self.RED} *(Repealed)*\n"
             )
 
-        return f"{self.GREEN}{self.GREEN}{self.RED}"
+        return f"{self.GREEN}{self.RED}"
