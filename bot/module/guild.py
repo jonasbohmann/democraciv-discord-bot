@@ -487,7 +487,8 @@ class _Guild(context.CustomCog, name="Server"):
                     "UPDATE guild SET tag_creation_allowed = false WHERE id = $1",
                     ctx.guild.id,
                 )
-                await ctx.send(f"{config.YES} Only Administrators can now make" " tags with `tag -add` on this server.")
+                await ctx.send(f"{config.YES} Only Administrators can now make tags with "
+                               f"`{config.BOT_PREFIX}tag add` on this server.")
 
             await self.bot.update_guild_config_cache()
 

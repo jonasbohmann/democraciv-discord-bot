@@ -399,7 +399,7 @@ class NPC(CustomCog):
 
         **Example**
            `{PREFIX}{COMMAND}` list all of your NPCs
-           `{PREFIX}{COMMAND} @DerJonas` see to what NPCs someone else has access to
+           `{PREFIX}{COMMAND} @DerJonas` to see what NPCs someone else has access to
            `{PREFIX}{COMMAND} DerJonas#8036`
            `{PREFIX}{COMMAND} Jonas`"""
 
@@ -740,9 +740,6 @@ class NPC(CustomCog):
 
         try:
             author = self._recent_npc_messages[payload.channel_id][payload.message_id]
-
-            if author != payload.user_id:
-                return
         except KeyError:
             return
 
@@ -767,6 +764,9 @@ class NPC(CustomCog):
         if str(payload.emoji) in ("\U0001f4dd", "\U0000270f\U0000fe0f"):
             # edit
 
+            if author != payload.user_id:
+                return
+
             await user.send(f"{config.USER_INTERACTION_REQUIRED} Reply with the updated message for "
                             f"this NPC message: <{jump_url}>\n{config.HINT} This will timeout after 5 minutes.")
 
@@ -782,6 +782,9 @@ class NPC(CustomCog):
 
         elif str(payload.emoji) == "\U0001f5d1\U0000fe0f":
             # delete
+
+            if author != payload.user_id:
+                return
 
             await webhook.delete_message(payload.message_id)
 
