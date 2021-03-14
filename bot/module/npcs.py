@@ -709,7 +709,7 @@ class NPC(CustomCog):
 
         await ctx.send(f"{config.YES} Those people can now __no longer__ speak as your NPC `{npc.name}`.")
 
-    async def _log_npc_usage(self, npc, original_message: discord.Message, npc_message_url: str):
+    async def _log_npc_usage(self, npc, original_message: discord.Message, npc_message_url: str, npc_message_content: str):
         if not await self.bot.get_guild_setting(original_message.guild.id, "logging_enabled"):
             return
 
@@ -722,7 +722,8 @@ class NPC(CustomCog):
         embed.add_field(name="NPC", value=npc['name'], inline=False)
         embed.add_field(name="Real Author", value=f"{original_message.author} ({original_message.author.id})",
                         inline=False)
-        embed.add_field(name="Message", value=f"[Jump]({npc_message_url})", inline=False)
+        embed.add_field(name="Context", value=f"[Jump to Message]({npc_message_url})", inline=False)
+        embed.add_field(name="Message", value=npc_message_content)
         await log_channel.send(embed=embed)
 
     async def _check_recent_npc_messages_size(self, channel):
@@ -730,7 +731,7 @@ class NPC(CustomCog):
 
         messages = self._recent_npc_messages[channel]
 
-        if len(messages) > 30:
+        if len(messages) > 100:
             self._recent_npc_messages[channel].pop(min(messages.keys()))
 
     @commands.Cog.listener()
@@ -827,12 +828,21 @@ class NPC(CustomCog):
             npc = self._npc_cache[auto_npc_id]
             content = message.clean_content
         else:
+            if not message.content:
+                # we can't check this sooner because empty messages are allowed for automatic npc invocations, for
+                # example when uploading an image
+                return
+
             prefix_and_suffixes = [NPCPrefixSuffix(npc['id'], *npc['trigger_phrase'].split("text")) for npc in
                                    available_npcs]
 
             cntn_to_check = message.clean_content.lower()
             lines = cntn_to_check.splitlines()
 
+            if not lines:
+                return
+
+            # indexerr
             matches = [match for match in prefix_and_suffixes if lines[0].startswith(match.prefix)
                        and lines[-1].endswith(match.suffix)]
 
@@ -899,8 +909,9 @@ class NPC(CustomCog):
                                          allowed_mentions=discord.AllowedMentions.none())
 
         jump_url = f'https://discord.com/channels/{message.guild.id}/{message.channel.id}/{msg.id}' if msg else ""
+        msg_cntnt = msg.content[:1020] if msg else "*unknown*"
         self._recent_npc_messages[message.channel.id][msg.id] = message.author.id
-        self.bot.loop.create_task(self._log_npc_usage(npc, message, jump_url))
+        self.bot.loop.create_task(self._log_npc_usage(npc, message, jump_url, msg_cntnt))
         self.bot.loop.create_task(self._check_recent_npc_messages_size(message.channel.id))
 
 
