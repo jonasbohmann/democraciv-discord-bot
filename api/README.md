@@ -40,6 +40,8 @@ The file should look like this:
 }
 ```
 
+For the `/ml/information_extraction` endpoint to work, you need to download a spaCy model that `holmes_extractor` needs. Run this before starting the API: `python -m spacy download en_core_web_lg`.
+
 #### Docker
 
 You can use the supplied Dockerfile to run the API as a Docker container.

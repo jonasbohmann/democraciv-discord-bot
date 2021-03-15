@@ -3,3 +3,7 @@ uvicorn
 discord.py>=1.5.1
 asyncpg
 xdice
+numpy
+holmes-extractor
+tensorflow
+ktrain
