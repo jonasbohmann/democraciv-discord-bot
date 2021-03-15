@@ -3,11 +3,12 @@ import json
 import logging
 import pathlib
 import sys
-
 import asyncpg
 import pydantic
 import uvicorn
 import xdice
+
+from ml import information_extraction
 
 try:
     import uvloop
@@ -17,13 +18,15 @@ except ImportError:
     pass
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [API] %(message)s", datefmt="%d.%m.%Y %H:%M:%S")
-
 sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
 from api.provider import RedditManager, TwitchManager
+from api.ml import question_answering
 from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.responses import PlainTextResponse
 from fastapi.logger import logger
+
+TOKEN_PATH = f"{pathlib.Path(__file__).parent}/token.json"
 
 
 class Database:
@@ -31,12 +34,12 @@ class Database:
         self.get_dsn()
         self._loop = asyncio.get_event_loop()
         self.pool = None
-        self.ready = False
+        self.ready = asyncio.Event()
         self._loop.create_task(self.make_pool())
         self._lock = asyncio.Lock()
 
     def get_dsn(self):
-        with open("api/token.json", "r") as token_file:
+        with open(TOKEN_PATH, "r") as token_file:
             token_json = json.load(token_file)
             self.dsn = token_json["db"]["dsn"]
 
@@ -95,14 +98,17 @@ class Database:
                 raise
 
             await self.apply_schema()
-            self.ready = True
+            self.ready.set()
             return self.pool
 
 
 app = FastAPI()
 db = Database()
-reddit_manager = RedditManager(db=db)
-twitch_manager = TwitchManager(db=db)
+bert_qa = question_answering.BERTQuestionAnswering(db=db,
+                                                   index_directory=str(pathlib.Path(__file__).parent) + "/ml/index")
+holmes_ie = information_extraction.InformationExtraction(db=db)
+reddit_manager = RedditManager(db=db, token_path=TOKEN_PATH)
+twitch_manager = TwitchManager(db=db, token_path=TOKEN_PATH)
 
 
 class AddWebhook(pydantic.BaseModel):
@@ -140,9 +146,15 @@ class DeleteRedditPost(pydantic.BaseModel):
     id: str
 
 
+class Bill(pydantic.BaseModel):
+    id: int
+
+
 @app.on_event("startup")
 async def startup_event():
     await db.make_pool()
+    await bert_qa.make()
+    await holmes_ie.register_documents()
     logger.info("API ready to serve")
 
 
@@ -313,6 +325,55 @@ def roll_dice(dice_to_roll: Dice):
         return {"ok": "ok", "result": _roll_dice(dice_to_roll.dices)}
     except (SyntaxError, TypeError, ValueError, IndexError):
         return {"error": "invalid dice syntax"}
+
+
+class Question(pydantic.BaseModel):
+    question: str
+
+
+@app.post("/ml/question_answering")
+def okay(question: Question):
+    try:
+        answers = bert_qa.qa.ask(question.question, n_answers=5, n_docs_considered=10, batch_size=1)
+        result = []
+
+        for answer in answers:
+            result.append(
+                {"answer": answer['answer'], "score": float(answer['confidence']), "context": answer['context']})
+
+        return result
+    except Exception as e:
+        # todo too broad
+        logger.error(f"error in /ml/question_answering: {type(e)}: {e}")
+        return {"error": "who knows"}
+
+
+@app.post("/ml/information_extraction")
+def okay(question: Question):
+    answers = holmes_ie.search(question.question)
+    return answers
+
+
+@app.post("/bill/add")
+async def new_bill(bill: Bill):
+    await bert_qa.add_bill(bill.id)
+    await holmes_ie.add_bill(bill.id)
+
+
+@app.post("/bill/update")
+async def update_bill(bill: Bill):
+    await holmes_ie.add_bill(bill.id)
+
+    # documents in our index are not unique so we cannot reasonably delete just the one bill
+    await bert_qa.index()
+
+
+@app.post("/bill/delete")
+async def delete_bill(bill: Bill):
+    await holmes_ie.delete_bill(bill.id)
+
+    # documents in our index are not unique so we cannot reasonably delete just the one bill
+    await bert_qa.index()
 
 
 if __name__ == "__main__":

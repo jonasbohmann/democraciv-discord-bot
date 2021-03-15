@@ -23,8 +23,7 @@ class ProviderManager(abc.ABC):
         self._session = aiohttp.ClientSession()
 
     async def _bulk_start_all(self):
-        if not self.db.ready:
-            await asyncio.sleep(5)
+        await self.db.ready.wait()
 
         webhooks = await self.db.pool.fetch(f"SELECT {self.target}, webhook_url FROM {self.table}")
 

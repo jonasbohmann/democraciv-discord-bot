@@ -42,25 +42,26 @@ class TwitchManager(ProviderManager):
     TWITCH_OAUTH_APP_ACCESS_TOKEN: str
     TWITCH_CALLBACK = "https://keinerosen.requestcatcher.com/test"
 
-    def __init__(self, db):
+    def __init__(self, db, token_path):
         super().__init__(db=db)
         self._webhooks: typing.Dict[str, set] = {}
+        self._token_path = token_path
         self._get_token()
 
     def _get_token(self):
-        with open("api/token.json", "r") as token_file:
+        with open(self._token_path, "r") as token_file:
             token_json = json.load(token_file)
             self.TWITCH_CLIENT_ID = token_json["twitch"]["client_id"]
             self.TWITCH_CLIENT_SECRET = token_json["twitch"]["client_secret"]
             self.TWITCH_OAUTH_APP_ACCESS_TOKEN = token_json["twitch"]["oauth_token"]
 
     def _save_token(self):
-        with open("api/token.json", "r") as token_file:
+        with open(self._token_path, "r") as token_file:
             js = json.load(token_file)
 
         js["twitch"]["oauth_token"] = self.TWITCH_OAUTH_APP_ACCESS_TOKEN
 
-        with open("api/token.json", "w") as token_file:
+        with open(self._token_path, "w") as token_file:
             json.dump(js, token_file)
 
     @property

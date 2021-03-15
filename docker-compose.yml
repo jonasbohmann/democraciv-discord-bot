@@ -6,12 +6,11 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./docker-postgresql-multiple-databases:/docker-entrypoint-initdb.d
       - postgresdata:/var/lib/postgresql/data
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=ehre
-      - POSTGRES_MULTIPLE_DATABASES=democraciv,api_test
+      - POSTGRES_DB=democraciv
 
   api:
     build: ./api/
