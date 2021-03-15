@@ -774,13 +774,14 @@ class Party(context.CustomCog, name="Political Parties"):
         if not alias:
             return
 
-        async with self.bot.db.acquire() as connection:
-            async with connection.transaction():
-                await connection.execute(
-                    "INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
-                    alias.lower(),
-                    party.role.id,
-                )
+        try:
+            await self.bot.db.execute(
+                "INSERT INTO party_alias (alias, party_id) VALUES ($1, $2)",
+                alias.lower(),
+                party.role.id,
+            )
+        except asyncpg.UniqueViolationError:
+            return await ctx.send(f"{config.NO} `{alias}` is already an alias for `{party.role.name}`.")
 
         await ctx.send(f"{config.YES} Alias `{alias}` for party `{party.role.name}` was added.")
 

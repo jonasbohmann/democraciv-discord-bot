@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS party(
 
 CREATE TABLE IF NOT EXISTS party_leader(
     id serial UNIQUE PRIMARY KEY,
-    party_id bigint references party(id) NOT NULL,
+    party_id bigint references party(id) ON DELETE CASCADE NOT NULL,
     leader_id bigint NOT NULL,
     UNIQUE (party_id, leader_id)
 );
