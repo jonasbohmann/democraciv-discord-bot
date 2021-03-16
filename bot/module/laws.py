@@ -265,8 +265,13 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         for result in response[:3]:
             bill = await models.Bill.convert(ctx, result['document_label'])
 
+            txt = result['text']
+
+            if len(txt) > 450:
+                txt = f"{txt[:447]}..."
+
             fmt.append(f"**__{bill.formatted}__**")
-            fmt.append(f"```{textwrap.shorten(result['text'], width=450, placeholder='...')}```\n")
+            fmt.append(f"```{txt}```\n")
 
         pages = paginator.SimplePages(entries=fmt,
                                       icon=self.bot.mk.NATION_ICON_URL,
