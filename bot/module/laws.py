@@ -219,14 +219,23 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
     @law.command(name="ask", hidden=True)
     async def ask(self, ctx, *, question):
         """Beta"""
-        response = await self.bot.api_request("POST", "ml/question_answering", json={'question': question})
+        wait = await ctx.send(f"{config.HINT} This might take a bit longer...")
+
+        async with ctx.typing():
+            response = await self.bot.api_request("POST", "ml/question_answering", json={'question': question})
+
+        await wait.delete()
+
+        if not response:
+            return await ctx.send(f"{config.NO} I couldn't find an answer to that question.")
+
         embed = text.SafeEmbed()
         embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL, name=f"Results for '{question}'")
 
         fmt = []
 
         for result in response:
-            fmt.append(f"```{result['answer']}```")
+            fmt.append(f"__{result['score']*100:.2f}% Confident__\n```{result['answer']}```")
 
         embed.description = "\n\n".join(fmt)
         await ctx.send(embed=embed)

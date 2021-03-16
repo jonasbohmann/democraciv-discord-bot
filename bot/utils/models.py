@@ -420,37 +420,37 @@ class BillStatus:
 
         self._bill.status = BillStatus.from_flag_value(new_status.value)(self._bot, self._bill)
 
-    async def veto(self, dry=False):
+    async def veto(self, dry=False, **kwargs):
         raise IllegalBillOperation()
 
-    async def withdraw(self, dry=False):
+    async def withdraw(self, dry=False, **kwargs):
         raise IllegalBillOperation()
 
-    async def pass_into_law(self, dry=False):
+    async def pass_into_law(self, dry=False, **kwargs):
         raise IllegalBillOperation()
 
-    async def pass_from_legislature(self, dry=False):
+    async def pass_from_legislature(self, dry=False, **kwargs):
         raise IllegalBillOperation()
 
-    async def fail_in_legislature(self, dry=False):
+    async def fail_in_legislature(self, dry=False, **kwargs):
         raise IllegalBillOperation()
 
-    async def override_veto(self, dry=False):
+    async def override_veto(self, dry=False, **kwargs):
         raise IllegalBillOperation()
 
-    async def repeal(self, dry=False):
+    async def repeal(self, dry=False, **kwargs):
         raise IllegalBillOperation()
 
-    async def resubmit(self, dry=False):
+    async def resubmit(self, dry=False, **kwargs):
         raise IllegalBillOperation()
 
-    async def amend(self, *, dry=False, new_link: str):
+    async def amend(self, *, dry=False, new_link: str, **kwargs):
         raise IllegalBillOperation()
 
-    async def sponsor(self, *, dry=False, sponsor: discord.Member):
+    async def sponsor(self, *, dry=False, sponsor: discord.Member, **kwargs):
         raise IllegalBillOperation(f"You can only sponsor recently submitted bills that were not voted on yet.")
 
-    async def unsponsor(self, *, dry=False, sponsor: discord.Member):
+    async def unsponsor(self, *, dry=False, sponsor: discord.Member, **kwargs):
         raise IllegalBillOperation(f"You can only unsponsor recently submitted bills that were not voted on yet.")
 
     def emojified_status(self, verbose=True):
@@ -462,13 +462,13 @@ class BillSubmitted(BillStatus):
     flag = _BillStatusFlag.SUBMITTED
     verbose_name = "Submitted"
 
-    async def withdraw(self, dry=False):
+    async def withdraw(self, dry=False, **kwargs):
         if dry:
             return
 
         await self._bot.db.execute("DELETE FROM bill WHERE id = $1", self._bill.id)
 
-    async def fail_in_legislature(self, dry=False):
+    async def fail_in_legislature(self, dry=False, **kwargs):
         if dry:
             return
 
@@ -480,7 +480,7 @@ class BillSubmitted(BillStatus):
 
         await self.log_history(self.flag, _BillStatusFlag.LEG_FAILED)
 
-    async def pass_from_legislature(self, dry=False):
+    async def pass_from_legislature(self, dry=False, **kwargs):
         if dry:
             return
 
@@ -512,7 +512,7 @@ class BillSubmitted(BillStatus):
         await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
         # await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
 
-    async def sponsor(self, *, dry=False, sponsor: discord.Member):
+    async def sponsor(self, *, dry=False, sponsor: discord.Member, **kwargs):
         if dry:
             return
 
@@ -522,7 +522,7 @@ class BillSubmitted(BillStatus):
             sponsor.id,
         )
 
-    async def unsponsor(self, *, dry=False, sponsor: discord.Member):
+    async def unsponsor(self, *, dry=False, sponsor: discord.Member, **kwargs):
         if dry:
             return
 
@@ -553,7 +553,7 @@ class BillFailedLegislature(BillStatus):
     flag = _BillStatusFlag.LEG_FAILED
     verbose_name = f"Failed in {mk.MarkConfig.LEGISLATURE_NAME}"
 
-    async def pass_from_legislature(self, dry=False):
+    async def pass_from_legislature(self, dry=False, **kwargs):
         if dry:
             return
 
@@ -581,7 +581,7 @@ class BillFailedLegislature(BillStatus):
         await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
         # await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
 
-    async def resubmit(self, dry=False):
+    async def resubmit(self, dry=False, **kwargs):
         session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE status = 'Submission Period'")
 
         if not session:
@@ -639,7 +639,7 @@ class BillPassedLegislature(BillStatus):
     #     )
     #     await self.log_history(self.flag, _BillStatusFlag.MIN_PASSED)
 
-    async def repeal(self, dry=False):
+    async def repeal(self, dry=False, **kwargs):
         if dry:
             return
 
@@ -651,7 +651,7 @@ class BillPassedLegislature(BillStatus):
 
         await self.log_history(self.flag, _BillStatusFlag.REPEALED)
 
-    async def amend(self, *, dry=False, new_link: str):
+    async def amend(self, *, dry=False, new_link: str, **kwargs):
         if dry:
             return
 
@@ -754,7 +754,7 @@ class BillRepealed(BillStatus):
     flag = _BillStatusFlag.REPEALED
     verbose_name = "Repealed"
 
-    async def resubmit(self, dry=False):
+    async def resubmit(self, dry=False, **kwargs):
         session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE status = 'Submission Period'")
 
         if not session:
