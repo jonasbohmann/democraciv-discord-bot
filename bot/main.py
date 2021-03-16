@@ -823,9 +823,6 @@ class DemocracivBot(commands.Bot):
         that backup to the #backup channel to the Democraciv Discord guild."""
         await self.do_db_backup(token.POSTGRESQL_DATABASE)
 
-        if not self.mk.IS_NATION_BOT:
-            await self.do_db_backup("api_test")
-
     async def get_logging_channel(self, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
         channel = await self.get_guild_setting(guild.id, "logging_channel")
 

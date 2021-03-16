@@ -22,4 +22,4 @@ class InformationExtraction:
         self.holmes_manager.remove_document(str(bill_id))
 
     def search(self, query: str):
-        return self.holmes_manager.topic_match_documents_against(query)
+        return self.holmes_manager.topic_match_documents_returning_dictionaries_against(query, number_of_results=5)

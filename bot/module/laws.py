@@ -1,11 +1,12 @@
 import datetime
+import textwrap
 import typing
 
 from discord.ext import commands
 from discord.ext.commands import Greedy
 
 from bot.config import config, mk
-from bot.utils import text, checks, context, models, mixin
+from bot.utils import text, checks, context, models, mixin, paginator
 from bot.utils.converter import (
     CaseInsensitiveMember,
     PoliticalParty,
@@ -232,13 +233,47 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         embed = text.SafeEmbed()
         embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL, name=f"Results for '{question}'")
 
-        fmt = []
+        fmt = ["This uses deep learning, a particular machine learning method, with neural networks to try to "
+               "find answers to a legal question you're asking. All currently existing bills are taken into account "
+               "to try to find the best answer. Google's BERT model in combination with Tensorflow Keras "
+               "are used here."]
 
         for result in response:
-            fmt.append(f"__{result['score']*100:.2f}% Confident__\n```{result['answer']}```")
+            if result['score'] * 100 <= 1:
+                continue
+
+            fmt.append(f"__{result['score'] * 100:.2f}% Confident__\n```{result['answer']}```")
 
         embed.description = "\n\n".join(fmt)
+        embed.set_footer(text="This feature is a work in progress and might change in the future.")
         await ctx.send(embed=embed)
+
+    @law.command(name="nlpsearch", hidden=True)
+    async def match(self, ctx, *, query):
+        """Beta"""
+
+        async with ctx.typing():
+            response = await self.bot.api_request("POST", "ml/information_extraction", json={'question': query})
+
+        if not response:
+            return await ctx.send(f"{config.NO} I couldn't find anything that matches `{query}`.")
+
+        fmt = ["This uses Natural Language Processing to topic match your query against all existing bills "
+               "and shows the most closely corresponding excerpts. Using full, grammatical expressions with "
+               "no spelling errors will improve the quality of your results.\n"]
+
+        for result in response[:3]:
+            bill = await models.Bill.convert(ctx, result['document_label'])
+
+            fmt.append(f"**__{bill.formatted}__**")
+            fmt.append(f"```{textwrap.shorten(result['text'], width=450, placeholder='...')}```\n")
+
+        pages = paginator.SimplePages(entries=fmt,
+                                      icon=self.bot.mk.NATION_ICON_URL,
+                                      author=f"Results for '{query}'")
+
+        pages.embed.set_footer(text="This feature is a work in progress and might change in the future.")
+        await pages.start(ctx)
 
 
 def setup(bot):
