@@ -8,8 +8,6 @@ import pydantic
 import uvicorn
 import xdice
 
-from ml import information_extraction
-
 try:
     import uvloop
 
@@ -21,7 +19,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [API] %(message)s", 
 sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
 from api.provider import RedditManager, TwitchManager
-from api.ml import question_answering
+from api.ml import question_answering, information_extraction
 from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.responses import PlainTextResponse
 from fastapi.logger import logger
@@ -332,7 +330,7 @@ class Question(pydantic.BaseModel):
 
 
 @app.post("/ml/question_answering")
-def okay(question: Question):
+def ml_qa(question: Question):
     try:
         answers = bert_qa.qa.ask(question.question, n_answers=5, n_docs_considered=10, batch_size=1)
         result = []
@@ -341,6 +339,7 @@ def okay(question: Question):
             result.append(
                 {"answer": answer['answer'], "score": float(answer['confidence']), "context": answer['context']})
 
+        result.sort(key=lambda x: x['score'], reverse=True)
         return result
     except Exception as e:
         # todo too broad
@@ -349,7 +348,7 @@ def okay(question: Question):
 
 
 @app.post("/ml/information_extraction")
-def okay(question: Question):
+def ml_ie(question: Question):
     answers = holmes_ie.search(question.question)
     return answers
 

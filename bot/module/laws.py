@@ -127,10 +127,10 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         embed = text.SafeEmbed(
             title=f"Generated Legal Code",
             description="This Legal Code is not guaranteed to be correct. Its "
-            f"content is based entirely on the list of Laws "
-            f"in `{config.BOT_PREFIX}laws`."
-            "\n\nRemember to change the edit link you "
-            "gave me earlier to not be public.",
+                        f"content is based entirely on the list of Laws "
+                        f"in `{config.BOT_PREFIX}laws`."
+                        "\n\nRemember to change the edit link you "
+                        "gave me earlier to not be public.",
         )
 
         embed.add_field(
@@ -143,10 +143,11 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
 
     @law.command(name="from", aliases=["f", "by"])
     async def _from(
-        self,
-        ctx,
-        *,
-        member_or_party: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty, FuzzyCIMember] = None,
+            self,
+            ctx,
+            *,
+            member_or_party: typing.Union[
+                CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty, FuzzyCIMember] = None,
     ):
         """List the laws a specific person or Political Party authored"""
         return await self._from_person_model(ctx, model=models.Law, member_or_party=member_or_party)
@@ -214,6 +215,21 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         law = await models.Law.convert(ctx, law.id)
         # self.amend_scheduler.add(law)
         await ctx.send(f"{config.YES} The link to `{law.name}` was changed.")
+
+    @law.command(name="ask", hidden=True)
+    async def ask(self, ctx, *, question):
+        """Beta"""
+        response = await self.bot.api_request("POST", "ml/question_answering", json={'question': question})
+        embed = text.SafeEmbed()
+        embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL, name=f"Results for '{question}'")
+
+        fmt = []
+
+        for result in response:
+            fmt.append(f"```{result['answer']}```")
+
+        embed.description = "\n\n".join(fmt)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):
