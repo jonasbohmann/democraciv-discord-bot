@@ -864,16 +864,18 @@ class DemocracivBot(commands.Bot):
 
     @alru_cache(cache_exceptions=False)
     async def tinyurl(self, url: str) -> typing.Optional[str]:
-        async with self.session.get(f"https://tinyurl.com/api-create.php?url={url}") as response:
-            if response.status == 200:
-                tiny_url = await response.text()
+        async with self.session.post(f"https://api.shrtco.de/v2/shorten?url={url}") as response:
+            if response.status in (200, 201):
+                tiny_url = await response.json()
 
-                if tiny_url == "Error":
+                try:
+                    return tiny_url['result']['full_short_link']
+                except KeyError:
                     raise exceptions.DemocracivBotException(
-                        f"{config.NO} tinyurl.com returned an error, try again later."
+                        f"{config.NO} The URL shortening service returned an error, try again later."
                     )
 
-                return tiny_url
+
 
 
 if __name__ == "__main__":
