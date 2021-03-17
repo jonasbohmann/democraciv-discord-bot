@@ -188,18 +188,23 @@ class DemocracivBot(commands.Bot):
                 f"Internal api at {self.BASE_API} is not running, bot is running " f"with limited functionality."
             )
 
-    async def api_request(self, method: str, route: str, **kwargs):
+    async def api_request(self, method: str, route: str, *, silent=False, **kwargs):
         if not self.is_api_running:
             self.loop.create_task(self.check_api_running())
-            raise exceptions.DemocracivBotAPIError(f"{config.NO} Internal API is not running, try again later.")
 
-        async with self.session.request(method, f"{self.BASE_API}/{route}", **kwargs) as response:
-            response.raise_for_status()
+            if not silent:
+                raise exceptions.DemocracivBotAPIError(f"{config.NO} Internal API is not running, try again later.")
 
-            if response.status == 200:
-                return await response.json()
+        try:
+            async with self.session.request(method, f"{self.BASE_API}/{route}", **kwargs) as response:
+                if response.status == 200:
+                    return await response.json()
 
-            raise exceptions.DemocracivBotAPIError(f"{config.NO} Something went wrong.")
+                if not silent:
+                    raise exceptions.DemocracivBotAPIError(f"{config.NO} Something went wrong.")
+        except aiohttp.ClientError:
+            if not silent:
+                raise
 
     async def get_context(self, message, *, cls=None):
         return await super().get_context(message, cls=cls or context.CustomContext)

@@ -851,6 +851,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             )
             embed.add_field(name="URL", value=google_docs_url, inline=False)
 
+        await self.bot.api_request("POST", "bill/add", silent=True, json={"id": bill_id})
+
         p = config.BOT_PREFIX
         l = self.bot.mk.LEGISLATURE_COMMAND
         info = text.SafeEmbed(

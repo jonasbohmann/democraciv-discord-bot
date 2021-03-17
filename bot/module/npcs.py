@@ -494,8 +494,8 @@ class NPC(CustomCog):
         grouped_by_npc = collections.defaultdict(list)
         pretty = [f"If you want to automatically speak as an NPC in a certain channel or channel category "
                   f"without having to use the trigger phrase, use `{config.BOT_PREFIX}npc automatic "
-                  f"on <npc name>`, or disable it with "
-                  f"`{config.BOT_PREFIX}npc automatic off <npc name>`.\n\nYou can only have one "
+                  f"on <npc>`, or disable it with "
+                  f"`{config.BOT_PREFIX}npc automatic off <npc>`.\n\nYou can only have one "
                   f"automatic NPC per channel.\n\nIf you have one NPC as automatic in an entire category, "
                   f"but a different NPC in a single channel that is that same category, and you write "
                   f"something in that channel, you will only speak as the NPC for that "

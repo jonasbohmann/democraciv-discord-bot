@@ -242,7 +242,9 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             if result['score'] * 100 <= 1:
                 continue
 
-            fmt.append(f"__{result['score'] * 100:.2f}% Confident__\n```{result['answer']}```")
+            bill = await models.Bill.convert(ctx, result['bill'])
+            fmt.append(f"**__Found answer in {bill.formatted} with a confidence of {result['score'] * 100:.2f}%__**"
+                       f"\n```{result['answer']}```\n__Context__\n```{result['full_answer']}```")
 
         embed.description = "\n\n".join(fmt)
         embed.set_footer(text="This feature is a work in progress and might change in the future.")

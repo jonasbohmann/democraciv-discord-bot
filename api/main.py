@@ -337,9 +337,13 @@ def ml_qa(question: Question):
 
         for answer in answers:
             result.append(
-                {"answer": answer['answer'], "score": float(answer['confidence']), "context": answer['context']})
+                {"answer": answer['answer'],
+                 "score": float(answer['confidence']),
+                 "context": answer['context'],
+                 "full_answer": answer['full_answer'],
+                 "bill": answer['reference']}
+            )
 
-        result.sort(key=lambda x: x['score'], reverse=True)
         return result
     except Exception as e:
         # todo too broad

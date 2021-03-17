@@ -73,6 +73,7 @@ class Admin(
 
             await self.bot.db.execute("UPDATE bill SET name = $1, content = $3 WHERE id = $2", name, bill.id, content)
             await self.bot.db.execute("DELETE FROM bill_lookup_tag WHERE bill_id = $1", bill.id)
+            await self.bot.api_request("POST", "bill/update", json={"id": bill.id})
 
             id_with_kws = [(bill.id, keyword) for keyword in keywords]
             self.bot.loop.create_task(

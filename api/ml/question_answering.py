@@ -47,16 +47,19 @@ class BERTQuestionAnswering:
             shutil.rmtree(self.index_directory, ignore_errors=True)
 
             await self.db.ready.wait()
-            laws = await self.db.pool.fetch("SELECT content FROM bill")
+            laws = await self.db.pool.fetch("SELECT id, content FROM bill")
 
             documents = [record['content'] for record in laws]
+            references = [str(record['id']) for record in laws]
 
             text.SimpleQA.initialize_index(self.index_directory)
 
             logger.info(f"starting indexing of {len(documents)} documents")
             start = time.time()
             text.SimpleQA.index_from_list(documents, self.index_directory, commit_every=len(documents),
-                                          multisegment=True, procs=procs, limitmb=memory_limit_in_mb, breakup_docs=True)
+                                          multisegment=True, procs=procs,
+                                          limitmb=memory_limit_in_mb, breakup_docs=True,
+                                          references=references)
             end = time.time()
             self._last_indexed = datetime.datetime.utcnow()
             logger.info(f"indexing successful after {end - start} seconds")

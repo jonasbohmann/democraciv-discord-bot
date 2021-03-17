@@ -467,6 +467,7 @@ class BillSubmitted(BillStatus):
             return
 
         await self._bot.db.execute("DELETE FROM bill WHERE id = $1", self._bill.id)
+        await self._bot.api_request("POST", "bill/delete", silent=True, json={"id": self._bill.id})
 
     async def fail_in_legislature(self, dry=False, **kwargs):
         if dry:
