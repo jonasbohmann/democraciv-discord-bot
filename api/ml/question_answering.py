@@ -25,7 +25,7 @@ class BERTQuestionAnswering:
     async def make(self):
         if not os.path.exists(self.index_directory):
             logger.warning("index for BERTQuestionAnswering missing")
-            await self.index(startup=True)
+            await self.index(force=True)
 
         self.qa = text.SimpleQA(index_dir=self.index_directory,
                                 bert_squad_model=self.bert_squad_model,
@@ -35,8 +35,8 @@ class BERTQuestionAnswering:
         await asyncio.sleep(900)
         await self.index()
 
-    async def index(self, memory_limit_in_mb=128, procs=1, startup=False):
-        if not startup:
+    async def index(self, memory_limit_in_mb=128, procs=1, force=False):
+        if not force:
             now = datetime.datetime.utcnow()
 
             if now - self._last_indexed < datetime.timedelta(minutes=15):

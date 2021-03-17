@@ -63,6 +63,14 @@ class Admin(
         )
         await ctx.send(f"{config.YES} `{tag}` was added as a search tag to `{bill.name}` (#{bill.id})")
 
+    @commands.command(name="forceindex", aliases=["force-index"])
+    @commands.is_owner()
+    async def ml_qa_force_index(self, ctx):
+        """Force rebuilding the document index for BERTQuestionAnswering"""
+
+        await self.bot.api_request("POST", "ml/question_answering/force_index")
+        await ctx.send(f"{config.YES}")
+
     @commands.command(name="syncbill", aliases=["sb", "synclaw", "sl"])
     @commands.is_owner()
     async def syncbill(self, ctx, bills: commands.Greedy[models.Bill]):

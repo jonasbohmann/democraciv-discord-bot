@@ -329,6 +329,12 @@ class Question(pydantic.BaseModel):
     question: str
 
 
+@app.post("/ml/question_answering/force_index")
+async def ml_qa_force_index():
+    await bert_qa.index(force=True)
+    return {"ok": "ok"}
+
+
 @app.post("/ml/question_answering")
 def ml_qa(question: Question):
     try:
