@@ -218,6 +218,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         await ctx.send(f"{config.YES} The link to `{law.name}` was changed.")
 
     @law.command(name="ask", hidden=True)
+    @commands.max_concurrency(1, wait=False)
     async def ask(self, ctx, *, question):
         """Beta"""
         wait = await ctx.send(f"{config.HINT} This might take a bit longer...")

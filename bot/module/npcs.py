@@ -49,6 +49,32 @@ class NPCConverter(commands.Converter):
         raise commands.BadArgument(f"{config.NO} You don't have an NPC that matches `{argument}`.")
 
 
+class AnyNPCConverter(NPCConverter):
+    @classmethod
+    async def convert(cls, ctx, argument):
+        arg = argument.lower()
+
+        sql = """SELECT npc.id, npc.name, npc.avatar_url, npc.owner_id, npc.trigger_phrase FROM npc 
+            WHERE (lower(npc.name) = $1 OR npc.id = $2)"""
+
+        try_id = arg
+
+        if arg.startswith("#"):
+            try_id = arg[1:]
+
+        try:
+            arg_id = int(try_id)
+        except ValueError:
+            arg_id = -1
+
+        match = await ctx.bot.db.fetchrow(sql, arg, arg_id)
+
+        if match:
+            return cls(**match, bot=ctx.bot)
+
+        raise commands.BadArgument(f"{config.NO} There is no NPC that matches `{argument}`.")
+
+
 class AccessToNPCConverter(NPCConverter):
     @classmethod
     async def convert(cls, ctx, argument):
@@ -182,8 +208,11 @@ class NPC(CustomCog):
                 return webhook
 
     @commands.group(name="npc", aliases=['npcs'], invoke_without_command=True, case_insensitive=True)
-    async def npc(self, ctx: CustomContext):
+    async def npc(self, ctx: CustomContext, *, npc: AnyNPCConverter=None):
         """What is an NPC?"""
+
+        if npc:
+            return await ctx.invoke(self.bot.get_command("npc info"), npc=npc)
 
         p = config.BOT_PREFIX
         embed = text.SafeEmbed(description=f"NPCs allow you to make it look like you speak as a different character, "
@@ -288,10 +317,11 @@ class NPC(CustomCog):
             return await ctx.send(f"{config.NO} You can't have an NPC that is named after me.")
 
         avatar_url = await self._make_avatar(ctx)
+
         trigger_phrase = await self._make_trigger_phrase(ctx)
 
         if not trigger_phrase:
-            return
+            return await ctx.send(f"{config.NO} Creating NPC process was cancelled.")
 
         try:
             npc_record = await self.bot.db.fetchrow(
@@ -429,14 +459,16 @@ class NPC(CustomCog):
         await pages.start(ctx)
 
     @npc.command(name="info", aliases=['information', 'show'])
-    async def info(self, ctx, *, npc: NPCConverter):
-        """Detailed information about one of your NPCs
+    async def info(self, ctx, *, npc: AnyNPCConverter):
+        """Detailed information about an existing NPC
+
+        You do not have to have access to this NPC to use this command.
 
         **Example**
            `{PREFIX}{COMMAND} 2` using the NPC's ID
            `{PREFIX}{COMMAND} Ecological Democratic Party` using the NPC's name"""
 
-        embed = text.SafeEmbed(description=f"You can edit the name, avatar and/or the trigger "
+        embed = text.SafeEmbed(description=f"The owner of this NPC can edit the name, avatar and/or the trigger "
                                            f"phrase of this NPC with `{config.BOT_PREFIX}npc edit {npc.id}`.")
 
         embed.set_author(name=f"NPC #{npc.id} - {npc.name}",
@@ -451,8 +483,9 @@ class NPC(CustomCog):
                         inline=False)
 
         allowed_people = await self.bot.db.fetch("SELECT user_id FROM npc_allowed_user WHERE npc_id = $1", npc.id)
-        pretty_people = [f"Allow other people to speak as this NPC with `{config.BOT_PREFIX}npc allow {npc.id}`, "
-                         f"or deny someone you previously allowed with `{config.BOT_PREFIX}npc deny {npc.id}`.\n",
+        pretty_people = [f"The owner of this NPC can allow other people to speak as this NPC with "
+                         f"`{config.BOT_PREFIX}npc allow {npc.id}`, or deny someone that was previously "
+                         f"allowed with `{config.BOT_PREFIX}npc deny {npc.id}`.\n",
                          f"{ctx.author.mention} ({ctx.author})"]
 
         for record in allowed_people:
@@ -477,7 +510,7 @@ class NPC(CustomCog):
                 pretty_chan.append(f"{c.mention if type(c) is discord.TextChannel else f'{c.name} Category'}")
 
             embed.add_field(name="Automatic Mode",
-                            value="\n".join(pretty_chan) or "You don't have automatic mode enabled for this "
+                            value="\n".join(pretty_chan) or "Automatic mode is not enabled for this "
                                                             "NPC in any channel or channel category on this server.")
         await ctx.send(embed=embed)
 
@@ -709,7 +742,8 @@ class NPC(CustomCog):
 
         await ctx.send(f"{config.YES} Those people can now __no longer__ speak as your NPC `{npc.name}`.")
 
-    async def _log_npc_usage(self, npc, original_message: discord.Message, npc_message_url: str, npc_message_content: str):
+    async def _log_npc_usage(self, npc, original_message: discord.Message, npc_message_url: str,
+                             npc_message_content: str):
         if not await self.bot.get_guild_setting(original_message.guild.id, "logging_enabled"):
             return
 
