@@ -762,8 +762,8 @@ class NPC(CustomCog):
 
         embed = text.SafeEmbed(title=":disguised_face:  NPC Used")
         embed.add_field(name="NPC", value=npc['name'], inline=False)
-        embed.add_field(name="Real Author", value=f"{original_message.author.mention} ({original_message.author} "
-                                                  f"{original_message.author.id})",
+        embed.add_field(name="Real Author", value=f"{original_message.author.mention} {original_message.author} "
+                                                  f"({original_message.author.id})",
                         inline=False)
         embed.add_field(name="Context", value=f"[Jump to Message]({npc_message_url})", inline=False)
         embed.add_field(name="Message", value=npc_message_content)
