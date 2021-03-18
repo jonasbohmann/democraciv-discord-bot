@@ -12,6 +12,13 @@ from bot.utils import text, converter, paginator
 NPCPrefixSuffix = collections.namedtuple("NPCPrefixSuffix", ["npc_id", "prefix", "suffix"])
 
 
+class MockOwner:
+    mention = "*Person left*"
+
+    def __str__(self):
+        return self.mention
+
+
 class NPCConverter(commands.Converter):
     """Represents an NPC that the ctx.author owns"""
 
@@ -25,7 +32,8 @@ class NPCConverter(commands.Converter):
 
     @property
     def owner(self) -> typing.Union[discord.Member, discord.User]:
-        return self._bot.dciv.get_member(self.owner_id) or self._bot.get_user(self.owner_id)
+        person = self._bot.dciv.get_member(self.owner_id) or self._bot.get_user(self.owner_id)
+        return person if person else MockOwner()
 
     @classmethod
     async def convert(cls, ctx, argument):
@@ -208,7 +216,7 @@ class NPC(CustomCog):
                 return webhook
 
     @commands.group(name="npc", aliases=['npcs'], invoke_without_command=True, case_insensitive=True)
-    async def npc(self, ctx: CustomContext, *, npc: AnyNPCConverter=None):
+    async def npc(self, ctx: CustomContext, *, npc: AnyNPCConverter = None):
         """What is an NPC?"""
 
         if npc:
@@ -486,7 +494,7 @@ class NPC(CustomCog):
         pretty_people = [f"The owner of this NPC can allow other people to speak as this NPC with "
                          f"`{config.BOT_PREFIX}npc allow {npc.id}`, or deny someone that was previously "
                          f"allowed with `{config.BOT_PREFIX}npc deny {npc.id}`.\n",
-                         f"{ctx.author.mention} ({ctx.author})"]
+                         f"{npc.owner.mention} ({npc.owner})"]
 
         for record in allowed_people:
             user = self.bot.dciv.get_member(record['user_id']) or self.bot.get_user(record['user_id'])
@@ -754,7 +762,8 @@ class NPC(CustomCog):
 
         embed = text.SafeEmbed(title=":disguised_face:  NPC Used")
         embed.add_field(name="NPC", value=npc['name'], inline=False)
-        embed.add_field(name="Real Author", value=f"{original_message.author} ({original_message.author.id})",
+        embed.add_field(name="Real Author", value=f"{original_message.author.mention} ({original_message.author} "
+                                                  f"{original_message.author.id})",
                         inline=False)
         embed.add_field(name="Context", value=f"[Jump to Message]({npc_message_url})", inline=False)
         embed.add_field(name="Message", value=npc_message_content)
