@@ -562,46 +562,28 @@ class Utility(context.CustomCog):
 
         # As veterans rarely change, use a cached version of sorted list if exists
         if ctx.guild.id == self.bot.dciv.id:
-            if len(self.cached_sorted_veterans_on_democraciv) >= 2:
+            if self.cached_sorted_veterans_on_democraciv:
                 sorted_first_15_members = self.cached_sorted_veterans_on_democraciv
             else:
                 vets = await self.bot.db.fetch(
-                    "SELECT member, join_position FROM original_join_date WHERE "
-                    "join_position <= 15 ORDER BY join_position"
+                    "SELECT member FROM original_join_date ORDER BY join_date LIMIT 15"
                 )
-                for record in vets:
-                    member = self.bot.get_user(record["member"])
-                    sorted_first_15_members.append((member, record["join_position"]))
 
-                self.cached_sorted_veterans_on_democraciv = sorted_first_15_members
+                self.cached_sorted_veterans_on_democraciv = sorted_first_15_members = [self.bot.get_user(r["member"])
+                                                                                       for r in vets]
 
         # If cache is empty OR ctx not on democraciv guild, calculate & sort again
         else:
-            async with ctx.typing():
-                guild_members_without_bots = [member for member in ctx.guild.members if not member.bot]
-
-                first_15_members = []
-
-                # Veterans can only be human, exclude bot accounts
-                for member in guild_members_without_bots:
-                    join_position, max_members = await self.get_member_join_position(member, guild_members_without_bots)
-
-                    if join_position <= 15:
-                        first_15_members.append((member, join_position))
-
-                # Sort by join position
-                sorted_first_15_members = sorted(first_15_members, key=lambda x: x[1])
-
-                # Save to cache if democraciv guild. This should only be done once in the bot's life cycle.
-                if ctx.guild.id == self.bot.dciv.id:
-                    self.cached_sorted_veterans_on_democraciv = sorted_first_15_members
+            guild_members_without_bots = [member for member in ctx.guild.members if not member.bot]
+            guild_members_without_bots.sort(key=lambda m: m.joined_at)
+            sorted_first_15_members = guild_members_without_bots[:15]
 
         # Send veterans
         message = ["These are the first 15 people who joined this server.\nBot accounts are not counted.\n"]
 
-        for veteran in sorted_first_15_members:
-            person = str(veteran[0]) if veteran[0] else f"*Person left {self.bot.dciv.name}*"
-            message.append(f"{veteran[1]}. {person}")
+        for position, veteran in enumerate(sorted_first_15_members, start=1):
+            fmt = f"{veteran.mention} {veteran}" if veteran else "*Unknown User*"
+            message.append(f"{position}. {fmt}")
 
         embed = text.SafeEmbed(description="\n".join(message))
         embed.set_author(name=f"Veterans of {ctx.guild.name}", icon_url=ctx.guild_icon)
