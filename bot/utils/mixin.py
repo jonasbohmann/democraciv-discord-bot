@@ -158,7 +158,8 @@ class GovernmentMixin:
         else:
             name = member.display_name
             members = [member.id]
-            empty = f"{name} hasn't submitted any {model.__name__.lower()}s yet."
+            submit_term = "written" if model is models.Law else "submitted"
+            empty = f"{name} hasn't {submit_term} any {model.__name__.lower()}s yet."
             title = f"{model.__name__}s from {name}"
             icon = member.avatar_url_as(static_format="png")
 

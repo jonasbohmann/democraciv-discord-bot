@@ -476,8 +476,14 @@ class NPC(CustomCog):
            `{PREFIX}{COMMAND} 2` using the NPC's ID
            `{PREFIX}{COMMAND} Ecological Democratic Party` using the NPC's name"""
 
-        embed = text.SafeEmbed(description=f"The owner of this NPC can edit the name, avatar and/or the trigger "
-                                           f"phrase of this NPC with `{config.BOT_PREFIX}npc edit {npc.id}`.")
+        has_access = npc.id in self._npc_access_cache[ctx.author.id]
+        is_owner = npc.owner_id == ctx.author.id
+
+        embed = text.SafeEmbed()
+
+        if is_owner:
+            embed.description = (f"You, the owner of this NPC, can edit the name, avatar and/or the trigger "
+                                 f"phrase of this NPC with `{config.BOT_PREFIX}npc edit {npc.id}`.")
 
         embed.set_author(name=f"NPC #{npc.id} - {npc.name}",
                          icon_url=npc.avatar_url or "https://cdn.discordapp.com/avatars/487345900239323147/79c38314283392c7e21bab76f77e09e9.png")
@@ -485,16 +491,22 @@ class NPC(CustomCog):
         if npc.avatar_url:
             embed.set_thumbnail(url=npc.avatar_url)
 
+        embed.add_field(name="Owner", value=f"{npc.owner.mention} {npc.owner}")
+
         embed.add_field(name="Trigger Phrase",
-                        value=f"`{npc.trigger_phrase}`\n\nSend messages as this NPC like this: "
+                        value=f"`{npc.trigger_phrase}`\n\nPeople with access to this NPC can send messages like this: "
                               f"`{npc.trigger_phrase.replace('text', 'Hello!')}`",
                         inline=False)
 
         allowed_people = await self.bot.db.fetch("SELECT user_id FROM npc_allowed_user WHERE npc_id = $1", npc.id)
-        pretty_people = [f"The owner of this NPC can allow other people to speak as this NPC with "
-                         f"`{config.BOT_PREFIX}npc allow {npc.id}`, or deny someone that was previously "
-                         f"allowed with `{config.BOT_PREFIX}npc deny {npc.id}`.\n",
-                         f"{npc.owner.mention} ({npc.owner})"]
+        pretty_people = []
+
+        if is_owner:
+            pretty_people.append(f"You, the owner of this NPC, can allow other people to speak as this NPC with "
+                                 f"`{config.BOT_PREFIX}npc allow {npc.id}`, or deny someone that you previously "
+                                 f"allowed with `{config.BOT_PREFIX}npc deny {npc.id}`.\n")
+
+        pretty_people.append(f"{npc.owner.mention} ({npc.owner})")
 
         for record in allowed_people:
             user = self.bot.dciv.get_member(record['user_id']) or self.bot.get_user(record['user_id'])
@@ -506,7 +518,7 @@ class NPC(CustomCog):
                         value="\n".join(pretty_people),
                         inline=False)
 
-        if ctx.guild:
+        if ctx.guild and has_access:
             automatic_channel = await self.bot.db.fetch(
                 "SELECT channel_id FROM npc_automatic_mode WHERE user_id = $1 AND guild_id = $2 AND npc_id = $3",
                 ctx.author.id, ctx.guild.id, npc.id)
@@ -518,7 +530,7 @@ class NPC(CustomCog):
                 pretty_chan.append(f"{c.mention if type(c) is discord.TextChannel else f'{c.name} Category'}")
 
             embed.add_field(name="Automatic Mode",
-                            value="\n".join(pretty_chan) or "Automatic mode is not enabled for this "
+                            value="\n".join(pretty_chan) or "__You__ don't have automatic mode enabled for this "
                                                             "NPC in any channel or channel category on this server.")
         await ctx.send(embed=embed)
 
