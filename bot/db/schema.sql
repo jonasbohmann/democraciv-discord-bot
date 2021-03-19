@@ -157,8 +157,7 @@ CREATE INDEX IF NOT EXISTS tag_lookup_alias_idx ON tag_lookup (alias);
 
 CREATE TABLE IF NOT EXISTS original_join_date(
     member bigint UNIQUE PRIMARY KEY,
-    join_date timestamp WITHOUT TIME ZONE NOT NULL,
-    join_position serial UNIQUE NOT NULL
+    join_date timestamp WITHOUT TIME ZONE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS profile(

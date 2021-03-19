@@ -422,7 +422,7 @@ class Utility(context.CustomCog):
         joined_on = member.joined_at or datetime.datetime.utcnow()
 
         await self.bot.db.execute(
-            "INSERT INTO original_join_date (member, join_date) " "VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            "INSERT INTO original_join_date (member, join_date) VALUES ($1, $2) ON CONFLICT DO NOTHING",
             member.id,
             joined_on,
         )
@@ -437,25 +437,33 @@ class Utility(context.CustomCog):
 
         return member.joined_at
 
-    async def get_member_join_position(self, user, members: list):
-        if user.guild.id == self.bot.dciv.id:
-            row = await self.bot.db.fetchrow("SELECT join_position FROM original_join_date WHERE member = $1", user.id)
+    async def get_member_join_position(self,
+                                       member: discord.Member,
+                                       members: typing.List[discord.Member]) -> typing.Tuple[typing.Optional[int], int]:
 
-            all_members = await self.bot.db.fetchval("SELECT max(join_position) FROM original_join_date")
+        if member.guild.id == self.bot.dciv.id:
+            sql = """SELECT position.row_number FROM 
+                       (SELECT member, ROW_NUMBER () OVER (ORDER BY join_date) AS row_number
+                             FROM original_join_date
+                       ) AS position
+                      WHERE member = $1"""
 
-            if row:
-                return row["join_position"], all_members
+            join_position = await self.bot.db.fetchval(sql, member.id)
+            all_members = await self.bot.db.fetchval("SELECT COUNT(member) FROM original_join_date")
 
+            if join_position:
+                return join_position, all_members
+
+        all_members = len(members)
         joins = tuple(sorted(members, key=operator.attrgetter("joined_at")))
 
         if None in joins:
-            return None, None
+            return None, all_members
 
-        for key, elem in enumerate(joins):
-            if elem == user:
-                return key + 1, len(members)
-
-        return None, None
+        try:
+            return joins.index(member) + 1, all_members
+        except ValueError:
+            return None, all_members
 
     @commands.command(name="whois")
     @commands.guild_only()
@@ -498,6 +506,9 @@ class Utility(context.CustomCog):
 
         member = member or ctx.author
         join_pos, max_members = await self.get_member_join_position(member, ctx.guild.members)
+
+        if not join_pos:
+            join_pos = "Unknown"
 
         embed = text.SafeEmbed(title="Member Information")
         embed.add_field(name="Member", value=f"{member} {member.mention}", inline=False)
