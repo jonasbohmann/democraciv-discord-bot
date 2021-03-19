@@ -62,6 +62,9 @@ class Tags(context.CustomCog):
                         return await ctx.send(embed=embed)
                     except discord.HTTPException:
                         return await ctx.send(tag.clean_content)
+                elif tag_content_type is TagContentType.VIDEO:
+                    # discord doesn't allow videos in embeds
+                    return await ctx.send(tag.clean_content)
 
                 embed = text.SafeEmbed(title=tag.title, description=tag.content)
                 return await ctx.send(embed=embed)
@@ -224,6 +227,10 @@ class Tags(context.CustomCog):
 
     async def validate_tag_name(self, ctx: context.CustomContext, tag_name: str) -> bool:
         tag_name = tag_name.lower()
+
+        if not tag_name:
+            await ctx.send(f"{config.NO} The name of your tag cannot be empty.")
+            return False
 
         ctx.message.content = f"{config.BOT_PREFIX}{tag_name}"
         maybe_context: context.CustomContext = await self.bot.get_context(ctx.message)
@@ -696,6 +703,10 @@ class Tags(context.CustomCog):
                     await message.channel.send(embed=embed)
                 except discord.HTTPException:
                     await message.channel.send(discord.utils.escape_mentions(tag_details["content"]))
+
+            elif tag_content_type is TagContentType.VIDEO:
+                # discord doesn't allow videos in embeds
+                await message.channel.send(discord.utils.escape_mentions(tag_details["content"]))
 
             else:
                 embed = text.SafeEmbed(title=tag_details["title"], description=tag_details["content"])

@@ -148,17 +148,17 @@ class GovernmentMixin:
 
     async def _from_person_model(self, ctx, *, member_or_party, model):
         member = member_or_party or ctx.author
+        submit_term = "written" if model is models.Law else "submitted"
 
         if isinstance(member, converter.PoliticalParty):
             name = member.role.name
             members = [m.id for m in member.role.members]
-            empty = f"No member of {name} has submitted a {model.__name__.lower()} yet."
+            empty = f"No member of {name} has {submit_term} a {model.__name__.lower()} yet."
             title = f"{model.__name__}s from members of {name}"
             icon = await member.get_logo() or EmptyEmbed
         else:
             name = member.display_name
             members = [member.id]
-            submit_term = "written" if model is models.Law else "submitted"
             empty = f"{name} hasn't {submit_term} any {model.__name__.lower()}s yet."
             title = f"{model.__name__}s from {name}"
             icon = member.avatar_url_as(static_format="png")
