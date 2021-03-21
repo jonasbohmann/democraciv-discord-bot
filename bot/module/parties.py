@@ -480,7 +480,7 @@ class Party(context.CustomCog, name="Political Parties"):
             if independent_role:
                 embed.add_field(name="\u200b", value=f"**Independent**\n" f"{len(independent_role.members)} "
                                                      f"citizen{'s' if len(independent_role.members) > 1 else ''}",
-                                inline=True)
+                                inline=False)
 
         else:
             if sorted_parties_and_members:
