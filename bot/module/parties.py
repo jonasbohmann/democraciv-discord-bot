@@ -468,32 +468,41 @@ class Party(context.CustomCog, name="Political Parties"):
         if not party_list_embed_content:
             party_list_embed_content = ["There are no political parties yet."]
 
-        if len(party_list_embed_content) > 6:
+        base_description = (f"Check out the [party platforms & descriptions on our Wiki]"
+                            f"({self.bot.mk.POLITICAL_PARTIES}).\nFor more information about a single "
+                            f"party, use `{config.BOT_PREFIX}party <party>`.")
+
+        if len(party_list_embed_content) > 5:
             # split in half
             first_half = party_list_embed_content[:len(party_list_embed_content) // 2]
             second_half = party_list_embed_content[len(party_list_embed_content) // 2:]
 
-            embed.description = f"[Party Platforms]({self.bot.mk.POLITICAL_PARTIES})\n"
-            embed.add_field(name="\u200b", value="\n\n".join(first_half))
-            embed.add_field(name="\u200b", value="\n\n".join(second_half))
+            if len(second_half) > len(first_half):
+                elem = second_half.pop(0)
+                first_half.append(elem)
 
             if independent_role:
-                embed.add_field(name="\u200b", value=f"**Independent**\n" f"{len(independent_role.members)} "
-                                                     f"citizen{'s' if len(independent_role.members) > 1 else ''}",
-                                inline=False)
+                inds = len(independent_role.members)
+                embed.description = (f"{base_description}\nThere {'is' if inds == 1 else 'are'} {inds} "
+                                     f"Independent{'s' if inds != 1 else ''}.")
+
+            else:
+                embed.description = base_description
+
+            embed.add_field(name="\u200b", value="\n\n".join(first_half))
+            embed.add_field(name="\u200b", value="\n\n".join(second_half))
 
         else:
             if sorted_parties_and_members:
                 party_list_embed_content.append(f"⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}"
                                                 f" citizen")
             fmt = "\n\n".join(party_list_embed_content)
-            embed.description = f"[Party Platforms]({self.bot.mk.POLITICAL_PARTIES})\n\n{fmt}"
+            embed.description = f"{base_description}\n\n{fmt}"
 
         embed.set_author(
             name=f"Ranking of Political Parties in {self.bot.mk.NATION_NAME}", icon_url=self.bot.mk.NATION_ICON_URL
         )
 
-        embed.set_footer(text=f"For more information about a party, use: {config.BOT_PREFIX}party <party>")
         await ctx.send(embed=embed)
 
     async def create_new_party(
