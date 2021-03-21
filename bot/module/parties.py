@@ -90,15 +90,14 @@ class Party(context.CustomCog, name="Political Parties"):
         parties_and_members = []
 
         parties = await self.bot.db.fetch("SELECT id FROM party")
-        parties = [record["id"] for record in parties]
-
         error_string = []
 
-        for party in parties:
-            role = self.bot.dciv.get_role(party)
+        for record in parties:
+            party_id = record['id']
+            role = self.bot.dciv.get_role(party_id)
 
             if role is None:
-                error_string.append(str(party))
+                error_string.append(str(party_id))
                 continue
 
             parties_and_members.append((role.name, len(role.members)))
@@ -109,9 +108,10 @@ class Party(context.CustomCog, name="Political Parties"):
                 f"The following ids were added as a party but have no role on the Democraciv guild: {errored}"
             )
 
+        parties_and_members.sort(key=lambda x: x[1], reverse=True)
         return parties_and_members
 
-    @commands.group(name="party", case_insensitive=True, invoke_without_command=True)
+    @commands.group(name="party", aliases=['p'], case_insensitive=True, invoke_without_command=True)
     async def party(self, ctx, *, party: PoliticalParty = None):
         """Detailed information about a single political party"""
 
@@ -451,8 +451,7 @@ class Party(context.CustomCog, name="Political Parties"):
         """Ranking of political parties by their amount of members"""
 
         party_list_embed_content = []
-
-        sorted_parties_and_members = sorted(await self.collect_parties_and_members(), key=lambda x: x[1], reverse=True)
+        sorted_parties_and_members = await self.collect_parties_and_members()
 
         for party in sorted_parties_and_members:
             if party[0] == "Independent":
@@ -464,31 +463,37 @@ class Party(context.CustomCog, name="Political Parties"):
 
         # Append Independents to message
         independent_role = discord.utils.get(self.bot.dciv.roles, name="Independent")
+        embed = text.SafeEmbed()
 
-        if independent_role is not None:
-            if len(independent_role.members) == 1:
-                party_list_embed_content.append(
-                    f"⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n" f"{len(independent_role.members)} citizen"
-                )
-            else:
-                party_list_embed_content.append(
-                    f"⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n" f"{len(independent_role.members)} citizens"
-                )
-        if len(party_list_embed_content) == 0:
+        if not party_list_embed_content:
             party_list_embed_content = ["There are no political parties yet."]
 
-        party_list_embed_content = "\n\n".join(party_list_embed_content)
+        if len(party_list_embed_content) > 6:
+            # split in half
+            first_half = party_list_embed_content[:len(party_list_embed_content) // 2]
+            second_half = party_list_embed_content[len(party_list_embed_content) // 2:]
 
-        embed = SafeEmbed(
-            description=f"[Party Platforms]({self.bot.mk.POLITICAL_PARTIES})\n\n{party_list_embed_content}",
-        )
+            embed.description = f"[Party Platforms]({self.bot.mk.POLITICAL_PARTIES})\n"
+            embed.add_field(name="\u200b", value="\n\n".join(first_half))
+            embed.add_field(name="\u200b", value="\n\n".join(second_half))
+
+            if independent_role:
+                embed.add_field(name="\u200b", value=f"**Independent**\n" f"{len(independent_role.members)} "
+                                                     f"citizen{'s' if len(independent_role.members) > 1 else ''}")
+
+        else:
+            if sorted_parties_and_members:
+                party_list_embed_content.append(f"⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}"
+                                                f" citizen")
+            fmt = "\n\n".join(party_list_embed_content)
+            embed.description = f"[Party Platforms]({self.bot.mk.POLITICAL_PARTIES})\n\n{fmt}"
 
         embed.set_author(
             name=f"Ranking of Political Parties in {self.bot.mk.NATION_NAME}", icon_url=self.bot.mk.NATION_ICON_URL
         )
 
         embed.set_footer(text=f"For more information about a party, use: {config.BOT_PREFIX}party <party>")
-        return await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
 
     async def create_new_party(
             self, ctx: CustomContext, *, role=True, leaders=True, invite=True, join_mode=True, commit=True
@@ -764,7 +769,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
         await ctx.send(f"{config.YES} `{name}` and all its aliases were deleted.")
 
-    @party.command(name="addalias")
+    @party.command(name="addalias", aliases=['alias'])
     @checks.moderation_or_nation_leader()
     async def addalias(self, ctx, *, party: PoliticalParty):
         """Add a new alias to a political party"""
