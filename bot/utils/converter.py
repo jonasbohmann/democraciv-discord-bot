@@ -1,4 +1,3 @@
-import difflib
 import enum
 import re
 import typing
@@ -52,6 +51,15 @@ class PoliticalParty(commands.Converter):
         self._id: int = kwargs.get("id")
         self._bot = kwargs.get("bot")
         self.is_independent = kwargs.get("ind", False)
+
+    def __str__(self):
+        return self.role.name if self.role else "*Deleted Party"
+
+    def __eq__(self, other):
+        return isinstance(other, PoliticalParty) and other._id == self._id
+
+    def __hash__(self):
+        return hash(self.role) if self.role else hash(self._id)
 
     @property
     def leaders(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
@@ -108,25 +116,8 @@ class PoliticalParty(commands.Converter):
         )
 
         if not party or not ctx.bot.dciv.get_role(party["id"]):
-            parties = await ctx.bot.db.fetch("SELECT id FROM party")
-            parties = [record["id"] for record in parties]
-            msg = []
-
-            for party in parties:
-                role = ctx.bot.dciv.get_role(party)
-                if role is not None:
-                    msg.append(f"`{role.name}`")
-
-            if msg:
-                msg = ", ".join(msg)
-                message = (
-                    f"{config.NO} There is no political party that matches `{argument}`.\n"
-                    f"{config.HINT} Try one of these: {msg}"
-                )
-            else:
-                message = f"{config.NO} There is no political party that matches `{argument}`."
-
-            raise exceptions.NotFoundError(message)
+            raise exceptions.NotFoundError(f"{config.NO} There is no political party that matches `{argument}`.\n"
+                                           f"{config.HINT} Try one of the ones in `{config.BOT_PREFIX}parties`.")
 
         aliases = await ctx.bot.db.fetch("SELECT alias FROM party_alias WHERE party_id = $1", party["id"])
         aliases = [record["alias"] for record in aliases]
@@ -151,13 +142,33 @@ class FuzzyPoliticalParty(PoliticalParty):
             return await super().convert(ctx, argument)
         except Exception:
             arg = argument.lower()
+            lookup = {}
 
-            possibilities = await ctx.bot.db.fetch("SELECT alias FROM party_alias")
+            possibilities = await ctx.bot.db.fetch("SELECT party_id, alias FROM party_alias")
+            for record in possibilities:
+                lookup[record['alias'].title()] = record['party_id']
+
             possibilities = [r['alias'].title() for r in possibilities]
-            possibilities.append("Independent")
+            match = process.extract(arg, possibilities, limit=10)
+            fmt = {}
 
-            party = await fuzzy_search(ctx, arg, possibilities, "Political Party")
-            return await super().convert(ctx, party)
+            for m, _ in match:
+                try:
+                    party = await PoliticalParty.convert(ctx, lookup[m])
+                    fmt[party] = None
+                except Exception:
+                    # sanity check
+                    continue
+
+            fmt = list(fmt.keys())[:5]
+            menu = text.FuzzyChoose(question=f"Which Political Party did you mean?", choices=fmt)
+            result = await menu.prompt(ctx)
+
+            if result:
+                return result
+
+            raise exceptions.NotFoundError(f"{config.NO} There is no political party that matches `{argument}`.\n"
+                                           f"{config.HINT} Try one of the ones in `{config.BOT_PREFIX}parties`.")
 
 
 class Selfrole(commands.Converter):
@@ -411,7 +422,7 @@ class FuzzyDemocracivCIRole(commands.Converter):
             return await FuzzyCIRole().convert(ctx, argument)
 
         roles = [role.name for role in ctx.guild.roles]
-        roles.extend([f"{role.name} - *{ctx.bot.dciv} Role*" for role in ctx.bot.dciv.roles])
+        roles.extend([f"{role.name} *({ctx.bot.dciv} Role)*" for role in ctx.bot.dciv.roles])
         role_name = await fuzzy_search(ctx, argument, roles, "role")
 
         if not role_name:
