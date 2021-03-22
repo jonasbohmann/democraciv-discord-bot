@@ -16,6 +16,12 @@ class InformationExtraction:
 
     async def add_bill(self, bill_id):
         bill = await self.db.pool.fetchrow("SELECT id, content FROM bill WHERE id = $1", bill_id)
+
+        try:
+            self.holmes_manager.remove_document(label=str(bill['id']))
+        except KeyError:
+            pass
+
         self.holmes_manager.parse_and_register_document(document_text=bill['content'], label=str(bill['id']))
 
     async def delete_bill(self, bill_id):
