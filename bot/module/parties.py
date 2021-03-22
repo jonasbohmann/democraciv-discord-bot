@@ -15,7 +15,7 @@ from bot.utils.context import CustomContext
 from bot.utils.converter import (
     PoliticalParty,
     PoliticalPartyJoinMode,
-    CaseInsensitiveRole,
+    CaseInsensitiveRole, FuzzyPoliticalParty,
 )
 from bot.utils.context import MockContext
 from bot.utils.text import SafeEmbed
@@ -112,7 +112,7 @@ class Party(context.CustomCog, name="Political Parties"):
         return parties_and_members
 
     @commands.group(name="party", aliases=['p'], case_insensitive=True, invoke_without_command=True)
-    async def party(self, ctx, *, party: PoliticalParty = None):
+    async def party(self, ctx, *, party: FuzzyPoliticalParty = None):
         """Detailed information about a single political party"""
 
         if party is None:
@@ -294,12 +294,12 @@ class Party(context.CustomCog, name="Political Parties"):
             await self.bot.safe_send_dm(target=leader, embed=embed, reason="party_join_leave")
 
     @party.command(name="join", hidden=True)
-    async def _join_alias(self, ctx, *, party: PoliticalParty):
+    async def _join_alias(self, ctx, *, party: FuzzyPoliticalParty):
         """Join a political party"""
         return await ctx.invoke(self.bot.get_command("join"), party=party)
 
     @commands.command(name="join")
-    async def join(self, ctx, *, party: PoliticalParty):
+    async def join(self, ctx, *, party: FuzzyPoliticalParty):
         """Join a political party"""
 
         person_in_dciv = self.bot.dciv.get_member(ctx.author.id)
@@ -415,12 +415,12 @@ class Party(context.CustomCog, name="Political Parties"):
             await ctx.send(message)
 
     @party.command(name="leave", hidden=True)
-    async def _leave_alias(self, ctx, *, party: PoliticalParty):
+    async def _leave_alias(self, ctx, *, party: FuzzyPoliticalParty):
         """Leave a political party"""
         return await ctx.invoke(self.bot.get_command("leave"), party=party)
 
     @commands.command(name="leave")
-    async def leave(self, ctx, *, party: PoliticalParty):
+    async def leave(self, ctx, *, party: FuzzyPoliticalParty):
         """Leave a political party"""
 
         person_in_dciv = self.bot.dciv.get_member(ctx.author.id)
@@ -657,7 +657,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
     @party.command(name="edit", aliases=["change"])
     @checks.moderation_or_nation_leader()
-    async def changeparty(self, ctx, *, party: PoliticalParty):
+    async def changeparty(self, ctx, *, party: FuzzyPoliticalParty):
         """Edit an existing political party
 
         **Example**
@@ -751,7 +751,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
     @party.command(name="delete", aliases=["remove"])
     @checks.moderation_or_nation_leader()
-    async def deleteparty(self, ctx, *, party: PoliticalParty):
+    async def deleteparty(self, ctx, *, party: FuzzyPoliticalParty):
         """Delete a political party
 
         **Usage**
@@ -781,7 +781,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
     @party.command(name="addalias", aliases=['alias'])
     @checks.moderation_or_nation_leader()
-    async def addalias(self, ctx, *, party: PoliticalParty):
+    async def addalias(self, ctx, *, party: FuzzyPoliticalParty):
         """Add a new alias to a political party"""
 
         alias = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the new alias for `{party.role.name}`.")
@@ -805,7 +805,7 @@ class Party(context.CustomCog, name="Political Parties"):
     async def deletealias(self, ctx, *, alias: str):
         """Delete a party's alias"""
         try:
-            await PoliticalParty.convert(ctx, alias)
+            await FuzzyPoliticalParty.convert(ctx, alias)
         except exceptions.NotFoundError:
             return await ctx.send(f"{config.NO} `{alias}` is not an alias of any party.")
 
@@ -830,7 +830,7 @@ class Party(context.CustomCog, name="Political Parties"):
                 return
 
             try:
-                party = await PoliticalParty.convert(ctx, name)
+                party = await FuzzyPoliticalParty.convert(ctx, name)
             except exceptions.NotFoundError:
                 return await ctx.send(f"{config.NO} There is no party that matches `{name}`. Aborted.")
 

@@ -677,7 +677,7 @@ class DemocracivBot(commands.Bot):
 
         try:
             await target.send(content=message, embed=embed)
-        except discord.Forbidden:
+        except discord.HTTPException:
             pass
 
     async def close(self):

@@ -1,3 +1,4 @@
+import difflib
 import enum
 import re
 import typing
@@ -82,12 +83,12 @@ class PoliticalParty(commands.Converter):
             arg_as_int = 0
 
         if argument.lower() in (
-            "independent",
-            "independant",
-            "ind",
-            "ind.",
-            "independents",
-            "independants",
+                "independent",
+                "independant",
+                "ind",
+                "ind.",
+                "independents",
+                "independants",
         ):
             ind_role = discord.utils.get(ctx.bot.dciv.roles, name="Independent")
 
@@ -141,6 +142,22 @@ class PoliticalParty(commands.Converter):
             aliases=aliases,
             bot=ctx.bot,
         )
+
+
+class FuzzyPoliticalParty(PoliticalParty):
+    @classmethod
+    async def convert(cls, ctx, argument):
+        try:
+            return await super().convert(ctx, argument)
+        except Exception:
+            arg = argument.lower()
+
+            possibilities = await ctx.bot.db.fetch("SELECT alias FROM party_alias")
+            possibilities = [r['alias'].title() for r in possibilities]
+            possibilities.append("Independent")
+
+            party = await fuzzy_search(ctx, arg, possibilities, "Political Party")
+            return await super().convert(ctx, party)
 
 
 class Selfrole(commands.Converter):
@@ -599,7 +616,8 @@ class OwnedTag(Tag):
             except exceptions.RoleNotFoundError:
                 pass
 
-        if (tag.author and tag.author.id == ctx.author.id) or ctx.author.guild_permissions.administrator or ctx.author.id == ctx.bot.owner_id:
+        if (
+                tag.author and tag.author.id == ctx.author.id) or ctx.author.guild_permissions.administrator or ctx.author.id == ctx.bot.owner_id:
             return tag
 
         raise exceptions.TagError(f"{config.NO} That isn't your tag.")
