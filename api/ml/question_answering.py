@@ -31,6 +31,10 @@ class BERTQuestionAnswering:
                                 bert_squad_model=self.bert_squad_model,
                                 bert_emb_model=self.bert_emb_model)
 
+    async def _sleep_until_index(self):
+        await asyncio.sleep(900)
+        await self.index(force=True)
+
     async def index(self, memory_limit_in_mb=128, procs=1, force=False):
         async with self._lock:
             if not force:
@@ -38,7 +42,8 @@ class BERTQuestionAnswering:
                     return
 
                 self._is_index_queued = True
-                await asyncio.sleep(900)
+                asyncio.get_event_loop().create_task(self._sleep_until_index())
+                return
 
             shutil.rmtree(self.index_directory, ignore_errors=True)
 
