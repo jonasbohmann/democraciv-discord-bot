@@ -965,7 +965,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         return embed
 
     @legislature.command(name="submit")
-    @commands.cooldown(1, 60, commands.BucketType.user)
+    @commands.cooldown(1, 30, commands.BucketType.user)
     @commands.max_concurrency(1, per=commands.BucketType.guild, wait=False)
     @checks.is_democraciv_guild()
     async def submit(self, ctx):

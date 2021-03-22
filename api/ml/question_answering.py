@@ -20,7 +20,7 @@ class BERTQuestionAnswering:
         self.qa: typing.Optional[text.SimpleQA] = None
 
         self._lock = asyncio.Lock()
-        self._last_indexed: typing.Optional[datetime.datetime] = None
+        self._is_index_queued = False
 
     async def make(self):
         if not os.path.exists(self.index_directory):
@@ -31,19 +31,15 @@ class BERTQuestionAnswering:
                                 bert_squad_model=self.bert_squad_model,
                                 bert_emb_model=self.bert_emb_model)
 
-    async def _sleep_until_index(self):
-        await asyncio.sleep(900)
-        await self.index()
-
     async def index(self, memory_limit_in_mb=128, procs=1, force=False):
-        if not force:
-            now = datetime.datetime.utcnow()
-
-            if now - self._last_indexed < datetime.timedelta(minutes=15):
-                asyncio.get_event_loop().create_task(self._sleep_until_index())
-                return
-
         async with self._lock:
+            if not force:
+                if self._is_index_queued:
+                    return
+
+                self._is_index_queued = True
+                await asyncio.sleep(900)
+
             shutil.rmtree(self.index_directory, ignore_errors=True)
 
             await self.db.ready.wait()
@@ -61,7 +57,7 @@ class BERTQuestionAnswering:
                                           limitmb=memory_limit_in_mb, breakup_docs=True,
                                           references=references)
             end = time.time()
-            self._last_indexed = datetime.datetime.utcnow()
+            self._is_index_queued = False
             logger.info(f"indexing successful after {end - start} seconds")
 
     async def add_bill(self, bill_id: int):
