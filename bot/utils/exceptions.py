@@ -6,9 +6,11 @@ from bot.config import config
 
 class DemocracivBotException(commands.CommandError):
     """Generic CommandError exception"""
+    message = f"{config.NO} Something went wrong."
 
-    def __init__(self, message="Something went wrong."):
-        self.message = message
+    def __init__(self, message=None):
+        if message:
+            self.message = message
 
 
 class DemocracivBotAPIError(DemocracivBotException):
@@ -34,8 +36,9 @@ class NotLawError(DemocracivBotException):
 class GoogleAPIError(DemocracivBotException):
     message = (
         f"{config.NO} Something went wrong during the execution of a Google Apps Script. "
-        f"Please try again later or contact the developer. Make sure that, if you have given me the URL "
-        f"of a Google Docs or Google Forms, I have edit permissions on this document if needed."
+        f"Please try again later or contact the developer. If you have given me the URL "
+        f"of a Google Docs or Google Forms, make sure that link is an edit link, so that I have edit permissions "
+        f"for this document or form if needed."
     )
 
 
