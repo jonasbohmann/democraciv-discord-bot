@@ -335,6 +335,8 @@ class PaginatedHelpCommand(commands.HelpCommand):
         if group in (
             self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} withdraw"),
             self.context.bot.get_command("random"),
+            self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} session export"),
+
         ):
             return await self._send_group_help(group)
 

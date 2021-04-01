@@ -321,7 +321,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             value="If you want to use Google Forms to vote, "
                   "I can generate that Google Form for you and fill "
                   f"it with all the bills and motions that were submitted. "
-                  f"Take a look at `{p}{l} session export`. You can use my generated Google Form "
+                  f"Take a look at `{p}{l} session export form`. You can use my generated Google Form "
                   f"for the `{p}{l} session vote` command.",
             inline=False,
         )
@@ -391,7 +391,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         if not self.is_google_doc_link(voting_form):
             return await ctx.send(f"{config.HINT} Use the "
-                                  f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session export` "
+                                  f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session export form` "
                                   f"command to make me generate the form for you, then use this command "
                                   f"again once you're all set.")
 
@@ -501,10 +501,18 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             f"{self.bot.mk.LEGISLATURE_CABINET_NAME}."
         )
 
-    @leg_session.command(name="export", aliases=["es", "ex", "e"])
-    @commands.cooldown(1, 120, commands.BucketType.user)
-    async def exportsession(self, ctx: context.CustomContext, session: Session = None):
-        """Export a session's submissions for Google Spreadsheets and generate the Google Forms voting form"""
+    @leg_session.group(name="export", aliases=["es", "ex", "e"], hidden=True,
+                       case_insensitive=True, invoke_without_command=True)
+    async def export(self, ctx: context.CustomContext):
+        """Automate the most time consuming Speaker responsibilities with these commands"""
+        if ctx.invoked_subcommand is None:
+            await ctx.send(f"{config.NO} You have to tell how you would like this session to be exported.")
+            await ctx.send_help(ctx.command)
+
+    @export.command(name="spreadsheet", aliases=['sheet', 'sheets', 's'])
+    async def export_spreadsheet(self, ctx, session: Session = None):
+        """Export a session's submissions into copy & paste-able formatting for Google Spreadsheets"""
+
         session = session or await self.get_last_leg_session()
 
         if session is None:
@@ -534,6 +542,26 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             exported.extend(m_hyperlinks)
 
             spreadsheet_formatting_link = await self.bot.make_paste("\n".join(exported))
+
+        embed = text.SafeEmbed(title=f"Spreadsheet Export of Session #{session.id}",
+                               description=f"This session's bills and motions were exported into a format that "
+                                           f"you can easily copy & paste into Google Spreadsheets, for example for a "
+                                           f"Legislative Docket. See [this video](https://cdn.discordapp.com/attachm"
+                                           f"ents/709411002482950184/709412385034862662/howtoexport.mp4) to "
+                                           f"see how to speed up your Speaker duties with this.")
+        embed.add_field(name=f"Bills & Motions in Google Spreadsheets Formatting",
+                        value=spreadsheet_formatting_link)
+        await ctx.send(embed=embed)
+
+    @export.command(name="form", aliases=['forms', 'voting', 'f'])
+    @commands.cooldown(1, 120, commands.BucketType.user)
+    async def export_form(self, ctx, session: Session = None):
+        """Generate the Google Forms voting form with all the submitted bills & motions for a session"""
+
+        session = session or await self.get_last_leg_session()
+
+        if session is None:
+            return await ctx.send(f"{config.NO} There hasn't been a session yet.")
 
         form_url = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with an **edit** link to an **empty** Google Forms "
@@ -567,14 +595,17 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         except ValueError:
             return await ctx.send(f"{config.NO} You didn't reply with a number.")
 
-        bills = list(filter(lambda b: len(b.sponsors) >= min_sponsors, bills))
-
         generating = await ctx.send(
-            f"{config.YES} I will generate the voting form for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}."
-            f"\n:arrows_counterclockwise: This may take a few minutes..."
+            f"{config.YES} I will generate the voting form for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
+            f"Session #{session.id}. \n:arrows_counterclockwise: This may take a few minutes..."
         )
 
         async with ctx.typing():
+            bills = [await Bill.convert(ctx, bill_id) for bill_id in session.bills]
+            motions = [await Motion.convert(ctx, motion_id) for motion_id in session.motions]
+
+            bills = list(filter(lambda b: len(b.sponsors) >= min_sponsors, bills))
+
             bills_info = {b.name: b.link for b in bills}
             motions_info = {m.name: m.link for m in motions}
 
@@ -600,21 +631,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             inline=False,
         )
 
-        embed.add_field(
-            name="Legislative Docket",
-            value=f"This session's bills and motions were exported into a format that you can easily copy & "
-                  f"paste into Google Spreadsheets, for example for a Legislative Docket. See "
-                  f"[this video](https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662"
-                  f"/howtoexport.mp4) to see how to speed up your Speaker duties.\n\n"
-                  f"Bills & Motions in Google Spreadsheets formatting: {spreadsheet_formatting_link}",
-
-            inline=False,
-        )
-
-        embed.set_footer(text="You can use this voting form to start the Voting Period of a session with: "
-                              f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session vote.")
-
-        await ctx.send(embed=embed)
+        await ctx.send(f"You can use this voting form to start the Voting Period of a session with "
+                       f"´{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session vote´.", embed=embed)
         self.bot.loop.create_task(generating.delete())
 
     async def paginate_all_sessions(self, ctx):
