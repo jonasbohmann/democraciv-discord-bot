@@ -543,7 +543,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
             spreadsheet_formatting_link = await self.bot.make_paste("\n".join(exported))
 
-        embed = text.SafeEmbed(title=f"Spreadsheet Export of Session #{session.id}",
+        embed = text.SafeEmbed(title=f"Spreadsheet Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}",
                                description=f"This session's bills and motions were exported into a format that "
                                            f"you can easily copy & paste into Google Spreadsheets, for example for a "
                                            f"Legislative Docket. See [this video](https://cdn.discordapp.com/attachm"
@@ -632,7 +632,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
         await ctx.send(f"You can use this voting form to start the Voting Period of a session with "
-                       f"´{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session vote´.", embed=embed)
+                       f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session vote`.", embed=embed)
         self.bot.loop.create_task(generating.delete())
 
     async def paginate_all_sessions(self, ctx):
