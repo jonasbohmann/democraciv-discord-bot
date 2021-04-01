@@ -107,7 +107,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         embed.add_field(name=self.bot.mk.LEGISLATURE_CABINET_NAME, value="\n".join(speaker_value))
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n" f"[Legal Code]({self.bot.mk.LEGAL_CODE})\n",
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
+                  f"\n[Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})",
             inline=True,
         )
         embed.add_field(name="Current Session", value=current_session_value, inline=False)
@@ -601,7 +602,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
         def safe_get_submitter(thing) -> str:
-            return f"{thing.submitter.display_name} ({thing.submitter})" if thing.submitter else "*Unknown Person*"
+            return thing.submitter.display_name if thing.submitter else "*Unknown Person*"
 
         async with ctx.typing():
             bills = [await Bill.convert(ctx, bill_id) for bill_id in session.bills]
@@ -609,7 +610,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
             bills = list(filter(lambda b: len(b.sponsors) >= min_sponsors, bills))
 
-            bills_info = {b.name: f"Submitted by {safe_get_submitter(b)}\n{b.link}\n\n{b.description}" for b in bills}
+            bills_info = {b.name: f"Submitted by {safe_get_submitter(b)} with {len(b.sponsors)} sponsors\n"
+                                  f"{b.link}\n\n{b.description}" for b in bills}
+
             motions_info = {m.name: f"Submitted by {safe_get_submitter(m)}\n{m.link}" for m in motions}
 
             result = await self.bot.run_apps_script(

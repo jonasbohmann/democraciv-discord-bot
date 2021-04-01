@@ -125,7 +125,8 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         embed.add_field(name=self.bot.mk.MINISTRY_LEADERSHIP_NAME, value="\n".join(minister_value))
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})\n",
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})\n"
+                  f"[Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})",
             inline=True,
         )
         # embed.add_field(name="Veto-able Bills", value=pretty_bills, inline=False)
