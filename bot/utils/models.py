@@ -65,20 +65,19 @@ class Session(commands.Converter):
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str]):
         if isinstance(argument, str):
-            if argument.lower() == "all":
-                return argument
-            else:
-                try:
-                    argument = int(argument)
-                except ValueError:
-                    raise commands.BadArgument(f"{config.NO} {argument} is neither a number nor 'all'.")
+            if argument.startswith("#"):
+                argument = argument[1:]
+            try:
+                argument = int(argument)
+            except ValueError:
+                raise commands.BadArgument(f"{config.NO} `{argument}` is not a number.")
 
         session = await ctx.bot.db.fetchrow("SELECT * FROM legislature_session WHERE id = $1", argument)
+
+        if not session:
+            raise NotFoundError(f"{config.NO} There hasn't been a Session #{argument} yet.")
+
         status = SessionStatus(session["status"])
-
-        if session is None:
-            raise NotFoundError(f"{config.NO} There is no session with ID #{argument}.")
-
         bills = await ctx.bot.db.fetch("SELECT id FROM bill WHERE leg_session = $1", session["id"])
         bills = sorted([record["id"] for record in bills])
         motions = await ctx.bot.db.fetch("SELECT id FROM motion WHERE leg_session = $1", session["id"])
@@ -181,8 +180,13 @@ class Bill(commands.Converter):
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str]):
         try:
-            argument = int(argument)
-            bill = await ctx.bot.db.fetchrow("SELECT * FROM bill WHERE id = $1", argument)
+            arg = argument
+
+            if isinstance(arg, str) and arg.startswith("#"):
+                arg = arg[1:]
+
+            arg = int(arg)
+            bill = await ctx.bot.db.fetchrow("SELECT * FROM bill WHERE id = $1", arg)
         except ValueError:
             bill = await ctx.bot.db.fetchrow(
                 "SELECT * FROM bill WHERE" " lower(name) = $2 or link = $1 or tiny_link = $1",
@@ -279,16 +283,24 @@ class Motion(commands.Converter):
         await self._bot.db.execute("DELETE FROM motion WHERE id = $1", self.id)
 
     @classmethod
-    async def convert(cls, ctx, argument: int):
+    async def convert(cls, ctx, argument: typing.Union[str, int]):
         try:
-            argument = int(argument)
-        except ValueError:
-            raise commands.BadArgument(f"{config.NO} {argument} is not a number.")
+            arg = argument
 
-        motion = await ctx.bot.db.fetchrow("SELECT * FROM motion WHERE id = $1", argument)
+            if isinstance(arg, str) and arg.startswith("#"):
+                arg = arg[1:]
+
+            arg = int(arg)
+            motion = await ctx.bot.db.fetchrow("SELECT * FROM motion WHERE id = $1", arg)
+        except ValueError:
+            motion = await ctx.bot.db.fetchrow(
+                "SELECT * FROM motion WHERE lower(title) = $2 or paste_link = $1",
+                argument,
+                argument.lower(),
+            )
 
         if motion is None:
-            raise NotFoundError(f"{config.NO} There is no motion with ID #{argument}.")
+            raise NotFoundError(f"{config.NO} There is no motion that matches `{argument}`.")
 
         session = await Session.convert(ctx, motion["leg_session"])
         return cls(**motion, session=session, bot=ctx.bot)

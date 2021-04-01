@@ -505,9 +505,6 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     @commands.cooldown(1, 120, commands.BucketType.user)
     async def exportsession(self, ctx: context.CustomContext, session: Session = None):
         """Export a session's submissions for Google Spreadsheets and generate the Google Forms voting form"""
-        if isinstance(session, str):  # 'all'
-            return
-
         session = session or await self.get_last_leg_session()
 
         if session is None:

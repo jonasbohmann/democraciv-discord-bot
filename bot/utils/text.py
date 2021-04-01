@@ -41,7 +41,7 @@ class AnnouncementScheduler:
     def __init__(self, bot, channel):
         self.bot = bot
         self._channel: mk.DemocracivChannel = channel
-        self._objects: typing.List[typing.Union[models.Bill, models.Law, models.Session]] = []
+        self._objects: typing.List[typing.Union[models.Bill, models.Law]] = []
         self._last_addition = None
         self._task = None
 
