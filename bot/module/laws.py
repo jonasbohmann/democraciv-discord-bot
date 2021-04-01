@@ -1,5 +1,4 @@
 import datetime
-import textwrap
 import typing
 
 from discord.ext import commands

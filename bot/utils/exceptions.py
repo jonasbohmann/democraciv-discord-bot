@@ -1,7 +1,7 @@
 import enum
 
 from discord.ext import commands
-from config import config
+from bot.config import config
 
 
 class DemocracivBotException(commands.CommandError):

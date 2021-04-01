@@ -3,7 +3,7 @@ from jishaku.cog import JishakuBase, jsk
 from jishaku.metacog import GroupCogMeta
 
 from bot.utils import models
-from config import config, token
+from bot.config import config, token
 
 
 class Admin(

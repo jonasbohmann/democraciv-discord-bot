@@ -8,8 +8,7 @@ from discord.ext.commands import BadArgument
 from fuzzywuzzy import process
 
 from bot.config import config, mk
-from bot.utils import context, exceptions
-from utils import text
+from bot.utils import context, exceptions, text
 
 
 class InternalAPIWebhookConverter(commands.Converter):

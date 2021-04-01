@@ -18,9 +18,8 @@ import itertools
 from bot.config import config
 from discord.ext import commands, tasks
 
-from bot.utils import context
 from bot.utils.converter import CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember
-from bot.utils import text
+from bot.utils import text, context
 
 
 class Starboard(context.CustomCog):

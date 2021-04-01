@@ -12,7 +12,7 @@ from discord.embeds import EmptyEmbed
 from discord.ext import menus
 from discord.ext.commands import Paginator as CommandPaginator
 from bot.utils.text import SafeEmbed
-from config import config
+from bot.config import config
 
 
 class Pages(menus.MenuPages):

@@ -3,11 +3,9 @@ import discord
 import bot.utils.exceptions as exceptions
 
 from bot.config import config
-from bot.utils import text, context
+from bot.utils import text, context, converter
 from bot.utils.converter import Selfrole
 from discord.ext import commands
-
-from bot.utils import converter
 
 
 class Selfroles(context.CustomCog):

@@ -10,7 +10,7 @@ import discord
 from discord.ext import commands, menus
 
 from bot.config import config
-from bot.utils import exceptions, checks, converter, context
+from bot.utils import exceptions, checks, converter, context, text
 from bot.utils.context import CustomContext
 from bot.utils.converter import (
     PoliticalParty,
@@ -18,9 +18,7 @@ from bot.utils.converter import (
     CaseInsensitiveRole, FuzzyPoliticalParty,
 )
 from bot.utils.context import MockContext
-from bot.utils.text import SafeEmbed
-from utils import text
-from utils.exceptions import ForbiddenTask
+from bot.utils.exceptions import ForbiddenTask
 
 
 class EditPartyMenu(menus.Menu):
@@ -118,7 +116,7 @@ class Party(context.CustomCog, name="Political Parties"):
         if party is None:
             return await ctx.invoke(self.bot.get_command("parties"))
 
-        embed = SafeEmbed(title=party.role.name)
+        embed = text.SafeEmbed(title=party.role.name)
 
         if not party.is_independent:
             thumbnail = await party.get_logo()
@@ -284,7 +282,7 @@ class Party(context.CustomCog, name="Political Parties"):
         except exceptions.NotFoundError:
             return
 
-        embed = SafeEmbed(description=message)
+        embed = text.SafeEmbed(description=message)
         embed.set_author(name=before, icon_url=before.avatar_url_as(static_format="png"))
 
         for leader in party.leaders:

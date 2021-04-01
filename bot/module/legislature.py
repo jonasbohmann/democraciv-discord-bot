@@ -168,7 +168,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         case_insensitive=True,
         invoke_without_command=True,
     )
-    async def motion(self, ctx: context.CustomContext, motion_id: Motion = None):
+    async def motion(self, ctx: context.CustomContext, *, motion_id: Motion = None):
         """List all motions or get details about a single motion"""
 
         if motion_id is None:
@@ -701,11 +701,16 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 else:
                     continue
 
+        if not messages:
+            await ctx.send(f"{config.HINT} You didn't write any text for your bill. The bill submission "
+                           f"process was cancelled.")
+            return
+
         # check if messages were deleted
         messages = [discord.utils.get(self.bot.cached_messages, id=mes.id) for mes in messages]
 
         if not any(messages):
-            await ctx.send(f"{config.NO} You deleted every message. This process was cancelled.")
+            await ctx.send(f"{config.HINT} You deleted all your messages. The bill submission process was cancelled.")
             return
 
         messages = list(filter(None, messages))
@@ -797,13 +802,18 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
             if tiny_url is None:
                 await ctx.send(
-                    f"{config.NO} Your bill was not submitted since there was a problem with tinyurl.com. "
-                    "Try again in a few minutes."
+                    f"{config.NO} Your bill was not submitted since there was a problem with the URL shortening "
+                    f"service. Sorry, try again in a few minutes."
                 )
                 return
 
             bill = models.Bill(bot=self.bot, link=google_docs_url, submitter_description=bill_description)
             name, tags, content = await bill.fetch_name_and_keywords()
+
+            if not name:
+                await ctx.send(f"{config.NO} Something went wrong. Are you sure you made your "
+                               f"Google Docs document public for everyone to view?")
+                return
 
             bill_id = await self.bot.db.fetchval(
                 "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, "
@@ -891,7 +901,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             name="Additional Commands",
             value=f"Congratulations! Your submitted bill will now show up in the detail page "
                   f"for the current session `{p}{l} session`, in `{p}{l} bills`, "
-                  f"`{p}{l} bills from {ctx.author.display_name}` and "
+                  f"`{p}{l} bills from {ctx.author.name}` and "
                   f"`{p}{l} bills from <your_party>` if you belong to a political party, and "
                   f"everyone can search for it based on matching keywords "
                   f"with `{p}{l} bill search <keyword>`.",
@@ -909,14 +919,14 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         title = await ctx.input(
             f"{config.YES} You will submit a **motion**.\n"
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the title of your motion."
+            f"{config.USER_INTERACTION_REQUIRED} Reply with a short **title** for your motion."
         )
 
         if not title:
             return
 
         description = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the content of your motion. If your motion is"
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the **content** of your motion. If your motion is"
             " inside a Google Docs document, just use a link to that for this."
         )
 
@@ -928,8 +938,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
             if not haste_bin_url:
                 await ctx.send(
-                    f"{config.NO} Your motion was not submitted, there was a problem with mystb.in. "
-                    "Try again in a few minutes."
+                    f"{config.NO} Your motion was not submitted, there was a problem with <https://mystb.in>. "
+                    "Sorry, try again in a few minutes."
                 )
                 return
 
@@ -992,14 +1002,15 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
             reaction = await ctx.choose(
-                f"{config.USER_INTERACTION_REQUIRED} Do you want to submit a motion or a bill?"
-                f" React with {config.LEG_SUBMIT_BILL} for bill, and with "
+                f"{config.USER_INTERACTION_REQUIRED} Do you want to submit a motion or a bill? "
+                f"React with {config.LEG_SUBMIT_BILL} for bill, and with "
                 f"{config.LEG_SUBMIT_MOTION} for a motion."
                 f"\n\n{config.HINT} *Motions lack a lot of features that bills have, "
                 f"for example they cannot be passed into Law by the Government. They will not "
-                f"show up in `{config.BOT_PREFIX}laws`, nor will they make it on the Legal Code. "
-                f"If you want to submit something small "
-                f"that results in some __temporary__ action, use a motion, otherwise use a bill. "
+                f"show up in `{config.BOT_PREFIX}laws`, nor will they make it on the Legal Code. They can also not "
+                f"be sponsored. If you want to submit something small  "
+                f"that results in some __temporary__ action and where it's not important to track if it passed, "
+                f"use a motion, otherwise use a bill. In most cases you should probably use bills."
                 f"\nCommon examples for motions: `Motion to repeal Law #12`, or "
                 f"`Motion to recall {self.bot.mk.legislator_term} XY`.*",
                 reactions=[config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION],
@@ -1014,7 +1025,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
                     if self.legislator_role not in ctx.author.roles:
                         return await ctx.send(
-                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} are allowed to submit bills."
+                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} are allowed to submit "
+                            f"bills."
                         )
 
                 embed = await self.submit_bill(ctx, current_leg_session.id)
@@ -1025,7 +1037,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS:
                     if self.legislator_role not in ctx.author.roles:
                         return await ctx.send(
-                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} are allowed to submit motions."
+                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} are allowed to submit "
+                            f"motions."
                         )
 
                 embed = await self.submit_motion(ctx, current_leg_session.id)
@@ -1033,7 +1046,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
                 if self.legislator_role not in ctx.author.roles:
                     return await ctx.send(
-                        f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} are allowed to submit bills."
+                        f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} are allowed to submit "
+                        f"bills."
                     )
 
             embed = await self.submit_bill(ctx, current_leg_session.id)
@@ -1280,6 +1294,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
     @legislature.command(name="sponsor", aliases=["sp", "cosponsor", "second"])
+    @checks.has_any_democraciv_role(mk.DemocracivRole.LEGISLATOR)
     async def sponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Show your support for one or multiple bills by sponsoring them
 
@@ -1323,6 +1338,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
     @legislature.command(name="unsponsor", aliases=["usp"])
+    @checks.has_any_democraciv_role(mk.DemocracivRole.LEGISLATOR)
     async def unsponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Remove yourself from the list of sponsors of one or multiple bills
 

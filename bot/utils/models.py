@@ -75,7 +75,7 @@ class Session(commands.Converter):
         session = await ctx.bot.db.fetchrow("SELECT * FROM legislature_session WHERE id = $1", argument)
 
         if not session:
-            raise NotFoundError(f"{config.NO} There hasn't been a Session #{argument} yet.")
+            raise NotFoundError(f"{config.NO} There hasn't been a session #{argument} yet.")
 
         status = SessionStatus(session["status"])
         bills = await ctx.bot.db.fetch("SELECT id FROM bill WHERE leg_session = $1", session["id"])

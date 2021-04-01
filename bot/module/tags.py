@@ -5,7 +5,6 @@ import discord
 
 from bot.config import config, mk
 from discord.ext import commands
-from bot.utils import context, checks
 from bot.utils.converter import (
     Tag,
     OwnedTag,
@@ -13,7 +12,7 @@ from bot.utils.converter import (
     CaseInsensitiveUser,
     FuzzyCIMember,
 )
-from bot.utils import text, paginator, exceptions
+from bot.utils import text, paginator, exceptions, context, checks
 
 
 class TagContentType(enum.Enum):

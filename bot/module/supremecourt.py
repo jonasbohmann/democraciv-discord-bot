@@ -1,13 +1,11 @@
 import discord
 
-from bot.utils import exceptions, context
 from discord.ext import commands
-from bot.utils.mixin import GovernmentMixin
-from bot.utils import text
-from config import mk
+from bot.utils import text, mixin, exceptions, context
+from bot.config import mk
 
 
-class SupremeCourt(context.CustomCog, GovernmentMixin, name=mk.MarkConfig.COURT_NAME):
+class SupremeCourt(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.COURT_NAME):
     """Useful information about the {courts_term} of this nation."""
 
     def get_justices(self):
