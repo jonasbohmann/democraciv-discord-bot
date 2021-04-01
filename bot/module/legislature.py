@@ -610,7 +610,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
             bills = list(filter(lambda b: len(b.sponsors) >= min_sponsors, bills))
 
-            bills_info = {b.name: f"Submitted by {safe_get_submitter(b)} with {len(b.sponsors)} sponsors\n"
+            bills_info = {b.name: f"Submitted by {safe_get_submitter(b)} with {len(b.sponsors)} sponsor(s)\n"
                                   f"{b.link}\n\n{b.description}" for b in bills}
 
             motions_info = {m.name: f"Submitted by {safe_get_submitter(m)}\n{m.link}" for m in motions}

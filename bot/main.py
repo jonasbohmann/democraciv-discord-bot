@@ -2,6 +2,7 @@ import io
 import os
 import pathlib
 import re
+import socket
 import sys
 import time
 import math
@@ -166,6 +167,9 @@ class DemocracivBot(commands.Bot):
 
         self.is_api_running = False
         self.loop.create_task(self.check_api_running(first_time=True))
+
+        # for Google Apps Script
+        socket.setdefaulttimeout(600)
 
         for extension in initial_extensions:
             try:
