@@ -506,7 +506,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     async def export(self, ctx: context.CustomContext):
         """Automate the most time consuming Speaker responsibilities with these commands"""
         if ctx.invoked_subcommand is None:
-            await ctx.send(f"{config.NO} You have to tell how you would like this session to be exported.")
+            await ctx.send(f"{config.NO} You have to tell me how you would like this session to be exported.")
             await ctx.send_help(ctx.command)
 
     @export.command(name="spreadsheet", aliases=['sheet', 'sheets', 's'])
@@ -580,7 +580,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         if not self.is_google_doc_link(form_url):
             ctx.command.reset_cooldown(ctx)
-            return await ctx.send(f"{config.NO} That doesn't look like a Google Forms URL.")
+            return await ctx.send(f"{config.NO} That doesn't look like a Google Forms URL. This process was cancelled.")
 
         min_sponsors = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the minimum amount of "
                                        f"sponsors a bill needs to be included on the "
@@ -600,14 +600,17 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             f"Session #{session.id}. \n:arrows_counterclockwise: This may take a few minutes..."
         )
 
+        def safe_get_submitter(thing) -> str:
+            return f"{thing.submitter.display_name} ({thing.submitter})" if thing.submitter else "*Unknown Person*"
+
         async with ctx.typing():
             bills = [await Bill.convert(ctx, bill_id) for bill_id in session.bills]
             motions = [await Motion.convert(ctx, motion_id) for motion_id in session.motions]
 
             bills = list(filter(lambda b: len(b.sponsors) >= min_sponsors, bills))
 
-            bills_info = {b.name: b.link for b in bills}
-            motions_info = {m.name: m.link for m in motions}
+            bills_info = {b.name: f"Submitted by {safe_get_submitter(b)}\n{b.link}\n\n{b.description}" for b in bills}
+            motions_info = {m.name: f"Submitted by {safe_get_submitter(m)}\n{m.link}" for m in motions}
 
             result = await self.bot.run_apps_script(
                 script_id="MME1GytLY6YguX02rrXqPiGqnXKElby-M",
@@ -620,7 +623,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             description="Make sure to double check the form to make sure it's "
                         "correct.\n\nNote that you may have to adjust "
                         "the form to comply with this nation's laws as this comes with no guarantees of a form's valid "
-                        "legal status.\n\nRemember to change the edit link you "
+                        "legal status.\n\n:warning: Remember to change the edit link you "
                         f"gave me earlier to be **'Restricted'** again.",
         )
 
@@ -631,7 +634,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             inline=False,
         )
 
-        await ctx.send(f"You can use this voting form to start the Voting Period of a session with "
+        await ctx.send(f"{config.HINT} You can use this voting form to start the Voting Period of a session with "
                        f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session vote`.", embed=embed)
         self.bot.loop.create_task(generating.delete())
 
@@ -1026,9 +1029,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 f"\n\n{config.HINT} *Motions lack a lot of features that bills have, "
                 f"for example they cannot be passed into Law by the Government. They will not "
                 f"show up in `{config.BOT_PREFIX}laws`, nor will they make it on the Legal Code. They can also not "
-                f"be sponsored. If you want to submit something small  "
+                f"be sponsored. If you want to submit something small "
                 f"that results in some __temporary__ action and where it's not important to track if it passed, "
-                f"use a motion, otherwise use a bill. In most cases you should probably use bills."
+                f"use a motion, otherwise use a bill. __In most cases you should probably use bills.__"
                 f"\nCommon examples for motions: `Motion to repeal Law #12`, or "
                 f"`Motion to recall {self.bot.mk.legislator_term} XY`.*",
                 reactions=[config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION],
