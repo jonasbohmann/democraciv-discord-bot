@@ -18,7 +18,7 @@ def split_string(string: str, length: int):
 
 def split_string_by_paragraphs(string: str, length: int):
     lines = string.splitlines(keepends=True)
-    split_into_length = dict()
+    split_into_length = {}
     index = 0
 
     for paragraph in lines:
@@ -108,7 +108,10 @@ class SafeEmbed(discord.Embed):
         # called by monkey patched Messageable.send
 
         if len(self.description) > 2048:
-            self.description = f"{self.description[:2040]}..."
+            if self.description.endswith("```"):
+                self.description = f"{self.description[:2037]}...```"
+            else:
+                self.description = f"{self.description[:2040]}..."
 
         if len(self.title) > 256:
             self.title = f"{self.title[:250]}..."
