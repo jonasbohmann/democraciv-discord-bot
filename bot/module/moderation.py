@@ -239,7 +239,7 @@ class Moderation(context.CustomCog):
 
     @commands.command(name="alt", hidden=True)
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
-    async def alt(self, ctx, *, member: CaseInsensitiveMember):
+    async def alt(self, ctx, *, member: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
         """Check if someone is an alt"""
         chance, details = await self.calculate_alt_chance(member)
 
@@ -263,7 +263,7 @@ class Moderation(context.CustomCog):
     async def hub(self, ctx):
         """Link to the Moderation Hub"""
         link = token.MOD_HUB or "https://hastebin.com/afijavahox.coffeescript"
-        embed = text.SafeEmbed(title="Moderation Hub", description=f"[Link]({link})")
+        embed = text.SafeEmbed(title="Moderation Hub", url=link)
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name="registry")
@@ -277,9 +277,9 @@ class Moderation(context.CustomCog):
     @commands.command(name="drive", aliases=["googledrive", "gdrive"])
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def gdrive(self, ctx):
-        """Link to the Google Drive for MK6"""
-        link = token.MK6_DRIVE or "https://hastebin.com/afijavahox.coffeescript"
-        embed = text.SafeEmbed(title="Google Drive for MK6", url=link)
+        """Link to the Moderation Google Drive"""
+        link = token.MOD_DRIVE or "https://hastebin.com/afijavahox.coffeescript"
+        embed = text.SafeEmbed(title="Moderation Google Drive", url=link)
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name="pin", aliases=["pins", "electiontool", "pintool"])
@@ -296,9 +296,9 @@ class Moderation(context.CustomCog):
     )
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def modguidelines(self, ctx):
-        """Link to the Democraciv Moderation Guidelines"""
+        """Link to DerJonas' Democraciv Moderation Guidelines"""
         link = token.MOD_GUIDELINES or "https://hastebin.com/afijavahox.coffeescript"
-        embed = text.SafeEmbed(title="Democraciv Moderation Guidelines & Procedures", url=link)
+        embed = text.SafeEmbed(title="DerJonas' Democraciv Moderation Guidelines & Procedures", url=link)
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name="quire", aliases=["q"])

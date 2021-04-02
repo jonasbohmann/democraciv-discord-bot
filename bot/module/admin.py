@@ -140,9 +140,9 @@ class Experiments(context.CustomCog):
         This is an experimental command and probably still a work-in-progress."""
 
         wait = await ctx.send(f"{config.HINT} This might take 30 to 60 seconds. Should this feature make it out "
-                              f"of beta, the time it takes will *hopefully* be sped up by switching to a more "
-                              f"powerful server.\n:arrows_counterclockwise: Thinking really hard about "
-                              f"your question...")
+                              f"of beta, the time it takes will *hopefully* be sped up to just a couple of seconds by "
+                              f"switching to more powerful server hardware.\n:arrows_counterclockwise: Thinking "
+                              f"really hard about your question...")
 
         async with ctx.typing():
             response = await self.bot.api_request("POST", "ml/question_answering", json={'question': question})
@@ -158,8 +158,8 @@ class Experiments(context.CustomCog):
         fmt = ["This uses deep learning, a particular machine learning method, with neural networks to try to "
                "find answers to a legal question you're asking. All currently existing bills are taken into account "
                "to try to find the best answer. Google's BERT model in combination with Tensorflow Keras "
-               "are used here.\n\nThis comes with no guarantees about the correctness of the answers. Do not except "
-               "there to be no wrong, misleading or irrelevant answers."]
+               "are used here.\n\nThis comes with no guarantees about the correctness of the answers. Do not expect "
+               "this to be free of wrong, misleading or irrelevant answers.\n\n"]
 
         for result in response:
             if result['score'] * 100 <= 1:
@@ -195,7 +195,7 @@ class Experiments(context.CustomCog):
                "and shows the most closely corresponding excerpts. Using full, grammatical expressions with "
                f"no spelling errors will improve the quality of your results.\n\nShould this feature come out of "
                f"beta, then it will probably be integrated into the `{config.BOT_PREFIX}laws search` and "
-               f"`{config.BOT_PREFIX}legislature bills search` commands."]
+               f"`{config.BOT_PREFIX}legislature bills search` commands.\n\n"]
 
         for result in response[:3]:
             bill = await models.Bill.convert(ctx, result['document_label'])
