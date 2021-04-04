@@ -163,14 +163,20 @@ class GovernmentMixin:
             title = f"{model.__name__}s from {name}"
             icon = member.avatar_url_as(static_format="png")
 
-        if model in (models.Bill, models.Law):
+        if model is models.Bill:
             objs_from_thing = await self.bot.db.fetch(
-                "SELECT id FROM bill " "WHERE submitter = ANY($1::bigint[]) ORDER BY id;",
+                "SELECT id FROM bill WHERE submitter = ANY($1::bigint[]) ORDER BY id;",
                 members,
+            )
+
+        elif model is models.Law:
+            objs_from_thing = await self.bot.db.fetch(
+                "SELECT id FROM bill WHERE submitter = ANY($1::bigint[]) AND status = $2 ORDER BY id;",
+                members, models.BillIsLaw.flag.value
             )
         else:
             objs_from_thing = await self.bot.db.fetch(
-                "SELECT id FROM motion " "WHERE submitter = ANY($1::bigint[]) ORDER BY id;",
+                "SELECT id FROM motion WHERE submitter = ANY($1::bigint[]) ORDER BY id;",
                 members,
             )
 
