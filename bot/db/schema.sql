@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS party_alias(
 );
 
 DO $$ BEGIN
-    CREATE TYPE session_status AS ENUM ('Submission Period', 'Voting Period', 'Closed');
+    CREATE TYPE session_status AS ENUM ('Submission Period', 'Submissions Locked', 'Voting Period', 'Closed');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;

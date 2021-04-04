@@ -238,8 +238,7 @@ class Party(context.CustomCog, name="Political Parties"):
             await self.bot.db.execute("DELETE FROM party_join_request WHERE id = $1", request_match["id"])
             await member.send(embed=member_embed)
 
-            leaders_without_reactor = [l.id for l in party.leaders]
-            leaders_without_reactor.remove(reactor.id)
+            leaders_without_reactor = [l.id for l in party.leaders if l.id != reactor.id]
 
             for leader in leaders_without_reactor:
                 try:

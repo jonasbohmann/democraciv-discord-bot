@@ -16,6 +16,7 @@ from bot.utils.exceptions import DemocracivBotException, NotFoundError, NotLawEr
 
 class SessionStatus(enum.Enum):
     SUBMISSION_PERIOD = "Submission Period"
+    LOCKED = "Submissions Locked"
     VOTING_PERIOD = "Voting Period"
     CLOSED = "Closed"
 
@@ -460,10 +461,10 @@ class BillStatus:
         raise IllegalBillOperation()
 
     async def sponsor(self, *, dry=False, sponsor: discord.Member, **kwargs):
-        raise IllegalBillOperation(f"You can only sponsor recently submitted bills that were not voted on yet.")
+        raise IllegalBillOperation("You can only sponsor recently submitted bills that were not voted on yet.")
 
     async def unsponsor(self, *, dry=False, sponsor: discord.Member, **kwargs):
-        raise IllegalBillOperation(f"You can only unsponsor recently submitted bills that were not voted on yet.")
+        raise IllegalBillOperation("You can only unsponsor recently submitted bills that were not voted on yet.")
 
     def emojified_status(self, verbose=True):
         raise NotImplementedError()
@@ -599,7 +600,7 @@ class BillFailedLegislature(BillStatus):
 
         if not session:
             raise IllegalBillOperation(
-                f"{config.NO} There is no active session right now, " f"so the bill cannot be resubmitted."
+                f"There is no session in Submission Period right now, so the bill cannot be resubmitted."
             )
 
         if dry:
@@ -772,7 +773,7 @@ class BillRepealed(BillStatus):
 
         if not session:
             raise IllegalBillOperation(
-                f"{config.NO} There is no active session right now, so the bill cannot be resubmitted."
+                f"There is no session in Submission Period right now, so the bill cannot be resubmitted."
             )
 
         if dry:

@@ -16,7 +16,7 @@ from bot.utils.models import Bill, Session, Motion, SessionStatus
 
 class PassScheduler(text.AnnouncementScheduler):
     def get_message(self) -> str:
-        message = [f"The following bills were **passed by the {self.bot.mk.LEGISLATURE_NAME}**.\n"]
+        message = [f"The following bills were **passed into law** by {self.bot.mk.LEGISLATURE_NAME}.\n"]
 
         for obj in self._objects:
             message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
@@ -305,15 +305,18 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             title=f"{config.HINT}  Help | Government System:  Legislative Sessions",
             description=f"Once you feel like enough time has passed for people to "
                         f"submit their bills and motions, you can lock submissions by doing either "
-                        f"one of these options:\n\n1.  "
+                        f"one of these options:\n\n1. If you want to stop submissions coming in, but aren't ready "
+                        f"yet to start voting, you can **lock the session** with `{p}{l} session lock`. You "
+                        f"can allow submissions to be submitted again by unlocking the session with "
+                        f"`{p}{l} session unlock`.\n\n2.  "
                         f"*(Optional)* Set the session into *Voting Period* with "
                         f"`{p}{l} session vote`. The only advantage of setting a session into Voting "
-                        f"Period instead of directly closing it, is that I will DM every legislator "
+                        f"Period before directly closing it, is that I will DM every legislator "
                         f"a reminder to vote and the link to the voting form, and the voting form "
                         f"will be displayed in `{p}{l} session`. After enough time has passed for "
                         f"everyone to vote, you would close the session as described in the "
                         f"next step.\n\n"
-                        f"2. Close the session entirely with "
+                        f"3. Close the session entirely with "
                         f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session close`.",
         )
 
@@ -365,6 +368,69 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                     f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit` on the {self.bot.dciv.name} server."
         )
 
+    @leg_session.command(name="lock")
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
+    async def locksession(self, ctx):
+        """Lock (deny) submissions for the currently active session"""
+
+        active_leg_session = await self.get_active_leg_session()
+        p = config.BOT_PREFIX
+        l = self.bot.mk.LEGISLATURE_COMMAND
+
+        if active_leg_session is None:
+            return await ctx.send(
+                f"{config.NO} There is no open session.\n{config.HINT} You can open a new session "
+                f"at any time with `{p}{l} session open`."
+            )
+
+        if active_leg_session.status is not SessionStatus.SUBMISSION_PERIOD:
+            return await ctx.send(f"{config.NO} You can only lock sessions that are in Submission Period.")
+
+        await self.bot.db.execute("UPDATE legislature_session SET status = $1 WHERE id = $2",
+                                  SessionStatus.LOCKED.value,
+                                  active_leg_session.id)
+
+        await self.gov_announcements_channel.send(
+            f"The Speaker has locked submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
+            f"Session #{active_leg_session.id}. Nothing can be submitted until the Speaker decides "
+            f"to unlock the session again."
+        )
+
+        await ctx.send(f"{config.YES} Submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
+                       f"Session #{active_leg_session.id} have been locked.\n{config.HINT} Want to allow "
+                       f"submissions again? Unlock the session with `{p}{l} session unlock`.")
+
+    @leg_session.command(name="unlock")
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
+    async def unlocksession(self, ctx):
+        """Unlock (allow) submissions for the currently active session again"""
+
+        active_leg_session = await self.get_active_leg_session()
+        p = config.BOT_PREFIX
+        l = self.bot.mk.LEGISLATURE_COMMAND
+
+        if active_leg_session is None:
+            return await ctx.send(
+                f"{config.NO} There is no open session.\n{config.HINT} You can open a new session "
+                f"at any time with `{p}{l} session open`."
+            )
+
+        if active_leg_session.status is not SessionStatus.LOCKED:
+            return await ctx.send(f"{config.NO} You can only unlock sessions that are already locked.")
+
+        await self.bot.db.execute("UPDATE legislature_session SET status = $1 WHERE id = $2",
+                                  SessionStatus.SUBMISSION_PERIOD.value,
+                                  active_leg_session.id)
+
+        await self.gov_announcements_channel.send(
+            f"The Speaker has unlocked submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
+            f"Session #{active_leg_session.id}, meaning you can now submit bills & motions with "
+            f"`{p}{l} submit` again."
+        )
+
+        await ctx.send(f"{config.YES} Submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
+                       f"Session #{active_leg_session.id} have been unlocked.")
+
     @leg_session.command(name="vote", aliases=["u", "v", "update"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def updatesession(self, ctx: context.CustomContext):
@@ -382,8 +448,6 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         if active_leg_session.status is SessionStatus.VOTING_PERIOD:
             return await ctx.send(f"{config.NO} This session is already in the Voting Period.")
-        elif active_leg_session.status is SessionStatus.CLOSED:
-            return await ctx.send(f"{config.NO} This session is closed.")
 
         voting_form = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the link to this session's Google Forms voting "
@@ -669,12 +733,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     def format_session_times(session: Session) -> str:
         formatted_time = [f"**Opened**: {session.opened_on.strftime('%A, %B %d %Y at %H:%M')}"]
 
-        if session.status is not SessionStatus.SUBMISSION_PERIOD:
-            # Session is either closed or in Voting Period
-            if session.voting_started_on is not None:
-                formatted_time.append(
-                    f"**Voting Started**: {session.voting_started_on.strftime('%A, %B %d %Y at %H:%M')}"
-                )
+        if session.voting_started_on:
+            formatted_time.append(
+                f"**Voting Started**: {session.voting_started_on.strftime('%A, %B %d %Y at %H:%M')}"
+            )
 
         if session.closed_on:
             # Session is closed
@@ -1023,9 +1085,22 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         if current_leg_session.status is not SessionStatus.SUBMISSION_PERIOD:
             ctx.command.reset_cooldown(ctx)
-            return await ctx.send(
-                f"{config.NO} The submission period for session #{current_leg_session.id} is already over."
-            )
+
+            if current_leg_session.status is SessionStatus.LOCKED:
+                return await ctx.send(
+                    f"{config.NO} The {self.bot.mk.speaker_term} has locked submissions for session "
+                    f"#{current_leg_session.id}. You "
+                    f"are not allowed to submit anything.\n{config.HINT} This session can be unlocked by the "
+                    f"{self.bot.mk.speaker_term} in order "
+                    f"to allow submissions again with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session "
+                    f"unlock`."
+                )
+
+            if current_leg_session.status is SessionStatus.VOTING_PERIOD:
+                return await ctx.send(
+                    f"{config.NO} Voting for session #{current_leg_session.id} has already started, so you "
+                    f"cannot submit anything anymore."
+                )
 
         if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
             reaction = await ctx.choose(
@@ -1037,8 +1112,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 f"show up in `{config.BOT_PREFIX}laws`, nor will they make it on the Legal Code. They can also not "
                 f"be sponsored. If you want to submit something small "
                 f"that results in some __temporary__ action and where it's not important to track if it passed, "
-                f"use a motion, otherwise use a bill. __In most cases you should probably use bills.__"
-                f"\nCommon examples for motions: `Motion to repeal Law #12`, or "
+                f"use a motion, otherwise use a bill. __In most cases you should probably use bills.__ "
+                f"Common examples for motions: `Motion to repeal Law #12`, or "
                 f"`Motion to recall {self.bot.mk.legislator_term} XY`.*",
                 reactions=[config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION],
             )
@@ -1105,7 +1180,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 return "You can only mark bills from the most recent session as passed."
 
             if last_session.status is not SessionStatus.CLOSED:
-                return "You cannot mark bills as passed while their session is still in Submission or Voting Period."
+                return "You can only mark bills as passed if their session is closed."
 
         consumer = models.LegalConsumer(ctx=ctx, objects=bill_ids, action=models.BillStatus.pass_from_legislature)
         await consumer.filter(filter_func=verify_bill, last_session=await self.get_last_leg_session())
@@ -1321,7 +1396,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
     @legislature.command(name="sponsor", aliases=["sp", "cosponsor", "second"])
-    @checks.has_any_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
     async def sponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Show your support for one or multiple bills by sponsoring them
 
@@ -1365,7 +1440,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
     @legislature.command(name="unsponsor", aliases=["usp"])
-    @checks.has_any_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
     async def unsponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Remove yourself from the list of sponsors of one or multiple bills
 

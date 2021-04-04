@@ -45,7 +45,6 @@ class CustomCog(commands.Cog):
     def __init__(self, bot):
         self.bot: "bot.DemocracivBot" = bot
         self.bot.loop.create_task(self._transform_description())
-        self._bot_is_ready = False
 
         for command in self.walk_commands():
             if command.help:
@@ -56,9 +55,7 @@ class CustomCog(commands.Cog):
                 cooldown_deco(command)
 
     async def _transform_description(self):
-        if not self._bot_is_ready:
-            await self.bot.wait_until_ready()
-            self._bot_is_ready = True
+        await self.bot.wait_until_ready()
 
         doc = inspect.getdoc(self)
         if doc is not None:
@@ -66,9 +63,7 @@ class CustomCog(commands.Cog):
             self.description = cleaned
 
     async def _transform_command_help(self, command: commands.Command):
-        if not self._bot_is_ready:
-            await self.bot.wait_until_ready()
-            self._bot_is_ready = True
+        await self.bot.wait_until_ready()
 
         format_mapping = self.bot.mk.to_dict()
         format_mapping["COMMAND"] = command.qualified_name
