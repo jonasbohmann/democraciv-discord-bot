@@ -426,7 +426,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         await ctx.send(f"{config.YES} Submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
                        f"Session #{active_leg_session.id} have been locked.\n{config.HINT} Want to allow "
-                       f"submissions again? Unlock the session with `{p}{l} session unlock`.")
+                       f"submissions again? Unlock the session with `{p}{l} session unlock`.\n"
+                       f"{config.HINT} In case you intend to leave submissions locked until voting starts "
+                       f"in order to use this time as a **debate period**, you can make me post the current list "
+                       f"of submission to **r/{config.DEMOCRACIV_SUBREDDIT}** with `{p}{l} session export reddit`. "
+                       f"That reddit post may help with more focused debates & feedback on bills & motions.")
 
     @leg_session.command(name="unlock")
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
@@ -491,7 +495,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         await active_leg_session.start_voting(voting_form)
 
         await ctx.send(
-            f"{config.YES} Session #{active_leg_session.id} is now in **voting period**.\n{config.HINT} Once you feel "
+            f"{config.YES} Session #{active_leg_session.id} is now in **voting period**.\n{config.HINT} You can make "
+            f"me post the list of bill & motion submissions to **r/{config.DEMOCRACIV_SUBREDDIT}** with "
+            f"`{p}{l} session export reddit`.\n{config.HINT} Once you feel "
             f"like enough time has passed for people to vote, close this session with `{p}{l} session close`. "
             f"I'll go over what happens after that once you close the session."
         )
@@ -636,15 +642,12 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
             spreadsheet_formatting_link = await self.bot.make_paste("\n".join(exported))
 
-        embed = text.SafeEmbed(title=f"Spreadsheet Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}",
-                               description=f"This session's bills and motions were exported into a format that "
-                                           f"you can easily copy & paste into Google Spreadsheets, for example for a "
-                                           f"Legislative Docket. See [this video](https://cdn.discordapp.com/attachm"
-                                           f"ents/709411002482950184/709412385034862662/howtoexport.mp4) to "
-                                           f"see how to speed up your Speaker duties with this.")
-        embed.add_field(name=f"Bills & Motions in Google Spreadsheets Formatting",
-                        value=spreadsheet_formatting_link)
-        await ctx.send(embed=embed)
+        await ctx.send(f"__**Spreadsheet Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}**__\n"
+                       f"This session's bills and motions were exported into a format that "
+                       f"you can easily copy & paste into Google Spreadsheets, for example for a "
+                       f"Legislative Docket: **<{spreadsheet_formatting_link}>**\n\nSee the video below to see how to "
+                       f"speed up your Speaker duties with this.\n"
+                       f"https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662/howtoexport.mp4")
 
     @export.command(name="form", aliases=['forms', 'voting', 'f'])
     @commands.cooldown(1, 120, commands.BucketType.user)
