@@ -14,12 +14,39 @@ from bot.utils import models, text, paginator, context, mixin, checks, converter
 from bot.utils.models import Bill, Session, Motion, SessionStatus
 
 
-class PassScheduler(text.AnnouncementScheduler):
+class PassScheduler(text.RedditAnnouncementScheduler):
+
+    def get_reddit_post_title(self) -> str:
+        session = self._objects[0].session
+        return f"Passed Bills from {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}"
+
+    def get_reddit_post_content(self) -> str:
+        content = [f"The following bills were passed into law by {self.bot.mk.LEGISLATURE_NAME}."
+                   f"\n\n###Relevant Links\n\n"
+                   f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
+                   f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `-laws` in #bot on our "
+                   f"[Discord Server](https://discord.gg/AK7dYMG)\n"
+                   f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n---\n  &nbsp; \n\n"]
+
+        for bill in self._objects:
+            submitter = bill.submitter or context.MockUser()
+            content.append(f"__**Law #{bill.id} - [{bill.name}]({bill.link})**__\n\n*Written by "
+                           f"{submitter.display_name} ({submitter})*"
+                           f"\n\n{bill.description}\n\n &nbsp;")
+
+        outro = f"""\n\n &nbsp; \n\n---\n\nAll these bills are now active laws and have to be followed. 
+                \n\n\n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) 
+                and this is an automated service. Contact u/Jovanos (DerJonas#8036 on Discord) for further questions 
+                or bug reports.*"""
+
+        content.append(outro)
+        return "\n\n".join(content)
+
     def get_message(self) -> str:
         message = [f"The following bills were **passed into law** by {self.bot.mk.LEGISLATURE_NAME}.\n"]
 
         for obj in self._objects:
-            message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+            message.append(f"Bill #{obj.id} - **{obj.name}** (<{obj.tiny_link}>)")
             # if obj.is_vetoable:
             #    message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
             # else:
@@ -45,7 +72,7 @@ class OverrideScheduler(text.AnnouncementScheduler):
         ]
 
         for obj in self._objects:
-            message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+            message.append(f"Bill #{obj.id} - **{obj.name}** (<{obj.tiny_link}>)")
 
         message.append(
             f"\nAll of the above bills are now law and can be found in `{config.BOT_PREFIX}laws`, "
@@ -64,7 +91,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     def __init__(self, bot):
         super().__init__(bot)
         self.email_regex = re.compile(r"[^@]+@[^@]+\.[^@]+")
-        self.pass_scheduler = PassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+        self.pass_scheduler = PassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL,
+                                            subreddit=config.DEMOCRACIV_SUBREDDIT)
         self.override_scheduler = OverrideScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
         if not self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
@@ -735,14 +763,14 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         intro += f"\n\nFeel free to use this thread to debate and propose feedback on bills & motions, " \
                  f"in case voting has not started yet.\n\n###Relevant Links\n\n* " \
                  f"[Constitution]({self.bot.mk.CONSTITUTION})\n" \
-                 f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) (or write `-laws` in #bot on our " \
-                 f"[Discord Server](https://discord.gg/AK7dYMG))\n" \
+                 f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `-laws` in #bot on our " \
+                 f"[Discord Server](https://discord.gg/AK7dYMG)\n" \
                  f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n  &nbsp; \n\n"
 
         cntnt.append(intro)
 
         if bills:
-            cntnt.append("\n\n--- \n\n###Submitted Bills\n\n &nbsp;")
+            cntnt.append("\n\n###Submitted Bills\n---\n &nbsp;")
 
         for bill in bills:
             submitter = bill.submitter or context.MockUser()
@@ -751,7 +779,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                          f"\n\n{bill.description}\n\n &nbsp;")
 
         if motions:
-            cntnt.append("\n\n--- \n\n###Submitted Motions\n\n &nbsp;")
+            cntnt.append("\n\n###Submitted Motions\n---\n &nbsp;")
 
         for motion in motions:
             submitter = motion.submitter or context.MockUser()

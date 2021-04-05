@@ -94,7 +94,35 @@ class AnnouncementScheduler:
                 minutes=5
         ):
             self._last_addition = None
+            self._objects.sort(key=lambda obj: obj.id)
             await self.send_messages()
+
+
+class RedditAnnouncementScheduler(AnnouncementScheduler):
+
+    def __init__(self, bot, channel, *, subreddit):
+        self.subreddit = subreddit
+        super().__init__(bot, channel)
+
+    def get_message(self) -> str:
+        raise NotImplementedError()
+
+    def get_reddit_post_title(self) -> str:
+        raise NotImplementedError()
+
+    def get_reddit_post_content(self) -> str:
+        raise NotImplementedError()
+
+    async def send_messages(self):
+        title = self.get_reddit_post_title()
+        content = self.get_reddit_post_content()
+
+        js = {"subreddit": self.subreddit,
+              "title": title,
+              "content": content}
+
+        await self.bot.api_request("POST", "reddit/post", silent=True, json=js)
+        await super().send_messages()
 
 
 class SafeEmbed(discord.Embed):
