@@ -19,12 +19,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [API] %(message)s", 
 sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
 from api.provider import RedditManager, TwitchManager
-from api.ml import question_answering, information_extraction
 from fastapi import FastAPI, BackgroundTasks, Request
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, JSONResponse
 from fastapi.logger import logger
 
 TOKEN_PATH = f"{pathlib.Path(__file__).parent}/token.json"
+ML_ENABLED = True
 
 
 class Database:
@@ -102,9 +102,16 @@ class Database:
 
 app = FastAPI()
 db = Database()
-bert_qa = question_answering.BERTQuestionAnswering(db=db,
-                                                   index_directory=str(pathlib.Path(__file__).parent) + "/ml/index")
-holmes_ie = information_extraction.InformationExtraction(db=db)
+
+if ML_ENABLED:
+    from api.ml import question_answering, information_extraction
+
+    bert_qa = question_answering.BERTQuestionAnswering(db=db,
+                                                       index_directory=str(pathlib.Path(__file__).parent) + "/ml/index")
+    holmes_ie = information_extraction.InformationExtraction(db=db)
+else:
+    bert_qa = holmes_ie = None
+
 reddit_manager = RedditManager(db=db, token_path=TOKEN_PATH)
 twitch_manager = TwitchManager(db=db, token_path=TOKEN_PATH)
 
@@ -151,8 +158,10 @@ class Bill(pydantic.BaseModel):
 @app.on_event("startup")
 async def startup_event():
     await db.make_pool()
-    await bert_qa.make()
-    await holmes_ie.register_documents()
+
+    if ML_ENABLED:
+        await bert_qa.make()
+        await holmes_ie.register_documents()
     logger.info("API ready to serve")
 
 
@@ -329,6 +338,14 @@ class Question(pydantic.BaseModel):
     question: str
 
 
+@app.middleware("http")
+async def check_if_ml_enabled(request: Request, call_next):
+    if request.url.path.startswith("/ml") and not ML_ENABLED:
+        return JSONResponse(content={"error": "ml endpoints are disabled"})
+
+    return await call_next(request)
+
+
 @app.post("/ml/question_answering/force_index")
 async def ml_qa_force_index():
     await bert_qa.index(force=True)
@@ -367,6 +384,7 @@ def ml_ie(question: Question):
 async def new_bill(bill: Bill):
     await bert_qa.add_bill(bill.id)
     await holmes_ie.add_bill(bill.id)
+    return {"ok": "ok"}
 
 
 @app.post("/bill/update")
@@ -375,6 +393,7 @@ async def update_bill(bill: Bill):
 
     # documents in our index are not unique so we cannot reasonably delete just the one bill
     await bert_qa.index()
+    return {"ok": "ok"}
 
 
 @app.post("/bill/delete")
@@ -383,6 +402,7 @@ async def delete_bill(bill: Bill):
 
     # documents in our index are not unique so we cannot reasonably delete just the one bill
     await bert_qa.index()
+    return {"ok": "ok"}
 
 
 if __name__ == "__main__":

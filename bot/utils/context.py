@@ -108,12 +108,12 @@ class CustomContext(commands.Context):
         return check
 
     async def choose(
-        self,
-        text=None,
-        *,
-        reactions: typing.Iterable[typing.Any],
-        message: discord.Message = None,
-        timeout: int = 300,
+            self,
+            text=None,
+            *,
+            reactions: typing.Iterable[typing.Any],
+            message: discord.Message = None,
+            timeout: int = 300,
     ) -> discord.Reaction:
 
         if text:
@@ -191,12 +191,12 @@ class CustomContext(commands.Context):
             await message.remove_reaction(emoji="\U0001f5d1", member=self.guild.me)
 
     async def input(
-        self,
-        text=None,
-        *,
-        timeout: int = 300,
-        delete_after: bool = False,
-        image_allowed: bool = False,
+            self,
+            text=None,
+            *,
+            timeout: int = 300,
+            delete_after: bool = False,
+            image_allowed: bool = False,
     ) -> str:
         """Waits for a reply by the original user in the original channel and returns reply as string.
 
@@ -226,12 +226,12 @@ class CustomContext(commands.Context):
             return message.content
 
     async def converted_input(
-        self,
-        text=None,
-        *,
-        converter,
-        timeout: int = 300,
-        return_input_on_fail: bool = True,
+            self,
+            text=None,
+            *,
+            converter,
+            timeout: int = 300,
+            return_input_on_fail: bool = True,
     ):
         if text:
             await self.send(text)
@@ -259,3 +259,15 @@ class CustomContext(commands.Context):
         else:
             # fallback
             return converter(message)
+
+
+class MockUser:
+    id = 0
+    discriminator = "0000"
+    name = mention = display_name = "Unknown Person"
+
+    def __str__(self):
+        return self.name
+
+    async def send(self, *args, **kwargs):
+        pass

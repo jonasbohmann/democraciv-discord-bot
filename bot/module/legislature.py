@@ -708,6 +708,77 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                        f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session vote`.", embed=embed)
         self.bot.loop.create_task(generating.delete())
 
+    @export.command(name="reddit")
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
+    async def export_reddit(self, ctx):
+        """Make me post an overview of the current session and its submissions to our subreddit """
+
+        session = await self.get_active_leg_session()
+
+        if session is None:
+            return await ctx.send(f"{config.NO} There is no open session in either Submission Period or "
+                                  f"Voting Period right now.")
+
+        bills = [await Bill.convert(ctx, i) for i in session.bills]
+        motions = [await Motion.convert(ctx, i) for i in session.motions]
+
+        speaker = session.speaker or context.MockUser()
+        cntnt = []
+
+        intro = (f"Speaker {speaker.display_name} ({speaker}) opened the Submission Period for this session on "
+                 f"{session.opened_on.strftime('%B %d, %Y at %H:%M')} UTC. ")
+
+        if session.voting_started_on:
+            intro += f"Voting started on {session.voting_started_on.strftime('%B %d, %Y at %H:%M')} UTC " \
+                     f"[on this form]({session.vote_form}). "
+
+        intro += f"\n\nFeel free to use this thread to debate and propose feedback on bills & motions, " \
+                 f"in case voting has not started yet.\n\n###Relevant Links\n\n* " \
+                 f"[Constitution]({self.bot.mk.CONSTITUTION})\n" \
+                 f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) (or write `-laws` in #bot on our " \
+                 f"[Discord Server](https://discord.gg/AK7dYMG))\n" \
+                 f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n  &nbsp; \n\n"
+
+        cntnt.append(intro)
+
+        if bills:
+            cntnt.append("\n\n--- \n\n###Submitted Bills\n\n &nbsp;")
+
+        for bill in bills:
+            submitter = bill.submitter or context.MockUser()
+            cntnt.append(f"__**Bill #{bill.id} - [{bill.name}]({bill.link})**__\n\n*Submitted by "
+                         f"{submitter.display_name} ({submitter}) with {len(bill.sponsors)} sponsor(s)*"
+                         f"\n\n{bill.description}\n\n &nbsp;")
+
+        if motions:
+            cntnt.append("\n\n--- \n\n###Submitted Motions\n\n &nbsp;")
+
+        for motion in motions:
+            submitter = motion.submitter or context.MockUser()
+            cntnt.append(f"__**Motion #{motion.id} - [{motion.name}]({motion.link})**__\n\n*Submitted by "
+                         f"{submitter.display_name} ({submitter})*"
+                         f"\n\n{motion.description}\n\n &nbsp;")
+
+        outro = f"""\n\n &nbsp; \n\n--- \n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) 
+        and this is an automated service. Contact u/Jovanos (DerJonas#8036 on Discord) for further questions or bug 
+        reports.*"""
+
+        cntnt.append(outro)
+
+        content = "\n\n".join(cntnt)
+
+        js = {"subreddit": config.DEMOCRACIV_SUBREDDIT,
+              "title": f"{self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id} - Docket & Submissions",
+              "content": content}
+
+        result = await self.bot.api_request("POST", "reddit/post", json=js)
+
+        if "error" in result:
+            raise exceptions.DemocracivBotAPIError()
+
+        await ctx.send(f"{config.YES} A summary of session #{session.id} was posted "
+                       f"to r/{config.DEMOCRACIV_SUBREDDIT}.")
+
     async def paginate_all_sessions(self, ctx):
         all_sessions = await self.bot.db.fetch("SELECT id, opened_on, closed_on FROM legislature_session ORDER BY id")
         pretty_sessions = []
