@@ -40,7 +40,7 @@ class SupremeCourt(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.
 
         embed = text.SafeEmbed()
         embed.set_author(
-            name=f"{self.bot.mk.courts_term} of the {self.bot.mk.NATION_FULL_NAME}",
+            name=f"{self.bot.mk.courts_term} of {self.bot.mk.NATION_FULL_NAME}",
             icon_url=self.bot.mk.NATION_ICON_URL,
         )
 
@@ -62,7 +62,10 @@ class SupremeCourt(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.
 
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n" f"[Legal Code]({self.bot.mk.LEGAL_CODE})",
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
+                  f"\n[Submit a Case](https://forms.gle/ovDr3MsjTubuerZw9)\n"
+                  f"[All Case Filings of the Supreme Court](https://docs.google.com/spreadsheets/d/1BuBk7n-_"
+                  f"TSHPEQIT9fGyk7z9RRQxGGrEc-gC5Vc2DkI/edit?usp=sharing)",
             inline=False,
         )
 
