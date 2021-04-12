@@ -166,7 +166,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         """
         bill = bill_id
 
-        if not self.is_cabinet(ctx.author) or (bill.submitter and bill.submitter.id != ctx.author.id):
+        if not self.is_cabinet(ctx.author) or bill._submitter != ctx.author.id:
             return await ctx.send(f"{config.NO} Only the {self.bot.mk.speaker_term} and the original "
                                   f"submitter of a bill can edit it.")
 
@@ -222,7 +222,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             description = bill.description
 
         are_you_sure = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit `{bill.name}`?"
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit `{bill.name}` (#{bill.id})?"
         )
 
         if not are_you_sure:
@@ -299,6 +299,80 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             return await self._paginate_all_(ctx, model=models.Motion)
 
         return await self._detail_view(ctx, obj=motion_id)
+
+    @motion.command(name="edit", aliases=["update", "e"])
+    @checks.is_democraciv_guild()
+    async def m_edit(self, ctx, motion_id: models.Motion):
+        """Edit the title or content of a motion
+
+        **Example**
+            `{PREFIX}{COMMAND} 16`
+        """
+        motion = motion_id
+
+        if not self.is_cabinet(ctx.author):
+            if motion._submitter != ctx.author.id:
+                return await ctx.send(f"{config.NO} Only the {self.bot.mk.speaker_term} and the original "
+                                      f"submitter of a motion can edit it.")
+
+            if motion.session.status is not SessionStatus.SUBMISSION_PERIOD:
+                return await ctx.send(f"{config.NO} You can only edit your motion if the "
+                                      f"session it was submitted in is still in Submission Period.\n{config.HINT} "
+                                      f"However, the {self.bot.mk.speaker_term} can edit your motion at "
+                                      f"any given time.")
+
+        menu = text.EditModelMenu(choices_with_formatted_explanation={"title": "Title",
+                                                                      "content": "Content"},
+                                  title=f"{config.USER_INTERACTION_REQUIRED}  What about {motion.name} (#{motion.id}) "
+                                        f"do you want to change?")
+
+        result = await menu.prompt(ctx)
+
+        if not result.confirmed:
+            return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
+
+        to_change = result.choices
+
+        if True not in to_change.values():
+            return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
+
+        if to_change["title"]:
+            title = await ctx.input(
+                f"{config.USER_INTERACTION_REQUIRED} Reply with the new short **title** for the motion."
+            )
+
+        else:
+            title = motion.title
+
+        if to_change["content"]:
+            content = await ctx.input(
+                f"{config.USER_INTERACTION_REQUIRED} Reply with the new **content** of the motion. If the motion is"
+                " inside a Google Docs document, just use a link to that for this."
+            )
+
+            paste = await self.bot.make_paste(content)
+
+            if not paste:
+                return await ctx.send(
+                    f"{config.NO} The motion will not be updated, there was a problem with <https://mystb.in>. "
+                    "Sorry, try again in a few minutes."
+                )
+        else:
+            content = motion.description
+            paste = motion._link
+
+        are_you_sure = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit `{motion.name}` (#{motion.id})?"
+        )
+
+        if not are_you_sure:
+            return await ctx.send("Cancelled.")
+
+        await self.bot.db.execute(
+            "UPDATE motion SET title = $1, description = $2, paste_link = $3 WHERE id = $4",
+            title, content, paste, motion.id)
+
+        await ctx.send(f"{config.YES} Motion #{motion.id} `{motion.name}` was updated.")
 
     @motion.command(name="from", aliases=["f", "by"])
     async def m_from(
