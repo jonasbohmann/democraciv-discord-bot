@@ -3,10 +3,9 @@ import typing
 import discord
 
 from discord.ext import commands
-from discord.ext.commands import Greedy
 
 from bot.config import config, mk
-from bot.utils import text, paginator, checks, context, mixin, models
+from bot.utils import text, context, mixin, models, exceptions
 
 
 class LawPassScheduler(text.AnnouncementScheduler):
@@ -38,6 +37,7 @@ class LawVetoScheduler(text.AnnouncementScheduler):
 
 class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINISTRY_NAME):
     """Information about the Executive of {NATION_FULL_NAME}"""
+
     # """Allows the {MINISTRY_NAME} to pass and veto bills from the {LEGISLATURE_NAME}."""
 
     def __init__(self, bot):
@@ -112,6 +112,13 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
 
         minister_value = []
 
+        emperor = self._safe_get_member(mk.DemocracivRole.EMPEROR)
+
+        if isinstance(emperor, discord.Member):
+            minister_value.append(f"Emperor of Japan: {emperor.mention}")
+        else:
+            minister_value.append(f"Emperor of Japan: -")
+
         if isinstance(self.prime_minister, discord.Member):
             minister_value.append(f"{self.bot.mk.pm_term}: {self.prime_minister.mention}")
         else:
@@ -122,13 +129,25 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         # else:
         #    minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
 
-        embed.add_field(name=self.bot.mk.MINISTRY_LEADERSHIP_NAME, value="\n".join(minister_value))
+        embed.add_field(name=self.bot.mk.MINISTRY_LEADERSHIP_NAME,
+                        value="\n".join(minister_value),
+                        inline=False)
+
+        try:
+            ministers = self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER)
+            ministers = [m.mention for m in ministers.members]
+        except exceptions.RoleNotFoundError:
+            ministers = ['-']
+
+        embed.add_field(name=f"{self.bot.mk.minister_term}s", value="\n".join(ministers), inline=False)
+
         embed.add_field(
             name="Links",
             value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})\n"
                   f"[Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})",
-            inline=True,
+            inline=False,
         )
+
         # embed.add_field(name="Veto-able Bills", value=pretty_bills, inline=False)
         await ctx.send(embed=embed)
 
