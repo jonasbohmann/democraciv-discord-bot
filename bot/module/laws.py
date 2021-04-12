@@ -157,7 +157,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         """Search for laws by their name or description"""
         return await self._search_model(ctx, model=models.Law, query=query)
 
-    @law.command(name="repeal", aliases=["r, remove", "delete"])
+    @law.command(name="repeal", aliases=["r"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def removelaw(self, ctx: context.CustomContext, law_ids: Greedy[models.Law]):
         """Repeal one or multiple laws
