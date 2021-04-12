@@ -128,9 +128,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             speaker_value.append(f"{self.bot.mk.speaker_term}: -")
 
         if isinstance(self.vice_speaker, discord.Member):
-           speaker_value.append(f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention}")
+            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention}")
         else:
-           speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
+            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
 
         embed.add_field(name=self.bot.mk.LEGISLATURE_CABINET_NAME, value="\n".join(speaker_value))
         embed.add_field(
@@ -155,6 +155,101 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             return await self._paginate_all_(ctx, model=models.Bill)
 
         return await self._detail_view(ctx, obj=bill_id)
+
+    @bill.command(name="edit", aliases=["update", "e"])
+    @checks.is_democraciv_guild()
+    async def b_edit(self, ctx, bill_id: models.Bill):
+        """Edit the Google Docs link or summary of a bill
+
+        **Example**
+            `{PREFIX}{COMMAND} 16`
+        """
+        bill = bill_id
+
+        if not self.is_cabinet(ctx.author) or (bill.submitter and bill.submitter.id != ctx.author.id):
+            return await ctx.send(f"{config.NO} Only the {self.bot.mk.speaker_term} and the original "
+                                  f"submitter of a bill can edit it.")
+
+        menu = text.EditModelMenu(choices_with_formatted_explanation={"link": "Google Docs Link",
+                                                                      "description": "Short Summary"},
+                                  title=f"{config.USER_INTERACTION_REQUIRED}  What about {bill.name} (#{bill.id}) do "
+                                        f"you want to change?")
+
+        result = await menu.prompt(ctx)
+
+        if not result.confirmed:
+            return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
+
+        to_change = result.choices
+
+        if True not in to_change.values():
+            return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
+
+        if to_change["link"]:
+            if not self.is_cabinet(ctx.author) and bill.session.status is not SessionStatus.SUBMISSION_PERIOD:
+                return await ctx.send(f"{config.NO} You can only change the link to your bill if the "
+                                      f"session it was submitted in is still in Submission Period.\n{config.HINT} "
+                                      f"However, the {self.bot.mk.speaker_term} can change the link of any bill at "
+                                      f"any given time.")
+
+            link = await ctx.input(
+                f"{config.USER_INTERACTION_REQUIRED} Reply with the new Google Docs link to the bill."
+
+            )
+
+            if not self.is_google_doc_link(link):
+                link = bill.link
+                tiny_link = bill.tiny_link
+                await ctx.send(f"{config.NO} That doesn't look like a Google Docs URL. "
+                               f"The link to the bill will not be changed.")
+
+            else:
+                tiny_link = await self.bot.tinyurl(link)
+
+        else:
+            link = bill.link
+            tiny_link = bill.tiny_link
+
+        if to_change["description"]:
+            description = await ctx.input(
+                f"{config.USER_INTERACTION_REQUIRED} Reply with a new **short** summary of what the bill does.",
+                timeout=400,
+            )
+            if not description:
+                description = "*No summary provided by submitter.*"
+
+        else:
+            description = bill.description
+
+        are_you_sure = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit `{bill.name}`?"
+        )
+
+        if not are_you_sure:
+            return await ctx.send("Cancelled.")
+
+        changed_bill = models.Bill(bot=self.bot, link=link, submitter_description=description)
+        name, keywords, content = await changed_bill.fetch_name_and_keywords()
+
+        if not name or not content:
+            return await ctx.send(f"{config.NO} Something went wrong with Google Docs. "
+                                  f"The bill was not edited, try again later.")
+
+        await self.bot.db.execute(
+            "UPDATE bill SET name = $1, content = $2, submitter_description = $3, link = $4, tiny_link = $5 "
+            "WHERE id = $6", name, content, description, link, tiny_link, bill.id)
+
+        await self.bot.db.execute("DELETE FROM bill_lookup_tag WHERE bill_id = $1", bill.id)
+        await self.bot.api_request("POST", "bill/update", silent=True, json={"id": bill.id})
+
+        id_with_kws = [(bill.id, keyword) for keyword in keywords]
+        self.bot.loop.create_task(
+            self.bot.db.executemany(
+                "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING ", id_with_kws
+            )
+        )
+
+        await ctx.send(f"{config.YES} Bill #{bill.id} `{bill.name}` was updated.")
 
     @bill.command(name="history", aliases=["h"])
     async def b_history(self, ctx: context.CustomContext, *, bill_id: models.Bill):
@@ -986,7 +1081,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
         if not bill_description:
-            bill_description = "-"
+            bill_description = "*No summary provided by submitter.*"
 
         async with ctx.typing():
             tiny_url = await self.bot.tinyurl(google_docs_url)
@@ -1263,7 +1358,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             if self.speaker is not None:
                 await self.bot.safe_send_dm(target=self.speaker, reason="leg_session_submit", embed=embed)
             if self.vice_speaker is not None:
-               await self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_submit", embed=embed)
+                await self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_submit", embed=embed)
 
     @legislature.command(name="pass", aliases=["p"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
@@ -1419,11 +1514,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             if self.speaker is not None:
                 await self.bot.safe_send_dm(target=self.speaker, reason="leg_session_withdraw", message=message)
             if self.vice_speaker is not None:
-               await self.bot.safe_send_dm(
-                   target=self.vice_speaker,
-                   reason="leg_session_withdraw",
-                   message=message,
-               )
+                await self.bot.safe_send_dm(
+                    target=self.vice_speaker,
+                    reason="leg_session_withdraw",
+                    message=message,
+                )
 
     @withdraw.command(name="bill", aliases=["b"])
     @checks.is_democraciv_guild()

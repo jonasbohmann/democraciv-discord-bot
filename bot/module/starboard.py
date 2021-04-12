@@ -111,7 +111,7 @@ class Starboard(context.CustomCog):
                 author = (
                     f"**{author.display_name}** ({str(author)})"
                     if author is not None
-                    else f"_Author left {self.bot.dciv.name}_"
+                    else f"_Unknown Person (or Webhook/NPC)_"
                 )
 
                 fmt_channel = f"**#{channel.name}**" if channel is not None else "_channel was deleted_"

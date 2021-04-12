@@ -188,34 +188,6 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code."
         )
 
-    @law.command(name="updatelink", aliases=["ul", "amend"])
-    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
-    async def updatelink(self, ctx, law_id: models.Law, new_link: str):
-        """Update the link to a law
-
-        Useful for applying amendments to laws if the current Speaker does not own the law's Google Doc.
-
-        **Example**
-            `{PREFIX}{COMMAND} 16 https://docs.google.com/1/d/ajgh3egfdjfnjdf`
-        """
-
-        if not self.is_google_doc_link(new_link):
-            return await ctx.send(f"{config.NO} This does not look like a Google Docs link: `{new_link}`")
-
-        law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to change the link to "
-            f"`{law.name}` (#{law.id})?"
-        )
-
-        if not reaction:
-            return await ctx.send("Cancelled.")
-
-        await law.status.amend(new_link=new_link)
-        law = await models.Law.convert(ctx, law.id)
-        # self.amend_scheduler.add(law)
-        await ctx.send(f"{config.YES} The link to `{law.name}` was changed.")
-
 
 def setup(bot):
     bot.add_cog(Laws(bot))
