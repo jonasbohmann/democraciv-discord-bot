@@ -127,10 +127,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         else:
             speaker_value.append(f"{self.bot.mk.speaker_term}: -")
 
-        # if isinstance(self.vice_speaker, discord.Member):
-        #    speaker_value.append(f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention}")
-        # else:
-        #    speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
+        if isinstance(self.vice_speaker, discord.Member):
+           speaker_value.append(f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention}")
+        else:
+           speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
 
         embed.add_field(name=self.bot.mk.LEGISLATURE_CABINET_NAME, value="\n".join(speaker_value))
         embed.add_field(
@@ -1262,8 +1262,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         if not self.is_cabinet(ctx.author):
             if self.speaker is not None:
                 await self.bot.safe_send_dm(target=self.speaker, reason="leg_session_submit", embed=embed)
-            # if self.vice_speaker is not None:
-            #    await self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_submit", embed=embed)
+            if self.vice_speaker is not None:
+               await self.bot.safe_send_dm(target=self.vice_speaker, reason="leg_session_submit", embed=embed)
 
     @legislature.command(name="pass", aliases=["p"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
@@ -1418,12 +1418,12 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         if not self.is_cabinet(ctx.author):
             if self.speaker is not None:
                 await self.bot.safe_send_dm(target=self.speaker, reason="leg_session_withdraw", message=message)
-            # if self.vice_speaker is not None:
-            #    await self.bot.safe_send_dm(
-            #        target=self.vice_speaker,
-            #        reason="leg_session_withdraw",
-            #        message=message,
-            #    )
+            if self.vice_speaker is not None:
+               await self.bot.safe_send_dm(
+                   target=self.vice_speaker,
+                   reason="leg_session_withdraw",
+                   message=message,
+               )
 
     @withdraw.command(name="bill", aliases=["b"])
     @checks.is_democraciv_guild()
