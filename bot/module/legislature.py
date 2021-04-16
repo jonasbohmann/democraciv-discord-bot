@@ -99,6 +99,24 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             self.bot.get_command(self.bot.mk.LEGISLATURE_COMMAND).remove_command("motion")
             self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw").remove_command("motion")
 
+    @commands.command(name="bill", aliases=["bills", "b"], hidden=True)
+    async def _bill(self, ctx: context.CustomContext):
+        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} bill`"""
+        ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
+                                                          f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
+                                                          f"{ctx.invoked_with}")
+        new_ctx = await self.bot.get_context(ctx.message)
+        return await self.bot.invoke(new_ctx)
+
+    @commands.command(name="motion", aliases=["motions", "m"], hidden=True)
+    async def _motion(self, ctx: context.CustomContext):
+        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} motion`"""
+        ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
+                                                          f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
+                                                          f"{ctx.invoked_with}")
+        new_ctx = await self.bot.get_context(ctx.message)
+        return await self.bot.invoke(new_ctx)
+
     @commands.group(
         name=mk.MarkConfig.LEGISLATURE_COMMAND.lower(),
         aliases=LEG_COMMAND_ALIASES,

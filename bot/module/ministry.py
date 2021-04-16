@@ -86,7 +86,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
 
     @commands.group(
         name=mk.MarkConfig.MINISTRY_COMMAND,
-        aliases=["m", "min", "exec", "cabinet", "minister", "ministry"],
+        aliases=["min", "exec", "cabinet", "minister", "ministry"],
         case_insensitive=True,
         invoke_without_command=True,
     )

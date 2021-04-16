@@ -366,7 +366,7 @@ class Bank(context.CustomCog):
                 )
 
     @commands.group(
-        name="bank", aliases=["b", "economy", "cash", "currency"], case_insensitive=True, invoke_without_command=True
+        name="bank", aliases=["ba", "economy", "cash", "currency"], case_insensitive=True, invoke_without_command=True
     )
     async def bank(self, ctx):
         """The Bank of Democraciv"""
