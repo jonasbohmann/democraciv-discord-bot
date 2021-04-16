@@ -812,7 +812,7 @@ class Party(context.CustomCog, name="Political Parties"):
     @party.command(name="merge")
     @checks.moderation_or_nation_leader()
     async def mergeparties(self, ctx, amount_of_parties: int):
-        """Merge one or multiple parties into a single, new party"""
+        """Merge multiple parties into a single, new party"""
 
         # todo
 
@@ -863,15 +863,12 @@ class Party(context.CustomCog, name="Political Parties"):
 
                 async with self.bot.db.acquire() as connection:
                     async with connection.transaction():
-                        await connection.execute(
-                            "DELETE FROM party_alias WHERE party_id = $1; " "DELETE FROM party WHERE id = $1",
-                            party.role.id,
-                        )
+                        await connection.execute("DELETE FROM party WHERE id = $1", party.role.id)
 
                 await party.role.delete()
 
         await ctx.send(
-            f"{config.YES} The old parties were deleted and" " all their members have now the role of the new party."
+            f"{config.YES} The old parties were deleted and all their members now have the role of the new party."
         )
 
 
