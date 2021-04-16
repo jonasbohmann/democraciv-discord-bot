@@ -33,7 +33,7 @@ class _Guild(context.CustomCog, name="Server"):
 
     @commands.group(
         name="server",
-        aliases=["settings", "guild", "config", "s"],
+        aliases=["settings", "guild", "config"],
         case_insensitive=True,
         invoke_without_command=True,
     )
