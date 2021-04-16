@@ -148,7 +148,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         case_insensitive=True,
         invoke_without_command=True,
     )
-    async def bill(self, ctx: context.CustomContext, *, bill_id: models.Bill = None):
+    async def bill(self, ctx: context.CustomContext, *, bill_id: models.FuzzyBill = None):
         """List all bills or get details about a single bill"""
 
         if bill_id is None:
@@ -332,7 +332,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         case_insensitive=True,
         invoke_without_command=True,
     )
-    async def motion(self, ctx: context.CustomContext, *, motion_id: Motion = None):
+    async def motion(self, ctx: context.CustomContext, *, motion_id: models.FuzzyMotion = None):
         """List all motions or get details about a single motion"""
 
         if motion_id is None:

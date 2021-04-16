@@ -45,7 +45,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         self.amend_scheduler = AmendScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
     @commands.group(name="law", aliases=["laws"], case_insensitive=True, invoke_without_command=True)
-    async def law(self, ctx, *, law_id: models.Law = None):
+    async def law(self, ctx, *, law_id: models.FuzzyLaw = None):
         """List all laws in {NATION_NAME} or get details about a specific law
 
         **Usage**

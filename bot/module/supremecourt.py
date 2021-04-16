@@ -65,7 +65,8 @@ class SupremeCourt(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.
             value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
                   f"\n[Submit a Case](https://forms.gle/ovDr3MsjTubuerZw9)\n"
                   f"[All Case Filings of the Supreme Court](https://docs.google.com/spreadsheets/d/1BuBk7n-_"
-                  f"TSHPEQIT9fGyk7z9RRQxGGrEc-gC5Vc2DkI/edit?usp=sharing)",
+                  f"TSHPEQIT9fGyk7z9RRQxGGrEc-gC5Vc2DkI/edit?usp=sharing)\n[Judicial Procedure](https://docs.google."
+                  f"com/document/d/1xogDLs2zZ7IA8SN6rqxy-ivCuxm9lE6lFINt8V7vuOE/edit?usp=sharing)",
             inline=False,
         )
 

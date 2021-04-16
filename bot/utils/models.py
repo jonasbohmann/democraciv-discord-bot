@@ -10,7 +10,7 @@ from discord.ext import commands
 from discord.utils import maybe_coroutine
 
 from bot.config import config, mk
-from bot.utils import context
+from bot.utils import context, text
 from bot.utils.exceptions import DemocracivBotException, NotFoundError, NotLawError
 
 
@@ -117,6 +117,9 @@ class Bill(commands.Converter):
 
         if self.status is None:
             self.status = BillStatus(self._bot, self)
+
+    def __str__(self):
+        return self.formatted
 
     @property
     def sponsors(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
@@ -225,6 +228,27 @@ class Bill(commands.Converter):
         return obj
 
 
+class FuzzyBill(Bill):
+    async def convert(self, ctx: context.CustomContext, argument):
+        try:
+            return await super().convert(ctx, argument)
+        except Exception as e:
+            matches = await ctx.bot.db.fetch(
+                "SELECT id FROM bill WHERE lower(name) % $1 OR lower(name) LIKE '%' || $1 || '%'"
+                " ORDER BY similarity(lower(name), $1) DESC LIMIT 6;", argument.lower(),
+            )
+            matches = [await Bill.convert(ctx, match['id']) for match in matches]
+
+            menu = text.FuzzyChoose(question="Which Bill did you mean?",
+                                    choices=matches)
+            bill = await menu.prompt(ctx)
+
+            if bill:
+                return bill
+
+            raise e
+
+
 class Law(Bill):
     @property
     def formatted(self):
@@ -241,6 +265,26 @@ class Law(Bill):
             raise NotLawError(f"{config.NO} `{bill.name}` (#{bill.id}) is not an active law.")
 
         return bill
+
+
+class FuzzyLaw(Law):
+    async def convert(self, ctx: context.CustomContext, argument):
+        try:
+            return await super().convert(ctx, argument)
+        except Exception as e:
+            matches = await ctx.bot.db.fetch(
+                "SELECT id FROM bill WHERE status = $2 AND (lower(name) % $1 OR lower(name) LIKE '%' || $1 || '%')"
+                " ORDER BY similarity(lower(name), $1) DESC LIMIT 6;", argument.lower(), BillIsLaw.flag.value
+            )
+            matches = [await Law.convert(ctx, match['id']) for match in matches]
+
+            menu = text.FuzzyChoose(question="Which Law did you mean?", choices=matches)
+            law = await menu.prompt(ctx)
+
+            if law:
+                return law
+
+            raise e
 
 
 class Motion(commands.Converter):
@@ -260,6 +304,9 @@ class Motion(commands.Converter):
         self.name: str = self.title  # compatibility
         self._submitter: int = kwargs.get("submitter")
         self._bot = kwargs.get("bot")
+
+    def __str__(self):
+        return self.formatted
 
     @property
     def formatted(self):
@@ -305,6 +352,27 @@ class Motion(commands.Converter):
 
         session = await Session.convert(ctx, motion["leg_session"])
         return cls(**motion, session=session, bot=ctx.bot)
+
+
+class FuzzyMotion(Motion):
+    async def convert(self, ctx: context.CustomContext, argument):
+        try:
+            return await super().convert(ctx, argument)
+        except Exception as e:
+            matches = await ctx.bot.db.fetch(
+                "SELECT id FROM motion WHERE lower(title) % $1 OR lower(title) LIKE '%' || $1 || '%'"
+                " ORDER BY similarity(lower(title), $1) DESC LIMIT 6;", argument.lower())
+
+            matches = [await Motion.convert(ctx, match['id']) for match in matches]
+
+            menu = text.FuzzyChoose(question="Which Motion did you mean?",
+                                    choices=matches)
+            motion = await menu.prompt(ctx)
+
+            if motion:
+                return motion
+
+            raise e
 
 
 class LegalConsumer:
