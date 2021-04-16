@@ -154,8 +154,16 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
 
     @law.command(name="search", aliases=["s"])
     async def search(self, ctx, *, query: str):
-        """Search for laws by their name or description"""
-        return await self._search_model(ctx, model=models.Law, query=query)
+        """Search for laws"""
+        results = await self._search_model(ctx, model=models.Law, query=query)
+
+        pages = paginator.SimplePages(
+            entries=results,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Laws matching '{query}'",
+            empty_message="Nothing found.",
+        )
+        await pages.start(ctx)
 
     @law.command(name="repeal", aliases=["r"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)

@@ -176,6 +176,29 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         embed.add_field(name="Current Session", value=current_session_value, inline=False)
         await ctx.send(embed=embed)
 
+    @legislature.command(name="search")
+    async def search(self, ctx: context.CustomContext, *, query: str):
+        """Search for both bills & motions at once
+
+        If you want to limit your search to either just bills or just motions, consider
+        the `{PREFIX}{LEGISLATURE_COMMAND} bill search` and `{PREFIX}{LEGISLATURE_COMMAND} motion search` commands."""
+
+        matches = await self._search_model(ctx, model=models.Bill, query=query)
+        matches.extend(await self._search_model(ctx, model=models.Motion, query=query))
+
+        matches.insert(0, f"This searches for both bills and motions. You can search for just bills with "
+                          f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill search`, "
+                          f"and for just motions with "
+                          f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion search`.\n")
+
+        pages = paginator.SimplePages(
+            entries=matches,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Bills & Motions matching '{query}'",
+            empty_message="Nothing found.",
+        )
+        await pages.start(ctx)
+
     @legislature.group(
         name="bill",
         aliases=["b", "bills"],
@@ -343,7 +366,15 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     @bill.command(name="search", aliases=["s"])
     async def b_search(self, ctx: context.CustomContext, *, query: str):
         """Search for a bill"""
-        return await self._search_model(ctx, model=models.Bill, query=query)
+        results = await self._search_model(ctx, model=models.Bill, query=query)
+
+        pages = paginator.SimplePages(
+            entries=results,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Bills matching '{query}'",
+            empty_message="Nothing found.",
+        )
+        await pages.start(ctx)
 
     @bill.command(name="from", aliases=["f", "by"])
     async def b_from(
@@ -466,7 +497,15 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     @motion.command(name="search", aliases=["s"])
     async def m_search(self, ctx: context.CustomContext, *, query: str):
         """Search for a motion"""
-        return await self._search_model(ctx, model=models.Motion, query=query)
+        results = await self._search_model(ctx, model=models.Motion, query=query)
+
+        pages = paginator.SimplePages(
+            entries=results,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Motions matching '{query}'",
+            empty_message="Nothing found.",
+        )
+        await pages.start(ctx)
 
     @legislature.group(
         name="session",

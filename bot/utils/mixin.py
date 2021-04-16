@@ -92,7 +92,7 @@ class GovernmentMixin:
 
     async def _search_model(self, ctx, *, model, query: str):
         if len(query) < 3:
-            return await ctx.send(f"{config.NO} The query to search for has to be at least 3 characters long.")
+            raise exceptions.DemocracivBotException(f"{config.NO} The query to search for has to be at least 3 characters long.")
 
         if model is models.Motion:
             found = await self.bot.db.fetch(
@@ -138,13 +138,7 @@ class GovernmentMixin:
 
             formatted = list(results)
 
-        pages = paginator.SimplePages(
-            entries=formatted,
-            icon=self.bot.mk.NATION_ICON_URL,
-            author=f"{model.__name__}s matching '{query}'",
-            empty_message="Nothing found.",
-        )
-        await pages.start(ctx)
+        return formatted
 
     async def _from_person_model(self, ctx, *, member_or_party, model):
         member = member_or_party or ctx.author
