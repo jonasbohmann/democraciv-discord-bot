@@ -156,9 +156,49 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         return await self._detail_view(ctx, obj=bill_id)
 
+    @bill.command(name="synchronize", aliases=["sync", "refresh"])
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
+    async def b_refresh(self, ctx, bills: commands.Greedy[models.Bill]):
+        """Synchronize the name & content of one or multiple bills with Google Docs"
+
+        This gets the current title and the current content of the Google Docs document of a bill,
+         and saves that to my database. In case my search commands show outdated text of a bill,
+         or I show the wrong name of a bill, use this command to fix that.
+
+        **Example**
+            `{PREFIX}{COMMAND} 12`
+            `{PREFIX}{COMMAND} 45 46 49 51 52`"""
+        errs = []
+
+        for bill in bills:
+            name, keywords, content = await bill.fetch_name_and_keywords()
+
+            if not name:
+                errs.append(f"Error syncing Bill #{bill.id} - {bill.name}. Skipping update..")
+                continue
+
+            await self.bot.db.execute("UPDATE bill SET name = $1, content = $3 WHERE id = $2", name, bill.id, content)
+            await self.bot.db.execute("DELETE FROM bill_lookup_tag WHERE bill_id = $1", bill.id)
+            await self.bot.api_request("POST", "bill/update", json={"id": bill.id})
+
+            id_with_kws = [(bill.id, keyword) for keyword in keywords]
+            self.bot.loop.create_task(
+                self.bot.db.executemany(
+                    "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES " "($1, $2) ON CONFLICT DO NOTHING ", id_with_kws
+                )
+            )
+
+        msg = f"{config.YES} Synchronized {len(bills) - len(errs)}/{len(bills)} bills with Google Docs."
+
+        if errs:
+            fmt = "\n".join(errs)
+            msg = f"{fmt}\n\n{msg}"
+
+        await ctx.send(msg)
+
     @bill.command(name="edit", aliases=["update", "e"])
     @checks.is_democraciv_guild()
-    async def b_edit(self, ctx, bill_id: models.Bill):
+    async def b_edit(self, ctx, *, bill_id: models.Bill):
         """Edit the Google Docs link or summary of a bill
 
         **Example**
@@ -302,7 +342,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
     @motion.command(name="edit", aliases=["update", "e"])
     @checks.is_democraciv_guild()
-    async def m_edit(self, ctx, motion_id: models.Motion):
+    async def m_edit(self, ctx, *, motion_id: models.Motion):
         """Edit the title or content of a motion
 
         **Example**

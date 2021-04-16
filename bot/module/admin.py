@@ -71,38 +71,6 @@ class Admin(
         await self.bot.api_request("POST", "ml/question_answering/force_index")
         await ctx.send(f"{config.YES}")
 
-    @commands.command(name="syncbill", aliases=["sb", "synclaw", "sl"])
-    @commands.is_owner()
-    async def syncbill(self, ctx, bills: commands.Greedy[models.Bill]):
-        """Refresh bill name, content and keywords from Google Docs"""
-        errs = []
-
-        for bill in bills:
-            name, keywords, content = await bill.fetch_name_and_keywords()
-
-            if not name:
-                errs.append(f"Error syncing Bill #{bill.id} - {bill.name}. Skipping update..")
-                continue
-
-            await self.bot.db.execute("UPDATE bill SET name = $1, content = $3 WHERE id = $2", name, bill.id, content)
-            await self.bot.db.execute("DELETE FROM bill_lookup_tag WHERE bill_id = $1", bill.id)
-            await self.bot.api_request("POST", "bill/update", json={"id": bill.id})
-
-            id_with_kws = [(bill.id, keyword) for keyword in keywords]
-            self.bot.loop.create_task(
-                self.bot.db.executemany(
-                    "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES " "($1, $2) ON CONFLICT DO NOTHING ", id_with_kws
-                )
-            )
-
-        msg = f"{config.YES} Synced {len(bills) - len(errs)}/{len(bills)} bills with Google Docs."
-
-        if errs:
-            fmt = "\n".join(errs)
-            msg = f"{fmt}\n\n{msg}"
-
-        await ctx.send(msg)
-
 
 class Experiments(context.CustomCog):
     """Test unfinished commands in beta & experimental features"""
