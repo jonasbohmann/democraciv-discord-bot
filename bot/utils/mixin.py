@@ -78,7 +78,8 @@ class GovernmentMixin:
                 fmt_sponsors = "\n".join([f"{sponsor.mention} {sponsor}" for sponsor in obj.sponsors])
                 embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
 
-            history = [f"{entry.date.strftime('%d %B %Y')} - {entry.after}" for entry in obj.history[:3]]
+            history = [f"{entry.date.strftime('%d %B %Y')} - {entry.note if entry.note else entry.after}"
+                       for entry in obj.history[:5]]
 
             if history:
                 embed.add_field(name="History", value="\n".join(history))

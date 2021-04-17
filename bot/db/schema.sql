@@ -108,7 +108,8 @@ CREATE TABLE IF NOT EXISTS bill_history(
     bill_id serial references bill(id) ON DELETE CASCADE,
     date timestamp WITHOUT TIME ZONE,
     before_status int,
-    after_status int
+    after_status int,
+    note text
 );
 
 

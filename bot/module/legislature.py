@@ -259,7 +259,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
     @bill.command(name="edit", aliases=["update", "e"])
     @checks.is_democraciv_guild()
-    async def b_edit(self, ctx, *, bill_id: models.Bill):
+    async def b_edit(self, ctx, *, bill_id: models.FuzzyBill):
         """Edit the Google Docs link or summary of a bill
 
         **Example**
@@ -353,10 +353,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         await ctx.send(f"{config.YES} Bill #{bill.id} `{bill.name}` was updated.")
 
     @bill.command(name="history", aliases=["h"])
-    async def b_history(self, ctx: context.CustomContext, *, bill_id: models.Bill):
+    async def b_history(self, ctx: context.CustomContext, *, bill_id: models.FuzzyBill):
         """See when a bill was first introduced, passed into Law, repealed, etc."""
         fmt_history = [
-            f"**{entry.date.strftime('%d %B %Y')}** - {entry.after}   "
+            f"**{entry.date.strftime('%d %B %Y')}** - {entry.note if entry.note else entry.after}   "
             f"({entry.after.emojified_status(verbose=False)})"
             for entry in bill_id.history
         ]
@@ -411,7 +411,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
     @motion.command(name="edit", aliases=["update", "e"])
     @checks.is_democraciv_guild()
-    async def m_edit(self, ctx, *, motion_id: models.Motion):
+    async def m_edit(self, ctx, *, motion_id: models.FuzzyMotion):
         """Edit the title or content of a motion
 
         **Example**
@@ -848,12 +848,18 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         await active_leg_session.close()
 
+        consumer = models.LegalConsumer(ctx=ctx, objects=[await Bill.convert(ctx, b) for b in active_leg_session.bills],
+                                        action=models.BillStatus.fail_in_legislature)
+
+        await consumer.filter()
+        await consumer.consume()
+
         #  Update all bills that did not pass
-        await self.bot.db.execute(
-            "UPDATE bill SET status = $1 WHERE leg_session = $2",
-            models.BillFailedLegislature.flag.value,
-            active_leg_session.id,
-        )
+        # await self.bot.db.execute(
+        #    "UPDATE bill SET status = $1 WHERE leg_session = $2",
+        #    models.BillFailedLegislature.flag.value,
+        #    active_leg_session.id,
+        # )
 
         info = text.SafeEmbed(
             title=f"{config.HINT}  Help | Government System:  Legislative Sessions",
@@ -1590,7 +1596,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 return "You can only mark bills as passed if their session is closed."
 
         consumer = models.LegalConsumer(ctx=ctx, objects=bill_ids, action=models.BillStatus.pass_from_legislature)
-        await consumer.filter(filter_func=verify_bill, last_session=await self.get_last_leg_session())
+
+        # await consumer.filter(filter_func=verify_bill, last_session=await self.get_last_leg_session())
+        await consumer.filter()
 
         if consumer.failed:
             await ctx.send(f":warning: The following bills can not be passed.\n{consumer.failed_formatted}")
@@ -1895,7 +1903,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             return await ctx.send_help(ctx.command)
 
         consumer = models.LegalConsumer(ctx=ctx, objects=bill_ids, action=models.BillStatus.resubmit)
-        await consumer.filter()
+        await consumer.filter(resubmitter=ctx.author)
 
         if consumer.failed:
             await ctx.send(f":warning: The following bills cannot be resubmitted.\n{consumer.failed_formatted}")
@@ -1911,7 +1919,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         if not reaction:
             return await ctx.send("Cancelled.")
 
-        await consumer.consume()
+        await consumer.consume(resubmitter=ctx.author)
         await ctx.send(f"{config.YES} All bills were resubmitted to the current session.")
 
     def _format_stats(self, *, record: typing.List[asyncpg.Record], record_key: str, stats_name: str) -> str:

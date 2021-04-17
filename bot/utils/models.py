@@ -122,7 +122,7 @@ class SessionSponsorFilter(commands.Converter):
             return
 
 
-BillHistoryEntry = namedtuple("BillHistoryEntry", "before after date")
+BillHistoryEntry = namedtuple("BillHistoryEntry", "before after date note")
 
 
 class Bill(commands.Converter):
@@ -263,6 +263,7 @@ class Bill(commands.Converter):
                 date=record["date"],
                 before=BillStatus.from_flag_value(record["before_status"])(ctx.bot, obj),
                 after=BillStatus.from_flag_value(record["after_status"])(ctx.bot, obj),
+                note=record['note']
             )
             history.append(entry)
 
@@ -557,13 +558,14 @@ class BillStatus:
     def __repr__(self):
         return f"<{self.__class__.__name__} flag={self.flag}"
 
-    async def log_history(self, old_status: _BillStatusFlag, new_status: _BillStatusFlag):
+    async def log_history(self, old_status: _BillStatusFlag, new_status: _BillStatusFlag, *, note=None):
         await self._bot.db.execute(
-            "INSERT INTO bill_history (bill_id, date, before_status, after_status) " "VALUES ($1, $2, $3, $4)",
+            "INSERT INTO bill_history (bill_id, date, before_status, after_status, note) VALUES ($1, $2, $3, $4, $5)",
             self._bill.id,
             datetime.datetime.utcnow(),
             old_status.value,
             new_status.value,
+            note
         )
 
         self._bill.status = BillStatus.from_flag_value(new_status.value)(self._bot, self._bill)
@@ -589,7 +591,7 @@ class BillStatus:
     async def repeal(self, dry=False, **kwargs):
         raise IllegalBillOperation()
 
-    async def resubmit(self, dry=False, **kwargs):
+    async def resubmit(self, dry=False, *, resubmitter: discord.Member, **kwargs):
         raise IllegalBillOperation()
 
     async def amend(self, *, dry=False, new_link: str, **kwargs):
@@ -627,7 +629,8 @@ class BillSubmitted(BillStatus):
             self._bill.id,
         )
 
-        await self.log_history(self.flag, _BillStatusFlag.LEG_FAILED)
+        await self.log_history(self.flag, _BillStatusFlag.LEG_FAILED,
+                               note=f"Failed in Session #{self._bill.session.id}")
 
     async def pass_from_legislature(self, dry=False, **kwargs):
         if dry:
@@ -658,7 +661,9 @@ class BillSubmitted(BillStatus):
             self._bill.id,
         )
 
-        await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
+        await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED,
+                               note=f"Passed into law by {mk.MarkConfig.LEGISLATURE_NAME} "
+                                    f"during Session #{self._bill.session.id}")
         # await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
 
     async def sponsor(self, *, dry=False, sponsor: discord.Member, **kwargs):
@@ -727,10 +732,19 @@ class BillFailedLegislature(BillStatus):
             self._bill.id,
         )
 
-        await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED)
+        # delete "Failed in Session .." history record
+        await self._bot.db.execute("DELETE FROM bill_history WHERE bill_id = $1 AND before_status = $2 "
+                                   "AND after_status = $3 AND note = $4", self._bill.id,
+                                   _BillStatusFlag.SUBMITTED.value,
+                                   _BillStatusFlag.LEG_FAILED.value,
+                                   f"Failed in Session #{self._bill.session.id}")
+
+        await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED,
+                               note=f"Passed into law by {mk.MarkConfig.LEGISLATURE_NAME} "
+                                    f"during Session #{self._bill.session.id}")
         # await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
 
-    async def resubmit(self, dry=False, **kwargs):
+    async def resubmit(self, dry=False, *, resubmitter, **kwargs):
         session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE status = 'Submission Period'")
 
         if not session:
@@ -748,7 +762,13 @@ class BillFailedLegislature(BillStatus):
             session,
         )
 
-        await self.log_history(self.flag, _BillStatusFlag.SUBMITTED)
+        await self.log_history(self.flag, _BillStatusFlag.SUBMITTED,
+                               note=f"Resubmitted from Session #{self._bill.session.id} to Session #{session} by "
+                                    f"[{resubmitter}](https://democracivbank.com/u/{resubmitter.id} "
+                                    f"\"{resubmitter.id}\")")  # hyperlink to "hide" discord user id in embed, but
+                                                               # show if user clicks on url. doesn't matter what url,
+                                                               # just want to be able to see the resubmitter's id but
+                                                               # in a nice way
 
     def emojified_status(self, verbose=True):
         if verbose:
@@ -798,7 +818,7 @@ class BillPassedLegislature(BillStatus):
             self._bill.id,
         )
 
-        await self.log_history(self.flag, _BillStatusFlag.REPEALED)
+        await self.log_history(self.flag, _BillStatusFlag.REPEALED, note="Repealed")
 
     async def amend(self, *, dry=False, new_link: str, **kwargs):
         if dry:
@@ -903,7 +923,7 @@ class BillRepealed(BillStatus):
     flag = _BillStatusFlag.REPEALED
     verbose_name = "Repealed"
 
-    async def resubmit(self, dry=False, **kwargs):
+    async def resubmit(self, dry=False, *, resubmitter, **kwargs):
         session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE status = 'Submission Period'")
 
         if not session:
@@ -921,7 +941,13 @@ class BillRepealed(BillStatus):
             session,
         )
 
-        await self.log_history(self.flag, _BillStatusFlag.SUBMITTED)
+        await self.log_history(self.flag, _BillStatusFlag.SUBMITTED,
+                               note=f"Resubmitted from Session #{self._bill.session.id} to Session #{session} by "
+                                    f"[{resubmitter}](https://democracivbank.com/u/{resubmitter.id} "
+                                    f"\"{resubmitter.id}\")")  # hyperlink to "hide" discord user id in embed, but
+        # show if user clicks on url. doesn't matter what url,
+        # just want to be able to see the resubmitter's id but
+        # in a nice way
 
     def emojified_status(self, verbose=True):
         if verbose:

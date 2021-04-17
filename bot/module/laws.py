@@ -72,7 +72,8 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
 
         embed.add_field(name="Author", value=submitted_by_value, inline=False)
 
-        history = [f"{entry.date.strftime('%d %B %Y')} - {entry.after}" for entry in law.history[:3]]
+        history = [f"{entry.date.strftime('%d %B %Y')} - {entry.note if entry.note else entry.after}"
+                   for entry in law.history[:5]]
 
         if history:
             embed.add_field(name="History", value="\n".join(history))
