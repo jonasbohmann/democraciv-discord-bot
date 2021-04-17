@@ -118,6 +118,12 @@ class Bill(commands.Converter):
         if self.status is None:
             self.status = BillStatus(self._bot, self)
 
+    def __hash__(self):
+        return hash(self.id)
+
+    def __eq__(self, other):
+        return isinstance(other, Bill) and self.id == other.id
+
     def __str__(self):
         return self.formatted
 
@@ -239,7 +245,13 @@ class FuzzyBill(Bill):
             )
             matches = [await Bill.convert(ctx, match['id']) for match in matches]
 
+            if not matches:
+                raise e
+
             menu = text.FuzzyChoose(question="Which Bill did you mean?",
+                                    description=f"*Maybe you were looking for the "
+                                                f"`{config.BOT_PREFIX}{ctx.bot.mk.LEGISLATURE_COMMAND} bill search` "
+                                                f"command instead?*\n",
                                     choices=matches)
             bill = await menu.prompt(ctx)
 
@@ -278,7 +290,14 @@ class FuzzyLaw(Law):
             )
             matches = [await Law.convert(ctx, match['id']) for match in matches]
 
-            menu = text.FuzzyChoose(question="Which Law did you mean?", choices=matches)
+            if not matches:
+                raise e
+
+            menu = text.FuzzyChoose(question="Which Law did you mean?",
+                                    description=f"*Maybe you were looking for the "
+                                                f"`{config.BOT_PREFIX}law search` "
+                                                f"command instead?*\n",
+                                    choices=matches)
             law = await menu.prompt(ctx)
 
             if law:
@@ -304,6 +323,12 @@ class Motion(commands.Converter):
         self.name: str = self.title  # compatibility
         self._submitter: int = kwargs.get("submitter")
         self._bot = kwargs.get("bot")
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __eq__(self, other):
+        return isinstance(other, Motion) and self.id == other.id
 
     def __str__(self):
         return self.formatted
@@ -365,7 +390,13 @@ class FuzzyMotion(Motion):
 
             matches = [await Motion.convert(ctx, match['id']) for match in matches]
 
+            if not matches:
+                raise e
+
             menu = text.FuzzyChoose(question="Which Motion did you mean?",
+                                    description=f"*Maybe you were looking for the "
+                                                f"`{config.BOT_PREFIX}{ctx.bot.mk.LEGISLATURE_COMMAND} motion search` "
+                                                f"command instead?*\n",
                                     choices=matches)
             motion = await menu.prompt(ctx)
 

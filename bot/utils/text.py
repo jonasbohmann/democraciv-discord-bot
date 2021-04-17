@@ -175,12 +175,13 @@ class SafeEmbed(discord.Embed):
 
 
 class FuzzyChoose(menus.Menu):
-    def __init__(self, question: str, choices: typing.Iterable):
+    def __init__(self, question: str, choices: typing.Iterable, *, description=None):
         super().__init__(timeout=120.0, delete_message_after=True)
         self.question = question
         self.choices = choices
         self.result = None
         self._mapping = {}
+        self.description = description
 
         for i, choice in enumerate(choices, start=1):
             emoji = f"{i}\N{variation selector-16}\N{combining enclosing keycap}"
@@ -195,6 +196,9 @@ class FuzzyChoose(menus.Menu):
         embed = SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}  {self.question}")
 
         fmt = [f"Click {config.NO} to cancel.\n"]
+
+        if self.description:
+            fmt.insert(0, self.description)
 
         for emoji, choice in self._mapping.items():
             fmt.append(f"{emoji}  {choice}")

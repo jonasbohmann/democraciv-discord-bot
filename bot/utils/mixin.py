@@ -90,7 +90,7 @@ class GovernmentMixin:
 
         await ctx.send(embed=embed)
 
-    async def _search_model(self, ctx, *, model, query: str):
+    async def _search_model(self, ctx, *, model, query: str, return_model=False):
         if len(query) < 3:
             raise exceptions.DemocracivBotException(f"{config.NO} The query to search for has to be at least 3 characters long.")
 
@@ -105,12 +105,16 @@ class GovernmentMixin:
 
             for record in found:
                 obj = await model.convert(ctx, record["id"])
-                formatted.append(obj.formatted)
+                if return_model:
+                    formatted.append(obj)
+                else:
+                    formatted.append(obj.formatted)
         else:
             is_law = model is models.Law
             # First, search by name similarity
             async with self.bot.db.acquire() as con:
-                results = await self._search_bill_by_name(query, connection=con, search_laws=is_law)
+                results = await self._search_bill_by_name(query, connection=con, search_laws=is_law,
+                                                          return_model=return_model)
 
                 # Set word similarity threshold for search by tag
                 await self._update_pg_trgm_similarity_threshold(0.4, connection=con)
@@ -132,7 +136,8 @@ class GovernmentMixin:
                     ):
                         continue
 
-                    result = await self._search_bill_by_tag(word, connection=con, search_laws=is_law)
+                    result = await self._search_bill_by_tag(word, connection=con, search_laws=is_law,
+                                                            return_model=return_model)
                     if result:
                         results.update(result)
 
@@ -184,8 +189,8 @@ class GovernmentMixin:
         await pages.start(ctx)
 
     async def _search_bill_by_name(
-        self, name: str, connection=None, search_laws: bool = False
-    ) -> typing.Dict[str, None]:
+        self, name: str, connection=None, search_laws: bool = False, return_model=False
+    ) -> typing.Dict[typing.Union[models.Bill, models.Law, str], None]:
         """Search for bills by their name, returns list with prettified strings of found bills"""
 
         con = connection or self.bot.db
@@ -213,13 +218,18 @@ class GovernmentMixin:
 
             try:
                 obj = await model.convert(context.MockContext(self.bot), record["id"])
-                found[obj.formatted] = None
+                if return_model:
+                    found[obj] = None
+                else:
+                    found[obj.formatted] = None
             except exceptions.NotLawError:
                 continue
 
         return found
 
-    async def _search_bill_by_tag(self, tag: str, connection=None, search_laws: bool = False) -> typing.Dict[str, None]:
+    async def _search_bill_by_tag(self, tag: str, connection=None,
+                                  search_laws: bool = False, *,
+                                  return_model=False) -> typing.Dict[typing.Union[models.Bill, models.Law, str], None]:
         """Search for bills by their tag(s), returns list with prettified strings of found laws"""
 
         # Once a bill is passed into law, the bot automatically generates tags for it to allow for easier and faster
@@ -256,7 +266,10 @@ class GovernmentMixin:
 
             try:
                 obj = await model.convert(context.MockContext(self.bot), record["bill_id"])
-                formatted[obj.formatted] = None
+                if return_model:
+                    formatted[obj] = None
+                else:
+                    formatted[obj.formatted] = None
             except exceptions.NotLawError:
                 continue
 

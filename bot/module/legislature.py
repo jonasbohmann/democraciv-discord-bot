@@ -1,6 +1,8 @@
 import asyncio
 import collections
 import datetime
+import difflib
+
 import asyncpg
 import discord
 import typing
@@ -183,8 +185,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         If you want to limit your search to either just bills or just motions, consider
         the `{PREFIX}{LEGISLATURE_COMMAND} bill search` and `{PREFIX}{LEGISLATURE_COMMAND} motion search` commands."""
 
-        matches = await self._search_model(ctx, model=models.Bill, query=query)
-        matches.extend(await self._search_model(ctx, model=models.Motion, query=query))
+        matches = await self._search_model(ctx, model=models.Bill, query=query, return_model=True)
+        matches.extend(await self._search_model(ctx, model=models.Motion, query=query, return_model=True))
+
+        matches.sort(key=lambda elm: difflib.SequenceMatcher(None, elm.name, query).ratio(), reverse=True)
+        matches = list(map(lambda elm: elm.formatted, matches))
 
         matches.insert(0, f"This searches for both bills and motions. You can search for just bills with "
                           f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill search`, "
