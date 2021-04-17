@@ -1,5 +1,6 @@
 import datetime
 import enum
+import re
 import textwrap
 import typing
 import discord
@@ -84,6 +85,41 @@ class Session(commands.Converter):
         motions = await ctx.bot.db.fetch("SELECT id FROM motion WHERE leg_session = $1", session["id"])
         motions = sorted([record["id"] for record in motions])
         return cls(**session, bills=bills, motions=motions, bot=ctx.bot, session_status=status)
+
+
+sponsor_regex = re.compile(r"([<>=!]=?)\s?(\d+)")
+
+
+class SessionSponsorFilter(commands.Converter):
+    async def convert(self, ctx, argument) -> typing.Optional[typing.Tuple[typing.Callable, str]]:
+        match = sponsor_regex.match(argument)
+
+        if not match:
+            return
+
+        try:
+            print(match.groups())
+            filter_func = match.group(1)
+            amount = int(match.group(2))
+        except (IndexError, ValueError):
+            return
+
+        translation = {
+            "<": lambda b: len(b.sponsors) < amount,
+            "<=": lambda b: len(b.sponsors) <= amount,
+            "=": lambda b: len(b.sponsors) == amount,
+            ">": lambda b: len(b.sponsors) > amount,
+            ">=": lambda b: len(b.sponsors) >= amount,
+            "!": lambda b: len(b.sponsors) != amount,
+        }
+
+        translation['=='] = translation['=']
+        translation['!='] = translation['!']
+
+        try:
+            return translation[filter_func], argument
+        except KeyError:
+            return
 
 
 BillHistoryEntry = namedtuple("BillHistoryEntry", "before after date")

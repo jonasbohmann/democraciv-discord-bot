@@ -324,6 +324,9 @@ class NPC(CustomCog):
         if name.lower() == self.bot.user.name.lower():
             return await ctx.send(f"{config.NO} You can't have an NPC that is named after me.")
 
+        if len(name) > 80:
+            return await ctx.send(f"{config.NO} The name cannot be longer than 80 characters.")
+
         avatar_url = await self._make_avatar(ctx)
 
         trigger_phrase = await self._make_trigger_phrase(ctx)

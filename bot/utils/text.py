@@ -144,6 +144,9 @@ class SafeEmbed(discord.Embed):
         if len(self.title) > 256:
             self.title = f"{self.title[:250]}..."
 
+        if len(self.author.name) > 256:
+            self.set_author(name=f"{self.author.name[:250]}...", url=self.author.url, icon_url=self.author.icon_url)
+
     def add_field(
             self,
             *,
@@ -163,7 +166,7 @@ class SafeEmbed(discord.Embed):
                 if index == 0:
                     super().add_field(name=name, value=fields[index], inline=inline)
                 else:
-                    super().add_field(name=f"{name} (Cont.)", value=fields[index], inline=False)
+                    super().add_field(name=name, value=fields[index], inline=False)
         else:
             super().add_field(name=name, value=value, inline=inline)
 

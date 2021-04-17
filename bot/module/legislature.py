@@ -2,7 +2,6 @@ import asyncio
 import collections
 import datetime
 import difflib
-
 import asyncpg
 import discord
 import typing
@@ -518,12 +517,25 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         case_insensitive=True,
         invoke_without_command=True,
     )
-    async def leg_session(self, ctx: context.CustomContext, session: Session = None):
-        """Get details about a session from the Legislature
+    async def leg_session(self, ctx: context.CustomContext, session: typing.Optional[Session] = None, *,
+                          sponsor_filter: models.SessionSponsorFilter = None):
+        """Get details about a session from {LEGISLATURE_NAME}
 
-        **Usage**
-        `{PREFIX}{COMMAND}` to see details about the last session
-        `{PREFIX}{COMMAND} <number>` to see details about a specific session"""
+        You can filter the list of bills by their amount of sponsors. Support notation: `<`, `<=`, `=`, `==`, `!=`, `!`, `>`, `>=` followed by a number.
+
+        **Example**
+        `{PREFIX}{COMMAND}` to see details about the most recent session
+        `{PREFIX}{COMMAND} 9` to see details about Session #9
+
+        **Example with sponsor filter**
+        `{PREFIX}{COMMAND} >1` to see details about the most recent session, but only show bills that have more than 1 sponsor
+        `{PREFIX}{COMMAND} >=2` to see details about the most recent session, but only show bills that have more than or exactly 2 sponsors
+        `{PREFIX}{COMMAND} =5` to see details about the most recent session, but only show bills that have exactly 5 sponsors
+
+        `{PREFIX}{COMMAND} 9 =1` to see details about Session #9, but only show bills that have exactly 1 sponsor
+        `{PREFIX}{COMMAND} 21 >=1` to see details about Session #21, but only show bills that have more than or exactly 1 sponsor
+
+        """
 
         # User invoked -legislature session without arguments
         if session is None:
@@ -534,11 +546,16 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                                       f"{self.bot.mk.speaker_term} can open one at any time with "
                                       f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session open`.")
 
-        if len(session.bills) > 0:
+        bills = [await Bill.convert(ctx, b_id) for b_id in session.bills]
+
+        if sponsor_filter:
+            filter_func, sponsors_needed = sponsor_filter
+            bills = list(filter(filter_func, bills))
+
+        if bills:
             pretty_bills = []
 
-            for bill_id in session.bills:
-                bill = await Bill.convert(ctx, bill_id)
+            for bill in bills:
                 if bill.status.is_law:
                     pretty_bills.append(f"__Bill #{bill.id}__ - [{bill.short_name}]({bill.tiny_link})")
                 else:
@@ -555,7 +572,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                             f"[this form]({session.vote_form}).")
 
         if session.closed_on:
-            description += (f" Finally, voting ended as the session was closed on "
+            description += (f" Finally, the session was closed on "
                             f"{session.closed_on.strftime('*%A, %B %d %Y* at *%H:%M*')}.")
 
         if session.status is SessionStatus.SUBMISSION_PERIOD:
@@ -598,7 +615,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             f"This text was too long for Discord, so I put it on [here.]({await self.bot.make_paste(pretty_bills)})"
         )
         embed.add_field(
-            name="Submitted Bills",
+            name=f"Submitted Bills{'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'}",
             value=pretty_bills,
             inline=False,
             too_long_value=too_long_,
@@ -978,7 +995,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             return await ctx.send(f"{config.NO} That doesn't look like a Google Forms URL. This process was cancelled.")
 
         min_sponsors = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the minimum amount of "
-                                       f"sponsors a bill needs to be included on the "
+                                       f"sponsors a bill needs to have to be included on the "
                                        f"Voting Form.\n{config.HINT} If you "
                                        f"reply with `0`, every bill will be included, "
                                        f"regardless the amount of sponsors it has."
@@ -1129,21 +1146,6 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             empty_message="There hasn't been a session yet.",
         )
         await pages.start(ctx)
-
-    @staticmethod
-    def format_session_times(session: Session) -> str:
-        formatted_time = [f"**Opened**: {session.opened_on.strftime('%A, %B %d %Y at %H:%M')}"]
-
-        if session.voting_started_on:
-            formatted_time.append(
-                f"**Voting Started**: {session.voting_started_on.strftime('%A, %B %d %Y at %H:%M')}"
-            )
-
-        if session.closed_on:
-            # Session is closed
-            formatted_time.append(f"**Ended**: {session.closed_on.strftime('%A, %B %d %Y at %H:%M')}")
-
-        return "\n".join(formatted_time)
 
     @leg_session.command(name="all", aliases=["a"])
     async def leg_session_all(self, ctx: context.CustomContext):
@@ -1811,7 +1813,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         consumer = models.LegalConsumer(ctx=ctx, objects=bill_ids, action=models.BillStatus.sponsor)
 
         def filter_sponsor(_ctx, _bill, **kwargs):
-            if _ctx.author.id == _bill.submitter.id:
+            if _ctx.author.id == _bill._submitter:
                 return "The bill's author cannot sponsor their own bill."
 
             if _ctx.author in _bill.sponsors:
