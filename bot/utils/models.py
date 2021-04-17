@@ -181,7 +181,7 @@ class Bill(commands.Converter):
 
     @property
     def short_name(self) -> str:
-        return textwrap.shorten(self.name, width=35)
+        return textwrap.shorten(self.name, width=50)
 
     @property
     def formatted(self):

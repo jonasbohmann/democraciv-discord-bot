@@ -304,7 +304,7 @@ class _Guild(context.CustomCog, name="Server"):
                         else ""
                     )
                     await ctx.send(
-                        f"{config.YES} The {channel} category is no longer hidden, and all channels in it "
+                        f"{config.YES} The {channel} category **is no longer hidden**, and all channels in it "
                         f"will show up in {current_logging_channel.mention} again.{star}"
                     )
                 else:
@@ -314,7 +314,7 @@ class _Guild(context.CustomCog, name="Server"):
                         else ""
                     )
                     await ctx.send(
-                        f"{config.YES} {channel.mention} is no longer hidden, "
+                        f"{config.YES} {channel.mention} **is no longer hidden**, "
                         f"and it will show up in {current_logging_channel.mention} again.{star}"
                     )
 
@@ -334,7 +334,7 @@ class _Guild(context.CustomCog, name="Server"):
                     )
 
                     await ctx.send(
-                        f"{config.YES} The {channel} category is now hidden, and all the channel in it "
+                        f"{config.YES} The {channel} category **is now hidden**, and all the channel in it "
                         f"will no longer show up in {current_logging_channel.mention}.{star}"
                     )
                 else:
@@ -345,7 +345,7 @@ class _Guild(context.CustomCog, name="Server"):
                     )
 
                     await ctx.send(
-                        f"{config.YES} {channel.mention} is now hidden and will no longer show up "
+                        f"{config.YES} {channel.mention} **is now hidden** and will no longer show up "
                         f"in {current_logging_channel.mention}.{star}"
                     )
                 await self.bot.update_guild_config_cache()

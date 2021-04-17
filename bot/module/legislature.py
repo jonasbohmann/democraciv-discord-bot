@@ -546,19 +546,31 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         else:
             pretty_bills = ["-"]
 
-        embed = text.SafeEmbed()
+        speaker = session.speaker or context.MockUser()
+        description = (f"This session was opened by {speaker.mention} on "
+                       f"{session.opened_on.strftime('*%A, %B %d %Y* at *%H:%M*')}.")
+
+        if session.voting_started_on:
+            description += (f" Voting started on {session.voting_started_on.strftime('*%A, %B %d %Y* at *%H:%M*')} on "
+                            f"[this form]({session.vote_form}).")
+
+        if session.closed_on:
+            description += (f" Finally, voting ended as the session was closed on "
+                            f"{session.closed_on.strftime('*%A, %B %d %Y* at *%H:%M*')}.")
+
+        if session.status is SessionStatus.SUBMISSION_PERIOD:
+            description += (f"\n\nBills & Motions can be submitted to this session with "
+                            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit`. Any old bills from "
+                            f"previous sessions that failed can be resubmitted to this session with "
+                            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`.")
+
+        embed = text.SafeEmbed(description=description)
+
         embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL, name=f"Legislative Session #{session.id}")
-
-        if session.speaker is not None:
-            embed.add_field(name="Opened by", value=session.speaker.mention)
-        else:
-            embed.add_field(name="Opened by", value="*Person left Democraciv*")
-
         embed.add_field(name="Status", value=session.status.value, inline=True)
-        embed.add_field(name="Date", value=self.format_session_times(session), inline=False)
 
         if session.vote_form:
-            embed.add_field(name="Vote Form", value=f"[Link]({session.vote_form})", inline=False)
+            embed.add_field(name="Vote Form", value=session.vote_form, inline=False)
 
         if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
             if len(session.motions) > 0:
