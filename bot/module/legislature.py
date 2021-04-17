@@ -18,7 +18,7 @@ from bot.utils.models import Bill, Session, Motion, SessionStatus
 class PassScheduler(text.RedditAnnouncementScheduler):
 
     def get_reddit_post_title(self) -> str:
-        session = self._objects[0].session
+        session = self._objects[len(self._objects) - 1].session
         return f"Passed Bills from {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}"
 
     def get_reddit_post_content(self) -> str:
@@ -1490,14 +1490,18 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             ctx.command.reset_cooldown(ctx)
 
             if current_leg_session.status is SessionStatus.LOCKED:
-                return await ctx.send(
-                    f"{config.NO} The {self.bot.mk.speaker_term} has locked submissions for session "
-                    f"#{current_leg_session.id}. You "
-                    f"are not allowed to submit anything.\n{config.HINT} This session can be unlocked by the "
-                    f"{self.bot.mk.speaker_term} in order "
-                    f"to allow submissions again with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session "
-                    f"unlock`."
-                )
+                if not self.is_cabinet(ctx.author):
+                    return await ctx.send(
+                        f"{config.NO} The {self.bot.mk.speaker_term} has locked submissions for Session "
+                        f"#{current_leg_session.id}. You "
+                        f"are not allowed to submit anything."
+                        f"\n{config.HINT} This session can be unlocked by the "
+                        f"{self.bot.mk.speaker_term} in order "
+                        f"to allow submissions again with "
+                        f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session "
+                        f"unlock`.\n{config.HINT} The {self.bot.mk.speaker_term} can bypass this "
+                        f"and is allowed to submit even if submissions are locked."
+                    )
 
             if current_leg_session.status is SessionStatus.VOTING_PERIOD:
                 return await ctx.send(
