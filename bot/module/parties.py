@@ -95,6 +95,7 @@ class Party(context.CustomCog, name="Political Parties"):
             role = self.bot.dciv.get_role(party_id)
 
             if role is None:
+                await self.bot.db.execute("DELETE FROM party WHERE id = $1", party_id)
                 error_string.append(str(party_id))
                 continue
 
@@ -103,7 +104,8 @@ class Party(context.CustomCog, name="Political Parties"):
         if error_string:
             errored = ", ".join(error_string)
             logging.warning(
-                f"The following ids were added as a party but have no role on the Democraciv guild: {errored}"
+                f"The following ids were added as a party but have no role on the Democraciv guild. "
+                f"Records were deleted: {errored}"
             )
 
         parties_and_members.sort(key=lambda x: x[1], reverse=True)
@@ -802,12 +804,32 @@ class Party(context.CustomCog, name="Political Parties"):
     async def deletealias(self, ctx, *, alias: str):
         """Delete a party's alias"""
         try:
-            await FuzzyPoliticalParty.convert(ctx, alias)
+            await PoliticalParty.convert(ctx, alias)
         except exceptions.NotFoundError:
             return await ctx.send(f"{config.NO} `{alias}` is not an alias of any party.")
 
         await self.bot.db.execute("DELETE FROM party_alias WHERE alias = $1", alias.lower())
-        await ctx.send(f"{config.YES} Alias `{alias}` was deleted.")
+        await ctx.send(f"{config.YES} Alias `{alias}` was deleted.\n{config.HINT} If you want to delete all aliases "
+                       f"of a party, consider using the `{config.BOT_PREFIX}party clearalias` command instead.")
+
+    @party.command(name="clearalias")
+    @checks.moderation_or_nation_leader()
+    async def clearalias(self, ctx, *, party: FuzzyPoliticalParty):
+        """Delete all aliases of a party"""
+
+        for alias in party.aliases:
+            if alias == party.role.name.lower():
+                continue
+
+            await self.bot.db.execute("DELETE FROM party_alias WHERE alias = $1", alias)
+
+        sure = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to "
+                                 f"delete all aliases of `{party.role.name}`?")
+
+        if sure:
+            await ctx.send(f"{config.YES} All aliases of `{party.role.name}` were deleted.")
+        else:
+            await ctx.send("Cancelled.")
 
     @party.command(name="merge")
     @checks.moderation_or_nation_leader()

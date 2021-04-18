@@ -147,7 +147,7 @@ class CustomContext(commands.Context):
         else:
             return True
 
-    async def confirm(self, text: str = None, *, message: discord.Message = None, timeout=300) -> object:
+    async def confirm(self, text: str = None, *, message: discord.Message = None, timeout=300) -> bool:
         """Adds the {config.YES} and {config.NO} emoji to the message and returns the reaction and user if either
         reaction has been added by the original user.
 
