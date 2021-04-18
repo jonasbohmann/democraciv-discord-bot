@@ -121,26 +121,26 @@ class GovernmentMixin:
                 await self._update_pg_trgm_similarity_threshold(0.4, connection=con)
 
                 # Then, search by tag similarity
-                for word in query.split():
-                    if len(word) < 3 or word in (
-                        "the",
-                        "author",
-                        "authors",
-                        "date",
-                        "name",
-                        "and",
-                        "d/m/y",
-                        "type",
-                        "description",
-                        "by",
-                        "generated",
-                    ):
-                        continue
+                # for word in query.split():
+                #    if len(word) < 3 or word in (
+                #        "the",
+                #        "author",
+                #        "authors",
+                #        "date",
+                #        "name",
+                #        "and",
+                #        "d/m/y",
+                #        "type",
+                #        "description",
+                #        "by",
+                #        "generated",
+                #    ):
+                #        continue
 
-                    result = await self._search_bill_by_tag(word, connection=con, search_laws=is_law,
-                                                            return_model=return_model)
-                    if result:
-                        results.update(result)
+                result = await self._search_bill_by_tag(query, connection=con, search_laws=is_law,
+                                                        return_model=return_model)
+                if result:
+                    results.update(result)
 
             formatted = list(results)
 

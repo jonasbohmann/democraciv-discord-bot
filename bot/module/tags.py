@@ -54,7 +54,8 @@ class Tags(context.CustomCog):
 
             if tag.is_embedded:
                 if tag_content_type is TagContentType.IMAGE:
-                    embed = discord.Embed(title=tag.title, colour=0x2F3136)
+                    # invisible colour=0x2F3136
+                    embed = text.SafeEmbed(title=tag.title)
                     embed.set_image(url=tag.content)
 
                     try:
@@ -170,9 +171,16 @@ class Tags(context.CustomCog):
     async def addtagalias(self, ctx: context.CustomContext, *, tag: OwnedTag):
         """Add a new alias to a tag"""
 
+        p = config.BOT_PREFIX
+
         alias = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the new alias for `{config.BOT_PREFIX}{tag.name}`."
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the new alias for `{p}{tag.name}`."
+            f"\n{config.HINT} *You do __not__ have to add `{p}` in front of it.*"
         )
+
+        if alias.startswith(p):
+            alias = alias[len(p):]
+            await ctx.send(f"*Note: The leading `{p}` was automatically removed from the alias.*")
 
         if not await self.validate_tag_name(ctx, alias.lower()):
             return
@@ -186,7 +194,7 @@ class Tags(context.CustomCog):
                 )
 
         await ctx.send(
-            f"{config.YES} The `{config.BOT_PREFIX}{alias}` alias was added to " f"`{config.BOT_PREFIX}{tag.name}`."
+            f"{config.YES} The `{p}{alias}` alias was added to " f"`{p}{tag.name}`."
         )
 
     @tags.command(name="removealias", aliases=["deletealias", "ra", "da"])
@@ -228,14 +236,14 @@ class Tags(context.CustomCog):
         tag_name = tag_name.lower()
 
         if not tag_name:
-            await ctx.send(f"{config.NO} The name of your tag cannot be empty.")
+            await ctx.send(f"{config.NO} The name of your tag or alias cannot be empty.")
             return False
 
         ctx.message.content = f"{config.BOT_PREFIX}{tag_name}"
         maybe_context: context.CustomContext = await self.bot.get_context(ctx.message)
 
         if maybe_context.valid:
-            await ctx.send(f"{config.NO} You can't create a tag with the same name of one of my commands.")
+            await ctx.send(f"{config.NO} You can't create a tag or alias with the same name of one of my commands.")
             return False
 
         tags = await self.bot.db.fetch(
@@ -262,7 +270,7 @@ class Tags(context.CustomCog):
             return False
 
         if len(tag_name) > 50:
-            await ctx.send(f"{config.NO} The name cannot be longer than 50 characters.")
+            await ctx.send(f"{config.NO} The name or alias cannot be longer than 50 characters.")
             return False
 
         return True
@@ -695,7 +703,8 @@ class Tags(context.CustomCog):
 
         if tag_details["is_embedded"]:
             if tag_content_type is TagContentType.IMAGE:
-                embed = text.SafeEmbed(title=tag_details['title'], colour=0x2F3136)
+                # invisible colour=0x2F3136
+                embed = text.SafeEmbed(title=tag_details['title'])
                 embed.set_image(url=tag_details["content"])
 
                 try:

@@ -1165,7 +1165,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
         await ctx.send(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the **text** of your bill.\n\n"
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the **text** of your bill.\n"
             f"{config.HINT} You can reply with as many messages as you need for this. Once you're done, reply with "
             f"just the word `stop` and we will continue with the process."
         )
@@ -1269,7 +1269,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         # Google Docs Link
         google_docs_url = await ctx.input(
             f"{config.YES} You will submit a **bill**.\n"
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the Google Docs link to the bill you want to submit.\n\n"
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the Google Docs link to the bill you want to submit.\n"
             f"{config.HINT} If you don't have your bill in a Google Docs document but instead just as text, "
             f"reply with gibberish to make me generate a Google Docs document for you."
         )
@@ -1520,7 +1520,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 f"{config.USER_INTERACTION_REQUIRED} Do you want to submit a motion or a bill? "
                 f"React with {config.LEG_SUBMIT_BILL} for bill, and with "
                 f"{config.LEG_SUBMIT_MOTION} for a motion."
-                f"\n\n{config.HINT} *Motions lack a lot of features that bills have, "
+                f"\n{config.HINT} *Motions lack a lot of features that bills have, "
                 f"for example they cannot be passed into Law by the Government. They will not "
                 f"show up in `{config.BOT_PREFIX}laws`, nor will they make it on the Legal Code. They can also not "
                 f"be sponsored. If you want to submit something small "
