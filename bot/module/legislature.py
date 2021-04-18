@@ -100,39 +100,39 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             self.bot.get_command(self.bot.mk.LEGISLATURE_COMMAND).remove_command("motion")
             self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw").remove_command("motion")
 
-    @commands.command(name="bill", aliases=["bills", "b"], hidden=True)
-    async def _bill(self, ctx: context.CustomContext):
-        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} bill`
+    # @commands.command(name="bill", aliases=["bills", "b"], hidden=True)
+    # async def _bill(self, ctx: context.CustomContext):
+    #    """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} bill`
+    #
+    #    Use `{PREFIX}help {LEGISLATURE_COMMAND} bill` for the help page of the actual command."""
+    #
+    #    ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
+    #                                                      f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
+    #                                                      f"{ctx.invoked_with}")
+    #    new_ctx = await self.bot.get_context(ctx.message)
+    #    return await self.bot.invoke(new_ctx)
 
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} bill` for the help page of the actual command."""
+    # @commands.command(name="motion", aliases=["motions", "m"], hidden=True)
+    # async def _motion(self, ctx: context.CustomContext):
+    #    """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} motion`
 
-        ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
-                                                          f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
-                                                          f"{ctx.invoked_with}")
-        new_ctx = await self.bot.get_context(ctx.message)
-        return await self.bot.invoke(new_ctx)
+    #    Use `{PREFIX}help {LEGISLATURE_COMMAND} motion` for the help page of the actual command."""
+    #    ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
+    #                                                      f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
+    #                                                      f"{ctx.invoked_with}")
+    #    new_ctx = await self.bot.get_context(ctx.message)
+    #    return await self.bot.invoke(new_ctx)
 
-    @commands.command(name="motion", aliases=["motions", "m"], hidden=True)
-    async def _motion(self, ctx: context.CustomContext):
-        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} motion`
+    # @commands.command(name="session", aliases=["sessions", "s"], hidden=True)
+    # async def _session(self, ctx: context.CustomContext):
+    #    """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} session`
 
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} motion` for the help page of the actual command."""
-        ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
-                                                          f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
-                                                          f"{ctx.invoked_with}")
-        new_ctx = await self.bot.get_context(ctx.message)
-        return await self.bot.invoke(new_ctx)
-
-    @commands.command(name="session", aliases=["sessions", "s"], hidden=True)
-    async def _session(self, ctx: context.CustomContext):
-        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} session`
-
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} session` for the help page of the actual command."""
-        ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
-                                                          f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
-                                                          f"{ctx.invoked_with}")
-        new_ctx = await self.bot.get_context(ctx.message)
-        return await self.bot.invoke(new_ctx)
+    #    Use `{PREFIX}help {LEGISLATURE_COMMAND} session` for the help page of the actual command."""
+    #    ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
+    #                                                      f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
+    #                                                      f"{ctx.invoked_with}")
+    #    new_ctx = await self.bot.get_context(ctx.message)
+    #    return await self.bot.invoke(new_ctx)
 
     @commands.group(
         name=mk.MarkConfig.LEGISLATURE_COMMAND.lower(),
@@ -1755,6 +1755,15 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         await self.withdraw_objects(ctx, bill_ids)
 
+    @bill.command(name="withdraw", aliases=["w"], hidden=True)
+    @checks.is_democraciv_guild()
+    async def _withdraw_bill_alias(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
+        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} withdraw bill`
+
+        Use `{PREFIX}help {LEGISLATURE_COMMAND} withdraw bill` for the help page of the actual command."""
+
+        await ctx.invoke(self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw bill"), bill_ids=bill_ids)
+
     @withdraw.command(name="motion", aliases=["m"])
     @checks.is_democraciv_guild()
     async def withdrawmotion(self, ctx: context.CustomContext, motion_ids: Greedy[Motion]):
@@ -1772,43 +1781,53 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         await self.withdraw_objects(ctx, motion_ids)
 
-    @legislature.command(name="override", aliases=["ov"], hidden=True, enabled=False)
-    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
-    async def override(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Override the veto of one or multiple bills to pass them into law
+    @motion.command(name="withdraw", aliases=["w"], hidden=True)
+    @checks.is_democraciv_guild()
+    async def _withdraw_motion_alias(self, ctx: context.CustomContext, motion_ids: Greedy[Bill]):
+        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} withdraw motion`
 
-        **Example**
-           `{PREFIX}{COMMAND} 56`
-           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
+        Use `{PREFIX}help {LEGISLATURE_COMMAND} withdraw motion` for the help page of the actual command."""
 
-        if not bill_ids:
-            return await ctx.send_help(ctx.command)
+        await ctx.invoke(self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw motion"),
+                         motion_ids=motion_ids)
 
-        consumer = models.LegalConsumer(ctx=ctx, objects=bill_ids, action=models.BillStatus.override_veto)
-        await consumer.filter()
+    # @legislature.command(name="override", aliases=["ov"], hidden=True, enabled=False)
+    # @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
+    # async def override(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
+    #    """Override the veto of one or multiple bills to pass them into law
+    #
+    #    **Example**
+    #       `{PREFIX}{COMMAND} 56`
+    #       `{PREFIX}{COMMAND} 12 13 14 15 16`"""
+    #
+    #    if not bill_ids:
+    #        return await ctx.send_help(ctx.command)
+    #
+    #    consumer = models.LegalConsumer(ctx=ctx, objects=bill_ids, action=models.BillStatus.override_veto)
+    #    await consumer.filter()
 
-        if consumer.failed:
-            await ctx.send(
-                f":warning: The vetoes of the following bills can not be overridden.\n{consumer.failed_formatted}"
-            )
+    #    if consumer.failed:
+    #        await ctx.send(
+    #            f":warning: The vetoes of the following bills can not be overridden.\n{consumer.failed_formatted}"
+    #        )
 
-        if not consumer.passed:
-            return
+    #    if not consumer.passed:
+    #        return
 
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to override the {self.bot.mk.MINISTRY_NAME}'s veto of the following "
-            f"bills?\n{consumer.passed_formatted}"
-        )
+    #    reaction = await ctx.confirm(
+    #        f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
+    #        f"to override the {self.bot.mk.MINISTRY_NAME}'s veto of the following "
+    #        f"bills?\n{consumer.passed_formatted}"
+    #    )
 
-        if not reaction:
-            return await ctx.send("Cancelled.")
+    #    if not reaction:
+    #        return await ctx.send("Cancelled.")
 
-        await consumer.consume(scheduler=self.override_scheduler)
-        await ctx.send(
-            f"{config.YES} The vetoes of all bills were overridden, and all bills are active laws and in "
-            f"`{config.BOT_PREFIX}laws` now."
-        )
+    #    await consumer.consume(scheduler=self.override_scheduler)
+    #    await ctx.send(
+    #        f"{config.YES} The vetoes of all bills were overridden, and all bills are active laws and in "
+    #        f"`{config.BOT_PREFIX}laws` now."
+    #    )
 
     @legislature.command(name="sponsor", aliases=["sp", "cosponsor", "second"])
     @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
@@ -1854,6 +1873,15 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             f"bill <bill_id>` for these bills."
         )
 
+    @bill.command(name="sponsor", hidden=True)
+    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+    async def _sponsor_bill_alias(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
+        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} sponsor`
+
+        Use `{PREFIX}help {LEGISLATURE_COMMAND} sponsor` for the help page of the actual command."""
+
+        await ctx.invoke(self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} sponsor"), bill_ids=bill_ids)
+
     @legislature.command(name="unsponsor", aliases=["usp"])
     @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
     async def unsponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
@@ -1890,6 +1918,15 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         await consumer.consume(sponsor=ctx.author)
         await ctx.send(f"{config.YES} You were removed from the list of sponsors from all bills.")
+
+    @bill.command(name="unsponsor", hidden=True)
+    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+    async def _unsponsor_bill_alias(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
+        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} unsponsor`
+
+        Use `{PREFIX}help {LEGISLATURE_COMMAND} unsponsor` for the help page of the actual command."""
+
+        await ctx.invoke(self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} unsponsor"), bill_ids=bill_ids)
 
     @legislature.command(name="resubmit", aliases=["rs"])
     async def resubmit(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
