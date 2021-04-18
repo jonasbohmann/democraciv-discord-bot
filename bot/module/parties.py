@@ -118,47 +118,45 @@ class Party(context.CustomCog, name="Political Parties"):
         if party is None:
             return await ctx.invoke(self.bot.get_command("parties"))
 
-        embed = text.SafeEmbed(title=party.role.name)
+        embed = text.SafeEmbed()
+        logo = await party.get_logo()
+        embed.set_author(name=party.role.name, icon_url=logo or self.bot.mk.NATION_ICON_URL)
 
         if not party.is_independent:
-            thumbnail = await party.get_logo()
-            footer_text = f"Join this party with: {config.BOT_PREFIX}join {party.role.name}"
-            embed.description = f"[Platform and Description]({self.bot.mk.POLITICAL_PARTIES})"
+            embed.description = (f"[Platform and Description]({self.bot.mk.POLITICAL_PARTIES})\nJoin this party with "
+                                 f"`{config.BOT_PREFIX}join {min(party.aliases, key=len)}`.")
             members_name = "Members"
 
-            if thumbnail:
-                embed.set_thumbnail(url=thumbnail)
+            if logo:
+                embed.set_thumbnail(url=logo)
 
-            invite_value = party.discord_invite if party.discord_invite else "*This party does not have a Discord server.*"
+            invite_value = party.discord_invite if party.discord_invite else "*N/A*"
             embed.add_field(name="Server", value=invite_value)
-
             embed.add_field(name="Join Setting", value=party.join_mode.value)
-
-            if party.leaders:
-                embed.add_field(
-                    name="Leaders",
-                    value="\n".join([f"{leader.mention} {leader}" for leader in party.leaders]),
-                    inline=False,
-                )
-
-            if party.aliases is not None:
-                embed.add_field(name="Aliases", value=", ".join(party.aliases) or "-", inline=False)
+            embed.add_field(name="Aliases", value=", ".join([f"`{alias}`" for alias in party.aliases]) or "-",
+                            inline=False)
         else:
             embed.description = (f"These people have decided to remain Independent and to not join any "
-                                 f"political party.\n\n[Overview of existing Political Parties]"
-                                 f"({self.bot.mk.POLITICAL_PARTIES})")
+                                 f"political party. Become an Independent with "
+                                 f"`{config.BOT_PREFIX}join {party.role.name}`."
+                                 f"\n\n[Overview of existing Political Parties]({self.bot.mk.POLITICAL_PARTIES})")
 
-            footer_text = f"Become an Independent with {config.BOT_PREFIX}join {party.role.name}"
             members_name = "Independents"
 
-        party_members = "\n".join([f"{member.mention} {member}" for member in party.role.members]) or "-"
+        party_members = [f"{member.mention} {member}" for member in party.role.members
+                         if member.id not in party._leaders] or ["-"]
+
+        if party.leaders:
+            for i, leader in enumerate(party.leaders):
+                if leader in party.role.members:
+                    party_members.insert(i, f"{leader.mention} **{leader} (Leader)**")
+
         embed.add_field(
             name=f"{members_name} ({len(party.role.members)})",
-            value=party_members,
+            value="\n".join(party_members),
             inline=False,
         )
 
-        embed.set_footer(text=footer_text)
         await ctx.send(embed=embed)
 
     @commands.Cog.listener(name="on_raw_reaction_add")
@@ -446,8 +444,11 @@ class Party(context.CustomCog, name="Political Parties"):
         name="parties",
         aliases=["rank", "ranks", "members", "member", "rankings", "ranking"],
     )
-    async def parties(self, ctx):
+    async def parties(self, ctx, *, party: FuzzyPoliticalParty = None):
         """Ranking of political parties by their amount of members"""
+
+        if party:
+            return await ctx.invoke(self.bot.get_command("party"), party=party)
 
         party_list_embed_content = []
         sorted_parties_and_members = await self.collect_parties_and_members()
