@@ -755,8 +755,7 @@ class _Guild(context.CustomCog, name="Server"):
         """Remove all subreddit feeds on this server"""
         await self._clear_webhooks(ctx, endpoint="reddit/clear", webhook_name="subreddit feed(s)")
 
-    @guild.group(name="twitch", case_insensitive=True, invoke_without_command=True, aliases=["t"], hidden=True,
-                 enabled=False)
+    @guild.group(name="twitch", case_insensitive=True, invoke_without_command=True, aliases=["t"], hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch(self, ctx: context.CustomContext):
@@ -777,7 +776,7 @@ class _Guild(context.CustomCog, name="Server"):
             icon="https://cdn.discordapp.com/attachments/730898526040752291/781547042471149598/TwitchGlitchPurple.png",
         )
 
-    @twitch.command(name="add", aliases=["make", "create", "a", "m"], hidden=True, enabled=False)
+    @twitch.command(name="add", aliases=["make", "create", "a", "m"], hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch_add(self, ctx: context.CustomContext):
@@ -819,7 +818,7 @@ class _Guild(context.CustomCog, name="Server"):
             f"{config.YES} Notifications for when `{streamer}` goes live will be posted to {channel.mention}."
         )
 
-    @twitch.command(name="remove", aliases=["delete", "r", "d"], hidden=True, enabled=False)
+    @twitch.command(name="remove", aliases=["delete", "r", "d"], hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch_remove(
@@ -839,7 +838,7 @@ class _Guild(context.CustomCog, name="Server"):
             success_fmt=fmt,
         )
 
-    @twitch.command(name="clear", aliases=["removeall", "deleteall"], hidden=True, enabled=False)
+    @twitch.command(name="clear", aliases=["removeall", "deleteall"], hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def twitch_clear(self, ctx: context.CustomContext):

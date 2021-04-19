@@ -5,6 +5,7 @@ import aiohttp
 import discord
 
 from discord.ext import tasks
+from fastapi.logger import logger
 
 
 class YouTubeManager:
@@ -19,7 +20,11 @@ class YouTubeManager:
         self._loop = asyncio.get_event_loop()
         self._loop.create_task(self.make_session())
 
-        self.youtube_upload_tasks.start()
+        if (
+                self.YOUTUBE_DATA_API_V3_KEY and self.YOUTUBE_CHANNEL_ID and
+                self.YOUTUBE_CHANNEL_UPLOADS_PLAYLIST and self.YOUTUBE_WEBHOOK
+        ):
+            self.youtube_upload_tasks.start()
 
     def _get_token(self):
         with open(self._token_path, "r") as token_file:
@@ -33,10 +38,6 @@ class YouTubeManager:
 
     async def make_session(self):
         self.session = aiohttp.ClientSession()
-
-    @property
-    def _webhook_adapter(self):
-        return discord.AsyncWebhookAdapter(session=self.session)
 
     async def get_live_broadcast(self) -> typing.Optional[typing.Dict]:
         """If a YouTube channel is streaming a live broadcast, returns JSON of broadcast details. Else, returns None.
@@ -175,5 +176,6 @@ class YouTubeManager:
                                       "833695619838640189/youtube_social_circle_white.png")
             embed.set_image(url=thumbnail_url)
 
-            webhook = discord.Webhook.from_url(self.YOUTUBE_WEBHOOK, adapter=self._webhook_adapter)
-            await webhook.send(embed=embed)
+            async with self.session.post(self.YOUTUBE_WEBHOOK, json={"embeds": [embed.to_dict()]}) as response:
+                if response.status not in (200, 204):
+                    logger.error(f"Error while sending Twitch webhook: {response.status} {await response.text()}")

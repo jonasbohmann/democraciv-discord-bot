@@ -534,7 +534,8 @@ class NPC(CustomCog):
 
             embed.add_field(name="Automatic Mode",
                             value="\n".join(pretty_chan) or "__You__ don't have automatic mode enabled for this "
-                                                            "NPC in any channel or channel category on this server.")
+                                                            "NPC in any channel or channel category on __this__ "
+                                                            "server.")
         await ctx.send(embed=embed)
 
     @npc.group(name="automatic", aliases=['auto'], invoke_without_command=True, case_insensitive=True)

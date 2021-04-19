@@ -21,6 +21,11 @@ The file should look like this:
 
 ```
 {
+  "auth": {
+     "user": "",
+     "password": "",
+  },
+  
   "db": {
     "dsn": ""
   },
@@ -28,7 +33,8 @@ The file should look like this:
   "twitch": {
     "client_id": "",
     "client_secret": "",
-    "oauth_token": ""
+    "oauth_token": "",
+    "callback_secret": ""
   },
 
   "reddit": {

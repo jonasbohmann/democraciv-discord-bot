@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import pathlib
+import secrets
 import sys
 import asyncpg
 import pydantic
@@ -19,9 +20,11 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [API] %(message)s", 
 sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
 from api.provider import RedditManager, TwitchManager, YouTubeManager
-from fastapi import FastAPI, BackgroundTasks, Request
+from fastapi import FastAPI, BackgroundTasks, Request, HTTPException, Depends
 from fastapi.responses import PlainTextResponse, JSONResponse
 from fastapi.logger import logger
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from starlette import status
 
 TOKEN_PATH = f"{pathlib.Path(__file__).parent}/token.json"
 ML_ENABLED = True
@@ -101,7 +104,26 @@ class Database:
 
 
 app = FastAPI()
+security = HTTPBasic()
 db = Database()
+
+with open(TOKEN_PATH, "r") as token_file:
+    token_json = json.load(token_file)
+    admin_user = token_json["auth"]["user"]
+    admin_pw = token_json["auth"]["password"]
+
+
+def ensure_auth(credentials: HTTPBasicCredentials = Depends(security)):
+    correct_username = secrets.compare_digest(credentials.username, admin_user)
+    correct_password = secrets.compare_digest(credentials.password, admin_pw)
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
+
 
 if ML_ENABLED:
     from api.ml import question_answering, information_extraction
@@ -172,20 +194,20 @@ async def ok():
 
 
 @app.get("/reddit/list/{guild_id}")
-async def reddit_list(guild_id: int):
+async def reddit_list(guild_id: int, auth: str = Depends(ensure_auth)):
     webhooks = await reddit_manager.get_webhooks_per_guild(guild_id)
     return {"webhooks": webhooks}
 
 
 @app.post("/reddit/add")
-async def reddit_add(reddit_config: AddWebhook):
+async def reddit_add(reddit_config: AddWebhook, auth: str = Depends(ensure_auth)):
     reddit_config.target = reddit_config.target.lower()  # subreddit names are case-insensitive right?
     await reddit_manager.add_webhook(config=reddit_config)
     return reddit_config
 
 
 @app.post("/reddit/remove")
-async def reddit_remove(reddit_config: RemoveWebhook):
+async def reddit_remove(reddit_config: RemoveWebhook, auth: str = Depends(ensure_auth)):
     response = await reddit_manager.remove_webhook(hook_id=reddit_config.id, guild_id=reddit_config.guild_id)
 
     if "error" not in response:
@@ -195,38 +217,38 @@ async def reddit_remove(reddit_config: RemoveWebhook):
 
 
 @app.post("/reddit/post")
-async def reddit_post(submission: SubmitRedditPost):
+async def reddit_post(submission: SubmitRedditPost, auth: str = Depends(ensure_auth)):
     return await reddit_manager.post_to_reddit(
         subreddit=submission.subreddit, title=submission.title, content=submission.content
     )
 
 
 @app.post("/reddit/post/delete")
-async def reddit_post_delete(post: DeleteRedditPost):
+async def reddit_post_delete(post: DeleteRedditPost, auth: str = Depends(ensure_auth)):
     return await reddit_manager.delete_reddit_post(post_id=post.id)
 
 
 @app.post("/reddit/clear")
-async def reddit_clear(reddit_config: ClearPerGuild):
+async def reddit_clear(reddit_config: ClearPerGuild, auth: str = Depends(ensure_auth)):
     removed = await reddit_manager.clear_per_guild(guild_id=reddit_config.guild_id)
     return {"ok": "ok", "removed": removed}
 
 
 @app.get("/twitch/list/{guild_id}")
-async def twitch_list(guild_id: int):
+async def twitch_list(guild_id: int, auth: str = Depends(ensure_auth)):
     webhooks = await twitch_manager.get_webhooks_per_guild(guild_id)
     return {"webhooks": webhooks}
 
 
 @app.post("/twitch/add")
-async def twitch_add(twitch_config: AddTwitchHook):
+async def twitch_add(twitch_config: AddTwitchHook, auth: str = Depends(ensure_auth)):
     twitch_config.target = twitch_config.target.lower()
     result = await twitch_manager.add_webhook(config=twitch_config)
     return result
 
 
 @app.post("/twitch/remove")
-async def twitch_remove(twitch_config: RemoveWebhook):
+async def twitch_remove(twitch_config: RemoveWebhook, auth: str = Depends(ensure_auth)):
     response = await twitch_manager.remove_webhook(hook_id=twitch_config.id, guild_id=twitch_config.guild_id)
 
     if "error" not in response:
@@ -235,28 +257,21 @@ async def twitch_remove(twitch_config: RemoveWebhook):
     return response
 
 
-@app.post("/reddit/clear")
-async def twitch_clear(twitch_config: ClearPerGuild):
+@app.post("/twitch/clear")
+async def twitch_clear(twitch_config: ClearPerGuild, auth: str = Depends(ensure_auth)):
     removed = await twitch_manager.clear_per_guild(guild_id=twitch_config.guild_id)
     return {"ok": "ok", "removed": removed}
 
 
-@app.post("/twitch/callback", response_class=PlainTextResponse)
+@app.post("/twitch/callback")
 async def twitch_subscription_verify(request: Request, background_tasks: BackgroundTasks):
     js = await request.json()
-    print(js)
 
     if "challenge" in js:
-        background_tasks.add_task(
-            twitch_manager.add_twitch_subscription_id,
-            js["subscription"]["condition"]["broadcaster_user_id"],
-            js["subscription"]["id"],
-        )
-        return js["challenge"]
+        return PlainTextResponse(js["challenge"])
 
-    elif "event" in js:
-        background_tasks.add_task(twitch_manager.process_incoming_notification, js["event"])
-        return "ok"
+    background_tasks.add_task(twitch_manager.handle_twitch_callback, request)
+    return {"ok": "ok"}
 
 
 def _roll_dice(dice_to_roll: str):
@@ -328,7 +343,7 @@ def _roll_dice(dice_to_roll: str):
 
 
 @app.post("/roll")
-def roll_dice(dice_to_roll: Dice):
+def roll_dice(dice_to_roll: Dice, auth: str = Depends(ensure_auth)):
     try:
         return {"ok": "ok", "result": _roll_dice(dice_to_roll.dices)}
     except (SyntaxError, TypeError, ValueError, IndexError):
@@ -348,13 +363,13 @@ async def check_if_ml_enabled(request: Request, call_next):
 
 
 @app.post("/ml/question_answering/force_index")
-async def ml_qa_force_index():
+async def ml_qa_force_index(auth: str = Depends(ensure_auth)):
     await bert_qa.index(force=True)
     return {"ok": "ok"}
 
 
 @app.post("/ml/question_answering")
-def ml_qa(question: Question):
+def ml_qa(question: Question, auth: str = Depends(ensure_auth)):
     try:
         answers = bert_qa.qa.ask(question.question, n_answers=5, n_docs_considered=10, batch_size=1)
         result = []
@@ -376,20 +391,20 @@ def ml_qa(question: Question):
 
 
 @app.post("/ml/information_extraction")
-def ml_ie(question: Question):
+def ml_ie(question: Question, auth: str = Depends(ensure_auth)):
     answers = holmes_ie.search(question.question)
     return answers
 
 
 @app.post("/bill/add")
-async def new_bill(bill: Bill):
+async def new_bill(bill: Bill, auth: str = Depends(ensure_auth)):
     await bert_qa.add_bill(bill.id)
     await holmes_ie.add_bill(bill.id)
     return {"ok": "ok"}
 
 
 @app.post("/bill/update")
-async def update_bill(bill: Bill):
+async def update_bill(bill: Bill, auth: str = Depends(ensure_auth)):
     await holmes_ie.add_bill(bill.id)
 
     # documents in our index are not unique so we cannot reasonably delete just the one bill
@@ -398,7 +413,7 @@ async def update_bill(bill: Bill):
 
 
 @app.post("/bill/delete")
-async def delete_bill(bill: Bill):
+async def delete_bill(bill: Bill, auth: str = Depends(ensure_auth)):
     await holmes_ie.delete_bill(bill.id)
 
     # documents in our index are not unique so we cannot reasonably delete just the one bill
@@ -408,4 +423,4 @@ async def delete_bill(bill: Bill):
 
 if __name__ == "__main__":
     logger.info("Starting app...")
-    uvicorn.run(app, host="0.0.0.0", port="8000")
+    uvicorn.run("main:app", host="0.0.0.0", port="8000")

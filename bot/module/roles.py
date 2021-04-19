@@ -134,11 +134,7 @@ class Selfroles(context.CustomCog):
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
     async def deleterole(self, ctx: context.CustomContext, *, role: str):
-        """Remove a selfrole from this server's `{PREFIX}roles` list
-
-        **Usage**
-         `{PREFIX}{COMMAND} <role>` will remove the selfrole **and** delete its Discord role
-        """
+        """Remove a selfrole from this server's `{PREFIX}roles` list"""
 
         try:
             selfrole = await Selfrole.convert(ctx, role)
