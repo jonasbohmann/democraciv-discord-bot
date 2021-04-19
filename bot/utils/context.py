@@ -252,7 +252,7 @@ class CustomContext(commands.Context):
                     )
                 else:
                     error_msg = (
-                        f"{config.NO} Something went wrong while converting your input. " f"Are you sure it was right?"
+                        f"{config.NO} Something went wrong while converting your input. Are you sure it was right?"
                     )
 
                 raise exceptions.InvalidUserInputError(error_msg)

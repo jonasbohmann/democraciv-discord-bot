@@ -3,7 +3,7 @@ import discord
 import datetime
 
 from discord.ext import commands
-from bot.utils import exceptions, text, context, checks
+from bot.utils import exceptions, text, context, checks, converter
 from bot.config import token, config, mk
 from bot.utils.exceptions import ForbiddenTask
 from bot.utils.converter import (
@@ -71,7 +71,7 @@ class Moderation(context.CustomCog):
         ]
 
         if any(name in member.name.lower() for name in weird_names) or any(
-            name in member.display_name.lower() for name in weird_names
+                name in member.display_name.lower() for name in weird_names
         ):
             # Check if user has any names that are associated with alt accounts in the past
             is_alt_chance += 0.45
@@ -346,11 +346,11 @@ class Moderation(context.CustomCog):
     @commands.guild_only()
     @commands.has_guild_permissions(manage_messages=True)
     async def clear(
-        self,
-        ctx,
-        amount: int,
-        *,
-        target: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
+            self,
+            ctx,
+            amount: int,
+            *,
+            target: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
     ):
         """Purge an amount of messages in the current channel"""
         if amount > 500 or amount < 0:
@@ -576,6 +576,11 @@ class Moderation(context.CustomCog):
             `{PREFIX}{COMMAND} #public-form`
             `{PREFIX}{COMMAND} legislature`"""
 
+        archive_category = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} What archive category should "
+                                                     f"I use for this?",
+                                                     converter=converter.CaseInsensitiveCategoryChannel,
+                                                     return_input_on_fail=False)
+
         everyone_perms = discord.PermissionOverwrite(
             read_message_history=False, send_messages=False, read_messages=False, add_reactions=False
         )
@@ -586,24 +591,18 @@ class Moderation(context.CustomCog):
         )
         archives_role = discord.utils.get(self.bot.dciv.roles, name="Archives")
 
-        def predicate(c):
-            return c.name.lower() == f"mk{self.bot.mk.MARK}-archive"
-
-        archive_category = discord.utils.find(predicate, self.bot.dciv.categories)
-
         if archives_role is None:
             return await ctx.send(f"{config.NO} There is no role named `Archives` for me to use.")
 
-        if archive_category is None:
-            return await ctx.send(
-                f"{config.NO} There is no category named `MK{self.bot.mk.MARK}-Archive` for me to use."
-            )
-
         await channel.edit(
-            name=f"mk{self.bot.mk.MARK}-{channel.name}",
+            name=f"mk{self.bot.mk.MARK}-{channel.name}" if not channel.name.startswith(f"mk{self.bot.mk.MARK}-")
+            else channel.name,
             overwrites={everyone_role: everyone_perms, archives_role: archive_perms},
             category=archive_category,
         )
+
+        await self.bot.db.execute("DELETE FROM guild_private_channel WHERE guild_id = $1 AND channel_id = $2",
+                                  channel.guild.id, channel.id)
 
         await ctx.send(f"{config.YES} Channel was archived.")
 
@@ -611,6 +610,11 @@ class Moderation(context.CustomCog):
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def archivecategory(self, ctx: context.CustomContext, *, category: CaseInsensitiveCategoryChannel):
         """Move all channels in a category into the Archives and set the right permissions"""
+
+        archive_category = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} What archive category should "
+                                                     f"I use for this?",
+                                                     converter=converter.CaseInsensitiveCategoryChannel,
+                                                     return_input_on_fail=False)
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want archive every channel in `{category}`?"
@@ -620,17 +624,6 @@ class Moderation(context.CustomCog):
             return await ctx.send("Cancelled.")
 
         async with ctx.typing():
-
-            def predicate(c):
-                return c.name.lower() == f"mk{self.bot.mk.MARK}-archive"
-
-            archive_category = discord.utils.find(predicate, self.bot.dciv.categories)
-
-            if archive_category is None:
-                return await ctx.send(
-                    f"{config.NO} There is no category named `MK{self.bot.mk.MARK}-Archive` for me to use."
-                )
-
             everyone_perms = discord.PermissionOverwrite(
                 read_message_history=False, send_messages=False, read_messages=False, add_reactions=False
             )
@@ -646,13 +639,17 @@ class Moderation(context.CustomCog):
             for channel in category.text_channels:
                 await channel.send(f":tada: Thanks for playing Democraciv MK{self.bot.mk.MARK}!")
                 await channel.edit(
-                    name=f"mk{self.bot.mk.MARK}-{channel.name}",
+                    name=f"mk{self.bot.mk.MARK}-{channel.name}" if not channel.name.startswith(f"mk{self.bot.mk.MARK}-")
+                    else channel.name,
                     overwrites={
                         everyone_role: everyone_perms,
                         archives_role: archive_perms,
                     },
                     category=archive_category,
                 )
+
+                await self.bot.db.execute("DELETE FROM guild_private_channel WHERE guild_id = $1 AND channel_id = $2",
+                                          channel.guild.id, channel.id)
 
         await ctx.send(f"{config.YES} Done.")
 
