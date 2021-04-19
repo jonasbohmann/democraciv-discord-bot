@@ -34,7 +34,9 @@ The file should look like this:
     "client_id": "",
     "client_secret": "",
     "oauth_token": "",
-    "callback_secret": ""
+    "callback_secret": "",
+    "subreddit": "",
+    "post_to_subreddit": true
   },
 
   "reddit": {

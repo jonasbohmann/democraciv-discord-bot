@@ -135,7 +135,7 @@ else:
     bert_qa = holmes_ie = None
 
 reddit_manager = RedditManager(db=db, token_path=TOKEN_PATH)
-twitch_manager = TwitchManager(db=db, token_path=TOKEN_PATH)
+twitch_manager = TwitchManager(db=db, token_path=TOKEN_PATH, reddit_manager=reddit_manager)
 youtube_manager = YouTubeManager(db=db, token_path=TOKEN_PATH, reddit_manager=reddit_manager)
 
 

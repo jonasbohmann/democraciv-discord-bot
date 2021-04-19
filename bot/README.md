@@ -48,6 +48,9 @@ The file should look like this:
 # Token
 TOKEN = ""
 
+API_USER = ""  # Should be the same as auth['user'] and auth['password'] in /api/token.json
+API_PASSWORD = ""
+
 # PostgreSQL config
 POSTGRESQL_USER = ""
 POSTGRESQL_PASSWORD = ""

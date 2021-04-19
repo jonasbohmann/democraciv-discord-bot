@@ -15,9 +15,6 @@ from api.provider.abc import ProviderManager
 StreamContext = namedtuple("StreamContext", "webhook_url everyone_ping")
 
 
-# todo post to reddit?
-
-
 class TwitchStream:
     def __init__(self, **kwargs):
         self.streamer_id: str = kwargs.get("broadcaster_user_id")
@@ -47,11 +44,12 @@ class TwitchManager(ProviderManager):
     TWITCH_OAUTH_APP_ACCESS_TOKEN: str
     TWITCH_CALLBACK = "https://keinerosen.requestcatcher.com/test"
 
-    def __init__(self, db, token_path):
+    def __init__(self, db, token_path, reddit_manager):
         super().__init__(db=db)
         self._webhooks: typing.Dict[str, set] = {}
         self._token_path = token_path
         self._get_token()
+        self.reddit_manager = reddit_manager
 
         self.seen_notifications = collections.deque(maxlen=100)
 
@@ -62,6 +60,8 @@ class TwitchManager(ProviderManager):
             self.TWITCH_CLIENT_SECRET = token_json["twitch"]["client_secret"]
             self.TWITCH_OAUTH_APP_ACCESS_TOKEN = token_json["twitch"]["oauth_token"]
             self.TWITCH_CALLBACK_SECRET = token_json["twitch"]["callback_secret"]
+            self.TWITCH_SUBREDDIT = token_json['twitch']['subreddit']
+            self.POST_TO_REDDIT = token_json['twitch']['post_to_subreddit']
             self.TWITCH_CALLBACK_SECRET_BYTES = self.TWITCH_CALLBACK_SECRET.encode()
 
     def _save_token(self):
@@ -264,3 +264,8 @@ class TwitchManager(ProviderManager):
                 await self._remove_webhook(target=stream.streamer, webhook_url=context.webhook_url)
                 await self.db.pool.execute(f"DELETE FROM {self.table} WHERE webhook_url = $1", context.webhook_url)
                 logger.info(f"removed deleted webhook_url {context.webhook_url} for {stream.streamer}")
+
+        if self.POST_TO_REDDIT:
+            await self.reddit_manager.post_to_reddit(subreddit=self.TWITCH_SUBREDDIT,
+                                                     title=f"{stream.streamer} is live on Twitch: {stream.title}",
+                                                     url=stream.link)

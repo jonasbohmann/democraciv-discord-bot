@@ -199,10 +199,16 @@ class DemocracivBot(commands.Bot):
             if not silent:
                 raise exceptions.DemocracivBotAPIError(f"{config.NO} Internal API is not running, try again later.")
 
+        auth = aiohttp.BasicAuth(token.API_USER, token.API_PASSWORD)
+
         try:
-            async with self.session.request(method, f"{self.BASE_API}/{route}", **kwargs) as response:
+            async with self.session.request(method, f"{self.BASE_API}/{route}", auth=auth, **kwargs) as response:
                 if response.status == 200:
                     return await response.json()
+
+                if response.status == 401:
+                    logging.error(f"API_USER & API_PASSWORD in /bot/token.py does not match "
+                                  f"auth['user'] and auth['password'] in /api/token.json - 401 Unauthorized")
 
                 if not silent:
                     raise exceptions.DemocracivBotAPIError(f"{config.NO} Something went wrong.")
