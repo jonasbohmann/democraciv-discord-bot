@@ -72,7 +72,7 @@ class RedditManager(ProviderManager):
                 self.REDDIT_BEARER_TOKEN = r["access_token"]
                 self._save_token()
 
-    async def post_to_reddit(self, *, subreddit: str, title: str, content: str, retry=False):
+    async def post_to_reddit(self, *, subreddit: str, title: str, content: str = None, url: str = None, retry=False):
         """Submit post to specified subreddit"""
 
         headers = {
@@ -81,14 +81,23 @@ class RedditManager(ProviderManager):
         }
 
         data = {
-            "kind": "self",
             "nsfw": False,
             "sr": subreddit,
             "title": title,
-            "text": content,
             "spoiler": False,
             "ad": False,
         }
+
+        if content and url:
+            raise RuntimeError("can only post either content or url, not both")
+
+        if content:
+            data['text'] = content
+            data['kind'] = "self"
+
+        if url:
+            data['url'] = url
+            data['kind'] = "link"
 
         async with self._session.post(
                 "https://oauth.reddit.com/api/submit?raw_json=1", data=data, headers=headers

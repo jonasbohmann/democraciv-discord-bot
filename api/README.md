@@ -36,7 +36,17 @@ The file should look like this:
     "client_secret": "",
     "refresh_token": "",
     "bearer_token": ""
+  },
+  
+  "youtube": {
+    "api_key": "", 
+    "webhook": "", 
+    "post_to_subreddit": true, 
+    "subreddit": "", 
+    "channel_id": "", 
+    "channel_uploads_playlist_id": ""
   }
+   
 }
 ```
 

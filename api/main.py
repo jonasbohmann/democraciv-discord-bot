@@ -18,7 +18,7 @@ except ImportError:
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [API] %(message)s", datefmt="%d.%m.%Y %H:%M:%S")
 sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
-from api.provider import RedditManager, TwitchManager
+from api.provider import RedditManager, TwitchManager, YouTubeManager
 from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.responses import PlainTextResponse, JSONResponse
 from fastapi.logger import logger
@@ -114,6 +114,7 @@ else:
 
 reddit_manager = RedditManager(db=db, token_path=TOKEN_PATH)
 twitch_manager = TwitchManager(db=db, token_path=TOKEN_PATH)
+youtube_manager = YouTubeManager(db=db, token_path=TOKEN_PATH, reddit_manager=reddit_manager)
 
 
 class AddWebhook(pydantic.BaseModel):
