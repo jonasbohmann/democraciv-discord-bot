@@ -100,39 +100,39 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             self.bot.get_command(self.bot.mk.LEGISLATURE_COMMAND).remove_command("motion")
             self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw").remove_command("motion")
 
-    # @commands.command(name="bill", aliases=["bills", "b"], hidden=True)
-    # async def _bill(self, ctx: context.CustomContext):
-    #    """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} bill`
-    #
-    #    Use `{PREFIX}help {LEGISLATURE_COMMAND} bill` for the help page of the actual command."""
-    #
-    #    ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
-    #                                                      f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
-    #                                                      f"{ctx.invoked_with}")
-    #    new_ctx = await self.bot.get_context(ctx.message)
-    #    return await self.bot.invoke(new_ctx)
+    @commands.command(name="bill", aliases=["bills", "b"], hidden=True)
+    async def _bill(self, ctx: context.CustomContext):
+        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} bill`
 
-    # @commands.command(name="motion", aliases=["motions", "m"], hidden=True)
-    # async def _motion(self, ctx: context.CustomContext):
-    #    """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} motion`
+        Use `{PREFIX}help {LEGISLATURE_COMMAND} bill` for the help page of the actual command."""
 
-    #    Use `{PREFIX}help {LEGISLATURE_COMMAND} motion` for the help page of the actual command."""
-    #    ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
-    #                                                      f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
-    #                                                      f"{ctx.invoked_with}")
-    #    new_ctx = await self.bot.get_context(ctx.message)
-    #    return await self.bot.invoke(new_ctx)
+        ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
+                                                          f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
+                                                          f"{ctx.invoked_with}")
+        new_ctx = await self.bot.get_context(ctx.message)
+        return await self.bot.invoke(new_ctx)
 
-    # @commands.command(name="session", aliases=["sessions", "s"], hidden=True)
-    # async def _session(self, ctx: context.CustomContext):
-    #    """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} session`
+    @commands.command(name="motion", aliases=["motions", "m"], hidden=True)
+    async def _motion(self, ctx: context.CustomContext):
+        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} motion`
 
-    #    Use `{PREFIX}help {LEGISLATURE_COMMAND} session` for the help page of the actual command."""
-    #    ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
-    #                                                      f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
-    #                                                      f"{ctx.invoked_with}")
-    #    new_ctx = await self.bot.get_context(ctx.message)
-    #    return await self.bot.invoke(new_ctx)
+        Use `{PREFIX}help {LEGISLATURE_COMMAND} motion` for the help page of the actual command."""
+        ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
+                                                          f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
+                                                          f"{ctx.invoked_with}")
+        new_ctx = await self.bot.get_context(ctx.message)
+        return await self.bot.invoke(new_ctx)
+
+    @commands.command(name="session", aliases=["sessions", "s"], hidden=True)
+    async def _session(self, ctx: context.CustomContext):
+        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} session`
+
+         Use `{PREFIX}help {LEGISLATURE_COMMAND} session` for the help page of the actual command."""
+        ctx.message.content = ctx.message.content.replace(f"{ctx.prefix}{ctx.invoked_with}",
+                                                          f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
+                                                          f"{ctx.invoked_with}")
+        new_ctx = await self.bot.get_context(ctx.message)
+        return await self.bot.invoke(new_ctx)
 
     @commands.group(
         name=mk.MarkConfig.LEGISLATURE_COMMAND.lower(),

@@ -220,8 +220,8 @@ class HelpMenu(Pages, inherit_buttons=False):
         embed = text.SafeEmbed(
             title="Using the Democraciv Bot",
             description="Optionally, [this guide]"
-            f"(https://drive.google.com/file/d/1fUWBeRPszLolRtX47OyhAMALudjqWaXc/view?usp=sharing) "
-            f"explains some additional topics of the bot.",
+                        f"(https://drive.google.com/file/d/1fUWBeRPszLolRtX47OyhAMALudjqWaXc/view?usp=sharing) "
+                        f"explains some additional topics of the bot.",
         )
 
         entries = (
@@ -333,15 +333,26 @@ class PaginatedHelpCommand(commands.HelpCommand):
         # The end user doesn't know the difference between a Group and a Command. To avoid confusion, just show them
         # the whole cog
         if group in (
-            self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} session"),
-            self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} withdraw"),
-            self.context.bot.get_command("random"),
-            self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} session export"),
+                self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} session"),
+                self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} withdraw"),
+                self.context.bot.get_command("random"),
+                self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} session export"),
 
         ):
             return await self._send_group_help(group)
 
         await self.send_cog_help(group.cog)
+
+    async def command_callback(self, ctx, *, command: str = None):
+        if command:
+            cmd = command.lower()
+
+            if cmd.startswith(("bill", "b", "bill", "motion", "m", "motions", "session", "s", "sessions")):
+                maybe_cmd = f"{ctx.bot.mk.LEGISLATURE_COMMAND} {command}"
+                if ctx.bot.get_command(maybe_cmd):
+                    command = maybe_cmd
+
+        return await super().command_callback(ctx, command=command)
 
     async def _send_group_help(self, group):
         subcommands = list(group.walk_commands())
