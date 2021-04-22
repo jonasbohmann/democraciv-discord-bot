@@ -46,7 +46,7 @@ class PoliticalParty(commands.Converter):
         self.discord_invite: str = kwargs.get("discord_invite")
         self.aliases: typing.List[str] = kwargs.get("aliases", [])
         self.join_mode: PoliticalPartyJoinMode = kwargs.get("join_mode")
-        self._leaders: typing.List[int] = kwargs.get("leaders", [])
+        self.leader_ids: typing.List[int] = kwargs.get("leaders", [])
         self._id: int = kwargs.get("id")
         self._bot = kwargs.get("bot")
         self.is_independent = kwargs.get("ind", False)
@@ -63,7 +63,8 @@ class PoliticalParty(commands.Converter):
     @property
     def leaders(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
         return list(
-            filter(None, [self._bot.dciv.get_member(leader) or self._bot.get_user(leader) for leader in self._leaders])
+            filter(None, [self._bot.dciv.get_member(leader) or self._bot.get_user(leader)
+                          for leader in self.leader_ids])
         )
 
     @property
@@ -544,12 +545,12 @@ class Tag(commands.Converter):
         self.content: str = kwargs.get("content")
         self.is_global: bool = kwargs.get("global")
         self.uses: int = kwargs.get("uses")
-        self.aliases: typing.List[str] = kwargs.get("aliases")
+        self.aliases: typing.List[str] = kwargs.get("aliases", [])
         self.is_embedded: bool = kwargs.get("is_embedded")
-        self._author: int = kwargs.get("author", None)
+        self.author_id: int = kwargs.get("author")
         self._guild_id: int = kwargs.get("guild_id")
         self._bot = kwargs.get("bot")
-        self.invoked_with: str = kwargs.get("invoked_with", None)
+        self.invoked_with: str = kwargs.get("invoked_with")
 
     @property
     def guild(self) -> discord.Guild:
@@ -560,10 +561,10 @@ class Tag(commands.Converter):
         user = None
 
         if self.guild:
-            user = self.guild.get_member(self._author)
+            user = self.guild.get_member(self.author_id)
 
         if user is None:
-            user = self._bot.get_user(self._author)
+            user = self._bot.get_user(self.author_id)
 
         return user
 

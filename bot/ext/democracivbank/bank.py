@@ -420,7 +420,7 @@ class Bank(context.CustomCog):
             for result in json["results"]:
                 # this will break/look like shit if too many ads
                 value = (
-                    f"[{result['corporation']['organization_type']} from the "
+                    f"[{result['corporation']['organization_type']} from "
                     f"{result['corporation']['nation']}]"
                     f"(https://democracivbank.com/organization/{result['corporation']['abbreviation']})"
                     f"\n\n{textwrap.shorten(result['ad_message'], width=800, placeholder='...')}"
@@ -439,7 +439,7 @@ class Bank(context.CustomCog):
 
         embed = text.SafeEmbed(
             title=f"{organization.name} ({organization.abbreviation})",
-            description=f"{organization.organization_type} from the {organization.nation}",
+            description=f"{organization.organization_type} from {organization.nation}",
             url=f"https://democracivbank.com/organization/{organization.abbreviation}",
         )
 

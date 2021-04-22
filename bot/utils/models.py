@@ -37,8 +37,8 @@ class Session(commands.Converter):
         self.opened_on: datetime = kwargs.get("opened_on")
         self.voting_started_on: datetime = kwargs.get("voting_started_on")
         self.closed_on: datetime = kwargs.get("closed_on")
-        self.bills: typing.List[int] = kwargs.get("bills")
-        self.motions: typing.List[int] = kwargs.get("motions")
+        self.bills: typing.List[int] = kwargs.get("bills", [])
+        self.motions: typing.List[int] = kwargs.get("motions", [])
         self._speaker: int = kwargs.get("speaker")
         self._bot = kwargs.get("bot")
 
@@ -145,9 +145,9 @@ class Bill(commands.Converter):
         self.is_vetoable: bool = kwargs.get("is_vetoable")
         self.status: BillStatus = kwargs.get("status")
         self.content: str = kwargs.get("content")
-        self._submitter: int = kwargs.get("submitter")
+        self.submitter_id: int = kwargs.get("submitter")
         self._bot = kwargs.get("bot")
-        self._sponsors: typing.List[int] = kwargs.get("sponsors")
+        self.sponsor_ids: typing.List[int] = kwargs.get("sponsors", [])
 
         self.history = kwargs.get("history")
 
@@ -167,7 +167,8 @@ class Bill(commands.Converter):
     def sponsors(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
         return list(
             filter(
-                None, [self._bot.dciv.get_member(sponsor) or self._bot.get_user(sponsor) for sponsor in self._sponsors]
+                None, [self._bot.dciv.get_member(sponsor) or self._bot.get_user(sponsor)
+                       for sponsor in self.sponsor_ids]
             )
         )
 
@@ -212,7 +213,7 @@ class Bill(commands.Converter):
 
     @property
     def submitter(self) -> typing.Union[discord.Member, discord.User, None]:
-        user = self._bot.dciv.get_member(self._submitter) or self._bot.get_user(self._submitter)
+        user = self._bot.dciv.get_member(self.submitter_id) or self._bot.get_user(self.submitter_id)
         return user
 
     @property
@@ -358,7 +359,7 @@ class Motion(commands.Converter):
         self.description: str = kwargs.get("description")
         self._link: str = kwargs.get("paste_link")
         self.name: str = self.title  # compatibility
-        self._submitter: int = kwargs.get("submitter")
+        self.submitter_id: int = kwargs.get("submitter")
         self._bot = kwargs.get("bot")
 
     def __hash__(self):
@@ -376,7 +377,7 @@ class Motion(commands.Converter):
 
     @property
     def submitter(self) -> typing.Union[discord.Member, discord.User, None]:
-        user = self._bot.dciv.get_member(self._submitter) or self._bot.get_user(self._submitter)
+        user = self._bot.dciv.get_member(self.submitter_id) or self._bot.get_user(self.submitter_id)
         return user
 
     @property

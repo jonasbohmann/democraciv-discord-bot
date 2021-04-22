@@ -267,7 +267,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         """
         bill = bill_id
 
-        if not self.is_cabinet(ctx.author) or bill._submitter != ctx.author.id:
+        if not self.is_cabinet(ctx.author) and bill.submitter_id != ctx.author.id:
             return await ctx.send(f"{config.NO} Only the {self.bot.mk.speaker_term} and the original "
                                   f"submitter of a bill can edit it.")
 
@@ -420,7 +420,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         motion = motion_id
 
         if not self.is_cabinet(ctx.author):
-            if motion._submitter != ctx.author.id:
+            if motion.submitter_id != ctx.author.id:
                 return await ctx.send(f"{config.NO} Only the {self.bot.mk.speaker_term} and the original "
                                       f"submitter of a motion can edit it.")
 
@@ -1651,7 +1651,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 return f"The session during which this {obj_name} was submitted is not open anymore."
 
             if not self.is_cabinet(_ctx.author):
-                if to_verify.submitter is not None and _ctx.author.id == to_verify.submitter.id:
+                if _ctx.author.id == to_verify.submitter_id:
                     if last_leg_session.status is SessionStatus.SUBMISSION_PERIOD:
                         allowed = True
                     else:
@@ -1844,7 +1844,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         consumer = models.LegalConsumer(ctx=ctx, objects=bill_ids, action=models.BillStatus.sponsor)
 
         def filter_sponsor(_ctx, _bill, **kwargs):
-            if _ctx.author.id == _bill._submitter:
+            if _ctx.author.id == _bill.submitter_id:
                 return "The bill's author cannot sponsor their own bill."
 
             if _ctx.author in _bill.sponsors:

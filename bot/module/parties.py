@@ -3,7 +3,6 @@ import collections
 import logging
 import re
 import typing
-
 import asyncpg
 import discord
 
@@ -144,7 +143,7 @@ class Party(context.CustomCog, name="Political Parties"):
             members_name = "Independents"
 
         party_members = [f"{member.mention} {member}" for member in party.role.members
-                         if member.id not in party._leaders] or ["-"]
+                         if member.id not in party.leader_ids] or ["-"]
 
         if party.leaders:
             for i, leader in enumerate(party.leaders):
@@ -727,7 +726,7 @@ class Party(context.CustomCog, name="Political Parties"):
             new_invite = updated_party["invite"]
 
         new_join_mode = updated_party["join_mode"] or party.join_mode.value
-        new_leaders = updated_party["leaders"] or party._leaders
+        new_leaders = updated_party["leaders"] or party.leader_ids
 
         async with self.bot.db.acquire() as connection:
             async with connection.transaction():

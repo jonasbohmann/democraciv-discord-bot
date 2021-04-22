@@ -135,7 +135,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
 
         try:
             ministers = self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER)
-            ministers = [m.mention for m in ministers.members]
+            ministers = [m.mention for m in ministers.members] or ['-']
         except exceptions.RoleNotFoundError:
             ministers = ['-']
 
