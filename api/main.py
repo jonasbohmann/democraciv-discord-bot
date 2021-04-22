@@ -61,7 +61,8 @@ class Database:
                     webhook_url text NOT NULL,
                     guild_id bigint NOT NULL,
                     channel_id bigint NOT NULL,
-                    everyone_ping bool DEFAULT FALSE NOT NULL
+                    everyone_ping bool DEFAULT FALSE NOT NULL,
+                    post_to_reddit bool DEFAULT FALSE NOT NULL
                     );
                     
                     CREATE TABLE IF NOT EXISTS twitch_eventsub_subscription(
@@ -149,6 +150,7 @@ class AddWebhook(pydantic.BaseModel):
 
 class AddTwitchHook(AddWebhook):
     everyone_ping: bool
+    post_to_reddit: bool
 
 
 class RemoveWebhook(pydantic.BaseModel):

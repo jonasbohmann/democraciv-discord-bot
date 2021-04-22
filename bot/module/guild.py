@@ -120,8 +120,8 @@ class _Guild(context.CustomCog, name="Server"):
 
         if await ctx.ask_to_continue(message=info_embed, emoji=config.GUILD_SETTINGS_GEAR):
             menu = text.EditModelMenu(choices_with_formatted_explanation={"status": "Enable Welcome Messages"
-                                                                          if not settings['welcome_enabled'] else
-                                                                          "Disable Welcome Messages",
+            if not settings['welcome_enabled'] else
+            "Disable Welcome Messages",
                                                                           "channel": "Welcome Channel",
                                                                           "message": "Welcome Message"})
             result = await menu.prompt(ctx)
@@ -196,8 +196,8 @@ class _Guild(context.CustomCog, name="Server"):
 
         if await ctx.ask_to_continue(message=info_embed, emoji=config.GUILD_SETTINGS_GEAR):
             menu = text.EditModelMenu(choices_with_formatted_explanation={"status": "Enable Logging"
-                                                                          if not settings['logging_enabled'] else
-                                                                          "Disable Logging",
+            if not settings['logging_enabled'] else
+            "Disable Logging",
                                                                           "channel": "Logging Channel"}
                                       )
             result = await menu.prompt(ctx)
@@ -410,8 +410,8 @@ class _Guild(context.CustomCog, name="Server"):
 
         if await ctx.ask_to_continue(message=info_embed, emoji=config.GUILD_SETTINGS_GEAR):
             menu = text.EditModelMenu(choices_with_formatted_explanation={"status": "Enable Role on Join"
-                                                                          if not settings['default_role_enabled'] else
-                                                                          "Disable Role on Join",
+            if not settings['default_role_enabled'] else
+            "Disable Role on Join",
                                                                           "role": "Role"}
                                       )
             result = await menu.prompt(ctx)
@@ -800,6 +800,13 @@ class _Guild(context.CustomCog, name="Server"):
             f"{channel.mention} when `{streamer}` goes live?"
         )
 
+        post_to_reddit = False
+
+        if ctx.guild.id == self.bot.dciv.id:
+            post_to_reddit = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Should I also post an "
+                                               f"announcement to **r/Democraciv** everytime `{streamer}` is "
+                                               f"going live?")
+
         js = {
             "target": streamer,
             "webhook_url": webhook.url,
@@ -807,6 +814,7 @@ class _Guild(context.CustomCog, name="Server"):
             "guild_id": ctx.guild.id,
             "channel_id": channel.id,
             "everyone_ping": everyone,
+            "post_to_reddit": post_to_reddit
         }
 
         response = await self.bot.api_request("POST", f"twitch/add", json=js)

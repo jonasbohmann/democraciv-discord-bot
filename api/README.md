@@ -23,7 +23,7 @@ The file should look like this:
 {
   "auth": {
      "user": "",
-     "password": "",
+     "password": ""
   },
   
   "db": {
@@ -36,7 +36,7 @@ The file should look like this:
     "oauth_token": "",
     "callback_secret": "",
     "subreddit": "",
-    "post_to_subreddit": true
+    "callback_url": ""  # has to be https
   },
 
   "reddit": {

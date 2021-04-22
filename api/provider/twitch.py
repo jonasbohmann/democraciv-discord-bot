@@ -12,7 +12,7 @@ from fastapi import Request
 
 from api.provider.abc import ProviderManager
 
-StreamContext = namedtuple("StreamContext", "webhook_url everyone_ping")
+StreamContext = namedtuple("StreamContext", "webhook_url everyone_ping post_to_reddit")
 
 
 class TwitchStream:
@@ -39,10 +39,6 @@ class TwitchManager(ProviderManager):
     API_STREAM_ENDPOINT = API_BASE + "streams?user_id="
     API_EVENTSUB_ENDPOINT = API_BASE + "eventsub/subscriptions"
     API_TOKEN_ENDPOINT = "https://id.twitch.tv/oauth2/token"
-    TWITCH_CLIENT_ID: str
-    TWITCH_CLIENT_SECRET: str
-    TWITCH_OAUTH_APP_ACCESS_TOKEN: str
-    TWITCH_CALLBACK = "https://keinerosen.requestcatcher.com/test"
 
     def __init__(self, db, token_path, reddit_manager):
         super().__init__(db=db)
@@ -56,13 +52,13 @@ class TwitchManager(ProviderManager):
     def _get_token(self):
         with open(self._token_path, "r") as token_file:
             token_json = json.load(token_file)
-            self.TWITCH_CLIENT_ID = token_json["twitch"]["client_id"]
-            self.TWITCH_CLIENT_SECRET = token_json["twitch"]["client_secret"]
-            self.TWITCH_OAUTH_APP_ACCESS_TOKEN = token_json["twitch"]["oauth_token"]
-            self.TWITCH_CALLBACK_SECRET = token_json["twitch"]["callback_secret"]
-            self.TWITCH_SUBREDDIT = token_json['twitch']['subreddit']
-            self.POST_TO_REDDIT = token_json['twitch']['post_to_subreddit']
-            self.TWITCH_CALLBACK_SECRET_BYTES = self.TWITCH_CALLBACK_SECRET.encode()
+            self.TWITCH_CLIENT_ID: str = token_json["twitch"]["client_id"]
+            self.TWITCH_CLIENT_SECRET: str = token_json["twitch"]["client_secret"]
+            self.TWITCH_OAUTH_APP_ACCESS_TOKEN: str = token_json["twitch"]["oauth_token"]
+            self.TWITCH_CALLBACK_SECRET: str = token_json["twitch"]["callback_secret"]
+            self.TWITCH_SUBREDDIT: str = token_json['twitch']['subreddit']
+            self.TWITCH_CALLBACK_SECRET_BYTES: bytes = self.TWITCH_CALLBACK_SECRET.encode()
+            self.TWITCH_CALLBACK: str = token_json['twitch']['callback_url']
 
     def _save_token(self):
         with open(self._token_path, "r") as token_file:
@@ -108,14 +104,15 @@ class TwitchManager(ProviderManager):
     async def add_webhook(self, config):
         await self.db.pool.execute(
             "INSERT INTO twitch_webhook (streamer, webhook_id, webhook_url, "
-            "guild_id, channel_id, everyone_ping)"
-            "VALUES ($1, $2, $3, $4, $5, $6)",
+            "guild_id, channel_id, everyone_ping, post_to_reddit)"
+            "VALUES ($1, $2, $3, $4, $5, $6, $7)",
             config.target,
             config.webhook_id,
             config.webhook_url,
             config.guild_id,
             config.channel_id,
             config.everyone_ping,
+            config.post_to_reddit
         )
         return await self._start_webhook(target=config.target, webhook_url=config.webhook_url)
 
@@ -236,11 +233,12 @@ class TwitchManager(ProviderManager):
 
         streamer = event["broadcaster_user_name"].lower()
         record = await self.db.pool.fetch(
-            "SELECT webhook_url, everyone_ping FROM " "twitch_webhook WHERE streamer = $1", streamer
+            "SELECT webhook_url, everyone_ping, post_to_reddit FROM twitch_webhook WHERE streamer = $1", streamer
         )
 
         for row in record:
-            context = StreamContext(webhook_url=row["webhook_url"], everyone_ping=row["everyone_ping"])
+            context = StreamContext(webhook_url=row["webhook_url"], everyone_ping=row["everyone_ping"],
+                                    post_to_reddit=record['post_to_reddit'])
             await self.send_webhook(context, TwitchStream(**event))
 
     async def send_webhook(self, context: StreamContext, stream: TwitchStream):
@@ -265,7 +263,7 @@ class TwitchManager(ProviderManager):
                 await self.db.pool.execute(f"DELETE FROM {self.table} WHERE webhook_url = $1", context.webhook_url)
                 logger.info(f"removed deleted webhook_url {context.webhook_url} for {stream.streamer}")
 
-        if self.POST_TO_REDDIT:
+        if context.post_to_reddit:
             await self.reddit_manager.post_to_reddit(subreddit=self.TWITCH_SUBREDDIT,
                                                      title=f"{stream.streamer} is live on Twitch: {stream.title}",
                                                      url=stream.link)
