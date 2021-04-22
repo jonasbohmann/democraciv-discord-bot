@@ -146,7 +146,7 @@ class GovernmentMixin:
 
         return formatted
 
-    async def _from_person_model(self, ctx, *, member_or_party, model):
+    async def _from_person_model(self, ctx, *, member_or_party, model, paginate=True):
         member = member_or_party or ctx.author
         submit_term = "written" if model is models.Law else "submitted"
 
@@ -155,7 +155,7 @@ class GovernmentMixin:
             members = [m.id for m in member.role.members]
             empty = f"No member of {name} has {submit_term} a {model.__name__.lower()} yet."
             title = f"{model.__name__}s from members of {name}"
-            icon = await member.get_logo() or EmptyEmbed
+            icon = await member.get_logo() or self.bot.mk.NATION_ICON_URL or EmptyEmbed
         else:
             name = member.display_name
             members = [member.id]
@@ -185,6 +185,9 @@ class GovernmentMixin:
         for record in objs_from_thing:
             obj = await model.convert(ctx, record["id"])
             formatted.append(obj.formatted)
+
+        if not paginate:
+            return formatted
 
         pages = paginator.SimplePages(entries=formatted, author=title, icon=icon, empty_message=empty)
         await pages.start(ctx)

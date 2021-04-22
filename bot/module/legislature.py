@@ -190,10 +190,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         matches.sort(key=lambda elm: difflib.SequenceMatcher(None, elm.name, query).ratio(), reverse=True)
         matches = list(map(lambda elm: elm.formatted, matches))
 
-        matches.insert(0, f"This searches for both bills and motions. You can search for just bills with "
-                          f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill search`, "
-                          f"and for just motions with "
-                          f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion search`.\n")
+        if matches:
+            matches.insert(0, f"This searches for both bills and motions. You can search for just bills with "
+                              f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill search`, "
+                              f"and for just motions with "
+                              f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion search`.\n")
 
         pages = paginator.SimplePages(
             entries=matches,
@@ -201,6 +202,38 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             author=f"Bills & Motions matching '{query}'",
             empty_message="Nothing found.",
         )
+        await pages.start(ctx)
+
+    @legislature.command(name="from")
+    async def _from(self, ctx: context.CustomContext, *, member_or_party: typing.Union[converter.CaseInsensitiveMember,
+                                                                                       converter.CaseInsensitiveUser,
+                                                                                       converter.PoliticalParty,
+                                                                                       converter.FuzzyCIMember] = None):
+        """List all bills and motions that a specific person or Political Party submitted"""
+        member_or_party = member_or_party or ctx.author
+
+        bills = await self._from_person_model(ctx, member_or_party=member_or_party, model=Bill, paginate=False)
+        motions = await self._from_person_model(ctx, member_or_party=member_or_party, model=Motion, paginate=False)
+        things = bills + motions
+
+        if isinstance(member_or_party, converter.PoliticalParty):
+            name = member_or_party.role.name
+            empty = f"No member of {name} has submitted something yet."
+            title = f"Bills & Motions from members of {name}"
+            icon = await member_or_party.get_logo() or self.bot.mk.NATION_ICON_URL or discord.Embed.Empty
+        else:
+            name = member_or_party.display_name
+            empty = f"{name} hasn't submitted anything yet."
+            title = f"Bills & Motions from {name}"
+            icon = member_or_party.avatar_url_as(static_format="png")
+
+        if things:
+            things.insert(0, f"This lists both bills and motions. You can limit this to just bills by using "
+                             f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bills from`, "
+                             f"and to just motions by using "
+                             f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motions from`.\n")
+
+        pages = paginator.SimplePages(entries=things, author=title, icon=icon, empty_message=empty)
         await pages.start(ctx)
 
     @legislature.group(
