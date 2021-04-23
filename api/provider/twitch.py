@@ -40,8 +40,8 @@ class TwitchManager(ProviderManager):
     API_EVENTSUB_ENDPOINT = API_BASE + "eventsub/subscriptions"
     API_TOKEN_ENDPOINT = "https://id.twitch.tv/oauth2/token"
 
-    def __init__(self, db, token_path, reddit_manager):
-        super().__init__(db=db)
+    def __init__(self, db, token_path, reddit_manager, **kwargs):
+        super().__init__(db=db, **kwargs)
         self._webhooks: typing.Dict[str, set] = {}
         self._token_path = token_path
         self._get_token()
@@ -199,10 +199,13 @@ class TwitchManager(ProviderManager):
         self.seen_notifications.append(notification_id)
         timestamp = headers['Twitch-Eventsub-Message-Timestamp']
 
-        if (datetime.datetime.now(tz=datetime.timezone.utc) -
-                datetime.datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                > datetime.timedelta(minutes=10)):
-            return
+        try:
+            if (datetime.datetime.now(tz=datetime.timezone.utc) -
+                    datetime.datetime.fromisoformat(timestamp)
+                    > datetime.timedelta(minutes=10)):
+                return
+        except Exception:
+            pass
 
         body = await request.body()
         hmac_message = notification_id.encode() + timestamp.encode() + body
