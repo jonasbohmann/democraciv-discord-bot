@@ -241,7 +241,7 @@ class TwitchManager(ProviderManager):
 
         for row in record:
             context = StreamContext(webhook_url=row["webhook_url"], everyone_ping=row["everyone_ping"],
-                                    post_to_reddit=record['post_to_reddit'])
+                                    post_to_reddit=row['post_to_reddit'])
             await self.send_webhook(context, TwitchStream(**event))
 
     async def send_webhook(self, context: StreamContext, stream: TwitchStream):

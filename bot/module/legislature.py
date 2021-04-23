@@ -204,7 +204,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
         await pages.start(ctx)
 
-    @legislature.command(name="from")
+    @legislature.command(name="from", aliases=['f', 'by'])
     async def _from(self, ctx: context.CustomContext, *, member_or_party: typing.Union[converter.CaseInsensitiveMember,
                                                                                        converter.CaseInsensitiveUser,
                                                                                        converter.PoliticalParty,
