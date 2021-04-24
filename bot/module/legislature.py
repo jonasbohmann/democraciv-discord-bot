@@ -550,8 +550,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         case_insensitive=True,
         invoke_without_command=True,
     )
-    async def leg_session(self, ctx: context.CustomContext, session: typing.Optional[Session] = None, *,
-                          sponsor_filter: models.SessionSponsorFilter = None):
+    async def session(self, ctx: context.CustomContext, session: typing.Optional[Session] = None, *,
+                      sponsor_filter: models.SessionSponsorFilter = None):
         """Get details about a session from {LEGISLATURE_NAME}
 
         You can filter the list of bills by their amount of sponsors. Support notation: `<`, `<=`, `=`, `==`, `!=`, `!`, `>`, `>=` followed by a number.
@@ -657,7 +657,87 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         embed.set_footer(text="Bills that are underlined are active laws. All times are in UTC.")
         await ctx.send(embed=embed)
 
-    @leg_session.command(name="open", aliases=["o"])
+    @legislature.command(name="newsession", aliases=["ns"], hidden=True)
+    async def new_session(self, ctx: context.CustomContext, session: typing.Optional[Session] = None, *,
+                          sponsor_filter: models.SessionSponsorFilter = None):
+        """Get details about a session from {LEGISLATURE_NAME}
+
+                You can filter the list of bills by their amount of sponsors. Support notation: `<`, `<=`, `=`, `==`, `!=`, `!`, `>`, `>=` followed by a number.
+
+                **Example**
+                `{PREFIX}{COMMAND}` to see details about the most recent session
+                `{PREFIX}{COMMAND} 9` to see details about Session #9
+
+                **Example with sponsor filter**
+                `{PREFIX}{COMMAND} >1` to see details about the most recent session, but only show bills that have more than 1 sponsor
+                `{PREFIX}{COMMAND} >=2` to see details about the most recent session, but only show bills that have more than or exactly 2 sponsors
+                `{PREFIX}{COMMAND} =5` to see details about the most recent session, but only show bills that have exactly 5 sponsors
+
+                `{PREFIX}{COMMAND} 9 =1` to see details about Session #9, but only show bills that have exactly 1 sponsor
+                `{PREFIX}{COMMAND} 21 >=1` to see details about Session #21, but only show bills that have more than or exactly 1 sponsor
+
+                """
+
+        session = session or await self.get_last_leg_session()
+
+        if session is None:
+            return await ctx.send(f"{config.NO} There hasn't been a session yet.\n{config.HINT} The "
+                                  f"{self.bot.mk.speaker_term} can open one at any time with "
+                                  f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session open`.")
+
+        entries = []
+        sponsors_needed = ""
+        bills = [await Bill.convert(ctx, b_id) for b_id in session.bills]
+
+        if sponsor_filter:
+            filter_func, sponsors_needed = sponsor_filter
+            bills = list(filter(filter_func, bills))
+
+        pretty_bills = [b.formatted for b in bills] or ['-']
+        speaker = session.speaker or context.MockUser()
+
+        description = (f"This session was opened by {speaker.mention} on "
+                       f"{session.opened_on.strftime('%A, %B %d %Y at %H:%M')}.\n")
+
+        if session.voting_started_on:
+            description = (
+                f"{description[:-2]} Voting started on {session.voting_started_on.strftime('%A, %B %d %Y at %H:%M')} on"
+                f" [this form]({session.vote_form}).\n")
+
+        if session.closed_on:
+            description = (f"{description[:-2]} Finally, the session was closed on "
+                           f"{session.closed_on.strftime('%A, %B %d %Y at %H:%M')}.\n")
+
+        if session.status is SessionStatus.SUBMISSION_PERIOD:
+            description = (f"{description[:-2]}\n\nBills & Motions can be submitted to this session with "
+                           f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit`. Any old bills from "
+                           f"previous sessions that failed can be resubmitted to this session with "
+                           f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`.\n")
+
+        entries.append(description)
+        entries.append(f"**__Status__**\n{session.status.value}\n")
+
+        if session.vote_form:
+            entries.append(f"**__Vote Form__**\n{session.vote_form}\n")
+
+        if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
+            pretty_motions = [(await Motion.convert(ctx, m)).formatted for m in session.motions] or ['-']
+            entries.append(f"**__Submitted Motions ({len(pretty_motions)})__**")
+
+            last_motion = pretty_motions.pop()
+            last_motion += "\n"
+            pretty_motions.append(last_motion)
+            entries.extend(pretty_motions)
+
+        entries.append(f"**__Submitted Bills{'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'}"
+                       f" ({len(pretty_bills)})__**")
+        entries.extend(pretty_bills)
+
+        pages = paginator.SimplePages(entries=entries, icon=self.bot.mk.NATION_ICON_URL,
+                                      author=f"Legislative Session #{session.id}", per_page=20)
+        await pages.start(ctx)
+
+    @session.command(name="open", aliases=["o"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
@@ -745,7 +825,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                     f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit` on the {self.bot.dciv.name} server."
         )
 
-    @leg_session.command(name="lock")
+    @session.command(name="lock")
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def locksession(self, ctx):
         """Lock (deny) submissions for the currently active session"""
@@ -781,7 +861,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                        f"of submission to **r/{config.DEMOCRACIV_SUBREDDIT}** with `{p}{l} session export reddit`. "
                        f"That reddit post may help with more focused debates & feedback on bills & motions.")
 
-    @leg_session.command(name="unlock")
+    @session.command(name="unlock")
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def unlocksession(self, ctx):
         """Unlock (allow) submissions for the currently active session again"""
@@ -812,7 +892,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         await ctx.send(f"{config.YES} Submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
                        f"Session #{active_leg_session.id} have been unlocked.")
 
-    @leg_session.command(name="vote", aliases=["u", "v", "update"])
+    @session.command(name="vote", aliases=["u", "v", "update"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def updatesession(self, ctx: context.CustomContext):
         """Changes the current session's status to be open for voting"""
@@ -863,7 +943,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                     f"#{active_leg_session.id} has started!\nVote here: {voting_form}",
         )
 
-    @leg_session.command(name="close", aliases=["c"])
+    @session.command(name="close", aliases=["c"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def closesession(self, ctx):
         """Closes the current session"""
@@ -955,8 +1035,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             f"{self.bot.mk.LEGISLATURE_CABINET_NAME}."
         )
 
-    @leg_session.group(name="export", aliases=["es", "ex", "e"], hidden=True,
-                       case_insensitive=True, invoke_without_command=True)
+    @session.group(name="export", aliases=["es", "ex", "e"], hidden=True,
+                   case_insensitive=True, invoke_without_command=True)
     async def export(self, ctx: context.CustomContext):
         """Automate the most time consuming Speaker responsibilities with these commands"""
         if ctx.invoked_subcommand is None:
@@ -1186,8 +1266,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
         await pages.start(ctx)
 
-    @leg_session.command(name="all", aliases=["a"])
-    async def leg_session_all(self, ctx: context.CustomContext):
+    @session.command(name="all", aliases=["a"])
+    async def all_sessions(self, ctx: context.CustomContext):
         """View a history of all previous sessions of the {LEGISLATURE_NAME}"""
         return await self.paginate_all_sessions(ctx)
 

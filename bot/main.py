@@ -662,6 +662,9 @@ class DemocracivBot(commands.Bot):
             message: str = None,
             embed: discord.Embed = None,
     ):
+        if target.bot:
+            return
+
         dm_settings = await self.db.fetchrow("SELECT * FROM dm_setting WHERE user_id = $1", target.id)
         p = config.BOT_PREFIX
         if not dm_settings:
