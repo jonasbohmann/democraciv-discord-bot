@@ -9,7 +9,8 @@ from fastapi.logger import logger
 
 
 class YouTubeManager:
-    def __init__(self, db, *, token_path, reddit_manager):
+    def __init__(self, db, *, token_path, reddit_manager, app_ready):
+        self.app_ready = app_ready
         self.db = db
         self._token_path = token_path
         self.reddit_manager = reddit_manager
@@ -136,6 +137,9 @@ class YouTubeManager:
 
         # A standard Google API key has 10.000 units per day
         #   This task, with the minutes set to 10, costs approx. 2160 units per day
+
+        await self.db.ready.wait()
+        await self.app_ready.wait()
 
         youtube_data = await self.get_newest_upload()
 

@@ -105,6 +105,7 @@ class Database:
 
 
 app = FastAPI()
+app_ready = asyncio.Event()
 security = HTTPBasic()
 db = Database()
 
@@ -135,9 +136,9 @@ if ML_ENABLED:
 else:
     bert_qa = holmes_ie = None
 
-reddit_manager = RedditManager(db=db, token_path=TOKEN_PATH)
-twitch_manager = TwitchManager(db=db, token_path=TOKEN_PATH, reddit_manager=reddit_manager)
-youtube_manager = YouTubeManager(db=db, token_path=TOKEN_PATH, reddit_manager=reddit_manager)
+reddit_manager = RedditManager(db=db, token_path=TOKEN_PATH, app_ready=app_ready)
+twitch_manager = TwitchManager(db=db, token_path=TOKEN_PATH, reddit_manager=reddit_manager, app_ready=app_ready)
+youtube_manager = YouTubeManager(db=db, token_path=TOKEN_PATH, reddit_manager=reddit_manager, app_ready=app_ready)
 
 
 class AddWebhook(pydantic.BaseModel):
@@ -187,7 +188,9 @@ async def startup_event():
     if ML_ENABLED:
         await bert_qa.make()
         await holmes_ie.register_documents()
+
     logger.info("API ready to serve")
+    app_ready.set()
 
 
 @app.get("/")
@@ -267,12 +270,12 @@ async def twitch_clear(twitch_config: ClearPerGuild, auth: str = Depends(ensure_
 
 @app.post("/twitch/callback")
 async def twitch_subscription_verify(request: Request, background_tasks: BackgroundTasks):
+    background_tasks.add_task(twitch_manager.handle_twitch_callback, request)
     js = await request.json()
 
     if "challenge" in js:
         return PlainTextResponse(js["challenge"])
 
-    background_tasks.add_task(twitch_manager.handle_twitch_callback, request)
     return {"ok": "ok"}
 
 

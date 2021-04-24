@@ -98,7 +98,6 @@ class SessionSponsorFilter(commands.Converter):
             return
 
         try:
-            print(match.groups())
             filter_func = match.group(1)
             amount = int(match.group(2))
         except (IndexError, ValueError):

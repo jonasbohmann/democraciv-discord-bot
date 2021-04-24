@@ -24,8 +24,8 @@ class RedditManager(ProviderManager):
     REDDIT_REFRESH_TOKEN: str
     REDDIT_BEARER_TOKEN: str
 
-    def __init__(self, *, db, token_path):
-        super().__init__(db=db)
+    def __init__(self, *, db, token_path, **kwargs):
+        super().__init__(db=db, **kwargs)
         self._webhooks: typing.Dict[str, SubredditScraper] = {}
         self._token_path = token_path
         self._get_token()

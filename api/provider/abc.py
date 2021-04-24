@@ -11,8 +11,9 @@ class ProviderManager(abc.ABC):
     target: str
     table: str
 
-    def __init__(self, *, db):
+    def __init__(self, *, db, app_ready):
         self.db = db
+        self.app_ready = app_ready
         self._loop = asyncio.get_event_loop()
         self._loop.create_task(self._make_aiohttp_session())
         self._lock = asyncio.Lock()
@@ -24,6 +25,7 @@ class ProviderManager(abc.ABC):
 
     async def _bulk_start_all(self):
         await self.db.ready.wait()
+        await self.app_ready.wait()
 
         webhooks = await self.db.pool.fetch(f"SELECT {self.target}, webhook_url FROM {self.table}")
 

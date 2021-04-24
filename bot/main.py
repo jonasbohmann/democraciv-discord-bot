@@ -805,22 +805,24 @@ class DemocracivBot(commands.Bot):
         pretty_time = datetime.datetime.utcfromtimestamp(now).strftime("%A, %B %d %Y %H:%M:%S")
         file_name = f"{database_name}-backup-{now}"
 
+        parent = str(pathlib.Path(__file__).parent) + "/db/"
+
         command = (
             f'PGPASSWORD="{token.POSTGRESQL_PASSWORD}" pg_dump -Fc {database_name} > '
-            f"bot/db/backup/{database_name}/{file_name} -U {token.POSTGRESQL_USER} "
+            f"{parent}backup/{database_name}/{file_name} -U {token.POSTGRESQL_USER} "
             f"-h {token.POSTGRESQL_HOST} -w"
         )
 
-        if not os.path.isdir(f"bot/db/backup"):
-            os.mkdir(f"bot/db/backup")
+        if not os.path.isdir(f"{parent}backup"):
+            os.mkdir(f"{parent}backup")
 
-        if not os.path.isdir(f"bot/db/backup/{database_name}"):
-            os.mkdir(f"bot/db/backup/{database_name}")
+        if not os.path.isdir(f"{parent}backup/{database_name}"):
+            os.mkdir(f"{parent}backup/{database_name}")
 
         await asyncio.create_subprocess_shell(command)
         await asyncio.sleep(20)
 
-        file = discord.File(f"bot/db/backup/{database_name}/{file_name}")
+        file = discord.File(f"{parent}backup/{database_name}/{file_name}")
 
         backup_channel = self.get_channel(config.DATABASE_DAILY_BACKUP_DISCORD_CHANNEL)
 

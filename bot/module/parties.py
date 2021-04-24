@@ -132,7 +132,15 @@ class Party(context.CustomCog, name="Political Parties"):
             invite_value = party.discord_invite if party.discord_invite else "*N/A*"
             embed.add_field(name="Server", value=invite_value)
             embed.add_field(name="Join Setting", value=party.join_mode.value)
-            embed.add_field(name="Aliases", value=", ".join([f"`{alias}`" for alias in party.aliases]) or "-",
+
+            aliases = party.aliases
+
+            try:
+                aliases.remove(party.role.name.lower())
+            except ValueError:
+                pass
+
+            embed.add_field(name="Aliases", value=", ".join([f"`{alias}`" for alias in aliases]) or "-",
                             inline=False)
         else:
             embed.description = (f"These people have decided to remain Independent and to not join any "
@@ -143,16 +151,15 @@ class Party(context.CustomCog, name="Political Parties"):
             members_name = "Independents"
 
         party_members = [f"{member.mention} {member}" for member in party.role.members
-                         if member.id not in party.leader_ids] or ["-"]
+                         if member.id not in party.leader_ids]
 
-        if party.leaders:
-            for i, leader in enumerate(party.leaders):
-                if leader in party.role.members:
-                    party_members.insert(i, f"{leader.mention} **{leader} (Leader)**")
+        for i, leader in enumerate(party.leaders):
+            if leader in party.role.members:
+                party_members.insert(i, f"{leader.mention} **{leader} (Leader)**")
 
         embed.add_field(
             name=f"{members_name} ({len(party.role.members)})",
-            value="\n".join(party_members),
+            value="\n".join(party_members or ['-']),
             inline=False,
         )
 
