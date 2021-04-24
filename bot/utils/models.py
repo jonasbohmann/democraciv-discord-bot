@@ -217,7 +217,7 @@ class Bill(commands.Converter):
 
     @property
     def short_name(self) -> str:
-        return textwrap.shorten(self.name, width=50)
+        return textwrap.shorten(self.name, width=70)
 
     @property
     def formatted(self):
@@ -381,7 +381,7 @@ class Motion(commands.Converter):
 
     @property
     def short_name(self) -> str:
-        return textwrap.shorten(self.name, width=35)
+        return textwrap.shorten(self.name, width=70)
 
     @property
     def link(self) -> str:
