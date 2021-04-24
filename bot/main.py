@@ -235,12 +235,12 @@ class DemocracivBot(commands.Bot):
         return to_return
 
     async def log_error(
-        self,
-        ctx,
-        error,
-        to_log_channel: bool = True,
-        to_owner: bool = False,
-        to_context: bool = False,
+            self,
+            ctx,
+            error,
+            to_log_channel: bool = True,
+            to_owner: bool = False,
+            to_context: bool = False,
     ):
         if ctx.guild is None:
             return
@@ -257,8 +257,8 @@ class DemocracivBot(commands.Bot):
             local_embed = text.SafeEmbed(
                 title=":warning:  Something went wrong",
                 description=f"An unexpected error occurred while performing this command. "
-                f"The developer has been notified. Sorry!\n\n"
-                f"```{error.__class__.__name__}: {error}```",
+                            f"The developer has been notified. Sorry!\n\n"
+                            f"```{error.__class__.__name__}: {error}```",
             )
             await ctx.send(embed=local_embed)
 
@@ -656,11 +656,11 @@ class DemocracivBot(commands.Bot):
         return service.scripts().run(body=request, scriptId=script_id).execute()
 
     async def safe_send_dm(
-        self,
-        target: Union[discord.User, discord.Member],
-        reason: str = None,
-        message: str = None,
-        embed: discord.Embed = None,
+            self,
+            target: Union[discord.User, discord.Member],
+            reason: str = None,
+            message: str = None,
+            embed: discord.Embed = None,
     ):
         dm_settings = await self.db.fetchrow("SELECT * FROM dm_setting WHERE user_id = $1", target.id)
         p = config.BOT_PREFIX
@@ -730,9 +730,9 @@ class DemocracivBot(commands.Bot):
             return
 
         if self.user.id in message.raw_mentions and len(message.content) in (
-            20,
-            21,
-            22,
+                20,
+                21,
+                22,
         ):
 
             if len(config.BOT_ADDITIONAL_PREFIXES) > 1:
@@ -758,12 +758,12 @@ class DemocracivBot(commands.Bot):
                 embed = text.SafeEmbed(
                     title=":pensive:  Sorry!",
                     description="Discord requires bot developers to hand over their passport "
-                    "once their bot reaches about ~75 servers. If they refuse to, "
-                    f"the bot cannot be invited anymore and Discord takes away some "
-                    f"critical features that the Democraciv Bot needs in order "
-                    f"to work properly. I **do not want to give Discord my "
-                    f"passport.**\n\nThis is the 70th server the bot is in, "
-                    f"and as a precaution **the bot is leaving this server** again.",
+                                "once their bot reaches about ~75 servers. If they refuse to, "
+                                f"the bot cannot be invited anymore and Discord takes away some "
+                                f"critical features that the Democraciv Bot needs in order "
+                                f"to work properly. I **do not want to give Discord my "
+                                f"passport.**\n\nThis is the 70th server the bot is in, "
+                                f"and as a precaution **the bot is leaving this server** again.",
                 )
 
                 await guild.system_channel.send(embed=embed)
@@ -886,8 +886,6 @@ class DemocracivBot(commands.Bot):
                     raise exceptions.DemocracivBotException(
                         f"{config.NO} The URL shortening service returned an error, try again later."
                     )
-
-
 
 
 if __name__ == "__main__":

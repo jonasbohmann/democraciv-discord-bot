@@ -253,7 +253,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     @bill.command(name="synchronize", aliases=["sync", "refresh"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
     async def b_refresh(self, ctx, bills: commands.Greedy[models.Bill]):
-        """Synchronize the name & content of one or multiple bills with Google Docs"
+        """Synchronize the name & content of one or multiple bills with Google Docs
 
         This gets the current title and the current content of the Google Docs document of a bill,
          and saves that to my database. In case my search commands show outdated text of a bill,
