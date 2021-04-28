@@ -153,6 +153,12 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         """List the laws a specific person or Political Party authored"""
         return await self._from_person_model(ctx, model=models.Law, member_or_party=member_or_party)
 
+    @law.command(name="read", aliases=["text", "txt", "content"])
+    async def read(self, ctx, *, law_id: models.Law):
+        """Read the content of a law"""
+
+        await self._show_bill_text(ctx, law_id)
+
     @law.command(name="search", aliases=["s"])
     async def search(self, ctx, *, query: str):
         """Search for laws"""
