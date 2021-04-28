@@ -19,11 +19,6 @@ class RedditManager(ProviderManager):
     target = "subreddit"
     table = "reddit_webhook"
 
-    REDDIT_CLIENT_ID: str
-    REDDIT_CLIENT_SECRET: str
-    REDDIT_REFRESH_TOKEN: str
-    REDDIT_BEARER_TOKEN: str
-
     def __init__(self, *, db, token_path, **kwargs):
         super().__init__(db=db, **kwargs)
         self._webhooks: typing.Dict[str, SubredditScraper] = {}
@@ -34,10 +29,10 @@ class RedditManager(ProviderManager):
     def _get_token(self):
         with open(self._token_path, "r") as token_file:
             token_json = json.load(token_file)
-            self.REDDIT_CLIENT_ID = token_json["reddit"]["client_id"]
-            self.REDDIT_CLIENT_SECRET = token_json["reddit"]["client_secret"]
-            self.REDDIT_REFRESH_TOKEN = token_json["reddit"]["refresh_token"]
-            self.REDDIT_BEARER_TOKEN = token_json["reddit"]["bearer_token"]
+            self.REDDIT_CLIENT_ID: str = token_json["reddit"]["client_id"]
+            self.REDDIT_CLIENT_SECRET: str = token_json["reddit"]["client_secret"]
+            self.REDDIT_REFRESH_TOKEN: str = token_json["reddit"]["refresh_token"]
+            self.REDDIT_BEARER_TOKEN: str = token_json["reddit"]["bearer_token"]
 
     def _save_token(self):
         with open(self._token_path, "r") as token_file:

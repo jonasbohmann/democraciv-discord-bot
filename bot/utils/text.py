@@ -43,6 +43,7 @@ class AnnouncementScheduler:
         self._channel: mk.DemocracivChannel = channel
         self._objects: typing.List[typing.Union[models.Bill, models.Law]] = []
         self._last_addition = None
+        self.wait_time = 5
         self._task = None
 
     def __del__(self):
@@ -91,7 +92,7 @@ class AnnouncementScheduler:
     @tasks.loop(seconds=30)
     async def _wait(self):
         if self._last_addition is not None and datetime.datetime.utcnow() - self._last_addition > datetime.timedelta(
-                minutes=5
+                minutes=self.wait_time
         ):
             self._last_addition = None
             self._objects.sort(key=lambda obj: obj.id)
@@ -102,6 +103,7 @@ class RedditAnnouncementScheduler(AnnouncementScheduler):
 
     def __init__(self, bot, channel, *, subreddit):
         self.subreddit = subreddit
+        self.wait_time = 20
         super().__init__(bot, channel)
 
     def get_message(self) -> str:

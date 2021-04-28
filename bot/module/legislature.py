@@ -18,8 +18,7 @@ from bot.utils.models import Bill, Session, Motion, SessionStatus
 class PassScheduler(text.RedditAnnouncementScheduler):
 
     def get_reddit_post_title(self) -> str:
-        session = self._objects[len(self._objects) - 1].session
-        return f"Passed Bills from {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}"
+        return f"Passed Bills from {self.bot.mk.LEGISLATURE_NAME}"
 
     def get_reddit_post_content(self) -> str:
         content = [f"The following bills were passed into law by {self.bot.mk.LEGISLATURE_NAME}."
@@ -554,114 +553,6 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                       sponsor_filter: models.SessionSponsorFilter = None):
         """Get details about a session from {LEGISLATURE_NAME}
 
-        You can filter the list of bills by their amount of sponsors. Support notation: `<`, `<=`, `=`, `==`, `!=`, `!`, `>`, `>=` followed by a number.
-
-        **Example**
-        `{PREFIX}{COMMAND}` to see details about the most recent session
-        `{PREFIX}{COMMAND} 9` to see details about Session #9
-
-        **Example with sponsor filter**
-        `{PREFIX}{COMMAND} >1` to see details about the most recent session, but only show bills that have more than 1 sponsor
-        `{PREFIX}{COMMAND} >=2` to see details about the most recent session, but only show bills that have more than or exactly 2 sponsors
-        `{PREFIX}{COMMAND} =5` to see details about the most recent session, but only show bills that have exactly 5 sponsors
-
-        `{PREFIX}{COMMAND} 9 =1` to see details about Session #9, but only show bills that have exactly 1 sponsor
-        `{PREFIX}{COMMAND} 21 >=1` to see details about Session #21, but only show bills that have more than or exactly 1 sponsor
-
-        """
-
-        # User invoked -legislature session without arguments
-        if session is None:
-            session = await self.get_last_leg_session()
-
-            if session is None:
-                return await ctx.send(f"{config.NO} There hasn't been a session yet.\n{config.HINT} The "
-                                      f"{self.bot.mk.speaker_term} can open one at any time with "
-                                      f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session open`.")
-
-        bills = [await Bill.convert(ctx, b_id) for b_id in session.bills]
-
-        if sponsor_filter:
-            filter_func, sponsors_needed = sponsor_filter
-            bills = list(filter(filter_func, bills))
-
-        if bills:
-            pretty_bills = []
-
-            for bill in bills:
-                if bill.status.is_law:
-                    pretty_bills.append(f"__Bill #{bill.id}__ - [{bill.short_name}]({bill.tiny_link})")
-                else:
-                    pretty_bills.append(f"Bill #{bill.id} - [{bill.short_name}]({bill.tiny_link})")
-        else:
-            pretty_bills = ["-"]
-
-        speaker = session.speaker or context.MockUser()
-        description = (f"This session was opened by {speaker.mention} on "
-                       f"{session.opened_on.strftime('*%A, %B %d %Y* at *%H:%M*')}.")
-
-        if session.voting_started_on:
-            description += (f" Voting started on {session.voting_started_on.strftime('*%A, %B %d %Y* at *%H:%M*')} on "
-                            f"[this form]({session.vote_form}).")
-
-        if session.closed_on:
-            description += (f" Finally, the session was closed on "
-                            f"{session.closed_on.strftime('*%A, %B %d %Y* at *%H:%M*')}.")
-
-        if session.status is SessionStatus.SUBMISSION_PERIOD:
-            description += (f"\n\nBills & Motions can be submitted to this session with "
-                            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit`. Any old bills from "
-                            f"previous sessions that failed can be resubmitted to this session with "
-                            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`.")
-
-        embed = text.SafeEmbed(description=description)
-
-        embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL, name=f"Legislative Session #{session.id}")
-        embed.add_field(name="Status", value=session.status.value, inline=True)
-
-        if session.vote_form:
-            embed.add_field(name="Vote Form", value=session.vote_form, inline=False)
-
-        if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
-            if len(session.motions) > 0:
-                pretty_motions = []
-                for motion_id in session.motions:
-                    motion = await Motion.convert(ctx, motion_id)
-                    pretty_motions.append(f"Motion #{motion.id} - [{motion.short_name}]({motion.link})")
-            else:
-                pretty_motions = ["-"]
-
-            pretty_motions = "\n".join(pretty_motions)
-            too_long = (
-                f"This text was too long for Discord, so I put it on "
-                f"[here.]({await self.bot.make_paste(pretty_motions)})"
-            )
-            embed.add_field(
-                name="Submitted Motions",
-                value=pretty_motions,
-                inline=False,
-                too_long_value=too_long,
-            )
-
-        pretty_bills = "\n".join(pretty_bills)
-        too_long_ = (
-            f"This text was too long for Discord, so I put it on [here.]({await self.bot.make_paste(pretty_bills)})"
-        )
-        embed.add_field(
-            name=f"Submitted Bills{'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'}",
-            value=pretty_bills,
-            inline=False,
-            too_long_value=too_long_,
-        )
-
-        embed.set_footer(text="Bills that are underlined are active laws. All times are in UTC.")
-        await ctx.send(embed=embed)
-
-    @legislature.command(name="newsession", aliases=["ns"], hidden=True)
-    async def new_session(self, ctx: context.CustomContext, session: typing.Optional[Session] = None, *,
-                          sponsor_filter: models.SessionSponsorFilter = None):
-        """Get details about a session from {LEGISLATURE_NAME}
-
                 You can filter the list of bills by their amount of sponsors. Support notation: `<`, `<=`, `=`, `==`, `!=`, `!`, `>`, `>=` followed by a number.
 
                 **Example**
@@ -701,15 +592,15 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         if session.voting_started_on:
             description = (
-                f"{description[:-2]} Voting started on {session.voting_started_on.strftime('%A, %B %d %Y at %H:%M')} on"
+                f"{description[:-1]} Voting started on {session.voting_started_on.strftime('%A, %B %d %Y at %H:%M')} on"
                 f" [this form]({session.vote_form}).\n")
 
         if session.closed_on:
-            description = (f"{description[:-2]} Finally, the session was closed on "
+            description = (f"{description[:-1]} Finally, the session was closed on "
                            f"{session.closed_on.strftime('%A, %B %d %Y at %H:%M')}.\n")
 
         if session.status is SessionStatus.SUBMISSION_PERIOD:
-            description = (f"{description[:-2]}\n\nBills & Motions can be submitted to this session with "
+            description = (f"{description[:-1]}\n\nBills & Motions can be submitted to this session with "
                            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit`. Any old bills from "
                            f"previous sessions that failed can be resubmitted to this session with "
                            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`.\n")
@@ -721,8 +612,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             entries.append(f"**__Vote Form__**\n{session.vote_form}\n")
 
         if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
-            pretty_motions = [(await Motion.convert(ctx, m)).formatted for m in session.motions] or ['-']
-            entries.append(f"**__Submitted Motions ({len(pretty_motions)})__**")
+            motions = [(await Motion.convert(ctx, m)).formatted for m in session.motions]
+            pretty_motions = motions or ['-']
+            entries.append(f"**__Submitted Motions ({len(motions)})__**")
 
             last_motion = pretty_motions.pop()
             last_motion += "\n"
@@ -730,7 +622,14 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             entries.extend(pretty_motions)
 
         entries.append(f"**__Submitted Bills{'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'}"
-                       f" ({len(pretty_bills)})__**")
+                       f" ({len(bills)})__**")
+
+        if not sponsor_filter:
+            entries.append(f"*You can filter the list of submitted bills of a session by their amount of sponsor. "
+                           f"For example, using `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session >=2` "
+                           f"would only show bills that have 2 or more sponsors. See the help page of this command "
+                           f"for more information.*\n")
+
         entries.extend(pretty_bills)
 
         pages = paginator.SimplePages(entries=entries, icon=self.bot.mk.NATION_ICON_URL,
