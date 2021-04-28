@@ -157,7 +157,7 @@ class GovernmentMixin:
         entries.insert(0, f"[Link to the Google Docs document of this Bill]({bill.link})\n"
                           f"*Am I showing you outdated or wrong text? Tell the {self.bot.mk.speaker_term} to "
                           f"synchronize this text with the Google Docs text of this bill with "
-                          f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill synchronize {bill.id}`.*")
+                          f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill synchronize {bill.id}`.*\n\n")
         pages = paginator.SimplePages(entries=entries, icon=self.bot.mk.NATION_ICON_URL,
                                       author=f"{bill.name} (#{bill.id})")
 
