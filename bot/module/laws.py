@@ -79,7 +79,10 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             embed.add_field(name="History", value="\n".join(history))
 
         embed.set_footer(text=f"All dates are in UTC.")
-        await ctx.send(embed=embed)
+        message = await ctx.send(embed=embed)
+
+        if await ctx.ask_to_continue(message=message, emoji="\U0001f4c3"):
+            await self._show_bill_text(ctx, law)
 
     @law.command(name="export", aliases=["e", "exp", "ex", "generate", "generatelegalcode"])
     @commands.cooldown(1, 300, commands.BucketType.user)

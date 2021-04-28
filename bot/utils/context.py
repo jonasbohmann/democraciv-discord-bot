@@ -143,6 +143,11 @@ class CustomContext(commands.Context):
                 timeout=timeout,
             )
         except asyncio.TimeoutError:
+            try:
+                await message.clear_reaction(emoji)
+            except discord.HTTPException:
+                pass
+
             return False
         else:
             return True
