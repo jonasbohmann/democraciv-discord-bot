@@ -17,17 +17,18 @@ from bot.config import config
 
 class Pages(menus.MenuPages):
     def __init__(
-        self,
-        source,
-        *,
-        title=EmptyEmbed,
-        author="",
-        icon=EmptyEmbed,
-        title_url=EmptyEmbed,
-        colour=config.BOT_EMBED_COLOUR,
-        thumbnail=None,
+            self,
+            source,
+            *,
+            title=EmptyEmbed,
+            author="",
+            icon=EmptyEmbed,
+            title_url=EmptyEmbed,
+            colour=config.BOT_EMBED_COLOUR,
+            thumbnail=None,
+            message=None
     ):
-        super().__init__(source=source, check_embeds=True)
+        super().__init__(source=source, check_embeds=True, message=message)
         self.embed = SafeEmbed(title=title, url=title_url, colour=colour)
         self.embed.set_author(name=author, icon_url=icon)
 

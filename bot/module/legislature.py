@@ -392,12 +392,19 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             f"({entry.after.emojified_status(verbose=False)})"
             for entry in bill_id.history
         ]
-        fmt_history.insert(0, "All dates are in UTC.\n")
+        fmt_history.insert(0, f"[Link to the Google Docs document of this Bill]({bill_id.link}).\n"
+                              f"All dates are in UTC.\n")
 
         pages = paginator.SimplePages(
-            entries=fmt_history, title=f"{bill_id.name} (#{bill_id.id})", title_url=bill_id.link
+            entries=fmt_history, author=f"{bill_id.name} (#{bill_id.id})", icon=self.bot.mk.NATION_ICON_URL
         )
         await pages.start(ctx)
+
+    @bill.command(name="read", aliases=["text", "txt", "content"])
+    async def b_read(self, ctx: context.CustomContext, *, bill_id: models.FuzzyBill):
+        """Read the content of a bill"""
+
+        await self._show_bill_text(ctx, bill_id)
 
     @bill.command(name="search", aliases=["s"])
     async def b_search(self, ctx: context.CustomContext, *, query: str):

@@ -2,6 +2,7 @@ import typing
 import discord
 
 from discord.embeds import EmptyEmbed
+from discord.ext import menus
 
 from bot.config import mk, config
 from bot.utils import exceptions, context, models, paginator, text, converter
@@ -9,6 +10,59 @@ from bot.utils import exceptions, context, models, paginator, text, converter
 
 def _make_property(role: mk.DemocracivRole):
     return property(lambda self: self._safe_get_member(role))
+
+
+class ShowBillTextMenu(paginator.SimplePages, inherit_buttons=False):
+    def __init__(self, detail_embed, **kwargs):
+        super().__init__(**kwargs)
+        self.is_showing_text = False
+        self.detail_embed: text.SafeEmbed = detail_embed
+        self.page_buttons = [menus.Button(config.HELP_FIRST, action=self.go_to_first_page, position=menus.First(0),
+                                          skip_if=menus.MenuPages._skip_double_triangle_buttons),
+                             menus.Button(config.HELP_PREVIOUS, action=self.go_to_previous_page,
+                                          position=menus.First(1)),
+                             menus.Button(config.HELP_NEXT, action=self.go_to_next_page, position=menus.Last(0)),
+                             menus.Button(config.HELP_LAST, action=self.go_to_last_page, position=menus.Last(1),
+                                          skip_if=menus.MenuPages._skip_double_triangle_buttons),
+                             ]
+
+    async def send_initial_message(self, ctx, channel):
+        pass
+
+    async def go_to_first_page(self, payload):
+        await self.show_page(0)
+
+    async def go_to_previous_page(self, payload):
+        await self.show_checked_page(self.current_page - 1)
+
+    async def go_to_next_page(self, payload):
+        await self.show_checked_page(self.current_page + 1)
+
+    async def go_to_last_page(self, payload):
+        await self.show_page(self._source.get_max_pages() - 1)
+
+    @menus.button(emoji="\U0001f4c3", position=menus.First(0))
+    async def on_bill_text(self, payload):
+        self.is_showing_text = not self.is_showing_text
+
+        if not self.is_showing_text:
+            await self.message.edit(embed=self.detail_embed)
+            for emoji in self.buttons.copy():
+                if str(emoji) == "\U0001f4c3":
+                    continue
+
+                self.remove_button(emoji=emoji, react=False)
+
+                try:
+                    await self.message.clear_reaction(emoji=emoji)
+                except discord.HTTPException:
+                    pass
+        else:
+            await self.show_page(0)
+
+            for button in self.page_buttons:
+                if button.is_valid(self):
+                    await self.add_button(button, react=True)
 
 
 class GovernmentMixin:
@@ -50,7 +104,7 @@ class GovernmentMixin:
         )
         await pages.start(ctx)
 
-    async def _detail_view(self, ctx, *, obj: typing.Union[models.Bill, models.Motion]):
+    async def _detail_view(self, ctx: context.CustomContext, *, obj: typing.Union[models.Bill, models.Motion]):
         embed = text.SafeEmbed(title=f"{obj.name} (#{obj.id})", description=obj.description, url=obj.link)
 
         if obj.submitter is not None:
@@ -89,11 +143,30 @@ class GovernmentMixin:
             else:
                 embed.set_footer(text="All dates are in UTC.")
 
+            view = await ctx.send(embed=embed)
+
+            if await ctx.ask_to_continue(message=view, emoji="\U0001f4c3"):
+                await self._show_bill_text(ctx, obj)
+
+            return
+
         await ctx.send(embed=embed)
+
+    async def _show_bill_text(self, ctx, bill: models.Bill):
+        entries = bill.content.splitlines()
+        entries.insert(0, f"[Link to the Google Docs document of this Bill]({bill.link})\n"
+                          f"*Am I showing you outdated or wrong text? Tell the {self.bot.mk.speaker_term} to "
+                          f"synchronize this text with the Google Docs text of this bill with "
+                          f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill synchronize {bill.id}`.*")
+        pages = paginator.SimplePages(entries=entries, icon=self.bot.mk.NATION_ICON_URL,
+                                      author=f"{bill.name} (#{bill.id})")
+
+        await pages.start(ctx)
 
     async def _search_model(self, ctx, *, model, query: str, return_model=False):
         if len(query) < 3:
-            raise exceptions.DemocracivBotException(f"{config.NO} The query to search for has to be at least 3 characters long.")
+            raise exceptions.DemocracivBotException(
+                f"{config.NO} The query to search for has to be at least 3 characters long.")
 
         if model is models.Motion:
             found = await self.bot.db.fetch(
@@ -193,7 +266,7 @@ class GovernmentMixin:
         await pages.start(ctx)
 
     async def _search_bill_by_name(
-        self, name: str, connection=None, search_laws: bool = False, return_model=False
+            self, name: str, connection=None, search_laws: bool = False, return_model=False
     ) -> typing.Dict[typing.Union[models.Bill, models.Law, str], None]:
         """Search for bills by their name, returns list with prettified strings of found bills"""
 
