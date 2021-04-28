@@ -640,7 +640,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         entries.extend(pretty_bills)
 
         pages = paginator.SimplePages(entries=entries, icon=self.bot.mk.NATION_ICON_URL,
-                                      author=f"Legislative Session #{session.id}", per_page=20)
+                                      author=f"Legislative Session #{session.id}")
         await pages.start(ctx)
 
     @session.command(name="open", aliases=["o"])
