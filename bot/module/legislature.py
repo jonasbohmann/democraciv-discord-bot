@@ -632,7 +632,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                        f" ({len(bills)})__**")
 
         if not sponsor_filter:
-            entries.append(f"*You can filter the list of submitted bills of a session by their amount of sponsor. "
+            entries.append(f"*You can filter the list of submitted bills of a session by their amount of sponsors. "
                            f"For example, using `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session >=2` "
                            f"would only show bills that have 2 or more sponsors. See the help page of this command "
                            f"for more information.*\n")

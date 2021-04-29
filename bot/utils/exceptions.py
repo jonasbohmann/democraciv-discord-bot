@@ -61,7 +61,7 @@ class ChannelNotFoundError(NotFoundError):
 class NotDemocracivGuildError(DemocracivBotException):
     """Raised when a Democraciv-specific command is called outside the Democraciv guild"""
 
-    def __init__(self, message=f"{config.NO} You can only use this command on the Democraciv server!"):
+    def __init__(self, message=f"{config.NO} You can only use this command on the Democraciv server."):
         self.message = message
 
 

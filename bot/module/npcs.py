@@ -216,11 +216,17 @@ class NPC(CustomCog):
                 return webhook
 
     @commands.group(name="npc", aliases=['npcs'], invoke_without_command=True, case_insensitive=True)
-    async def npc(self, ctx: CustomContext, *, npc: AnyNPCConverter = None):
+    async def npc(self, ctx: CustomContext, *, npc: typing.Union[AnyNPCConverter, converter.CaseInsensitiveMember] = None):
         """What is an NPC?"""
 
-        if npc:
+        if npc and isinstance(npc, AnyNPCConverter):
             return await ctx.invoke(self.bot.get_command("npc info"), npc=npc)
+
+        if ctx.invoked_with.lower() == "npcs":
+            npc = npc or ctx.author
+
+            if isinstance(npc, discord.Member):
+                return await ctx.invoke(self.bot.get_command("npc list"), member=npc)
 
         p = config.BOT_PREFIX
         embed = text.SafeEmbed(description=f"NPCs allow you to make it look like you speak as a different character, "
@@ -433,7 +439,7 @@ class NPC(CustomCog):
         await self._load_automatic_trigger_cache()
         await ctx.send(f"{config.YES} `{npc.name}` was deleted.")
 
-    @npc.command(name="list", aliases=['from', 'by', 'f'])
+    @npc.command(name="list", aliases=['from', 'by', 'f', 'l'])
     async def list_npcs(self, ctx: CustomContext, *, member: typing.Union[
         converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.FuzzyCIMember] = None):
         """List every NPC you or someone else has access to
@@ -446,6 +452,7 @@ class NPC(CustomCog):
 
         member = member or ctx.author
         npcs = [self._npc_cache[i] for i in self._npc_access_cache[member.id]]
+        npcs.sort(key=lambda npc: npc['id'])
 
         pretty_npcs = []
 
@@ -453,10 +460,12 @@ class NPC(CustomCog):
             avatar = f"[Avatar]({record['avatar_url']})\n" if record['avatar_url'] else ""
 
             owner = ctx.guild.get_member(record['owner_id']) or self.bot.get_user(record['owner_id'])
-            owner_value = "" if not owner else f"Owner: {owner.mention} ({owner})\n"
+            owner_value = "\n" if not owner else f"Owner: {owner.mention} ({owner})\n"
 
             pretty_npcs.append(
-                f"**__NPC #{record['id']} - {record['name']}__**\n{avatar}Trigger Phrase: `{record['trigger_phrase']}`\n{owner_value}")
+                f"**__NPC #{record['id']} - {record['name']}__**")
+            pretty_npcs.append(f"{avatar}Trigger Phrase: `{record['trigger_phrase']}`")
+            pretty_npcs.append(owner_value)
 
         if pretty_npcs:
             pretty_npcs.insert(0, f"You can create a new NPC with `{config.BOT_PREFIX}npc create`, "
