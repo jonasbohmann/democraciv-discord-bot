@@ -586,6 +586,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         entries = []
         sponsors_needed = ""
         bills = [await Bill.convert(ctx, b_id) for b_id in session.bills]
+        amount_of_all_bills = len(bills)
 
         if sponsor_filter:
             filter_func, sponsors_needed = sponsor_filter
@@ -628,8 +629,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             pretty_motions.append(last_motion)
             entries.extend(pretty_motions)
 
+        amount = f"{len(bills)}/{amount_of_all_bills}" if sponsor_filter else amount_of_all_bills
+
         entries.append(f"**__Submitted Bills{'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'}"
-                       f" ({len(bills)})__**")
+                       f" ({amount})__**")
 
         if not sponsor_filter:
             entries.append(f"*You can filter the list of submitted bills of a session by their amount of sponsors. "
