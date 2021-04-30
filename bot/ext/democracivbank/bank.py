@@ -371,30 +371,28 @@ class Bank(context.CustomCog):
     async def bank(self, ctx):
         """The Bank of Democraciv"""
 
-        response = await self.request(BankRoute("GET", "statistics/"))
-
         embed = text.SafeEmbed(
-            description=f"The {self.BANK_NAME} provides the international community with free financial "
+            description=f"The [{self.BANK_NAME}](https://democracivbank.com) provides the international community "
+                        f"with free financial "
                         f"services: Personal & Shared Bank Accounts with complete transaction records, a "
                         f"corporate registry, personalized notifications, support for multiple currencies and a "
-                        f"deep integration into the Democraciv Discord Bot.\n\nSign up for an account over at "
-                        f"[democracivbank.com](https://democracivbank.com) and connect your Discord Account on "
-                        f"[democracivbank.com/me/discord](https://democracivbank.com/me/discord) for the "
-                        f"full experience."
+                        f"deep integration into the Democraciv Discord Bot.\n\nYou can register at "
+                        f"[democracivbank.com](https://democracivbank.com) and open as many bank accounts as you want. "
+                        f"We don't have, give out or loan any money ourselves, so to actually get some "
+                        f"money you need to consult with our third-party partners (usually governments) "
+                        f"that issue the currencies.\n\n"
+                        f"Connect your Discord Account on "
+                        f"[democracivbank.com/me/discord](https://democracivbank.com/me/discord) to get access to "
+                        f"the `{config.BOT_PREFIX}bank` commands, like "
+                        f"`{config.BOT_PREFIX}bank accounts` to view all of your balances right here in Discord, "
+                        f"and to enable personalized "
+                        f"notifications in real-time whenever someone sends you money.\n\nSee `{config.BOT_PREFIX}help "
+                        f"bank` for a list of all bank related commands here on Discord."
+
         )
 
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
-
-        if response.status == 200:
-            json = await response.json()
-            pl = []
-
-            for k, v in json.items():
-                pl.append(f"{k}: {v}")
-
-            pl = "\n".join(pl)
-            embed.add_field(name="Statistics", value=pl, inline=False)
-
+        embed.set_image(url="https://cdn.discordapp.com/attachments/738903909535318086/837833943377903616/bank.PNG")
         await ctx.send(embed=embed)
 
     @bank.command(name="organization", aliases=["org", "corp", "company", "corporation", "marketplace", "m"])
@@ -580,23 +578,38 @@ class Bank(context.CustomCog):
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
         await ctx.send(embed=embed)
 
-    @bank.command(name="circulation", aliases=["total"])
-    async def circulation(self, ctx):
-        """See how much of every currency is currently in circulation"""
-
-        embed = text.SafeEmbed(
-            title="Currency Circulation",
-            description=f"This does not include any currency reserves that "
-                        f"were provided by the {self.BANK_NAME} when this currency "
-                        f"was originally created.",
-        )
+    @bank.command(name="stats", aliases=["circulation", "statistics", "total"])
+    async def statistics(self, ctx):
+        """See how much of every currency is currently in circulation and other statistics"""
 
         response = await self.request(BankRoute("GET", f"currencies/"))
-        result = await response.json()
+        currencies = await response.json()
 
-        for currency in result["result"]:
+        stat_response = await self.request(BankRoute("GET", f"statistics/"))
+        stats = await stat_response.json()
+
+        embed = text.SafeEmbed(
+            description=f"\n\nThere are a total of {stats['total_bank_accounts']} open bank accounts across "
+            f"all currencies with a total of {stats['total_transactions']} transactions between "
+            f"all of them. Japan has {stats['organizations']['Japan']} registered "
+            f"organizations.\n\nThe shown circulation of a currency does not include any currency reserves that "
+            f"were provided by the {self.BANK_NAME} when this currency "
+            f"was originally created.\n\nThe velocity is calculated as the amount of currency transferred "
+            f"in the last 7 days divided by its total circulation."
+        )
+
+        embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
+
+        for currency in currencies["result"]:
             as_object = self.get_currency(currency["code"])
-            embed.add_field(name=currency["name"], value=as_object.with_amount(currency["circulation"]), inline=False)
+
+            stat = stats['currencies']['detail'][currency["code"].upper()]
+            value = f"Circulation: {as_object.with_amount(currency['circulation'])}\n" \
+                    f"Transactions: {stat['transactions']}\n" \
+                    f"Bank Accounts: {stat['bank_accounts']}\n" \
+                    f"Velocity in the last 7 days: {stat['velocity']:.2f}"
+
+            embed.add_field(name=currency["name"], value=value)
 
         await ctx.send(embed=embed)
 
