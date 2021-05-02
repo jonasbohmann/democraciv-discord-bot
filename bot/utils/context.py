@@ -143,14 +143,14 @@ class CustomContext(commands.Context):
                 timeout=timeout,
             )
         except asyncio.TimeoutError:
+            return False
+        else:
+            return True
+        finally:
             try:
                 await message.clear_reaction(emoji)
             except discord.HTTPException:
                 pass
-
-            return False
-        else:
-            return True
 
     async def confirm(self, text: str = None, *, message: discord.Message = None, timeout=300) -> bool:
         """Adds the {config.YES} and {config.NO} emoji to the message and returns the reaction and user if either
