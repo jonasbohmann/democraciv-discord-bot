@@ -349,8 +349,16 @@ class PaginatedHelpCommand(commands.HelpCommand):
 
             if cmd.startswith(("bill", "b", "bill", "motion", "m", "motions", "session", "s", "sessions")):
                 maybe_cmd = f"{ctx.bot.mk.LEGISLATURE_COMMAND} {command}"
-                if ctx.bot.get_command(maybe_cmd):
-                    command = maybe_cmd
+                found = ctx.bot.get_command(maybe_cmd)
+
+                if found:
+                    try:
+                        parent = found.parents[-2]
+
+                        if parent.name in ("bill", "motion", "session"):
+                            command = maybe_cmd
+                    except IndexError:
+                        pass
 
         return await super().command_callback(ctx, command=command)
 

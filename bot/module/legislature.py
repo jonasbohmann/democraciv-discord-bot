@@ -249,9 +249,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         return await self._detail_view(ctx, obj=bill_id)
 
-    @bill.command(name="synchronize", aliases=["sync", "refresh"])
+    @bill.command(name="synchronize", aliases=["sync", "refresh", "synchronise"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
-    async def b_refresh(self, ctx, bills: commands.Greedy[models.Bill]):
+    async def b_refresh(self, ctx, bill_ids: commands.Greedy[models.Bill]):
         """Synchronize the name & content of one or multiple bills with Google Docs
 
         This gets the current title and the current content of the Google Docs document of a bill,
@@ -261,13 +261,19 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         **Example**
             `{PREFIX}{COMMAND} 12`
             `{PREFIX}{COMMAND} 45 46 49 51 52`"""
+
+        bills = bill_ids
+
+        if not bills:
+            return await ctx.send_help(ctx.command)
+
         errs = []
 
         for bill in bills:
             name, keywords, content = await bill.fetch_name_and_keywords()
 
             if not name:
-                errs.append(f"Error syncing Bill #{bill.id} - {bill.name}. Skipping update..")
+                errs.append(f"Error synchronizing Bill #{bill.id} - {bill.name}. Skipping update..")
                 continue
 
             await self.bot.db.execute("UPDATE bill SET name = $1, content = $3 WHERE id = $2", name, bill.id, content)
