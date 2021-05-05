@@ -479,17 +479,17 @@ class Starboard(context.CustomCog):
         self,
         ctx,
         *,
-        member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
+        person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
     ):
         """Statistics about our Starboard
 
         **Usage**
              `{PREFIX}{COMMAND}` for statistics on the general starboard usage
              `{PREFIX}{COMMAND} <member>` for statistics on the starboard usage of a specific member"""
-        if member is None:
+        if person is None:
             await self.star_overall_stats(ctx)
         else:
-            await self.star_member_stats(ctx, member)
+            await self.star_member_stats(ctx, person)
 
     @staticmethod
     def records_to_value(records, fmt=None, default="-"):

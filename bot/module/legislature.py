@@ -204,12 +204,12 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         await pages.start(ctx)
 
     @legislature.command(name="from", aliases=['f', 'by'])
-    async def _from(self, ctx: context.CustomContext, *, member_or_party: typing.Union[converter.CaseInsensitiveMember,
+    async def _from(self, ctx: context.CustomContext, *, person_or_party: typing.Union[converter.CaseInsensitiveMember,
                                                                                        converter.CaseInsensitiveUser,
                                                                                        converter.PoliticalParty,
                                                                                        converter.FuzzyCIMember] = None):
         """List all bills and motions that a specific person or Political Party submitted"""
-        member_or_party = member_or_party or ctx.author
+        member_or_party = person_or_party or ctx.author
 
         bills = await self._from_person_model(ctx, member_or_party=member_or_party, model=Bill, paginate=False)
         motions = await self._from_person_model(ctx, member_or_party=member_or_party, model=Motion, paginate=False)
@@ -436,7 +436,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             self,
             ctx: context.CustomContext,
             *,
-            member_or_party: typing.Union[
+            person_or_party: typing.Union[
                 converter.CaseInsensitiveMember,
                 converter.CaseInsensitiveUser,
                 converter.PoliticalParty,
@@ -444,7 +444,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             ] = None,
     ):
         """List all bills that a specific person or Political Party submitted"""
-        return await self._from_person_model(ctx, member_or_party=member_or_party, model=models.Bill)
+        return await self._from_person_model(ctx, member_or_party=person_or_party, model=models.Bill)
 
     @legislature.group(
         name="motion",
@@ -539,7 +539,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             self,
             ctx: context.CustomContext,
             *,
-            member_or_party: typing.Union[
+            person_or_party: typing.Union[
                 converter.CaseInsensitiveMember,
                 converter.CaseInsensitiveUser,
                 converter.PoliticalParty,
@@ -547,7 +547,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             ] = None,
     ):
         """List all motions that a specific person or Political Party submitted"""
-        return await self._from_person_model(ctx, model=models.Motion, member_or_party=member_or_party)
+        return await self._from_person_model(ctx, model=models.Motion, member_or_party=person_or_party)
 
     @motion.command(name="search", aliases=["s"])
     async def m_search(self, ctx: context.CustomContext, *, query: str):

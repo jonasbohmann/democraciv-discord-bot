@@ -518,7 +518,7 @@ class Bank(context.CustomCog):
     async def send(
             self,
             ctx,
-            to_member_or_iban_or_organization: typing.Union[
+            to_person_or_iban_or_organization: typing.Union[
                 converter.CaseInsensitiveMember,
                 converter.CaseInsensitiveUser,
                 uuid.UUID,
@@ -541,7 +541,7 @@ class Bank(context.CustomCog):
         await self.is_connected_with_bank_user(ctx)
         currency = "XYZ"  # linter
 
-        if not isinstance(to_member_or_iban_or_organization, uuid.UUID):
+        if not isinstance(to_person_or_iban_or_organization, uuid.UUID):
             # if IBAN, skip currency selection
             currency = await CurrencySelector(self._currencies).prompt(ctx)
 
@@ -550,19 +550,19 @@ class Bank(context.CustomCog):
 
             from_iban = await self.resolve_iban(ctx.author.id, currency, is_sender=True)
 
-        if isinstance(to_member_or_iban_or_organization, discord.Member):
-            to_iban = await self.resolve_iban(to_member_or_iban_or_organization.id, currency)
-        elif isinstance(to_member_or_iban_or_organization, str):
-            to_iban = await self.resolve_iban(to_member_or_iban_or_organization, currency)
+        if isinstance(to_person_or_iban_or_organization, discord.Member):
+            to_iban = await self.resolve_iban(to_person_or_iban_or_organization.id, currency)
+        elif isinstance(to_person_or_iban_or_organization, str):
+            to_iban = await self.resolve_iban(to_person_or_iban_or_organization, currency)
         else:
             # is UUID
-            if to_member_or_iban_or_organization.version != 4:
+            if to_person_or_iban_or_organization.version != 4:
                 raise BankInvalidIBANFormat(
                     f"{config.NO} That is not a valid IBAN, it needs to be in this "
                     "format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`"
                 )
 
-            to_iban = str(to_member_or_iban_or_organization)
+            to_iban = str(to_person_or_iban_or_organization)
             currency = await self.get_currency_from_iban(to_iban)
             from_iban = await self.resolve_iban(ctx.author.id, currency, is_sender=True)
 

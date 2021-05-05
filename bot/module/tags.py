@@ -141,11 +141,11 @@ class Tags(context.CustomCog):
             self,
             ctx: context.CustomContext,
             *,
-            member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
+            person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
     ):
-        """List the tags that someone made"""
+        """List the tags that someone made on this server"""
 
-        member = member or ctx.author
+        member = person or ctx.author
         all_tags = await self.bot.db.fetch(
             "SELECT * FROM tag WHERE author = $1 AND guild_id = $2 ORDER BY uses desc",
             member.id,

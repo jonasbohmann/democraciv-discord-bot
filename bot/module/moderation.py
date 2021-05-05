@@ -239,18 +239,18 @@ class Moderation(context.CustomCog):
 
     @commands.command(name="alt", hidden=True)
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
-    async def alt(self, ctx, *, member: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
+    async def alt(self, ctx, *, person: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
         """Check if someone is an alt"""
-        chance, details = await self.calculate_alt_chance(member)
+        chance, details = await self.calculate_alt_chance(person)
 
         embed = text.SafeEmbed(
             title="Possible Alt Detection",
             description="This is in no way perfect and should always be taken with a grain of salt.",
         )
-        embed.add_field(name="Target", value=f"{member.mention} ({member.id})", inline=False)
+        embed.add_field(name="Target", value=f"{person.mention} ({person.id})", inline=False)
         embed.add_field(
             name="Result",
-            value=f"There is a **{(chance * 100):.0f}%** chance that {member} is an alt.",
+            value=f"There is a **{(chance * 100):.0f}%** chance that {person} is an alt.",
         )
 
         if details:
@@ -312,35 +312,35 @@ class Moderation(context.CustomCog):
     @commands.guild_only()
     @commands.bot_has_permissions(kick_members=True)
     @commands.has_permissions(kick_members=True)
-    async def kick(self, ctx, *, member: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
+    async def kick(self, ctx, *, person: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
         """Kick someone"""
-        if member == ctx.author:
+        if person == ctx.author:
             return await ctx.send(f"{config.NO} You can't kick yourself.")
 
-        if member == self.bot.owner:
+        if person == self.bot.owner:
             #  :)
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_KICK)
 
-        if member == ctx.guild.me:
+        if person == ctx.guild.me:
             return await ctx.send(f"{config.NO} I can't kick myself.")
 
-        if member.top_role >= ctx.author.top_role:
+        if person.top_role >= ctx.author.top_role:
             return await ctx.send(f"{config.NO} You aren't allowed to kick someone with a higher role than yours.")
 
         formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id})."
 
         await self.bot.safe_send_dm(
-            target=member,
+            target=person,
             reason="ban_kick_mute",
             message=f":boot: You were **kicked** from {ctx.guild.name}.",
         )
 
         try:
-            await ctx.guild.kick(member, reason=formatted_reason)
+            await ctx.guild.kick(person, reason=formatted_reason)
         except discord.Forbidden:
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MEMBER_KICK)
 
-        await ctx.send(f"{config.YES} {member} was kicked.")
+        await ctx.send(f"{config.YES} {person} was kicked.")
 
     @commands.command(name="clear")
     @commands.guild_only()
@@ -397,7 +397,7 @@ class Moderation(context.CustomCog):
     @commands.command(name="mute")
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
-    async def mute(self, ctx, *, member: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
+    async def mute(self, ctx, *, person: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
         """Mute someone"""
 
         muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
@@ -415,34 +415,34 @@ class Moderation(context.CustomCog):
         if muted_role is None:
             raise exceptions.RoleNotFoundError("Muted")
 
-        if muted_role in member.roles:
-            return await ctx.send(f"{config.NO} {member} is already muted.")
+        if muted_role in person.roles:
+            return await ctx.send(f"{config.NO} {person} is already muted.")
 
         formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id})"
 
-        if member == ctx.author:
+        if person == ctx.author:
             return await ctx.send(f"{config.NO} You can't mute yourself.")
 
-        if member == ctx.guild.me:
+        if person == ctx.guild.me:
             return await ctx.send(f"{config.NO} You can't mute me.")
 
         try:
-            await member.add_roles(muted_role, reason=formatted_reason)
+            await person.add_roles(muted_role, reason=formatted_reason)
         except discord.Forbidden:
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.ADD_ROLE, detail="Muted")
 
         await self.bot.safe_send_dm(
-            target=member,
+            target=person,
             reason="ban_kick_mute",
             message=f":zipper_mouth: You were **muted** in {ctx.guild.name}.",
         )
 
-        await ctx.send(f"{config.YES} {member} was muted.")
+        await ctx.send(f"{config.YES} {person} was muted.")
 
     @commands.command(name="unmute")
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
-    async def unmute(self, ctx, *, member: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
+    async def unmute(self, ctx, *, person: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
         """Unmute someone"""
 
         muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
@@ -450,27 +450,27 @@ class Moderation(context.CustomCog):
         if muted_role is None:
             raise exceptions.RoleNotFoundError("Muted")
 
-        if muted_role not in member.roles:
-            return await ctx.send(f"{config.NO} {member} is not muted.")
+        if muted_role not in person.roles:
+            return await ctx.send(f"{config.NO} {person} is not muted.")
 
         try:
-            await member.remove_roles(muted_role, reason=f"Action requested by {ctx.author}.")
+            await person.remove_roles(muted_role, reason=f"Action requested by {ctx.author}.")
         except discord.Forbidden:
             raise exceptions.ForbiddenError(exceptions.ForbiddenTask.REMOVE_ROLE, detail="Muted")
 
         await self.bot.safe_send_dm(
-            target=member,
+            target=person,
             reason="ban_kick_mute",
             message=f":innocent: You were **unmuted** in {ctx.guild.name}.",
         )
 
-        await ctx.send(f"{config.YES} {member} was unmuted.")
+        await ctx.send(f"{config.YES} {person} was unmuted.")
 
     @commands.command(name="ban")
     @commands.guild_only()
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
-    async def ban(self, ctx, *, member: BanConverter):
+    async def ban(self, ctx, *, person: BanConverter):
         """Ban someone
 
         If you want to ban a user that is not in this server, use the user's ID instead.
@@ -482,12 +482,12 @@ class Moderation(context.CustomCog):
             `{PREFIX}{COMMAND} darthspectrum#4924` ban by username#discriminator
             `{PREFIX}{COMMAND} 561280863464062977` ban by ID"""
 
-        if isinstance(member, discord.Member):
-            member_object = member
-            member_id = member.id
-        elif isinstance(member, int):
+        if isinstance(person, discord.Member):
+            member_object = person
+            member_id = person.id
+        elif isinstance(person, int):
             member_object = None
-            member_id = member
+            member_id = person
         else:
             return await ctx.send(f"{config.NO} I couldn't find that person.")
 
@@ -538,15 +538,15 @@ class Moderation(context.CustomCog):
     @commands.guild_only()
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
-    async def unban(self, ctx, *, user: UnbanConverter):
+    async def unban(self, ctx, *, person: UnbanConverter):
         """Unban someone
 
         **Example**
             `{PREFIX}{COMMAND} darthspectrum` unban by Discord username
             `{PREFIX}{COMMAND} 561280863464062977` unban by Discord ID"""
 
-        user_object = user
-        user_id = user.id
+        user_object = person
+        user_id = person.id
 
         if user_id is None:
             return await ctx.send(f"{config.NO} I couldn't find that person.")

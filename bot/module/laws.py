@@ -150,11 +150,11 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             self,
             ctx,
             *,
-            member_or_party: typing.Union[
+            person_or_party: typing.Union[
                 CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty, FuzzyCIMember] = None,
     ):
         """List the laws a specific person or Political Party authored"""
-        return await self._from_person_model(ctx, model=models.Law, member_or_party=member_or_party)
+        return await self._from_person_model(ctx, model=models.Law, member_or_party=person_or_party)
 
     @law.command(name="read", aliases=["text", "txt", "content"])
     async def read(self, ctx, *, law_id: models.Law):

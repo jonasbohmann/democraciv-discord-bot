@@ -471,11 +471,11 @@ class Utility(context.CustomCog):
             self,
             ctx,
             *,
-            member: typing.Union[
-                CaseInsensitiveMember, DemocracivCaseInsensitiveRole, PoliticalParty, FuzzyCIMember
+            person: typing.Union[
+                CaseInsensitiveMember, DemocracivCaseInsensitiveRole, PoliticalParty, CaseInsensitiveUser, FuzzyCIMember
             ] = None,
     ):
-        """Get detailed information about a member of this server
+        """See detailed information about someone
 
         **Example**
          `{PREFIX}{COMMAND}`
@@ -484,6 +484,7 @@ class Utility(context.CustomCog):
          `{PREFIX}{COMMAND} DerJonas`
          `{PREFIX}{COMMAND} deRjoNAS`
          `{PREFIX}{COMMAND} DerJonas#8109`
+         `{PREFIX}{COMMAND} 212972352890339328`
         """
 
         def _get_roles(roles):
@@ -498,44 +499,51 @@ class Utility(context.CustomCog):
             else:
                 return ", ".join(fmt)
 
-        if isinstance(member, discord.Role):
-            return await self.role_info(ctx, member)
+        if isinstance(person, discord.Role):
+            return await self.role_info(ctx, person)
 
-        elif isinstance(member, PoliticalParty):
-            return await self.role_info(ctx, member.role)
+        elif isinstance(person, PoliticalParty):
+            return await self.role_info(ctx, person.role)
 
-        member = member or ctx.author
-        join_pos, max_members = await self.get_member_join_position(member, ctx.guild.members)
+        member = person or ctx.author
+        embed = text.SafeEmbed()
 
-        if not join_pos:
-            join_pos = "Unknown"
+        if isinstance(member, discord.User):
+            embed.description = ":warning: This person is not here in this server."
 
-        embed = text.SafeEmbed(title="Member Information")
-        embed.add_field(name="Member", value=f"{member} {member.mention}", inline=False)
+        embed.add_field(name="Person", value=f"{member} {member.mention}", inline=False)
         embed.add_field(name="ID", value=member.id, inline=False)
         embed.add_field(
             name="Discord Registration",
             value=f'{member.created_at.strftime("%B %d, %Y")}',
             inline=True,
         )
-        embed.add_field(
-            name="Joined",
-            value=f'{(await self.get_member_join_date(member)).strftime("%B %d, %Y")}',
-            inline=True,
-        )
-        embed.add_field(name="Join Position", value=f"{join_pos}/{max_members}", inline=True)
-        embed.add_field(
-            name=f"Roles ({len(member.roles) - 1})",
-            value=_get_roles(member.roles),
-            inline=False,
-        )
+
+        if isinstance(member, discord.Member):
+            join_pos, max_members = await self.get_member_join_position(member, ctx.guild.members)
+
+            if not join_pos:
+                join_pos = "Unknown"
+
+            embed.add_field(
+                name="Joined",
+                value=f'{(await self.get_member_join_date(member)).strftime("%B %d, %Y")}',
+                inline=True,
+            )
+            embed.add_field(name="Join Position", value=f"{join_pos}/{max_members}", inline=True)
+            embed.add_field(
+                name=f"Roles ({len(member.roles) - 1})",
+                value=_get_roles(member.roles),
+                inline=False,
+            )
+
         embed.set_thumbnail(url=member.avatar_url_as(static_format="png"))
         await ctx.send(embed=embed)
 
-    @commands.command(name="avatar", aliases=["pfp"])
+    @commands.command(name="avatar", aliases=["pfp", "avy"])
     @commands.guild_only()
     async def avatar(
-            self, ctx, *, member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None
+            self, ctx, *, person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None
     ):
         """View someone's avatar in detail
 
@@ -546,7 +554,7 @@ class Utility(context.CustomCog):
              `{PREFIX}{COMMAND} DerJonas#8109`
         """
 
-        member = member or ctx.author
+        member = person or ctx.author
         avatar_png = str(member.avatar_url_as(static_format="png", size=4096))
         embed = text.SafeEmbed()
         embed.set_image(url=avatar_png)
@@ -720,11 +728,11 @@ class Utility(context.CustomCog):
     @commands.command(name="vibecheck", hidden=True)
     @commands.guild_only()
     async def vibecheck(
-            self, ctx, *, member: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None
+            self, ctx, *, person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None
     ):
         """vibecheck"""
 
-        member = member or ctx.author
+        member = person or ctx.author
 
         not_vibing = [
             "https://i.kym-cdn.com/entries/icons/mobile/000/031/163/Screen_Shot_2019-09-16_at_10.22.26_AM.jpg",
