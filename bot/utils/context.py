@@ -202,6 +202,7 @@ class CustomContext(commands.Context):
             timeout: int = 300,
             delete_after: bool = False,
             image_allowed: bool = False,
+            return_cleaned: bool = False
     ) -> str:
         """Waits for a reply by the original user in the original channel and returns reply as string.
 
@@ -228,7 +229,7 @@ class CustomContext(commands.Context):
                 except discord.HTTPException:
                     pass
 
-            return message.content
+            return message.clean_content if return_cleaned else message.content
 
     async def converted_input(
             self,

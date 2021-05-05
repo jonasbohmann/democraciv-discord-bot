@@ -269,23 +269,29 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         errs = []
 
-        for bill in bills:
-            name, keywords, content = await bill.fetch_name_and_keywords()
+        async with ctx.typing():
+            async with self.bot.db.acquire() as connection:
+                async with connection.transaction():
+                    for bill in bills:
+                        name, keywords, content = await bill.fetch_name_and_keywords()
 
-            if not name:
-                errs.append(f"Error synchronizing Bill #{bill.id} - {bill.name}. Skipping update..")
-                continue
+                        if not name:
+                            errs.append(f"Error synchronizing Bill #{bill.id} - {bill.name}. Skipping update..")
+                            continue
 
-            await self.bot.db.execute("UPDATE bill SET name = $1, content = $3 WHERE id = $2", name, bill.id, content)
-            await self.bot.db.execute("DELETE FROM bill_lookup_tag WHERE bill_id = $1", bill.id)
-            await self.bot.api_request("POST", "bill/update", json={"id": bill.id})
+                        await connection.execute("UPDATE bill SET name = $1, content = $3 WHERE id = $2", name, bill.id,
+                                                 content)
+                        await connection.execute("DELETE FROM bill_lookup_tag WHERE bill_id = $1", bill.id)
 
-            id_with_kws = [(bill.id, keyword) for keyword in keywords]
-            self.bot.loop.create_task(
-                self.bot.db.executemany(
-                    "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES " "($1, $2) ON CONFLICT DO NOTHING ", id_with_kws
-                )
-            )
+                        id_with_kws = [(bill.id, keyword) for keyword in keywords]
+                        self.bot.loop.create_task(
+                            connection.executemany(
+                                "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING ",
+                                id_with_kws
+                            )
+                        )
+
+                        await self.bot.api_request("POST", "bill/update", json={"id": bill.id})
 
         msg = f"{config.YES} Synchronized {len(bills) - len(errs)}/{len(bills)} bills with Google Docs."
 
@@ -1318,7 +1324,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         bill_description = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with a **short** summary of what your bill does.",
-            timeout=400,
+            timeout=400, return_cleaned=True
         )
 
         if not bill_description:
@@ -1366,26 +1372,26 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 )
             )
 
-            embed = text.SafeEmbed(
-                title="Bill Submitted",
-                description="Hey! A new **bill** was just submitted.",
-                timestamp=datetime.datetime.utcnow(),
-            )
-            embed.add_field(name="Title", value=name, inline=False)
-            embed.add_field(name="Author", value=ctx.message.author.name, inline=False)
-            embed.add_field(name="Session", value=current_leg_session_id)
-            # embed.add_field(
-            #    name=f"{self.bot.mk.MINISTRY_NAME} Veto Allowed",
-            #    value="Yes" if is_vetoable else "No",
-            # )
-            embed.add_field(
-                name="Time of Submission (UTC)",
-                value=datetime.datetime.utcnow(),
-                inline=False,
-            )
-            embed.add_field(name="URL", value=google_docs_url, inline=False)
+        embed = text.SafeEmbed(
+            title=f"{name} (#{bill_id})",
+            url=google_docs_url,
+            description=f"Hey! A new **bill** was just submitted to session #{current_leg_session_id}."
+        )
+        embed.add_field(name="Description", value=bill_description, inline=False)
+        embed.add_field(name="Author", value=f"{ctx.author.mention} {ctx.author}", inline=False)
+        embed.add_field(name="Google Docs Document", value=google_docs_url, inline=False)
 
-        await self.bot.api_request("POST", "bill/add", silent=True, json={"id": bill_id})
+        # embed.add_field(
+        #    name=f"{self.bot.mk.MINISTRY_NAME} Veto Allowed",
+        #    value="Yes" if is_vetoable else "No",
+        # )
+
+        embed.add_field(
+            name="Exact Time of Submission",
+            value=datetime.datetime.utcnow().strftime("%B %d, %Y %H:%M:%S UTC"),
+        )
+
+        embed.set_author(icon_url=ctx.author_icon, name=f"Submitted by {ctx.author.display_name}")
 
         p = config.BOT_PREFIX
         l = self.bot.mk.LEGISLATURE_COMMAND
@@ -1438,6 +1444,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         )
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
+        await self.bot.api_request("POST", "bill/add", silent=True, json={"id": bill_id})
         return embed
 
     async def submit_motion(
@@ -1446,7 +1453,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         title = await ctx.input(
             f"{config.YES} You will submit a **motion**.\n"
-            f"{config.USER_INTERACTION_REQUIRED} Reply with a short **title** for your motion."
+            f"{config.USER_INTERACTION_REQUIRED} Reply with a short **title** for your motion.", return_cleaned=True
         )
 
         if not title:
@@ -1454,7 +1461,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         description = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the **content** of your motion. If your motion is"
-            " inside a Google Docs document, just use a link to that for this."
+            " inside a Google Docs document, just use a link to that for this.", return_cleaned=True
         )
 
         if not description:
@@ -1470,9 +1477,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 )
                 return
 
-            await self.bot.db.execute(
+            motion_id = await self.bot.db.fetchval(
                 "INSERT INTO motion (leg_session, title, description, submitter, paste_link) "
-                "VALUES ($1, $2, $3, $4, $5)",
+                "VALUES ($1, $2, $3, $4, $5) RETURNING id",
                 current_leg_session_id,
                 title,
                 description,
@@ -1480,20 +1487,17 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 haste_bin_url,
             )
 
-            embed = text.SafeEmbed(
-                title="Motion Submitted",
-                description="Hey! A new **motion** was just submitted.",
-                timestamp=datetime.datetime.utcnow(),
-            )
-            embed.add_field(name="Title", value=title, inline=False)
-            embed.add_field(name="Content", value=description, inline=False)
-            embed.add_field(name="Author", value=ctx.message.author.name)
-            embed.add_field(name="Session", value=current_leg_session_id)
-            embed.add_field(
-                name="Time of Submission (UTC)",
-                value=datetime.datetime.utcnow(),
-                inline=False,
-            )
+        embed = text.SafeEmbed(
+            title=f"{title} (#{motion_id})",
+            description=f"Hey! A new **motion** was just submitted to session #{current_leg_session_id}.",
+            url=haste_bin_url
+        )
+
+        embed.add_field(name="Content", value=description, inline=False)
+        embed.add_field(name="Author", value=f"{ctx.author.mention} {ctx.author}")
+        embed.add_field(name="Exact Time of Submission",
+                        value=datetime.datetime.utcnow().strftime("%B %d, %Y %H:%M:%S UTC"), inline=False)
+        embed.set_author(icon_url=ctx.author_icon, name=f"Submitted by {ctx.author.display_name}")
 
         await ctx.send(f"{config.YES} Your motion `{title}` was submitted for session #{current_leg_session_id}.")
         return embed
@@ -1651,6 +1655,17 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             f"be updated, the {self.bot.mk.speaker_term} can use my "
             f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code. "
         )
+
+        bills_that_might_repeal_something = [f" - Law #{bill.id} - {bill.name} (<{bill.tiny_link}>)"
+                                             for bill in consumer.passed if "repeal" in bill.content.lower()]
+
+        if bills_that_might_repeal_something:
+            fmt = "\n".join(bills_that_might_repeal_something)
+
+            await ctx.send(f"{config.HINT} {ctx.author.mention}, I found the word `repeal` in the following laws that "
+                           f"you just passed. Maybe you have to repeal some laws?\n\n{fmt}\n\n"
+                           f"You can repeal laws with `{config.BOT_PREFIX}law repeal`.",
+                           allowed_mentions=discord.AllowedMentions(users=[ctx.author]))
 
     @legislature.group(name="withdraw", aliases=["w"], hidden=True)
     @checks.is_democraciv_guild()
