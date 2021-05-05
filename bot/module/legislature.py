@@ -598,7 +598,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             filter_func, sponsors_needed = sponsor_filter
             bills = list(filter(filter_func, bills))
 
-        pretty_bills = [b.formatted for b in bills] or ['-']
+        pretty_bills = [f"{b.formatted} ({len(b.sponsors)} sponsor{'s' if len(b.sponsors) != 1 else ''})"
+                        for b in bills] or ['-']
         speaker = session.speaker or context.MockUser()
 
         description = (f"This session was opened by {speaker.mention} on "

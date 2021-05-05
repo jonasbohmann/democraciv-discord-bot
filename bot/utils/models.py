@@ -278,9 +278,15 @@ class FuzzyBill(Bill):
         except Exception as e:
             matches = await ctx.bot.db.fetch(
                 "SELECT id FROM bill WHERE lower(name) % $1 OR lower(name) LIKE '%' || $1 || '%'"
-                " ORDER BY similarity(lower(name), $1) DESC LIMIT 6;", argument.lower(),
+                " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;", argument.lower(),
             )
-            matches = [await Bill.convert(ctx, match['id']) for match in matches]
+            tag_matches = await ctx.bot.db.fetch(
+                "SELECT DISTINCT bill_id AS id FROM bill_lookup_tag WHERE tag = $1 LIMIT 2;", argument.lower(),
+            )
+
+            matches.extend(tag_matches)
+
+            matches = {await Bill.convert(ctx, match['id']): None for match in matches}
 
             if not matches:
                 raise e
@@ -289,7 +295,7 @@ class FuzzyBill(Bill):
                                     description=f"*Maybe you were looking for the "
                                                 f"`{config.BOT_PREFIX}{ctx.bot.mk.LEGISLATURE_COMMAND} bill search` "
                                                 f"command instead?*\n",
-                                    choices=matches)
+                                    choices=list(matches.keys()))
             bill = await menu.prompt(ctx)
 
             if bill:
@@ -766,9 +772,9 @@ class BillFailedLegislature(BillStatus):
                                note=f"Resubmitted from Session #{self._bill.session.id} to Session #{session} by "
                                     f"[{resubmitter}](https://democracivbank.com/u/{resubmitter.id} "
                                     f"\"{resubmitter.id}\")")  # hyperlink to "hide" discord user id in embed, but
-                                                               # show if user clicks on url. doesn't matter what url,
-                                                               # just want to be able to see the resubmitter's id but
-                                                               # in a nice way
+        # show if user clicks on url. doesn't matter what url,
+        # just want to be able to see the resubmitter's id but
+        # in a nice way
 
     def emojified_status(self, verbose=True):
         if verbose:
