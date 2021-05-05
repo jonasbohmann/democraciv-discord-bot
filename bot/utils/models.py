@@ -276,12 +276,15 @@ class FuzzyBill(Bill):
         try:
             return await super().convert(ctx, argument)
         except Exception as e:
+            lowered = argument.lower()
+
             matches = await ctx.bot.db.fetch(
                 "SELECT id FROM bill WHERE lower(name) % $1 OR lower(name) LIKE '%' || $1 || '%'"
-                " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;", argument.lower(),
+                " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;", lowered
             )
+
             tag_matches = await ctx.bot.db.fetch(
-                "SELECT DISTINCT bill_id AS id FROM bill_lookup_tag WHERE tag = $1 LIMIT 2;", argument.lower(),
+                "SELECT DISTINCT bill_id AS id FROM bill_lookup_tag WHERE tag % $1 LIMIT 2;", lowered
             )
 
             matches.extend(tag_matches)
@@ -310,28 +313,42 @@ class Law(Bill):
         return f"Law #{self.id} - [{self.name}]({self.tiny_link})"
 
     @classmethod
-    async def convert(cls, ctx, argument: typing.Union[int, str]):
+    async def convert(cls, ctx, argument: typing.Union[int, str], silent=False):
         try:
             bill = await super().convert(ctx, argument)
         except NotFoundError:
             raise NotFoundError(f"{config.NO} There is no law that matches `{argument}`.")
 
         if not bill.status.is_law:
-            raise NotLawError(f"{config.NO} `{bill.name}` (#{bill.id}) is not an active law.")
+            if silent:
+                return None
+            else:
+                raise NotLawError(f"{config.NO} `{bill.name}` (#{bill.id}) is not an active law.")
 
         return bill
 
 
 class FuzzyLaw(Law):
-    async def convert(self, ctx: context.CustomContext, argument):
+    async def convert(self, ctx: context.CustomContext, argument, silent=False):
         try:
-            return await super().convert(ctx, argument)
+            return await super().convert(ctx, argument, silent=silent)
         except Exception as e:
+            lowered = argument.lower()
+
             matches = await ctx.bot.db.fetch(
                 "SELECT id FROM bill WHERE status = $2 AND (lower(name) % $1 OR lower(name) LIKE '%' || $1 || '%')"
-                " ORDER BY similarity(lower(name), $1) DESC LIMIT 6;", argument.lower(), BillIsLaw.flag.value
+                " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;", lowered, BillIsLaw.flag.value
             )
-            matches = [await Law.convert(ctx, match['id']) for match in matches]
+
+            tag_matches = await ctx.bot.db.fetch(
+                "SELECT DISTINCT bill_id AS id FROM bill_lookup_tag WHERE tag % $1 LIMIT 2;", lowered
+            )
+
+            matches.extend(tag_matches)
+
+            matches = {await Law.convert(ctx, match['id'], silent=True): None for match in matches}
+
+            matches = list(filter(None, matches))
 
             if not matches:
                 raise e
