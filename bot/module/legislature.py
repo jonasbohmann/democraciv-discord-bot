@@ -2073,37 +2073,48 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             self,
             ctx,
             *,
-            person: typing.Union[
-                converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.FuzzyCIMember
+            person_or_political_party: typing.Union[
+                converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty,
+                converter.FuzzyCIMember
             ] = None,
     ):
-        """Statistics about the {LEGISLATURE_NAME} or a specific person
+        """Legislative statistics about the overall {LEGISLATURE_NAME}, a specific person or a political party
 
         **Example**
         `{PREFIX}{COMMAND}` to get the overall statistics about the {LEGISLATURE_NAME}
-        `{PREFIX}{COMMAND} DerJonas` to get personalized statistics for that person"""
+        `{PREFIX}{COMMAND} DerJonas` to get personalized statistics for that person
+        `{PREFIX}{COMMAND} Ecological Democratic Union` to get statistics for a political party"""
 
-        if not person:
+        if not person_or_political_party:
             return await self._get_leg_stats(ctx)
 
-        query = """SELECT COUNT(*) FROM bill WHERE submitter = $1
-                   UNION ALL
-                   SELECT COUNT(*) FROM bill WHERE submitter = $1 AND status = $2
-                   UNION ALL
-                   SELECT COUNT(*) FROM motion WHERE submitter = $1
-                   UNION ALL
-                   SELECT COUNT(id) FROM bill_sponsor WHERE sponsor = $1
-                   UNION ALL
-                   SELECT COUNT(bill_sponsor.sponsor) FROM bill_sponsor JOIN bill ON bill_sponsor.bill_id = bill.id WHERE bill.submitter = $1"""
+        query = """SELECT COUNT(*) FROM bill WHERE submitter = ANY($1::bigint[])
+                               UNION ALL
+                               SELECT COUNT(*) FROM bill WHERE submitter = ANY($1::bigint[]) AND status = $2
+                               UNION ALL
+                               SELECT COUNT(*) FROM motion WHERE submitter = ANY($1::bigint[])
+                               UNION ALL
+                               SELECT COUNT(id) FROM bill_sponsor WHERE sponsor = ANY($1::bigint[])
+                               UNION ALL
+                               SELECT COUNT(bill_sponsor.sponsor) FROM bill_sponsor JOIN bill 
+                               ON bill_sponsor.bill_id = bill.id WHERE bill.submitter = ANY($1::bigint[])"""
 
-        _stats = await self.bot.db.fetch(query, person.id, models.BillIsLaw.flag.value)
+        if isinstance(person_or_political_party, converter.PoliticalParty):
+            ids = [person.id for person in person_or_political_party.role.members]
+            icon_url = await person_or_political_party.get_logo() or self.bot.mk.NATION_ICON_URL or discord.Embed.Empty
+            name = (f"Members of {person_or_political_party.role.name} in the "
+                    f"{self.bot.mk.NATION_ADJECTIVE} {self.bot.mk.LEGISLATURE_NAME}")
+
+        else:
+            ids = [person_or_political_party.id]
+            icon_url = person_or_political_party.avatar_url_as(static_format="png")
+            name = (f"{person_or_political_party.display_name} in the {self.bot.mk.NATION_ADJECTIVE} "
+                    f"{self.bot.mk.LEGISLATURE_NAME}")
+
+        _stats = await self.bot.db.fetch(query, ids, models.BillIsLaw.flag.value)
 
         embed = text.SafeEmbed()
-        embed.set_author(
-            icon_url=person.avatar_url_as(static_format="png"),
-            name=f"{person.display_name} in the " f"{self.bot.mk.NATION_ADJECTIVE} " f"{self.bot.mk.LEGISLATURE_NAME}",
-        )
-
+        embed.set_author(icon_url=icon_url, name=name)
         embed.add_field(name="Bill Submissions", value=_stats[0]["count"], inline=True)
         embed.add_field(name="Motion Submissions", value=_stats[2]["count"], inline=True)
         embed.add_field(name="Amount of Laws written", value=_stats[1]["count"], inline=False)
