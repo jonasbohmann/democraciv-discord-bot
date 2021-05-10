@@ -607,7 +607,7 @@ class Bank(context.CustomCog):
             value = f"Circulation: {as_object.with_amount(currency['circulation'])}\n" \
                     f"Transactions: {stat['transactions']}\n" \
                     f"Bank Accounts: {stat['bank_accounts']}\n" \
-                    f"Velocity in the last 7 days: {stat['velocity']:.2f}"
+                    f"Velocity in the last 7 days: {stat['velocity']:.3f}"
 
             embed.add_field(name=currency["name"], value=value)
 
