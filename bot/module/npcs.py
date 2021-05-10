@@ -310,7 +310,7 @@ class NPC(CustomCog):
 
         if ctx.invoked_with.lower() == "npcs":
             person = await converter.FuzzyCIMember().convert(ctx, npc) if npc else ctx.author
-            return await ctx.invoke(self.bot.get_command("npc list"), member=person)
+            return await ctx.invoke(self.bot.get_command("npc list"), person=person)
 
         if npc:
             converted = await FuzzyAnyNPCConverter().convert(ctx, npc)
@@ -471,7 +471,7 @@ class NPC(CustomCog):
         if to_change["name"]:
             name = await ctx.input(
                 f"{config.USER_INTERACTION_REQUIRED} Reply with the new name of your NPC."
-                f"\n{config.HINT} The current name is `{npc.name}`",
+                f"\n{config.HINT} The current name is: `{npc.name}`",
             )
 
             if name.lower() == self.bot.user.name.lower():
