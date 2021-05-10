@@ -512,6 +512,7 @@ class Tags(context.CustomCog):
         if to_change["title"]:
             new_title = await ctx.input(
                 f"{config.USER_INTERACTION_REQUIRED} Reply with the updated **title** of the tag."
+                f"\n{config.HINT} The current title is: `{tag.title}`"
                 f"\n{config.HINT} *This will be displayed next to the tag's name, "
                 f"`{tag.name}`, in the `{p}tags`, `{p}tags search` and `{p}tags from` commands. It will "
                 f"also be the title of the embed, if you decided to send this tag as an embed.*"

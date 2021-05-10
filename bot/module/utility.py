@@ -387,7 +387,7 @@ class Utility(context.CustomCog):
             zone = await menu.prompt(ctx)
 
             if not zone:
-                return await ctx.send("Cancelled.")
+                return
 
             tz = pytz.timezone(zone)
 

@@ -121,7 +121,8 @@ class Selfroles(context.CustomCog):
         """
 
         new_join_message = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the new join message " f"for `{role.role.name}`."
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the new join message for `{role.role.name}`."
+            f"\n{config.HINT} The current join message is: `{role.join_message}`"
         )
 
         await self.bot.db.execute(
