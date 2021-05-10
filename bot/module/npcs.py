@@ -38,7 +38,7 @@ class NPCConverter(commands.Converter):
         return hash(self.id)
 
     @property
-    def owner(self) -> typing.Union[discord.Member, discord.User]:
+    def owner(self) -> typing.Union[discord.Member, discord.User, MockOwner]:
         person = self._bot.dciv.get_member(self.owner_id) or self._bot.get_user(self.owner_id)
         return person if person else MockOwner()
 
@@ -547,7 +547,7 @@ class NPC(CustomCog):
         for record in npcs:
             avatar = f"[Avatar]({record['avatar_url']})\n" if record['avatar_url'] else ""
 
-            owner = ctx.guild.get_member(record['owner_id']) or self.bot.get_user(record['owner_id'])
+            owner = self.bot.get_user(record['owner_id'])
             owner_value = "\n" if not owner else f"Owner: {owner.mention} ({owner})\n"
 
             pretty_npcs.append(
