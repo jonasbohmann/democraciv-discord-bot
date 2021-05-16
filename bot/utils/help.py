@@ -213,6 +213,38 @@ class HelpMenu(Pages, inherit_buttons=False):
         # The call here is safe because it's guarded by skip_if
         await self.show_page(self._source.get_max_pages() - 1)
 
+    @menus.button(config.HELP_NUMBERS, position=menus.Last(1.5), lock=False)
+    async def numbered_page(self, payload):
+        """lets you type a page number to go to"""
+        if self.input_lock.locked():
+            return
+
+        async with self.input_lock:
+            channel = self.message.channel
+            author_id = payload.user_id
+            question = await channel.send(f'{config.USER_INTERACTION_REQUIRED} What page do you want to go to?')
+            to_delete = [question]
+
+            def message_check(m):
+                return (m.author.id == author_id and
+                        channel == m.channel and
+                        m.content.isdigit())
+
+            try:
+                msg = await self.bot.wait_for('message', check=message_check, timeout=30.0)
+            except asyncio.TimeoutError:
+                to_delete.append(await question.reply(':zzz: You took too long to reply.'))
+                await asyncio.sleep(5)
+            else:
+                page = int(msg.content)
+                to_delete.append(msg)
+                await self.show_checked_page(page - 1)
+
+            try:
+                await channel.delete_messages(to_delete)
+            except Exception:
+                pass
+
     @menus.button(config.HELP_BOT_HELP, position=menus.Last(5))
     async def show_bot_help(self, payload):
         """shows how to use the bot"""
