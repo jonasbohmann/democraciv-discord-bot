@@ -727,6 +727,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             inline=False,
         )
 
+        should_dm_legislators = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Do you want me to DM all "
+                                                  f"{self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} to notify them "
+                                                  f"about a new session "
+                                                  f"being opened?")
+
         await ctx.send(
             f"{config.YES} The **submission period** for session #{new_session} was opened, and bills & "
             f"motions can now be submitted."
@@ -740,12 +745,14 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             f"submitted with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit`."
         )
 
-        await self.dm_legislators(
-            reason="leg_session_open",
-            message=f":envelope_with_arrow: The **submission period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
-                    f" #{new_session} has started! Submit your bills and motions with "
-                    f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit` on the {self.bot.dciv.name} server."
-        )
+        if should_dm_legislators:
+            await self.dm_legislators(
+                reason="leg_session_open",
+                message=f":envelope_with_arrow: The **submission period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
+                        f"Session #{new_session} has started! Submit your bills and motions with "
+                        f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit` "
+                        f"on the {self.bot.dciv.name} server."
+            )
 
     @session.command(name="lock")
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
@@ -843,6 +850,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                                   f"command to make me generate the form for you, then use this command "
                                   f"again once you're all set.")
 
+        should_dm_legislators = await ctx.confirm(f"{config.USER_INTERACTION_REQUIRED} Do you want me to DM the link "
+                                                  f"to the Voting Form to all "
+                                                  f"{self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL}?")
+
         await active_leg_session.start_voting(voting_form)
 
         await ctx.send(
@@ -859,11 +870,12 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             f"has started!\n{self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} can vote here: <{voting_form}>"
         )
 
-        await self.dm_legislators(
-            reason="leg_session_update",
-            message=f":ballot_box: The **voting period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
-                    f"#{active_leg_session.id} has started!\nVote here: {voting_form}",
-        )
+        if should_dm_legislators:
+            await self.dm_legislators(
+                reason="leg_session_update",
+                message=f":ballot_box: The **voting period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
+                        f"#{active_leg_session.id} has started!\nVote here: {voting_form}",
+            )
 
     @session.command(name="close", aliases=["c"])
     @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
@@ -1503,8 +1515,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         return embed
 
     @legislature.command(name="submit")
-    @commands.cooldown(1, 30, commands.BucketType.user)
-    @commands.max_concurrency(1, per=commands.BucketType.guild, wait=False)
+    @commands.cooldown(1, 15, commands.BucketType.user)
+    @commands.max_concurrency(2, per=commands.BucketType.guild, wait=False)
     @checks.is_democraciv_guild()
     async def submit(self, ctx):
         """Submit a new bill or motion to the currently active session"""
