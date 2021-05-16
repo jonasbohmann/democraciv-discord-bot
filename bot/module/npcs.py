@@ -309,7 +309,17 @@ class NPC(CustomCog):
         """What is an NPC?"""
 
         if ctx.invoked_with.lower() == "npcs":
-            person = await converter.FuzzyCIMember().convert(ctx, npc) if npc else ctx.author
+            if npc:
+                try:
+                    person = await converter.CaseInsensitiveMember().convert(ctx, npc)
+                except commands.BadArgument:
+                    try:
+                        person = await converter.CaseInsensitiveUser().convert(ctx, npc)
+                    except commands.BadArgument:
+                        person = await converter.FuzzyCIMember().convert(ctx, npc)
+            else:
+                person = ctx.author
+
             return await ctx.invoke(self.bot.get_command("npc list"), person=person)
 
         if npc:

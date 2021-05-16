@@ -200,7 +200,7 @@ class FuzzyChoose(menus.Menu):
     async def send_initial_message(self, ctx, channel):
         embed = SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}  {self.question}")
 
-        fmt = [f"Click {config.NO} to cancel.\n"]
+        fmt = []
 
         if self.description:
             fmt.insert(0, self.description)

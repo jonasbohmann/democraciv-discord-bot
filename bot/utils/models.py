@@ -295,9 +295,9 @@ class FuzzyBill(Bill):
                 raise e
 
             menu = text.FuzzyChoose(question="Which Bill did you mean?",
-                                    description=f"*Maybe you were looking for the "
+                                    description=f"Maybe you were looking for the "
                                                 f"`{config.BOT_PREFIX}{ctx.bot.mk.LEGISLATURE_COMMAND} bill search` "
-                                                f"command instead?*\n",
+                                                f"command instead?\n",
                                     choices=list(matches.keys()))
             bill = await menu.prompt(ctx)
 
@@ -354,9 +354,9 @@ class FuzzyLaw(Law):
                 raise e
 
             menu = text.FuzzyChoose(question="Which Law did you mean?",
-                                    description=f"*Maybe you were looking for the "
+                                    description=f"Maybe you were looking for the "
                                                 f"`{config.BOT_PREFIX}law search` "
-                                                f"command instead?*\n",
+                                                f"command instead?\n",
                                     choices=matches)
             law = await menu.prompt(ctx)
 
@@ -454,9 +454,9 @@ class FuzzyMotion(Motion):
                 raise e
 
             menu = text.FuzzyChoose(question="Which Motion did you mean?",
-                                    description=f"*Maybe you were looking for the "
+                                    description=f"Maybe you were looking for the "
                                                 f"`{config.BOT_PREFIX}{ctx.bot.mk.LEGISLATURE_COMMAND} motion search` "
-                                                f"command instead?*\n",
+                                                f"command instead?\n",
                                     choices=matches)
             motion = await menu.prompt(ctx)
 
