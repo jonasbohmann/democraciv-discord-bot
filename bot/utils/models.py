@@ -139,7 +139,7 @@ class Bill(commands.Converter):
         self.name: str = kwargs.get("name")
         self.session: Session = kwargs.get("session")
         self.link: str = kwargs.get("link")
-        self.tiny_link: str = kwargs.get("tiny_link")
+        self.tiny_link: str = self.link  # deprecated
         self.description: str = kwargs.get("submitter_description")
         self.is_vetoable: bool = kwargs.get("is_vetoable")
         self.status: BillStatus = kwargs.get("status")
@@ -221,7 +221,7 @@ class Bill(commands.Converter):
 
     @property
     def formatted(self):
-        return f"Bill #{self.id} - [{self.name}]({self.tiny_link}) {self.status.emojified_status(verbose=False)}"
+        return f"Bill #{self.id} - [{self.name}]({self.link}) {self.status.emojified_status(verbose=False)}"
 
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str]):
@@ -235,7 +235,7 @@ class Bill(commands.Converter):
             bill = await ctx.bot.db.fetchrow("SELECT * FROM bill WHERE id = $1", arg)
         except ValueError:
             bill = await ctx.bot.db.fetchrow(
-                "SELECT * FROM bill WHERE" " lower(name) = $2 or link = $1 or tiny_link = $1",
+                "SELECT * FROM bill WHERE lower(name) = $2 or link = $1",
                 argument,
                 argument.lower(),
             )
@@ -310,7 +310,7 @@ class FuzzyBill(Bill):
 class Law(Bill):
     @property
     def formatted(self):
-        return f"Law #{self.id} - [{self.name}]({self.tiny_link})"
+        return f"Law #{self.id} - [{self.name}]({self.link})"
 
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str], silent=False):
@@ -617,9 +617,6 @@ class BillStatus:
     async def resubmit(self, dry=False, *, resubmitter: discord.Member, **kwargs):
         raise IllegalBillOperation()
 
-    async def amend(self, *, dry=False, new_link: str, **kwargs):
-        raise IllegalBillOperation()
-
     async def sponsor(self, *, dry=False, sponsor: discord.Member, **kwargs):
         raise IllegalBillOperation("You can only sponsor recently submitted bills that were not voted on yet.")
 
@@ -843,18 +840,6 @@ class BillPassedLegislature(BillStatus):
 
         await self.log_history(self.flag, _BillStatusFlag.REPEALED, note="Repealed")
 
-    async def amend(self, *, dry=False, new_link: str, **kwargs):
-        if dry:
-            return
-
-        new_tiny = await self._bot.tinyurl(new_link)
-        await self._bot.db.execute(
-            "UPDATE bill SET link = $1, tiny_link = $2 WHERE id = $3",
-            new_link,
-            new_tiny,
-            self._bill.id,
-        )
-
     def emojified_status(self, verbose=True):
         if verbose:
             return (
@@ -909,18 +894,6 @@ class BillPassedLegislature(BillStatus):
 #         )
 #
 #         await self.log_history(self.flag, _BillStatusFlag.REPEALED)
-#
-#     async def amend(self, *, dry=False, new_link: str):
-#         if dry:
-#             return
-#
-#         new_tiny = await self._bot.tinyurl(new_link)
-#         await self._bot.db.execute(
-#             "UPDATE bill SET link = $1, tiny_link = $2 WHERE id = $3",
-#             new_link,
-#             new_tiny,
-#             self._bill.id,
-#         )
 #
 #     def emojified_status(self, verbose=True):
 #         if verbose:

@@ -46,11 +46,11 @@ class PassScheduler(text.RedditAnnouncementScheduler):
         message = [f"The following bills were **passed into law** by {self.bot.mk.LEGISLATURE_NAME}.\n"]
 
         for obj in self._objects:
-            message.append(f"Bill #{obj.id} - **{obj.name}** (<{obj.tiny_link}>)")
+            message.append(f"Bill #{obj.id} - **{obj.name}** (<{obj.link}>)")
             # if obj.is_vetoable:
-            #    message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+            #    message.append(f"-  **{obj.name}** (<{obj.link}>)")
             # else:
-            #    message.append(f"-  __**{obj.name}**__ (<{obj.tiny_link}>)")
+            #    message.append(f"-  __**{obj.name}**__ (<{obj.link}>)")
 
         p = config.BOT_PREFIX
         # message.append(
@@ -72,7 +72,7 @@ class OverrideScheduler(text.AnnouncementScheduler):
         ]
 
         for obj in self._objects:
-            message.append(f"Bill #{obj.id} - **{obj.name}** (<{obj.tiny_link}>)")
+            message.append(f"Bill #{obj.id} - **{obj.name}** (<{obj.link}>)")
 
         message.append(
             f"\nAll of the above bills are now law and can be found in `{config.BOT_PREFIX}laws`, "
@@ -344,16 +344,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
             if not self.is_google_doc_link(link):
                 link = bill.link
-                tiny_link = bill.tiny_link
                 await ctx.send(f"{config.NO} That doesn't look like a Google Docs URL. "
                                f"The link to the bill will not be changed.")
 
-            else:
-                tiny_link = await self.bot.tinyurl(link)
-
         else:
             link = bill.link
-            tiny_link = bill.tiny_link
 
         if to_change["description"]:
             description = await ctx.input(
@@ -381,8 +376,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                                   f"The bill was not edited, try again later.")
 
         await self.bot.db.execute(
-            "UPDATE bill SET name = $1, content = $2, submitter_description = $3, link = $4, tiny_link = $5 "
-            "WHERE id = $6", name, content, description, link, tiny_link, bill.id)
+            "UPDATE bill SET name = $1, content = $2, submitter_description = $3, link = $4 WHERE id = $5",
+            name, content, description, link, bill.id)
 
         await self.bot.db.execute("DELETE FROM bill_lookup_tag WHERE bill_id = $1", bill.id)
         await self.bot.api_request("POST", "bill/update", silent=True, json={"id": bill.id})
@@ -1344,15 +1339,6 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             bill_description = "*No summary provided by submitter.*"
 
         async with ctx.typing():
-            tiny_url = await self.bot.tinyurl(google_docs_url)
-
-            if tiny_url is None:
-                await ctx.send(
-                    f"{config.NO} Your bill was not submitted since there was a problem with the URL shortening "
-                    f"service. Sorry, try again in a few minutes."
-                )
-                return
-
             bill = models.Bill(bot=self.bot, link=google_docs_url, submitter_description=bill_description)
             name, tags, content = await bill.fetch_name_and_keywords()
 
@@ -1363,14 +1349,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
             bill_id = await self.bot.db.fetchval(
                 "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, "
-                "submitter_description, tiny_link, content) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
+                "submitter_description, content) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
                 current_leg_session_id,
                 name,
                 google_docs_url,
                 ctx.author.id,
                 is_vetoable,
                 bill_description,
-                tiny_url,
                 content
             )
 
@@ -1669,7 +1654,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code. "
         )
 
-        bills_that_might_repeal_something = [f" - Law #{bill.id} - {bill.name} (<{bill.tiny_link}>)"
+        bills_that_might_repeal_something = [f" - Law #{bill.id} - {bill.name}"
                                              for bill in consumer.passed if "repeal" in bill.content.lower()]
 
         if bills_that_might_repeal_something:

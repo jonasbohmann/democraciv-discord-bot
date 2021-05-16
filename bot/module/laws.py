@@ -19,19 +19,9 @@ class RepealScheduler(text.AnnouncementScheduler):
         message = [f"The following laws were **repealed**.\n"]
 
         for obj in self._objects:
-            message.append(f"Bill #{obj.id} - **{obj.name}** (<{obj.tiny_link}>)")
+            message.append(f"Bill #{obj.id} - **{obj.name}** (<{obj.link}>)")
 
         message.append(f"\nThe laws were removed from `{config.BOT_PREFIX}laws`.")
-
-        return "\n".join(message)
-
-
-class AmendScheduler(text.AnnouncementScheduler):
-    def get_message(self) -> str:
-        message = [f"The links to the following laws were changed by the {self.bot.mk.LEGISLATURE_CABINET_NAME}.\n"]
-
-        for obj in self._objects:
-            message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
 
         return "\n".join(message)
 
@@ -42,7 +32,6 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
     def __init__(self, bot):
         super().__init__(bot)
         self.repeal_scheduler = RepealScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
-        self.amend_scheduler = AmendScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
     @commands.group(name="law", aliases=["laws"], case_insensitive=True, invoke_without_command=True)
     async def law(self, ctx, *, law_id: models.FuzzyLaw = None):

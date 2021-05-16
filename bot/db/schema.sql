@@ -89,7 +89,6 @@ CREATE TABLE IF NOT EXISTS bill(
     name text NOT NULL,
     content text NOT NULL,
     link text NOT NULL,
-    tiny_link text NOT NULL,
     submitter bigint NOT NULL,
     submitter_description text NOT NULL,
     is_vetoable bool NOT NULL,

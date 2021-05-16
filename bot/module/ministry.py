@@ -13,7 +13,7 @@ class LawPassScheduler(text.AnnouncementScheduler):
         message = [f"The following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"]
 
         for obj in self._objects:
-            message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+            message.append(f"-  **{obj.name}** (<{obj.link}>)")
 
         message.append(
             f"\nAll new laws were added to `{config.BOT_PREFIX}laws` and can now be found with "
@@ -30,7 +30,7 @@ class LawVetoScheduler(text.AnnouncementScheduler):
         message = [f"The following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"]
 
         for obj in self._objects:
-            message.append(f"-  **{obj.name}** (<{obj.tiny_link}>)")
+            message.append(f"-  **{obj.name}** (<{obj.link}>)")
 
         return "\n".join(message)
 
@@ -49,7 +49,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         """Gets all bills that passed the Legislature, are veto-able and were not yet voted on by the Ministry"""
 
         open_bills = await self.bot.db.fetch(
-            "SELECT id, name, link, tiny_link FROM bill WHERE is_vetoable = true AND status = $1 ORDER BY id",
+            "SELECT id, name, link, link FROM bill WHERE is_vetoable = true AND status = $1 ORDER BY id",
             models.BillPassedLegislature.flag.value,
         )
 
@@ -63,7 +63,7 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         for record in open_bills:
             b_ids.append(f"Bill #{record['id']}")
             b_hyperlinks.append(f"=HYPERLINK(\"{record['link']}\"; \"{record['name']}\")")
-            pretty_bills.append(f"Bill #{record['id']} - [{record['name']}]({record['tiny_link']})")
+            pretty_bills.append(f"Bill #{record['id']} - [{record['name']}]({record['link']})")
 
         exported = [
             f"Export of Veto-able Bills -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n",

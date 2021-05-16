@@ -649,7 +649,8 @@ class Utility(context.CustomCog):
         tiny_url = await self.bot.tinyurl(url)
 
         if tiny_url is None:
-            return await ctx.send(f"{config.NO} tinyurl.com returned an error, try again in a few minutes.")
+            return await ctx.send(f"{config.NO} The URL shortening service returned an error, "
+                                  f"try again in a few minutes.")
 
         await ctx.send(f"<{tiny_url}>")
 
