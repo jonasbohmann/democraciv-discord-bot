@@ -510,7 +510,7 @@ class Bank(context.CustomCog):
         desc.append("\n".join(prepend_desc))
 
         pages = paginator.SimplePages(
-            entries=desc, author=f"{ctx.author.display_name}'s Bank Accounts", icon=ctx.author_icon
+            entries=desc, author=f"{ctx.author.display_name}'s Bank Accounts", icon=ctx.author_icon, per_page=12
         )
         await pages.start(ctx)
 

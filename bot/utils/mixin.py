@@ -76,6 +76,8 @@ class GovernmentMixin:
             return None
 
     async def _paginate_all_(self, ctx, *, model):
+        per_page = None
+
         if model is models.Bill:
             all_objects = await self.bot.db.fetch("SELECT id FROM bill ORDER BY id;")
         elif model is models.Law:
@@ -84,6 +86,7 @@ class GovernmentMixin:
                 models.BillIsLaw.flag.value,
             )
         elif model is models.Motion:
+            per_page = 12
             all_objects = await self.bot.db.fetch("SELECT id FROM motion ORDER BY id;")
 
         formatted = []
@@ -100,7 +103,8 @@ class GovernmentMixin:
             empty_message = f"No one has submitted any {model.__name__.lower()}s yet."
 
         pages = paginator.SimplePages(
-            entries=formatted, icon=self.bot.mk.NATION_ICON_URL, author=title, empty_message=empty_message
+            entries=formatted, icon=self.bot.mk.NATION_ICON_URL, author=title, empty_message=empty_message,
+            per_page=per_page
         )
         await pages.start(ctx)
 
@@ -222,6 +226,7 @@ class GovernmentMixin:
     async def _from_person_model(self, ctx, *, member_or_party, model, paginate=True):
         member = member_or_party or ctx.author
         submit_term = "written" if model is models.Law else "submitted"
+        per_page = None
 
         if isinstance(member, converter.PoliticalParty):
             name = member.role.name
@@ -252,6 +257,7 @@ class GovernmentMixin:
                 "SELECT id FROM motion WHERE submitter = ANY($1::bigint[]) ORDER BY id;",
                 members,
             )
+            per_page = 12
 
         formatted = []
 
@@ -262,7 +268,8 @@ class GovernmentMixin:
         if not paginate:
             return formatted
 
-        pages = paginator.SimplePages(entries=formatted, author=title, icon=icon, empty_message=empty)
+        pages = paginator.SimplePages(entries=formatted, author=title, icon=icon, per_page=per_page,
+                                      empty_message=empty)
         await pages.start(ctx)
 
     async def _search_bill_by_name(

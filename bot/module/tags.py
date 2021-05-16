@@ -110,7 +110,8 @@ class Tags(context.CustomCog):
         if len(pretty_tags) < 2:
             pretty_tags = []
 
-        pages = paginator.SimplePages(entries=pretty_tags, author=author, icon=icon, empty_message=empty_message)
+        pages = paginator.SimplePages(entries=pretty_tags, author=author, icon=icon,
+                                      empty_message=empty_message, per_page=12)
         await pages.start(ctx)
 
     @tags.command(name="local", aliases=["l"])
@@ -132,6 +133,7 @@ class Tags(context.CustomCog):
             author=f"Local Tags in {ctx.guild.name}",
             icon=ctx.guild_icon,
             empty_message="There are no local tags on this server.",
+            per_page=12
         )
         await pages.start(ctx)
 
@@ -162,6 +164,7 @@ class Tags(context.CustomCog):
             author=f"Tags from {member.display_name}",
             icon=member.avatar_url_as(static_format="png"),
             empty_message=f"{member} hasn't made any tags on this server yet.",
+            per_page=12
         )
         await pages.start(ctx)
 
@@ -577,6 +580,7 @@ class Tags(context.CustomCog):
             author=f"Tags matching '{query}'",
             icon=icon,
             empty_message="Nothing found.",
+            per_page=12
         )
 
         await pages.start(ctx)

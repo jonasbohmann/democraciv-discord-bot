@@ -563,6 +563,7 @@ class NPC(CustomCog):
         pages = paginator.SimplePages(author=f"{member.display_name}'s NPCs",
                                       icon=member.avatar_url_as(static_format="png"),
                                       entries=pretty_npcs,
+                                      per_page=20,
                                       empty_message="This person hasn't made any NPCs yet.")
         await pages.start(ctx)
 
@@ -667,6 +668,7 @@ class NPC(CustomCog):
         if len(pretty) > 1:
             pages = paginator.SimplePages(entries=pretty,
                                           icon=ctx.guild_icon,
+                                          per_page=15,
                                           author=f"{ctx.author.display_name}'s Automatic NPCs")
             await pages.start(ctx)
 

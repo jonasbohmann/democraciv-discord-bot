@@ -214,6 +214,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
             author=f"Nation Roles",
             icon=self.bot.mk.safe_flag,
             empty_message="There are no roles that you can give out.",
+            per_page=12
         )
         await pages.start(ctx)
 

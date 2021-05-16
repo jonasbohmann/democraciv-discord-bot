@@ -408,7 +408,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                               f"All dates are in UTC.\n")
 
         pages = paginator.SimplePages(
-            entries=fmt_history, author=f"{bill_id.name} (#{bill_id.id})", icon=self.bot.mk.NATION_ICON_URL
+            entries=fmt_history, author=f"{bill_id.name} (#{bill_id.id})", per_page=12, icon=self.bot.mk.NATION_ICON_URL
         )
         await pages.start(ctx)
 
@@ -1197,6 +1197,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             icon=self.bot.mk.NATION_ICON_URL,
             author=f"All Sessions of the {self.bot.mk.NATION_ADJECTIVE} {self.bot.mk.LEGISLATURE_NAME}",
             empty_message="There hasn't been a session yet.",
+            per_page=12,
         )
         await pages.start(ctx)
 

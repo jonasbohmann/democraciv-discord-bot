@@ -592,6 +592,7 @@ class _Guild(context.CustomCog, name="Server"):
             author=f"{webhook_name.title()} on {ctx.guild.name}",
             icon=icon,
             entries=entries,
+            per_page=12,
             empty_message=f"This server does not have any {webhook_name} yet.\n\nAdd some "
                           f"with `{config.BOT_PREFIX}server {command_name} add`.",
         )
