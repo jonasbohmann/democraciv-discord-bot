@@ -7,11 +7,20 @@ CREATE TABLE IF NOT EXISTS guild(
     welcome_channel bigint,
     logging_enabled bool DEFAULT FALSE,
     logging_channel bigint,
+    logging_message_edit bool DEFAULT TRUE,
+    logging_message_delete bool DEFAULT TRUE,
+    logging_member_nickname_change bool DEFAULT TRUE,
+    logging_member_role_change bool DEFAULT TRUE,
+    logging_member_join_leave bool DEFAULT TRUE,
+    logging_ban_unban bool DEFAULT TRUE,
+    logging_guild_channel_create_delete bool DEFAULT TRUE,
+    logging_role_create_delete bool DEFAULT TRUE,
     default_role_enabled bool DEFAULT FALSE,
     default_role_role bigint,
     tag_creation_allowed bool DEFAULT TRUE,
     npc_usage_allowed bool DEFAULT TRUE
 );
+
 
 CREATE TABLE IF NOT EXISTS guild_private_channel(
     id serial UNIQUE PRIMARY KEY,

@@ -54,26 +54,11 @@ class AnnouncementScheduler:
     def channel(self) -> typing.Optional[discord.TextChannel]:
         return self.bot.get_democraciv_channel(self._channel)
 
-    def get_message(self) -> str:
-        raise NotImplementedError()
+    def get_embed(self) -> typing.Optional[discord.Embed]:
+        pass
 
-    def split_message(self, message: str) -> typing.List[str]:
-        lines = message.splitlines(keepends=True)
-        split_into_2000 = dict()
-        index = 0
-
-        for paragraph in lines:
-            try:
-                split_into_2000[index]
-            except KeyError:
-                split_into_2000[index] = ""
-
-            split_into_2000[index] = split_into_2000[index] + "".join(paragraph)
-
-            if (len("".join(split_into_2000[index]))) > 1900:
-                index += 1
-
-        return list(split_into_2000.values())
+    def get_message(self) -> typing.Optional[str]:
+        pass
 
     def add(self, obj: models.Bill):
         if len(self._objects) == 0:
@@ -83,20 +68,27 @@ class AnnouncementScheduler:
         self._objects.append(obj)
         self._last_addition = datetime.datetime.utcnow()
 
+    async def trigger_now(self):
+        await self._trigger()
+
+    async def _trigger(self):
+        self._last_addition = None
+        self._objects.sort(key=lambda obj: obj.id)
+        await self.send_messages()
+        self._task.cancel()
+        self._objects.clear()
+
     async def send_messages(self):
         message = self.get_message()
-        await self.channel.send(message, allowed_mentions=discord.AllowedMentions(roles=True))
-        self._objects.clear()
-        self._task.cancel()
+        embed = self.get_embed()
+        await self.channel.send(message, embed=embed, allowed_mentions=discord.AllowedMentions(roles=True))
 
     @tasks.loop(seconds=30)
     async def _wait(self):
         if self._last_addition is not None and datetime.datetime.utcnow() - self._last_addition > datetime.timedelta(
                 minutes=self.wait_time
         ):
-            self._last_addition = None
-            self._objects.sort(key=lambda obj: obj.id)
-            await self.send_messages()
+            await self._trigger()
 
 
 class RedditAnnouncementScheduler(AnnouncementScheduler):
@@ -105,9 +97,6 @@ class RedditAnnouncementScheduler(AnnouncementScheduler):
         self.subreddit = subreddit
         self.wait_time = 20
         super().__init__(bot, channel)
-
-    def get_message(self) -> str:
-        raise NotImplementedError()
 
     def get_reddit_post_title(self) -> str:
         raise NotImplementedError()

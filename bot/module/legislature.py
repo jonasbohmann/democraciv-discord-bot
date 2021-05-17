@@ -17,6 +17,33 @@ from bot.utils.models import Bill, Session, Motion, SessionStatus
 
 class PassScheduler(text.RedditAnnouncementScheduler):
 
+    def get_embed(self):
+        embed = text.SafeEmbed()
+        embed.set_author(name=f"Passed Bills from {self.bot.mk.LEGISLATURE_NAME}",
+                         icon_url=self.bot.mk.NATION_ICON_URL
+                                  or self.bot.dciv.icon_url_as(static_format="png")
+                                  or discord.embeds.EmptyEmbed)
+        message = [f"The following bills were **passed into law** by {self.bot.mk.LEGISLATURE_NAME}.\n"]
+
+        for obj in self._objects:
+            message.append(f"Bill #{obj.id} - [**{obj.name}**]({obj.link})")
+            # if obj.is_vetoable:
+            #    message.append(f"-  **{obj.name}** (<{obj.link}>)")
+            # else:
+            #    message.append(f"-  __**{obj.name}**__ (<{obj.link}>)")
+
+        p = config.BOT_PREFIX
+        # message.append(
+        #    f"\nAll non veto-able bills are now laws (marked as __underlined__) and can be found in `{p}laws`, "
+        #    f"as well with `{p}laws search`. The others were sent to the {self.bot.mk.MINISTRY_NAME} "
+        #    f"(`{p}{self.bot.mk.MINISTRY_COMMAND} bills`) to either pass "
+        #    f"(`{p}{self.bot.mk.MINISTRY_COMMAND} pass`) or veto (`{p}{self.bot.mk.MINISTRY_COMMAND} veto`) them."
+        # )
+
+        message.append(f"\nAll these bills are now laws and can be found in `{p}laws`, as well with `{p}laws search`.")
+        embed.description = "\n".join(message)
+        return embed
+
     def get_reddit_post_title(self) -> str:
         return f"Passed Bills from {self.bot.mk.LEGISLATURE_NAME}"
 
@@ -41,27 +68,6 @@ class PassScheduler(text.RedditAnnouncementScheduler):
 
         content.append(outro)
         return "\n\n".join(content)
-
-    def get_message(self) -> str:
-        message = [f"The following bills were **passed into law** by {self.bot.mk.LEGISLATURE_NAME}.\n"]
-
-        for obj in self._objects:
-            message.append(f"Bill #{obj.id} - **{obj.name}** (<{obj.link}>)")
-            # if obj.is_vetoable:
-            #    message.append(f"-  **{obj.name}** (<{obj.link}>)")
-            # else:
-            #    message.append(f"-  __**{obj.name}**__ (<{obj.link}>)")
-
-        p = config.BOT_PREFIX
-        # message.append(
-        #    f"\nAll non veto-able bills are now laws (marked as __underlined__) and can be found in `{p}laws`, "
-        #    f"as well with `{p}laws search`. The others were sent to the {self.bot.mk.MINISTRY_NAME} "
-        #    f"(`{p}{self.bot.mk.MINISTRY_COMMAND} bills`) to either pass "
-        #    f"(`{p}{self.bot.mk.MINISTRY_COMMAND} pass`) or veto (`{p}{self.bot.mk.MINISTRY_COMMAND} veto`) them."
-        # )
-
-        message.append(f"\nAll these bills are now laws and can be found in `{p}laws`, as well with `{p}laws search`.")
-        return "\n".join(message)
 
 
 class OverrideScheduler(text.AnnouncementScheduler):
@@ -397,10 +403,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
             link = await ctx.input(
                 f"{config.USER_INTERACTION_REQUIRED} Reply with the new Google Docs link to the bill."
+                f"\n{config.HINT} Did you know? You can change the link of multiple bills at once with my "
+                f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill bulkedit` command."
 
             )
 
             if not self.is_google_doc_link(link):
+                link = None
                 await ctx.send(f"{config.NO} That doesn't look like a Google Docs URL. "
                                f"The link to the bill will not be changed.")
 
@@ -1946,11 +1955,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             return await ctx.send("Cancelled.")
 
         await consumer.consume(sponsor=ctx.author)
-        await ctx.send(
-            f"{config.YES} All bills were sponsored by you. Your name is now on the list of "
-            f"sponsors on the detail pages `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} "
-            f"bill <bill_id>` for these bills."
-        )
+        await ctx.send(f"{config.YES} All bills were sponsored by you.")
 
     @bill.command(name="sponsor", hidden=True)
     @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)

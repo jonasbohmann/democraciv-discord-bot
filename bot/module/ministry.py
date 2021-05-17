@@ -9,30 +9,39 @@ from bot.utils import text, context, mixin, models, exceptions
 
 
 class LawPassScheduler(text.AnnouncementScheduler):
-    def get_message(self) -> str:
+    def get_embed(self):
+        embed = text.SafeEmbed()
+        embed.set_author(name=f"Passed Bills from the {self.bot.mk.MINISTRY_NAME}",
+                         icon_url=self.bot.mk.NATION_ICON_URL
+                                  or self.bot.dciv.icon_url_as(static_format="png")
+                                  or discord.embeds.EmptyEmbed)
         message = [f"The following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"]
 
         for obj in self._objects:
-            message.append(f"-  **{obj.name}** (<{obj.link}>)")
+            message.append(f"-  [**{obj.name}**]({obj.link})")
 
         message.append(
             f"\nAll new laws were added to `{config.BOT_PREFIX}laws` and can now be found with "
-            f"`{config.BOT_PREFIX}laws search <query>`. The "
-            f"{self.bot.get_democraciv_role(mk.DemocracivRole.SPEAKER).mention} should add them to "
-            f"the Legal Code as soon as possible."
+            f"`{config.BOT_PREFIX}laws search <query>`."
         )
-
-        return "\n".join(message)
+        embed.description = "\n".join(message)
+        return embed
 
 
 class LawVetoScheduler(text.AnnouncementScheduler):
-    def get_message(self) -> str:
+    def get_embed(self):
+        embed = text.SafeEmbed()
+        embed.set_author(name=f"The {self.bot.mk.MINISTRY_NAME} vetoed Bills",
+                         icon_url=self.bot.mk.NATION_ICON_URL
+                                  or self.bot.dciv.icon_url_as(static_format="png")
+                                  or discord.embeds.EmptyEmbed)
         message = [f"The following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"]
 
         for obj in self._objects:
-            message.append(f"-  **{obj.name}** (<{obj.link}>)")
+            message.append(f"-  [**{obj.name}**]({obj.link})")
 
-        return "\n".join(message)
+        embed.description = "\n".join(message)
+        return embed
 
 
 class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINISTRY_NAME):

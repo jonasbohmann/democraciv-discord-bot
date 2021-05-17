@@ -1,5 +1,6 @@
 import datetime
 import typing
+import discord
 
 from discord.ext import commands
 from discord.ext.commands import Greedy
@@ -15,15 +16,20 @@ from bot.utils.converter import (
 
 
 class RepealScheduler(text.AnnouncementScheduler):
-    def get_message(self) -> str:
+    def get_embed(self):
+        embed = text.SafeEmbed()
+        embed.set_author(name=f"{self.bot.mk.LEGISLATURE_NAME} repealed Bills",
+                         icon_url=self.bot.mk.NATION_ICON_URL
+                                  or self.bot.dciv.icon_url_as(static_format="png")
+                                  or discord.embeds.EmptyEmbed)
         message = [f"The following laws were **repealed**.\n"]
 
         for obj in self._objects:
-            message.append(f"Bill #{obj.id} - **{obj.name}** (<{obj.link}>)")
+            message.append(f"Bill #{obj.id} - [**{obj.name}**]({obj.link})")
 
         message.append(f"\nThe laws were removed from `{config.BOT_PREFIX}laws`.")
-
-        return "\n".join(message)
+        embed.description = "\n".join(message)
+        return embed
 
 
 class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
