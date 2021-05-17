@@ -471,8 +471,13 @@ class DemocracivBot(commands.Bot):
         logging.info("Guild config cache was updated.")
         return guild_config
 
+    async def make_file_from_image_link(self, url: str) -> discord.File:
+        img = await self._make_file_from_image_link(url)
+        img.seek(0)
+        return discord.File(img, filename="image.png")
+
     @alru_cache(cache_exceptions=False)
-    async def make_file_from_image_link(self, url: str):
+    async def _make_file_from_image_link(self, url: str):
         async with self.session.get(url) as response:
             image = await response.read()
             return io.BytesIO(image)

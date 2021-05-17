@@ -612,15 +612,13 @@ class _Guild(context.CustomCog, name="Server"):
             img = await self.bot.make_file_from_image_link(
                 "https://cdn.discordapp.com/attachments/499669824847478785/778778261450653706/redditds.PNG"
             )
-            img.seek(0)
-            file = discord.File(img, filename="image.png")
 
             await ctx.send(
                 f"{config.USER_INTERACTION_REQUIRED} What's the ID of the {webhook_name} you want to remove? "
                 f"You can get the ID from `{config.BOT_PREFIX}server {command_name}`. "
                 f"In case you want to remove every feed on this server, use `{config.BOT_PREFIX}server {command_name} "
                 f"clear` instead.",
-                file=file,
+                file=img,
             )
 
             hook_id = await ctx.converted_input(converter=converter.InternalAPIWebhookConverter)

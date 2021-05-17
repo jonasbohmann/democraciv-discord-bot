@@ -305,14 +305,12 @@ class Tags(context.CustomCog):
         img = await self.bot.make_file_from_image_link(
             "https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png"
         )
-        img.seek(0)
-        file = discord.File(img, filename="image.png")
 
         embed_q = await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?"
             f"\n{config.HINT} *Embeds behave differently than plain text, see the image below "
             f"for the key differences.*",
-            file=file,
+            file=img,
         )
 
         is_embedded = await ctx.confirm(message=embed_q)
@@ -498,15 +496,12 @@ class Tags(context.CustomCog):
             img = await self.bot.make_file_from_image_link(
                 "https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png"
             )
-            img.seek(0)
-
-            file = discord.File(img, filename="image.png")
 
             embed_q = await ctx.send(
                 f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?"
                 f"\n{config.HINT} *Embeds behave differently than plain text, see the image below "
                 f"for the key differences.*",
-                file=file,
+                file=img,
             )
             is_embedded = await ctx.confirm(message=embed_q)
         else:

@@ -162,6 +162,28 @@ class Bill(commands.Converter):
     def __str__(self):
         return self.formatted
 
+    async def update_link(self, new_link: str):
+        self.link = new_link
+        name, keywords, content = await self.fetch_name_and_keywords()
+
+        if not name or not content:
+            raise DemocracivBotException(f"There was an error while fetching the name & content of "
+                                         f"this bill. Do I have view permissions for this bill's Google Docs document?")
+
+        await self._bot.db.execute(
+            "UPDATE bill SET name = $1, content = $2, link = $3 WHERE id = $4",
+            name, content, new_link, self.id)
+
+        await self._bot.db.execute("DELETE FROM bill_lookup_tag WHERE bill_id = $1", self.id)
+        await self._bot.api_request("POST", "bill/update", silent=True, json={"id": self.id})
+
+        id_with_kws = [(self.id, keyword) for keyword in keywords]
+        self._bot.loop.create_task(
+            self._bot.db.executemany(
+                "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING ", id_with_kws
+            )
+        )
+
     @property
     def sponsors(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
         return list(

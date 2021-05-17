@@ -301,9 +301,64 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
         await ctx.send(msg)
 
-    @bill.command(name="edit", aliases=["update", "e"])
+    @bill.command(name="bulkedit", aliases=["bulkupdate", "bulkchange", "be"])
+    @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
+    async def b_bulkedit(self, ctx: context.CustomContext):
+        """Bulk edit the Google Docs links of multiple bills at once"""
+
+        img = await self.bot.make_file_from_image_link(
+            "https://cdn.discordapp.com/attachments/759894147628269588/843804262777225226/bulkbill.PNG"
+        )
+
+        await ctx.send(f"{config.USER_INTERACTION_REQUIRED} Reply with a list of bills and their "
+                       f"respective new links. First, type the bill's id (like `12`), then type a space, "
+                       f"and then the new link for that bill.\n"
+                       f"{config.HINT} For each bill/link pair, use a new line like in the image below.",
+                       file=img)
+
+        bulks = await ctx.input()
+
+        skipped = []
+        split = bulks.splitlines()
+
+        async with ctx.typing():
+            for i, bill_link in enumerate(split, start=1):
+                bill_link = bill_link.strip()
+
+                try:
+                    bill_id, link = bill_link.split(" ")
+                except ValueError:
+                    skipped.append(f"  - Incorrect input formatting on line {i}. See the image I sent for the "
+                                   f"correct formatting.")
+                    continue
+
+                try:
+                    bill = await Bill.convert(ctx, bill_id)
+
+                    if not self.is_google_doc_link(link):
+                        skipped.append(
+                            f"  - The new link for Bill #{bill_id} you gave me is not a valid Google Docs link.")
+                        continue
+
+                    await bill.update_link(link)
+                except exceptions.NotFoundError:
+                    skipped.append(f"  - There is no Bill #{bill_id}.")
+                    continue
+                except exceptions.DemocracivBotException as e:
+                    skipped.append(f"  - {e.message}")
+                    continue
+
+        msg = f"{config.YES} Changed the link of {len(split) - len(skipped)}/{len(split)} bills."
+
+        if skipped:
+            fmt = "\n".join(skipped)
+            msg = f":warning: I skipped changing the link of some bills, see the errors below:\n\n{fmt}\n\n{msg}"
+
+        await ctx.send(msg)
+
+    @bill.command(name="edit", aliases=["update", "e", "change"])
     @checks.is_democraciv_guild()
-    async def b_edit(self, ctx, *, bill_id: models.FuzzyBill):
+    async def b_edit(self, ctx: context.CustomContext, *, bill_id: models.FuzzyBill):
         """Edit the Google Docs link or summary of a bill
 
         **Example**
@@ -330,6 +385,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         if True not in to_change.values():
             return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
 
+        link = None
+        description = None
+
         if to_change["link"]:
             if not self.is_cabinet(ctx.author) and bill.session.status is not SessionStatus.SUBMISSION_PERIOD:
                 return await ctx.send(f"{config.NO} You can only change the link to your bill if the "
@@ -343,23 +401,16 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             )
 
             if not self.is_google_doc_link(link):
-                link = bill.link
                 await ctx.send(f"{config.NO} That doesn't look like a Google Docs URL. "
                                f"The link to the bill will not be changed.")
-
-        else:
-            link = bill.link
 
         if to_change["description"]:
             description = await ctx.input(
                 f"{config.USER_INTERACTION_REQUIRED} Reply with a new **short** summary of what the bill does.",
-                timeout=400,
+                timeout=400, return_cleaned=True
             )
             if not description:
                 description = "*No summary provided by submitter.*"
-
-        else:
-            description = bill.description
 
         are_you_sure = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit `{bill.name}` (#{bill.id})?"
@@ -368,26 +419,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         if not are_you_sure:
             return await ctx.send("Cancelled.")
 
-        changed_bill = models.Bill(bot=self.bot, link=link, submitter_description=description)
-        name, keywords, content = await changed_bill.fetch_name_and_keywords()
+        if link:
+            changed_bill = models.Bill(id=bill.id, bot=self.bot, link=link,
+                                       submitter_description=description or bill.description)
+            await changed_bill.update_link(link)
 
-        if not name or not content:
-            return await ctx.send(f"{config.NO} Something went wrong with Google Docs. "
-                                  f"The bill was not edited, try again later.")
-
-        await self.bot.db.execute(
-            "UPDATE bill SET name = $1, content = $2, submitter_description = $3, link = $4 WHERE id = $5",
-            name, content, description, link, bill.id)
-
-        await self.bot.db.execute("DELETE FROM bill_lookup_tag WHERE bill_id = $1", bill.id)
-        await self.bot.api_request("POST", "bill/update", silent=True, json={"id": bill.id})
-
-        id_with_kws = [(bill.id, keyword) for keyword in keywords]
-        self.bot.loop.create_task(
-            self.bot.db.executemany(
-                "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING ", id_with_kws
-            )
-        )
+        if description:
+            await self.bot.db.execute("UPDATE bill SET submitter_description = $1 WHERE id = $2", description, bill.id)
 
         await ctx.send(f"{config.YES} Bill #{bill.id} `{bill.name}` was updated.")
 
@@ -410,7 +448,6 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
     @bill.command(name="read", aliases=["text", "txt", "content"])
     async def b_read(self, ctx: context.CustomContext, *, bill_id: models.FuzzyBill):
         """Read the content of a bill"""
-
         await self._show_bill_text(ctx, bill_id)
 
     @bill.command(name="search", aliases=["s"])

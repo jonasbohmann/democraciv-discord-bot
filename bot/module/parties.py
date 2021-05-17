@@ -547,8 +547,7 @@ class Party(context.CustomCog, name="Political Parties"):
             img = await self.bot.make_file_from_image_link(
                 "https://cdn.discordapp.com/attachments/499669824847478785/784584955921301554/partyjoin.PNG"
             )
-            img.seek(0)
-            file = discord.File(img, filename="image.png")
+
             await ctx.send(
                 f"{config.USER_INTERACTION_REQUIRED} Reply with the names or mentions of the party's leaders or "
                 f"representatives. If this party has multiple leaders, separate them with a newline, like in the "
@@ -556,7 +555,7 @@ class Party(context.CustomCog, name="Political Parties"):
                 f"{config.HINT} *Party leaders get DM notifications by me when someone joins or leaves their "
                 f"party, and they are the ones that can accept and deny join requests if the party's join mode "
                 f"is request-based.*",
-                file=file,
+                file=img,
             )
 
             leaders_text = (await ctx.input()).splitlines()
