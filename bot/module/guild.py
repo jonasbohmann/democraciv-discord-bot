@@ -77,7 +77,7 @@ class _Guild(context.CustomCog, name="Server"):
         await ctx.send(embed=embed)
 
     @commands.Cog.listener(name="on_member_join")
-    async def welcome_message_listener(self, member):
+    async def welcome_message_listener(self, member: discord.Member):
         settings = await self.ensure_guild_settings(member.guild.id)
 
         if not settings["welcome_enabled"]:
@@ -88,8 +88,14 @@ class _Guild(context.CustomCog, name="Server"):
         message = settings["welcome_message"]
 
         if welcome_channel and message:
-            welcome_message = message.replace("{member}", member.mention)
-            await welcome_channel.send(welcome_message, allowed_mentions=discord.AllowedMentions(users=True))
+            message = message.replace("{member}", member.mention)  # deprecated
+            message = message.replace("{mention}", member.mention)
+            message = message.replace("{username}", member.name)
+            message = message.replace("{discriminator}", member.discriminator)
+            message = message.replace("{user}", str(member))
+            message = message.replace("{server}", member.guild.name)
+            message = message.replace("{channel}", welcome_channel.mention)
+            await welcome_channel.send(message, allowed_mentions=discord.AllowedMentions(users=True))
 
     @guild.command(name="welcome")
     @commands.guild_only()
@@ -160,10 +166,20 @@ class _Guild(context.CustomCog, name="Server"):
                 welcome_channel = settings['welcome_channel']
 
             if to_change['message']:
+
+                translations = (
+                    f"`{{mention}}` - Mention (ping) the person that just joined  (For example: @DerJonas)\n"
+                    f"`{{user}}` - Username#Discriminator  (For example: DerJonas#8036)\n"
+                    f"`{{username}}` - Username  (For example: DerJonas)\n"
+                    f"`{{discriminator}}` - Discriminator  (For example: 8036)\n"
+                    f"`{{server}}` - Name of the server  (For example: Democraciv)\n"
+                    f"`{{channel}}` - The welcome channel  (For example: #welcome)\n"
+                )
+
                 welcome_message = await ctx.input(
                     f"{config.USER_INTERACTION_REQUIRED} Reply with the message that should be sent to "
                     f"{current_welcome_channel.mention} every time a new person joins.\n{config.HINT} "
-                    f"You can write `{{member}}` to make me mention the person that just joined."
+                    f"You can use the following variables in the welcome message.\n\n{translations}"
                 )
             else:
                 welcome_message = settings['welcome_message']
