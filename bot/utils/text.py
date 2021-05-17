@@ -274,3 +274,31 @@ class EditModelMenu(menus.Menu):
     async def prompt(self, ctx):
         await self.start(ctx, wait=True)
         return self.result
+
+
+class EditSettingsWithEmojifiedLiveToggles(EditModelMenu):
+    def __init__(self, settings, description, icon=discord.Embed.Empty, **kwargs):
+        self.icon = icon
+        self.description = description
+        super().__init__(choices_with_formatted_explanation={k: v[0] for k, v in settings.items()}, **kwargs)
+        self._result = {k: v[1] for k, v in settings.items()}
+
+    def _make_embed(self):
+        embed = SafeEmbed()
+        embed.set_author(name=self.title, icon_url=self.icon)
+        fmt = [self.description]
+
+        for emoji, choice in self._mapping.items():
+            fmt.append(f"{emoji}  -  {self.bot.emojify_boolean(self._result[choice])} {self.choices[choice]}")
+
+        fmt = "\n".join(fmt)
+        embed.description = fmt
+        return embed
+
+    async def send_initial_message(self, ctx, channel):
+        return await ctx.send(embed=self._make_embed())
+
+    async def on_button(self, payload):
+        choice = self._mapping[str(payload.emoji)]
+        self._result[choice] = not self._result[choice]
+        await self.message.edit(embed=self._make_embed())

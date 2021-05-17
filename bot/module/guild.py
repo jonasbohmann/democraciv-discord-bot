@@ -11,14 +11,6 @@ from bot.utils import text, converter, paginator, exceptions, context
 class _Guild(context.CustomCog, name="Server"):
     """Configure various features of this bot for this server."""
 
-    @staticmethod
-    def emojify_settings(boolean) -> str:
-        # Thanks to Dutchy for the custom emojis used here
-        if boolean:
-            return f"{config.GUILD_SETTINGS_GRAY_DISABLED}{config.GUILD_SETTINGS_ENABLED}\u200b"
-        else:
-            return f"{config.GUILD_SETTINGS_DISABLED}{config.GUILD_SETTINGS_GRAY_ENABLED}\u200b"
-
     async def ensure_guild_settings(self, guild_id: int) -> typing.Dict[str, typing.Any]:
         try:
             settings = self.bot.guild_config[guild_id]
@@ -43,12 +35,12 @@ class _Guild(context.CustomCog, name="Server"):
 
         settings = await self.ensure_guild_settings(ctx.guild.id)
 
-        is_welcome_enabled = self.emojify_settings(settings["welcome_enabled"])
-        is_logging_enabled = self.emojify_settings(settings["logging_enabled"])
-        is_default_role_enabled = self.emojify_settings(settings["default_role_enabled"])
-        is_tag_creation_allowed = self.emojify_settings(settings["tag_creation_allowed"])
+        is_welcome_enabled = self.bot.emojify_boolean(settings["welcome_enabled"])
+        is_logging_enabled = self.bot.emojify_boolean(settings["logging_enabled"])
+        is_default_role_enabled = self.bot.emojify_boolean(settings["default_role_enabled"])
+        is_tag_creation_allowed = self.bot.emojify_boolean(settings["tag_creation_allowed"])
         excluded_channels = len(settings["private_channels"])
-        is_npc_allowed = self.emojify_settings(settings['npc_usage_allowed'])
+        is_npc_allowed = self.bot.emojify_boolean(settings['npc_usage_allowed'])
 
         embed = text.SafeEmbed(
             description=f"Check **`{config.BOT_PREFIX}help server`** to see how you can configure me for this server.",
@@ -118,7 +110,7 @@ class _Guild(context.CustomCog, name="Server"):
         )
 
         embed.set_author(name=f"Welcome Messages on {ctx.guild.name}", icon_url=ctx.guild_icon)
-        embed.add_field(name="Enabled", value=self.emojify_settings(settings["welcome_enabled"]))
+        embed.add_field(name="Enabled", value=self.bot.emojify_boolean(settings["welcome_enabled"]))
         embed.add_field(name="Welcome Channel", value=current_welcome_channel_value)
         embed.add_field(name="Welcome Message", value=current_welcome_message, inline=False)
 
@@ -190,7 +182,7 @@ class _Guild(context.CustomCog, name="Server"):
             await self.bot.update_guild_config_cache()
             await ctx.send(f"{config.YES} Welcome Message settings were updated.")
 
-    @guild.command(name="logs", aliases=["log", "logging"])
+    @guild.group(name="logs", aliases=["log", "logging"], case_insensitive=True, invoke_without_command=True)
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def logs(self, ctx: context.CustomContext):
@@ -201,11 +193,13 @@ class _Guild(context.CustomCog, name="Server"):
         current_logging_channel_value = "-" if not current_logging_channel else current_logging_channel.mention
 
         embed = text.SafeEmbed(
-            description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to change these settings.",
+            description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to change these settings.\n\nIf you want "
+                        f"to change what specific events I should log, use my `{config.BOT_PREFIX}server logs events` "
+                        f"command."
         )
 
         embed.set_author(name=f"Event Logging on {ctx.guild.name}", icon_url=ctx.guild_icon)
-        embed.add_field(name="Enabled", value=self.emojify_settings(settings["logging_enabled"]))
+        embed.add_field(name="Enabled", value=self.bot.emojify_boolean(settings["logging_enabled"]))
         embed.add_field(name="Log Channel", value=current_logging_channel_value)
 
         info_embed = await ctx.send(embed=embed)
@@ -255,7 +249,63 @@ class _Guild(context.CustomCog, name="Server"):
             await self.bot.db.execute("UPDATE guild SET logging_enabled = $1, logging_channel = $2 WHERE id = $3",
                                       logging_enabled, logging_channel, ctx.guild.id)
             await self.bot.update_guild_config_cache()
-            await ctx.send(f"{config.YES} Logging settings were updated.")
+            await ctx.send(f"{config.YES} Logging settings were updated.\n{config.HINT} If you want to "
+                           f"change what specific events I should log, use my `{config.BOT_PREFIX}server logs events` "
+                           f"command.")
+
+    @logs.command(name="events", aliases=["event"])
+    @commands.guild_only()
+    @commands.has_permissions(manage_guild=True)
+    async def logs_change_events(self, ctx: context.CustomContext):
+        """Customize what specific events I should log on this server"""
+
+        choices = {
+            "logging_message_edit": ["Message edits"],
+            "logging_message_delete": ["Message deletions"],
+            "logging_member_nickname_change": ["Nickname changes"],
+            "logging_member_role_change": ["Someone gets or loses a role"],
+            "logging_member_join_leave": ["Joins & Leaves"],
+            "logging_ban_unban": ["Bans & Unbans"],
+            "logging_guild_channel_create_delete": ["Channel creations & deletions"],
+            "logging_role_create_delete": ["Role creations & deletions"]
+        }
+
+        current_settings = await self.ensure_guild_settings(ctx.guild.id)
+
+        for k, v in current_settings.items():
+            if k in choices:
+                choices[k].append(v)
+
+        menu = text.EditSettingsWithEmojifiedLiveToggles(settings=choices,
+                                                         description=
+                                                         f"You can toggle as many events on and off as you want. "
+                                                         f"Once you're done, hit {config.YES} to confirm, or "
+                                                         f"{config.NO} to cancel.\n",
+                                                         title=f"Events to Log on {ctx.guild.name}",
+                                                         icon=ctx.guild_icon)
+
+        result = await menu.prompt(ctx)
+
+        if not result.confirmed:
+            return
+
+        await self.bot.db.execute(
+            "UPDATE guild SET "
+            "logging_message_edit = $1, "
+            "logging_message_delete = $2, "
+            "logging_member_nickname_change = $3, "
+            "logging_member_role_change = $4, "
+            "logging_member_join_leave = $5, "
+            "logging_ban_unban = $6, "
+            "logging_guild_channel_create_delete = $7, "
+            "logging_role_create_delete = $8 "
+            "WHERE id = $9",
+            *result.choices.values(),
+            ctx.guild.id,
+        )
+
+        await self.bot.update_guild_config_cache()
+        await ctx.send(f"{config.YES} The settings for this server were updated.")
 
     @guild.command(name="hidechannel", aliases=["exclude", "private", "hiddenchannels", "hide"])
     @commands.guild_only()
@@ -411,7 +461,7 @@ class _Guild(context.CustomCog, name="Server"):
         """Give every new person that joins a specific role"""
 
         settings = await self.ensure_guild_settings(ctx.guild.id)
-        is_default_role_enabled = self.emojify_settings(settings["default_role_enabled"])
+        is_default_role_enabled = self.bot.emojify_boolean(settings["default_role_enabled"])
         current_default_role = ctx.guild.get_role(settings["default_role_role"])
         current_default_role_value = "-" if not current_default_role else current_default_role.mention
 
@@ -531,7 +581,7 @@ class _Guild(context.CustomCog, name="Server"):
         settings = await self.ensure_guild_settings(ctx.guild.id)
         is_allowed = settings["npc_usage_allowed"]
 
-        pretty_is_allowed = self.emojify_settings(is_allowed)
+        pretty_is_allowed = self.bot.emojify_boolean(is_allowed)
 
         embed = text.SafeEmbed(
             description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to change this setting.",

@@ -1,6 +1,7 @@
 import io
 import os
 import pathlib
+import platform
 import re
 import socket
 import sys
@@ -38,6 +39,7 @@ from bot.utils import exceptions, text, context
 from bot.config import token, config, mk
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [BOT] %(message)s", datefmt="%d.%m.%Y %H:%M:%S")
+
 
 all_extensions = {
     "bot.module.logs",
@@ -131,6 +133,8 @@ class DemocracivBot(commands.Bot):
 
     def __init__(self):
         self.start_time = time.time()
+        self.IS_DEBUG = platform.system() == "Windows"
+        logging.info(f"Starting bot for {'debug' if self.IS_DEBUG else 'production'}")
 
         intents = discord.Intents.default()
         intents.typing = False
@@ -155,7 +159,7 @@ class DemocracivBot(commands.Bot):
         self.db_ready = False
         self.loop.create_task(self.connect_to_db())
 
-        if config.DATABASE_DAILY_BACKUP_ENABLED:
+        if config.DATABASE_DAILY_BACKUP_ENABLED and not self.IS_DEBUG:
             self.daily_db_backup.start()
 
         self.loop.create_task(self.initialize_democraciv_guild())
@@ -207,8 +211,8 @@ class DemocracivBot(commands.Bot):
                     return await response.json()
 
                 if response.status == 401:
-                    logging.error(f"API_USER & API_PASSWORD in /bot/token.py does not match "
-                                  f"auth['user'] and auth['password'] in /api/token.json - 401 Unauthorized")
+                    logging.error("API_USER & API_PASSWORD in /bot/token.py does not match "
+                                  "auth['user'] and auth['password'] in /api/token.json - 401 Unauthorized")
 
                 if not silent:
                     raise exceptions.DemocracivBotAPIError(f"{config.NO} Something went wrong.")
@@ -470,6 +474,15 @@ class DemocracivBot(commands.Bot):
         self.guild_config = guild_config
         logging.info("Guild config cache was updated.")
         return guild_config
+
+    @staticmethod
+    def emojify_boolean(boolean: bool) -> str:
+        # Thanks to Dutchy for the custom emojis used here
+
+        if boolean:
+            return f"{config.GUILD_SETTINGS_GRAY_DISABLED}{config.GUILD_SETTINGS_ENABLED}\u200b"
+        else:
+            return f"{config.GUILD_SETTINGS_DISABLED}{config.GUILD_SETTINGS_GRAY_ENABLED}\u200b"
 
     async def make_file_from_image_link(self, url: str) -> discord.File:
         img = await self._make_file_from_image_link(url)
@@ -847,6 +860,7 @@ class DemocracivBot(commands.Bot):
     async def daily_db_backup(self):
         """This task makes a backup of the bot's PostgreSQL database every 24hours and uploads
         that backup to the #backup channel to the Democraciv Discord guild."""
+
         await self.do_db_backup(token.POSTGRESQL_DATABASE)
 
     async def get_logging_channel(self, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:

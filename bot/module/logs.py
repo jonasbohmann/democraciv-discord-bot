@@ -16,6 +16,7 @@ class _Log(context.CustomCog):
         fields: dict,
         thumbnail: str = None,
         to_owner: bool = False,
+        reason: str = None,
     ):
 
         if guild is None:
@@ -23,6 +24,10 @@ class _Log(context.CustomCog):
 
         if not await self.bot.get_guild_setting(guild.id, "logging_enabled"):
             return
+
+        if reason:
+            if not await self.bot.get_guild_setting(guild.id, reason):
+                return
 
         embed = text.SafeEmbed(title=title)
 
@@ -47,56 +52,61 @@ class _Log(context.CustomCog):
         if before.guild is None:
             return
 
-        if not await self.bot.is_channel_excluded(before.guild.id, before.channel.id):
-            if not before.content or not after.content:
-                return
+        if await self.bot.is_channel_excluded(before.guild.id, before.channel.id):
+            return
 
-            if before.content == after.content:
-                return
+        if not before.content or not after.content or before.content == after.content:
+            return
 
-            embed_fields = {
-                "Author": [f"{before.author.mention} {before.author}", False],
-                "Channel": [before.channel.mention, True],
-                "Jump": [f"[Link]({before.jump_url})", True],
-                "Before": [before.content[:1020], False],
-                "After": [after.content[:1020], False],
-            }
+        embed_fields = {
+            "Author": [f"{before.author.mention} {before.author}", False],
+            "Channel": [before.channel.mention, True],
+            "Jump": [f"[Link]({before.jump_url})", True],
+            "Before": [before.content, False],
+            "After": [after.content, False],
+        }
 
-            await self.log_event(before.guild, ":pencil2:  Message Edited", embed_fields)
+        await self.log_event(before.guild, ":pencil2:  Message Edited", embed_fields, reason="logging_message_edit")
 
     @commands.Cog.listener()
     async def on_message_delete(self, message):
         if message.guild is None:
             return
 
-        if not await self.bot.is_channel_excluded(message.guild.id, message.channel.id):
-            embed_fields = {
-                "Author": [f"{message.author.mention} {message.author}", True],
-                "Channel": [message.channel.mention, False],
-            }
+        if await self.bot.is_channel_excluded(message.guild.id, message.channel.id):
+            return
 
-            if message.content:
-                embed_fields["Message"] = [message.content, False]
+        embed_fields = {
+            "Author": [f"{message.author.mention} {message.author}", True],
+            "Channel": [message.channel.mention, False],
+        }
 
-            await self.log_event(message.guild, ":wastebasket:  Message Deleted", embed_fields)
+        if message.content:
+            embed_fields["Message"] = [message.content, False]
+
+        await self.log_event(message.guild, ":wastebasket:  Message Deleted", embed_fields,
+                             reason="logging_message_delete")
 
     @commands.Cog.listener()
     async def on_raw_bulk_message_delete(self, payload):
         guild = self.bot.get_guild(payload.guild_id)
 
-        if not await self.bot.is_channel_excluded(guild.id, payload.channel_id):
-            channel = self.bot.get_channel(payload.channel_id)
+        if await self.bot.is_channel_excluded(guild.id, payload.channel_id):
+            return
 
-            embed_fields = {
-                "Amount": [len(payload.message_ids), True],
-                "Channel": [channel.mention, True],
-            }
+        channel = self.bot.get_channel(payload.channel_id)
 
-            await self.log_event(
-                guild,
-                ":wastebasket: :wastebasket:  Bulk of Messages Deleted",
-                embed_fields,
-            )
+        embed_fields = {
+            "Amount": [len(payload.message_ids), True],
+            "Channel": [channel.mention, True],
+        }
+
+        await self.log_event(
+            guild,
+            ":wastebasket: :wastebasket:  Bulk of Messages Deleted",
+            embed_fields,
+            reason="logging_message_delete"
+        )
 
     @commands.Cog.listener()
     async def on_member_join(self, member):
@@ -110,6 +120,7 @@ class _Log(context.CustomCog):
             ":tada:  Member Joined",
             embed_fields,
             thumbnail=member.avatar_url_as(static_format="png"),
+            reason="logging_member_join_leave"
         )
 
     @commands.Cog.listener()
@@ -121,14 +132,12 @@ class _Log(context.CustomCog):
             ":no_pedestrians:  Member Left",
             embed_fields,
             thumbnail=member.avatar_url_as(static_format="png"),
+            reason="logging_member_join_leave"
         )
 
     @commands.Cog.listener()
     async def on_member_update(self, before, after):
         if before.display_name != after.display_name:
-            if not await self.bot.get_guild_setting(before.guild.id, "logging_enabled"):
-                return
-
             embed_fields = {
                 "Member": [f"{before.mention} {before}", False],
                 "Before": [before.display_name, False],
@@ -140,12 +149,10 @@ class _Log(context.CustomCog):
                 ":arrows_counterclockwise:  Nickname Changed",
                 embed_fields,
                 thumbnail=before.avatar_url_as(static_format="png"),
+                reason="logging_member_nickname_change"
             )
 
         elif before.roles != after.roles:
-            if not await self.bot.get_guild_setting(before.guild.id, "logging_enabled"):
-                return
-
             if len(before.roles) < len(after.roles):
                 given_role = "*invalid role*"
 
@@ -164,6 +171,7 @@ class _Log(context.CustomCog):
                     ":sunglasses:  Role given to Member",
                     embed_fields,
                     thumbnail=before.avatar_url_as(static_format="png"),
+                    reason="logging_member_role_change"
                 )
 
             elif len(before.roles) > len(after.roles):
@@ -184,6 +192,7 @@ class _Log(context.CustomCog):
                     ":zipper_mouth:  Role removed from Member",
                     embed_fields,
                     thumbnail=before.avatar_url_as(static_format="png"),
+                    reason="logging_member_role_change"
                 )
 
     @commands.Cog.listener()
@@ -196,6 +205,7 @@ class _Log(context.CustomCog):
             embed_fields,
             thumbnail=user.avatar_url_as(static_format="png"),
             to_owner=True,
+            reason="logging_ban_unban"
         )
 
     @commands.Cog.listener()
@@ -208,6 +218,7 @@ class _Log(context.CustomCog):
             embed_fields,
             thumbnail=user.avatar_url_as(static_format="png"),
             to_owner=True,
+            reason="logging_ban_unban"
         )
 
     @commands.Cog.listener()
@@ -220,7 +231,7 @@ class _Log(context.CustomCog):
                 "ID": [role.id, False],
             }
 
-            await self.log_event(role.guild, ":new:  Role Created", embed_fields)
+            await self.log_event(role.guild, ":new:  Role Created", embed_fields, reason="logging_role_create_delete")
 
         except TypeError:
             return
@@ -236,7 +247,8 @@ class _Log(context.CustomCog):
             "ID": [role.id, False],
         }
 
-        await self.log_event(role.guild, ":exclamation:  Role Deleted", embed_fields)
+        await self.log_event(role.guild, ":exclamation:  Role Deleted", embed_fields,
+                             reason="logging_role_create_delete")
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
@@ -245,7 +257,8 @@ class _Log(context.CustomCog):
             "Category": [channel.category, True],
         }
 
-        await self.log_event(channel.guild, ":new:  Channel Created", embed_fields)
+        await self.log_event(channel.guild, ":new:  Channel Created", embed_fields,
+                             reason="logging_guild_channel_create_delete")
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
@@ -254,7 +267,8 @@ class _Log(context.CustomCog):
             "Category": [channel.category, True],
         }
 
-        await self.log_event(channel.guild, ":exclamation:  Channel Deleted", embed_fields)
+        await self.log_event(channel.guild, ":exclamation:  Channel Deleted", embed_fields,
+                             reason="logging_guild_channel_create_delete")
 
     async def on_guild_remove(self, guild):
         await self.bot.owner.send(f":warning:  I was removed from {guild.name} ({guild.id}).")

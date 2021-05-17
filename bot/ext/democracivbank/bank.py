@@ -223,13 +223,18 @@ class Bank(context.CustomCog):
             "https://cdn.discordapp.com/attachments/663076007426785300/717434510861533344/ezgif-5-8a4edb1f0306.png"
         )
         self.bank_listener = BankListener(bot)
-        self.bank_db_backup.start()
+
+        if not bot.IS_DEBUG:
+            self.bank_db_backup.start()
+
         self._currencies = {}
         self.bot.loop.create_task(self._fetch_currencies())
 
     def cog_unload(self):
         self.bot.loop.create_task(self.bank_listener.shutdown())
-        self.bank_db_backup.cancel()
+
+        if not bot.IS_DEBUG:
+            self.bank_db_backup.cancel()
 
     @tasks.loop(hours=config.DATABASE_DAILY_BACKUP_INTERVAL)
     async def bank_db_backup(self):
