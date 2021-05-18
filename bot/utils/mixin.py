@@ -316,14 +316,6 @@ class GovernmentMixin:
                                   return_model=False) -> typing.Dict[typing.Union[models.Bill, models.Law, str], None]:
         """Search for bills by their tag(s), returns list with prettified strings of found laws"""
 
-        # Once a bill is passed into law, the bot automatically generates tags for it to allow for easier and faster
-        # searching.
-
-        # The bot takes the submitter-provided description (from the -legislature submit command) *and* the description
-        # from Google Docs (og:description property in HTML, usually the title of the Google Doc and the first
-        # few sentences of content.) and tokenizes those with nltk. Then, every noun from both descriptions is saved
-        # into the legislature_tags table with the corresponding law_id.
-
         con = connection or self.bot.db
 
         model = models.Bill if not search_laws else models.Law

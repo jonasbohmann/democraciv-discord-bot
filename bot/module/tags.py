@@ -479,18 +479,24 @@ class Tags(context.CustomCog):
     async def edittag(self, ctx: context.CustomContext, *, tag: OwnedTag):
         """Edit one of your tags"""
 
-        menu = text.EditModelMenu(choices_with_formatted_explanation={"embed": "Send Tag as embed or plain text",
-                                                                      "title": "Tag Title", "content": "Tag Content"})
+        choices = {"embed": "Send Tag as embed or plain text", "title": "Tag Title", "content": "Tag Content"}
+
+        if ctx.guild.id == self.bot.dciv.id:
+            try:
+                nation_admin = self.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
+            except exceptions.RoleNotFoundError:
+                nation_admin = None
+
+            if ctx.author.guild_permissions.administrator or (nation_admin and nation_admin in ctx.author.roles):
+                choices["global"] = "Change Tag to be Global or Local"
+
+        menu = text.EditModelMenu(choices_with_formatted_explanation=choices)
         result = await menu.prompt(ctx)
         p = config.BOT_PREFIX
-
-        if not result.confirmed:
-            return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
-
         to_change = result.choices
 
-        if True not in to_change.values():
-            return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
+        if not result.confirmed or True not in to_change.values():
+            return
 
         if to_change["embed"]:
             img = await self.bot.make_file_from_image_link(
@@ -533,19 +539,33 @@ class Tags(context.CustomCog):
         else:
             new_content = tag.content
 
+        if to_change.get("global"):
+            is_global = await ctx.confirm(
+                f"{config.USER_INTERACTION_REQUIRED} Should this tag be global?"
+                f"\n{config.HINT} *Only {self.bot.dciv.name} Moderators and Nation "
+                f"Admins can make global tags. If a tag is global, it can be used "
+                f"in every server I am in, as well as in "
+                f"DMs with me. If a tag is not global, called a 'local' tag, "
+                f"it can only be used in the server it was made in.*"
+            )
+        else:
+            is_global = tag.is_global
+
         are_you_sure = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit your `{config.BOT_PREFIX}{tag.name}` tag?"
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit your "
+            f"`{config.BOT_PREFIX}{tag.name}` tag?"
         )
 
         if not are_you_sure:
             return await ctx.send("Cancelled.")
 
         await self.bot.db.execute(
-            "UPDATE tag SET content = $1, title = $3, is_embedded = $4 WHERE id = $2",
+            "UPDATE tag SET content = $1, title = $3, is_embedded = $4, global = $5 WHERE id = $2",
             new_content,
             tag.id,
             new_title,
             is_embedded,
+            is_global
         )
         await ctx.send(f"{config.YES} Your tag was edited.")
 
@@ -580,6 +600,101 @@ class Tags(context.CustomCog):
 
         await pages.start(ctx)
 
+    async def _person_stats(self, ctx, person):
+        amount = await self.bot.db.fetch("SELECT COUNT(name) FROM tag WHERE author = $1 "
+                                         "UNION ALL "
+                                         "SELECT COUNT(name) FROM tag WHERE author = $1 AND guild_id = $2 "
+                                         "UNION ALL "
+                                         "SELECT COUNT(name) FROM tag WHERE author = $1 AND global = true ",
+                                         person.id, ctx.guild.id)
+
+        top_tags = await self.bot.db.fetch("SELECT name, uses FROM tag WHERE author = $1 AND guild_id = $2 "
+                                           "ORDER BY uses DESC LIMIT 5", person.id, ctx.guild.id)
+
+        top_global_tags = await self.bot.db.fetch("SELECT name, uses FROM tag WHERE author = $1 AND global = true "
+                                                  "ORDER BY uses DESC LIMIT 5", person.id)
+
+        embed = text.SafeEmbed()
+        embed.set_author(name=person.display_name, icon_url=person.avatar_url_as(static_format="png"))
+
+        embed.add_field(name="Amount of Tags from any Server", value=amount[0]['count'])
+        embed.add_field(name="Amount of Global Tags from any Server", value=amount[2]['count'])
+        embed.add_field(name="Amount of Tags from this Server", value=amount[1]['count'], inline=False)
+
+        embed.add_field(name="Top Tags from this Server (Global and Local)", value=self._fmt_stats(top_tags),
+                        inline=False)
+        embed.add_field(name="Top Global Tags from any Server", value=self._fmt_stats(top_global_tags),
+                        inline=False)
+
+        await ctx.send(embed=embed)
+
+    @staticmethod
+    def _fmt_stats(records):
+        if not records:
+            return "-"
+
+        return "\n".join(f'{i}. `{config.BOT_PREFIX}{r["name"]}` ({r["uses"]} uses)' for i, r in enumerate(records,
+                                                                                                           start=1))
+
+    @tags.command(name="stats", aliases=['statistics'])
+    @commands.guild_only()
+    async def stats(self, ctx: context.CustomContext, *,
+                    person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None):
+        """View general statistics or statistics about a specific person
+
+        **Example**
+            `{PREFIX}{COMMAND}` to view general statistics
+            `{PREFIX}{COMMAND} DerJonas` to view statistics specific to that person"""
+
+        if person:
+            return await self._person_stats(ctx, person)
+
+        total = await self.bot.db.fetch("SELECT COUNT(name) FROM tag "
+                                        "UNION ALL "
+                                        "SELECT COUNT(name) FROM tag WHERE guild_id = $1 "
+                                        "UNION ALL "
+                                        "SELECT COUNT(name) FROM tag WHERE global = true", ctx.guild.id)
+
+        total_total = total[0]['count']
+        total_local = total[1]['count']
+        total_global = total[2]['count']
+
+        top_global_tags = await self.bot.db.fetch("SELECT name, uses FROM tag WHERE global = true "
+                                                  "ORDER BY uses DESC LIMIT 5")
+
+        top_server_tags = await self.bot.db.fetch("SELECT name, uses FROM tag WHERE guild_id = $1 "
+                                                  "ORDER BY uses DESC LIMIT 5",
+                                                  ctx.guild.id)
+
+        top_local_tags = await self.bot.db.fetch("SELECT name, uses FROM tag WHERE global = false AND guild_id = $1 "
+                                                 "ORDER BY uses DESC LIMIT 5", ctx.guild.id)
+
+        embed = text.SafeEmbed(description=f"There are {total_total} tags in total, of which "
+                                           f"{total_global} are global. {total_local} are from this server.")
+        embed.set_author(name=f"Tags on {ctx.guild.name}", icon_url=ctx.guild_icon)
+
+        embed.add_field(name="Top Global Tags", value=self._fmt_stats(top_global_tags),
+                        inline=False)
+        embed.add_field(name="Top Tags from this Server (Global and Local)", value=self._fmt_stats(top_server_tags),
+                        inline=False)
+        embed.add_field(name="Top Local Tags from this Server", value=self._fmt_stats(top_local_tags),
+                        inline=False)
+
+        cog = self.bot.get_cog(self.bot.mk.LEGISLATURE_NAME)
+
+        if cog:
+            top_tag_creators = await self.bot.db.fetch("SELECT author FROM tag WHERE guild_id = $1", ctx.guild.id)
+            value = cog.format_stats(record=top_tag_creators, record_key="author", stats_name="tags")
+
+            top_global_tag_creators = await self.bot.db.fetch("SELECT author FROM tag WHERE global = true")
+            global_value = cog.format_stats(record=top_global_tag_creators, record_key="author",
+                                            stats_name="global tags")
+
+            embed.add_field(name="People with the most Global Tags from any Server", value=global_value, inline=False)
+            embed.add_field(name="People with the most Tags from this Server", value=value, inline=False)
+
+        await ctx.send(embed=embed)
+
     @tags.command(name="toggleglobal")
     @commands.guild_only()
     @checks.moderation_or_nation_leader()
@@ -589,7 +704,7 @@ class Tags(context.CustomCog):
         if not tag.is_global:
             # Local -> Global
             await self.bot.db.execute("UPDATE tag SET global = true WHERE id = $1", tag.id)
-            await ctx.send(f"{config.YES} `{config.BOT_PREFIX}{tag.name}` is now a global tag. ")
+            await ctx.send(f"{config.YES} `{config.BOT_PREFIX}{tag.name}` is now a global tag.")
 
         else:
             # Global -> Local

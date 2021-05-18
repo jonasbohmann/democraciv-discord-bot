@@ -2043,7 +2043,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         await consumer.consume(resubmitter=ctx.author)
         await ctx.send(f"{config.YES} All bills were resubmitted to the current session.")
 
-    def _format_stats(self, *, record: typing.List[asyncpg.Record], record_key: str, stats_name: str) -> str:
+    def format_stats(self, *, record: typing.List[asyncpg.Record], record_key: str, stats_name: str) -> str:
         """Prettifies the dicts used in generate_leg_statistics() to strings"""
 
         record_as_list = [r[record_key] for r in record]
@@ -2079,13 +2079,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         amounts = await self.bot.db.fetch(query, models.BillIsLaw.flag.value)
 
         submitter = await self.bot.db.fetch("SELECT submitter from bill")
-        pretty_top_submitter = self._format_stats(record=submitter, record_key="submitter", stats_name="bills")
+        pretty_top_submitter = self.format_stats(record=submitter, record_key="submitter", stats_name="bills")
 
         speaker = await self.bot.db.fetch("SELECT speaker from legislature_session")
-        pretty_top_speaker = self._format_stats(record=speaker, record_key="speaker", stats_name="sessions")
+        pretty_top_speaker = self.format_stats(record=speaker, record_key="speaker", stats_name="sessions")
 
         lawmaker = await self.bot.db.fetch("SELECT submitter from bill WHERE status = $1", models.BillIsLaw.flag.value)
-        pretty_top_lawmaker = self._format_stats(record=lawmaker, record_key="submitter", stats_name="laws")
+        pretty_top_lawmaker = self.format_stats(record=lawmaker, record_key="submitter", stats_name="laws")
 
         embed = text.SafeEmbed()
         embed.set_author(
