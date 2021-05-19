@@ -29,7 +29,7 @@ from bot.utils.converter import (
     PoliticalParty,
     CaseInsensitiveUser,
     DemocracivCaseInsensitiveRole,
-    CaseInsensitiveMember, Fuzzy, FuzzyWeights, FuzzyNoMatchMessage,
+    CaseInsensitiveMember, Fuzzy, FuzzySettings,
 )
 
 
@@ -471,7 +471,7 @@ class Utility(context.CustomCog):
             *,
             person: Fuzzy[
                 CaseInsensitiveMember, CaseInsensitiveUser, DemocracivCaseInsensitiveRole, PoliticalParty,
-                FuzzyWeights(5, 2, 1, 1)
+                FuzzySettings(weights=(5, 2, 1, 1))
             ] = None,
     ):
         """See detailed information about someone
@@ -542,7 +542,8 @@ class Utility(context.CustomCog):
     @commands.command(name="avatar", aliases=["pfp", "avy"])
     @commands.guild_only()
     async def avatar(
-            self, ctx, *, person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyWeights(5, 1)] = None
+            self, ctx, *,
+            person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))] = None
     ):
         """View someone's avatar in detail
 
@@ -659,9 +660,10 @@ class Utility(context.CustomCog):
             self,
             ctx,
             *,
-            role: Fuzzy[DemocracivCaseInsensitiveRole, PoliticalParty, FuzzyWeights(5, 1),
-                        FuzzyNoMatchMessage(f"{config.NO} There is no role on this or the "
-                                            f"Democraciv server that matches `{{argument}}`.")]
+            role: Fuzzy[DemocracivCaseInsensitiveRole, PoliticalParty,
+                        FuzzySettings(no_choice_exception=f"{config.NO} There is no role on this or the "
+                                                          f"Democraciv server that matches `{{argument}}`.",
+                                      weights=(5, 1))]
     ):
         """Detailed information about a role"""
 
@@ -730,7 +732,8 @@ class Utility(context.CustomCog):
     @commands.command(name="vibecheck", hidden=True)
     @commands.guild_only()
     async def vibecheck(
-            self, ctx, *, person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyWeights(5, 1)] = None
+            self, ctx, *,
+            person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))] = None
     ):
         """vibecheck"""
 

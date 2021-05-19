@@ -21,52 +21,44 @@ ConvertersWithWeights = collections.namedtuple("ConvertersWithWeights", ["conver
 
 class _Fuzzy(commands.Converter):
 
-    def __init__(self, converter=None, message=None):
-        self.converter: typing.List[ConvertersWithWeights] = converter
-        self.message = message
+    def __init__(self, converter: typing.List[ConvertersWithWeights] = None, settings: FuzzySettings = None):
+        self.converter = converter
+        self.settings = settings
 
-    def __class_getitem__(cls, converter: typing.Union[typing.Tuple[T], T]) -> _Fuzzy[T]:
+    """def __class_getitem__(cls, converter: typing.Union[typing.Tuple[T], T]) -> _Fuzzy[T]:
         if not isinstance(converter, tuple):
             converter = (converter,)
 
         no_match_message = converter[-1]
 
-        if isinstance(no_match_message, FuzzyNoMatchMessage):
+        if isinstance(no_match_message, FuzzySettings):
             message = no_match_message.message
         else:
             message = None
 
         converter = tuple(conv() for conv in converter if not conv.__class__.__name__ == "FuzzyNoMatchMessage")
 
-        return cls(converter=converter, message=message)
+        return cls(converter=converter, message=message)"""
 
-    def __getitem__(self, converter: typing.Union[typing.Tuple[T], T]) -> _Fuzzy[T]:
+    def __getitem__(self, converter: typing.Union[typing.Tuple[T], T]) -> Fuzzy[T]:
         if not isinstance(converter, tuple):
             converter = (converter,)
 
-        no_match_message = None
-        weights = FuzzyWeights()
+        settings = None
 
         for thing in converter:
-            if isinstance(thing, FuzzyNoMatchMessage):
-                no_match_message = thing
-            if isinstance(thing, FuzzyWeights):
-                weights = thing
-
-        if no_match_message:
-            message = no_match_message.message
-        else:
-            message = None
+            if isinstance(thing, FuzzySettings):
+                settings = thing
 
         convs = []
         for i, conv in enumerate(converter):
-            if conv.__class__.__name__ in ("FuzzyNoMatchMessage", "FuzzyWeights"):
+            if isinstance(conv, FuzzySettings):
                 continue
 
-            weight = weights[i]
+            weight = settings.get_weight(i) if settings else None
             convs.append(ConvertersWithWeights(conv(), weight))
 
-        return self.__class__(converter=convs, message=message)
+        return self.__class__(converter=convs, settings=settings)
 
     async def convert(self, ctx, argument) -> T:
         exception_mapping = {}
@@ -84,7 +76,7 @@ class _Fuzzy(commands.Converter):
         # todo : catch actual exception from convert ^
 
         for converter, weight in self.converter:
-            if not isinstance(converter, FuzzyableMixin):
+            if not hasattr(converter, "get_fuzzy_source"):
                 continue
 
             source = await converter.get_fuzzy_source(ctx, argument)
@@ -99,7 +91,7 @@ class _Fuzzy(commands.Converter):
         else:
             first_exception = str(exception_mapping[self.converter[0][0]])
 
-        exception = self.message if self.message else first_exception
+        exception = self.settings.no_choice_exception if self.settings.no_choice_exception else first_exception
 
         if not sources:
             raise commands.BadArgument(exception)
@@ -135,26 +127,24 @@ class FuzzyableMixin:
         raise NotImplementedError()
 
 
-class FuzzyNoMatchMessage:
-    def __init__(self, message):
-        self.message = message
-
-    def __call__(self, *args, **kwargs):
-        return
-
-
-class FuzzyWeights:
-    def __init__(self, *weights):
+class FuzzySettings:
+    def __init__(self, *,
+                 no_choice_exception: typing.Optional[str] = None,
+                 weights: typing.Optional[typing.Sequence[int]] = None,
+                 embed_description: typing.Optional[str] = None):
+        self.no_choice_exception = no_choice_exception
         self.weights = weights
-
-    def __getitem__(self, item):
-        try:
-            return self.weights[item]
-        except IndexError:
-            return None
+        self.embed_description = embed_description
 
     def __call__(self, *args, **kwargs):
         return
+
+    def get_weight(self, index: int) -> typing.Optional[int]:
+        if self.weights:
+            try:
+                return self.weights[index]
+            except IndexError:
+                return None
 
 
 class InternalAPIWebhookConverter(commands.Converter):

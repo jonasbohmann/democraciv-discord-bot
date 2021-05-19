@@ -352,7 +352,7 @@ class FuzzyBill(Bill):
             raise e
 
 
-class Law(Bill):
+class Law(Bill, FuzzyableMixin):
     model = "Law"
     fuzzy_description = (f"Maybe you were looking for the "
                          f"`{config.BOT_PREFIX}law search` "

@@ -10,7 +10,7 @@ from bot.utils.converter import (
     CaseInsensitiveRole,
     CaseInsensitiveCategoryChannel,
     CaseInsensitiveTextChannel,
-    Fuzzy, FuzzyWeights,
+    Fuzzy, FuzzySettings,
 )
 
 
@@ -343,7 +343,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
             f"permissions in {channel.mention} be changed?"
         )
 
-        conv = await Fuzzy[CaseInsensitiveRole, CaseInsensitiveMember, FuzzyWeights(4, 2)]
+        conv = await Fuzzy[CaseInsensitiveRole, CaseInsensitiveMember, FuzzySettings(weights=(4, 2))]
         role = await conv.convert(ctx, user_input)
 
         overwrites = channel.overwrites_for(role)

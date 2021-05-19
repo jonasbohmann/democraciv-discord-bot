@@ -154,7 +154,6 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
     @law.command(name="read")
     async def read(self, ctx, *, law_id: Fuzzy[models.Law]):
         """Read the content of a law"""
-
         await self._show_bill_text(ctx, law_id)
 
     @law.command(name="search", aliases=["s"])
