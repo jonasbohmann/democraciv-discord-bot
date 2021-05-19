@@ -206,7 +206,8 @@ class CustomContext(commands.Context):
     ) -> str:
         """Waits for a reply by the original user in the original channel and returns reply as string.
 
-        Returns None if the user did nothing."""
+        Returns None if the user did nothing.
+        :rtype: object"""
 
         if text:
             await self.send(text)

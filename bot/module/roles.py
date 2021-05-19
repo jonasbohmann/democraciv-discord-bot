@@ -1,10 +1,11 @@
 import asyncpg
 import discord
+
 import bot.utils.exceptions as exceptions
 
 from bot.config import config
 from bot.utils import text, context, converter
-from bot.utils.converter import Selfrole
+from bot.utils.converter import Selfrole, Fuzzy
 from discord.ext import commands
 
 
@@ -39,7 +40,7 @@ class Selfroles(context.CustomCog):
         invoke_without_command=True,
     )
     @commands.guild_only()
-    async def roles(self, ctx, *, role: Selfrole = None):
+    async def roles(self, ctx, *, role: Fuzzy[Selfrole] = None):
         """List all selfroles on this server or toggle a selfrole by specifying the selfrole's name
 
         **Usage**
@@ -113,7 +114,7 @@ class Selfroles(context.CustomCog):
     @roles.command(name="edit", aliases=["change"])
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
-    async def editrole(self, ctx: context.CustomContext, *, role: Selfrole):
+    async def editrole(self, ctx: context.CustomContext, *, role: Fuzzy[Selfrole]):
         """Edit the join message of a selfrole
 
         **Usage**
@@ -138,7 +139,7 @@ class Selfroles(context.CustomCog):
         """Remove a selfrole from this server's `{PREFIX}roles` list"""
 
         try:
-            selfrole = await Selfrole.convert(ctx, role)
+            selfrole = await Fuzzy[Selfrole].convert(ctx, role)
         except exceptions.NotFoundError:
             return await ctx.send(f"{config.NO} This server has no selfrole that matches `{role}`.")
 

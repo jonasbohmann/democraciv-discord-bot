@@ -13,7 +13,7 @@ from bot.utils.converter import (
     CaseInsensitiveUser,
     FuzzyCIMember,
     CaseInsensitiveTextChannel,
-    CaseInsensitiveCategoryChannel,
+    CaseInsensitiveCategoryChannel, Fuzzy,
 )
 
 
@@ -239,7 +239,7 @@ class Moderation(context.CustomCog):
 
     @commands.command(name="alt", hidden=True)
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
-    async def alt(self, ctx, *, person: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
+    async def alt(self, ctx, *, person: Fuzzy[CaseInsensitiveMember]):
         """Check if someone is an alt"""
         chance, details = await self.calculate_alt_chance(person)
 
@@ -312,7 +312,7 @@ class Moderation(context.CustomCog):
     @commands.guild_only()
     @commands.bot_has_permissions(kick_members=True)
     @commands.has_permissions(kick_members=True)
-    async def kick(self, ctx, *, person: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
+    async def kick(self, ctx, *, person: Fuzzy[CaseInsensitiveMember]):
         """Kick someone"""
         if person == ctx.author:
             return await ctx.send(f"{config.NO} You can't kick yourself.")
@@ -350,7 +350,7 @@ class Moderation(context.CustomCog):
             ctx,
             amount: int,
             *,
-            target: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
+            target: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser] = None,
     ):
         """Purge an amount of messages in the current channel"""
         if amount > 500 or amount < 0:
@@ -397,7 +397,7 @@ class Moderation(context.CustomCog):
     @commands.command(name="mute")
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
-    async def mute(self, ctx, *, person: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
+    async def mute(self, ctx, *, person: Fuzzy[CaseInsensitiveMember]):
         """Mute someone"""
 
         muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
@@ -442,7 +442,7 @@ class Moderation(context.CustomCog):
     @commands.command(name="unmute")
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
-    async def unmute(self, ctx, *, person: typing.Union[CaseInsensitiveMember, FuzzyCIMember]):
+    async def unmute(self, ctx, *, person: Fuzzy[CaseInsensitiveMember]):
         """Unmute someone"""
 
         muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
@@ -569,7 +569,7 @@ class Moderation(context.CustomCog):
 
     @commands.command(name="archivechannel")
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
-    async def archivechannel(self, ctx, *, channel: CaseInsensitiveTextChannel):
+    async def archivechannel(self, ctx, *, channel: Fuzzy[CaseInsensitiveTextChannel]):
         """Archive a channel and automatically set the right permissions
 
         **Example**
@@ -608,7 +608,7 @@ class Moderation(context.CustomCog):
 
     @commands.command(name="archivecategory")
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
-    async def archivecategory(self, ctx: context.CustomContext, *, category: CaseInsensitiveCategoryChannel):
+    async def archivecategory(self, ctx: context.CustomContext, *, category: Fuzzy[CaseInsensitiveCategoryChannel]):
         """Move all channels in a category into the Archives and set the right permissions"""
 
         archive_category = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} What archive category should "

@@ -28,10 +28,8 @@ from bot.utils import context, paginator, text
 from bot.utils.converter import (
     PoliticalParty,
     CaseInsensitiveUser,
-    FuzzyCIMember,
     DemocracivCaseInsensitiveRole,
-    FuzzyDemocracivCIRole,
-    CaseInsensitiveMember,
+    CaseInsensitiveMember, Fuzzy, FuzzyWeights, FuzzyNoMatchMessage,
 )
 
 
@@ -471,8 +469,9 @@ class Utility(context.CustomCog):
             self,
             ctx,
             *,
-            person: typing.Union[
-                CaseInsensitiveMember, DemocracivCaseInsensitiveRole, PoliticalParty, CaseInsensitiveUser, FuzzyCIMember
+            person: Fuzzy[
+                CaseInsensitiveMember, CaseInsensitiveUser, DemocracivCaseInsensitiveRole, PoliticalParty,
+                FuzzyWeights(5, 2, 1, 1)
             ] = None,
     ):
         """See detailed information about someone
@@ -543,7 +542,7 @@ class Utility(context.CustomCog):
     @commands.command(name="avatar", aliases=["pfp", "avy"])
     @commands.guild_only()
     async def avatar(
-            self, ctx, *, person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None
+            self, ctx, *, person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyWeights(5, 1)] = None
     ):
         """View someone's avatar in detail
 
@@ -640,9 +639,9 @@ class Utility(context.CustomCog):
 
         await pages.start(ctx)
 
-    @commands.command(name="tinyurl", aliases=["tiny"])
+    @commands.command(name="shortenurl", aliases=["tiny", "tinyurl", "shortenlink"])
     async def tinyurl(self, ctx, *, url: str):
-        """Shorten a link with tinyurl"""
+        """Shorten a link"""
         if len(url) <= 3:
             return await ctx.send(f"{config.NO} That doesn't look like a valid URL.")
 
@@ -660,7 +659,9 @@ class Utility(context.CustomCog):
             self,
             ctx,
             *,
-            role: typing.Union[DemocracivCaseInsensitiveRole, PoliticalParty, FuzzyDemocracivCIRole],
+            role: Fuzzy[DemocracivCaseInsensitiveRole, PoliticalParty, FuzzyWeights(5, 1),
+                        FuzzyNoMatchMessage(f"{config.NO} There is no role on this or the "
+                                            f"Democraciv server that matches `{{argument}}`.")]
     ):
         """Detailed information about a role"""
 
@@ -729,7 +730,7 @@ class Utility(context.CustomCog):
     @commands.command(name="vibecheck", hidden=True)
     @commands.guild_only()
     async def vibecheck(
-            self, ctx, *, person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None
+            self, ctx, *, person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyWeights(5, 1)] = None
     ):
         """vibecheck"""
 

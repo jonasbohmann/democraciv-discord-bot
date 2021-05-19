@@ -10,7 +10,7 @@ from bot.utils.converter import (
     CaseInsensitiveRole,
     CaseInsensitiveCategoryChannel,
     CaseInsensitiveTextChannel,
-    CIMemberOrCIRole,
+    Fuzzy, FuzzyWeights,
 )
 
 
@@ -78,11 +78,11 @@ class PermissionSelectorMenu(menus.Menu):
         send = "Deny" if self.overwrites.send_messages else "Allow"
         embed = text.SafeEmbed(
             title=f"{config.USER_INTERACTION_REQUIRED}  Which Permissions in #{self.channel.name} do you want "
-            f"to change?",
+                  f"to change?",
             description=f"Select as many things as you want, then click the {config.YES} button to continue, "
-            f"or {config.NO} to cancel.\n\n"
-            f":one: {read} Read Messages Permission for `{self.role}` in {self.channel.mention}\n"
-            f":two: {send} Send Messages Permission for `{self.role}` in {self.channel.mention}",
+                        f"or {config.NO} to cancel.\n\n"
+                        f":one: {read} Read Messages Permission for `{self.role}` in {self.channel.mention}\n"
+                        f":two: {send} Send Messages Permission for `{self.role}` in {self.channel.mention}",
         )
         return await ctx.send(embed=embed)
 
@@ -121,7 +121,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         embed = text.SafeEmbed(
             description=f"{description}\n\n[Constitution]({self.bot.mk.CONSTITUTION})\n"
-            f"[Wiki](https://reddit.com/r/democraciv/wiki/{nation_wiki})"
+                        f"[Wiki](https://reddit.com/r/democraciv/wiki/{nation_wiki})"
         )
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
 
@@ -165,11 +165,11 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         embed = text.SafeEmbed(
             description=f"Nation Admins are allowed to make roles and "
-            f"channels on the {self.bot.dciv.name} server that are "
-            f"specific for their nation (`{p}help Nation`).\n\nAdditionally, they are "
-            f"allowed to create, edit and delete political parties "
-            f"(`{p}help Political Parties`).\n\nNation Admins can also pin messages "
-            f"in every category that belongs to their nation."
+                        f"channels on the {self.bot.dciv.name} server that are "
+                        f"specific for their nation (`{p}help Nation`).\n\nAdditionally, they are "
+                        f"allowed to create, edit and delete political parties "
+                        f"(`{p}help Political Parties`).\n\nNation Admins can also pin messages "
+                        f"in every category that belongs to their nation."
         )
 
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
@@ -184,8 +184,10 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
     @nation.command(name="pin")
     @checks.moderation_or_nation_leader()
-    async def pin(self, ctx, *, message: discord.Message):
+    async def pin(self, ctx, *, message: discord.Message = None):
         """Pin a message
+
+        You can either reply to the message you want me to pin, or give me the message's ID like shown below.
 
         **Example**
             `{PREFIX}{COMMAND} 784598328666619934` use the message's ID *(only works if you use the command in the same channel as the message you want to pin)*
@@ -194,6 +196,15 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         """
         if message.channel.category_id not in self.bot.mk.NATION_CATEGORIES:
             raise exceptions.DemocracivBotException(f"{config.NO} You're not allowed to pin messages in this channel.")
+
+        if not message and ctx.message.reference:
+            message = ctx.message.reference.resolved
+
+            if not message:
+                message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+
+                if not message:
+                    return
 
         await message.pin()
         await ctx.send(f"{config.YES} Done.")
@@ -314,7 +325,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
     @nation.command(name="permissions", aliases=["perms", "permission", "perm"])
     @checks.moderation_or_nation_leader()
-    async def set_channel_perms(self, ctx, *, channel: CaseInsensitiveTextChannel = None):
+    async def set_channel_perms(self, ctx, *, channel: Fuzzy[CaseInsensitiveTextChannel] = None):
         """Toggle Read and/or Send Messages permissions for a role or person in one of your nation's channels"""
 
         if not channel:
@@ -327,12 +338,13 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         if channel.category_id not in self.bot.mk.NATION_CATEGORIES:
             return await ctx.send(f"{config.NO} The `{channel.name}` channel does not belong to your nation.")
 
-        role = await ctx.converted_input(
+        user_input = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} For which role *or* person should the "
-            f"permissions in {channel.mention} be changed?",
-            return_input_on_fail=False,
-            converter=CIMemberOrCIRole,
+            f"permissions in {channel.mention} be changed?"
         )
+
+        conv = await Fuzzy[CaseInsensitiveRole, CaseInsensitiveMember, FuzzyWeights(4, 2)]
+        role = await conv.convert(ctx, user_input)
 
         overwrites = channel.overwrites_for(role)
 

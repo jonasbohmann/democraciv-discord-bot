@@ -433,9 +433,10 @@ class DemocracivBot(commands.Bot):
             return await ctx.send(error.message)
 
         else:
-            await self.log_error(ctx, error, to_log_channel=False, to_owner=True, to_context=True)
             logging.error(f"Ignoring exception in command {ctx.command}:")
             traceback.print_exception(type(error), error, error.__traceback__)
+            await self.log_error(ctx, error, to_log_channel=False, to_owner=True, to_context=True)
+
 
     def get_democraciv_channel(self, channel: mk.DemocracivChannel) -> typing.Optional[discord.TextChannel]:
         to_return = self.dciv.get_channel(channel.value)

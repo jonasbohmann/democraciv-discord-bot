@@ -69,7 +69,7 @@ class Admin(
         """Force rebuilding the document index for BERTQuestionAnswering"""
 
         await self.bot.api_request("POST", "ml/question_answering/force_index")
-        await ctx.send(f"{config.YES}")
+        await ctx.send(config.YES)
 
 
 class Experiments(context.CustomCog):

@@ -6,6 +6,7 @@ from bot.config import config
 from discord.ext import commands
 
 from bot.utils import text, converter, paginator, exceptions, context
+from utils.converter import Fuzzy
 
 
 class _Guild(context.CustomCog, name="Server"):
@@ -310,7 +311,8 @@ class _Guild(context.CustomCog, name="Server"):
     @guild.command(name="hidechannel", aliases=["exclude", "private", "hiddenchannels", "hide"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
-    async def exclude(self, ctx, *, channel: converter.CaseInsensitiveTextChannelOrCategoryChannel = None):
+    async def exclude(self, ctx, *, channel: Fuzzy[converter.CaseInsensitiveTextChannel,
+                                                   converter.CaseInsensitiveCategoryChannel] = None):
         """Hide a channel or category from your server's log channel
 
         Both text channels and entire categories can be hidden.
@@ -330,9 +332,10 @@ class _Guild(context.CustomCog, name="Server"):
             )
 
         help_description = (
-            f"When you hide a channel, it will no longer show up in {current_logging_channel.mention}.\n\nAdditionally, "
-            f":star: reactions for the starboard will no longer count in that channel.\n\nYou can hide a channel, "
-            f"or even an entire category at once, with `{config.BOT_PREFIX}server hidechannel <channel_name>`\n\n__**Hidden Channels**__"
+            f"When you hide a channel, it will no longer show up in {current_logging_channel.mention}.\n\nAdditionally,"
+            f" :star: reactions for the starboard will no longer count in that channel.\n\nYou can hide a channel, "
+            f"or even an entire category at once, with "
+            f"`{config.BOT_PREFIX}server hidechannel <channel_name>`\n\n__**Hidden Channels**__"
         )
 
         private_channels = settings["private_channels"]

@@ -10,7 +10,7 @@ from bot.utils.converter import (
     OwnedTag,
     CaseInsensitiveMember,
     CaseInsensitiveUser,
-    FuzzyCIMember,
+    FuzzyCIMember, Fuzzy,
 )
 from bot.utils import text, paginator, exceptions, context, checks
 
@@ -465,7 +465,7 @@ class Tags(context.CustomCog):
 
     @tags.command(name="raw")
     @commands.guild_only()
-    async def raw(self, ctx: context.CustomContext, *, tag: Tag):
+    async def raw(self, ctx: context.CustomContext, *, tag: Fuzzy[Tag]):
         """Raw markdown of a tag
 
         Useful when you want to update a tag with `-tag edit`
@@ -476,7 +476,7 @@ class Tags(context.CustomCog):
     @tags.command(name="edit", aliases=["change"])
     @commands.guild_only()
     @checks.tag_check()
-    async def edittag(self, ctx: context.CustomContext, *, tag: OwnedTag):
+    async def edittag(self, ctx: context.CustomContext, *, tag: Fuzzy[OwnedTag]):
         """Edit one of your tags"""
 
         choices = {"embed": "Send Tag as embed or plain text", "title": "Tag Title", "content": "Tag Content"}

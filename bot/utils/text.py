@@ -6,7 +6,6 @@ import discord
 
 from discord.ext import tasks, menus
 from bot.config import config, mk
-from bot.utils import models
 
 
 def split_string(string: str, length: int):
@@ -41,7 +40,7 @@ class AnnouncementScheduler:
     def __init__(self, bot, channel):
         self.bot = bot
         self._channel: mk.DemocracivChannel = channel
-        self._objects: typing.List[typing.Union[models.Bill, models.Law]] = []
+        self._objects: typing.List = []
         self._last_addition = None
         self.wait_time = 5
         self._task = None
@@ -60,7 +59,7 @@ class AnnouncementScheduler:
     def get_message(self) -> typing.Optional[str]:
         pass
 
-    def add(self, obj: models.Bill):
+    def add(self, obj):
         if len(self._objects) == 0:
             self._task = copy.copy(self._wait)
             self._task.start()

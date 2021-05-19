@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import collections
 import enum
 import re
 import typing
@@ -6,9 +9,152 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import BadArgument
 from fuzzywuzzy import process
+from typing import TypeVar
 
 from bot.config import config, mk
 from bot.utils import context, exceptions, text
+
+T = TypeVar("T")
+
+ConvertersWithWeights = collections.namedtuple("ConvertersWithWeights", ["converter", "weight"])
+
+
+class _Fuzzy(commands.Converter):
+
+    def __init__(self, converter=None, message=None):
+        self.converter: typing.List[ConvertersWithWeights] = converter
+        self.message = message
+
+    def __class_getitem__(cls, converter: typing.Union[typing.Tuple[T], T]) -> _Fuzzy[T]:
+        if not isinstance(converter, tuple):
+            converter = (converter,)
+
+        no_match_message = converter[-1]
+
+        if isinstance(no_match_message, FuzzyNoMatchMessage):
+            message = no_match_message.message
+        else:
+            message = None
+
+        converter = tuple(conv() for conv in converter if not conv.__class__.__name__ == "FuzzyNoMatchMessage")
+
+        return cls(converter=converter, message=message)
+
+    def __getitem__(self, converter: typing.Union[typing.Tuple[T], T]) -> _Fuzzy[T]:
+        if not isinstance(converter, tuple):
+            converter = (converter,)
+
+        no_match_message = None
+        weights = FuzzyWeights()
+
+        for thing in converter:
+            if isinstance(thing, FuzzyNoMatchMessage):
+                no_match_message = thing
+            if isinstance(thing, FuzzyWeights):
+                weights = thing
+
+        if no_match_message:
+            message = no_match_message.message
+        else:
+            message = None
+
+        convs = []
+        for i, conv in enumerate(converter):
+            if conv.__class__.__name__ in ("FuzzyNoMatchMessage", "FuzzyWeights"):
+                continue
+
+            weight = weights[i]
+            convs.append(ConvertersWithWeights(conv(), weight))
+
+        return self.__class__(converter=convs, message=message)
+
+    async def convert(self, ctx, argument) -> T:
+        exception_mapping = {}
+
+        for converter, _ in self.converter:
+            try:
+                return await converter.convert(ctx, argument)
+            except Exception as e:
+                exception_mapping[converter] = e
+                continue
+
+        sources = []
+        model = []
+        description = []
+        # todo : catch actual exception from convert ^
+
+        for converter, weight in self.converter:
+            if not isinstance(converter, FuzzyableMixin):
+                continue
+
+            source = await converter.get_fuzzy_source(ctx, argument)
+            sources.extend(source[:weight])
+            model.append(converter.model)
+
+            if converter.fuzzy_description:
+                description.append(converter.fuzzy_description)
+
+        if hasattr(exception_mapping[self.converter[0].converter], "message"):
+            first_exception = exception_mapping[self.converter[0].converter].message
+        else:
+            first_exception = str(exception_mapping[self.converter[0][0]])
+
+        exception = self.message if self.message else first_exception
+
+        if not sources:
+            raise commands.BadArgument(exception)
+
+        if len(model) > 1:
+            first = ", ".join(model[:-1])
+            fmt = f"{first} or {model[-1]}"
+        else:
+            fmt = model[0]
+
+        menu = text.FuzzyChoose(question=f"Which {fmt} did you mean?",
+                                description="\n".join(description),
+                                choices=sources[:8])
+        result = await menu.prompt(ctx)
+
+        if result:
+            return result
+
+        raise commands.BadArgument(exception)
+
+
+Fuzzy = _Fuzzy()
+
+
+class FuzzyableMixin:
+    model: str
+    fuzzy_description: typing.Optional[str] = None
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        """This must return an Iterable of the _already converted_, final objects.
+
+         The __str__ of each object will be shown in the FuzzyChoose menu for the user to choose."""
+        raise NotImplementedError()
+
+
+class FuzzyNoMatchMessage:
+    def __init__(self, message):
+        self.message = message
+
+    def __call__(self, *args, **kwargs):
+        return
+
+
+class FuzzyWeights:
+    def __init__(self, *weights):
+        self.weights = weights
+
+    def __getitem__(self, item):
+        try:
+            return self.weights[item]
+        except IndexError:
+            return None
+
+    def __call__(self, *args, **kwargs):
+        return
 
 
 class InternalAPIWebhookConverter(commands.Converter):
@@ -31,7 +177,7 @@ class PoliticalPartyJoinMode(enum.Enum):
     PRIVATE = "Private"
 
 
-class PoliticalParty(commands.Converter):
+class PoliticalParty(commands.Converter, FuzzyableMixin):
     """
     Represents a political party.
 
@@ -41,6 +187,9 @@ class PoliticalParty(commands.Converter):
         3. Lookup via Discord roles on the Democraciv Guild by name/alias.
 
     """
+    model = "Political Party"
+    fuzzy_exception = (f"{config.NO} There is no political party that matches `{{argument}}`.\n"
+                       f"{config.HINT} Try one of the ones in `{config.BOT_PREFIX}parties`.")
 
     def __init__(self, **kwargs):
         self.discord_invite: str = kwargs.get("discord_invite")
@@ -58,7 +207,30 @@ class PoliticalParty(commands.Converter):
         return isinstance(other, PoliticalParty) and other._id == self._id
 
     def __hash__(self):
-        return hash(self.role) if self.role else hash(self._id)
+        return hash(self._id)
+
+    async def get_fuzzy_source(self, ctx, argument):
+        arg = argument.lower()
+        lookup = {}
+
+        possibilities = await ctx.bot.db.fetch("SELECT party_id, alias FROM party_alias")
+        for record in possibilities:
+            lookup[record['alias'].title()] = record['party_id']
+
+        possibilities = [r['alias'].title() for r in possibilities]
+        match = process.extract(arg, possibilities, limit=10)
+        fmt = {}
+
+        for m, _ in match:
+            try:
+                party = await PoliticalParty.convert(ctx, lookup[m])
+                fmt[party] = None
+            except Exception:
+                # sanity check
+                continue
+
+        fmt = list(fmt.keys())[:5]
+        return fmt
 
     @property
     def leaders(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
@@ -135,48 +307,34 @@ class PoliticalParty(commands.Converter):
         )
 
 
-class FuzzyPoliticalParty(PoliticalParty):
-    @classmethod
-    async def convert(cls, ctx, argument):
-        try:
-            return await super().convert(ctx, argument)
-        except Exception:
-            arg = argument.lower()
-            lookup = {}
+class Selfrole(commands.Converter, FuzzyableMixin):
+    class MockRole:
+        id = 0
+        name = mention = "*Deleted Role*"
+        members = []
 
-            possibilities = await ctx.bot.db.fetch("SELECT party_id, alias FROM party_alias")
-            for record in possibilities:
-                lookup[record['alias'].title()] = record['party_id']
+        def __bool__(self):
+            return False
 
-            possibilities = [r['alias'].title() for r in possibilities]
-            match = process.extract(arg, possibilities, limit=10)
-            fmt = {}
+        def __str__(self):
+            return self.name
 
-            for m, _ in match:
-                try:
-                    party = await PoliticalParty.convert(ctx, lookup[m])
-                    fmt[party] = None
-                except Exception:
-                    # sanity check
-                    continue
+        async def delete(self):
+            pass
 
-            fmt = list(fmt.keys())[:5]
-            menu = text.FuzzyChoose(question=f"Which Political Party did you mean?", choices=fmt)
-            result = await menu.prompt(ctx)
+    model = "Selfrole"
+    fuzzy_exception = (f"{config.NO} There is no selfrole on this server that matches `{{argument}}`.\n"
+                       f"{config.HINT} If you're trying to join or leave a political party, "
+                       f"check `{config.BOT_PREFIX}help party`")
 
-            if result:
-                return result
-
-            raise exceptions.NotFoundError(f"{config.NO} There is no political party that matches `{argument}`.\n"
-                                           f"{config.HINT} Try one of the ones in `{config.BOT_PREFIX}parties`.")
-
-
-class Selfrole(commands.Converter):
     def __init__(self, **kwargs):
         self._join_message: str = kwargs.get("join_message")
         self._guild = kwargs.get("guild_id")
         self._role = kwargs.get("role_id")
         self._bot = kwargs.get("bot")
+
+    def __str__(self):
+        return self.role.name
 
     @property
     def join_message(self):
@@ -187,11 +345,29 @@ class Selfrole(commands.Converter):
         return self._bot.get_guild(self._guild)
 
     @property
-    def role(self) -> typing.Optional[discord.Role]:
+    def role(self) -> typing.Union[discord.Role, MockRole]:
         if self.guild is not None:
             return self.guild.get_role(self._role)
 
-        return None
+        return self.MockRole()
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        available_roles = await ctx.bot.db.fetch("SELECT * FROM selfrole WHERE guild_id = $1", ctx.guild.id)
+        roles = {}
+
+        for record in available_roles:
+            role = ctx.guild.get_role(record['role_id'])
+
+            if role:
+                roles[role.name] = Selfrole(**dict(record), bot=ctx.bot)
+
+        match = process.extract(argument, [r.role.name for r in roles.values()], limit=5)
+        fmt = []
+
+        for m, _ in match:
+            fmt.append(roles[m])
+
+        return fmt
 
     @classmethod
     async def convert(cls, ctx, argument):
@@ -276,22 +452,35 @@ async def fuzzy_search(ctx, arg, iterable, model):
     return await menu.prompt(ctx)
 
 
-class CaseInsensitiveTextChannel(commands.TextChannelConverter):
+def _find_channel(arg, what):
+    if arg.startswith("#"):
+        arg = arg[1:]
+
+    def predicate(c):
+        return c.name.lower() == arg
+
+    return discord.utils.find(predicate, what)
+
+
+class CaseInsensitiveTextChannel(commands.TextChannelConverter, FuzzyableMixin):
     model = "channel"
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        channel = {channel.id: channel.name for channel in ctx.guild.text_channels}
+        match = process.extract(argument, channel, limit=5)
+
+        fmt = []
+
+        for m, _, k in match:
+            fmt.append(ctx.guild.get_channel(k))
+
+        return fmt
 
     async def convert(self, ctx, argument):
         try:
             return await super().convert(ctx, argument)
         except BadArgument:
-            arg = argument.lower()
-
-            if arg.startswith("#"):
-                arg = arg[1:]
-
-            def predicate(c):
-                return c.name.lower() == arg
-
-            channel = discord.utils.find(predicate, ctx.guild.text_channels)
+            channel = _find_channel(argument.lower(), ctx.guild.text_channels)
 
             if channel:
                 return channel
@@ -299,22 +488,25 @@ class CaseInsensitiveTextChannel(commands.TextChannelConverter):
             raise BadArgument(f"{config.NO} There is no channel named `{argument}` on this server.")
 
 
-class CaseInsensitiveCategoryChannel(commands.CategoryChannelConverter):
+class CaseInsensitiveCategoryChannel(commands.CategoryChannelConverter, FuzzyableMixin):
     model = "category"
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        categories = {category.id: category.name for category in ctx.guild.categories}
+        match = process.extract(argument, categories, limit=5)
+
+        fmt = []
+
+        for m, _, k in match:
+            fmt.append(ctx.guild.get_channel(k))
+
+        return fmt
 
     async def convert(self, ctx, argument):
         try:
             return await super().convert(ctx, argument)
         except BadArgument:
-            arg = argument.lower()
-
-            if arg.startswith("#"):
-                arg = arg[1:]
-
-            def predicate(c):
-                return c.name.lower() == arg
-
-            channel = discord.utils.find(predicate, ctx.guild.categories)
+            channel = _find_channel(argument.lower(), ctx.guild.categories)
 
             if channel:
                 return channel
@@ -335,8 +527,18 @@ class CaseInsensitiveTextChannelOrCategoryChannel(CaseInsensitiveTextChannel):
                 raise BadArgument(f"{config.NO} There is no channel or category named `{argument}` on this server.")
 
 
-class CaseInsensitiveRole(commands.RoleConverter):
+class CaseInsensitiveRole(commands.RoleConverter, FuzzyableMixin):
     model = "role"
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        roles = [role.name for role in ctx.guild.roles]
+
+        match = process.extract(argument, roles, limit=5)
+        fmt = []
+        for m, _ in match:
+            fmt.append(discord.utils.get(ctx.guild.roles, name=m))
+
+        return fmt
 
     async def convert(self, ctx: context.CustomContext, argument):
         try:
@@ -366,6 +568,22 @@ def find_dciv_role(ctx, argument):
 
 
 class DemocracivCaseInsensitiveRole(CaseInsensitiveRole):
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        if ctx.guild.id == ctx.bot.dciv.id:
+            return await super().get_fuzzy_source(ctx, argument)
+
+        roles = {role.id: role for role in ctx.guild.roles}
+        roles.update({role.id: role for role in ctx.bot.dciv.roles})
+
+        match = process.extract(argument, roles, limit=5)
+        fmt = []
+
+        for v, _, k in match:
+            fmt.append(ctx.guild.get_role(k) or ctx.bot.dciv.get_role(k))
+
+        return fmt
+
     async def convert(self, ctx: context.CustomContext, argument):
         try:
             return await super().convert(ctx, argument)
@@ -383,15 +601,15 @@ class DemocracivCaseInsensitiveRole(CaseInsensitiveRole):
             """for nation_prefix in ["canada - ", "rome - ", "maori - ", "ottoman - "]:
                 if arg.startswith(nation_prefix):
                     nation_arg = arg
-
+    
                 elif arg.startswith(nation_prefix[:-2]):
                     nation_arg = arg.replace(nation_prefix[:-2], nation_prefix)
-
+    
                 else:
                     nation_arg = f"{nation_prefix}{arg}"
-
+    
                 role = find_dciv_role(ctx, nation_arg)
-
+    
                 if role:
                     return role"""
 
@@ -445,8 +663,32 @@ class FuzzyDemocracivCIRole(commands.Converter):
         )
 
 
-class CaseInsensitiveMember(commands.MemberConverter):
+class CaseInsensitiveMember(commands.MemberConverter, FuzzyableMixin):
     model = "person"
+    fuzzy_exception = f"{config.NO} I couldn't find that person."
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        members = {}
+        all_tries = []
+
+        for member in ctx.guild.members:
+            all_tries.append(member.name)
+
+            if member.nick:
+                members[member.nick] = member.id
+                all_tries.append(member.nick)
+
+            members[member.name] = member.id
+
+        match = process.extract(argument, all_tries, limit=10)
+
+        fmt = {}
+
+        for m, _ in match:
+            person = ctx.guild.get_member(members[m])
+            fmt[person] = None
+
+        return list(fmt.keys())[:5]
 
     async def convert(self, ctx, argument):
         try:
@@ -500,8 +742,19 @@ class FuzzyCIMember(commands.Converter):
         raise BadArgument(f"{config.NO} I couldn't find that person.")
 
 
-class CaseInsensitiveUser(commands.UserConverter):
+class CaseInsensitiveUser(commands.UserConverter, FuzzyableMixin):
     model = "person"
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        users = {user.id: user.name for user in ctx.bot.users}
+        match = process.extract(argument, users, limit=5)
+
+        fmt = []
+
+        for m, _, k in match:
+            fmt.append(ctx.bot.get_user(k))
+
+        return fmt
 
     async def convert(self, ctx, argument):
         try:
@@ -520,23 +773,23 @@ class CaseInsensitiveUser(commands.UserConverter):
             raise BadArgument(f"{config.NO} I couldn't find that person.")
 
 
-class CIMemberOrCIRole(DemocracivCaseInsensitiveRole):
-    async def convert(self, ctx: context.CustomContext, argument):
-        try:
-            return await super().convert(ctx, argument)
-        except BadArgument:
-            return await CaseInsensitiveMember().convert(ctx, argument)
-
-
-class Tag(commands.Converter):
+class Tag(commands.Converter, FuzzyableMixin):
     """
-    Represents a Tag. Can be global or local.
+    Represents a Tag.
 
     The lookup strategy for the converter is as follows (in order):
         1. Lookup through global tags by alias
         2. Lookup through guild tags by alias
 
     """
+    model = "Tag"
+    fuzzy_exception = None
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __str__(self):
+        return f"`{config.BOT_PREFIX}{self.name}`"
 
     def __init__(self, **kwargs):
         self.id: int = kwargs.get("id")
@@ -548,13 +801,13 @@ class Tag(commands.Converter):
         self.aliases: typing.List[str] = kwargs.get("aliases", [])
         self.is_embedded: bool = kwargs.get("is_embedded")
         self.author_id: int = kwargs.get("author")
-        self._guild_id: int = kwargs.get("guild_id")
+        self.guild_id: int = kwargs.get("guild_id")
         self._bot = kwargs.get("bot")
         self.invoked_with: str = kwargs.get("invoked_with")
 
     @property
     def guild(self) -> discord.Guild:
-        return self._bot.get_guild(self._guild_id)
+        return self._bot.get_guild(self.guild_id)
 
     @property
     def author(self) -> typing.Union[discord.Member, discord.User, None]:
@@ -571,6 +824,33 @@ class Tag(commands.Converter):
     @property
     def clean_content(self) -> str:
         return discord.utils.escape_mentions(self.content)
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        lowered = argument.lower()
+
+        sql = """SELECT 
+                    tag.id, tag.guild_id, tag.name, tag.title, tag.content, tag.global, tag.author, tag.uses, tag.is_embedded
+                     FROM tag
+                     INNER JOIN
+                      tag_lookup look ON look.tag_id = tag.id 
+                     WHERE
+                       (look.alias % $1 OR lower(look.alias) LIKE '%' || $1 || '%')
+                     AND
+                      (tag.global = true OR tag.guild_id = $2)
+                     ORDER BY similarity(lower(name), $1) DESC LIMIT 5;
+                   """
+
+        matches = await ctx.bot.db.fetch(sql, lowered, ctx.guild.id)
+        found = {}
+
+        for match in matches:
+            aliases = await ctx.bot.db.fetch("SELECT alias FROM tag_lookup WHERE tag_id = $1", match["id"])
+            aliases = [record["alias"] for record in aliases]
+
+            tag = Tag(**match, bot=ctx.bot, aliases=aliases, invoked_with=lowered)
+            found[tag] = None
+
+        return list(found.keys())
 
     @classmethod
     async def convert(cls, ctx, argument: str):
@@ -607,9 +887,32 @@ class OwnedTag(Tag):
     """
     Represents a Tag that the Context.author owns.
     """
+    fuzzy_exception = f"{config.NO} You don't have access to a tag named `{{argument}}`."
 
-    @classmethod
-    async def convert(cls, ctx, argument: str):
+    def _is_allowed(self, ctx, tag: Tag) -> bool:
+        if tag.is_global and tag.guild_id != ctx.guild.id:
+            return False
+
+        if ctx.bot.mk.IS_NATION_BOT:
+            try:
+                nation_admin = ctx.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
+
+                if nation_admin in ctx.author.roles:
+                    return True
+            except exceptions.RoleNotFoundError:
+                pass
+
+        if (
+                tag.author_id == ctx.author.id) or ctx.author.guild_permissions.administrator or ctx.author.id == ctx.bot.owner_id:
+            return True
+
+        return False
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        matches = await super().get_fuzzy_source(ctx, argument)
+        return [m for m in matches if self._is_allowed(ctx, m)]
+
+    async def convert(self, ctx, argument: str):
         tag = await super().convert(ctx, argument)
 
         if tag.is_global and tag.guild.id != ctx.guild.id:
@@ -618,17 +921,7 @@ class OwnedTag(Tag):
                 f"the server they were originally created on."
             )
 
-        if ctx.bot.mk.IS_NATION_BOT:
-            try:
-                nation_admin = ctx.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
-
-                if nation_admin in ctx.author.roles:
-                    return tag
-            except exceptions.RoleNotFoundError:
-                pass
-
-        if (
-                tag.author and tag.author.id == ctx.author.id) or ctx.author.guild_permissions.administrator or ctx.author.id == ctx.bot.owner_id:
+        if self._is_allowed(ctx, tag):
             return tag
 
         raise exceptions.TagError(f"{config.NO} That isn't your tag.")

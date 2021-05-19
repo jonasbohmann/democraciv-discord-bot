@@ -65,6 +65,9 @@ class ShowBillTextMenu(paginator.SimplePages, inherit_buttons=False):
                     await self.add_button(button, react=True)
 
 
+
+
+
 class GovernmentMixin:
     def __init__(self, b):
         self.bot = b

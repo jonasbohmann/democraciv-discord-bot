@@ -13,6 +13,7 @@ from discord.utils import maybe_coroutine
 from bot.config import config, mk
 from bot.utils import context, text
 from bot.utils.exceptions import DemocracivBotException, NotFoundError, NotLawError
+from utils.converter import FuzzyableMixin
 
 
 class SessionStatus(enum.Enum):
@@ -124,7 +125,7 @@ class SessionSponsorFilter(commands.Converter):
 BillHistoryEntry = namedtuple("BillHistoryEntry", "before after date note")
 
 
-class Bill(commands.Converter):
+class Bill(commands.Converter, FuzzyableMixin):
     """
     Represents a bill that someone submitted to a session of the Legislature.
 
@@ -133,6 +134,10 @@ class Bill(commands.Converter):
         2. Lookup by bill name (Google Docs Title).
         3. Lookup by Google Docs URL.
     """
+    model = "Bill"
+    fuzzy_description = (f"Maybe you were looking for the "
+                         f"`{config.BOT_PREFIX}{mk.MarkConfig.LEGISLATURE_COMMAND} bill search` "
+                         f"command instead?\n")
 
     def __init__(self, **kwargs):
         self.id: int = kwargs.get("id")
@@ -161,6 +166,24 @@ class Bill(commands.Converter):
 
     def __str__(self):
         return self.formatted
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        lowered = argument.lower()
+
+        matches = await ctx.bot.db.fetch(
+            "SELECT id FROM bill WHERE lower(name) % $1 OR lower(name) LIKE '%' || $1 || '%'"
+            " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;", lowered
+        )
+
+        tag_matches = await ctx.bot.db.fetch(
+            "SELECT DISTINCT bill_id AS id FROM bill_lookup_tag WHERE tag % $1 LIMIT 2;", lowered
+        )
+
+        matches.extend(tag_matches)
+
+        matches = {await Bill.convert(ctx, match['id']): None for match in matches}
+
+        return list(matches.keys())
 
     async def update_link(self, new_link: str):
         self.link = new_link
@@ -330,9 +353,31 @@ class FuzzyBill(Bill):
 
 
 class Law(Bill):
+    model = "Law"
+    fuzzy_description = (f"Maybe you were looking for the "
+                         f"`{config.BOT_PREFIX}law search` "
+                         f"command instead?\n")
+
     @property
     def formatted(self):
         return f"Law #{self.id} - [{self.name}]({self.link})"
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        lowered = argument.lower()
+
+        matches = await ctx.bot.db.fetch(
+            "SELECT id FROM bill WHERE status = $2 AND (lower(name) % $1 OR lower(name) LIKE '%' || $1 || '%')"
+            " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;", lowered, BillIsLaw.flag.value
+        )
+
+        tag_matches = await ctx.bot.db.fetch(
+            "SELECT DISTINCT bill_id AS id FROM bill_lookup_tag WHERE tag % $1 LIMIT 2;", lowered
+        )
+
+        matches.extend(tag_matches)
+
+        matches = {await Law.convert(ctx, match['id'], silent=True): None for match in matches}
+        return list(filter(None, matches))
 
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str], silent=False):
@@ -388,13 +433,17 @@ class FuzzyLaw(Law):
             raise e
 
 
-class Motion(commands.Converter):
+class Motion(commands.Converter, FuzzyableMixin):
     """
     Represents a motion that someone submitted to a session of the Legislature.
 
     The lookup strategy for the converter is as follows (in order):
         1. Lookup by ID.
     """
+    model = "Motion"
+    fuzzy_description = (f"Maybe you were looking for the "
+                         f"`{config.BOT_PREFIX}{mk.MarkConfig.LEGISLATURE_COMMAND} motion search` "
+                         f"command instead?\n")
 
     def __init__(self, **kwargs):
         self.id: int = kwargs.get("id")
@@ -436,6 +485,13 @@ class Motion(commands.Converter):
 
     async def withdraw(self):
         await self._bot.db.execute("DELETE FROM motion WHERE id = $1", self.id)
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        matches = await ctx.bot.db.fetch(
+            "SELECT id FROM motion WHERE lower(title) % $1 OR lower(title) LIKE '%' || $1 || '%'"
+            " ORDER BY similarity(lower(title), $1) DESC LIMIT 6;", argument.lower())
+
+        return [await Motion.convert(ctx, match['id']) for match in matches]
 
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[str, int]):

@@ -14,7 +14,7 @@ from bot.utils.context import CustomContext
 from bot.utils.converter import (
     PoliticalParty,
     PoliticalPartyJoinMode,
-    CaseInsensitiveRole, FuzzyPoliticalParty,
+    CaseInsensitiveRole, Fuzzy,
 )
 from bot.utils.context import MockContext
 from bot.utils.exceptions import ForbiddenTask
@@ -111,7 +111,7 @@ class Party(context.CustomCog, name="Political Parties"):
         return parties_and_members
 
     @commands.group(name="party", aliases=['p'], case_insensitive=True, invoke_without_command=True)
-    async def party(self, ctx, *, party: FuzzyPoliticalParty = None):
+    async def party(self, ctx, *, party: Fuzzy[PoliticalParty] = None):
         """Detailed information about a single political party"""
 
         if party is None:
@@ -297,12 +297,12 @@ class Party(context.CustomCog, name="Political Parties"):
             await self.bot.safe_send_dm(target=leader, embed=embed, reason="party_join_leave")
 
     @party.command(name="join", hidden=True)
-    async def _join_alias(self, ctx, *, party: FuzzyPoliticalParty):
+    async def _join_alias(self, ctx, *, party: Fuzzy[PoliticalParty]):
         """Join a political party"""
         return await ctx.invoke(self.bot.get_command("join"), party=party)
 
     @commands.command(name="join")
-    async def join(self, ctx, *, party: FuzzyPoliticalParty):
+    async def join(self, ctx, *, party: Fuzzy[PoliticalParty]):
         """Join a political party"""
 
         person_in_dciv = self.bot.dciv.get_member(ctx.author.id)
@@ -418,12 +418,12 @@ class Party(context.CustomCog, name="Political Parties"):
             await ctx.send(message)
 
     @party.command(name="leave", hidden=True)
-    async def _leave_alias(self, ctx, *, party: FuzzyPoliticalParty):
+    async def _leave_alias(self, ctx, *, party: Fuzzy[PoliticalParty]):
         """Leave a political party"""
         return await ctx.invoke(self.bot.get_command("leave"), party=party)
 
     @commands.command(name="leave")
-    async def leave(self, ctx, *, party: FuzzyPoliticalParty):
+    async def leave(self, ctx, *, party: Fuzzy[PoliticalParty]):
         """Leave a political party"""
 
         person_in_dciv = self.bot.dciv.get_member(ctx.author.id)
@@ -450,7 +450,7 @@ class Party(context.CustomCog, name="Political Parties"):
         name="parties",
         aliases=["rank", "ranks", "members", "member", "rankings", "ranking"],
     )
-    async def parties(self, ctx, *, party: FuzzyPoliticalParty = None):
+    async def parties(self, ctx, *, party: Fuzzy[PoliticalParty] = None):
         """Ranking of political parties by their amount of members"""
 
         if party:
@@ -658,11 +658,12 @@ class Party(context.CustomCog, name="Political Parties"):
     async def addparty(self, ctx):
         """Add a new political party"""
         party = await self.create_new_party(ctx, commit=True)
-        await ctx.send(f"{config.YES} `{party.role.name}` was added as a new Political Party.")
+        await ctx.send(f"{config.YES} `{party.role.name}` was added as a new Political Party."
+                       f"\n{config.HINT} Remember to update <https://reddit.com/r/democraciv/wiki> accordingly.")
 
     @party.command(name="edit", aliases=["change"])
     @checks.moderation_or_nation_leader()
-    async def changeparty(self, ctx, *, party: FuzzyPoliticalParty):
+    async def changeparty(self, ctx, *, party: Fuzzy[PoliticalParty]):
         """Edit an existing political party
 
         **Example**
@@ -752,11 +753,12 @@ class Party(context.CustomCog, name="Political Parties"):
                         leader,
                     )
 
-        await ctx.send(f"{config.YES} `{party.role.name}` was edited.")
+        await ctx.send(f"{config.YES} `{party.role.name}` was edited."
+                       f"\n{config.HINT} Remember to update <https://reddit.com/r/democraciv/wiki> accordingly.")
 
     @party.command(name="delete", aliases=["remove"])
     @checks.moderation_or_nation_leader()
-    async def deleteparty(self, ctx, *, party: FuzzyPoliticalParty):
+    async def deleteparty(self, ctx, *, party: Fuzzy[PoliticalParty]):
         """Delete a political party
 
         **Usage**
@@ -782,11 +784,12 @@ class Party(context.CustomCog, name="Political Parties"):
             except discord.Forbidden:
                 raise exceptions.ForbiddenError(ForbiddenTask.DELETE_ROLE, detail=party.role.name)
 
-        await ctx.send(f"{config.YES} `{name}` and all its aliases were deleted.")
+        await ctx.send(f"{config.YES} `{name}` and all its aliases were deleted."
+                       f"\n{config.HINT} Remember to update <https://reddit.com/r/democraciv/wiki> accordingly.")
 
     @party.command(name="addalias", aliases=['alias'])
     @checks.moderation_or_nation_leader()
-    async def addalias(self, ctx, *, party: FuzzyPoliticalParty):
+    async def addalias(self, ctx, *, party: Fuzzy[PoliticalParty]):
         """Add a new alias to a political party"""
 
         alias = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} Reply with the new alias for `{party.role.name}`.")
@@ -820,7 +823,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
     @party.command(name="clearalias")
     @checks.moderation_or_nation_leader()
-    async def clearalias(self, ctx, *, party: FuzzyPoliticalParty):
+    async def clearalias(self, ctx, *, party: Fuzzy[PoliticalParty]):
         """Delete all aliases of a party"""
 
         for alias in party.aliases:
@@ -855,7 +858,8 @@ class Party(context.CustomCog, name="Political Parties"):
                 return
 
             try:
-                party = await FuzzyPoliticalParty.convert(ctx, name)
+                conv = Fuzzy[PoliticalParty]
+                party = await conv.convert(ctx, name)
             except exceptions.NotFoundError:
                 return await ctx.send(f"{config.NO} There is no party that matches `{name}`. Aborted.")
 
@@ -896,7 +900,8 @@ class Party(context.CustomCog, name="Political Parties"):
                 await party.role.delete()
 
         await ctx.send(
-            f"{config.YES} The old parties were deleted and all their members now have the role of the new party."
+            f"{config.YES} The old parties were deleted and all their members now have the role of the new party.\n"
+            f"{config.HINT} Remember to update <https://reddit.com/r/democraciv/wiki> accordingly."
         )
 
 

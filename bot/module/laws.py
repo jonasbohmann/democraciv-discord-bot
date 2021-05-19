@@ -11,7 +11,7 @@ from bot.utils.converter import (
     CaseInsensitiveMember,
     PoliticalParty,
     CaseInsensitiveUser,
-    FuzzyCIMember,
+    FuzzyCIMember, Fuzzy,
 )
 
 
@@ -40,7 +40,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         self.repeal_scheduler = RepealScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
 
     @commands.group(name="law", aliases=["laws"], case_insensitive=True, invoke_without_command=True)
-    async def law(self, ctx, *, law_id: models.FuzzyLaw = None):
+    async def law(self, ctx, *, law_id: Fuzzy[models.Law] = None):
         """List all laws in {NATION_NAME} or get details about a specific law
 
         **Usage**
@@ -151,8 +151,8 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         """List the laws a specific person or Political Party authored"""
         return await self._from_person_model(ctx, model=models.Law, member_or_party=person_or_party)
 
-    @law.command(name="read", aliases=["text", "txt", "content"])
-    async def read(self, ctx, *, law_id: models.Law):
+    @law.command(name="read")
+    async def read(self, ctx, *, law_id: Fuzzy[models.Law]):
         """Read the content of a law"""
 
         await self._show_bill_text(ctx, law_id)

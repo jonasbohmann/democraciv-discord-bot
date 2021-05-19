@@ -83,7 +83,7 @@ class Meta(context.CustomCog):
 
         await ctx.send(f"{config.YES} Your settings were updated.")
 
-    @commands.command(name="about", aliases=["info"])
+    @commands.command(name="about", aliases=["info", "bot"])
     async def about(self, ctx):
         """About this bot"""
         invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
