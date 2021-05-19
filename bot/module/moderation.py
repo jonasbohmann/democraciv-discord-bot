@@ -1,4 +1,3 @@
-import typing
 import discord
 import datetime
 
@@ -11,9 +10,8 @@ from bot.utils.converter import (
     BanConverter,
     CaseInsensitiveMember,
     CaseInsensitiveUser,
-    FuzzyCIMember,
     CaseInsensitiveTextChannel,
-    CaseInsensitiveCategoryChannel, Fuzzy,
+    CaseInsensitiveCategoryChannel, Fuzzy, FuzzySettings,
 )
 
 
@@ -350,7 +348,7 @@ class Moderation(context.CustomCog):
             ctx,
             amount: int,
             *,
-            target: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser] = None,
+            target: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))] = None,
     ):
         """Purge an amount of messages in the current channel"""
         if amount > 500 or amount < 0:

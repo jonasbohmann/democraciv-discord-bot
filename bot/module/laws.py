@@ -1,5 +1,4 @@
 import datetime
-import typing
 import discord
 
 from discord.ext import commands
@@ -11,7 +10,7 @@ from bot.utils.converter import (
     CaseInsensitiveMember,
     PoliticalParty,
     CaseInsensitiveUser,
-    FuzzyCIMember, Fuzzy,
+    Fuzzy, FuzzySettings,
 )
 
 
@@ -145,8 +144,8 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             self,
             ctx,
             *,
-            person_or_party: typing.Union[
-                CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty, FuzzyCIMember] = None,
+            person_or_party: Fuzzy[
+                CaseInsensitiveMember, CaseInsensitiveUser, PoliticalParty, FuzzySettings(weights=(5, 1, 2))] = None,
     ):
         """List the laws a specific person or Political Party authored"""
         return await self._from_person_model(ctx, model=models.Law, member_or_party=person_or_party)

@@ -13,6 +13,7 @@ from discord.ext.commands import Greedy
 from bot.config import config, mk
 from bot.utils import models, text, paginator, context, mixin, checks, converter, exceptions
 from bot.utils.models import Bill, Session, Motion, SessionStatus
+from utils.converter import Fuzzy, FuzzySettings
 
 
 class PassScheduler(text.RedditAnnouncementScheduler):
@@ -210,10 +211,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         await pages.start(ctx)
 
     @legislature.command(name="from", aliases=['f', 'by'])
-    async def _from(self, ctx: context.CustomContext, *, person_or_party: typing.Union[converter.CaseInsensitiveMember,
-                                                                                       converter.CaseInsensitiveUser,
-                                                                                       converter.PoliticalParty,
-                                                                                       converter.FuzzyCIMember] = None):
+    async def _from(self, ctx: context.CustomContext, *, person_or_party: Fuzzy[converter.CaseInsensitiveMember,
+                                                                                converter.CaseInsensitiveUser,
+                                                                                converter.PoliticalParty,
+                                                                                FuzzySettings(weights=(5, 0, 2))
+    ] = None):
         """List all bills and motions that a specific person or Political Party submitted"""
         member_or_party = person_or_party or ctx.author
 
@@ -247,7 +249,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         case_insensitive=True,
         invoke_without_command=True,
     )
-    async def bill(self, ctx: context.CustomContext, *, bill_id: models.FuzzyBill = None):
+    async def bill(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill] = None):
         """List all bills or get details about a single bill"""
 
         if bill_id is None:
@@ -364,7 +366,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
     @bill.command(name="edit", aliases=["update", "e", "change"])
     @checks.is_democraciv_guild()
-    async def b_edit(self, ctx: context.CustomContext, *, bill_id: models.FuzzyBill):
+    async def b_edit(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill]):
         """Edit the Google Docs link or summary of a bill
 
         **Example**
@@ -439,7 +441,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         await ctx.send(f"{config.YES} Bill #{bill.id} `{bill.name}` was updated.")
 
     @bill.command(name="history", aliases=["h"])
-    async def b_history(self, ctx: context.CustomContext, *, bill_id: models.FuzzyBill):
+    async def b_history(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill]):
         """See when a bill was first introduced, passed into Law, repealed, etc."""
         fmt_history = [
             f"**{entry.date.strftime('%d %B %Y')}** - {entry.note if entry.note else entry.after}   "
@@ -455,7 +457,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         await pages.start(ctx)
 
     @bill.command(name="read", aliases=["text", "txt", "content"])
-    async def b_read(self, ctx: context.CustomContext, *, bill_id: models.FuzzyBill):
+    async def b_read(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill]):
         """Read the content of a bill"""
         await self._show_bill_text(ctx, bill_id)
 
@@ -477,11 +479,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             self,
             ctx: context.CustomContext,
             *,
-            person_or_party: typing.Union[
+            person_or_party: Fuzzy[
                 converter.CaseInsensitiveMember,
                 converter.CaseInsensitiveUser,
                 converter.PoliticalParty,
-                converter.FuzzyCIMember,
+                FuzzySettings(weights=(5, 0, 2))
             ] = None,
     ):
         """List all bills that a specific person or Political Party submitted"""
@@ -493,7 +495,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
         case_insensitive=True,
         invoke_without_command=True,
     )
-    async def motion(self, ctx: context.CustomContext, *, motion_id: models.FuzzyMotion = None):
+    async def motion(self, ctx: context.CustomContext, *, motion_id: Fuzzy[Motion] = None):
         """List all motions or get details about a single motion"""
 
         if motion_id is None:
@@ -503,7 +505,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
 
     @motion.command(name="edit", aliases=["update", "e"])
     @checks.is_democraciv_guild()
-    async def m_edit(self, ctx, *, motion_id: models.FuzzyMotion):
+    async def m_edit(self, ctx, *, motion_id: Fuzzy[Motion]):
         """Edit the title or content of a motion
 
         **Example**
@@ -580,11 +582,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             self,
             ctx: context.CustomContext,
             *,
-            person_or_party: typing.Union[
+            person_or_party: Fuzzy[
                 converter.CaseInsensitiveMember,
                 converter.CaseInsensitiveUser,
                 converter.PoliticalParty,
-                converter.FuzzyCIMember,
+                FuzzySettings(weights=(5, 0, 2))
             ] = None,
     ):
         """List all motions that a specific person or Political Party submitted"""
@@ -2113,9 +2115,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             self,
             ctx,
             *,
-            person_or_political_party: typing.Union[
+            person_or_political_party: Fuzzy[
                 converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.PoliticalParty,
-                converter.FuzzyCIMember
+                FuzzySettings(weights=(5, 0, 2))
             ] = None,
     ):
         """Legislative statistics about the overall {LEGISLATURE_NAME}, a specific person or a political party

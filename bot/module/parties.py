@@ -14,7 +14,7 @@ from bot.utils.context import CustomContext
 from bot.utils.converter import (
     PoliticalParty,
     PoliticalPartyJoinMode,
-    CaseInsensitiveRole, Fuzzy,
+    Fuzzy,
 )
 from bot.utils.context import MockContext
 from bot.utils.exceptions import ForbiddenTask
@@ -522,7 +522,7 @@ class Party(context.CustomCog, name="Political Parties"):
                 f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the new party you want to create."
             )
 
-            role_name = await ctx.converted_input(converter=CaseInsensitiveRole)
+            role_name = await ctx.converted_input(converter=converter.CaseInsensitiveRole)
 
             if isinstance(role_name, str):
                 await ctx.send(
@@ -562,21 +562,17 @@ class Party(context.CustomCog, name="Political Parties"):
 
             leaders = []
 
+            conv = Fuzzy[converter.CaseInsensitiveMember]
+
             for leader in leaders_text:
                 try:
-                    converted = await converter.CaseInsensitiveMember().convert(ctx, leader.strip())
+                    converted = await conv.convert(ctx, leader.strip())
 
                     if not converted.bot:
                         leaders.append(converted.id)
 
                 except commands.BadArgument:
-                    try:
-                        converted = await converter.FuzzyCIMember().convert(ctx, leader.strip())
-
-                        if not converted.bot:
-                            leaders.append(converted.id)
-                    except commands.BadArgument:
-                        continue
+                    continue
 
             if not leaders:
                 leaders.append(0)

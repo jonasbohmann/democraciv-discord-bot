@@ -10,7 +10,7 @@ from bot.utils.converter import (
     OwnedTag,
     CaseInsensitiveMember,
     CaseInsensitiveUser,
-    FuzzyCIMember, Fuzzy,
+    Fuzzy, FuzzySettings,
 )
 from bot.utils import text, paginator, exceptions, context, checks
 
@@ -143,7 +143,7 @@ class Tags(context.CustomCog):
             self,
             ctx: context.CustomContext,
             *,
-            person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
+            person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))] = None,
     ):
         """List the tags that someone made on this server"""
 
@@ -451,7 +451,7 @@ class Tags(context.CustomCog):
     async def transfer(
             self,
             ctx: context.CustomContext,
-            to_person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember],
+            to_person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))],
             *,
             tag: OwnedTag,
     ):
@@ -639,7 +639,7 @@ class Tags(context.CustomCog):
     @tags.command(name="stats", aliases=['statistics'])
     @commands.guild_only()
     async def stats(self, ctx: context.CustomContext, *,
-                    person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None):
+                    person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))] = None):
         """View general statistics or statistics about a specific person
 
         **Example**

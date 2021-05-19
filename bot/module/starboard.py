@@ -18,7 +18,7 @@ import itertools
 from bot.config import config
 from discord.ext import commands, tasks
 
-from bot.utils.converter import CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember
+from bot.utils.converter import CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings, Fuzzy
 from bot.utils import text, context
 
 
@@ -479,7 +479,7 @@ class Starboard(context.CustomCog):
         self,
         ctx,
         *,
-        person: typing.Union[CaseInsensitiveMember, CaseInsensitiveUser, FuzzyCIMember] = None,
+        person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))] = None,
     ):
         """Statistics about our Starboard
 

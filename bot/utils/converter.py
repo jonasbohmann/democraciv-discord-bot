@@ -91,7 +91,7 @@ class _Fuzzy(commands.Converter):
         else:
             first_exception = str(exception_mapping[self.converter[0][0]])
 
-        exception = self.settings.no_choice_exception if self.settings.no_choice_exception else first_exception
+        exception = self.settings.no_choice_exception if self.settings and self.settings.no_choice_exception else first_exception
 
         if not sources:
             raise commands.BadArgument(exception)

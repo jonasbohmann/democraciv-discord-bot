@@ -1,4 +1,3 @@
-import asyncio
 import sys
 import textwrap
 import uuid
@@ -181,7 +180,7 @@ class BankCorporationMarketplace(commands.Converter):
         )
 
 
-class BankCorporationAbbreviation:
+class BankCorporationAbbreviation(commands.Converter):
     @classmethod
     async def convert(cls, ctx, argument):
         try:
@@ -233,7 +232,7 @@ class Bank(context.CustomCog):
     def cog_unload(self):
         self.bot.loop.create_task(self.bank_listener.shutdown())
 
-        if not bot.IS_DEBUG:
+        if not self.bot.IS_DEBUG:
             self.bank_db_backup.cancel()
 
     @tasks.loop(hours=config.DATABASE_DAILY_BACKUP_INTERVAL)

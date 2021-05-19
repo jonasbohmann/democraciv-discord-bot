@@ -9,6 +9,7 @@ from fuzzywuzzy import process
 from bot.config import config
 from bot.utils.context import CustomContext, CustomCog
 from bot.utils import text, converter, paginator
+from utils.converter import FuzzyableMixin, Fuzzy, FuzzySettings
 
 NPCPrefixSuffix = collections.namedtuple("NPCPrefixSuffix", ["npc_id", "prefix", "suffix"])
 
@@ -20,8 +21,10 @@ class MockOwner:
         return self.mention
 
 
-class NPCConverter(commands.Converter):
+class NPCConverter(commands.Converter, FuzzyableMixin):
     """Represents an NPC that the ctx.author owns"""
+
+    model = "NPC"
 
     def __init__(self, **kwargs):
         self.id: int = kwargs.get("id")
@@ -36,6 +39,17 @@ class NPCConverter(commands.Converter):
 
     def __hash__(self):
         return hash(self.id)
+
+    async def get_fuzzy_source(self, ctx, argument: str) -> typing.Iterable:
+        npc_cog = ctx.bot.get_cog("NPC")
+        try:
+            npc_cache = npc_cog._npc_access_cache[ctx.author.id]
+        except KeyError:
+            return []
+
+        npcs = {npc_id: npc_cog._npc_cache[npc_id]['name'] for npc_id in npc_cache
+                if npc_cog._npc_cache[npc_id]['owner_id'] == ctx.author.id}
+        return fuzzy_get_npc(ctx, argument, npcs)
 
     @property
     def owner(self) -> typing.Union[discord.Member, discord.User, MockOwner]:
@@ -78,7 +92,7 @@ class FuzzyNPCConverter(NPCConverter):
 
             npcs = {npc_id: npc_cog._npc_cache[npc_id]['name'] for npc_id in npc_cache
                     if npc_cog._npc_cache[npc_id]['owner_id'] == ctx.author.id}
-            match = await fuzzy_get_npc(ctx, argument, npcs)
+            match = fuzzy_get_npc(ctx, argument, npcs)
 
             if match:
                 return match
@@ -87,6 +101,13 @@ class FuzzyNPCConverter(NPCConverter):
 
 
 class AnyNPCConverter(NPCConverter):
+
+    async def get_fuzzy_source(self, ctx, argument: str) -> typing.Iterable:
+        npc_cache = ctx.bot.get_cog("NPC")._npc_cache
+        npcs = {npc['id']: npc['name'] for npc in npc_cache.values()}
+        return fuzzy_get_npc(ctx, argument, npcs)
+
+
     @classmethod
     async def convert(cls, ctx, argument):
         arg = argument.lower()
@@ -112,11 +133,11 @@ class AnyNPCConverter(NPCConverter):
         raise commands.BadArgument(f"{config.NO} There is no NPC that matches `{argument}`.")
 
 
-async def fuzzy_get_npc(ctx, arg, iterable):
+def fuzzy_get_npc(ctx, arg, iterable):
     match = process.extract(arg, iterable, limit=5)
 
     if not match:
-        return
+        return []
 
     fmt = {}
 
@@ -124,13 +145,7 @@ async def fuzzy_get_npc(ctx, arg, iterable):
         npc_obj = NPCConverter(**ctx.bot.get_cog("NPC")._npc_cache[key], bot=ctx.bot)
         fmt[npc_obj] = None
 
-    fmt = list(fmt.keys())[:5]
-
-    menu = text.FuzzyChoose(question="Which NPC did you mean?", choices=fmt)
-    chosen = await menu.prompt(ctx)
-
-    if chosen:
-        return chosen
+    return list(fmt.keys())[:5]
 
 
 class FuzzyAnyNPCConverter(AnyNPCConverter):
@@ -142,7 +157,7 @@ class FuzzyAnyNPCConverter(AnyNPCConverter):
             npc_cache = ctx.bot.get_cog("NPC")._npc_cache
             npcs = {npc['id']: npc['name'] for npc in npc_cache.values()}
 
-            match = await fuzzy_get_npc(ctx, argument, npcs)
+            match = fuzzy_get_npc(ctx, argument, npcs)
 
             if match:
                 return match
@@ -151,6 +166,18 @@ class FuzzyAnyNPCConverter(AnyNPCConverter):
 
 
 class AccessToNPCConverter(NPCConverter):
+
+    async def get_fuzzy_source(self, ctx, argument: str) -> typing.Iterable:
+        npc_cog = ctx.bot.get_cog("NPC")
+
+        try:
+            npc_cache = npc_cog._npc_access_cache[ctx.author.id]
+        except KeyError:
+            raise []
+
+        npcs = {npc_id: npc_cog._npc_cache[npc_id]['name'] for npc_id in npc_cache}
+        return fuzzy_get_npc(ctx, argument, npcs)
+
     @classmethod
     async def convert(cls, ctx, argument):
         try:
@@ -194,7 +221,7 @@ class FuzzyAccessToNPCConverter(AccessToNPCConverter):
                 raise e
 
             npcs = {npc_id: npc_cog._npc_cache[npc_id]['name'] for npc_id in npc_cache}
-            match = await fuzzy_get_npc(ctx, argument, npcs)
+            match = fuzzy_get_npc(ctx, argument, npcs)
 
             if match:
                 return match
@@ -310,20 +337,17 @@ class NPC(CustomCog):
 
         if ctx.invoked_with.lower() == "npcs":
             if npc:
-                try:
-                    person = await converter.CaseInsensitiveMember().convert(ctx, npc)
-                except commands.BadArgument:
-                    try:
-                        person = await converter.CaseInsensitiveUser().convert(ctx, npc)
-                    except commands.BadArgument:
-                        person = await converter.FuzzyCIMember().convert(ctx, npc)
+                conv = Fuzzy[converter.CaseInsensitiveMember, converter.CaseInsensitiveUser,
+                             FuzzySettings(weights=(5, 1))]
+                person = await conv.convert(ctx, npc)
+
             else:
                 person = ctx.author
 
             return await ctx.invoke(self.bot.get_command("npc list"), person=person)
 
         if npc:
-            converted = await FuzzyAnyNPCConverter().convert(ctx, npc)
+            converted = await Fuzzy[AnyNPCConverter].convert(ctx, npc)
             return await ctx.invoke(self.bot.get_command("npc info"), npc=converted)
 
         p = config.BOT_PREFIX
@@ -459,7 +483,7 @@ class NPC(CustomCog):
         self._npc_access_cache[ctx.author.id].add(npc_record['id'])
 
     @npc.command(name="edit", aliases=['change', 'update'])
-    async def edit_npc(self, ctx, *, npc: FuzzyNPCConverter):
+    async def edit_npc(self, ctx, *, npc: Fuzzy[NPCConverter]):
         """Edit the name, avatar and/or trigger phrase of one of your NPCs
 
         **Example**
@@ -525,7 +549,7 @@ class NPC(CustomCog):
         await ctx.send(f"{config.YES} Your NPC was edited.")
 
     @npc.command(name="delete", aliases=['remove'])
-    async def remove_npc(self, ctx, *, npc: FuzzyNPCConverter):
+    async def remove_npc(self, ctx, *, npc: Fuzzy[NPCConverter]):
         """Delete one of your NPCs
 
         **Example**
@@ -538,8 +562,8 @@ class NPC(CustomCog):
         await ctx.send(f"{config.YES} `{npc.name}` was deleted.")
 
     @npc.command(name="list", aliases=['from', 'by', 'f', 'l'])
-    async def list_npcs(self, ctx: CustomContext, *, person: typing.Union[
-        converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, converter.FuzzyCIMember] = None):
+    async def list_npcs(self, ctx: CustomContext, *, person: Fuzzy[
+        converter.CaseInsensitiveMember, converter.CaseInsensitiveUser, FuzzySettings(weights=(5, 1))] = None):
         """List every NPC you or someone else has access to
 
         **Example**
@@ -578,7 +602,7 @@ class NPC(CustomCog):
         await pages.start(ctx)
 
     @npc.command(name="info", aliases=['information', 'show'])
-    async def info(self, ctx, *, npc: FuzzyAnyNPCConverter):
+    async def info(self, ctx, *, npc: Fuzzy[AnyNPCConverter]):
         """Detailed information about an existing NPC
 
         You do not have to have access to this NPC to use this command.
@@ -689,7 +713,7 @@ class NPC(CustomCog):
 
     @automatic.command(name="on", aliases=['enable'])
     @commands.guild_only()
-    async def toggle_on(self, ctx: CustomContext, *, npc: FuzzyAccessToNPCConverter):
+    async def toggle_on(self, ctx: CustomContext, *, npc: Fuzzy[AccessToNPCConverter]):
         """Enable automatic mode for an NPC you have access to
 
         **Example**
@@ -721,7 +745,7 @@ class NPC(CustomCog):
 
     @automatic.command(name="off", aliases=['disable'])
     @commands.guild_only()
-    async def toggle_off(self, ctx: CustomContext, *, npc: FuzzyAccessToNPCConverter):
+    async def toggle_off(self, ctx: CustomContext, *, npc: Fuzzy[AccessToNPCConverter]):
         """Disable automatic mode for an NPC you have access to
 
         **Example**
@@ -756,7 +780,7 @@ class NPC(CustomCog):
 
     @automatic.command(name="clear", aliases=['remove', 'delete'])
     @commands.guild_only()
-    async def clear(self, ctx: CustomContext, *, npc: FuzzyAccessToNPCConverter):
+    async def clear(self, ctx: CustomContext, *, npc: Fuzzy[AccessToNPCConverter]):
         """Disable automatic mode for an NPC you have access to in all channels on this server at once
 
         **Example**
@@ -795,28 +819,23 @@ class NPC(CustomCog):
         people_text = (await ctx.input()).splitlines()
 
         people = []
+        conv = Fuzzy[converter.CaseInsensitiveMember]
 
         for peep in people_text:
             try:
-                converted = await converter.CaseInsensitiveMember().convert(ctx, peep.strip())
+                converted = await conv.convert(ctx, peep.strip())
 
                 if not converted.bot and not converted.id == npc.owner_id:
                     people.append(converted.id)
 
             except commands.BadArgument:
-                try:
-                    converted = await converter.FuzzyCIMember().convert(ctx, peep.strip())
-
-                    if not converted.bot and not converted.id == npc.owner_id:
-                        people.append(converted.id)
-                except commands.BadArgument:
-                    continue
+                continue
 
         return people
 
     @npc.command(name="allow")
     @commands.guild_only()
-    async def allow(self, ctx, *, npc: FuzzyNPCConverter):
+    async def allow(self, ctx, *, npc: Fuzzy[NPCConverter]):
         """Allow other people on this server to also use one of your NPCs and to speak as them
 
         This is especially useful for NPCs representing groups and organizations, like political parties or the government.
@@ -848,7 +867,7 @@ class NPC(CustomCog):
 
     @npc.command(name="deny")
     @commands.guild_only()
-    async def deny(self, ctx, *, npc: FuzzyNPCConverter):
+    async def deny(self, ctx, *, npc: Fuzzy[NPCConverter]):
         """Remove access to one of your NPCs from someone that you previously have shared
 
         **Example**
