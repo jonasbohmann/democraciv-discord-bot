@@ -390,7 +390,6 @@ def ml_qa(question: Question, auth: str = Depends(ensure_auth)):
 
         return result
     except Exception as e:
-        # todo too broad
         logger.error(f"error in /ml/question_answering: {type(e)}: {e}")
         return {"error": "who knows"}
 

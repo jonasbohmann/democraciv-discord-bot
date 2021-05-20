@@ -247,8 +247,8 @@ class TwitchManager(ProviderManager):
     async def send_webhook(self, context: StreamContext, stream: TwitchStream):
         embed = discord.Embed(title=stream.title, url=stream.link, colour=0x1B1C20)
         embed.set_author(name=f"{stream.streamer} - Live on Twitch",
-                         icon_url="https://cdn.discordapp.com/attachments/730898526040752291/"
-                                  "781547042471149598/TwitchGlitchPurple.png")
+                         icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
+                                  "844946761353134100/testamesta.png")
         embed.set_image(url=stream.thumbnail)
 
         js = {"embeds": [embed.to_dict()]}

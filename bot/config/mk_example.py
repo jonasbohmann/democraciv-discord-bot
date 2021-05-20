@@ -139,8 +139,8 @@ class MarkConfig:
         try:
             name = self.bot.get_democraciv_role(role).name
 
-            if name.lower().startswith(self.NATION_ROLE_PREFIX.lower()):
-                return name[len(self.NATION_ROLE_PREFIX) :]
+            if self.NATION_ROLE_PREFIX and name.lower().startswith(self.NATION_ROLE_PREFIX.lower()):
+                return name[len(self.NATION_ROLE_PREFIX):]
 
         except exceptions.RoleNotFoundError:
             return alt

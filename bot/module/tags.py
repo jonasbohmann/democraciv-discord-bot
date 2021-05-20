@@ -8,6 +8,7 @@ from discord.ext import commands
 from bot.utils.converter import (
     Tag,
     OwnedTag,
+    CollaboratorOfTag,
     CaseInsensitiveMember,
     CaseInsensitiveUser,
     Fuzzy, FuzzySettings,
@@ -42,7 +43,7 @@ class Tags(context.CustomCog):
         invoke_without_command=True,
         case_insensitive=True,
     )
-    async def tags(self, ctx: context.CustomContext, *, tag: Tag = None):
+    async def tags(self, ctx: context.CustomContext, *, tag: Fuzzy[Tag] = None):
         """Access a tag or list all tags on this server
 
         **Example**
@@ -171,7 +172,7 @@ class Tags(context.CustomCog):
     @tags.command(name="addalias", aliases=['alias'])
     @commands.guild_only()
     @checks.tag_check()
-    async def addtagalias(self, ctx: context.CustomContext, *, tag: OwnedTag):
+    async def addtagalias(self, ctx: context.CustomContext, *, tag: Fuzzy[CollaboratorOfTag]):
         """Add a new alias to a tag"""
 
         p = config.BOT_PREFIX
@@ -198,12 +199,15 @@ class Tags(context.CustomCog):
 
         await ctx.send(
             f"{config.YES} The `{p}{alias}` alias was added to " f"`{p}{tag.name}`."
+            f"\n{config.HINT} You can add other people as collaborators for this tag, "
+            f"so that they can edit and add & remove aliases, with "
+            f"`{config.BOT_PREFIX}tag share {tag.name}`."
         )
 
     @tags.command(name="removealias", aliases=["deletealias", "ra", "da"])
     @commands.guild_only()
     @checks.tag_check()
-    async def removetagalias(self, ctx: context.CustomContext, *, alias: OwnedTag):
+    async def removetagalias(self, ctx: context.CustomContext, *, alias: Fuzzy[CollaboratorOfTag]):
         """Remove an alias from a tag"""
 
         if alias.invoked_with == alias.name:
@@ -233,6 +237,9 @@ class Tags(context.CustomCog):
             f"{config.YES} The alias "
             f"`{config.BOT_PREFIX}{alias.invoked_with}` from "
             f"`{config.BOT_PREFIX}{alias.name}` was removed."
+            f"\n{config.HINT} You can add other people as collaborators for this tag, "
+            f"so that they can edit and add & remove aliases, with "
+            f"`{config.BOT_PREFIX}tag share {alias.name}`."
         )
 
     async def validate_tag_name(self, ctx: context.CustomContext, tag_name: str) -> bool:
@@ -380,14 +387,17 @@ class Tags(context.CustomCog):
                     name.lower(),
                 )
 
-        await ctx.send(f"{config.YES} The `{config.BOT_PREFIX}{name}` tag was added.")
+        await ctx.send(f"{config.YES} The `{config.BOT_PREFIX}{name}` tag was added.\n"
+                       f"{config.HINT} You can add other people as collaborators for this tag, "
+                       f"so that they can edit and add & remove aliases, with "
+                       f"`{config.BOT_PREFIX}tag share {name.lower()}`.")
 
     @tags.command(name="info", aliases=["about", "i"])
     @commands.guild_only()
-    async def taginfo(self, ctx: context.CustomContext, *, tag: Tag):
+    async def taginfo(self, ctx: context.CustomContext, *, tag: Fuzzy[Tag]):
         """Info about a tag"""
 
-        pretty_aliases = (", ".join([f"`{config.BOT_PREFIX}{alias}`" for alias in tag.aliases])) or "None"
+        pretty_aliases = (", ".join([f"`{config.BOT_PREFIX}{alias}`" for alias in tag.aliases])) or "-"
 
         embed = text.SafeEmbed(title=tag.title)
 
@@ -426,12 +436,18 @@ class Tags(context.CustomCog):
         embed.add_field(name="Global Tag", value=is_global, inline=True)
         embed.add_field(name="Tag Format", value=is_embedded, inline=True)
         embed.add_field(name="Uses", value=tag.uses, inline=False)
+        embed.add_field(name="Collaborators", value="\n".join([f"{c.mention} {c}" for c in tag.collaborators]
+                                                              or [f'*The owner of this tag can add other people as '
+                                                                  f'collaborators for this tag, so that they can '
+                                                                  f'edit and add & '
+                                                                  f'remove aliases, with '
+                                                                  f'`{config.BOT_PREFIX}tag share {tag.name}`.*\n\n-']))
         embed.add_field(name="Aliases", value=pretty_aliases, inline=False)
         await ctx.send(embed=embed)
 
     @tags.command(name="claim")
     @commands.guild_only()
-    async def claim(self, ctx: context.CustomContext, *, tag: Tag):
+    async def claim(self, ctx: context.CustomContext, *, tag: Fuzzy[Tag]):
         """Claim a tag if the original tag author left this server"""
 
         if tag.is_global:
@@ -476,7 +492,7 @@ class Tags(context.CustomCog):
     @tags.command(name="edit", aliases=["change"])
     @commands.guild_only()
     @checks.tag_check()
-    async def edittag(self, ctx: context.CustomContext, *, tag: Fuzzy[OwnedTag]):
+    async def edittag(self, ctx: context.CustomContext, *, tag: Fuzzy[CollaboratorOfTag]):
         """Edit one of your tags"""
 
         choices = {"embed": "Send Tag as embed or plain text", "title": "Tag Title", "content": "Tag Content"}
@@ -552,7 +568,7 @@ class Tags(context.CustomCog):
             is_global = tag.is_global
 
         are_you_sure = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit your "
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit the "
             f"`{config.BOT_PREFIX}{tag.name}` tag?"
         )
 
@@ -567,7 +583,10 @@ class Tags(context.CustomCog):
             is_embedded,
             is_global
         )
-        await ctx.send(f"{config.YES} Your tag was edited.")
+        await ctx.send(
+            f"{config.YES} The tag was edited.\n{config.HINT} You can add other people as collaborators for this tag, "
+            f"so that they can edit and add & remove aliases, with "
+            f"`{config.BOT_PREFIX}tag share {tag.name}`.")
 
     @tags.command(name="search", aliases=["s"])
     async def search(self, ctx: context.CustomContext, *, query: str):
@@ -698,7 +717,7 @@ class Tags(context.CustomCog):
     @tags.command(name="toggleglobal")
     @commands.guild_only()
     @checks.moderation_or_nation_leader()
-    async def toggleglobal(self, ctx: context.CustomContext, *, tag: Tag):
+    async def toggleglobal(self, ctx: context.CustomContext, *, tag: Fuzzy[Tag]):
         """Change a tag to be global/local"""
 
         if not tag.is_global:
@@ -714,7 +733,7 @@ class Tags(context.CustomCog):
     @tags.command(name="remove", aliases=["delete"])
     @commands.guild_only()
     @checks.tag_check()
-    async def removetag(self, ctx: context.CustomContext, *, tag: OwnedTag):
+    async def removetag(self, ctx: context.CustomContext, *, tag: Fuzzy[OwnedTag]):
         """Remove a tag"""
 
         are_you_sure = await ctx.confirm(
@@ -733,6 +752,82 @@ class Tags(context.CustomCog):
                     ctx.guild.id,
                 )
                 await ctx.send(f"{config.YES} `{config.BOT_PREFIX}{tag.name}` was removed.")
+
+    async def _get_people_input(self, ctx, tag: Tag):
+        people_text = (await ctx.input()).splitlines()
+        people = []
+        conv = Fuzzy[CaseInsensitiveMember]
+
+        for peep in people_text:
+            try:
+                converted = await conv.convert(ctx, peep.strip())
+
+                if not converted.bot and converted.id != tag.author_id:
+                    people.append(converted.id)
+
+            except commands.BadArgument:
+                continue
+
+        return people
+
+    @tags.command(name="share", aliases=['allow'])
+    @commands.guild_only()
+    async def allow(self, ctx, *, tag: Fuzzy[OwnedTag]):
+        """Allow other people on this server to edit and add & remove aliases to one of your tags
+
+        Note that only the owner of a Tag can delete it or transfer ownership of it to somebody else.
+
+        **Example**
+           `{PREFIX}{COMMAND} const`
+           `{PREFIX}{COMMAND} sue`"""
+
+        await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the names or mentions of the people that should be able "
+            f"to edit and add & remove aliases to your `{config.BOT_PREFIX}{tag.name}` tag."
+            f"\n{config.HINT} To make me give multiple people at once access to your tag, separate them with a newline."
+        )
+
+        people = await self._get_people_input(ctx, tag)
+
+        if not people:
+            return await ctx.send(f"{config.NO} Something went wrong, you didn't specify anybody.")
+
+        for p_id in people:
+            await self.bot.db.execute(
+                "INSERT INTO tag_collaborator (tag_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING ",
+                tag.id, p_id,
+            )
+
+        await ctx.send(f"{config.YES} Those people can now edit your `{config.BOT_PREFIX}{tag.name}` tag.")
+
+    @tags.command(name="unshare", aliases=['deny'])
+    @commands.guild_only()
+    async def deny(self, ctx, *, tag: Fuzzy[OwnedTag]):
+        """Remove access to one of your tags from someone that you previously have shared
+
+        **Example**
+           `{PREFIX}{COMMAND} const`
+           `{PREFIX}{COMMAND} sue`"""
+
+        await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the names or mentions of the people that should "
+            f"__no longer__  able be to edit and add & remove aliases to your `{config.BOT_PREFIX}{tag.name}` tag."
+            f"\n{config.HINT} To make me give multiple people at once access to your tag, separate them with a newline."
+        )
+
+        people = await self._get_people_input(ctx, tag)
+
+        if not people:
+            return await ctx.send(f"{config.NO} Something went wrong, you didn't specify anybody.")
+
+        for p_id in people:
+            await self.bot.db.execute(
+                "DELETE FROM tag_collaborator WHERE tag_id = $1 AND user_id = $2",
+                tag.id, p_id,
+            )
+
+        await ctx.send(f"{config.YES} Those people can __no longer__ "
+                       f"edit your `{config.BOT_PREFIX}{tag.name}` tag.")
 
     def get_tag_content_type(self, tag_content: str) -> TagContentType:
         url_endings_image = (

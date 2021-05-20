@@ -161,6 +161,14 @@ CREATE TABLE IF NOT EXISTS tag_lookup(
     UNIQUE (tag_id, alias)
 );
 
+CREATE TABLE IF NOT EXISTS tag_collaborator(
+    id serial UNIQUE PRIMARY KEY,
+    tag_id serial references tag(id) ON DELETE CASCADE NOT NULL,
+    user_id bigint NOT NULL,
+    UNIQUE (tag_id, user_id)
+);
+
+
 CREATE INDEX IF NOT EXISTS tag_lookup_alias_idx ON tag_lookup (alias);
 
 

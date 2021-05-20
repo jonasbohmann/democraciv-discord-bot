@@ -841,7 +841,7 @@ class _Guild(context.CustomCog, name="Server"):
             command_name="twitch",
             webhook_name="twitch notifications",
             fmt=fmt,
-            icon="https://cdn.discordapp.com/attachments/730898526040752291/781547042471149598/TwitchGlitchPurple.png",
+            icon="https://cdn.discordapp.com/attachments/738903909535318086/844946761353134100/testamesta.png",
         )
 
     @twitch.command(name="add", aliases=["make", "create", "a", "m"])

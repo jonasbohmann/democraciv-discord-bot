@@ -411,7 +411,7 @@ class NPC(CustomCog):
         example = trigger_phrase.replace("text", "Hello!")
         await ctx.send(f"{config.YES} The NPC #{npc_record['id']} `{name}` was created. Try speaking as them "
                        f"with `{example}`. \n{config.HINT} You can allow other people to speak as this "
-                       f"NPC with `{config.BOT_PREFIX}npc allow {npc_record['id']}`.\n{config.HINT} The "
+                       f"NPC with `{config.BOT_PREFIX}npc share {npc_record['id']}`.\n{config.HINT} The "
                        f"`{config.BOT_PREFIX}npc automatic` command can be used to let you automatically speak "
                        f"as this NPC in certain channels, without having to use the trigger phrase.\n{config.HINT} "
                        f"You can react with :wastebasket: to a message from your NPC to delete it, or with "
@@ -576,8 +576,8 @@ class NPC(CustomCog):
 
         if is_owner:
             pretty_people.append(f"You, the owner of this NPC, can allow other people to speak as this NPC with "
-                                 f"`{config.BOT_PREFIX}npc allow {npc.id}`, or deny someone that you previously "
-                                 f"allowed with `{config.BOT_PREFIX}npc deny {npc.id}`.\n")
+                                 f"`{config.BOT_PREFIX}npc share {npc.id}`, or deny someone that you previously "
+                                 f"allowed with `{config.BOT_PREFIX}npc unshare {npc.id}`.\n")
 
         pretty_people.append(f"{npc.owner.mention} ({npc.owner})")
 
@@ -765,7 +765,7 @@ class NPC(CustomCog):
             try:
                 converted = await conv.convert(ctx, peep.strip())
 
-                if not converted.bot and not converted.id == npc.owner_id:
+                if not converted.bot and converted.id != npc.owner_id:
                     people.append(converted.id)
 
             except commands.BadArgument:
@@ -773,10 +773,10 @@ class NPC(CustomCog):
 
         return people
 
-    @npc.command(name="allow")
+    @npc.command(name="share", aliases=["allow"])
     @commands.guild_only()
     async def allow(self, ctx, *, npc: Fuzzy[NPCConverter]):
-        """Allow other people on this server to also use one of your NPCs and to speak as them
+        """Allow other people on this server to use one of your NPCs and to speak as them
 
         This is especially useful for NPCs representing groups and organizations, like political parties or the government.
 
@@ -805,7 +805,7 @@ class NPC(CustomCog):
 
         await ctx.send(f"{config.YES} Those people can now speak as your NPC `{npc.name}`.")
 
-    @npc.command(name="deny")
+    @npc.command(name="unshare", aliases=["deny"])
     @commands.guild_only()
     async def deny(self, ctx, *, npc: Fuzzy[NPCConverter]):
         """Remove access to one of your NPCs from someone that you previously have shared
@@ -832,7 +832,7 @@ class NPC(CustomCog):
 
             self._npc_access_cache[p_id].remove(npc.id)
 
-        await ctx.send(f"{config.YES} Those people can now __no longer__ speak as your NPC `{npc.name}`.")
+        await ctx.send(f"{config.YES} Those people can __no longer__ speak as your NPC `{npc.name}`.")
 
     async def _log_npc_usage(self, npc, original_message: discord.Message, npc_message_url: str,
                              npc_message_content: str):

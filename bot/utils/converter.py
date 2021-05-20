@@ -677,10 +677,18 @@ class Tag(commands.Converter, FuzzyableMixin):
         self.guild_id: int = kwargs.get("guild_id")
         self._bot = kwargs.get("bot")
         self.invoked_with: str = kwargs.get("invoked_with")
+        self.collaborator_ids: typing.List[int] = kwargs.get("collaborators", [])
 
     @property
     def guild(self) -> discord.Guild:
         return self._bot.get_guild(self.guild_id)
+
+    @property
+    def collaborators(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
+        return list(
+            filter(None, [self.guild.get_member(collaborator) or self._bot.get_user(collaborator)
+                          for collaborator in self.collaborator_ids])
+        )
 
     @property
     def author(self) -> typing.Union[discord.Member, discord.User, None]:
@@ -720,7 +728,11 @@ class Tag(commands.Converter, FuzzyableMixin):
             aliases = await ctx.bot.db.fetch("SELECT alias FROM tag_lookup WHERE tag_id = $1", match["id"])
             aliases = [record["alias"] for record in aliases]
 
-            tag = Tag(**match, bot=ctx.bot, aliases=aliases, invoked_with=lowered)
+            collaborators = await ctx.bot.db.fetch("SELECT user_id FROM tag_collaborator WHERE tag_id = $1",
+                                                   match["id"])
+            collaborators = [record["user_id"] for record in collaborators]
+
+            tag = Tag(**match, bot=ctx.bot, aliases=aliases, invoked_with=lowered, collaborators=collaborators)
             found[tag] = None
 
         return list(found.keys())
@@ -753,7 +765,38 @@ class Tag(commands.Converter, FuzzyableMixin):
 
         aliases = await ctx.bot.db.fetch("SELECT alias FROM tag_lookup WHERE tag_id = $1", tag_record["id"])
         aliases = [record["alias"] for record in aliases]
-        return cls(**tag_record, bot=ctx.bot, aliases=aliases, invoked_with=argument.lower())
+
+        collaborators = await ctx.bot.db.fetch("SELECT user_id FROM tag_collaborator WHERE tag_id = $1",
+                                               tag_record["id"])
+        collaborators = [record["user_id"] for record in collaborators]
+
+        return cls(**tag_record, bot=ctx.bot, aliases=aliases,
+                   invoked_with=argument.lower(), collaborators=collaborators)
+
+
+class CollaboratorOfTag(Tag):
+    """
+    Represents a Tag that the Context.author either owns, or is a collaborator of.
+    """
+
+    def _is_allowed(self, ctx, tag: Tag) -> bool:
+        if tag.author_id == ctx.author.id or ctx.author.id in tag.collaborator_ids:
+            return True
+
+        return False
+
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+        matches = await super().get_fuzzy_source(ctx, argument)
+        return [m for m in matches if self._is_allowed(ctx, m)]
+
+    async def convert(self, ctx, argument: str):
+        tag = await super().convert(ctx, argument)
+
+        if self._is_allowed(ctx, tag):
+            return tag
+
+        raise exceptions.TagError(f"{config.NO} That isn't your tag, and the tag's owner "
+                                  f"hasn't made you a collaborator.")
 
 
 class OwnedTag(Tag):
