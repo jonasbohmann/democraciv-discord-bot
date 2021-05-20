@@ -19,7 +19,9 @@ BOT_TECHNICAL_NOTIFICATIONS_CHANNEL = 661201604493443092
 STARBOARD_ENABLED = True
 STARBOARD_STAR_EMOJI = "\U00002b50"
 STARBOARD_CHANNEL = 680565146133069873  # The Discord channel for the starboard
-STARBOARD_MIN_STARS = 5  # How many star reactions does a message need to be added to the starboard
+STARBOARD_MIN_STARS = (
+    5  # How many star reactions does a message need to be added to the starboard
+)
 STARBOARD_MAX_AGE = 7  # Messages older than X days won't be allowed into the starboard
 STARBOARD_REDDIT_SUMMARY_ENABLED = True
 STARBOARD_REDDIT_SUBREDDIT = DEMOCRACIV_SUBREDDIT
@@ -59,7 +61,9 @@ DATABASE_DAILY_BACKUP_DISCORD_CHANNEL = 738903909535318086
 DATABASE_DAILY_BACKUP_INTERVAL = 72  # hours
 
 # Google Cloud Platform
-GOOGLE_CLOUD_PLATFORM_CLIENT_SECRETS_FILE = str(pathlib.Path(__file__).parent) + "/config/google_client_secret.json"
+GOOGLE_CLOUD_PLATFORM_CLIENT_SECRETS_FILE = (
+    str(pathlib.Path(__file__).parent) + "/config/google_client_secret.json"
+)
 GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES = [
     "https://www.googleapis.com/auth/forms",
     "https://www.googleapis.com/auth/documents",

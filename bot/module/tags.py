@@ -11,7 +11,8 @@ from bot.utils.converter import (
     CollaboratorOfTag,
     CaseInsensitiveMember,
     CaseInsensitiveUser,
-    Fuzzy, FuzzySettings,
+    Fuzzy,
+    FuzzySettings,
 )
 from bot.utils import text, paginator, exceptions, context, checks
 
@@ -31,8 +32,12 @@ class Tags(context.CustomCog):
 
     def __init__(self, bot):
         super().__init__(bot)
-        self.emoji_pattern = re.compile(r"<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>")
-        self.discord_invite_pattern = re.compile(r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?")
+        self.emoji_pattern = re.compile(
+            r"<(?P<animated>a)?:(?P<name>[0-9a-zA-Z_]{2,32}):(?P<id>[0-9]{15,21})>"
+        )
+        self.discord_invite_pattern = re.compile(
+            r"(?:https?://)?discord(?:app\.com/invite|\.gg)/?[a-zA-Z0-9]+/?"
+        )
         self.url_pattern = re.compile(
             r"((http|https)\:\/\/)?[a-zA-Z0-9\.\/\?\:@\-_=#]+\.([a-zA-Z]){2,6}([a-zA-Z0-9\.\&\/\?\:@\-_=#])*"
         )
@@ -73,7 +78,9 @@ class Tags(context.CustomCog):
             else:
                 return await ctx.send(tag.clean_content)
 
-        global_tags = await self.bot.db.fetch("SELECT * FROM tag WHERE global = true ORDER BY uses desc")
+        global_tags = await self.bot.db.fetch(
+            "SELECT * FROM tag WHERE global = true ORDER BY uses desc"
+        )
         pretty_tags = []
 
         if global_tags:
@@ -83,11 +90,14 @@ class Tags(context.CustomCog):
             ]
 
         for record in global_tags:
-            pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
+            pretty_tags.append(
+                f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}"
+            )
 
         if ctx.guild:
             all_tags = await self.bot.db.fetch(
-                "SELECT * FROM tag WHERE guild_id = $1 AND global = false" " ORDER BY uses desc",
+                "SELECT * FROM tag WHERE guild_id = $1 AND global = false"
+                " ORDER BY uses desc",
                 ctx.guild.id,
             )
             if all_tags:
@@ -98,7 +108,9 @@ class Tags(context.CustomCog):
                 )
 
             for record in all_tags:
-                pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
+                pretty_tags.append(
+                    f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}"
+                )
 
             author = f"All Tags in {ctx.guild.name}"
             icon = ctx.guild_icon
@@ -111,8 +123,13 @@ class Tags(context.CustomCog):
         if len(pretty_tags) < 2:
             pretty_tags = []
 
-        pages = paginator.SimplePages(entries=pretty_tags, author=author, icon=icon,
-                                      empty_message=empty_message, per_page=12)
+        pages = paginator.SimplePages(
+            entries=pretty_tags,
+            author=author,
+            icon=icon,
+            empty_message=empty_message,
+            per_page=12,
+        )
         await pages.start(ctx)
 
     @tags.command(name="local", aliases=["l"])
@@ -121,30 +138,35 @@ class Tags(context.CustomCog):
         """List all non-global tags on this server"""
 
         all_tags = await self.bot.db.fetch(
-            "SELECT * FROM tag WHERE guild_id = $1 AND global = false " "ORDER BY uses desc",
+            "SELECT * FROM tag WHERE guild_id = $1 AND global = false "
+            "ORDER BY uses desc",
             ctx.guild.id,
         )
         pretty_tags = []
 
         for record in all_tags:
-            pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
+            pretty_tags.append(
+                f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}"
+            )
 
         pages = paginator.SimplePages(
             entries=pretty_tags,
             author=f"Local Tags in {ctx.guild.name}",
             icon=ctx.guild_icon,
             empty_message="There are no local tags on this server.",
-            per_page=12
+            per_page=12,
         )
         await pages.start(ctx)
 
     @tags.command(name="from", aliases=["by", "f"])
     @commands.guild_only()
     async def _from(
-            self,
-            ctx: context.CustomContext,
-            *,
-            person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))] = None,
+        self,
+        ctx: context.CustomContext,
+        *,
+        person: Fuzzy[
+            CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))
+        ] = None,
     ):
         """List the tags that someone made on this server"""
 
@@ -158,21 +180,25 @@ class Tags(context.CustomCog):
         pretty_tags = []
 
         for record in all_tags:
-            pretty_tags.append(f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}")
+            pretty_tags.append(
+                f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}"
+            )
 
         pages = paginator.SimplePages(
             entries=pretty_tags,
             author=f"Tags from {member.display_name}",
             icon=member.avatar_url_as(static_format="png"),
             empty_message=f"{member} hasn't made any tags on this server yet.",
-            per_page=12
+            per_page=12,
         )
         await pages.start(ctx)
 
-    @tags.command(name="addalias", aliases=['alias'])
+    @tags.command(name="addalias", aliases=["alias"])
     @commands.guild_only()
     @checks.tag_check()
-    async def addtagalias(self, ctx: context.CustomContext, *, tag: Fuzzy[CollaboratorOfTag]):
+    async def addtagalias(
+        self, ctx: context.CustomContext, *, tag: Fuzzy[CollaboratorOfTag]
+    ):
         """Add a new alias to a tag"""
 
         p = config.BOT_PREFIX
@@ -183,8 +209,10 @@ class Tags(context.CustomCog):
         )
 
         if alias.startswith(p):
-            alias = alias[len(p):]
-            await ctx.send(f"*Note: The leading `{p}` was automatically removed from the alias.*")
+            alias = alias[len(p) :]
+            await ctx.send(
+                f"*Note: The leading `{p}` was automatically removed from the alias.*"
+            )
 
         if not await self.validate_tag_name(ctx, alias.lower()):
             return
@@ -198,7 +226,8 @@ class Tags(context.CustomCog):
                 )
 
         await ctx.send(
-            f"{config.YES} The `{p}{alias}` alias was added to " f"`{p}{tag.name}`."
+            f"{config.YES} The `{p}{alias}` alias was added to "
+            f"`{p}{tag.name}`."
             f"\n{config.HINT} You can add other people as collaborators for this tag, "
             f"so that they can edit and add & remove aliases, with "
             f"`{config.BOT_PREFIX}tag share {tag.name}`."
@@ -207,7 +236,9 @@ class Tags(context.CustomCog):
     @tags.command(name="removealias", aliases=["deletealias", "ra", "da"])
     @commands.guild_only()
     @checks.tag_check()
-    async def removetagalias(self, ctx: context.CustomContext, *, alias: Fuzzy[CollaboratorOfTag]):
+    async def removetagalias(
+        self, ctx: context.CustomContext, *, alias: Fuzzy[CollaboratorOfTag]
+    ):
         """Remove an alias from a tag"""
 
         if alias.invoked_with == alias.name:
@@ -242,18 +273,24 @@ class Tags(context.CustomCog):
             f"`{config.BOT_PREFIX}tag share {alias.name}`."
         )
 
-    async def validate_tag_name(self, ctx: context.CustomContext, tag_name: str) -> bool:
+    async def validate_tag_name(
+        self, ctx: context.CustomContext, tag_name: str
+    ) -> bool:
         tag_name = tag_name.lower()
 
         if not tag_name:
-            await ctx.send(f"{config.NO} The name of your tag or alias cannot be empty.")
+            await ctx.send(
+                f"{config.NO} The name of your tag or alias cannot be empty."
+            )
             return False
 
         ctx.message.content = f"{config.BOT_PREFIX}{tag_name}"
         maybe_context: context.CustomContext = await self.bot.get_context(ctx.message)
 
         if maybe_context.valid:
-            await ctx.send(f"{config.NO} You can't create a tag or alias with the same name of one of my commands.")
+            await ctx.send(
+                f"{config.NO} You can't create a tag or alias with the same name of one of my commands."
+            )
             return False
 
         tags = await self.bot.db.fetch(
@@ -280,7 +317,9 @@ class Tags(context.CustomCog):
             return False
 
         if len(tag_name) > 50:
-            await ctx.send(f"{config.NO} The name or alias cannot be longer than 50 characters.")
+            await ctx.send(
+                f"{config.NO} The name or alias cannot be longer than 50 characters."
+            )
             return False
 
         return True
@@ -294,7 +333,9 @@ class Tags(context.CustomCog):
         p = config.BOT_PREFIX
 
         if "alias" in ctx.message.content.lower():
-            return await ctx.send(f"{config.HINT} Did you mean the `{p}tag addalias` command?")
+            return await ctx.send(
+                f"{config.HINT} Did you mean the `{p}tag addalias` command?"
+            )
 
         name = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the **name** of the tag.\n{config.HINT} *This will be "
@@ -303,8 +344,10 @@ class Tags(context.CustomCog):
         )
 
         if name.startswith(p):
-            name = name[len(p):]
-            await ctx.send(f"*Note: The leading `{p}` was automatically removed from your tag name.*")
+            name = name[len(p) :]
+            await ctx.send(
+                f"*Note: The leading `{p}` was automatically removed from your tag name.*"
+            )
 
         if not await self.validate_tag_name(ctx, name.lower()):
             return
@@ -330,25 +373,34 @@ class Tags(context.CustomCog):
         )
 
         if len(title) > 256:
-            return await ctx.send(f"{config.NO} The title cannot be longer than 256 characters.")
+            return await ctx.send(
+                f"{config.NO} The title cannot be longer than 256 characters."
+            )
 
         content = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the **content** of the tag.", image_allowed=True
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the **content** of the tag.",
+            image_allowed=True,
         )
 
         if len(content) > 2000:
-            return await ctx.send(f"{config.NO} The content cannot be longer than 2000 characters.")
+            return await ctx.send(
+                f"{config.NO} The content cannot be longer than 2000 characters."
+            )
 
         is_global = False
 
         if ctx.guild.id == self.bot.dciv.id:
             try:
-                nation_admin = self.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
+                nation_admin = self.bot.get_democraciv_role(
+                    mk.DemocracivRole.NATION_ADMIN
+                )
             except exceptions.RoleNotFoundError:
                 nation_admin = None
 
             if ctx.author.guild_permissions.administrator or (
-                    self.bot.mk.IS_NATION_BOT and nation_admin and nation_admin in ctx.author.roles
+                self.bot.mk.IS_NATION_BOT
+                and nation_admin
+                and nation_admin in ctx.author.roles
             ):
                 is_global = await ctx.confirm(
                     f"{config.USER_INTERACTION_REQUIRED} Should this tag be global?"
@@ -387,17 +439,21 @@ class Tags(context.CustomCog):
                     name.lower(),
                 )
 
-        await ctx.send(f"{config.YES} The `{config.BOT_PREFIX}{name}` tag was added.\n"
-                       f"{config.HINT} You can add other people as collaborators for this tag, "
-                       f"so that they can edit and add & remove aliases, with "
-                       f"`{config.BOT_PREFIX}tag share {name.lower()}`.")
+        await ctx.send(
+            f"{config.YES} The `{config.BOT_PREFIX}{name}` tag was added.\n"
+            f"{config.HINT} You can add other people as collaborators for this tag, "
+            f"so that they can edit and add & remove aliases, with "
+            f"`{config.BOT_PREFIX}tag share {name.lower()}`."
+        )
 
     @tags.command(name="info", aliases=["about", "i"])
     @commands.guild_only()
     async def taginfo(self, ctx: context.CustomContext, *, tag: Fuzzy[Tag]):
         """Info about a tag"""
 
-        pretty_aliases = (", ".join([f"`{config.BOT_PREFIX}{alias}`" for alias in tag.aliases])) or "-"
+        pretty_aliases = (
+            ", ".join([f"`{config.BOT_PREFIX}{alias}`" for alias in tag.aliases])
+        ) or "-"
 
         embed = text.SafeEmbed(title=tag.title)
 
@@ -415,8 +471,8 @@ class Tags(context.CustomCog):
             embed.add_field(
                 name="Author",
                 value=f"*The author of this tag left this server.*\n"
-                      f"*You can claim this tag to make it yours with*\n"
-                      f"`{config.BOT_PREFIX}tag claim {tag.name}`",
+                f"*You can claim this tag to make it yours with*\n"
+                f"`{config.BOT_PREFIX}tag claim {tag.name}`",
                 inline=False,
             )
             embed.set_author(
@@ -428,20 +484,27 @@ class Tags(context.CustomCog):
             embed.add_field(
                 name="Author",
                 value=f"*The author of this tag left this server.*\n"
-                      f"*You can claim this tag to make it yours with*\n"
-                      f"`{config.BOT_PREFIX}tag claim {tag.name}`",
+                f"*You can claim this tag to make it yours with*\n"
+                f"`{config.BOT_PREFIX}tag claim {tag.name}`",
                 inline=False,
             )
 
         embed.add_field(name="Global Tag", value=is_global, inline=True)
         embed.add_field(name="Tag Format", value=is_embedded, inline=True)
         embed.add_field(name="Uses", value=tag.uses, inline=False)
-        embed.add_field(name="Collaborators", value="\n".join([f"{c.mention} {c}" for c in tag.collaborators]
-                                                              or [f'*The owner of this tag can add other people as '
-                                                                  f'collaborators for this tag, so that they can '
-                                                                  f'edit and add & '
-                                                                  f'remove aliases, with '
-                                                                  f'`{config.BOT_PREFIX}tag share {tag.name}`.*\n\n-']))
+        embed.add_field(
+            name="Collaborators",
+            value="\n".join(
+                [f"{c.mention} {c}" for c in tag.collaborators]
+                or [
+                    f"*The owner of this tag can add other people as "
+                    f"collaborators for this tag, so that they can "
+                    f"edit and add & "
+                    f"remove aliases, with "
+                    f"`{config.BOT_PREFIX}tag share {tag.name}`.*\n\n-"
+                ]
+            ),
+        )
         embed.add_field(name="Aliases", value=pretty_aliases, inline=False)
         await ctx.send(embed=embed)
 
@@ -457,27 +520,41 @@ class Tags(context.CustomCog):
             return await ctx.send(f"{config.NO} You already own this tag.")
 
         if isinstance(tag.author, discord.Member):
-            return await ctx.send(f"{config.NO} The owner of this tag is still in this server.")
+            return await ctx.send(
+                f"{config.NO} The owner of this tag is still in this server."
+            )
 
-        await self.bot.db.execute("UPDATE tag SET author = $1 WHERE id = $2", ctx.author.id, tag.id)
-        return await ctx.send(f"{config.YES} You are now the owner `{config.BOT_PREFIX}{tag.name}`.")
+        await self.bot.db.execute(
+            "UPDATE tag SET author = $1 WHERE id = $2", ctx.author.id, tag.id
+        )
+        return await ctx.send(
+            f"{config.YES} You are now the owner `{config.BOT_PREFIX}{tag.name}`."
+        )
 
     @tags.command(name="transfer")
     @commands.guild_only()
     async def transfer(
-            self,
-            ctx: context.CustomContext,
-            to_person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))],
-            *,
-            tag: OwnedTag,
+        self,
+        ctx: context.CustomContext,
+        to_person: Fuzzy[
+            CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))
+        ],
+        *,
+        tag: OwnedTag,
     ):
         """Transfer a tag of yours to someone else"""
 
         if to_person == ctx.author:
-            return await ctx.send(f"{config.NO} You cannot transfer your tag to yourself.")
+            return await ctx.send(
+                f"{config.NO} You cannot transfer your tag to yourself."
+            )
 
-        await self.bot.db.execute("UPDATE tag SET author = $1 WHERE id = $2", to_person.id, tag.id)
-        return await ctx.send(f"{config.YES} {to_person} is now the owner of `{config.BOT_PREFIX}{tag.name}`.")
+        await self.bot.db.execute(
+            "UPDATE tag SET author = $1 WHERE id = $2", to_person.id, tag.id
+        )
+        return await ctx.send(
+            f"{config.YES} {to_person} is now the owner of `{config.BOT_PREFIX}{tag.name}`."
+        )
 
     @tags.command(name="raw")
     @commands.guild_only()
@@ -492,18 +569,28 @@ class Tags(context.CustomCog):
     @tags.command(name="edit", aliases=["change"])
     @commands.guild_only()
     @checks.tag_check()
-    async def edittag(self, ctx: context.CustomContext, *, tag: Fuzzy[CollaboratorOfTag]):
+    async def edittag(
+        self, ctx: context.CustomContext, *, tag: Fuzzy[CollaboratorOfTag]
+    ):
         """Edit one of your tags"""
 
-        choices = {"embed": "Send Tag as embed or plain text", "title": "Tag Title", "content": "Tag Content"}
+        choices = {
+            "embed": "Send Tag as embed or plain text",
+            "title": "Tag Title",
+            "content": "Tag Content",
+        }
 
         if ctx.guild.id == self.bot.dciv.id:
             try:
-                nation_admin = self.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
+                nation_admin = self.bot.get_democraciv_role(
+                    mk.DemocracivRole.NATION_ADMIN
+                )
             except exceptions.RoleNotFoundError:
                 nation_admin = None
 
-            if ctx.author.guild_permissions.administrator or (nation_admin and nation_admin in ctx.author.roles):
+            if ctx.author.guild_permissions.administrator or (
+                nation_admin and nation_admin in ctx.author.roles
+            ):
                 choices["global"] = "Change Tag to be Global or Local"
 
         menu = text.EditModelMenu(choices_with_formatted_explanation=choices)
@@ -539,7 +626,9 @@ class Tags(context.CustomCog):
             )
 
             if len(new_title) > 256:
-                return await ctx.send(f"{config.NO} The title cannot be longer than 256 characters.")
+                return await ctx.send(
+                    f"{config.NO} The title cannot be longer than 256 characters."
+                )
 
         else:
             new_title = tag.title
@@ -551,7 +640,9 @@ class Tags(context.CustomCog):
             )
 
             if len(new_content) > 2000:
-                return await ctx.send(f"{config.NO} The content cannot be longer than 2000 characters.")
+                return await ctx.send(
+                    f"{config.NO} The content cannot be longer than 2000 characters."
+                )
         else:
             new_content = tag.content
 
@@ -581,12 +672,13 @@ class Tags(context.CustomCog):
             tag.id,
             new_title,
             is_embedded,
-            is_global
+            is_global,
         )
         await ctx.send(
             f"{config.YES} The tag was edited.\n{config.HINT} You can add other people as collaborators for this tag, "
             f"so that they can edit and add & remove aliases, with "
-            f"`{config.BOT_PREFIX}tag share {tag.name}`.")
+            f"`{config.BOT_PREFIX}tag share {tag.name}`."
+        )
 
     @tags.command(name="search", aliases=["s"])
     async def search(self, ctx: context.CustomContext, *, query: str):
@@ -602,48 +694,80 @@ class Tags(context.CustomCog):
                     """
 
         guild_id = 0 if not ctx.guild else ctx.guild.id
-        icon = self.bot.user.avatar_url_as(static_format="png") if not ctx.guild else ctx.guild_icon
+        icon = (
+            self.bot.user.avatar_url_as(static_format="png")
+            if not ctx.guild
+            else ctx.guild_icon
+        )
         tags = await self.bot.db.fetch(db_query, query.lower(), guild_id)
-        pretty_names = {}  # Abuse dict as ordered set since you can't use DISTINCT in above SQL query
+        pretty_names = (
+            {}
+        )  # Abuse dict as ordered set since you can't use DISTINCT in above SQL query
 
         for record in tags:
-            pretty_names[f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}"] = None
+            pretty_names[
+                f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}"
+            ] = None
 
         pages = paginator.SimplePages(
             entries=list(pretty_names),
             author=f"Tags matching '{query}'",
             icon=icon,
             empty_message="Nothing found.",
-            per_page=12
+            per_page=12,
         )
 
         await pages.start(ctx)
 
     async def _person_stats(self, ctx, person):
-        amount = await self.bot.db.fetch("SELECT COUNT(name) FROM tag WHERE author = $1 "
-                                         "UNION ALL "
-                                         "SELECT COUNT(name) FROM tag WHERE author = $1 AND guild_id = $2 "
-                                         "UNION ALL "
-                                         "SELECT COUNT(name) FROM tag WHERE author = $1 AND global = true ",
-                                         person.id, ctx.guild.id)
+        amount = await self.bot.db.fetch(
+            "SELECT COUNT(name) FROM tag WHERE author = $1 "
+            "UNION ALL "
+            "SELECT COUNT(name) FROM tag WHERE author = $1 AND guild_id = $2 "
+            "UNION ALL "
+            "SELECT COUNT(name) FROM tag WHERE author = $1 AND global = true ",
+            person.id,
+            ctx.guild.id,
+        )
 
-        top_tags = await self.bot.db.fetch("SELECT name, uses FROM tag WHERE author = $1 AND guild_id = $2 "
-                                           "ORDER BY uses DESC LIMIT 5", person.id, ctx.guild.id)
+        top_tags = await self.bot.db.fetch(
+            "SELECT name, uses FROM tag WHERE author = $1 AND guild_id = $2 "
+            "ORDER BY uses DESC LIMIT 5",
+            person.id,
+            ctx.guild.id,
+        )
 
-        top_global_tags = await self.bot.db.fetch("SELECT name, uses FROM tag WHERE author = $1 AND global = true "
-                                                  "ORDER BY uses DESC LIMIT 5", person.id)
+        top_global_tags = await self.bot.db.fetch(
+            "SELECT name, uses FROM tag WHERE author = $1 AND global = true "
+            "ORDER BY uses DESC LIMIT 5",
+            person.id,
+        )
 
         embed = text.SafeEmbed()
-        embed.set_author(name=person.display_name, icon_url=person.avatar_url_as(static_format="png"))
+        embed.set_author(
+            name=person.display_name, icon_url=person.avatar_url_as(static_format="png")
+        )
 
-        embed.add_field(name="Amount of Tags from any Server", value=amount[0]['count'])
-        embed.add_field(name="Amount of Global Tags from any Server", value=amount[2]['count'])
-        embed.add_field(name="Amount of Tags from this Server", value=amount[1]['count'], inline=False)
+        embed.add_field(name="Amount of Tags from any Server", value=amount[0]["count"])
+        embed.add_field(
+            name="Amount of Global Tags from any Server", value=amount[2]["count"]
+        )
+        embed.add_field(
+            name="Amount of Tags from this Server",
+            value=amount[1]["count"],
+            inline=False,
+        )
 
-        embed.add_field(name="Top Tags from this Server (Global and Local)", value=self._fmt_stats(top_tags),
-                        inline=False)
-        embed.add_field(name="Top Global Tags from any Server", value=self._fmt_stats(top_global_tags),
-                        inline=False)
+        embed.add_field(
+            name="Top Tags from this Server (Global and Local)",
+            value=self._fmt_stats(top_tags),
+            inline=False,
+        )
+        embed.add_field(
+            name="Top Global Tags from any Server",
+            value=self._fmt_stats(top_global_tags),
+            inline=False,
+        )
 
         await ctx.send(embed=embed)
 
@@ -652,13 +776,21 @@ class Tags(context.CustomCog):
         if not records:
             return "-"
 
-        return "\n".join(f'{i}. `{config.BOT_PREFIX}{r["name"]}` ({r["uses"]} uses)' for i, r in enumerate(records,
-                                                                                                           start=1))
+        return "\n".join(
+            f'{i}. `{config.BOT_PREFIX}{r["name"]}` ({r["uses"]} uses)'
+            for i, r in enumerate(records, start=1)
+        )
 
-    @tags.command(name="stats", aliases=['statistics'])
+    @tags.command(name="stats", aliases=["statistics"])
     @commands.guild_only()
-    async def stats(self, ctx: context.CustomContext, *,
-                    person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))] = None):
+    async def stats(
+        self,
+        ctx: context.CustomContext,
+        *,
+        person: Fuzzy[
+            CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))
+        ] = None,
+    ):
         """View general statistics or statistics about a specific person
 
         **Example**
@@ -668,49 +800,85 @@ class Tags(context.CustomCog):
         if person:
             return await self._person_stats(ctx, person)
 
-        total = await self.bot.db.fetch("SELECT COUNT(name) FROM tag "
-                                        "UNION ALL "
-                                        "SELECT COUNT(name) FROM tag WHERE guild_id = $1 "
-                                        "UNION ALL "
-                                        "SELECT COUNT(name) FROM tag WHERE global = true", ctx.guild.id)
+        total = await self.bot.db.fetch(
+            "SELECT COUNT(name) FROM tag "
+            "UNION ALL "
+            "SELECT COUNT(name) FROM tag WHERE guild_id = $1 "
+            "UNION ALL "
+            "SELECT COUNT(name) FROM tag WHERE global = true",
+            ctx.guild.id,
+        )
 
-        total_total = total[0]['count']
-        total_local = total[1]['count']
-        total_global = total[2]['count']
+        total_total = total[0]["count"]
+        total_local = total[1]["count"]
+        total_global = total[2]["count"]
 
-        top_global_tags = await self.bot.db.fetch("SELECT name, uses FROM tag WHERE global = true "
-                                                  "ORDER BY uses DESC LIMIT 5")
+        top_global_tags = await self.bot.db.fetch(
+            "SELECT name, uses FROM tag WHERE global = true "
+            "ORDER BY uses DESC LIMIT 5"
+        )
 
-        top_server_tags = await self.bot.db.fetch("SELECT name, uses FROM tag WHERE guild_id = $1 "
-                                                  "ORDER BY uses DESC LIMIT 5",
-                                                  ctx.guild.id)
+        top_server_tags = await self.bot.db.fetch(
+            "SELECT name, uses FROM tag WHERE guild_id = $1 "
+            "ORDER BY uses DESC LIMIT 5",
+            ctx.guild.id,
+        )
 
-        top_local_tags = await self.bot.db.fetch("SELECT name, uses FROM tag WHERE global = false AND guild_id = $1 "
-                                                 "ORDER BY uses DESC LIMIT 5", ctx.guild.id)
+        top_local_tags = await self.bot.db.fetch(
+            "SELECT name, uses FROM tag WHERE global = false AND guild_id = $1 "
+            "ORDER BY uses DESC LIMIT 5",
+            ctx.guild.id,
+        )
 
-        embed = text.SafeEmbed(description=f"There are {total_total} tags in total, of which "
-                                           f"{total_global} are global. {total_local} are from this server.")
+        embed = text.SafeEmbed(
+            description=f"There are {total_total} tags in total, of which "
+            f"{total_global} are global. {total_local} are from this server."
+        )
         embed.set_author(name=f"Tags on {ctx.guild.name}", icon_url=ctx.guild_icon)
 
-        embed.add_field(name="Top Global Tags", value=self._fmt_stats(top_global_tags),
-                        inline=False)
-        embed.add_field(name="Top Tags from this Server (Global and Local)", value=self._fmt_stats(top_server_tags),
-                        inline=False)
-        embed.add_field(name="Top Local Tags from this Server", value=self._fmt_stats(top_local_tags),
-                        inline=False)
+        embed.add_field(
+            name="Top Global Tags", value=self._fmt_stats(top_global_tags), inline=False
+        )
+        embed.add_field(
+            name="Top Tags from this Server (Global and Local)",
+            value=self._fmt_stats(top_server_tags),
+            inline=False,
+        )
+        embed.add_field(
+            name="Top Local Tags from this Server",
+            value=self._fmt_stats(top_local_tags),
+            inline=False,
+        )
 
         cog = self.bot.get_cog(self.bot.mk.LEGISLATURE_NAME)
 
         if cog:
-            top_tag_creators = await self.bot.db.fetch("SELECT author FROM tag WHERE guild_id = $1", ctx.guild.id)
-            value = cog.format_stats(record=top_tag_creators, record_key="author", stats_name="tags")
+            top_tag_creators = await self.bot.db.fetch(
+                "SELECT author FROM tag WHERE guild_id = $1", ctx.guild.id
+            )
+            value = cog.format_stats(
+                record=top_tag_creators, record_key="author", stats_name="tags"
+            )
 
-            top_global_tag_creators = await self.bot.db.fetch("SELECT author FROM tag WHERE global = true")
-            global_value = cog.format_stats(record=top_global_tag_creators, record_key="author",
-                                            stats_name="global tags")
+            top_global_tag_creators = await self.bot.db.fetch(
+                "SELECT author FROM tag WHERE global = true"
+            )
+            global_value = cog.format_stats(
+                record=top_global_tag_creators,
+                record_key="author",
+                stats_name="global tags",
+            )
 
-            embed.add_field(name="People with the most Global Tags from any Server", value=global_value, inline=False)
-            embed.add_field(name="People with the most Tags from this Server", value=value, inline=False)
+            embed.add_field(
+                name="People with the most Global Tags from any Server",
+                value=global_value,
+                inline=False,
+            )
+            embed.add_field(
+                name="People with the most Tags from this Server",
+                value=value,
+                inline=False,
+            )
 
         await ctx.send(embed=embed)
 
@@ -722,13 +890,21 @@ class Tags(context.CustomCog):
 
         if not tag.is_global:
             # Local -> Global
-            await self.bot.db.execute("UPDATE tag SET global = true WHERE id = $1", tag.id)
-            await ctx.send(f"{config.YES} `{config.BOT_PREFIX}{tag.name}` is now a global tag.")
+            await self.bot.db.execute(
+                "UPDATE tag SET global = true WHERE id = $1", tag.id
+            )
+            await ctx.send(
+                f"{config.YES} `{config.BOT_PREFIX}{tag.name}` is now a global tag."
+            )
 
         else:
             # Global -> Local
-            await self.bot.db.execute("UPDATE tag SET global = false WHERE id = $1", tag.id)
-            await ctx.send(f"{config.YES} `{config.BOT_PREFIX}{tag.name}` is no longer a global tag.")
+            await self.bot.db.execute(
+                "UPDATE tag SET global = false WHERE id = $1", tag.id
+            )
+            await ctx.send(
+                f"{config.YES} `{config.BOT_PREFIX}{tag.name}` is no longer a global tag."
+            )
 
     @tags.command(name="remove", aliases=["delete"])
     @commands.guild_only()
@@ -751,7 +927,9 @@ class Tags(context.CustomCog):
                     tag.name,
                     ctx.guild.id,
                 )
-                await ctx.send(f"{config.YES} `{config.BOT_PREFIX}{tag.name}` was removed.")
+                await ctx.send(
+                    f"{config.YES} `{config.BOT_PREFIX}{tag.name}` was removed."
+                )
 
     async def _get_people_input(self, ctx, tag: Tag):
         people_text = (await ctx.input()).splitlines()
@@ -770,7 +948,7 @@ class Tags(context.CustomCog):
 
         return people
 
-    @tags.command(name="share", aliases=['allow'])
+    @tags.command(name="share", aliases=["allow"])
     @commands.guild_only()
     async def allow(self, ctx, *, tag: Fuzzy[OwnedTag]):
         """Allow other people on this server to edit and add & remove aliases to one of your tags
@@ -790,17 +968,22 @@ class Tags(context.CustomCog):
         people = await self._get_people_input(ctx, tag)
 
         if not people:
-            return await ctx.send(f"{config.NO} Something went wrong, you didn't specify anybody.")
+            return await ctx.send(
+                f"{config.NO} Something went wrong, you didn't specify anybody."
+            )
 
         for p_id in people:
             await self.bot.db.execute(
                 "INSERT INTO tag_collaborator (tag_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING ",
-                tag.id, p_id,
+                tag.id,
+                p_id,
             )
 
-        await ctx.send(f"{config.YES} Those people can now edit your `{config.BOT_PREFIX}{tag.name}` tag.")
+        await ctx.send(
+            f"{config.YES} Those people can now edit your `{config.BOT_PREFIX}{tag.name}` tag."
+        )
 
-    @tags.command(name="unshare", aliases=['deny'])
+    @tags.command(name="unshare", aliases=["deny"])
     @commands.guild_only()
     async def deny(self, ctx, *, tag: Fuzzy[OwnedTag]):
         """Remove access to one of your tags from someone that you previously have shared
@@ -818,16 +1001,21 @@ class Tags(context.CustomCog):
         people = await self._get_people_input(ctx, tag)
 
         if not people:
-            return await ctx.send(f"{config.NO} Something went wrong, you didn't specify anybody.")
+            return await ctx.send(
+                f"{config.NO} Something went wrong, you didn't specify anybody."
+            )
 
         for p_id in people:
             await self.bot.db.execute(
                 "DELETE FROM tag_collaborator WHERE tag_id = $1 AND user_id = $2",
-                tag.id, p_id,
+                tag.id,
+                p_id,
             )
 
-        await ctx.send(f"{config.YES} Those people can __no longer__ "
-                       f"edit your `{config.BOT_PREFIX}{tag.name}` tag.")
+        await ctx.send(
+            f"{config.YES} Those people can __no longer__ "
+            f"edit your `{config.BOT_PREFIX}{tag.name}` tag."
+        )
 
     def get_tag_content_type(self, tag_content: str) -> TagContentType:
         url_endings_image = (
@@ -842,16 +1030,25 @@ class Tags(context.CustomCog):
         )
         url_endings_video = (".avi", ".mp4", ".mp3", ".mov", ".flv", ".wmv")
 
-        if self.url_pattern.fullmatch(tag_content) and (tag_content.lower().endswith(url_endings_image)):
+        if self.url_pattern.fullmatch(tag_content) and (
+            tag_content.lower().endswith(url_endings_image)
+        ):
             return TagContentType.IMAGE
 
-        elif self.url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings_image)):
+        elif self.url_pattern.match(tag_content) and (
+            tag_content.lower().endswith(url_endings_image)
+        ):
             return TagContentType.PARTIAL_IMAGE
 
-        elif self.url_pattern.match(tag_content) and (tag_content.lower().endswith(url_endings_video)):
+        elif self.url_pattern.match(tag_content) and (
+            tag_content.lower().endswith(url_endings_video)
+        ):
             return TagContentType.VIDEO
 
-        elif any(s in tag_content for s in ["youtube", "youtu.be", "tenor.com", "gph.is", "giphy.com"]):
+        elif any(
+            s in tag_content
+            for s in ["youtube", "youtu.be", "tenor.com", "gph.is", "giphy.com"]
+        ):
             return TagContentType.YOUTUBE_TENOR_GIPHY
 
         elif self.emoji_pattern.fullmatch(tag_content):
@@ -890,7 +1087,12 @@ class Tags(context.CustomCog):
 
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
-        if not before.author.bot and before.content and after.content and before.content != after.content:
+        if (
+            not before.author.bot
+            and before.content
+            and after.content
+            and before.content != after.content
+        ):
             await self.tag_listener(after)
 
     @commands.Cog.listener(name="on_message")
@@ -903,7 +1105,7 @@ class Tags(context.CustomCog):
         if ctx.valid or not ctx.prefix:
             return
 
-        tag_name = message.content[len(ctx.prefix):]
+        tag_name = message.content[len(ctx.prefix) :]
         tag_details = await self.resolve_tag_name(tag_name, message.guild)
 
         if tag_details is None:
@@ -914,25 +1116,33 @@ class Tags(context.CustomCog):
         if tag_details["is_embedded"]:
             if tag_content_type is TagContentType.IMAGE:
                 # invisible colour=0x2F3136
-                embed = text.SafeEmbed(title=tag_details['title'])
+                embed = text.SafeEmbed(title=tag_details["title"])
                 embed.set_image(url=tag_details["content"])
 
                 try:
                     await message.channel.send(embed=embed)
                 except discord.HTTPException:
-                    await message.channel.send(discord.utils.escape_mentions(tag_details["content"]))
+                    await message.channel.send(
+                        discord.utils.escape_mentions(tag_details["content"])
+                    )
 
             elif tag_content_type is TagContentType.VIDEO:
                 # discord doesn't allow videos in embeds
-                await message.channel.send(discord.utils.escape_mentions(tag_details["content"]))
+                await message.channel.send(
+                    discord.utils.escape_mentions(tag_details["content"])
+                )
 
             else:
-                embed = text.SafeEmbed(title=tag_details["title"], description=tag_details["content"])
+                embed = text.SafeEmbed(
+                    title=tag_details["title"], description=tag_details["content"]
+                )
 
                 await message.channel.send(embed=embed)
 
         else:
-            await message.channel.send(discord.utils.escape_mentions(tag_details["content"]))
+            await message.channel.send(
+                discord.utils.escape_mentions(tag_details["content"])
+            )
 
 
 def setup(bot):

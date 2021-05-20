@@ -52,7 +52,9 @@ class CustomCog(commands.Cog):
                 self.bot.loop.create_task(self._transform_command_help(command))
 
             if not command._buckets._cooldown:
-                cooldown_deco = commands.cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user)
+                cooldown_deco = commands.cooldown(
+                    1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user
+                )
                 cooldown_deco(command)
 
     async def _transform_description(self):
@@ -92,7 +94,10 @@ class CustomContext(commands.Context):
 
     def _wait_for_message_check(self):
         def check(message):
-            return message.author == self.message.author and message.channel == self.message.channel
+            return (
+                message.author == self.message.author
+                and message.channel == self.message.channel
+            )
 
         return check
 
@@ -102,19 +107,25 @@ class CustomContext(commands.Context):
 
         return check
 
-    def _wait_for_specific_emoji_reaction_check(self, *, original_message: discord.Message, emoji: str):
+    def _wait_for_specific_emoji_reaction_check(
+        self, *, original_message: discord.Message, emoji: str
+    ):
         def check(reaction, user):
-            return user == self.author and reaction.message.id == original_message.id and str(reaction.emoji) == emoji
+            return (
+                user == self.author
+                and reaction.message.id == original_message.id
+                and str(reaction.emoji) == emoji
+            )
 
         return check
 
     async def choose(
-            self,
-            text=None,
-            *,
-            reactions: typing.Iterable[typing.Any],
-            message: discord.Message = None,
-            timeout: int = 300,
+        self,
+        text=None,
+        *,
+        reactions: typing.Iterable[typing.Any],
+        message: discord.Message = None,
+        timeout: int = 300,
     ) -> discord.Reaction:
 
         if text:
@@ -134,13 +145,17 @@ class CustomContext(commands.Context):
         except asyncio.TimeoutError:
             raise exceptions.InvalidUserInputError(":zzz: You took too long to react.")
 
-    async def ask_to_continue(self, *, message: discord.Message, emoji: str, timeout: int = 300) -> bool:
+    async def ask_to_continue(
+        self, *, message: discord.Message, emoji: str, timeout: int = 300
+    ) -> bool:
         await message.add_reaction(emoji)
 
         try:
             await self.bot.wait_for(
                 "reaction_add",
-                check=self._wait_for_specific_emoji_reaction_check(original_message=message, emoji=emoji),
+                check=self._wait_for_specific_emoji_reaction_check(
+                    original_message=message, emoji=emoji
+                ),
                 timeout=timeout,
             )
         except asyncio.TimeoutError:
@@ -153,7 +168,9 @@ class CustomContext(commands.Context):
             except discord.HTTPException:
                 pass
 
-    async def confirm(self, text: str = None, *, message: discord.Message = None, timeout=300) -> bool:
+    async def confirm(
+        self, text: str = None, *, message: discord.Message = None, timeout=300
+    ) -> bool:
         """Adds the {config.YES} and {config.NO} emoji to the message and returns the reaction and user if either
         reaction has been added by the original user.
 
@@ -179,7 +196,9 @@ class CustomContext(commands.Context):
 
         else:
             if reaction is None:
-                raise exceptions.InvalidUserInputError(":zzz: You took too long to react.")
+                raise exceptions.InvalidUserInputError(
+                    ":zzz: You took too long to react."
+                )
 
             if str(reaction.emoji) == yes_emoji:
                 return True
@@ -189,7 +208,9 @@ class CustomContext(commands.Context):
 
     async def send_with_timed_delete(self, content=None, *, embed=None, timeout=200):
         message = await self.send(content=content, embed=embed)
-        should_delete = await self.ask_to_continue(message=message, emoji="\U0001f5d1", timeout=timeout)
+        should_delete = await self.ask_to_continue(
+            message=message, emoji="\U0001f5d1", timeout=timeout
+        )
 
         if should_delete:
             await message.delete()
@@ -197,13 +218,13 @@ class CustomContext(commands.Context):
             await message.remove_reaction(emoji="\U0001f5d1", member=self.guild.me)
 
     async def input(
-            self,
-            text=None,
-            *,
-            timeout: int = 300,
-            delete_after: bool = False,
-            image_allowed: bool = False,
-            return_cleaned: bool = False
+        self,
+        text=None,
+        *,
+        timeout: int = 300,
+        delete_after: bool = False,
+        image_allowed: bool = False,
+        return_cleaned: bool = False,
     ) -> str:
         """Waits for a reply by the original user in the original channel and returns reply as string.
 
@@ -214,7 +235,9 @@ class CustomContext(commands.Context):
             await self.send(text)
 
         try:
-            message = await self.bot.wait_for("message", check=self._wait_for_message_check(), timeout=timeout)
+            message = await self.bot.wait_for(
+                "message", check=self._wait_for_message_check(), timeout=timeout
+            )
         except asyncio.TimeoutError:
             raise exceptions.InvalidUserInputError(":zzz: You took too long to reply.")
 
@@ -222,7 +245,9 @@ class CustomContext(commands.Context):
             if image_allowed and message.attachments:
                 return message.attachments[0].url
 
-            raise exceptions.InvalidUserInputError(f"{config.NO} You didn't reply with text.")
+            raise exceptions.InvalidUserInputError(
+                f"{config.NO} You didn't reply with text."
+            )
 
         else:
             if delete_after:
@@ -234,12 +259,12 @@ class CustomContext(commands.Context):
             return message.clean_content if return_cleaned else message.content
 
     async def converted_input(
-            self,
-            text=None,
-            *,
-            converter,
-            timeout: int = 300,
-            return_input_on_fail: bool = True,
+        self,
+        text=None,
+        *,
+        converter,
+        timeout: int = 300,
+        return_input_on_fail: bool = True,
     ):
         if text:
             await self.send(text)
@@ -259,9 +284,7 @@ class CustomContext(commands.Context):
                         f"the {converter.model} exists?"
                     )
                 else:
-                    error_msg = (
-                        f"{config.NO} Something went wrong while converting your input. Are you sure it was right?"
-                    )
+                    error_msg = f"{config.NO} Something went wrong while converting your input. Are you sure it was right?"
 
                 raise exceptions.InvalidUserInputError(error_msg)
         else:

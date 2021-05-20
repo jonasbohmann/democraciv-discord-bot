@@ -29,7 +29,9 @@ from bot.utils.converter import (
     CaseInsensitiveUser,
     CaseInsensitiveRole,
     DemocracivCaseInsensitiveRole,
-    CaseInsensitiveMember, Fuzzy, FuzzySettings,
+    CaseInsensitiveMember,
+    Fuzzy,
+    FuzzySettings,
 )
 
 
@@ -44,10 +46,10 @@ class Utility(context.CustomCog):
     @commands.Cog.listener(name="on_message")
     async def on_press_message(self, message: discord.Message):
         if (
-                message.author.bot
-                or not message.guild
-                or message.guild.id != self.bot.dciv.id
-                or message.channel.id not in self.bot.mk.PRESS_CHANNEL
+            message.author.bot
+            or not message.guild
+            or message.guild.id != self.bot.dciv.id
+            or message.channel.id not in self.bot.mk.PRESS_CHANNEL
         ):
             return
 
@@ -73,7 +75,10 @@ class Utility(context.CustomCog):
         while True:
             try:
                 _m = await self.bot.wait_for(
-                    "message", check=lambda m: m.author == message.author and m.channel == message.channel, timeout=120
+                    "message",
+                    check=lambda m: m.author == message.author
+                    and m.channel == message.channel,
+                    timeout=120,
                 )
 
                 _ctx = await self.bot.get_context(_m)
@@ -90,7 +95,9 @@ class Utility(context.CustomCog):
                     continue
 
         # check if messages were not deleted before asking
-        messages = [discord.utils.get(self.bot.cached_messages, id=mes.id) for mes in messages]
+        messages = [
+            discord.utils.get(self.bot.cached_messages, id=mes.id) for mes in messages
+        ]
 
         if not any(messages):
             self.active_press_flows.remove(message.author.id)
@@ -120,7 +127,8 @@ class Utility(context.CustomCog):
         try:
             reaction, user = await self.bot.wait_for(
                 "reaction_add",
-                check=lambda r, u: u.id == message.author.id and r.message.id == confirm.id,
+                check=lambda r, u: u.id == message.author.id
+                and r.message.id == confirm.id,
                 timeout=120,
             )
         except asyncio.TimeoutError:
@@ -143,7 +151,10 @@ class Utility(context.CustomCog):
 
         try:
             title_message = await self.bot.wait_for(
-                "message", check=lambda m: m.author == message.author and m.channel == message.channel, timeout=180
+                "message",
+                check=lambda m: m.author == message.author
+                and m.channel == message.channel,
+                timeout=180,
             )
 
         except asyncio.TimeoutError:
@@ -156,8 +167,10 @@ class Utility(context.CustomCog):
                 return
 
         title = f"{title_message.clean_content} — by {message.author.name}"
-        cleaned_up = [f"*The following was written by the journalist {message.author.display_name} ({message.author}) "
-                      f"in #{message.channel.name} on our [Discord server](https://discord.gg/AK7dYMG)*."]
+        cleaned_up = [
+            f"*The following was written by the journalist {message.author.display_name} ({message.author}) "
+            f"in #{message.channel.name} on our [Discord server](https://discord.gg/AK7dYMG)*."
+        ]
 
         for mes in messages:
             cntn = ""
@@ -179,8 +192,10 @@ class Utility(context.CustomCog):
 
         if len(cleaned_up) == 1:
             self.active_press_flows.remove(message.author.id)
-            return await ctx.send(f"{config.HINT} {message.author}, you deleted your messages, "
-                                  f"so I cancelled this process.")
+            return await ctx.send(
+                f"{config.HINT} {message.author}, you deleted your messages, "
+                f"so I cancelled this process."
+            )
 
         outro = f"""\n\n &nbsp; \n\n --- \n\n*This is an automated press post from our Discord server. I am a 
         [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) and this is an automated service. 
@@ -190,18 +205,25 @@ class Utility(context.CustomCog):
 
         content = "\n\n  &nbsp; \n\n".join(cleaned_up)
 
-        js = {"subreddit": config.DEMOCRACIV_SUBREDDIT, "title": title, "content": content}
+        js = {
+            "subreddit": config.DEMOCRACIV_SUBREDDIT,
+            "title": title,
+            "content": content,
+        }
         self.active_press_flows.remove(message.author.id)
 
         try:
             result = await self.bot.api_request("POST", "reddit/post", json=js)
 
             if "error" in result:
-                raise RuntimeError(result['error'])
+                raise RuntimeError(result["error"])
 
         except Exception as e:
-            await message.channel.send(f"{config.NO} {message.author}, something went wrong, your article was not "
-                                       f"posted to Reddit.", delete_after=10)
+            await message.channel.send(
+                f"{config.NO} {message.author}, something went wrong, your article was not "
+                f"posted to Reddit.",
+                delete_after=10,
+            )
             logging.warning(f"Failed to post press article to Reddit: ")
             traceback.print_exception(type(e), e, e.__traceback__)
 
@@ -217,8 +239,10 @@ class Utility(context.CustomCog):
         self.bot.loop.create_task(title_q.delete())
         self.bot.loop.create_task(title_message.delete())
 
-    @commands.command(name="deletepresspost",
-                      aliases=['deletepress', 'removepress', 'removepresspost', 'dpp', 'rpp', 'dp'])
+    @commands.command(
+        name="deletepresspost",
+        aliases=["deletepress", "removepress", "removepresspost", "dpp", "rpp", "dp"],
+    )
     async def delete_press_post(self, ctx, *, url):
         """Make me delete a reddit post that I made out of your #press messages and posted to our subreddit
 
@@ -227,13 +251,20 @@ class Utility(context.CustomCog):
 
         # todo make regex
 
-        if f"reddit.com/r/{config.DEMOCRACIV_SUBREDDIT.lower()}" not in url.lower() and "comments" not in url.lower():
-            return await ctx.send(f"{config.NO} Make sure the link to your Reddit press post is in this exact format: "
-                                  f"`https://www.reddit.com/r/democraciv/comments/ibr37f/"
-                                  f"introducing_the_bank_of_democraciv/`.")
+        if (
+            f"reddit.com/r/{config.DEMOCRACIV_SUBREDDIT.lower()}" not in url.lower()
+            and "comments" not in url.lower()
+        ):
+            return await ctx.send(
+                f"{config.NO} Make sure the link to your Reddit press post is in this exact format: "
+                f"`https://www.reddit.com/r/democraciv/comments/ibr37f/"
+                f"introducing_the_bank_of_democraciv/`."
+            )
 
-        error_msg = f"{config.NO} Something went wrong. Are you sure that you gave me " \
-                    f"a real link to a press Reddit post?"
+        error_msg = (
+            f"{config.NO} Something went wrong. Are you sure that you gave me "
+            f"a real link to a press Reddit post?"
+        )
 
         try:
             async with self.bot.session.get(f"{url}.json") as response:
@@ -245,22 +276,28 @@ class Utility(context.CustomCog):
             return await ctx.send(error_msg)
 
         try:
-            post = js[0]['data']['children'][0]['data']
+            post = js[0]["data"]["children"][0]["data"]
 
-            if post['subreddit'].lower() != config.DEMOCRACIV_SUBREDDIT.lower() or post[
-                'author'].lower() != config.STARBOARD_REDDIT_USERNAME.lower():
+            if (
+                post["subreddit"].lower() != config.DEMOCRACIV_SUBREDDIT.lower()
+                or post["author"].lower() != config.STARBOARD_REDDIT_USERNAME.lower()
+            ):
                 return await ctx.send(error_msg)
 
             # remove whitespace
-            content = "".join(post['selftext'].split())
-            post_id = post['name']
+            content = "".join(post["selftext"].split())
+            post_id = post["name"]
         except (TypeError, KeyError, IndexError):
             return await ctx.send(error_msg)
 
         if f"!A_ID:{ctx.author.id}" not in content:
-            return await ctx.send(f"{config.NO} You are not the author of that press article.")
+            return await ctx.send(
+                f"{config.NO} You are not the author of that press article."
+            )
 
-        resp = await self.bot.api_request("POST", "reddit/post/delete", json={'id': post_id})
+        resp = await self.bot.api_request(
+            "POST", "reddit/post/delete", json={"id": post_id}
+        )
 
         if "error" in resp:
             return await ctx.send(error_msg)
@@ -303,8 +340,8 @@ class Utility(context.CustomCog):
         see: https://en.wikipedia.org/w/api.php"""
 
         async with self.bot.session.get(
-                f"https://en.wikipedia.org/w/api.php?format=json&action=query&list=search"
-                f"&srinfo=suggestion&srsearch={query}"
+            f"https://en.wikipedia.org/w/api.php?format=json&action=query&list=search"
+            f"&srinfo=suggestion&srsearch={query}"
         ) as response:
             if response.status == 200:
                 return await response.json()
@@ -324,7 +361,9 @@ class Utility(context.CustomCog):
                     result = None
 
                     for suggested_page in suggested_pages["query"]["search"]:
-                        page_info = await self.get_wikipedia_result_with_rest_api(suggested_page["title"])
+                        page_info = await self.get_wikipedia_result_with_rest_api(
+                            suggested_page["title"]
+                        )
 
                         if page_info and page_info["type"] != "disambiguation":
                             result = page_info
@@ -340,7 +379,8 @@ class Utility(context.CustomCog):
 
                 if not result:
                     return await ctx.send(
-                        f"{config.NO} Wikipedia could not suggest me any articles that are " f"related to `{topic}`."
+                        f"{config.NO} Wikipedia could not suggest me any articles that are "
+                        f"related to `{topic}`."
                     )
 
             title = result["title"]
@@ -353,12 +393,14 @@ class Utility(context.CustomCog):
             except KeyError:
                 pass
 
-            embed = text.SafeEmbed(description=textwrap.shorten(summary, 500, placeholder="..."))
+            embed = text.SafeEmbed(
+                description=textwrap.shorten(summary, 500, placeholder="...")
+            )
             embed.set_author(
                 url=url,
                 name=title,
                 icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
-                         "806577378314289162/Wikipedia-logo-v2.png",
+                "806577378314289162/Wikipedia-logo-v2.png",
             )
 
             embed.add_field(name="Link", value=url)
@@ -381,7 +423,10 @@ class Utility(context.CustomCog):
         except pytz.UnknownTimeZoneError:
             match = process.extract(zone, pytz.all_timezones, limit=5)
 
-            menu = text.FuzzyChoose(question="Which time zone did you mean?", choices=[zone for zone, _ in match])
+            menu = text.FuzzyChoose(
+                question="Which time zone did you mean?",
+                choices=[zone for zone, _ in match],
+            )
             zone = await menu.prompt(ctx)
 
             if not zone:
@@ -408,8 +453,14 @@ class Utility(context.CustomCog):
 
         embed = text.SafeEmbed(title=f":clock1:  Current Time in {title}")
         embed.add_field(name="Date", value=date.strftime("%A, %B %d %Y"), inline=False)
-        embed.add_field(name="Time (12-Hour Clock)", value=date.strftime("%I:%M:%S %p"), inline=False)
-        embed.add_field(name="Time (24-Hour Clock)", value=date.strftime("%H:%M:%S"), inline=False)
+        embed.add_field(
+            name="Time (12-Hour Clock)",
+            value=date.strftime("%I:%M:%S %p"),
+            inline=False,
+        )
+        embed.add_field(
+            name="Time (24-Hour Clock)", value=date.strftime("%H:%M:%S"), inline=False
+        )
         await ctx.send(embed=embed)
 
     @commands.Cog.listener(name="on_member_join")
@@ -435,9 +486,9 @@ class Utility(context.CustomCog):
 
         return member.joined_at
 
-    async def get_member_join_position(self,
-                                       member: discord.Member,
-                                       members: typing.List[discord.Member]) -> typing.Tuple[typing.Optional[int], int]:
+    async def get_member_join_position(
+        self, member: discord.Member, members: typing.List[discord.Member]
+    ) -> typing.Tuple[typing.Optional[int], int]:
 
         if member.guild.id == self.bot.dciv.id:
             sql = """SELECT position.row_number FROM 
@@ -447,7 +498,9 @@ class Utility(context.CustomCog):
                       WHERE member = $1"""
 
             join_position = await self.bot.db.fetchval(sql, member.id)
-            all_members = await self.bot.db.fetchval("SELECT COUNT(member) FROM original_join_date")
+            all_members = await self.bot.db.fetchval(
+                "SELECT COUNT(member) FROM original_join_date"
+            )
 
             if join_position:
                 return join_position, all_members
@@ -466,13 +519,17 @@ class Utility(context.CustomCog):
     @commands.command(name="whois")
     @commands.guild_only()
     async def whois(
-            self,
-            ctx,
-            *,
-            person: Fuzzy[
-                CaseInsensitiveMember, CaseInsensitiveUser, CaseInsensitiveRole, DemocracivCaseInsensitiveRole, PoliticalParty,
-                FuzzySettings(weights=(5, 1, 2, 1, 1))
-            ] = None,
+        self,
+        ctx,
+        *,
+        person: Fuzzy[
+            CaseInsensitiveMember,
+            CaseInsensitiveUser,
+            CaseInsensitiveRole,
+            DemocracivCaseInsensitiveRole,
+            PoliticalParty,
+            FuzzySettings(weights=(5, 1, 2, 1, 1)),
+        ] = None,
     ):
         """See detailed information about someone
 
@@ -519,7 +576,9 @@ class Utility(context.CustomCog):
         )
 
         if isinstance(member, discord.Member):
-            join_pos, max_members = await self.get_member_join_position(member, ctx.guild.members)
+            join_pos, max_members = await self.get_member_join_position(
+                member, ctx.guild.members
+            )
 
             if not join_pos:
                 join_pos = "Unknown"
@@ -529,7 +588,9 @@ class Utility(context.CustomCog):
                 value=f'{(await self.get_member_join_date(member)).strftime("%B %d, %Y")}',
                 inline=True,
             )
-            embed.add_field(name="Join Position", value=f"{join_pos}/{max_members}", inline=True)
+            embed.add_field(
+                name="Join Position", value=f"{join_pos}/{max_members}", inline=True
+            )
             embed.add_field(
                 name=f"Roles ({len(member.roles) - 1})",
                 value=_get_roles(member.roles),
@@ -542,8 +603,12 @@ class Utility(context.CustomCog):
     @commands.command(name="avatar", aliases=["pfp", "avy"])
     @commands.guild_only()
     async def avatar(
-            self, ctx, *,
-            person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))] = None
+        self,
+        ctx,
+        *,
+        person: Fuzzy[
+            CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))
+        ] = None,
     ):
         """View someone's avatar in detail
 
@@ -577,17 +642,22 @@ class Utility(context.CustomCog):
                     "SELECT member FROM original_join_date ORDER BY join_date LIMIT 15"
                 )
 
-                self.cached_sorted_veterans_on_democraciv = sorted_first_15_members = [self.bot.get_user(r["member"])
-                                                                                       for r in vets]
+                self.cached_sorted_veterans_on_democraciv = sorted_first_15_members = [
+                    self.bot.get_user(r["member"]) for r in vets
+                ]
 
         # If cache is empty OR ctx not on democraciv guild, calculate & sort again
         else:
-            guild_members_without_bots = [member for member in ctx.guild.members if not member.bot]
+            guild_members_without_bots = [
+                member for member in ctx.guild.members if not member.bot
+            ]
             guild_members_without_bots.sort(key=lambda m: m.joined_at)
             sorted_first_15_members = guild_members_without_bots[:15]
 
         # Send veterans
-        message = ["These are the first 15 people who joined this server.\nBot accounts are not counted.\n"]
+        message = [
+            "These are the first 15 people who joined this server.\nBot accounts are not counted.\n"
+        ]
 
         for position, veteran in enumerate(sorted_first_15_members, start=1):
             fmt = f"{veteran.mention} {veteran}" if veteran else "*Unknown User*"
@@ -606,21 +676,30 @@ class Utility(context.CustomCog):
         """
 
         if len(query) < 3:
-            return await ctx.send(f"{config.NO} The query to search for has to be more than 3 characters!")
+            return await ctx.send(
+                f"{config.NO} The query to search for has to be more than 3 characters!"
+            )
 
         async with ctx.typing():
-            async with self.bot.session.get(f"https://some-random-api.ml/lyrics?title={query}") as response:
+            async with self.bot.session.get(
+                f"https://some-random-api.ml/lyrics?title={query}"
+            ) as response:
                 if response.status == 200:
                     lyrics = await response.json()
                 else:
-                    return await ctx.send(f"{config.NO} Genius could not suggest me anything related to `{query}`.")
+                    return await ctx.send(
+                        f"{config.NO} Genius could not suggest me anything related to `{query}`."
+                    )
 
         try:
             lyrics["lyrics"] = lyrics["lyrics"].replace("[", "**[").replace("]", "]**")
 
             if len(lyrics["lyrics"]) <= 2048:
                 embed = text.SafeEmbed(
-                    title=lyrics["title"], description=lyrics["lyrics"], colour=0x2F3136, url=lyrics["links"]["genius"]
+                    title=lyrics["title"],
+                    description=lyrics["lyrics"],
+                    colour=0x2F3136,
+                    url=lyrics["links"]["genius"],
                 )
                 embed.set_author(name=lyrics["author"])
                 embed.set_thumbnail(url=lyrics["thumbnail"]["genius"])
@@ -636,7 +715,9 @@ class Utility(context.CustomCog):
             )
 
         except KeyError:
-            return await ctx.send(f"{config.NO} Genius could not suggest me anything related to `{query}`.")
+            return await ctx.send(
+                f"{config.NO} Genius could not suggest me anything related to `{query}`."
+            )
 
         await pages.start(ctx)
 
@@ -649,21 +730,29 @@ class Utility(context.CustomCog):
         tiny_url = await self.bot.tinyurl(url)
 
         if tiny_url is None:
-            return await ctx.send(f"{config.NO} The URL shortening service returned an error, "
-                                  f"try again in a few minutes.")
+            return await ctx.send(
+                f"{config.NO} The URL shortening service returned an error, "
+                f"try again in a few minutes."
+            )
 
         await ctx.send(f"<{tiny_url}>")
 
     @commands.command(name="whohas", aliases=["roleinfo"])
     @commands.guild_only()
     async def whohas(
-            self,
-            ctx,
-            *,
-            role: Fuzzy[CaseInsensitiveRole, DemocracivCaseInsensitiveRole, PoliticalParty,
-                        FuzzySettings(no_choice_exception=f"{config.NO} There is no role on this or the "
-                                                          f"Democraciv server that matches `{{argument}}`.",
-                                      weights=(5, 2, 2))]
+        self,
+        ctx,
+        *,
+        role: Fuzzy[
+            CaseInsensitiveRole,
+            DemocracivCaseInsensitiveRole,
+            PoliticalParty,
+            FuzzySettings(
+                no_choice_exception=f"{config.NO} There is no role on this or the "
+                f"Democraciv server that matches `{{argument}}`.",
+                weights=(5, 2, 2),
+            ),
+        ],
     ):
         """Detailed information about a role"""
 
@@ -674,7 +763,9 @@ class Utility(context.CustomCog):
 
     async def role_info(self, ctx, role: discord.Role):
         if role is None:
-            return await ctx.send(f"{config.NO} `role` is neither a role on this server, nor on the Democraciv server.")
+            return await ctx.send(
+                f"{config.NO} `role` is neither a role on this server, nor on the Democraciv server."
+            )
 
         if role.guild.id != ctx.guild.id:
             description = f":warning:  This role is from the {self.bot.dciv.name} server, not from this server!"
@@ -684,17 +775,26 @@ class Utility(context.CustomCog):
             role_name = f"{role.name} {role.mention}"
 
         if role != role.guild.default_role:
-            role_members = "\n".join([f"{member.mention} {member}" for member in role.members]) or "-"
+            role_members = (
+                "\n".join([f"{member.mention} {member}" for member in role.members])
+                or "-"
+            )
         else:
             role_members = "*Too long to display.*"
 
-        embed = text.SafeEmbed(title="Role Information", description=description, colour=role.colour)
+        embed = text.SafeEmbed(
+            title="Role Information", description=description, colour=role.colour
+        )
 
         embed.add_field(name="Role", value=role_name, inline=False)
         embed.add_field(name="ID", value=role.id, inline=False)
-        embed.add_field(name="Created on", value=role.created_at.strftime("%B %d, %Y"), inline=True)
+        embed.add_field(
+            name="Created on", value=role.created_at.strftime("%B %d, %Y"), inline=True
+        )
         embed.add_field(name="Colour", value=role.colour, inline=True)
-        embed.add_field(name=f"Members ({len(role.members)})", value=role_members, inline=False)
+        embed.add_field(
+            name=f"Members ({len(role.members)})", value=role_members, inline=False
+        )
         await ctx.send(embed=embed)
 
     @commands.group(name="random", case_insensitive=True, invoke_without_command=True)
@@ -711,7 +811,9 @@ class Utility(context.CustomCog):
         except Exception:
             raise commands.BadArgument()
 
-        await ctx.send(f":arrows_counterclockwise: Random number ({start} - {end}): **{result}**")
+        await ctx.send(
+            f":arrows_counterclockwise: Random number ({start} - {end}): **{result}**"
+        )
 
     @random.command(name="choose", aliases=["choice"])
     async def random_choice(self, ctx, *choices):
@@ -732,8 +834,12 @@ class Utility(context.CustomCog):
     @commands.command(name="vibecheck", hidden=True)
     @commands.guild_only()
     async def vibecheck(
-            self, ctx, *,
-            person: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))] = None
+        self,
+        ctx,
+        *,
+        person: Fuzzy[
+            CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))
+        ] = None,
     ):
         """vibecheck"""
 
@@ -792,7 +898,9 @@ class Utility(context.CustomCog):
                 async with ctx.typing():
                     async with self.bot.session.get(url) as other:
                         if other.status != 200:
-                            return await ctx.send(f"{config.NO} Could not download dog video :(")
+                            return await ctx.send(
+                                f"{config.NO} Could not download dog video :("
+                            )
 
                         if int(other.headers["Content-Length"]) >= filesize:
                             return await ctx.send(
@@ -811,7 +919,9 @@ class Utility(context.CustomCog):
     async def cat(self, ctx):
         """A random cat"""
 
-        async with self.bot.session.get("https://api.thecatapi.com/v1/images/search") as response:
+        async with self.bot.session.get(
+            "https://api.thecatapi.com/v1/images/search"
+        ) as response:
             if response.status != 200:
                 return await ctx.send(f"{config.NO} No cat found :(")
 

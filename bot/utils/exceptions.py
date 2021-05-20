@@ -6,6 +6,7 @@ from bot.config import config
 
 class DemocracivBotException(commands.CommandError):
     """Generic CommandError exception"""
+
     message = f"{config.NO} Something went wrong."
 
     def __init__(self, message=None):
@@ -55,13 +56,18 @@ class ChannelNotFoundError(NotFoundError):
 
     def __init__(self, channel: str):
         self.channel = channel
-        self.message = f"{config.NO} There is no channel named `{channel}` on this server."
+        self.message = (
+            f"{config.NO} There is no channel named `{channel}` on this server."
+        )
 
 
 class NotDemocracivGuildError(DemocracivBotException):
     """Raised when a Democraciv-specific command is called outside the Democraciv guild"""
 
-    def __init__(self, message=f"{config.NO} You can only use this command on the Democraciv server."):
+    def __init__(
+        self,
+        message=f"{config.NO} You can only use this command on the Democraciv server.",
+    ):
         self.message = message
 
 
@@ -74,9 +80,15 @@ class ForbiddenTask(enum.Enum):
         "{x} Either the `{detail}` role is higher than my top role, or "
         "I'm missing required permissions to remove the role from you."
     )
-    CREATE_ROLE = "{x} I'm missing the required permissions to create the `{detail}` role."
-    DELETE_ROLE = "{x} I'm missing the required permissions to delete the `{detail}` role."
-    MESSAGE_SEND = "{x} I'm missing the required permissions to send messages in this channel."
+    CREATE_ROLE = (
+        "{x} I'm missing the required permissions to create the `{detail}` role."
+    )
+    DELETE_ROLE = (
+        "{x} I'm missing the required permissions to delete the `{detail}` role."
+    )
+    MESSAGE_SEND = (
+        "{x} I'm missing the required permissions to send messages in this channel."
+    )
     MESSAGE_DELETE = "{x} I'm missing the required permissions to delete that message."
     MEMBER_BAN = "{x} I'm not allowed to ban or unban that person."
     MEMBER_KICK = "{x} I'm not allowed to kick that person."

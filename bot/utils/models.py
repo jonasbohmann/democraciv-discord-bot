@@ -45,7 +45,9 @@ class Session(commands.Converter):
 
     @property
     def speaker(self) -> typing.Union[discord.Member, discord.User, None]:
-        user = self._bot.dciv.get_member(self._speaker) or self._bot.get_user(self._speaker)
+        user = self._bot.dciv.get_member(self._speaker) or self._bot.get_user(
+            self._speaker
+        )
         return user
 
     async def start_voting(self, voting_form):
@@ -75,24 +77,36 @@ class Session(commands.Converter):
             except ValueError:
                 raise commands.BadArgument(f"{config.NO} `{argument}` is not a number.")
 
-        session = await ctx.bot.db.fetchrow("SELECT * FROM legislature_session WHERE id = $1", argument)
+        session = await ctx.bot.db.fetchrow(
+            "SELECT * FROM legislature_session WHERE id = $1", argument
+        )
 
         if not session:
-            raise NotFoundError(f"{config.NO} There hasn't been a session #{argument} yet.")
+            raise NotFoundError(
+                f"{config.NO} There hasn't been a session #{argument} yet."
+            )
 
         status = SessionStatus(session["status"])
-        bills = await ctx.bot.db.fetch("SELECT id FROM bill WHERE leg_session = $1", session["id"])
+        bills = await ctx.bot.db.fetch(
+            "SELECT id FROM bill WHERE leg_session = $1", session["id"]
+        )
         bills = sorted([record["id"] for record in bills])
-        motions = await ctx.bot.db.fetch("SELECT id FROM motion WHERE leg_session = $1", session["id"])
+        motions = await ctx.bot.db.fetch(
+            "SELECT id FROM motion WHERE leg_session = $1", session["id"]
+        )
         motions = sorted([record["id"] for record in motions])
-        return cls(**session, bills=bills, motions=motions, bot=ctx.bot, session_status=status)
+        return cls(
+            **session, bills=bills, motions=motions, bot=ctx.bot, session_status=status
+        )
 
 
 sponsor_regex = re.compile(r"([<>=!]=?)\s?(\d+)")
 
 
 class SessionSponsorFilter(commands.Converter):
-    async def convert(self, ctx, argument) -> typing.Optional[typing.Tuple[typing.Callable, str]]:
+    async def convert(
+        self, ctx, argument
+    ) -> typing.Optional[typing.Tuple[typing.Callable, str]]:
         match = sponsor_regex.match(argument)
 
         if not match:
@@ -113,8 +127,8 @@ class SessionSponsorFilter(commands.Converter):
             "!": lambda b: len(b.sponsors) != amount,
         }
 
-        translation['=='] = translation['=']
-        translation['!='] = translation['!']
+        translation["=="] = translation["="]
+        translation["!="] = translation["!"]
 
         try:
             return translation[filter_func], argument
@@ -134,10 +148,13 @@ class Bill(commands.Converter, FuzzyableMixin):
         2. Lookup by bill name (Google Docs Title).
         3. Lookup by Google Docs URL.
     """
+
     model = "Bill"
-    fuzzy_description = (f"Maybe you were looking for the "
-                         f"`{config.BOT_PREFIX}{mk.MarkConfig.LEGISLATURE_COMMAND} bill search` "
-                         f"command instead?\n")
+    fuzzy_description = (
+        f"Maybe you were looking for the "
+        f"`{config.BOT_PREFIX}{mk.MarkConfig.LEGISLATURE_COMMAND} bill search` "
+        f"command instead?\n"
+    )
 
     def __init__(self, **kwargs):
         self.id: int = kwargs.get("id")
@@ -167,21 +184,25 @@ class Bill(commands.Converter, FuzzyableMixin):
     def __str__(self):
         return self.formatted
 
-    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+    async def get_fuzzy_source(
+        self, ctx: context.CustomContext, argument: str
+    ) -> typing.Iterable:
         lowered = argument.lower()
 
         matches = await ctx.bot.db.fetch(
             "SELECT id FROM bill WHERE lower(name) % $1 OR lower(name) LIKE '%' || $1 || '%'"
-            " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;", lowered
+            " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;",
+            lowered,
         )
 
         tag_matches = await ctx.bot.db.fetch(
-            "SELECT DISTINCT bill_id AS id FROM bill_lookup_tag WHERE tag % $1 LIMIT 2;", lowered
+            "SELECT DISTINCT bill_id AS id FROM bill_lookup_tag WHERE tag % $1 LIMIT 2;",
+            lowered,
         )
 
         matches.extend(tag_matches)
 
-        matches = {await Bill.convert(ctx, match['id']): None for match in matches}
+        matches = {await Bill.convert(ctx, match["id"]): None for match in matches}
 
         return list(matches.keys())
 
@@ -190,20 +211,31 @@ class Bill(commands.Converter, FuzzyableMixin):
         name, keywords, content = await self.fetch_name_and_keywords()
 
         if not name or not content:
-            raise DemocracivBotException(f"There was an error while fetching the name & content of "
-                                         f"this bill. Do I have view permissions for this bill's Google Docs document?")
+            raise DemocracivBotException(
+                f"There was an error while fetching the name & content of "
+                f"this bill. Do I have view permissions for this bill's Google Docs document?"
+            )
 
         await self._bot.db.execute(
             "UPDATE bill SET name = $1, content = $2, link = $3 WHERE id = $4",
-            name, content, new_link, self.id)
+            name,
+            content,
+            new_link,
+            self.id,
+        )
 
-        await self._bot.db.execute("DELETE FROM bill_lookup_tag WHERE bill_id = $1", self.id)
-        await self._bot.api_request("POST", "bill/update", silent=True, json={"id": self.id})
+        await self._bot.db.execute(
+            "DELETE FROM bill_lookup_tag WHERE bill_id = $1", self.id
+        )
+        await self._bot.api_request(
+            "POST", "bill/update", silent=True, json={"id": self.id}
+        )
 
         id_with_kws = [(self.id, keyword) for keyword in keywords]
         self._bot.loop.create_task(
             self._bot.db.executemany(
-                "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING ", id_with_kws
+                "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING ",
+                id_with_kws,
             )
         )
 
@@ -211,8 +243,11 @@ class Bill(commands.Converter, FuzzyableMixin):
     def sponsors(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
         return list(
             filter(
-                None, [self._bot.dciv.get_member(sponsor) or self._bot.get_user(sponsor)
-                       for sponsor in self.sponsor_ids]
+                None,
+                [
+                    self._bot.dciv.get_member(sponsor) or self._bot.get_user(sponsor)
+                    for sponsor in self.sponsor_ids
+                ],
             )
         )
 
@@ -220,13 +255,17 @@ class Bill(commands.Converter, FuzzyableMixin):
 
         try:
             response: typing.Dict = await self._bot.run_apps_script(
-                script_id="MtyscpHHIi0Ck1h8XfuBIn2qnXKElby-M", function="main", parameters=[self.link]
+                script_id="MtyscpHHIi0Ck1h8XfuBIn2qnXKElby-M",
+                function="main",
+                parameters=[self.link],
             )
 
             self.name = name = response["response"]["result"]["title"]
             self.content = content = response["response"]["result"]["content"]
             keywords = [
-                word["ngram"] for word in response["response"]["result"]["keywords"]["keywords"] if word["ngram"]
+                word["ngram"]
+                for word in response["response"]["result"]["keywords"]["keywords"]
+                if word["ngram"]
             ]
 
         except (DemocracivBotException, KeyError):
@@ -235,15 +274,17 @@ class Bill(commands.Converter, FuzzyableMixin):
             self.content = content = ""
 
         async with self._bot.session.post(
-                "http://yake.inesctec.pt/yake/v2/extract_keywords?max_ngram_size=2&number_of_keywords=20&highlight=false",
-                data={"content": self.description},
+            "http://yake.inesctec.pt/yake/v2/extract_keywords?max_ngram_size=2&number_of_keywords=20&highlight=false",
+            data={"content": self.description},
         ) as r:
 
             if r.status == 200:
                 js = await r.json()
 
                 try:
-                    keywords.extend([word["ngram"] for word in js["keywords"] if word["ngram"]])
+                    keywords.extend(
+                        [word["ngram"] for word in js["keywords"] if word["ngram"]]
+                    )
                 except KeyError:
                     pass
 
@@ -257,7 +298,9 @@ class Bill(commands.Converter, FuzzyableMixin):
 
     @property
     def submitter(self) -> typing.Union[discord.Member, discord.User, None]:
-        user = self._bot.dciv.get_member(self.submitter_id) or self._bot.get_user(self.submitter_id)
+        user = self._bot.dciv.get_member(self.submitter_id) or self._bot.get_user(
+            self.submitter_id
+        )
         return user
 
     @property
@@ -286,11 +329,15 @@ class Bill(commands.Converter, FuzzyableMixin):
             )
 
         if bill is None:
-            raise NotFoundError(f"{config.NO} There is no bill that matches `{argument}`.")
+            raise NotFoundError(
+                f"{config.NO} There is no bill that matches `{argument}`."
+            )
 
         session = await Session.convert(ctx, bill["leg_session"])
 
-        sponsors = await ctx.bot.db.fetch("SELECT sponsor FROM bill_sponsor WHERE bill_id = $1", bill["id"])
+        sponsors = await ctx.bot.db.fetch(
+            "SELECT sponsor FROM bill_sponsor WHERE bill_id = $1", bill["id"]
+        )
         sponsors = [record["sponsor"] for record in sponsors]
 
         obj = cls(**bill, session=session, bot=ctx.bot, sponsors=sponsors)
@@ -306,9 +353,11 @@ class Bill(commands.Converter, FuzzyableMixin):
         for record in history_record:
             entry = BillHistoryEntry(
                 date=record["date"],
-                before=BillStatus.from_flag_value(record["before_status"])(ctx.bot, obj),
+                before=BillStatus.from_flag_value(record["before_status"])(
+                    ctx.bot, obj
+                ),
                 after=BillStatus.from_flag_value(record["after_status"])(ctx.bot, obj),
-                note=record['note']
+                note=record["note"],
             )
             history.append(entry)
 
@@ -318,29 +367,38 @@ class Bill(commands.Converter, FuzzyableMixin):
 
 class Law(Bill, FuzzyableMixin):
     model = "Law"
-    fuzzy_description = (f"Maybe you were looking for the "
-                         f"`{config.BOT_PREFIX}law search` "
-                         f"command instead?\n")
+    fuzzy_description = (
+        f"Maybe you were looking for the "
+        f"`{config.BOT_PREFIX}law search` "
+        f"command instead?\n"
+    )
 
     @property
     def formatted(self):
         return f"Law #{self.id} - [{self.name}]({self.link})"
 
-    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+    async def get_fuzzy_source(
+        self, ctx: context.CustomContext, argument: str
+    ) -> typing.Iterable:
         lowered = argument.lower()
 
         matches = await ctx.bot.db.fetch(
             "SELECT id FROM bill WHERE status = $2 AND (lower(name) % $1 OR lower(name) LIKE '%' || $1 || '%')"
-            " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;", lowered, BillIsLaw.flag.value
+            " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;",
+            lowered,
+            BillIsLaw.flag.value,
         )
 
         tag_matches = await ctx.bot.db.fetch(
-            "SELECT DISTINCT bill_id AS id FROM bill_lookup_tag WHERE tag % $1 LIMIT 2;", lowered
+            "SELECT DISTINCT bill_id AS id FROM bill_lookup_tag WHERE tag % $1 LIMIT 2;",
+            lowered,
         )
 
         matches.extend(tag_matches)
 
-        matches = {await Law.convert(ctx, match['id'], silent=True): None for match in matches}
+        matches = {
+            await Law.convert(ctx, match["id"], silent=True): None for match in matches
+        }
         return list(filter(None, matches))
 
     @classmethod
@@ -348,13 +406,17 @@ class Law(Bill, FuzzyableMixin):
         try:
             bill = await super().convert(ctx, argument)
         except NotFoundError:
-            raise NotFoundError(f"{config.NO} There is no law that matches `{argument}`.")
+            raise NotFoundError(
+                f"{config.NO} There is no law that matches `{argument}`."
+            )
 
         if not bill.status.is_law:
             if silent:
                 return None
             else:
-                raise NotLawError(f"{config.NO} `{bill.name}` (#{bill.id}) is not an active law.")
+                raise NotLawError(
+                    f"{config.NO} `{bill.name}` (#{bill.id}) is not an active law."
+                )
 
         return bill
 
@@ -366,10 +428,13 @@ class Motion(commands.Converter, FuzzyableMixin):
     The lookup strategy for the converter is as follows (in order):
         1. Lookup by ID.
     """
+
     model = "Motion"
-    fuzzy_description = (f"Maybe you were looking for the "
-                         f"`{config.BOT_PREFIX}{mk.MarkConfig.LEGISLATURE_COMMAND} motion search` "
-                         f"command instead?\n")
+    fuzzy_description = (
+        f"Maybe you were looking for the "
+        f"`{config.BOT_PREFIX}{mk.MarkConfig.LEGISLATURE_COMMAND} motion search` "
+        f"command instead?\n"
+    )
 
     def __init__(self, **kwargs):
         self.id: int = kwargs.get("id")
@@ -396,7 +461,9 @@ class Motion(commands.Converter, FuzzyableMixin):
 
     @property
     def submitter(self) -> typing.Union[discord.Member, discord.User, None]:
-        user = self._bot.dciv.get_member(self.submitter_id) or self._bot.get_user(self.submitter_id)
+        user = self._bot.dciv.get_member(self.submitter_id) or self._bot.get_user(
+            self.submitter_id
+        )
         return user
 
     @property
@@ -406,18 +473,25 @@ class Motion(commands.Converter, FuzzyableMixin):
     @property
     def link(self) -> str:
         # If the motion's description is just a Google Docs link, use that link instead of the paste link
-        is_google_docs = self._bot.get_cog("Law").is_google_doc_link(self.description) and len(self.description) <= 100
+        is_google_docs = (
+            self._bot.get_cog("Law").is_google_doc_link(self.description)
+            and len(self.description) <= 100
+        )
         return self.description if is_google_docs else self._link
 
     async def withdraw(self):
         await self._bot.db.execute("DELETE FROM motion WHERE id = $1", self.id)
 
-    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str) -> typing.Iterable:
+    async def get_fuzzy_source(
+        self, ctx: context.CustomContext, argument: str
+    ) -> typing.Iterable:
         matches = await ctx.bot.db.fetch(
             "SELECT id FROM motion WHERE lower(title) % $1 OR lower(title) LIKE '%' || $1 || '%'"
-            " ORDER BY similarity(lower(title), $1) DESC LIMIT 6;", argument.lower())
+            " ORDER BY similarity(lower(title), $1) DESC LIMIT 6;",
+            argument.lower(),
+        )
 
-        return [await Motion.convert(ctx, match['id']) for match in matches]
+        return [await Motion.convert(ctx, match["id"]) for match in matches]
 
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[str, int]):
@@ -428,7 +502,9 @@ class Motion(commands.Converter, FuzzyableMixin):
                 arg = arg[1:]
 
             arg = int(arg)
-            motion = await ctx.bot.db.fetchrow("SELECT * FROM motion WHERE id = $1", arg)
+            motion = await ctx.bot.db.fetchrow(
+                "SELECT * FROM motion WHERE id = $1", arg
+            )
         except ValueError:
             motion = await ctx.bot.db.fetchrow(
                 "SELECT * FROM motion WHERE lower(title) = $2 or paste_link = $1",
@@ -437,7 +513,9 @@ class Motion(commands.Converter, FuzzyableMixin):
             )
 
         if motion is None:
-            raise NotFoundError(f"{config.NO} There is no motion that matches `{argument}`.")
+            raise NotFoundError(
+                f"{config.NO} There is no motion that matches `{argument}`."
+            )
 
         session = await Session.convert(ctx, motion["leg_session"])
         return cls(**motion, session=session, bot=ctx.bot)
@@ -445,11 +523,11 @@ class Motion(commands.Converter, FuzzyableMixin):
 
 class LegalConsumer:
     def __init__(
-            self,
-            *,
-            ctx: context.CustomContext,
-            objects: typing.Iterable[Bill],
-            action: typing.Callable,
+        self,
+        *,
+        ctx: context.CustomContext,
+        objects: typing.Iterable[Bill],
+        action: typing.Callable,
     ):
         self.objects = set(objects)
         self.ctx = ctx
@@ -468,7 +546,9 @@ class LegalConsumer:
 
             if obj not in self._filtered_out_objs:
                 try:
-                    action = getattr(obj.status, self.action.__name__)  # this is some bullshit
+                    action = getattr(
+                        obj.status, self.action.__name__
+                    )  # this is some bullshit
                     await maybe_coroutine(action, dry=True, **kwargs)
                 except IllegalOperation as e:
                     self._filtered_out_objs.add(obj)
@@ -498,7 +578,12 @@ class LegalConsumer:
 
     @property
     def failed_formatted(self) -> str:
-        return "\n".join([f"-  **{obj.name}** (#{obj.id}): _{reason}_" for obj, reason in self._errors.items()])
+        return "\n".join(
+            [
+                f"-  **{obj.name}** (#{obj.id}): _{reason}_"
+                for obj, reason in self._errors.items()
+            ]
+        )
 
 
 class _BillStatusFlag(enum.Enum):
@@ -515,7 +600,10 @@ class IllegalOperation(DemocracivBotException):
 
 
 class IllegalBillOperation(IllegalOperation):
-    def __init__(self, message="You cannot perform this action on this bill in its current state."):
+    def __init__(
+        self,
+        message="You cannot perform this action on this bill in its current state.",
+    ):
         self.message = message
 
 
@@ -558,17 +646,21 @@ class BillStatus:
     def __repr__(self):
         return f"<{self.__class__.__name__} flag={self.flag}"
 
-    async def log_history(self, old_status: _BillStatusFlag, new_status: _BillStatusFlag, *, note=None):
+    async def log_history(
+        self, old_status: _BillStatusFlag, new_status: _BillStatusFlag, *, note=None
+    ):
         await self._bot.db.execute(
             "INSERT INTO bill_history (bill_id, date, before_status, after_status, note) VALUES ($1, $2, $3, $4, $5)",
             self._bill.id,
             datetime.datetime.utcnow(),
             old_status.value,
             new_status.value,
-            note
+            note,
         )
 
-        self._bill.status = BillStatus.from_flag_value(new_status.value)(self._bot, self._bill)
+        self._bill.status = BillStatus.from_flag_value(new_status.value)(
+            self._bot, self._bill
+        )
 
     async def veto(self, dry=False, **kwargs):
         raise IllegalBillOperation()
@@ -595,10 +687,14 @@ class BillStatus:
         raise IllegalBillOperation()
 
     async def sponsor(self, *, dry=False, sponsor: discord.Member, **kwargs):
-        raise IllegalBillOperation("You can only sponsor recently submitted bills that were not voted on yet.")
+        raise IllegalBillOperation(
+            "You can only sponsor recently submitted bills that were not voted on yet."
+        )
 
     async def unsponsor(self, *, dry=False, sponsor: discord.Member, **kwargs):
-        raise IllegalBillOperation("You can only unsponsor recently submitted bills that were not voted on yet.")
+        raise IllegalBillOperation(
+            "You can only unsponsor recently submitted bills that were not voted on yet."
+        )
 
     def emojified_status(self, verbose=True):
         raise NotImplementedError()
@@ -614,7 +710,9 @@ class BillSubmitted(BillStatus):
             return
 
         await self._bot.db.execute("DELETE FROM bill WHERE id = $1", self._bill.id)
-        await self._bot.api_request("POST", "bill/delete", silent=True, json={"id": self._bill.id})
+        await self._bot.api_request(
+            "POST", "bill/delete", silent=True, json={"id": self._bill.id}
+        )
 
     async def fail_in_legislature(self, dry=False, **kwargs):
         if dry:
@@ -626,8 +724,11 @@ class BillSubmitted(BillStatus):
             self._bill.id,
         )
 
-        await self.log_history(self.flag, _BillStatusFlag.LEG_FAILED,
-                               note=f"Failed in Session #{self._bill.session.id}")
+        await self.log_history(
+            self.flag,
+            _BillStatusFlag.LEG_FAILED,
+            note=f"Failed in Session #{self._bill.session.id}",
+        )
 
     async def pass_from_legislature(self, dry=False, **kwargs):
         if dry:
@@ -658,9 +759,12 @@ class BillSubmitted(BillStatus):
             self._bill.id,
         )
 
-        await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED,
-                               note=f"Passed into law by {mk.MarkConfig.LEGISLATURE_NAME} "
-                                    f"during Session #{self._bill.session.id}")
+        await self.log_history(
+            self.flag,
+            _BillStatusFlag.LEG_PASSED,
+            note=f"Passed into law by {mk.MarkConfig.LEGISLATURE_NAME} "
+            f"during Session #{self._bill.session.id}",
+        )
         # await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
 
     async def sponsor(self, *, dry=False, sponsor: discord.Member, **kwargs):
@@ -678,7 +782,9 @@ class BillSubmitted(BillStatus):
             return
 
         await self._bot.db.execute(
-            "DELETE FROM bill_sponsor WHERE bill_id = $1 AND sponsor = $2", self._bill.id, sponsor.id
+            "DELETE FROM bill_sponsor WHERE bill_id = $1 AND sponsor = $2",
+            self._bill.id,
+            sponsor.id,
         )
 
     def emojified_status(self, verbose=True):
@@ -730,19 +836,27 @@ class BillFailedLegislature(BillStatus):
         )
 
         # delete "Failed in Session .." history record
-        await self._bot.db.execute("DELETE FROM bill_history WHERE bill_id = $1 AND before_status = $2 "
-                                   "AND after_status = $3 AND note = $4", self._bill.id,
-                                   _BillStatusFlag.SUBMITTED.value,
-                                   _BillStatusFlag.LEG_FAILED.value,
-                                   f"Failed in Session #{self._bill.session.id}")
+        await self._bot.db.execute(
+            "DELETE FROM bill_history WHERE bill_id = $1 AND before_status = $2 "
+            "AND after_status = $3 AND note = $4",
+            self._bill.id,
+            _BillStatusFlag.SUBMITTED.value,
+            _BillStatusFlag.LEG_FAILED.value,
+            f"Failed in Session #{self._bill.session.id}",
+        )
 
-        await self.log_history(self.flag, _BillStatusFlag.LEG_PASSED,
-                               note=f"Passed into law by {mk.MarkConfig.LEGISLATURE_NAME} "
-                                    f"during Session #{self._bill.session.id}")
+        await self.log_history(
+            self.flag,
+            _BillStatusFlag.LEG_PASSED,
+            note=f"Passed into law by {mk.MarkConfig.LEGISLATURE_NAME} "
+            f"during Session #{self._bill.session.id}",
+        )
         # await self.log_history(_BillStatusFlag.LEG_PASSED, _BillStatusFlag.MIN_PASSED)
 
     async def resubmit(self, dry=False, *, resubmitter, **kwargs):
-        session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE status = 'Submission Period'")
+        session = await self._bot.db.fetchval(
+            "SELECT id FROM legislature_session WHERE status = 'Submission Period'"
+        )
 
         if not session:
             raise IllegalBillOperation(
@@ -759,10 +873,13 @@ class BillFailedLegislature(BillStatus):
             session,
         )
 
-        await self.log_history(self.flag, _BillStatusFlag.SUBMITTED,
-                               note=f"Resubmitted from Session #{self._bill.session.id} to Session #{session} by "
-                                    f"[{resubmitter}](https://democracivbank.com/u/{resubmitter.id} "
-                                    f"\"{resubmitter.id}\")")  # hyperlink to "hide" discord user id in embed, but
+        await self.log_history(
+            self.flag,
+            _BillStatusFlag.SUBMITTED,
+            note=f"Resubmitted from Session #{self._bill.session.id} to Session #{session} by "
+            f"[{resubmitter}](https://democracivbank.com/u/{resubmitter.id} "
+            f'"{resubmitter.id}")',
+        )  # hyperlink to "hide" discord user id in embed, but
         # show if user clicks on url. doesn't matter what url,
         # just want to be able to see the resubmitter's id but
         # in a nice way
@@ -897,7 +1014,9 @@ class BillRepealed(BillStatus):
     verbose_name = "Repealed"
 
     async def resubmit(self, dry=False, *, resubmitter, **kwargs):
-        session = await self._bot.db.fetchval("SELECT id FROM legislature_session WHERE status = 'Submission Period'")
+        session = await self._bot.db.fetchval(
+            "SELECT id FROM legislature_session WHERE status = 'Submission Period'"
+        )
 
         if not session:
             raise IllegalBillOperation(
@@ -914,10 +1033,13 @@ class BillRepealed(BillStatus):
             session,
         )
 
-        await self.log_history(self.flag, _BillStatusFlag.SUBMITTED,
-                               note=f"Resubmitted from Session #{self._bill.session.id} to Session #{session} by "
-                                    f"[{resubmitter}](https://democracivbank.com/u/{resubmitter.id} "
-                                    f"\"{resubmitter.id}\")")  # hyperlink to "hide" discord user id in embed, but
+        await self.log_history(
+            self.flag,
+            _BillStatusFlag.SUBMITTED,
+            note=f"Resubmitted from Session #{self._bill.session.id} to Session #{session} by "
+            f"[{resubmitter}](https://democracivbank.com/u/{resubmitter.id} "
+            f'"{resubmitter.id}")',
+        )  # hyperlink to "hide" discord user id in embed, but
         # show if user clicks on url. doesn't matter what url,
         # just want to be able to see the resubmitter's id but
         # in a nice way

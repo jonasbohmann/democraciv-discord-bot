@@ -5,7 +5,9 @@ from bot.utils import text, mixin, exceptions, context
 from bot.config import mk
 
 
-class SupremeCourt(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.COURT_NAME):
+class SupremeCourt(
+    context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.COURT_NAME
+):
     """Useful information about the {courts_term} of this nation."""
 
     def get_justices(self):
@@ -15,7 +17,11 @@ class SupremeCourt(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.
             return None
 
         if isinstance(self.chief_justice, discord.Member):
-            justices = [justice.mention for justice in _justices.members if justice.id != self.chief_justice.id]
+            justices = [
+                justice.mention
+                for justice in _justices.members
+                if justice.id != self.chief_justice.id
+            ]
             justices.insert(
                 0,
                 f"{self.chief_justice.mention} ({self.bot.mk.COURT_CHIEF_JUSTICE_NAME})",
@@ -33,7 +39,10 @@ class SupremeCourt(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.
         return [judge.mention for judge in _judges.members]
 
     @commands.group(
-        name="court", aliases=["sc", "courts", "j", "judicial"], case_insensitive=True, invoke_without_command=True
+        name="court",
+        aliases=["sc", "courts", "j", "judicial"],
+        case_insensitive=True,
+        invoke_without_command=True,
     )
     async def court(self, ctx):
         """Dashboard for {justice_term}"""
@@ -63,10 +72,10 @@ class SupremeCourt(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.
         embed.add_field(
             name="Links",
             value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
-                  f"\n[Submit a Case](https://forms.gle/ovDr3MsjTubuerZw9)\n"
-                  f"[All Case Filings of the Supreme Court](https://docs.google.com/spreadsheets/d/1BuBk7n-_"
-                  f"TSHPEQIT9fGyk7z9RRQxGGrEc-gC5Vc2DkI/edit?usp=sharing)\n[Judicial Procedure](https://docs.google."
-                  f"com/document/d/1xogDLs2zZ7IA8SN6rqxy-ivCuxm9lE6lFINt8V7vuOE/edit?usp=sharing)",
+            f"\n[Submit a Case](https://forms.gle/ovDr3MsjTubuerZw9)\n"
+            f"[All Case Filings of the Supreme Court](https://docs.google.com/spreadsheets/d/1BuBk7n-_"
+            f"TSHPEQIT9fGyk7z9RRQxGGrEc-gC5Vc2DkI/edit?usp=sharing)\n[Judicial Procedure](https://docs.google."
+            f"com/document/d/1xogDLs2zZ7IA8SN6rqxy-ivCuxm9lE6lFINt8V7vuOE/edit?usp=sharing)",
             inline=False,
         )
 

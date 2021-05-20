@@ -19,16 +19,16 @@ from bot.config import config
 
 class Pages(menus.MenuPages):
     def __init__(
-            self,
-            source: menus.PageSource,
-            *,
-            title=EmptyEmbed,
-            author="",
-            icon=EmptyEmbed,
-            title_url=EmptyEmbed,
-            colour=config.BOT_EMBED_COLOUR,
-            thumbnail=None,
-            message=None
+        self,
+        source: menus.PageSource,
+        *,
+        title=EmptyEmbed,
+        author="",
+        icon=EmptyEmbed,
+        title_url=EmptyEmbed,
+        colour=config.BOT_EMBED_COLOUR,
+        thumbnail=None,
+        message=None,
     ):
         super().__init__(source=source, check_embeds=True, message=message)
         self.embed = SafeEmbed(title=title, url=title_url, colour=colour)
@@ -62,7 +62,9 @@ class SimplePageSource(menus.ListPageSource):
         else:
             super().__init__(entries, per_page=per_page)
 
-    async def format_page(self, menu: Pages, entries: typing.Union[typing.List[str], str]):
+    async def format_page(
+        self, menu: Pages, entries: typing.Union[typing.List[str], str]
+    ):
         if isinstance(entries, list):
             menu.embed.description = "\n".join(entries)
         elif isinstance(entries, str):
@@ -78,8 +80,15 @@ class SimplePageSource(menus.ListPageSource):
 
 
 class SimplePages(Pages, inherit_buttons=False):
-    def __init__(self, entries: typing.List[str], *, per_page=None, empty_message: str = "*No entries.*",
-                 reply=False, **kwargs):
+    def __init__(
+        self,
+        entries: typing.List[str],
+        *,
+        per_page=None,
+        empty_message: str = "*No entries.*",
+        reply=False,
+        **kwargs,
+    ):
         self.reply = reply
         if len(entries) == 0:
             entries.append(empty_message)
@@ -94,7 +103,11 @@ class SimplePages(Pages, inherit_buttons=False):
 
         return await channel.send(**kwargs)
 
-    @menus.button(config.HELP_FIRST, position=menus.First(0), skip_if=menus.MenuPages._skip_double_triangle_buttons)
+    @menus.button(
+        config.HELP_FIRST,
+        position=menus.First(0),
+        skip_if=menus.MenuPages._skip_double_triangle_buttons,
+    )
     async def go_to_first_page(self, payload):
         await self.show_page(0)
 
@@ -106,7 +119,11 @@ class SimplePages(Pages, inherit_buttons=False):
     async def go_to_next_page(self, payload):
         await self.show_checked_page(self.current_page + 1)
 
-    @menus.button(config.HELP_LAST, position=menus.Last(1), skip_if=menus.MenuPages._skip_double_triangle_buttons)
+    @menus.button(
+        config.HELP_LAST,
+        position=menus.Last(1),
+        skip_if=menus.MenuPages._skip_double_triangle_buttons,
+    )
     async def go_to_last_page(self, payload):
         # The call here is safe because it's guarded by skip_if
         await self.show_page(self._source.get_max_pages() - 1)
@@ -120,18 +137,26 @@ class SimplePages(Pages, inherit_buttons=False):
         async with self.input_lock:
             channel = self.message.channel
             author_id = payload.user_id
-            question = await channel.send(f'{config.USER_INTERACTION_REQUIRED} What page do you want to go to?')
+            question = await channel.send(
+                f"{config.USER_INTERACTION_REQUIRED} What page do you want to go to?"
+            )
             to_delete = [question]
 
             def message_check(m):
-                return (m.author.id == author_id and
-                        channel == m.channel and
-                        m.content.isdigit())
+                return (
+                    m.author.id == author_id
+                    and channel == m.channel
+                    and m.content.isdigit()
+                )
 
             try:
-                msg = await self.bot.wait_for('message', check=message_check, timeout=30.0)
+                msg = await self.bot.wait_for(
+                    "message", check=message_check, timeout=30.0
+                )
             except asyncio.TimeoutError:
-                to_delete.append(await question.reply(':zzz: You took too long to reply.'))
+                to_delete.append(
+                    await question.reply(":zzz: You took too long to reply.")
+                )
                 await asyncio.sleep(5)
             else:
                 page = int(msg.content)

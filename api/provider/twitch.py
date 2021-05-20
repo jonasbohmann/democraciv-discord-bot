@@ -54,11 +54,15 @@ class TwitchManager(ProviderManager):
             token_json = json.load(token_file)
             self.TWITCH_CLIENT_ID: str = token_json["twitch"]["client_id"]
             self.TWITCH_CLIENT_SECRET: str = token_json["twitch"]["client_secret"]
-            self.TWITCH_OAUTH_APP_ACCESS_TOKEN: str = token_json["twitch"]["oauth_token"]
+            self.TWITCH_OAUTH_APP_ACCESS_TOKEN: str = token_json["twitch"][
+                "oauth_token"
+            ]
             self.TWITCH_CALLBACK_SECRET: str = token_json["twitch"]["callback_secret"]
-            self.TWITCH_SUBREDDIT: str = token_json['twitch']['subreddit']
-            self.TWITCH_CALLBACK_SECRET_BYTES: bytes = self.TWITCH_CALLBACK_SECRET.encode()
-            self.TWITCH_CALLBACK: str = token_json['twitch']['callback_url']
+            self.TWITCH_SUBREDDIT: str = token_json["twitch"]["subreddit"]
+            self.TWITCH_CALLBACK_SECRET_BYTES: bytes = (
+                self.TWITCH_CALLBACK_SECRET.encode()
+            )
+            self.TWITCH_CALLBACK: str = token_json["twitch"]["callback_url"]
 
     def _save_token(self):
         with open(self._token_path, "r") as token_file:
@@ -86,14 +90,18 @@ class TwitchManager(ProviderManager):
             "grant_type": "client_credentials",
         }
 
-        async with self._session.post(self.API_TOKEN_ENDPOINT, data=post_data) as response:
+        async with self._session.post(
+            self.API_TOKEN_ENDPOINT, data=post_data
+        ) as response:
             if response.status == 200:
                 r = await response.json()
                 self.TWITCH_OAUTH_APP_ACCESS_TOKEN = r["access_token"]
                 self._save_token()
 
     async def _get_user_id_from_username(self, username: str):
-        response = await self.twitch_request("GET", f"{self.API_USER_ENDPOINT}?login={username}")
+        response = await self.twitch_request(
+            "GET", f"{self.API_USER_ENDPOINT}?login={username}"
+        )
 
         if response:
             try:
@@ -112,12 +120,16 @@ class TwitchManager(ProviderManager):
             config.guild_id,
             config.channel_id,
             config.everyone_ping,
-            config.post_to_reddit
+            config.post_to_reddit,
         )
-        return await self._start_webhook(target=config.target, webhook_url=config.webhook_url)
+        return await self._start_webhook(
+            target=config.target, webhook_url=config.webhook_url
+        )
 
     async def twitch_request(self, method, url, *, retry=False, **kwargs):
-        async with self._session.request(method, url, **kwargs, headers=self._headers) as resp:
+        async with self._session.request(
+            method, url, **kwargs, headers=self._headers
+        ) as resp:
             print(f"method {method} to {url}", resp.status, await resp.json())
             if resp.status in (401, 403):
                 if not retry:
@@ -168,16 +180,22 @@ class TwitchManager(ProviderManager):
 
     async def unsubscribe(self, streamer: str):
         subscription_id = await self.db.pool.fetchval(
-            "SELECT twitch_subscription_id FROM " "twitch_eventsub_subscription WHERE streamer = $1", streamer
+            "SELECT twitch_subscription_id FROM "
+            "twitch_eventsub_subscription WHERE streamer = $1",
+            streamer,
         )
 
         if not subscription_id:
             return
 
-        await self.twitch_request("DELETE", f"{self.API_EVENTSUB_ENDPOINT}?id={subscription_id}")
+        await self.twitch_request(
+            "DELETE", f"{self.API_EVENTSUB_ENDPOINT}?id={subscription_id}"
+        )
 
     async def add_twitch_subscription_id(self, streamer_id: str, subscription_id: str):
-        response = await self.twitch_request("GET", f"{self.API_USER_ENDPOINT}?id={streamer_id}")
+        response = await self.twitch_request(
+            "GET", f"{self.API_USER_ENDPOINT}?id={streamer_id}"
+        )
         streamer = response["data"][0]["login"]
 
         await self.db.pool.execute(
@@ -191,28 +209,32 @@ class TwitchManager(ProviderManager):
 
     async def handle_twitch_callback(self, request: Request):
         headers = request.headers
-        notification_id = headers['Twitch-Eventsub-Message-Id']
+        notification_id = headers["Twitch-Eventsub-Message-Id"]
 
         if notification_id in self.seen_notifications:
             return
 
         self.seen_notifications.append(notification_id)
-        timestamp = headers['Twitch-Eventsub-Message-Timestamp']
+        timestamp = headers["Twitch-Eventsub-Message-Timestamp"]
 
         try:
-            if (datetime.datetime.now(tz=datetime.timezone.utc) -
-                    datetime.datetime.fromisoformat(timestamp)
-                    > datetime.timedelta(minutes=10)):
+            if datetime.datetime.now(
+                tz=datetime.timezone.utc
+            ) - datetime.datetime.fromisoformat(timestamp) > datetime.timedelta(
+                minutes=10
+            ):
                 return
         except Exception:
             pass
 
         body = await request.body()
         hmac_message = notification_id.encode() + timestamp.encode() + body
-        digester = hmac.new(self.TWITCH_CALLBACK_SECRET_BYTES, hmac_message, hashlib.sha256)
+        digester = hmac.new(
+            self.TWITCH_CALLBACK_SECRET_BYTES, hmac_message, hashlib.sha256
+        )
         expected_signature_header = f"sha256={digester.hexdigest()}"
 
-        if headers['Twitch-Eventsub-Message-Signature'] != expected_signature_header:
+        if headers["Twitch-Eventsub-Message-Signature"] != expected_signature_header:
             return
 
         js = await request.json()
@@ -227,7 +249,9 @@ class TwitchManager(ProviderManager):
             await self.process_incoming_notification(js["event"])
 
     async def process_incoming_notification(self, event: typing.Dict):
-        js = await self.twitch_request("GET", f"{self.API_STREAM_ENDPOINT}{event['broadcaster_user_id']}")
+        js = await self.twitch_request(
+            "GET", f"{self.API_STREAM_ENDPOINT}{event['broadcaster_user_id']}"
+        )
 
         if js["data"]:
             event["title"] = js["data"][0]["title"]
@@ -236,19 +260,25 @@ class TwitchManager(ProviderManager):
 
         streamer = event["broadcaster_user_name"].lower()
         record = await self.db.pool.fetch(
-            "SELECT webhook_url, everyone_ping, post_to_reddit FROM twitch_webhook WHERE streamer = $1", streamer
+            "SELECT webhook_url, everyone_ping, post_to_reddit FROM twitch_webhook WHERE streamer = $1",
+            streamer,
         )
 
         for row in record:
-            context = StreamContext(webhook_url=row["webhook_url"], everyone_ping=row["everyone_ping"],
-                                    post_to_reddit=row['post_to_reddit'])
+            context = StreamContext(
+                webhook_url=row["webhook_url"],
+                everyone_ping=row["everyone_ping"],
+                post_to_reddit=row["post_to_reddit"],
+            )
             await self.send_webhook(context, TwitchStream(**event))
 
     async def send_webhook(self, context: StreamContext, stream: TwitchStream):
         embed = discord.Embed(title=stream.title, url=stream.link, colour=0x1B1C20)
-        embed.set_author(name=f"{stream.streamer} - Live on Twitch",
-                         icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
-                                  "844946761353134100/testamesta.png")
+        embed.set_author(
+            name=f"{stream.streamer} - Live on Twitch",
+            icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
+            "844946761353134100/testamesta.png",
+        )
         embed.set_image(url=stream.thumbnail)
 
         js = {"embeds": [embed.to_dict()]}
@@ -258,15 +288,26 @@ class TwitchManager(ProviderManager):
 
         async with self._session.post(context.webhook_url, json=js) as response:
             if response.status not in (200, 204):
-                logger.error(f"Error while sending Twitch webhook: {response.status} {await response.text()}")
+                logger.error(
+                    f"Error while sending Twitch webhook: {response.status} {await response.text()}"
+                )
 
             if response.status == 404:
                 # webhook was deleted
-                await self._remove_webhook(target=stream.streamer, webhook_url=context.webhook_url)
-                await self.db.pool.execute(f"DELETE FROM {self.table} WHERE webhook_url = $1", context.webhook_url)
-                logger.info(f"removed deleted webhook_url {context.webhook_url} for {stream.streamer}")
+                await self._remove_webhook(
+                    target=stream.streamer, webhook_url=context.webhook_url
+                )
+                await self.db.pool.execute(
+                    f"DELETE FROM {self.table} WHERE webhook_url = $1",
+                    context.webhook_url,
+                )
+                logger.info(
+                    f"removed deleted webhook_url {context.webhook_url} for {stream.streamer}"
+                )
 
         if context.post_to_reddit:
-            await self.reddit_manager.post_to_reddit(subreddit=self.TWITCH_SUBREDDIT,
-                                                     title=f"{stream.streamer} is live on Twitch: {stream.title}",
-                                                     url=stream.link)
+            await self.reddit_manager.post_to_reddit(
+                subreddit=self.TWITCH_SUBREDDIT,
+                title=f"{stream.streamer} is live on Twitch: {stream.title}",
+                url=stream.link,
+            )

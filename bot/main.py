@@ -38,7 +38,11 @@ sys.path.append(str(pathlib.Path(__file__).parent.parent))
 from bot.utils import exceptions, text, context
 from bot.config import token, config, mk
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [BOT] %(message)s", datefmt="%d.%m.%Y %H:%M:%S")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [BOT] %(message)s",
+    datefmt="%d.%m.%Y %H:%M:%S",
+)
 
 
 BOT_VERSION = "2.3.0"
@@ -155,7 +159,9 @@ class DemocracivBot(commands.Bot):
             ),
         )
 
-        self._BotBase__cogs = commands.core._CaseInsensitiveDict()  # case-insensitive cog names
+        self._BotBase__cogs = (
+            commands.core._CaseInsensitiveDict()
+        )  # case-insensitive cog names
 
         self.loop.create_task(self.initialize_aiohttp_session())
 
@@ -196,7 +202,8 @@ class DemocracivBot(commands.Bot):
                     self.is_api_running = True
         except aiohttp.ClientConnectionError:
             logging.warning(
-                f"Internal api at {self.BASE_API} is not running, bot is running " f"with limited functionality."
+                f"Internal api at {self.BASE_API} is not running, bot is running "
+                f"with limited functionality."
             )
 
     async def api_request(self, method: str, route: str, *, silent=False, **kwargs):
@@ -204,21 +211,29 @@ class DemocracivBot(commands.Bot):
             self.loop.create_task(self.check_api_running())
 
             if not silent:
-                raise exceptions.DemocracivBotAPIError(f"{config.NO} Internal API is not running, try again later.")
+                raise exceptions.DemocracivBotAPIError(
+                    f"{config.NO} Internal API is not running, try again later."
+                )
 
         auth = aiohttp.BasicAuth(token.API_USER, token.API_PASSWORD)
 
         try:
-            async with self.session.request(method, f"{self.BASE_API}/{route}", auth=auth, **kwargs) as response:
+            async with self.session.request(
+                method, f"{self.BASE_API}/{route}", auth=auth, **kwargs
+            ) as response:
                 if response.status == 200:
                     return await response.json()
 
                 if response.status == 401:
-                    logging.error("API_USER & API_PASSWORD in /bot/token.py does not match "
-                                  "auth['user'] and auth['password'] in /api/token.json - 401 Unauthorized")
+                    logging.error(
+                        "API_USER & API_PASSWORD in /bot/token.py does not match "
+                        "auth['user'] and auth['password'] in /api/token.json - 401 Unauthorized"
+                    )
 
                 if not silent:
-                    raise exceptions.DemocracivBotAPIError(f"{config.NO} Something went wrong.")
+                    raise exceptions.DemocracivBotAPIError(
+                        f"{config.NO} Something went wrong."
+                    )
         except aiohttp.ClientError:
             if not silent:
                 raise
@@ -233,7 +248,9 @@ class DemocracivBot(commands.Bot):
             self._avatar_bytes = avatar = await self.user.avatar_url_as().read()
             return avatar
 
-    def get_democraciv_role(self, role: mk.DemocracivRole) -> typing.Optional[discord.Role]:
+    def get_democraciv_role(
+        self, role: mk.DemocracivRole
+    ) -> typing.Optional[discord.Role]:
         to_return = self.dciv.get_role(role.value)
 
         if to_return is None:
@@ -242,48 +259,67 @@ class DemocracivBot(commands.Bot):
         return to_return
 
     async def log_error(
-            self,
-            ctx,
-            error,
-            to_log_channel: bool = True,
-            to_owner: bool = False,
-            to_context: bool = False,
+        self,
+        ctx,
+        error,
+        to_log_channel: bool = True,
+        to_owner: bool = False,
+        to_context: bool = False,
     ):
         if ctx.guild is None:
             return
 
         embed = text.SafeEmbed(title=f"{config.NO}  Command Error")
 
-        embed.add_field(name="Error", value=f"```{error.__class__.__name__}: {error}```", inline=False)
+        embed.add_field(
+            name="Error",
+            value=f"```{error.__class__.__name__}: {error}```",
+            inline=False,
+        )
         embed.add_field(name="Channel", value=ctx.channel.mention, inline=True)
-        embed.add_field(name="Context", value=f"[Jump]({ctx.message.jump_url})", inline=True)
-        caused_by = ctx.message.clean_content if len(ctx.message.clean_content) < 500 else "*too long*"
+        embed.add_field(
+            name="Context", value=f"[Jump]({ctx.message.jump_url})", inline=True
+        )
+        caused_by = (
+            ctx.message.clean_content
+            if len(ctx.message.clean_content) < 500
+            else "*too long*"
+        )
         embed.add_field(name="Caused by", value=caused_by, inline=False)
 
         if to_context:
             local_embed = text.SafeEmbed(
                 title=":warning:  Something went wrong",
                 description=f"An unexpected error occurred while performing this command. "
-                            f"The developer has been notified. Sorry!\n\n"
-                            f"```{error.__class__.__name__}: {error}```",
+                f"The developer has been notified. Sorry!\n\n"
+                f"```{error.__class__.__name__}: {error}```",
             )
             await ctx.send(embed=local_embed)
 
         if to_log_channel:
             log_channel = await self.get_logging_channel(ctx.guild)
 
-            if log_channel is not None and await self.get_guild_setting(ctx.guild.id, "logging_enabled"):
+            if log_channel is not None and await self.get_guild_setting(
+                ctx.guild.id, "logging_enabled"
+            ):
                 await log_channel.send(embed=embed)
 
         if to_owner:
-            embed.add_field(name="Guild", value=f"{ctx.guild.name} ({ctx.guild.id})", inline=False)
-            pretty_traceback = "".join(traceback.format_exception(type(error), error, error.__traceback__))
+            embed.add_field(
+                name="Guild", value=f"{ctx.guild.name} ({ctx.guild.id})", inline=False
+            )
+            pretty_traceback = "".join(
+                traceback.format_exception(type(error), error, error.__traceback__)
+            )
             embed.add_field(name="Traceback", value=f"```py\n{pretty_traceback}```")
             await self.owner.send(embed=embed)
 
     @staticmethod
     def format_permissions(missing_perms: list) -> str:
-        missing = [f"`{perm.replace('_', ' ').replace('guild', 'server').title()}`" for perm in missing_perms]
+        missing = [
+            f"`{perm.replace('_', ' ').replace('guild', 'server').title()}`"
+            for perm in missing_perms
+        ]
 
         if len(missing) > 2:
             first = ", ".join(missing[:-1])
@@ -300,7 +336,9 @@ class DemocracivBot(commands.Bot):
 
         def safe_get_role(r):
             if isinstance(r, str):
-                found = discord.utils.get(ctx.guild.roles, name=r) or discord.utils.get(ctx.bot.dciv.roles, name=r)
+                found = discord.utils.get(ctx.guild.roles, name=r) or discord.utils.get(
+                    ctx.bot.dciv.roles, name=r
+                )
                 return found if found else MockRole()
 
             elif isinstance(r, int):
@@ -329,7 +367,9 @@ class DemocracivBot(commands.Bot):
             ctx.command.reset_cooldown(ctx)
 
         # This prevents any commands with local handlers being handled here
-        if hasattr(ctx.command, "on_error") and (isinstance(error, (commands.BadArgument, commands.BadUnionArgument))):
+        if hasattr(ctx.command, "on_error") and (
+            isinstance(error, (commands.BadArgument, commands.BadUnionArgument))
+        ):
             return
 
         # Anything in ignored will return
@@ -337,7 +377,9 @@ class DemocracivBot(commands.Bot):
             return
 
         elif isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(f"{config.NO} You forgot to give me the `{error.param.name}` argument.")
+            await ctx.send(
+                f"{config.NO} You forgot to give me the `{error.param.name}` argument."
+            )
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.TooManyArguments):
@@ -345,7 +387,9 @@ class DemocracivBot(commands.Bot):
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.BadArgument):
-            if error.args and str(error).startswith(config.NO):  # catching default BadArgument message
+            if error.args and str(error).startswith(
+                config.NO
+            ):  # catching default BadArgument message
                 return await ctx.send(error)
 
             await ctx.send(
@@ -356,7 +400,9 @@ class DemocracivBot(commands.Bot):
         elif isinstance(error, commands.BadUnionArgument):
             first_error = error.errors[0]
 
-            if first_error.args and str(first_error).startswith(config.NO):  # catching default BadArgument message
+            if first_error.args and str(first_error).startswith(
+                config.NO
+            ):  # catching default BadArgument message
                 return await ctx.send(first_error)
 
             await ctx.send(
@@ -366,7 +412,9 @@ class DemocracivBot(commands.Bot):
             return await ctx.send_help(ctx.command)
 
         elif isinstance(error, commands.CommandOnCooldown):
-            return await ctx.send(f"{config.NO} You are on cooldown! Try again in {error.retry_after:.2f} seconds.")
+            return await ctx.send(
+                f"{config.NO} You are on cooldown! Try again in {error.retry_after:.2f} seconds."
+            )
 
         elif isinstance(error, commands.MaxConcurrencyReached):
             return await ctx.send(
@@ -384,13 +432,17 @@ class DemocracivBot(commands.Bot):
                 role_id = error.missing_role.value
                 role = ctx.guild.get_role(role_id) or self.dciv.get_role(role_id)
             elif isinstance(error.missing_role, str):
-                role = discord.utils.get(ctx.guild.roles, name=error.missing_role) or discord.utils.get(
-                    self.dciv.roles, name=error.missing_role
-                )
+                role = discord.utils.get(
+                    ctx.guild.roles, name=error.missing_role
+                ) or discord.utils.get(self.dciv.roles, name=error.missing_role)
             else:
-                role = ctx.guild.get_role(error.missing_role) or self.dciv.get_role(error.missing_role)
+                role = ctx.guild.get_role(error.missing_role) or self.dciv.get_role(
+                    error.missing_role
+                )
 
-            return await ctx.send(f"{config.NO} You need the `{role.name}` role in order to use this command.")
+            return await ctx.send(
+                f"{config.NO} You need the `{role.name}` role in order to use this command."
+            )
 
         elif isinstance(error, commands.MissingAnyRole):
             return await ctx.send(
@@ -406,10 +458,13 @@ class DemocracivBot(commands.Bot):
             )
 
         elif isinstance(error, commands.BotMissingRole):
-            role = ctx.guild.get_role(error.missing_role) or ctx.bot.dciv.get_role(error.missing_role)
+            role = ctx.guild.get_role(error.missing_role) or ctx.bot.dciv.get_role(
+                error.missing_role
+            )
             await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
             return await ctx.send(
-                f"{config.NO} I need the `{role.name}` role in order to perform this" f" action for you."
+                f"{config.NO} I need the `{role.name}` role in order to perform this"
+                f" action for you."
             )
 
         elif isinstance(error, commands.BotMissingAnyRole):
@@ -423,13 +478,17 @@ class DemocracivBot(commands.Bot):
             return await ctx.send(f"{config.NO} This command cannot be used in DMs.")
 
         elif isinstance(error, commands.PrivateMessageOnly):
-            return await ctx.send(f"{config.NO} This command can only be used in DMs with me.")
+            return await ctx.send(
+                f"{config.NO} This command can only be used in DMs with me."
+            )
 
         elif isinstance(error, commands.DisabledCommand):
             return await ctx.send(f"{config.NO} This command has been disabled.")
 
         elif isinstance(error, commands.NotOwner):
-            return await ctx.send(f"{config.NO} Only {self.owner} can use this command.")
+            return await ctx.send(
+                f"{config.NO} Only {self.owner} can use this command."
+            )
 
         # This includes all exceptions declared in utils.exceptions.py
         elif isinstance(error, exceptions.DemocracivBotException):
@@ -438,10 +497,13 @@ class DemocracivBot(commands.Bot):
         else:
             logging.error(f"Ignoring exception in command {ctx.command}:")
             traceback.print_exception(type(error), error, error.__traceback__)
-            await self.log_error(ctx, error, to_log_channel=False, to_owner=True, to_context=True)
+            await self.log_error(
+                ctx, error, to_log_channel=False, to_owner=True, to_context=True
+            )
 
-
-    def get_democraciv_channel(self, channel: mk.DemocracivChannel) -> typing.Optional[discord.TextChannel]:
+    def get_democraciv_channel(
+        self, channel: mk.DemocracivChannel
+    ) -> typing.Optional[discord.TextChannel]:
         to_return = self.dciv.get_channel(channel.value)
 
         if to_return is None:
@@ -472,8 +534,12 @@ class DemocracivBot(commands.Bot):
 
         for guild in self.guilds:
             if guild.id not in guild_config:
-                settings = await self.db.fetchrow("INSERT INTO guild (id) VALUES ($1) RETURNING *", guild.id)
-                guild_config[settings["id"]] = await self._populate_guild_config_cache(settings)
+                settings = await self.db.fetchrow(
+                    "INSERT INTO guild (id) VALUES ($1) RETURNING *", guild.id
+                )
+                guild_config[settings["id"]] = await self._populate_guild_config_cache(
+                    settings
+                )
 
         self.guild_config = guild_config
         logging.info("Guild config cache was updated.")
@@ -499,7 +565,9 @@ class DemocracivBot(commands.Bot):
             image = await response.read()
             return io.BytesIO(image)
 
-    async def get_guild_setting(self, guild_id: int, setting: str) -> typing.Union[typing.Any, typing.List]:
+    async def get_guild_setting(
+        self, guild_id: int, setting: str
+    ) -> typing.Union[typing.Any, typing.List]:
         if not self.is_ready():
             await self.wait_until_ready()
 
@@ -513,7 +581,9 @@ class DemocracivBot(commands.Bot):
                 )
                 return [record["channel_id"] for record in private_channels]
             else:
-                return await self.db.fetchval(f"SELECT {setting} FROM guild WHERE id = $1", guild_id)
+                return await self.db.fetchval(
+                    f"SELECT {setting} FROM guild WHERE id = $1", guild_id
+                )
 
     async def fetch_owner(self):
         await self.wait_until_ready()
@@ -582,7 +652,9 @@ class DemocracivBot(commands.Bot):
                 host=token.POSTGRESQL_HOST,
             )
         except Exception:
-            logging.error("Unexpected error occurred while connecting to PostgreSQL database.")
+            logging.error(
+                "Unexpected error occurred while connecting to PostgreSQL database."
+            )
             self.db_ready = False
             raise
 
@@ -597,7 +669,9 @@ class DemocracivBot(commands.Bot):
                 self.db_ready = False
                 raise
             except Exception:
-                logging.error("Unexpected error occurred while executing default schema on PostgreSQL database")
+                logging.error(
+                    "Unexpected error occurred while executing default schema on PostgreSQL database"
+                )
                 self.db_ready = False
                 raise
 
@@ -626,7 +700,9 @@ class DemocracivBot(commands.Bot):
 
         config.DEMOCRACIV_GUILD_ID = dciv_guild.id
         self.democraciv_guild_id = dciv_guild.id
-        logging.info(f"Using '{dciv_guild.name}' ({dciv_guild.id}) as Democraciv guild.")
+        logging.info(
+            f"Using '{dciv_guild.name}' ({dciv_guild.id}) as Democraciv guild."
+        )
 
     @property
     def uptime(self):
@@ -643,7 +719,9 @@ class DemocracivBot(commands.Bot):
 
     async def run_apps_script(self, script_id, function, parameters):
         try:
-            result = await self.loop.run_in_executor(None, self._execute_apps_script, script_id, function, parameters)
+            result = await self.loop.run_in_executor(
+                None, self._execute_apps_script, script_id, function, parameters
+            )
 
             if "error" in result:
                 raise exceptions.GoogleAPIError()
@@ -663,35 +741,46 @@ class DemocracivBot(commands.Bot):
                 google_credentials = pickle.load(google_token)
 
         if not google_credentials or not google_credentials.valid:
-            if google_credentials and google_credentials.expired and google_credentials.refresh_token:
+            if (
+                google_credentials
+                and google_credentials.expired
+                and google_credentials.refresh_token
+            ):
                 google_credentials.refresh(requests.Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    config.GOOGLE_CLOUD_PLATFORM_CLIENT_SECRETS_FILE, config.GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES
+                    config.GOOGLE_CLOUD_PLATFORM_CLIENT_SECRETS_FILE,
+                    config.GOOGLE_CLOUD_PLATFORM_OAUTH_SCOPES,
                 )
                 google_credentials = flow.run_local_server(port=0)
 
             with open(path, "wb") as google_token:
                 pickle.dump(google_credentials, google_token)
 
-        service = build("script", "v1", credentials=google_credentials, cache_discovery=False)
+        service = build(
+            "script", "v1", credentials=google_credentials, cache_discovery=False
+        )
         request = {"function": function, "parameters": parameters, "devMode": True}
         return service.scripts().run(body=request, scriptId=script_id).execute()
 
     async def safe_send_dm(
-            self,
-            target: Union[discord.User, discord.Member],
-            reason: str = None,
-            message: str = None,
-            embed: discord.Embed = None,
+        self,
+        target: Union[discord.User, discord.Member],
+        reason: str = None,
+        message: str = None,
+        embed: discord.Embed = None,
     ):
         if target.bot:
             return
 
-        dm_settings = await self.db.fetchrow("SELECT * FROM dm_setting WHERE user_id = $1", target.id)
+        dm_settings = await self.db.fetchrow(
+            "SELECT * FROM dm_setting WHERE user_id = $1", target.id
+        )
         p = config.BOT_PREFIX
         if not dm_settings:
-            dm_settings = await self.db.fetchrow("INSERT INTO dm_setting (user_id) VALUES ($1) RETURNING *", target.id)
+            dm_settings = await self.db.fetchrow(
+                "INSERT INTO dm_setting (user_id) VALUES ($1) RETURNING *", target.id
+            )
 
         try:
             is_enabled = dm_settings[reason]
@@ -734,7 +823,9 @@ class DemocracivBot(commands.Bot):
             logging.error("Fatal error while connecting to database. Closing bot...")
             return await self.close()
 
-        logging.info(f"Logged in as {self.user.name} with discord.py {discord.__version__}")
+        logging.info(
+            f"Logged in as {self.user.name} with discord.py {discord.__version__}"
+        )
 
         channel = self.get_channel(config.BOT_TECHNICAL_NOTIFICATIONS_CHANNEL)
 
@@ -756,9 +847,9 @@ class DemocracivBot(commands.Bot):
             return
 
         if self.user.id in message.raw_mentions and len(message.content) in (
-                20,
-                21,
-                22,
+            20,
+            21,
+            22,
         ):
 
             if len(config.BOT_ADDITIONAL_PREFIXES) > 1:
@@ -775,7 +866,12 @@ class DemocracivBot(commands.Bot):
         await self.process_commands(message)
 
     async def on_message_edit(self, before, after):
-        if not before.author.bot and before.content and after.content and before.content != after.content:
+        if (
+            not before.author.bot
+            and before.content
+            and after.content
+            and before.content != after.content
+        ):
             await self.process_commands(after)
 
     async def on_guild_join(self, guild: discord.Guild):
@@ -784,12 +880,12 @@ class DemocracivBot(commands.Bot):
                 embed = text.SafeEmbed(
                     title=":pensive:  Sorry!",
                     description="Discord requires bot developers to hand over their passport "
-                                "once their bot reaches about ~75 servers. If they refuse to, "
-                                f"the bot cannot be invited anymore and Discord takes away some "
-                                f"critical features that the Democraciv Bot needs in order "
-                                f"to work properly. I **do not want to give Discord my "
-                                f"passport.**\n\nThis is the 70th server the bot is in, "
-                                f"and as a precaution **the bot is leaving this server** again.",
+                    "once their bot reaches about ~75 servers. If they refuse to, "
+                    f"the bot cannot be invited anymore and Discord takes away some "
+                    f"critical features that the Democraciv Bot needs in order "
+                    f"to work properly. I **do not want to give Discord my "
+                    f"passport.**\n\nThis is the 70th server the bot is in, "
+                    f"and as a precaution **the bot is leaving this server** again.",
                 )
 
                 await guild.system_channel.send(embed=embed)
@@ -800,7 +896,9 @@ class DemocracivBot(commands.Bot):
         introduction_channel = guild.system_channel or guild.text_channels[0]
 
         # Alert owner of this bot that the bot was invited to some place
-        await self.owner.send(f"{config.HINT} I was added to {guild.name} ({guild.id}).")
+        await self.owner.send(
+            f"{config.HINT} I was added to {guild.name} ({guild.id})."
+        )
         p = config.BOT_PREFIX
 
         introduction_message = (
@@ -815,10 +913,14 @@ class DemocracivBot(commands.Bot):
         )
 
         # Send introduction message to random guild channel
-        embed = text.SafeEmbed(title="Thanks for inviting me!", description=introduction_message)
+        embed = text.SafeEmbed(
+            title="Thanks for inviting me!", description=introduction_message
+        )
 
         # Add new guild to database
-        await self.db.execute("INSERT INTO guild (id) VALUES ($1) ON CONFLICT DO NOTHING ", guild.id)
+        await self.db.execute(
+            "INSERT INTO guild (id) VALUES ($1) ON CONFLICT DO NOTHING ", guild.id
+        )
         await self.update_guild_config_cache()
 
         try:
@@ -828,7 +930,9 @@ class DemocracivBot(commands.Bot):
 
     async def do_db_backup(self, database_name: str):
         now = time.time()
-        pretty_time = datetime.datetime.utcfromtimestamp(now).strftime("%A, %B %d %Y %H:%M:%S")
+        pretty_time = datetime.datetime.utcfromtimestamp(now).strftime(
+            "%A, %B %d %Y %H:%M:%S"
+        )
         file_name = f"{database_name}-backup-{now}"
 
         parent = str(pathlib.Path(__file__).parent) + "/db/"
@@ -858,7 +962,9 @@ class DemocracivBot(commands.Bot):
             )
             return
 
-        await backup_channel.send(f"---- Database Backup from {pretty_time} (UTC) ----", file=file)
+        await backup_channel.send(
+            f"---- Database Backup from {pretty_time} (UTC) ----", file=file
+        )
 
     @tasks.loop(hours=config.DATABASE_DAILY_BACKUP_INTERVAL)
     async def daily_db_backup(self):
@@ -867,13 +973,17 @@ class DemocracivBot(commands.Bot):
 
         await self.do_db_backup(token.POSTGRESQL_DATABASE)
 
-    async def get_logging_channel(self, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
+    async def get_logging_channel(
+        self, guild: discord.Guild
+    ) -> typing.Optional[discord.TextChannel]:
         channel = await self.get_guild_setting(guild.id, "logging_channel")
 
         if channel:
             return guild.get_channel(channel)
 
-    async def get_welcome_channel(self, guild: discord.Guild) -> typing.Optional[discord.TextChannel]:
+    async def get_welcome_channel(
+        self, guild: discord.Guild
+    ) -> typing.Optional[discord.TextChannel]:
         channel = await self.get_guild_setting(guild.id, "welcome_channel")
 
         if channel:
@@ -887,12 +997,16 @@ class DemocracivBot(commands.Bot):
             return False
 
         channel: discord.TextChannel = self.get_guild(guild_id).get_channel(channel_id)
-        return channel_id in excluded_channels or channel.category_id in excluded_channels
+        return (
+            channel_id in excluded_channels or channel.category_id in excluded_channels
+        )
 
     async def make_paste(self, txt: str) -> typing.Optional[str]:
         """Post text to mystb.in"""
 
-        async with self.session.post("https://mystb.in/documents", data=txt) as response:
+        async with self.session.post(
+            "https://mystb.in/documents", data=txt
+        ) as response:
             if response.status == 200:
                 data = await response.json()
 
@@ -905,12 +1019,14 @@ class DemocracivBot(commands.Bot):
 
     @alru_cache(cache_exceptions=False)
     async def tinyurl(self, url: str) -> typing.Optional[str]:
-        async with self.session.post(f"https://api.shrtco.de/v2/shorten?url={url}") as response:
+        async with self.session.post(
+            f"https://api.shrtco.de/v2/shorten?url={url}"
+        ) as response:
             if response.status in (200, 201):
                 tiny_url = await response.json()
 
                 try:
-                    return tiny_url['result']['full_short_link']
+                    return tiny_url["result"]["full_short_link"]
                 except KeyError:
                     raise exceptions.DemocracivBotException(
                         f"{config.NO} The URL shortening service returned an error, try again later."

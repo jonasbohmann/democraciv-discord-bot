@@ -13,7 +13,9 @@ class Selfroles(context.CustomCog):
     """Self-assignable roles for this server."""
 
     async def _list_all_roles(self, ctx):
-        role_list = await self.bot.db.fetch("SELECT role_id FROM selfrole WHERE guild_id = $1", ctx.guild.id)
+        role_list = await self.bot.db.fetch(
+            "SELECT role_id FROM selfrole WHERE guild_id = $1", ctx.guild.id
+        )
 
         embed_message = []
 
@@ -30,7 +32,9 @@ class Selfroles(context.CustomCog):
             name=f"Selfroles in {ctx.guild.name}",
             icon_url=ctx.guild.icon_url_as(static_format="png"),
         )
-        embed.set_footer(text=f"In order to add or remove a role from you, use: {config.BOT_PREFIX}role <role>")
+        embed.set_footer(
+            text=f"In order to add or remove a role from you, use: {config.BOT_PREFIX}role <role>"
+        )
         await ctx.send(embed=embed)
 
     @commands.group(
@@ -60,7 +64,9 @@ class Selfroles(context.CustomCog):
             try:
                 await ctx.message.author.add_roles(selfrole.role)
             except discord.Forbidden:
-                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.ADD_ROLE, selfrole.role.name)
+                raise exceptions.ForbiddenError(
+                    exceptions.ForbiddenTask.ADD_ROLE, selfrole.role.name
+                )
 
             await ctx.send(f"{config.YES} {selfrole.join_message}")
 
@@ -68,9 +74,13 @@ class Selfroles(context.CustomCog):
             try:
                 await ctx.message.author.remove_roles(selfrole.role)
             except discord.Forbidden:
-                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.REMOVE_ROLE, selfrole.role.name)
+                raise exceptions.ForbiddenError(
+                    exceptions.ForbiddenTask.REMOVE_ROLE, selfrole.role.name
+                )
 
-            await ctx.send(f"{config.YES} The `{selfrole.role.name}` role was removed from you.")
+            await ctx.send(
+                f"{config.YES} The `{selfrole.role.name}` role was removed from you."
+            )
 
     @roles.command(name="add", aliases=["create", "make"])
     @commands.guild_only()
@@ -78,21 +88,29 @@ class Selfroles(context.CustomCog):
     async def addrole(self, ctx: context.CustomContext):
         """Add a role to this server's `{PREFIX}roles` list"""
 
-        await ctx.send(f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the role you want to create.")
+        await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the role you want to create."
+        )
 
         role_name = await ctx.converted_input(converter=converter.CaseInsensitiveRole)
 
         if isinstance(role_name, str):
-            await ctx.send(f"{config.YES} I will **create a new role** on this server named `{role_name}` for this.")
+            await ctx.send(
+                f"{config.YES} I will **create a new role** on this server named `{role_name}` for this."
+            )
             try:
                 discord_role = await ctx.guild.create_role(name=role_name)
             except discord.Forbidden:
-                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE, role_name)
+                raise exceptions.ForbiddenError(
+                    exceptions.ForbiddenTask.CREATE_ROLE, role_name
+                )
 
         else:
             discord_role = role_name
 
-            await ctx.send(f"{config.YES} I'll use the **pre-existing role** named `{discord_role.name}` for this.")
+            await ctx.send(
+                f"{config.YES} I'll use the **pre-existing role** named `{discord_role.name}` for this."
+            )
 
         role_join_message = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with a short message the user should see when they get the role."
@@ -107,7 +125,9 @@ class Selfroles(context.CustomCog):
                 role_join_message,
             )
         except asyncpg.UniqueViolationError:
-            return await ctx.send(f"{config.NO} `{discord_role.name}` is already a selfrole on this server.")
+            return await ctx.send(
+                f"{config.NO} `{discord_role.name}` is already a selfrole on this server."
+            )
 
         await ctx.send(f"{config.YES} `{discord_role.name}` was added as a selfrole.")
 
@@ -127,10 +147,14 @@ class Selfroles(context.CustomCog):
         )
 
         await self.bot.db.execute(
-            "UPDATE selfrole SET join_message = $1 WHERE role_id = $2", new_join_message, role.role.id
+            "UPDATE selfrole SET join_message = $1 WHERE role_id = $2",
+            new_join_message,
+            role.role.id,
         )
 
-        await ctx.send(f"{config.YES} The join message for `{role.role.name}` was updated.")
+        await ctx.send(
+            f"{config.YES} The join message for `{role.role.name}` was updated."
+        )
 
     @roles.command(name="delete", aliases=["remove"])
     @commands.guild_only()
@@ -141,7 +165,9 @@ class Selfroles(context.CustomCog):
         try:
             selfrole = await Fuzzy[Selfrole].convert(ctx, role)
         except exceptions.NotFoundError:
-            return await ctx.send(f"{config.NO} This server has no selfrole that matches `{role}`.")
+            return await ctx.send(
+                f"{config.NO} This server has no selfrole that matches `{role}`."
+            )
 
         if selfrole.role:
             hard_delete = await ctx.confirm(
@@ -162,9 +188,13 @@ class Selfroles(context.CustomCog):
             try:
                 await selfrole.role.delete()
             except discord.Forbidden:
-                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.DELETE_ROLE, detail=selfrole.role.name)
+                raise exceptions.ForbiddenError(
+                    exceptions.ForbiddenTask.DELETE_ROLE, detail=selfrole.role.name
+                )
 
-            return await ctx.send(f"{config.YES} The `{role}` selfrole and its Discord role were deleted.")
+            return await ctx.send(
+                f"{config.YES} The `{role}` selfrole and its Discord role were deleted."
+            )
 
         await ctx.send(
             f"{config.YES} The `{role}` selfrole was removed from the `{config.BOT_PREFIX}roles` list but "

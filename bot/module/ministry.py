@@ -11,11 +11,15 @@ from bot.utils import text, context, mixin, models, exceptions
 class LawPassScheduler(text.AnnouncementScheduler):
     def get_embed(self):
         embed = text.SafeEmbed()
-        embed.set_author(name=f"Passed Bills from the {self.bot.mk.MINISTRY_NAME}",
-                         icon_url=self.bot.mk.NATION_ICON_URL
-                                  or self.bot.dciv.icon_url_as(static_format="png")
-                                  or discord.embeds.EmptyEmbed)
-        message = [f"The following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"]
+        embed.set_author(
+            name=f"Passed Bills from the {self.bot.mk.MINISTRY_NAME}",
+            icon_url=self.bot.mk.NATION_ICON_URL
+            or self.bot.dciv.icon_url_as(static_format="png")
+            or discord.embeds.EmptyEmbed,
+        )
+        message = [
+            f"The following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"
+        ]
 
         for obj in self._objects:
             message.append(f"-  **[{obj.name}]({obj.link})**")
@@ -31,11 +35,15 @@ class LawPassScheduler(text.AnnouncementScheduler):
 class LawVetoScheduler(text.AnnouncementScheduler):
     def get_embed(self):
         embed = text.SafeEmbed()
-        embed.set_author(name=f"The {self.bot.mk.MINISTRY_NAME} vetoed Bills",
-                         icon_url=self.bot.mk.NATION_ICON_URL
-                                  or self.bot.dciv.icon_url_as(static_format="png")
-                                  or discord.embeds.EmptyEmbed)
-        message = [f"The following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"]
+        embed.set_author(
+            name=f"The {self.bot.mk.MINISTRY_NAME} vetoed Bills",
+            icon_url=self.bot.mk.NATION_ICON_URL
+            or self.bot.dciv.icon_url_as(static_format="png")
+            or discord.embeds.EmptyEmbed,
+        )
+        message = [
+            f"The following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"
+        ]
 
         for obj in self._objects:
             message.append(f"-  **[{obj.name}]({obj.link})**")
@@ -44,15 +52,21 @@ class LawVetoScheduler(text.AnnouncementScheduler):
         return embed
 
 
-class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINISTRY_NAME):
+class Ministry(
+    context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINISTRY_NAME
+):
     """Information about the Executive of {NATION_FULL_NAME}"""
 
     # """Allows the {MINISTRY_NAME} to pass and veto bills from the {LEGISLATURE_NAME}."""
 
     def __init__(self, bot):
         super().__init__(bot)
-        self.pass_scheduler = LawPassScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
-        self.veto_scheduler = LawVetoScheduler(bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+        self.pass_scheduler = LawPassScheduler(
+            bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL
+        )
+        self.veto_scheduler = LawVetoScheduler(
+            bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL
+        )
 
     async def get_pretty_vetoes(self) -> typing.List[str]:
         """Gets all bills that passed the Legislature, are veto-able and were not yet voted on by the Ministry"""
@@ -71,8 +85,12 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
 
         for record in open_bills:
             b_ids.append(f"Bill #{record['id']}")
-            b_hyperlinks.append(f"=HYPERLINK(\"{record['link']}\"; \"{record['name']}\")")
-            pretty_bills.append(f"Bill #{record['id']} - [{record['name']}]({record['link']})")
+            b_hyperlinks.append(
+                f"=HYPERLINK(\"{record['link']}\"; \"{record['name']}\")"
+            )
+            pretty_bills.append(
+                f"Bill #{record['id']} - [{record['name']}]({record['link']})"
+            )
 
         exported = [
             f"Export of Veto-able Bills -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n",
@@ -136,7 +154,9 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
             minister_value.append(f"Emperor of Japan: -")
 
         if isinstance(self.prime_minister, discord.Member):
-            minister_value.append(f"{self.bot.mk.pm_term}: {self.prime_minister.mention}")
+            minister_value.append(
+                f"{self.bot.mk.pm_term}: {self.prime_minister.mention}"
+            )
         else:
             minister_value.append(f"{self.bot.mk.pm_term}: -")
 
@@ -145,22 +165,28 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         # else:
         #    minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
 
-        embed.add_field(name=self.bot.mk.MINISTRY_LEADERSHIP_NAME,
-                        value="\n".join(minister_value),
-                        inline=False)
+        embed.add_field(
+            name=self.bot.mk.MINISTRY_LEADERSHIP_NAME,
+            value="\n".join(minister_value),
+            inline=False,
+        )
 
         try:
             ministers = self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER)
-            ministers = [m.mention for m in ministers.members] or ['-']
+            ministers = [m.mention for m in ministers.members] or ["-"]
         except exceptions.RoleNotFoundError:
-            ministers = ['-']
+            ministers = ["-"]
 
-        embed.add_field(name=f"{self.bot.mk.minister_term}s", value="\n".join(ministers), inline=False)
+        embed.add_field(
+            name=f"{self.bot.mk.minister_term}s",
+            value="\n".join(ministers),
+            inline=False,
+        )
 
         embed.add_field(
             name="Links",
             value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})\n"
-                  f"[Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})",
+            f"[Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})",
             inline=False,
         )
 

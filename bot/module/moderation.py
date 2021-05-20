@@ -11,7 +11,9 @@ from bot.utils.converter import (
     CaseInsensitiveMember,
     CaseInsensitiveUser,
     CaseInsensitiveTextChannel,
-    CaseInsensitiveCategoryChannel, Fuzzy, FuzzySettings,
+    CaseInsensitiveCategoryChannel,
+    Fuzzy,
+    FuzzySettings,
 )
 
 
@@ -34,7 +36,9 @@ class Moderation(context.CustomCog):
             return 0, "Bot Account (0%)"
 
         # Check how long it has been since the user registered
-        discord_registration_duration_in_s = (datetime.datetime.utcnow() - member.created_at).total_seconds()
+        discord_registration_duration_in_s = (
+            datetime.datetime.utcnow() - member.created_at
+        ).total_seconds()
         hours_since = divmod(discord_registration_duration_in_s, 3600)[0]
 
         if hours_since <= 48:
@@ -69,7 +73,7 @@ class Moderation(context.CustomCog):
         ]
 
         if any(name in member.name.lower() for name in weird_names) or any(
-                name in member.display_name.lower() for name in weird_names
+            name in member.display_name.lower() for name in weird_names
         ):
             # Check if user has any names that are associated with alt accounts in the past
             is_alt_chance += 0.45
@@ -78,7 +82,10 @@ class Moderation(context.CustomCog):
         if member.status != discord.Status.offline:
             # If the user didn't download a Discord App, but is accessing Discord through their browser, chances
             # increase that they're an alt
-            if isinstance(member.web_status, discord.Status) and member.web_status != discord.Status.offline:
+            if (
+                isinstance(member.web_status, discord.Status)
+                and member.web_status != discord.Status.offline
+            ):
                 factor_details += "Uses Discord Web instead of apps (+5%)\n"
                 is_alt_chance += 0.05
 
@@ -123,7 +130,9 @@ class Moderation(context.CustomCog):
             return
 
         try:
-            mod_channel = self.bot.get_democraciv_channel(mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL)
+            mod_channel = self.bot.get_democraciv_channel(
+                mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL
+            )
         except exceptions.ChannelNotFoundError:
             return
 
@@ -133,7 +142,9 @@ class Moderation(context.CustomCog):
                 description=message.content,
             )
             embed.add_field(name="From", value=message.author.mention)
-            embed.add_field(name="Original", value=f"[Jump to Message]({message.jump_url})")
+            embed.add_field(
+                name="Original", value=f"[Jump to Message]({message.jump_url})"
+            )
             await mod_channel.send(embed=embed)
 
     @commands.Cog.listener(name="on_member_join")
@@ -148,7 +159,9 @@ class Moderation(context.CustomCog):
 
         if chance >= 0.2:
             embed = text.SafeEmbed(title="Possible Alt Account Joined", description="")
-            embed.add_field(name="Member", value=f"{member.mention} ({member.id})", inline=False)
+            embed.add_field(
+                name="Member", value=f"{member.mention} ({member.id})", inline=False
+            )
             embed.add_field(
                 name="Chance",
                 value=f"There is a **{(chance * 100):.0f}%** chance that {member} is an alt.",
@@ -157,9 +170,9 @@ class Moderation(context.CustomCog):
             if details:
                 embed.add_field(name="Factors", value=details, inline=False)
 
-            await self.bot.get_democraciv_channel(mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
-                embed=embed
-            )
+            await self.bot.get_democraciv_channel(
+                mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL
+            ).send(embed=embed)
 
     @commands.command(name="report")
     @commands.dm_only()
@@ -181,7 +194,9 @@ class Moderation(context.CustomCog):
         )
 
         if len(content) > 2048:
-            return await ctx.send(f"{config.NO} Text cannot be more than 2048 characters.")
+            return await ctx.send(
+                f"{config.NO} Text cannot be more than 2048 characters."
+            )
 
         pretty_anon = "be anonymous" if is_anon else "not be anonymous"
         reaction = await ctx.confirm(
@@ -201,7 +216,9 @@ class Moderation(context.CustomCog):
 
         embed.add_field(name="From", value=from_value)
 
-        await self.bot.get_democraciv_channel(mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL).send(
+        await self.bot.get_democraciv_channel(
+            mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL
+        ).send(
             content=self.bot.get_democraciv_role(mk.DemocracivRole.MODERATION).mention,
             embed=embed,
             allowed_mentions=discord.AllowedMentions(roles=True),
@@ -215,7 +232,9 @@ class Moderation(context.CustomCog):
             return await ctx.author.send(embed=embed)
 
         unsafe_members = [
-            member for member in ctx.channel.members if not member.bot and not member.guild_permissions.administrator
+            member
+            for member in ctx.channel.members
+            if not member.bot and not member.guild_permissions.administrator
         ]
 
         if unsafe_members:
@@ -231,7 +250,9 @@ class Moderation(context.CustomCog):
         try:
             await ctx.message.delete()
         except discord.Forbidden:
-            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.MESSAGE_DELETE, content)
+            raise exceptions.ForbiddenError(
+                exceptions.ForbiddenTask.MESSAGE_DELETE, content
+            )
 
         await ctx.send(content)
 
@@ -245,7 +266,9 @@ class Moderation(context.CustomCog):
             title="Possible Alt Detection",
             description="This is in no way perfect and should always be taken with a grain of salt.",
         )
-        embed.add_field(name="Target", value=f"{person.mention} ({person.id})", inline=False)
+        embed.add_field(
+            name="Target", value=f"{person.mention} ({person.id})", inline=False
+        )
         embed.add_field(
             name="Result",
             value=f"There is a **{(chance * 100):.0f}%** chance that {person} is an alt.",
@@ -296,14 +319,18 @@ class Moderation(context.CustomCog):
     async def modguidelines(self, ctx):
         """Link to DerJonas' Democraciv Moderation Guidelines"""
         link = token.MOD_GUIDELINES or "https://hastebin.com/afijavahox.coffeescript"
-        embed = text.SafeEmbed(title="DerJonas' Democraciv Moderation Guidelines & Procedures", url=link)
+        embed = text.SafeEmbed(
+            title="DerJonas' Democraciv Moderation Guidelines & Procedures", url=link
+        )
         await self.safe_send_mod_links(ctx, embed)
 
     @commands.command(name="quire", aliases=["q"])
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def quire(self, ctx):
         """Quire Project Management"""
-        embed = text.SafeEmbed(title="Quire", url="https://quire.io/c/democraciv-moderation")
+        embed = text.SafeEmbed(
+            title="Quire", url="https://quire.io/c/democraciv-moderation"
+        )
         await ctx.send(embed=embed)
 
     @commands.command(name="kick")
@@ -323,7 +350,9 @@ class Moderation(context.CustomCog):
             return await ctx.send(f"{config.NO} I can't kick myself.")
 
         if person.top_role >= ctx.author.top_role:
-            return await ctx.send(f"{config.NO} You aren't allowed to kick someone with a higher role than yours.")
+            return await ctx.send(
+                f"{config.NO} You aren't allowed to kick someone with a higher role than yours."
+            )
 
         formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id})."
 
@@ -344,15 +373,19 @@ class Moderation(context.CustomCog):
     @commands.guild_only()
     @commands.has_guild_permissions(manage_messages=True)
     async def clear(
-            self,
-            ctx,
-            amount: int,
-            *,
-            target: Fuzzy[CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))] = None,
+        self,
+        ctx,
+        amount: int,
+        *,
+        target: Fuzzy[
+            CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 1))
+        ] = None,
     ):
         """Purge an amount of messages in the current channel"""
         if amount > 500 or amount < 0:
-            return await ctx.send(f"{config.NO} You can only clear up to 500 messages at most.")
+            return await ctx.send(
+                f"{config.NO} You can only clear up to 500 messages at most."
+            )
 
         def check(message):
             if target:
@@ -364,7 +397,9 @@ class Moderation(context.CustomCog):
         except discord.Forbidden:
             raise exceptions.ForbiddenError(task=ForbiddenTask.MESSAGE_DELETE)
 
-        await ctx.send(f"{config.YES} Deleted **{len(deleted)}** messages.", delete_after=5)
+        await ctx.send(
+            f"{config.YES} Deleted **{len(deleted)}** messages.", delete_after=5
+        )
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
@@ -378,7 +413,11 @@ class Moderation(context.CustomCog):
 
         if guild.id != self.bot.dciv.id:
             for channel in guild.text_channels:
-                self.bot.loop.create_task(channel.set_permissions(muted_role, send_messages=False, add_reactions=False))
+                self.bot.loop.create_task(
+                    channel.set_permissions(
+                        muted_role, send_messages=False, add_reactions=False
+                    )
+                )
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
@@ -388,9 +427,13 @@ class Moderation(context.CustomCog):
             try:
                 muted_role = await channel.guild.create_role(name="Muted")
             except discord.Forbidden:
-                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted")
+                raise exceptions.ForbiddenError(
+                    exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted"
+                )
 
-        await channel.set_permissions(muted_role, send_messages=False, add_reactions=False)
+        await channel.set_permissions(
+            muted_role, send_messages=False, add_reactions=False
+        )
 
     @commands.command(name="mute")
     @commands.guild_only()
@@ -405,10 +448,14 @@ class Moderation(context.CustomCog):
                 muted_role = await ctx.guild.create_role(name="Muted")
                 for channel in ctx.guild.text_channels:
                     self.bot.loop.create_task(
-                        channel.set_permissions(muted_role, send_messages=False, add_reactions=False)
+                        channel.set_permissions(
+                            muted_role, send_messages=False, add_reactions=False
+                        )
                     )
             except discord.Forbidden:
-                raise exceptions.ForbiddenError(exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted")
+                raise exceptions.ForbiddenError(
+                    exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted"
+                )
 
         if muted_role is None:
             raise exceptions.RoleNotFoundError("Muted")
@@ -427,7 +474,9 @@ class Moderation(context.CustomCog):
         try:
             await person.add_roles(muted_role, reason=formatted_reason)
         except discord.Forbidden:
-            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.ADD_ROLE, detail="Muted")
+            raise exceptions.ForbiddenError(
+                exceptions.ForbiddenTask.ADD_ROLE, detail="Muted"
+            )
 
         await self.bot.safe_send_dm(
             target=person,
@@ -452,9 +501,13 @@ class Moderation(context.CustomCog):
             return await ctx.send(f"{config.NO} {person} is not muted.")
 
         try:
-            await person.remove_roles(muted_role, reason=f"Action requested by {ctx.author}.")
+            await person.remove_roles(
+                muted_role, reason=f"Action requested by {ctx.author}."
+            )
         except discord.Forbidden:
-            raise exceptions.ForbiddenError(exceptions.ForbiddenTask.REMOVE_ROLE, detail="Muted")
+            raise exceptions.ForbiddenError(
+                exceptions.ForbiddenTask.REMOVE_ROLE, detail="Muted"
+            )
 
         await self.bot.safe_send_dm(
             target=person,
@@ -503,7 +556,9 @@ class Moderation(context.CustomCog):
             return await ctx.send(f"{config.NO} I can't ban myself.")
 
         if member_object is not None and member_object.top_role >= ctx.author.top_role:
-            return await ctx.send(f"{config.NO} You aren't allowed to ban someone with a higher role than yours.")
+            return await ctx.send(
+                f"{config.NO} You aren't allowed to ban someone with a higher role than yours."
+            )
 
         formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id})."
 
@@ -574,45 +629,66 @@ class Moderation(context.CustomCog):
             `{PREFIX}{COMMAND} #public-form`
             `{PREFIX}{COMMAND} legislature`"""
 
-        archive_category = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} What archive category should "
-                                                     f"I use for this?",
-                                                     converter=converter.CaseInsensitiveCategoryChannel,
-                                                     return_input_on_fail=False)
+        archive_category = await ctx.converted_input(
+            f"{config.USER_INTERACTION_REQUIRED} What archive category should "
+            f"I use for this?",
+            converter=converter.CaseInsensitiveCategoryChannel,
+            return_input_on_fail=False,
+        )
 
         everyone_perms = discord.PermissionOverwrite(
-            read_message_history=False, send_messages=False, read_messages=False, add_reactions=False
+            read_message_history=False,
+            send_messages=False,
+            read_messages=False,
+            add_reactions=False,
         )
         everyone_role = self.bot.dciv.default_role
 
         archive_perms = discord.PermissionOverwrite(
-            read_message_history=True, send_messages=False, read_messages=True, add_reactions=False
+            read_message_history=True,
+            send_messages=False,
+            read_messages=True,
+            add_reactions=False,
         )
         archives_role = discord.utils.get(self.bot.dciv.roles, name="Archives")
 
         if archives_role is None:
-            return await ctx.send(f"{config.NO} There is no role named `Archives` for me to use.")
+            return await ctx.send(
+                f"{config.NO} There is no role named `Archives` for me to use."
+            )
 
         await channel.edit(
-            name=f"mk{self.bot.mk.MARK}-{channel.name}" if not channel.name.startswith(f"mk{self.bot.mk.MARK}-")
+            name=f"mk{self.bot.mk.MARK}-{channel.name}"
+            if not channel.name.startswith(f"mk{self.bot.mk.MARK}-")
             else channel.name,
             overwrites={everyone_role: everyone_perms, archives_role: archive_perms},
             category=archive_category,
         )
 
-        await self.bot.db.execute("DELETE FROM guild_private_channel WHERE guild_id = $1 AND channel_id = $2",
-                                  channel.guild.id, channel.id)
+        await self.bot.db.execute(
+            "DELETE FROM guild_private_channel WHERE guild_id = $1 AND channel_id = $2",
+            channel.guild.id,
+            channel.id,
+        )
 
         await ctx.send(f"{config.YES} Channel was archived.")
 
     @commands.command(name="archivecategory")
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
-    async def archivecategory(self, ctx: context.CustomContext, *, category: Fuzzy[CaseInsensitiveCategoryChannel]):
+    async def archivecategory(
+        self,
+        ctx: context.CustomContext,
+        *,
+        category: Fuzzy[CaseInsensitiveCategoryChannel],
+    ):
         """Move all channels in a category into the Archives and set the right permissions"""
 
-        archive_category = await ctx.converted_input(f"{config.USER_INTERACTION_REQUIRED} What archive category should "
-                                                     f"I use for this?",
-                                                     converter=converter.CaseInsensitiveCategoryChannel,
-                                                     return_input_on_fail=False)
+        archive_category = await ctx.converted_input(
+            f"{config.USER_INTERACTION_REQUIRED} What archive category should "
+            f"I use for this?",
+            converter=converter.CaseInsensitiveCategoryChannel,
+            return_input_on_fail=False,
+        )
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want archive every channel in `{category}`?"
@@ -623,21 +699,32 @@ class Moderation(context.CustomCog):
 
         async with ctx.typing():
             everyone_perms = discord.PermissionOverwrite(
-                read_message_history=False, send_messages=False, read_messages=False, add_reactions=False
+                read_message_history=False,
+                send_messages=False,
+                read_messages=False,
+                add_reactions=False,
             )
             everyone_role = self.bot.dciv.default_role
             archive_perms = discord.PermissionOverwrite(
-                read_message_history=True, send_messages=False, read_messages=True, add_reactions=False
+                read_message_history=True,
+                send_messages=False,
+                read_messages=True,
+                add_reactions=False,
             )
             archives_role = discord.utils.get(self.bot.dciv.roles, name="Archives")
 
             if archives_role is None:
-                return await ctx.send(f"{config.NO} There is no role named `Archives` for me to use.")
+                return await ctx.send(
+                    f"{config.NO} There is no role named `Archives` for me to use."
+                )
 
             for channel in category.text_channels:
-                await channel.send(f":tada: Thanks for playing Democraciv MK{self.bot.mk.MARK}!")
+                await channel.send(
+                    f":tada: Thanks for playing Democraciv MK{self.bot.mk.MARK}!"
+                )
                 await channel.edit(
-                    name=f"mk{self.bot.mk.MARK}-{channel.name}" if not channel.name.startswith(f"mk{self.bot.mk.MARK}-")
+                    name=f"mk{self.bot.mk.MARK}-{channel.name}"
+                    if not channel.name.startswith(f"mk{self.bot.mk.MARK}-")
                     else channel.name,
                     overwrites={
                         everyone_role: everyone_perms,
@@ -646,8 +733,11 @@ class Moderation(context.CustomCog):
                     category=archive_category,
                 )
 
-                await self.bot.db.execute("DELETE FROM guild_private_channel WHERE guild_id = $1 AND channel_id = $2",
-                                          channel.guild.id, channel.id)
+                await self.bot.db.execute(
+                    "DELETE FROM guild_private_channel WHERE guild_id = $1 AND channel_id = $2",
+                    channel.guild.id,
+                    channel.id,
+                )
 
         await ctx.send(f"{config.YES} Done.")
 

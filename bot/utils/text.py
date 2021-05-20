@@ -9,7 +9,7 @@ from bot.config import config, mk
 
 
 def split_string(string: str, length: int):
-    return list((string[0 + i: length + i] for i in range(0, len(string), length)))
+    return list((string[0 + i : length + i] for i in range(0, len(string), length)))
 
 
 # todo fix this shit
@@ -77,7 +77,9 @@ class AnnouncementScheduler:
         self._task.cancel()
         self._objects.clear()
 
-    def _split_embeds(self, original_embed: discord.Embed) -> typing.List[discord.Embed]:
+    def _split_embeds(
+        self, original_embed: discord.Embed
+    ) -> typing.List[discord.Embed]:
         paginator = commands.Paginator(prefix="", suffix="", max_size=2035)
 
         for line in original_embed.description.splitlines():
@@ -87,7 +89,9 @@ class AnnouncementScheduler:
 
         for page in paginator.pages:
             em = SafeEmbed(title=original_embed.title, description=page)
-            em.set_author(icon_url=original_embed.author.icon_url, name=original_embed.author.name)
+            em.set_author(
+                icon_url=original_embed.author.icon_url, name=original_embed.author.name
+            )
             embeds.append(em)
 
         return embeds
@@ -100,25 +104,32 @@ class AnnouncementScheduler:
             embeds = self._split_embeds(embed)
             first = embeds.pop(0)
 
-            await self.channel.send(message, embed=first, allowed_mentions=discord.AllowedMentions(roles=True))
+            await self.channel.send(
+                message,
+                embed=first,
+                allowed_mentions=discord.AllowedMentions(roles=True),
+            )
 
             for emb in embeds:
                 await self.channel.send(embed=emb)
 
             return
 
-        await self.channel.send(message, embed=embed, allowed_mentions=discord.AllowedMentions(roles=True))
+        await self.channel.send(
+            message, embed=embed, allowed_mentions=discord.AllowedMentions(roles=True)
+        )
 
     @tasks.loop(seconds=30)
     async def _wait(self):
-        if self._last_addition is not None and datetime.datetime.utcnow() - self._last_addition > datetime.timedelta(
-                minutes=self.wait_time
+        if (
+            self._last_addition is not None
+            and datetime.datetime.utcnow() - self._last_addition
+            > datetime.timedelta(minutes=self.wait_time)
         ):
             await self._trigger()
 
 
 class RedditAnnouncementScheduler(AnnouncementScheduler):
-
     def __init__(self, bot, channel, *, subreddit):
         self.subreddit = subreddit
         self.wait_time = 20
@@ -134,9 +145,7 @@ class RedditAnnouncementScheduler(AnnouncementScheduler):
         title = self.get_reddit_post_title()
         content = self.get_reddit_post_content()
 
-        js = {"subreddit": self.subreddit,
-              "title": title,
-              "content": content}
+        js = {"subreddit": self.subreddit, "title": title, "content": content}
 
         await super().send_messages()
         await self.bot.api_request("POST", "reddit/post", silent=True, json=js)
@@ -162,15 +171,19 @@ class SafeEmbed(discord.Embed):
             self.title = f"{self.title[:250]}..."
 
         if len(self.author.name) > 256:
-            self.set_author(name=f"{self.author.name[:250]}...", url=self.author.url, icon_url=self.author.icon_url)
+            self.set_author(
+                name=f"{self.author.name[:250]}...",
+                url=self.author.url,
+                icon_url=self.author.icon_url,
+            )
 
     def add_field(
-            self,
-            *,
-            name: typing.Any,
-            value: typing.Any,
-            inline: bool = True,
-            too_long_value: str = "*Too long to display.*",
+        self,
+        *,
+        name: typing.Any,
+        value: typing.Any,
+        inline: bool = True,
+        too_long_value: str = "*Too long to display.*",
     ):
         field_index = len(self.fields)
         name = str(name)
@@ -195,7 +208,9 @@ class SafeEmbed(discord.Embed):
 
 
 class FuzzyChoose(menus.Menu):
-    def __init__(self, question: str, choices: typing.Sequence, *, description=None, **kwargs):
+    def __init__(
+        self, question: str, choices: typing.Sequence, *, description=None, **kwargs
+    ):
         super().__init__(timeout=120.0, delete_message_after=True)
         self.question = question
         self.choices = choices
@@ -246,7 +261,6 @@ class FuzzyChoose(menus.Menu):
 
 
 class FuzzyMultiModelChoose(FuzzyChoose):
-
     def __init__(self, models: typing.Mapping[str, typing.Sequence], *args, **kwargs):
         self.models = models
         super().__init__(*args, **kwargs)
@@ -275,8 +289,12 @@ EditModelResult = collections.namedtuple("EditModelResult", ["confirmed", "choic
 
 
 class EditModelMenu(menus.Menu):
-    def __init__(self, choices_with_formatted_explanation: typing.Dict[str, str], *,
-                 title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?"):
+    def __init__(
+        self,
+        choices_with_formatted_explanation: typing.Dict[str, str],
+        *,
+        title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
+    ):
         super().__init__(timeout=120.0, delete_message_after=True)
         self.choices = choices_with_formatted_explanation
         self.title = title
@@ -304,8 +322,10 @@ class EditModelMenu(menus.Menu):
     async def send_initial_message(self, ctx, channel):
         embed = SafeEmbed(title=self.title)
 
-        fmt = [f"Select as many things as you want, then click the {config.YES} button to continue, "
-               f"or {config.NO} to cancel.\n"]
+        fmt = [
+            f"Select as many things as you want, then click the {config.YES} button to continue, "
+            f"or {config.NO} to cancel.\n"
+        ]
 
         for emoji, choice in self._mapping.items():
             fmt.append(f"{emoji}  {self.choices[choice]}")
@@ -336,7 +356,10 @@ class EditSettingsWithEmojifiedLiveToggles(EditModelMenu):
     def __init__(self, settings, description, icon=discord.Embed.Empty, **kwargs):
         self.icon = icon
         self.description = description
-        super().__init__(choices_with_formatted_explanation={k: v[0] for k, v in settings.items()}, **kwargs)
+        super().__init__(
+            choices_with_formatted_explanation={k: v[0] for k, v in settings.items()},
+            **kwargs,
+        )
         self._result = {k: v[1] for k, v in settings.items()}
 
     def _make_embed(self):
@@ -345,7 +368,9 @@ class EditSettingsWithEmojifiedLiveToggles(EditModelMenu):
         fmt = [self.description]
 
         for emoji, choice in self._mapping.items():
-            fmt.append(f"{emoji}  -  {self.bot.emojify_boolean(self._result[choice])} {self.choices[choice]}")
+            fmt.append(
+                f"{emoji}  -  {self.bot.emojify_boolean(self._result[choice])} {self.choices[choice]}"
+            )
 
         fmt = "\n".join(fmt)
         embed.description = fmt

@@ -47,7 +47,9 @@ class RedditManager(ProviderManager):
         """Gets a new access_token for the Reddit API with a refresh token that was previously acquired by following
         this guide: https://github.com/reddit-archive/reddit/wiki/OAuth2"""
 
-        auth = aiohttp.BasicAuth(login=self.REDDIT_CLIENT_ID, password=self.REDDIT_CLIENT_SECRET)
+        auth = aiohttp.BasicAuth(
+            login=self.REDDIT_CLIENT_ID, password=self.REDDIT_CLIENT_SECRET
+        )
 
         post_data = {
             "grant_type": "refresh_token",
@@ -57,17 +59,25 @@ class RedditManager(ProviderManager):
         headers = {"User-Agent": "democraciv-discord-bot by DerJonas - u/Jovanos"}
 
         async with self._session.post(
-                "https://www.reddit.com/api/v1/access_token",
-                data=post_data,
-                auth=auth,
-                headers=headers,
+            "https://www.reddit.com/api/v1/access_token",
+            data=post_data,
+            auth=auth,
+            headers=headers,
         ) as response:
             if response.status == 200:
                 r = await response.json()
                 self.REDDIT_BEARER_TOKEN = r["access_token"]
                 self._save_token()
 
-    async def post_to_reddit(self, *, subreddit: str, title: str, content: str = None, url: str = None, retry=False):
+    async def post_to_reddit(
+        self,
+        *,
+        subreddit: str,
+        title: str,
+        content: str = None,
+        url: str = None,
+        retry=False,
+    ):
         """Submit post to specified subreddit"""
 
         headers = {
@@ -87,30 +97,32 @@ class RedditManager(ProviderManager):
             raise RuntimeError("can only post either content or url, not both")
 
         if content:
-            data['text'] = content
-            data['kind'] = "self"
+            data["text"] = content
+            data["kind"] = "self"
 
         if url:
-            data['url'] = url
-            data['kind'] = "link"
+            data["url"] = url
+            data["kind"] = "link"
 
         async with self._session.post(
-                "https://oauth.reddit.com/api/submit?raw_json=1", data=data, headers=headers
+            "https://oauth.reddit.com/api/submit?raw_json=1", data=data, headers=headers
         ) as response:
 
             if response.status in (401, 403):
 
                 if not retry:
                     await self.refresh_reddit_bearer_token()
-                    return await self.post_to_reddit(subreddit=subreddit, title=title, content=content, retry=True)
+                    return await self.post_to_reddit(
+                        subreddit=subreddit, title=title, content=content, retry=True
+                    )
 
                 logger.warning("got 403 while posting to reddit")
-                return {'error': await response.json()}
+                return {"error": await response.json()}
 
             try:
                 return await response.json()
             except aiohttp.ContentTypeError:
-                return {'error': 'error'}
+                return {"error": "error"}
 
     async def delete_reddit_post(self, *, post_id: str, retry=False):
         headers = {
@@ -121,7 +133,7 @@ class RedditManager(ProviderManager):
         data = {"id": post_id}
 
         async with self._session.post(
-                "https://oauth.reddit.com/api/del?raw_json=1", data=data, headers=headers
+            "https://oauth.reddit.com/api/del?raw_json=1", data=data, headers=headers
         ) as response:
 
             if response.status in (401, 403):
@@ -130,19 +142,21 @@ class RedditManager(ProviderManager):
                     return await self.delete_reddit_post(post_id=post_id, retry=True)
 
                 logger.warning("got 403 while deleting reddit post")
-                return {'error': await response.json()}
+                return {"error": await response.json()}
 
             try:
                 return await response.json()
             except aiohttp.ContentTypeError:
-                return {'error': 'error'}
+                return {"error": "error"}
 
     async def _start_webhook(self, *, target: str, webhook_url: str):
         async with self._lock:
             if target in self._webhooks:
                 self._webhooks[target].webhook_urls.add(webhook_url)
             else:
-                scraper = SubredditScraper(db=self.db, session=self._session, subreddit=target, manager=self)
+                scraper = SubredditScraper(
+                    db=self.db, session=self._session, subreddit=target, manager=self
+                )
                 scraper.webhook_urls.add(webhook_url)
                 self._webhooks[target] = scraper
                 scraper.start()
@@ -154,9 +168,14 @@ class RedditManager(ProviderManager):
             return
 
         async with self._lock:
-            if len(self._webhooks[target].webhook_urls) == 1 and webhook_url in self._webhooks[target].webhook_urls:
+            if (
+                len(self._webhooks[target].webhook_urls) == 1
+                and webhook_url in self._webhooks[target].webhook_urls
+            ):
                 self._webhooks[target].stop()
-                logger.info(f"stopping {self._webhooks[target]} ({self._webhooks[target].subreddit})")
+                logger.info(
+                    f"stopping {self._webhooks[target]} ({self._webhooks[target].subreddit})"
+                )
                 del self._webhooks[target]
             else:
                 self._webhooks[target].webhook_urls.remove(webhook_url)
@@ -201,7 +220,13 @@ class RedditPost:
 
 class SubredditScraper:
     def __init__(
-            self, *, db, subreddit: str, session: aiohttp.ClientSession, post_limit: int = 1, manager: RedditManager
+        self,
+        *,
+        db,
+        subreddit: str,
+        session: aiohttp.ClientSession,
+        post_limit: int = 1,
+        manager: RedditManager,
     ):
         self.subreddit = subreddit
         self.webhook_urls = set()
@@ -229,20 +254,29 @@ class SubredditScraper:
         for webhook in self.webhook_urls:
             async with self._session.post(url=webhook, json=post_data) as response:
                 if response.status not in (200, 204):
-                    logger.error(f"Error while sending reddit webhook: {response.status} {await response.text()}")
+                    logger.error(
+                        f"Error while sending reddit webhook: {response.status} {await response.text()}"
+                    )
 
                 if response.status == 404:
                     # webhook was deleted
-                    await self.manager._remove_webhook(target=self.subreddit, webhook_url=webhook)
+                    await self.manager._remove_webhook(
+                        target=self.subreddit, webhook_url=webhook
+                    )
                     try:
-                        await self.db.pool.execute(f"DELETE FROM {self.manager.table} WHERE webhook_url = $1", webhook)
-                        logger.info(f"removed deleted webhook_url {webhook} for r/{self.subreddit}")
+                        await self.db.pool.execute(
+                            f"DELETE FROM {self.manager.table} WHERE webhook_url = $1",
+                            webhook,
+                        )
+                        logger.info(
+                            f"removed deleted webhook_url {webhook} for r/{self.subreddit}"
+                        )
                     except Exception as e:
                         traceback.print_exception(type(e), e, e.__traceback__)
 
     async def get_newest_reddit_post(self) -> typing.Optional[typing.Dict]:
         async with self._session.get(
-                f"https://www.reddit.com/r/{self.subreddit}/new.json?limit={self.post_limit}"
+            f"https://www.reddit.com/r/{self.subreddit}/new.json?limit={self.post_limit}"
         ) as response:
             if response.status == 200:
                 return await response.json()
@@ -259,7 +293,8 @@ class SubredditScraper:
             post_id = reddit_post_json["id"]
 
             status = await self.db.pool.execute(
-                "INSERT INTO reddit_post (id) VALUES ($1) ON CONFLICT DO NOTHING", post_id
+                "INSERT INTO reddit_post (id) VALUES ($1) ON CONFLICT DO NOTHING",
+                post_id,
             )
             is_new = False if status == "INSERT 0 0" else True
 

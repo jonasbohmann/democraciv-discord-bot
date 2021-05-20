@@ -27,10 +27,16 @@ class ProviderManager(abc.ABC):
         await self.db.ready.wait()
         await self.app_ready.wait()
 
-        webhooks = await self.db.pool.fetch(f"SELECT {self.target}, webhook_url FROM {self.table}")
+        webhooks = await self.db.pool.fetch(
+            f"SELECT {self.target}, webhook_url FROM {self.table}"
+        )
 
         for webhook in webhooks:
-            self._loop.create_task(self._start_webhook(target=webhook[self.target], webhook_url=webhook["webhook_url"]))
+            self._loop.create_task(
+                self._start_webhook(
+                    target=webhook[self.target], webhook_url=webhook["webhook_url"]
+                )
+            )
 
         logger.info(f"started {len(webhooks)} {self.provider} hooks")
 
@@ -45,7 +51,9 @@ class ProviderManager(abc.ABC):
             config.guild_id,
             config.channel_id,
         )
-        return await self._start_webhook(target=config.target, webhook_url=config.webhook_url)
+        return await self._start_webhook(
+            target=config.target, webhook_url=config.webhook_url
+        )
 
     async def new_webhook_for_target(self, *, target: str, webhook_url: str):
         pass
@@ -59,7 +67,9 @@ class ProviderManager(abc.ABC):
                 self._webhooks[target].add(webhook_url)
                 return self._webhooks[target]
             else:
-                result = await self.new_webhook_for_target(target=target, webhook_url=webhook_url)
+                result = await self.new_webhook_for_target(
+                    target=target, webhook_url=webhook_url
+                )
                 self._webhooks[target] = {webhook_url}
                 return result
 
@@ -68,8 +78,13 @@ class ProviderManager(abc.ABC):
             return
 
         async with self._lock:
-            if len(self._webhooks[target]) == 1 and webhook_url in self._webhooks[target]:
-                await self.no_more_webhooks_for_target(target=target, webhook_url=webhook_url)
+            if (
+                len(self._webhooks[target]) == 1
+                and webhook_url in self._webhooks[target]
+            ):
+                await self.no_more_webhooks_for_target(
+                    target=target, webhook_url=webhook_url
+                )
                 del self._webhooks[target]
             else:
                 self._webhooks[target].remove(webhook_url)
@@ -85,11 +100,17 @@ class ProviderManager(abc.ABC):
         if not record:
             return {"error": "not found"}
 
-        safe_to_delete = await self._can_discord_webhook_be_deleted(record["channel_id"])
+        safe_to_delete = await self._can_discord_webhook_be_deleted(
+            record["channel_id"]
+        )
         js = dict(record)
         js["safe_to_delete"] = safe_to_delete
 
-        self._loop.create_task(self._remove_webhook(target=record[self.target], webhook_url=record["webhook_url"]))
+        self._loop.create_task(
+            self._remove_webhook(
+                target=record[self.target], webhook_url=record["webhook_url"]
+            )
+        )
         return js
 
     async def _can_discord_webhook_be_deleted(self, channel_id: int):
@@ -107,7 +128,9 @@ class ProviderManager(abc.ABC):
             return True
 
     async def get_webhooks_per_guild(self, guild_id: int):
-        records = await self.db.pool.fetch(f"SELECT * FROM {self.table} WHERE guild_id = $1", guild_id)
+        records = await self.db.pool.fetch(
+            f"SELECT * FROM {self.table} WHERE guild_id = $1", guild_id
+        )
         return [dict(record) for record in records]
 
     async def clear_per_guild(self, guild_id: int):

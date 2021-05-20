@@ -9,9 +9,14 @@ from fastapi.logger import logger
 
 
 class BERTQuestionAnswering:
-    def __init__(self, *, db, index_directory: str,
-                 bert_squad_model='bert-large-uncased-whole-word-masking-finetuned-squad',
-                 bert_emb_model='bert-base-uncased'):
+    def __init__(
+        self,
+        *,
+        db,
+        index_directory: str,
+        bert_squad_model="bert-large-uncased-whole-word-masking-finetuned-squad",
+        bert_emb_model="bert-base-uncased",
+    ):
         self.db = db
         self.index_directory = index_directory
         self.bert_squad_model = bert_squad_model
@@ -26,9 +31,11 @@ class BERTQuestionAnswering:
             logger.warning("index for BERTQuestionAnswering missing")
             await self.index(force=True)
 
-        self.qa = text.SimpleQA(index_dir=self.index_directory,
-                                bert_squad_model=self.bert_squad_model,
-                                bert_emb_model=self.bert_emb_model)
+        self.qa = text.SimpleQA(
+            index_dir=self.index_directory,
+            bert_squad_model=self.bert_squad_model,
+            bert_emb_model=self.bert_emb_model,
+        )
 
     async def _sleep_until_index(self):
         await asyncio.sleep(900)
@@ -49,17 +56,23 @@ class BERTQuestionAnswering:
             await self.db.ready.wait()
             laws = await self.db.pool.fetch("SELECT id, content FROM bill")
 
-            documents = [record['content'] for record in laws]
-            references = [str(record['id']) for record in laws]
+            documents = [record["content"] for record in laws]
+            references = [str(record["id"]) for record in laws]
 
             text.SimpleQA.initialize_index(self.index_directory)
 
             logger.info(f"starting indexing of {len(documents)} documents")
             start = time.time()
-            text.SimpleQA.index_from_list(documents, self.index_directory, commit_every=len(documents),
-                                          multisegment=True, procs=procs,
-                                          limitmb=memory_limit_in_mb, breakup_docs=True,
-                                          references=references)
+            text.SimpleQA.index_from_list(
+                documents,
+                self.index_directory,
+                commit_every=len(documents),
+                multisegment=True,
+                procs=procs,
+                limitmb=memory_limit_in_mb,
+                breakup_docs=True,
+                references=references,
+            )
             end = time.time()
             self._is_index_queued = False
             logger.info(f"indexing successful after {end - start} seconds")

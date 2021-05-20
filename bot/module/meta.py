@@ -29,28 +29,40 @@ class Meta(context.CustomCog):
         await ctx.invoke(self.bot.get_command("jsk reload"), list(self.bot.extensions))
 
     async def ensure_dm_settings(self, user: int):
-        settings = await self.bot.db.fetchrow("SELECT * FROM dm_setting WHERE user_id = $1", user)
+        settings = await self.bot.db.fetchrow(
+            "SELECT * FROM dm_setting WHERE user_id = $1", user
+        )
 
         if not settings:
-            settings = await self.bot.db.fetchrow("INSERT INTO dm_setting (user_id) VALUES ($1) RETURNING *", user)
+            settings = await self.bot.db.fetchrow(
+                "INSERT INTO dm_setting (user_id) VALUES ($1) RETURNING *", user
+            )
 
         return settings
 
-    @commands.command(name="dms", aliases=["dm", "pm", "dmsettings", "dm-settings", "dmsetting"])
+    @commands.command(
+        name="dms", aliases=["dm", "pm", "dmsettings", "dm-settings", "dmsetting"]
+    )
     async def dmsettings(self, ctx):
         """Manage your DM notifications from me"""
 
         choices = {
             "ban_kick_mute": ["DM when you get muted, kicked or banned"],
             "leg_session_open": [
-                f"*({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when a {self.bot.mk.LEGISLATURE_ADJECTIVE} Session opens"],
+                f"*({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when a {self.bot.mk.LEGISLATURE_ADJECTIVE} Session opens"
+            ],
             "leg_session_update": [
-                f"*({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when voting starts for a {self.bot.mk.LEGISLATURE_ADJECTIVE} Session"],
+                f"*({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when voting starts for a {self.bot.mk.LEGISLATURE_ADJECTIVE} Session"
+            ],
             "leg_session_submit": [
-                f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when someone submits a Bill or Motion"],
+                f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when someone submits a Bill or Motion"
+            ],
             "leg_session_withdraw": [
-                f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when someone withdraws a Bill or Motion"],
-            "party_join_leave": [f"*(Party Leaders Only)* DM when someone joins or leaves your political party"],
+                f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when someone withdraws a Bill or Motion"
+            ],
+            "party_join_leave": [
+                f"*(Party Leaders Only)* DM when someone joins or leaves your political party"
+            ],
         }
 
         current_settings = await self.ensure_dm_settings(ctx.author.id)
@@ -61,13 +73,14 @@ class Meta(context.CustomCog):
 
         print(choices)
 
-        menu = text.EditSettingsWithEmojifiedLiveToggles(settings=choices,
-                                                         description=
-                                                         f"You can toggle each notification on and off. Once you're "
-                                                         f"done, hit {config.YES} to confirm, or {config.NO} to "
-                                                         f"cancel.\n",
-                                                         title=f"DM Notifications for {ctx.author}",
-                                                         icon=ctx.author_icon)
+        menu = text.EditSettingsWithEmojifiedLiveToggles(
+            settings=choices,
+            description=f"You can toggle each notification on and off. Once you're "
+            f"done, hit {config.YES} to confirm, or {config.NO} to "
+            f"cancel.\n",
+            title=f"DM Notifications for {ctx.author}",
+            icon=ctx.author_icon,
+        )
         result = await menu.prompt(ctx)
 
         if not result.confirmed:
@@ -86,13 +99,17 @@ class Meta(context.CustomCog):
     @commands.command(name="about", aliases=["info", "bot"])
     async def about(self, ctx):
         """About this bot"""
-        invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
+        invite_url = discord.utils.oauth_url(
+            self.bot.user.id, permissions=discord.Permissions(8)
+        )
 
         embed = text.SafeEmbed(
             description=f"[Invite this bot to your Discord Server.]({invite_url})",
         )
 
-        embed.add_field(name="Developer", value="DerJonas#8036 (u/Jovanos)", inline=False)
+        embed.add_field(
+            name="Developer", value="DerJonas#8036 (u/Jovanos)", inline=False
+        )
         embed.add_field(name="Version", value=self.bot.BOT_VERSION, inline=True)
         embed.add_field(name="Servers", value=len(self.bot.guilds), inline=True)
         embed.add_field(name="Prefix", value=f"`{config.BOT_PREFIX}`", inline=True)
@@ -137,7 +154,8 @@ class Meta(context.CustomCog):
             api_http = None
 
         embed = text.SafeEmbed(
-            title=f":ping_pong:  {title}", description="**[status.discord.com](https://status.discord.com/)**\n\n"
+            title=f":ping_pong:  {title}",
+            description="**[status.discord.com](https://status.discord.com/)**\n\n",
         )
         embed.add_field(
             name="Discord",
@@ -145,7 +163,10 @@ class Meta(context.CustomCog):
             inline=False,
         )
 
-        embed.add_field(name="Internal API", value=f"{api_http:.0f}ms" if api_http else "*not running*")
+        embed.add_field(
+            name="Internal API",
+            value=f"{api_http:.0f}ms" if api_http else "*not running*",
+        )
         await message.edit(content=None, embed=embed)
 
     @commands.command(name="commands", aliases=["cmd", "cmds"])
@@ -194,9 +215,9 @@ class Meta(context.CustomCog):
         embed = text.SafeEmbed(
             title=f"All Commands ({amounts})",
             description=f"For more detailed explanations and example usage of commands, "
-                        f"use `{p}help`, `{p}help <Category>`, "
-                        f"or `{p}help <command>`."
-                        f"\n\n{' '.join(description_text)}",
+            f"use `{p}help`, `{p}help <Category>`, "
+            f"or `{p}help <command>`."
+            f"\n\n{' '.join(description_text)}",
         )
 
         if field_text:
@@ -207,8 +228,14 @@ class Meta(context.CustomCog):
     @commands.command(name="addme", aliases=["inviteme", "invite"])
     async def addme(self, ctx):
         """Invite this bot to your Discord server"""
-        invite_url = discord.utils.oauth_url(self.bot.user.id, permissions=discord.Permissions(8))
-        await ctx.send(embed=text.SafeEmbed(title="Add this bot to your own Discord server", description=invite_url))
+        invite_url = discord.utils.oauth_url(
+            self.bot.user.id, permissions=discord.Permissions(8)
+        )
+        await ctx.send(
+            embed=text.SafeEmbed(
+                title="Add this bot to your own Discord server", description=invite_url
+            )
+        )
 
 
 def setup(bot):

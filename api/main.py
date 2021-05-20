@@ -16,7 +16,11 @@ try:
 except ImportError:
     pass
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [API] %(message)s", datefmt="%d.%m.%Y %H:%M:%S")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [API] %(message)s",
+    datefmt="%d.%m.%Y %H:%M:%S",
+)
 sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
 from api.provider import RedditManager, TwitchManager, YouTubeManager
@@ -130,15 +134,20 @@ def ensure_auth(credentials: HTTPBasicCredentials = Depends(security)):
 if ML_ENABLED:
     from api.ml import question_answering, information_extraction
 
-    bert_qa = question_answering.BERTQuestionAnswering(db=db,
-                                                       index_directory=str(pathlib.Path(__file__).parent) + "/ml/index")
+    bert_qa = question_answering.BERTQuestionAnswering(
+        db=db, index_directory=str(pathlib.Path(__file__).parent) + "/ml/index"
+    )
     holmes_ie = information_extraction.InformationExtraction(db=db)
 else:
     bert_qa = holmes_ie = None
 
 reddit_manager = RedditManager(db=db, token_path=TOKEN_PATH, app_ready=app_ready)
-twitch_manager = TwitchManager(db=db, token_path=TOKEN_PATH, reddit_manager=reddit_manager, app_ready=app_ready)
-youtube_manager = YouTubeManager(db=db, token_path=TOKEN_PATH, reddit_manager=reddit_manager, app_ready=app_ready)
+twitch_manager = TwitchManager(
+    db=db, token_path=TOKEN_PATH, reddit_manager=reddit_manager, app_ready=app_ready
+)
+youtube_manager = YouTubeManager(
+    db=db, token_path=TOKEN_PATH, reddit_manager=reddit_manager, app_ready=app_ready
+)
 
 
 class AddWebhook(pydantic.BaseModel):
@@ -206,14 +215,18 @@ async def reddit_list(guild_id: int, auth: str = Depends(ensure_auth)):
 
 @app.post("/reddit/add")
 async def reddit_add(reddit_config: AddWebhook, auth: str = Depends(ensure_auth)):
-    reddit_config.target = reddit_config.target.lower()  # subreddit names are case-insensitive right?
+    reddit_config.target = (
+        reddit_config.target.lower()
+    )  # subreddit names are case-insensitive right?
     await reddit_manager.add_webhook(config=reddit_config)
     return reddit_config
 
 
 @app.post("/reddit/remove")
 async def reddit_remove(reddit_config: RemoveWebhook, auth: str = Depends(ensure_auth)):
-    response = await reddit_manager.remove_webhook(hook_id=reddit_config.id, guild_id=reddit_config.guild_id)
+    response = await reddit_manager.remove_webhook(
+        hook_id=reddit_config.id, guild_id=reddit_config.guild_id
+    )
 
     if "error" not in response:
         response["ok"] = "ok"
@@ -224,7 +237,9 @@ async def reddit_remove(reddit_config: RemoveWebhook, auth: str = Depends(ensure
 @app.post("/reddit/post")
 async def reddit_post(submission: SubmitRedditPost, auth: str = Depends(ensure_auth)):
     return await reddit_manager.post_to_reddit(
-        subreddit=submission.subreddit, title=submission.title, content=submission.content
+        subreddit=submission.subreddit,
+        title=submission.title,
+        content=submission.content,
     )
 
 
@@ -254,7 +269,9 @@ async def twitch_add(twitch_config: AddTwitchHook, auth: str = Depends(ensure_au
 
 @app.post("/twitch/remove")
 async def twitch_remove(twitch_config: RemoveWebhook, auth: str = Depends(ensure_auth)):
-    response = await twitch_manager.remove_webhook(hook_id=twitch_config.id, guild_id=twitch_config.guild_id)
+    response = await twitch_manager.remove_webhook(
+        hook_id=twitch_config.id, guild_id=twitch_config.guild_id
+    )
 
     if "error" not in response:
         response["ok"] = "ok"
@@ -269,7 +286,9 @@ async def twitch_clear(twitch_config: ClearPerGuild, auth: str = Depends(ensure_
 
 
 @app.post("/twitch/callback")
-async def twitch_subscription_verify(request: Request, background_tasks: BackgroundTasks):
+async def twitch_subscription_verify(
+    request: Request, background_tasks: BackgroundTasks
+):
     background_tasks.add_task(twitch_manager.handle_twitch_callback, request)
     js = await request.json()
 
@@ -376,16 +395,20 @@ async def ml_qa_force_index(auth: str = Depends(ensure_auth)):
 @app.post("/ml/question_answering")
 def ml_qa(question: Question, auth: str = Depends(ensure_auth)):
     try:
-        answers = bert_qa.qa.ask(question.question, n_answers=5, n_docs_considered=10, batch_size=1)
+        answers = bert_qa.qa.ask(
+            question.question, n_answers=5, n_docs_considered=10, batch_size=1
+        )
         result = []
 
         for answer in answers:
             result.append(
-                {"answer": answer['answer'],
-                 "score": float(answer['confidence']),
-                 "context": answer['context'],
-                 "full_answer": answer['full_answer'],
-                 "bill": answer['reference']}
+                {
+                    "answer": answer["answer"],
+                    "score": float(answer["confidence"]),
+                    "context": answer["context"],
+                    "full_answer": answer["full_answer"],
+                    "bill": answer["reference"],
+                }
             )
 
         return result

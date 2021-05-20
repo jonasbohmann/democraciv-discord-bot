@@ -61,7 +61,9 @@ class Admin(
             bill.id,
             tag.lower(),
         )
-        await ctx.send(f"{config.YES} `{tag}` was added as a search tag to `{bill.name}` (#{bill.id})")
+        await ctx.send(
+            f"{config.YES} `{tag}` was added as a search tag to `{bill.name}` (#{bill.id})"
+        )
 
     @commands.command(name="forceindex", aliases=["force-index"])
     @commands.is_owner()
@@ -83,21 +85,25 @@ class Experiments(context.CustomCog):
         # remove_cog can't be done in __init__ for some reason
         await self.bot.wait_until_ready()
 
-        public_cmds = filter(lambda cmd: cmd.enabled and not cmd.hidden and cmd.name != "experiments",
-                             self.walk_commands())
+        public_cmds = filter(
+            lambda cmd: cmd.enabled and not cmd.hidden and cmd.name != "experiments",
+            self.walk_commands(),
+        )
 
         if not any(public_cmds):
             # hide this cog if no public experiments
             self.bot.remove_cog(name=self.qualified_name)
 
-    @commands.command(name="experiments", aliases=['beta', 'test', 'testing'])
+    @commands.command(name="experiments", aliases=["beta", "test", "testing"])
     async def experiments(self, ctx):
         """What is this?"""
-        await ctx.send(f"Any experimental commands or features that are still in beta and a "
-                       f"work-in-progress will be put in this `Experimental` category. See the list of "
-                       f"experimental commands below (if there are any right now), and "
-                       f"feel free to test them and share your feedback. Not every command here is guaranteed "
-                       f"to make it into a 'real' command, and some might even be scrapped entirely.")
+        await ctx.send(
+            f"Any experimental commands or features that are still in beta and a "
+            f"work-in-progress will be put in this `Experimental` category. See the list of "
+            f"experimental commands below (if there are any right now), and "
+            f"feel free to test them and share your feedback. Not every command here is guaranteed "
+            f"to make it into a 'real' command, and some might even be scrapped entirely."
+        )
         await ctx.send_help(self)
 
     @commands.command(name="ask")
@@ -107,41 +113,55 @@ class Experiments(context.CustomCog):
 
         This is an experimental command and probably still a work-in-progress."""
 
-        wait = await ctx.send(f"{config.HINT} This might take 30 to 60 seconds. Should this feature make it out "
-                              f"of beta, the time it takes will *hopefully* be sped up to just a couple of seconds by "
-                              f"switching to more powerful server hardware.\n:arrows_counterclockwise: Thinking "
-                              f"really hard about your question...")
+        wait = await ctx.send(
+            f"{config.HINT} This might take 30 to 60 seconds. Should this feature make it out "
+            f"of beta, the time it takes will *hopefully* be sped up to just a couple of seconds by "
+            f"switching to more powerful server hardware.\n:arrows_counterclockwise: Thinking "
+            f"really hard about your question..."
+        )
 
         async with ctx.typing():
-            response = await self.bot.api_request("POST", "ml/question_answering", json={'question': question})
+            response = await self.bot.api_request(
+                "POST", "ml/question_answering", json={"question": question}
+            )
 
         await wait.delete()
 
         if not response:
-            return await ctx.send(f"{config.NO} I couldn't find an answer to that question. Sorry!")
+            return await ctx.send(
+                f"{config.NO} I couldn't find an answer to that question. Sorry!"
+            )
 
-        fmt = ["This uses deep learning, a particular machine learning method, with neural networks to try to "
-               "find answers to a legal question you're asking. All currently existing bills are taken into account "
-               "to try to find the best answer. Google's BERT model in combination with Tensorflow Keras "
-               "are used here.\n\nThis comes with no guarantees about the correctness of the answers. Do not expect "
-               "this to be free of wrong, misleading or irrelevant answers."]
+        fmt = [
+            "This uses deep learning, a particular machine learning method, with neural networks to try to "
+            "find answers to a legal question you're asking. All currently existing bills are taken into account "
+            "to try to find the best answer. Google's BERT model in combination with Tensorflow Keras "
+            "are used here.\n\nThis comes with no guarantees about the correctness of the answers. Do not expect "
+            "this to be free of wrong, misleading or irrelevant answers."
+        ]
 
         for result in response:
-            if result['score'] * 100 <= 1:
+            if result["score"] * 100 <= 1:
                 continue
 
-            if len(result['full_answer']) - len(result['answer']) <= 3:
+            if len(result["full_answer"]) - len(result["answer"]) <= 3:
                 cntxt = []
             else:
                 cntxt = [f"__Context__", f"```{result['full_answer']}```"]
 
-            bill = await models.Bill.convert(ctx, result['bill'])
-            fmt.append(f"**__Found answer in {bill.formatted} with a confidence of {result['score'] * 100:.2f}%__**")
+            bill = await models.Bill.convert(ctx, result["bill"])
+            fmt.append(
+                f"**__Found answer in {bill.formatted} with a confidence of {result['score'] * 100:.2f}%__**"
+            )
             fmt.append(f"```{result['answer']}```")
             fmt.extend(cntxt)
 
-        pages = paginator.SimplePages(entries=fmt, author=f"[BETA] Results for '{question}'",
-                                      icon=self.bot.mk.NATION_ICON_URL, reply=True)
+        pages = paginator.SimplePages(
+            entries=fmt,
+            author=f"[BETA] Results for '{question}'",
+            icon=self.bot.mk.NATION_ICON_URL,
+            reply=True,
+        )
         await pages.start(ctx)
 
     @commands.command(name="extract")
@@ -151,25 +171,34 @@ class Experiments(context.CustomCog):
         This is an experimental command and probably still a work-in-progress."""
 
         async with ctx.typing():
-            response = await self.bot.api_request("POST", "ml/information_extraction", json={'question': query})
+            response = await self.bot.api_request(
+                "POST", "ml/information_extraction", json={"question": query}
+            )
 
         if not response:
-            return await ctx.send(f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!")
+            return await ctx.send(
+                f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
+            )
 
-        fmt = ["This uses Natural Language Processing to topic match your query against all existing bills "
-               "and shows the most closely corresponding excerpts. Using full, grammatical expressions with "
-               f"no spelling errors will improve the quality of your results.\n\nShould this feature come out of "
-               f"beta, then it will probably be integrated into the `{config.BOT_PREFIX}laws search` and "
-               f"`{config.BOT_PREFIX}legislature bills search` commands.\n\n"]
+        fmt = [
+            "This uses Natural Language Processing to topic match your query against all existing bills "
+            "and shows the most closely corresponding excerpts. Using full, grammatical expressions with "
+            f"no spelling errors will improve the quality of your results.\n\nShould this feature come out of "
+            f"beta, then it will probably be integrated into the `{config.BOT_PREFIX}laws search` and "
+            f"`{config.BOT_PREFIX}legislature bills search` commands.\n\n"
+        ]
 
         for result in response:
-            bill = await models.Bill.convert(ctx, result['document_label'])
-            txt = result['text']
+            bill = await models.Bill.convert(ctx, result["document_label"])
+            txt = result["text"]
             fmt.append(f"**__{bill.formatted}__**")
             fmt.append(f"```{txt}```\n")
 
-        pages = paginator.SimplePages(entries=fmt, icon=self.bot.mk.NATION_ICON_URL,
-                                      author=f"[BETA] Results for '{query}'")
+        pages = paginator.SimplePages(
+            entries=fmt,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"[BETA] Results for '{query}'",
+        )
 
         await pages.start(ctx)
 

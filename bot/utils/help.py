@@ -41,7 +41,9 @@ Use these buttons below to navigate between the pages."""
 
 class BotHelpPageSource(menus.ListPageSource):
     def __init__(self, help_command, commands):
-        super().__init__(entries=sorted(commands.keys(), key=lambda c: c.qualified_name), per_page=6)
+        super().__init__(
+            entries=sorted(commands.keys(), key=lambda c: c.qualified_name), per_page=6
+        )
         self.commands = commands
         self.help_command = help_command
         self.prefix = config.BOT_PREFIX
@@ -128,15 +130,21 @@ class GroupHelpPageSource(menus.ListPageSource):
 
         for command in commands:
             hlp = command.short_doc or "No help given."
-            fmt_commands.append(f"__**{config.BOT_PREFIX}{command.qualified_name} {command.signature}**__\n{hlp}\n")
+            fmt_commands.append(
+                f"__**{config.BOT_PREFIX}{command.qualified_name} {command.signature}**__\n{hlp}\n"
+            )
 
         if fmt_commands:
-            embed.add_field(name="Subcommands", value="\n".join(fmt_commands), inline=False)
+            embed.add_field(
+                name="Subcommands", value="\n".join(fmt_commands), inline=False
+            )
 
         maximum = self.get_max_pages()
 
         if maximum > 1:
-            embed.set_footer(text=f"Page {menu.current_page + 1}/{maximum} ({len(self.entries)} commands)")
+            embed.set_footer(
+                text=f"Page {menu.current_page + 1}/{maximum} ({len(self.entries)} commands)"
+            )
 
         return embed
 
@@ -172,11 +180,17 @@ class CogHelpPageSource(menus.ListPageSource):
 
                 signature = f"{default_sig}*__"
 
-            embed.add_field(name=signature, value=command.short_doc or "No help given.", inline=False)
+            embed.add_field(
+                name=signature,
+                value=command.short_doc or "No help given.",
+                inline=False,
+            )
 
         maximum = self.get_max_pages()
         if maximum > 1:
-            embed.set_footer(text=f"Page {menu.current_page + 1}/{maximum} ({len(self.entries)} commands)")
+            embed.set_footer(
+                text=f"Page {menu.current_page + 1}/{maximum} ({len(self.entries)} commands)"
+            )
 
         return embed
 
@@ -192,11 +206,18 @@ class HelpMenu(Pages, inherit_buttons=False):
 
         embed = text.SafeEmbed(title="Welcome to the Democraciv Bot")
         embed.description = BOT_INTRO
-        embed.set_author(name=f"Made by {ctx.bot.owner}", icon_url=ctx.bot.owner.avatar_url_as(static_format="png"))
+        embed.set_author(
+            name=f"Made by {ctx.bot.owner}",
+            icon_url=ctx.bot.owner.avatar_url_as(static_format="png"),
+        )
         self.current_page = -1
         return await channel.send(embed=embed)
 
-    @menus.button(config.HELP_FIRST, position=menus.First(0), skip_if=menus.MenuPages._skip_double_triangle_buttons)
+    @menus.button(
+        config.HELP_FIRST,
+        position=menus.First(0),
+        skip_if=menus.MenuPages._skip_double_triangle_buttons,
+    )
     async def go_to_first_page(self, payload):
         await self.show_page(0)
 
@@ -208,7 +229,11 @@ class HelpMenu(Pages, inherit_buttons=False):
     async def go_to_next_page(self, payload):
         await self.show_checked_page(self.current_page + 1)
 
-    @menus.button(config.HELP_LAST, position=menus.Last(1), skip_if=menus.MenuPages._skip_double_triangle_buttons)
+    @menus.button(
+        config.HELP_LAST,
+        position=menus.Last(1),
+        skip_if=menus.MenuPages._skip_double_triangle_buttons,
+    )
     async def go_to_last_page(self, payload):
         # The call here is safe because it's guarded by skip_if
         await self.show_page(self._source.get_max_pages() - 1)
@@ -222,18 +247,26 @@ class HelpMenu(Pages, inherit_buttons=False):
         async with self.input_lock:
             channel = self.message.channel
             author_id = payload.user_id
-            question = await channel.send(f'{config.USER_INTERACTION_REQUIRED} What page do you want to go to?')
+            question = await channel.send(
+                f"{config.USER_INTERACTION_REQUIRED} What page do you want to go to?"
+            )
             to_delete = [question]
 
             def message_check(m):
-                return (m.author.id == author_id and
-                        channel == m.channel and
-                        m.content.isdigit())
+                return (
+                    m.author.id == author_id
+                    and channel == m.channel
+                    and m.content.isdigit()
+                )
 
             try:
-                msg = await self.bot.wait_for('message', check=message_check, timeout=30.0)
+                msg = await self.bot.wait_for(
+                    "message", check=message_check, timeout=30.0
+                )
             except asyncio.TimeoutError:
-                to_delete.append(await question.reply(':zzz: You took too long to reply.'))
+                to_delete.append(
+                    await question.reply(":zzz: You took too long to reply.")
+                )
                 await asyncio.sleep(5)
             else:
                 page = int(msg.content)
@@ -252,8 +285,8 @@ class HelpMenu(Pages, inherit_buttons=False):
         embed = text.SafeEmbed(
             title="Using the Democraciv Bot",
             description="Optionally, [this guide]"
-                        f"(https://drive.google.com/file/d/1fUWBeRPszLolRtX47OyhAMALudjqWaXc/view?usp=sharing) "
-                        f"explains some additional topics of the bot.",
+            f"(https://drive.google.com/file/d/1fUWBeRPszLolRtX47OyhAMALudjqWaXc/view?usp=sharing) "
+            f"explains some additional topics of the bot.",
         )
 
         entries = (
@@ -272,7 +305,9 @@ class HelpMenu(Pages, inherit_buttons=False):
         if self.current_page == -1:
             self.current_page = 0
 
-        embed.set_footer(text=f"We were on page {self.current_page + 1} before this message.")
+        embed.set_footer(
+            text=f"We were on page {self.current_page + 1} before this message."
+        )
         await self.message.edit(embed=embed)
 
         async def go_back_to_current_page():
@@ -286,7 +321,9 @@ class PaginatedHelpCommand(commands.HelpCommand):
     def __init__(self):
         super().__init__(
             command_attrs={
-                "cooldown": commands.Cooldown(1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user),
+                "cooldown": commands.Cooldown(
+                    1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user
+                ),
                 "help": "Shows help about the bot, a command, or a category",
                 "aliases": ["man", "manual", "h"],
             },
@@ -297,9 +334,7 @@ class PaginatedHelpCommand(commands.HelpCommand):
         return f"{config.NO} `{string}` is neither a command, nor a category."
 
     def subcommand_not_found(self, command, string):
-        return (
-            f"{config.NO} `{string}` is not a subcommand of the `{config.BOT_PREFIX}{command.qualified_name}` command."
-        )
+        return f"{config.NO} `{string}` is not a subcommand of the `{config.BOT_PREFIX}{command.qualified_name}` command."
 
     def get_command_signature(self, command):
         parent = command.full_parent_name
@@ -308,7 +343,9 @@ class PaginatedHelpCommand(commands.HelpCommand):
 
     async def send_bot_help(self, mapping):
         bot = self.context.bot
-        entries = await self.filter_commands(bot.commands, sort=True, key=lambda c: c.qualified_name)
+        entries = await self.filter_commands(
+            bot.commands, sort=True, key=lambda c: c.qualified_name
+        )
 
         all_commands = {}
         for command in entries:
@@ -323,7 +360,9 @@ class PaginatedHelpCommand(commands.HelpCommand):
         await menu.start(self.context)
 
     async def send_cog_help(self, cog):
-        entries = await self.filter_commands(cog.walk_commands(), sort=True, key=lambda c: c.qualified_name)
+        entries = await self.filter_commands(
+            cog.walk_commands(), sort=True, key=lambda c: c.qualified_name
+        )
         menu = HelpMenu(
             CogHelpPageSource(cog, entries, prefix=config.BOT_PREFIX),
             send_intro=False,
@@ -365,11 +404,16 @@ class PaginatedHelpCommand(commands.HelpCommand):
         # The end user doesn't know the difference between a Group and a Command. To avoid confusion, just show them
         # the whole cog
         if group in (
-                self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} session"),
-                self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} withdraw"),
-                self.context.bot.get_command("random"),
-                self.context.bot.get_command(f"{mk.MarkConfig.LEGISLATURE_COMMAND} session export"),
-
+            self.context.bot.get_command(
+                f"{mk.MarkConfig.LEGISLATURE_COMMAND} session"
+            ),
+            self.context.bot.get_command(
+                f"{mk.MarkConfig.LEGISLATURE_COMMAND} withdraw"
+            ),
+            self.context.bot.get_command("random"),
+            self.context.bot.get_command(
+                f"{mk.MarkConfig.LEGISLATURE_COMMAND} session export"
+            ),
         ):
             return await self._send_group_help(group)
 
@@ -379,7 +423,19 @@ class PaginatedHelpCommand(commands.HelpCommand):
         if command:
             cmd = command.lower()
 
-            if cmd.startswith(("bill", "b", "bill", "motion", "m", "motions", "session", "s", "sessions")):
+            if cmd.startswith(
+                (
+                    "bill",
+                    "b",
+                    "bill",
+                    "motion",
+                    "m",
+                    "motions",
+                    "session",
+                    "s",
+                    "sessions",
+                )
+            ):
                 maybe_cmd = f"{ctx.bot.mk.LEGISLATURE_COMMAND} {command}"
                 found = ctx.bot.get_command(maybe_cmd)
 

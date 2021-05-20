@@ -10,14 +10,17 @@ from bot.utils.converter import (
     CaseInsensitiveRole,
     CaseInsensitiveCategoryChannel,
     CaseInsensitiveTextChannel,
-    Fuzzy, FuzzySettings,
+    Fuzzy,
+    FuzzySettings,
 )
 
 
 class NationRoleConverter(CaseInsensitiveRole):
     async def convert(self, ctx: context.CustomContext, argument):
         if not ctx.bot.mk.NATION_ROLE_PREFIX:
-            raise exceptions.DemocracivBotException(f"{config.NO} You can't use Nation Roles with this bot.")
+            raise exceptions.DemocracivBotException(
+                f"{config.NO} You can't use Nation Roles with this bot."
+            )
 
         arg = argument.lower()
         prefix = ctx.bot.mk.NATION_ROLE_PREFIX.lower()
@@ -34,7 +37,9 @@ class NationRoleConverter(CaseInsensitiveRole):
         role = await super().convert(ctx, real_arg)
 
         if not role.name.lower().startswith(ctx.bot.mk.NATION_ROLE_PREFIX.lower()):
-            raise commands.BadArgument(f"{config.NO} You're not allowed to give someone the `{role.name}` role.")
+            raise commands.BadArgument(
+                f"{config.NO} You're not allowed to give someone the `{role.name}` role."
+            )
 
         return role
 
@@ -44,7 +49,9 @@ class CIMemberNoBot(CaseInsensitiveMember):
         member = await super().convert(ctx, argument)
 
         if member.bot:
-            raise commands.BadArgument(f"{config.NO} You cannot give Nation Roles to bots.")
+            raise commands.BadArgument(
+                f"{config.NO} You cannot give Nation Roles to bots."
+            )
 
         return member
 
@@ -52,7 +59,9 @@ class CIMemberNoBot(CaseInsensitiveMember):
 def nation_role_prefix_not_blank():
     def wrapper(ctx):
         if not ctx.bot.mk.NATION_ROLE_PREFIX:
-            raise exceptions.DemocracivBotException(f"{config.NO} You can't use Nation Roles with this bot.")
+            raise exceptions.DemocracivBotException(
+                f"{config.NO} You can't use Nation Roles with this bot."
+            )
         else:
             return True
 
@@ -68,7 +77,9 @@ class PermissionSelectorMenu(menus.Menu):
         self._make_result()
 
     def _make_result(self):
-        self.result = collections.namedtuple("PermissionSelectorResult", ["confirmed", "result"])
+        self.result = collections.namedtuple(
+            "PermissionSelectorResult", ["confirmed", "result"]
+        )
         self.result.confirmed = False
         self.result.result = {"read": False, "send": False}
         return self.result
@@ -78,11 +89,11 @@ class PermissionSelectorMenu(menus.Menu):
         send = "Deny" if self.overwrites.send_messages else "Allow"
         embed = text.SafeEmbed(
             title=f"{config.USER_INTERACTION_REQUIRED}  Which Permissions in #{self.channel.name} do you want "
-                  f"to change?",
+            f"to change?",
             description=f"Select as many things as you want, then click the {config.YES} button to continue, "
-                        f"or {config.NO} to cancel.\n\n"
-                        f":one: {read} Read Messages Permission for `{self.role}` in {self.channel.mention}\n"
-                        f":two: {send} Send Messages Permission for `{self.role}` in {self.channel.mention}",
+            f"or {config.NO} to cancel.\n\n"
+            f":one: {read} Read Messages Permission for `{self.role}` in {self.channel.mention}\n"
+            f":two: {send} Send Messages Permission for `{self.role}` in {self.channel.mention}",
         )
         return await ctx.send(embed=embed)
 
@@ -112,7 +123,12 @@ class PermissionSelectorMenu(menus.Menu):
 class Nation(context.CustomCog, mixin.GovernmentMixin):
     """Useful commands for Nation Admins to manage their nation in Multiciv."""
 
-    @commands.group(name="nation", aliases=["civ", "n"], case_insensitive=True, invoke_without_command=True)
+    @commands.group(
+        name="nation",
+        aliases=["civ", "n"],
+        case_insensitive=True,
+        invoke_without_command=True,
+    )
     async def nation(self, ctx):
         """{NATION_NAME}"""
 
@@ -121,7 +137,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         embed = text.SafeEmbed(
             description=f"{description}\n\n[Constitution]({self.bot.mk.CONSTITUTION})\n"
-                        f"[Wiki](https://reddit.com/r/democraciv/wiki/{nation_wiki})"
+            f"[Wiki](https://reddit.com/r/democraciv/wiki/{nation_wiki})"
         )
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
 
@@ -151,7 +167,9 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         embed.add_field(
             name="Government",
-            value=f"{prime_minister}\n" f"{speaker}\n" f"Amount of {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL}: {legislators}",
+            value=f"{prime_minister}\n"
+            f"{speaker}\n"
+            f"Amount of {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL}: {legislators}",
             inline=False,
         )
 
@@ -165,11 +183,11 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         embed = text.SafeEmbed(
             description=f"Nation Admins are allowed to make roles and "
-                        f"channels on the {self.bot.dciv.name} server that are "
-                        f"specific for their nation (`{p}help Nation`).\n\nAdditionally, they are "
-                        f"allowed to create, edit and delete political parties "
-                        f"(`{p}help Political Parties`).\n\nNation Admins can also pin messages "
-                        f"in every category that belongs to their nation."
+            f"channels on the {self.bot.dciv.name} server that are "
+            f"specific for their nation (`{p}help Nation`).\n\nAdditionally, they are "
+            f"allowed to create, edit and delete political parties "
+            f"(`{p}help Political Parties`).\n\nNation Admins can also pin messages "
+            f"in every category that belongs to their nation."
         )
 
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
@@ -195,13 +213,17 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         """
         if message.channel.category_id not in self.bot.mk.NATION_CATEGORIES:
-            raise exceptions.DemocracivBotException(f"{config.NO} You're not allowed to pin messages in this channel.")
+            raise exceptions.DemocracivBotException(
+                f"{config.NO} You're not allowed to pin messages in this channel."
+            )
 
         if not message and ctx.message.reference:
             message = ctx.message.reference.resolved
 
             if not message:
-                message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+                message = await ctx.channel.fetch_message(
+                    ctx.message.reference.message_id
+                )
 
                 if not message:
                     return
@@ -209,30 +231,42 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         await message.pin()
         await ctx.send(f"{config.YES} Done.")
 
-    @nation.group(name="roles", aliases=["role"], case_insensitive=True, invoke_without_command=True)
+    @nation.group(
+        name="roles",
+        aliases=["role"],
+        case_insensitive=True,
+        invoke_without_command=True,
+    )
     @checks.moderation_or_nation_leader()
     @nation_role_prefix_not_blank()
     async def nationroles(self, ctx):
         """List all nation-specific roles that can be given out with `{PREFIX}nation roles toggle`"""
 
-        predicate = lambda r: r.name.lower().startswith(self.bot.mk.NATION_ROLE_PREFIX.lower())
+        predicate = lambda r: r.name.lower().startswith(
+            self.bot.mk.NATION_ROLE_PREFIX.lower()
+        )
         found = filter(predicate, ctx.guild.roles)
         fmt = [r.mention for r in found]
-        fmt.insert(0, f"These roles can be given out with `{config.BOT_PREFIX}nation roles toggle` by you.\n")
+        fmt.insert(
+            0,
+            f"These roles can be given out with `{config.BOT_PREFIX}nation roles toggle` by you.\n",
+        )
 
         pages = paginator.SimplePages(
             entries=fmt,
             author=f"Nation Roles",
             icon=self.bot.mk.safe_flag,
             empty_message="There are no roles that you can give out.",
-            per_page=12
+            per_page=12,
         )
         await pages.start(ctx)
 
     @nationroles.command(name="toggle")
     @checks.moderation_or_nation_leader()
     @nation_role_prefix_not_blank()
-    async def toggle_role(self, ctx, people: commands.Greedy[CIMemberNoBot], *, role: NationRoleConverter):
+    async def toggle_role(
+        self, ctx, people: commands.Greedy[CIMemberNoBot], *, role: NationRoleConverter
+    ):
         """Give someone a role, or remove one from them
 
         **Example**:
@@ -262,7 +296,9 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         """Create a new nation-specific roles that can be given out with `{PREFIX}nation roles toggle`"""
 
         if not name:
-            name = await ctx.input(f"{config.USER_INTERACTION_REQUIRED} What should be the name of the new role?")
+            name = await ctx.input(
+                f"{config.USER_INTERACTION_REQUIRED} What should be the name of the new role?"
+            )
 
         if name.lower().startswith(self.bot.mk.NATION_ROLE_PREFIX.lower()):
             role_name = name
@@ -302,13 +338,17 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
             )
 
             if category.id not in self.bot.mk.NATION_CATEGORIES:
-                return await ctx.send(f"{config.NO} The `{category.name}` category does not belong to your nation.")
+                return await ctx.send(
+                    f"{config.NO} The `{category.name}` category does not belong to your nation."
+                )
 
         elif len(self.bot.mk.NATION_CATEGORIES) == 1:
             category = self.bot.dciv.get_channel(self.bot.mk.NATION_CATEGORIES[0])
 
         else:
-            return await ctx.send(f"{config.NO} Your nation has no categories for some reason.")
+            return await ctx.send(
+                f"{config.NO} Your nation has no categories for some reason."
+            )
 
         channel_name = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} What should be the name of the new channel?"
@@ -325,7 +365,9 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
     @nation.command(name="permissions", aliases=["perms", "permission", "perm"])
     @checks.moderation_or_nation_leader()
-    async def set_channel_perms(self, ctx, *, channel: Fuzzy[CaseInsensitiveTextChannel] = None):
+    async def set_channel_perms(
+        self, ctx, *, channel: Fuzzy[CaseInsensitiveTextChannel] = None
+    ):
         """Toggle Read and/or Send Messages permissions for a role or person in one of your nation's channels"""
 
         if not channel:
@@ -336,22 +378,30 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
             )
 
         if channel.category_id not in self.bot.mk.NATION_CATEGORIES:
-            return await ctx.send(f"{config.NO} The `{channel.name}` channel does not belong to your nation.")
+            return await ctx.send(
+                f"{config.NO} The `{channel.name}` channel does not belong to your nation."
+            )
 
         user_input = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} For which role *or* person should the "
             f"permissions in {channel.mention} be changed?"
         )
 
-        conv = await Fuzzy[CaseInsensitiveRole, CaseInsensitiveMember, FuzzySettings(weights=(4, 2))]
+        conv = await Fuzzy[
+            CaseInsensitiveRole, CaseInsensitiveMember, FuzzySettings(weights=(4, 2))
+        ]
         role = await conv.convert(ctx, user_input)
 
         overwrites = channel.overwrites_for(role)
 
-        result = await PermissionSelectorMenu(role=role, channel=channel, overwrites=overwrites).prompt(ctx)
+        result = await PermissionSelectorMenu(
+            role=role, channel=channel, overwrites=overwrites
+        ).prompt(ctx)
 
         if not result.confirmed:
-            return await ctx.send(f"{config.NO} You didn't decide on which permission(s) to change.")
+            return await ctx.send(
+                f"{config.NO} You didn't decide on which permission(s) to change."
+            )
 
         permission_to_change = result.result
 

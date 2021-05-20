@@ -65,12 +65,8 @@ class MarkConfig:
     NATION_NAME = "Ottoman Mercantile Divan"
     NATION_FULL_NAME = "Ottoman Mercantile Divan"
     NATION_ADJECTIVE = "Ottoman"
-    NATION_FLAG_URL = (
-        "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=1024"
-    )
-    NATION_ICON_URL = (
-        "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=102496"
-    )
+    NATION_FLAG_URL = "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=1024"
+    NATION_ICON_URL = "https://cdn.discordapp.com/avatars/742114348083839008/565389e5e30b93e301111e3ebc64d2e3.png?size=102496"
     NATION_EMOJI = "<:ottoman:784984719728836638>>"
 
     LEGISLATURE_NAME = "Grand Divan"
@@ -104,19 +100,11 @@ class MarkConfig:
     LEGAL_CODE = "https://docs.google.com/document/d/1nmDfOy3DypadML817J_d2pCc8FpDlO7HUUhHOajWG2o/edit?usp=sharing"
     POLITICAL_PARTIES = "https://www.reddit.com/r/democraciv/wiki/parties"
 
-    LEGISLATURE_DOCKET = (
-        "https://docs.google.com/spreadsheets/d/1k3NkAbh-32ciHMqboZRQVXXkdjT1T21qhtdom0JSm-Q/edit?usp=sharing"
-    )
-    LEGISLATURE_PROCEDURES = (
-        "https://docs.google.com/document/d/1vUGVIv0F0ZK2cAJrhaDaOS02iKIz8KOXSwjoZZgnEmo/edit?usp=sharing"
-    )
+    LEGISLATURE_DOCKET = "https://docs.google.com/spreadsheets/d/1k3NkAbh-32ciHMqboZRQVXXkdjT1T21qhtdom0JSm-Q/edit?usp=sharing"
+    LEGISLATURE_PROCEDURES = "https://docs.google.com/document/d/1vUGVIv0F0ZK2cAJrhaDaOS02iKIz8KOXSwjoZZgnEmo/edit?usp=sharing"
 
-    MINISTRY_WORKSHEET = (
-        "https://docs.google.com/spreadsheets/d/1hrBA2yftAilQFhPwCDtm74YBVFWRce5l41wRsKf9qdI/edit?usp=sharing"
-    )
-    MINISTRY_PROCEDURES = (
-        "https://docs.google.com/document/d/1c6HtdY7urz4F3fH9Nra83Qc1bNVrp_O9zmaeFs6szgA/edit?usp=sharing"
-    )
+    MINISTRY_WORKSHEET = "https://docs.google.com/spreadsheets/d/1hrBA2yftAilQFhPwCDtm74YBVFWRce5l41wRsKf9qdI/edit?usp=sharing"
+    MINISTRY_PROCEDURES = "https://docs.google.com/document/d/1c6HtdY7urz4F3fH9Nra83Qc1bNVrp_O9zmaeFs6szgA/edit?usp=sharing"
 
     def __init__(self, bot):
         self.bot = bot
@@ -126,7 +114,11 @@ class MarkConfig:
             return self._attributes_as_dict
         except AttributeError:
             attributes = inspect.getmembers(self.__class__)
-            as_dict = {a[0]: a[1] for a in attributes if not a[0].startswith("__") and not a[0].endswith("__")}
+            as_dict = {
+                a[0]: a[1]
+                for a in attributes
+                if not a[0].startswith("__") and not a[0].endswith("__")
+            }
 
             for key, value in as_dict.items():
                 if type(value) == property:
@@ -139,18 +131,28 @@ class MarkConfig:
         try:
             name = self.bot.get_democraciv_role(role).name
 
-            if self.NATION_ROLE_PREFIX and name.lower().startswith(self.NATION_ROLE_PREFIX.lower()):
-                return name[len(self.NATION_ROLE_PREFIX):]
+            if self.NATION_ROLE_PREFIX and name.lower().startswith(
+                self.NATION_ROLE_PREFIX.lower()
+            ):
+                return name[len(self.NATION_ROLE_PREFIX) :]
 
         except exceptions.RoleNotFoundError:
             return alt
 
-    legislator_term = _make_property(DemocracivRole.LEGISLATOR, LEGISLATURE_LEGISLATOR_NAME)
+    legislator_term = _make_property(
+        DemocracivRole.LEGISLATOR, LEGISLATURE_LEGISLATOR_NAME
+    )
     speaker_term = _make_property(DemocracivRole.SPEAKER, LEGISLATURE_SPEAKER_NAME)
-    vice_speaker_term = _make_property(DemocracivRole.VICE_SPEAKER, LEGISLATURE_VICE_SPEAKER_NAME)
+    vice_speaker_term = _make_property(
+        DemocracivRole.VICE_SPEAKER, LEGISLATURE_VICE_SPEAKER_NAME
+    )
     minister_term = _make_property(DemocracivRole.MINISTER, MINISTRY_MINISTER_NAME)
-    pm_term = _make_property(DemocracivRole.PRIME_MINISTER, MINISTRY_PRIME_MINISTER_NAME)
-    lt_pm_term = _make_property(DemocracivRole.LT_PRIME_MINISTER, MINISTRY_VICE_PRIME_MINISTER_NAME)
+    pm_term = _make_property(
+        DemocracivRole.PRIME_MINISTER, MINISTRY_PRIME_MINISTER_NAME
+    )
+    lt_pm_term = _make_property(
+        DemocracivRole.LT_PRIME_MINISTER, MINISTRY_VICE_PRIME_MINISTER_NAME
+    )
     justice_term = _make_property(DemocracivRole.JUSTICE, COURT_JUSTICE_NAME)
     judge_term = _make_property(DemocracivRole.JUDGE, COURT_JUDGE_NAME)
 

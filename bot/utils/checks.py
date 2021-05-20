@@ -77,8 +77,9 @@ def tag_check():
         if ctx.author.id == ctx.bot.owner_id:
             return True
 
-        is_allowed = ctx.author.guild_permissions.administrator or await ctx.bot.get_guild_setting(
-            ctx.guild.id, "tag_creation_allowed"
+        is_allowed = (
+            ctx.author.guild_permissions.administrator
+            or await ctx.bot.get_guild_setting(ctx.guild.id, "tag_creation_allowed")
         )
 
         if is_allowed:
@@ -95,6 +96,8 @@ def tag_check():
 
 def moderation_or_nation_leader():
     if mk.MarkConfig.IS_MULTICIV:
-        return has_any_democraciv_role(mk.DemocracivRole.MODERATION, mk.DemocracivRole.NATION_ADMIN)
+        return has_any_democraciv_role(
+            mk.DemocracivRole.MODERATION, mk.DemocracivRole.NATION_ADMIN
+        )
     else:
         return has_democraciv_role(mk.DemocracivRole.MODERATION)

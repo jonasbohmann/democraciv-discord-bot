@@ -22,8 +22,10 @@ class YouTubeManager:
         self._loop.create_task(self.make_session())
 
         if (
-                self.YOUTUBE_DATA_API_V3_KEY and self.YOUTUBE_CHANNEL_ID and
-                self.YOUTUBE_CHANNEL_UPLOADS_PLAYLIST and self.YOUTUBE_WEBHOOK
+            self.YOUTUBE_DATA_API_V3_KEY
+            and self.YOUTUBE_CHANNEL_ID
+            and self.YOUTUBE_CHANNEL_UPLOADS_PLAYLIST
+            and self.YOUTUBE_WEBHOOK
         ):
             self.youtube_upload_tasks.start()
 
@@ -33,8 +35,12 @@ class YouTubeManager:
             self.YOUTUBE_DATA_API_V3_KEY = token_json["youtube"]["api_key"]
             self.YOUTUBE_SUBREDDIT = token_json["youtube"]["subreddit"]
             self.YOUTUBE_CHANNEL_ID = token_json["youtube"]["channel_id"]
-            self.YOUTUBE_CHANNEL_UPLOADS_PLAYLIST = token_json["youtube"]["channel_uploads_playlist_id"]
-            self.YOUTUBE_VIDEO_UPLOADS_TO_REDDIT = token_json["youtube"]["post_to_subreddit"]
+            self.YOUTUBE_CHANNEL_UPLOADS_PLAYLIST = token_json["youtube"][
+                "channel_uploads_playlist_id"
+            ]
+            self.YOUTUBE_VIDEO_UPLOADS_TO_REDDIT = token_json["youtube"][
+                "post_to_subreddit"
+            ]
             self.YOUTUBE_WEBHOOK = token_json["youtube"]["webhook"]
 
     async def make_session(self):
@@ -46,10 +52,10 @@ class YouTubeManager:
         API key."""
 
         async with self.session.get(
-                f"https://www.googleapis.com/youtube/v3/search?"
-                f"part=snippet&channelId={self.YOUTUBE_CHANNEL_ID}"
-                f"&type=video&eventType=live&maxResults=1&key={self.YOUTUBE_DATA_API_V3_KEY}",
-                headers={"Accept": "application/json"},
+            f"https://www.googleapis.com/youtube/v3/search?"
+            f"part=snippet&channelId={self.YOUTUBE_CHANNEL_ID}"
+            f"&type=video&eventType=live&maxResults=1&key={self.YOUTUBE_DATA_API_V3_KEY}",
+            headers={"Accept": "application/json"},
         ) as response:
             if response.status == 200:
                 stream_data = await response.json()
@@ -60,7 +66,8 @@ class YouTubeManager:
             return None
 
         status = await self.db.pool.execute(
-            "INSERT INTO youtube_stream (id) VALUES ($1) ON CONFLICT DO NOTHING", stream_id
+            "INSERT INTO youtube_stream (id) VALUES ($1) ON CONFLICT DO NOTHING",
+            stream_id,
         )
 
         # ID already in database -> stream already announced
@@ -68,9 +75,9 @@ class YouTubeManager:
             return None
 
         async with self.session.get(
-                f"https://www.googleapis.com/youtube/v3/videos?part=snippet&id={stream_id}"
-                f"&key={self.YOUTUBE_DATA_API_V3_KEY}",
-                headers={"Accept": "application/json"},
+            f"https://www.googleapis.com/youtube/v3/videos?part=snippet&id={stream_id}"
+            f"&key={self.YOUTUBE_DATA_API_V3_KEY}",
+            headers={"Accept": "application/json"},
         ) as response:
             if response.status == 200:
                 return await response.json()
@@ -102,22 +109,28 @@ class YouTubeManager:
         thumbnail = video_data["snippet"]["thumbnails"]["high"]["url"]
         video_url = f'https://youtube.com/watch?v={video_data["id"]}'
 
-        embed = discord.Embed(title=title, url=video_url,
-                              description=self.shorten_description(description), colour=0x1B1C20)
+        embed = discord.Embed(
+            title=title,
+            url=video_url,
+            description=self.shorten_description(description),
+            colour=0x1B1C20,
+        )
 
-        embed.set_author(name=f"{channel_title} - Live on YouTube",
-                         icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
-                                  "833693607084818432/youtube_social_circle_red.png")
+        embed.set_author(
+            name=f"{channel_title} - Live on YouTube",
+            icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
+            "833693607084818432/youtube_social_circle_red.png",
+        )
 
         if thumbnail.startswith("https://"):
             embed.set_image(url=thumbnail)
 
     async def get_newest_upload(self) -> typing.Optional[typing.Dict]:
         async with self.session.get(
-                "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet"
-                f"&maxResults=3&playlistId={self.YOUTUBE_CHANNEL_UPLOADS_PLAYLIST}"
-                f"&key={self.YOUTUBE_DATA_API_V3_KEY}",
-                headers={"Accept": "application/json"},
+            "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet"
+            f"&maxResults=3&playlistId={self.YOUTUBE_CHANNEL_UPLOADS_PLAYLIST}"
+            f"&key={self.YOUTUBE_DATA_API_V3_KEY}",
+            headers={"Accept": "application/json"},
         ) as response:
             if response.status == 200:
                 return await response.json()
@@ -157,7 +170,8 @@ class YouTubeManager:
 
             # Try to add post id to database
             status = await self.db.pool.execute(
-                "INSERT INTO youtube_upload (id) VALUES ($1) ON CONFLICT DO NOTHING", video_id
+                "INSERT INTO youtube_upload (id) VALUES ($1) ON CONFLICT DO NOTHING",
+                video_id,
             )
 
             # ID already in database -> post already seen
@@ -171,15 +185,27 @@ class YouTubeManager:
             video_link = f"https://youtube.com/watch?v={video_id}"
 
             if self.YOUTUBE_VIDEO_UPLOADS_TO_REDDIT:
-                await self.reddit_manager.post_to_reddit(subreddit=self.YOUTUBE_SUBREDDIT, title=title, url=video_link)
+                await self.reddit_manager.post_to_reddit(
+                    subreddit=self.YOUTUBE_SUBREDDIT, title=title, url=video_link
+                )
 
-            embed = discord.Embed(title=title, description=self.shorten_description(description),
-                                  url=video_link, colour=0x1B1C20)
-            embed.set_author(name=f"{channel} - New YouTube Video Uploaded",
-                             icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
-                                      "833695619838640189/youtube_social_circle_white.png")
+            embed = discord.Embed(
+                title=title,
+                description=self.shorten_description(description),
+                url=video_link,
+                colour=0x1B1C20,
+            )
+            embed.set_author(
+                name=f"{channel} - New YouTube Video Uploaded",
+                icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
+                "833695619838640189/youtube_social_circle_white.png",
+            )
             embed.set_image(url=thumbnail_url)
 
-            async with self.session.post(self.YOUTUBE_WEBHOOK, json={"embeds": [embed.to_dict()]}) as response:
+            async with self.session.post(
+                self.YOUTUBE_WEBHOOK, json={"embeds": [embed.to_dict()]}
+            ) as response:
                 if response.status not in (200, 204):
-                    logger.error(f"Error while sending Twitch webhook: {response.status} {await response.text()}")
+                    logger.error(
+                        f"Error while sending Twitch webhook: {response.status} {await response.text()}"
+                    )

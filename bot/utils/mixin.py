@@ -49,13 +49,23 @@ class GovernmentMixin:
             empty_message = f"No one has submitted any {model.__name__.lower()}s yet."
 
         pages = paginator.SimplePages(
-            entries=formatted, icon=self.bot.mk.NATION_ICON_URL, author=title, empty_message=empty_message,
-            per_page=per_page
+            entries=formatted,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=title,
+            empty_message=empty_message,
+            per_page=per_page,
         )
         await pages.start(ctx)
 
-    async def _detail_view(self, ctx: context.CustomContext, *, obj: typing.Union[models.Bill, models.Motion]):
-        embed = text.SafeEmbed(title=f"{obj.name} (#{obj.id})", description=obj.description, url=obj.link)
+    async def _detail_view(
+        self,
+        ctx: context.CustomContext,
+        *,
+        obj: typing.Union[models.Bill, models.Motion],
+    ):
+        embed = text.SafeEmbed(
+            title=f"{obj.name} (#{obj.id})", description=obj.description, url=obj.link
+        )
 
         if obj.submitter is not None:
             embed.set_author(
@@ -79,20 +89,28 @@ class GovernmentMixin:
             )
 
             if obj.sponsors:
-                fmt_sponsors = "\n".join([f"{sponsor.mention} {sponsor}" for sponsor in obj.sponsors])
+                fmt_sponsors = "\n".join(
+                    [f"{sponsor.mention} {sponsor}" for sponsor in obj.sponsors]
+                )
                 embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
 
-            history = [f"{entry.date.strftime('%d %B %Y')} - {entry.note if entry.note else entry.after}"
-                       for entry in obj.history[:5]]
+            history = [
+                f"{entry.date.strftime('%d %B %Y')} - {entry.note if entry.note else entry.after}"
+                for entry in obj.history[:5]
+            ]
 
             if history:
                 embed.add_field(name="History", value="\n".join(history))
 
             if obj.status.is_law:
                 # todo remove session when mk8 ends
-                embed.set_footer(text=f"All dates are in UTC. This is an active law. Session #{obj.session.id}")
+                embed.set_footer(
+                    text=f"All dates are in UTC. This is an active law. Session #{obj.session.id}"
+                )
             else:
-                embed.set_footer(text=f"All dates are in UTC. Session #{obj.session.id}")
+                embed.set_footer(
+                    text=f"All dates are in UTC. Session #{obj.session.id}"
+                )
 
             view = await ctx.send(embed=embed)
 
@@ -105,19 +123,26 @@ class GovernmentMixin:
 
     async def _show_bill_text(self, ctx, bill: models.Bill):
         entries = bill.content.splitlines()
-        entries.insert(0, f"[Link to the Google Docs document of this Bill]({bill.link})\n"
-                          f"*Am I showing you outdated or wrong text? Tell the {self.bot.mk.speaker_term} to "
-                          f"synchronize this text with the Google Docs text of this bill with "
-                          f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill synchronize {bill.id}`.*\n\n")
-        pages = paginator.SimplePages(entries=entries, icon=self.bot.mk.NATION_ICON_URL,
-                                      author=f"{bill.name} (#{bill.id})")
+        entries.insert(
+            0,
+            f"[Link to the Google Docs document of this Bill]({bill.link})\n"
+            f"*Am I showing you outdated or wrong text? Tell the {self.bot.mk.speaker_term} to "
+            f"synchronize this text with the Google Docs text of this bill with "
+            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill synchronize {bill.id}`.*\n\n",
+        )
+        pages = paginator.SimplePages(
+            entries=entries,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"{bill.name} (#{bill.id})",
+        )
 
         await pages.start(ctx)
 
     async def _search_model(self, ctx, *, model, query: str, return_model=False):
         if len(query) < 3:
             raise exceptions.DemocracivBotException(
-                f"{config.NO} The query to search for has to be at least 3 characters long.")
+                f"{config.NO} The query to search for has to be at least 3 characters long."
+            )
 
         if model is models.Motion:
             found = await self.bot.db.fetch(
@@ -138,8 +163,9 @@ class GovernmentMixin:
             is_law = model is models.Law
             # First, search by name similarity
             async with self.bot.db.acquire() as con:
-                results = await self._search_bill_by_name(query, connection=con, search_laws=is_law,
-                                                          return_model=return_model)
+                results = await self._search_bill_by_name(
+                    query, connection=con, search_laws=is_law, return_model=return_model
+                )
 
                 # Set word similarity threshold for search by tag
                 await self._update_pg_trgm_similarity_threshold(0.4, connection=con)
@@ -161,8 +187,9 @@ class GovernmentMixin:
                 #    ):
                 #        continue
 
-                result = await self._search_bill_by_tag(query, connection=con, search_laws=is_law,
-                                                        return_model=return_model)
+                result = await self._search_bill_by_tag(
+                    query, connection=con, search_laws=is_law, return_model=return_model
+                )
                 if result:
                     results.update(result)
 
@@ -178,7 +205,9 @@ class GovernmentMixin:
         if isinstance(member, converter.PoliticalParty):
             name = member.role.name
             members = [m.id for m in member.role.members]
-            empty = f"No member of {name} has {submit_term} a {model.__name__.lower()} yet."
+            empty = (
+                f"No member of {name} has {submit_term} a {model.__name__.lower()} yet."
+            )
             title = f"{model.__name__}s from members of {name}"
             icon = await member.get_logo() or self.bot.mk.NATION_ICON_URL or EmptyEmbed
         else:
@@ -197,7 +226,8 @@ class GovernmentMixin:
         elif model is models.Law:
             objs_from_thing = await self.bot.db.fetch(
                 "SELECT id FROM bill WHERE submitter = ANY($1::bigint[]) AND status = $2 ORDER BY id;",
-                members, models.BillIsLaw.flag.value
+                members,
+                models.BillIsLaw.flag.value,
             )
         else:
             objs_from_thing = await self.bot.db.fetch(
@@ -215,12 +245,17 @@ class GovernmentMixin:
         if not paginate:
             return formatted
 
-        pages = paginator.SimplePages(entries=formatted, author=title, icon=icon, per_page=per_page,
-                                      empty_message=empty)
+        pages = paginator.SimplePages(
+            entries=formatted,
+            author=title,
+            icon=icon,
+            per_page=per_page,
+            empty_message=empty,
+        )
         await pages.start(ctx)
 
     async def _search_bill_by_name(
-            self, name: str, connection=None, search_laws: bool = False, return_model=False
+        self, name: str, connection=None, search_laws: bool = False, return_model=False
     ) -> typing.Dict[typing.Union[models.Bill, models.Law, str], None]:
         """Search for bills by their name, returns list with prettified strings of found bills"""
 
@@ -258,9 +293,14 @@ class GovernmentMixin:
 
         return found
 
-    async def _search_bill_by_tag(self, tag: str, connection=None,
-                                  search_laws: bool = False, *,
-                                  return_model=False) -> typing.Dict[typing.Union[models.Bill, models.Law, str], None]:
+    async def _search_bill_by_tag(
+        self,
+        tag: str,
+        connection=None,
+        search_laws: bool = False,
+        *,
+        return_model=False,
+    ) -> typing.Dict[typing.Union[models.Bill, models.Law, str], None]:
         """Search for bills by their tag(s), returns list with prettified strings of found laws"""
 
         con = connection or self.bot.db
@@ -288,7 +328,9 @@ class GovernmentMixin:
             # todo fix this
 
             try:
-                obj = await model.convert(context.MockContext(self.bot), record["bill_id"])
+                obj = await model.convert(
+                    context.MockContext(self.bot), record["bill_id"]
+                )
                 if return_model:
                     formatted[obj] = None
                 else:
@@ -298,7 +340,9 @@ class GovernmentMixin:
 
         return formatted
 
-    async def _update_pg_trgm_similarity_threshold(self, threshold: float = 0.3, connection=None):
+    async def _update_pg_trgm_similarity_threshold(
+        self, threshold: float = 0.3, connection=None
+    ):
         # I couldn't figure out how to make the setting persist in all sessions from the connection pool, so
         # we just set it every time per connection
 
@@ -319,16 +363,24 @@ class GovernmentMixin:
         return len(link) >= 15 and link.startswith(valid_google_docs_url_strings)
 
     async def get_active_leg_session(self) -> typing.Optional[models.Session]:
-        session_id = await self.bot.db.fetchval("SELECT id FROM legislature_session WHERE status != 'Closed'")
+        session_id = await self.bot.db.fetchval(
+            "SELECT id FROM legislature_session WHERE status != 'Closed'"
+        )
 
         if session_id is not None:
-            return await models.Session.convert(context.MockContext(self.bot), session_id)
+            return await models.Session.convert(
+                context.MockContext(self.bot), session_id
+            )
 
     async def get_last_leg_session(self) -> typing.Optional[models.Session]:
-        session_id = await self.bot.db.fetchval("SELECT MAX(id) FROM legislature_session")
+        session_id = await self.bot.db.fetchval(
+            "SELECT MAX(id) FROM legislature_session"
+        )
 
         if session_id is not None:
-            return await models.Session.convert(context.MockContext(self.bot), session_id)
+            return await models.Session.convert(
+                context.MockContext(self.bot), session_id
+            )
 
     class MockChannel:
         id = 0
@@ -338,9 +390,13 @@ class GovernmentMixin:
             pass
 
     @property
-    def gov_announcements_channel(self) -> typing.Union[discord.TextChannel, MockChannel]:
+    def gov_announcements_channel(
+        self,
+    ) -> typing.Union[discord.TextChannel, MockChannel]:
         try:
-            return self.bot.get_democraciv_channel(mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL)
+            return self.bot.get_democraciv_channel(
+                mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL
+            )
         except exceptions.ChannelNotFoundError:
             return self.MockChannel()
 
@@ -376,10 +432,14 @@ class GovernmentMixin:
             return
 
         for legislator in self.legislator_role.members:
-            await self.bot.safe_send_dm(target=legislator, reason=reason, message=message)
+            await self.bot.safe_send_dm(
+                target=legislator, reason=reason, message=message
+            )
 
     def is_cabinet(self, member: discord.Member) -> bool:
-        return self.speaker_role in member.roles or self.vice_speaker_role in member.roles
+        return (
+            self.speaker_role in member.roles or self.vice_speaker_role in member.roles
+        )
 
     @property
     def justice_role(self) -> typing.Optional[discord.Role]:
