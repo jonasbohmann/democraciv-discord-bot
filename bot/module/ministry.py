@@ -18,7 +18,7 @@ class LawPassScheduler(text.AnnouncementScheduler):
         message = [f"The following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"]
 
         for obj in self._objects:
-            message.append(f"-  [**{obj.name}**]({obj.link})")
+            message.append(f"-  **[{obj.name}]({obj.link})**")
 
         message.append(
             f"\nAll new laws were added to `{config.BOT_PREFIX}laws` and can now be found with "
@@ -38,7 +38,7 @@ class LawVetoScheduler(text.AnnouncementScheduler):
         message = [f"The following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"]
 
         for obj in self._objects:
-            message.append(f"-  [**{obj.name}**]({obj.link})")
+            message.append(f"-  **[{obj.name}]({obj.link})**")
 
         embed.description = "\n".join(message)
         return embed
@@ -94,7 +94,11 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
         return pretty_bills
 
     MINISTRY_ALIASES = ["min", "exec", "cabinet", "minister", "ministry"]
-    MINISTRY_ALIASES.remove(mk.MarkConfig.MINISTRY_COMMAND.lower())
+
+    try:
+        MINISTRY_ALIASES.remove(mk.MarkConfig.MINISTRY_COMMAND.lower())
+    except ValueError:
+        pass
 
     @commands.group(
         name=mk.MarkConfig.MINISTRY_COMMAND,

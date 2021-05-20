@@ -4,7 +4,7 @@ import datetime
 import typing
 import discord
 
-from discord.ext import tasks, menus
+from discord.ext import tasks, menus, commands
 from bot.config import config, mk
 
 
@@ -77,9 +77,36 @@ class AnnouncementScheduler:
         self._task.cancel()
         self._objects.clear()
 
+    def _split_embeds(self, original_embed: discord.Embed) -> typing.List[discord.Embed]:
+        paginator = commands.Paginator(prefix="", suffix="", max_size=2035)
+
+        for line in original_embed.description.splitlines():
+            paginator.add_line(line)
+
+        embeds = []
+
+        for page in paginator.pages:
+            em = SafeEmbed(title=original_embed.title, description=page)
+            em.set_author(icon_url=original_embed.author.icon_url, name=original_embed.author.name)
+            embeds.append(em)
+
+        return embeds
+
     async def send_messages(self):
         message = self.get_message()
         embed = self.get_embed()
+
+        if len(embed) >= 5080 or len(embed.description) >= 2035:
+            embeds = self._split_embeds(embed)
+            first = embeds.pop(0)
+
+            await self.channel.send(message, embed=first, allowed_mentions=discord.AllowedMentions(roles=True))
+
+            for emb in embeds:
+                await self.channel.send(embed=emb)
+
+            return
+
         await self.channel.send(message, embed=embed, allowed_mentions=discord.AllowedMentions(roles=True))
 
     @tasks.loop(seconds=30)
@@ -111,8 +138,8 @@ class RedditAnnouncementScheduler(AnnouncementScheduler):
               "title": title,
               "content": content}
 
-        await self.bot.api_request("POST", "reddit/post", silent=True, json=js)
         await super().send_messages()
+        await self.bot.api_request("POST", "reddit/post", silent=True, json=js)
 
 
 class SafeEmbed(discord.Embed):

@@ -137,7 +137,7 @@ class Meta(context.CustomCog):
             api_http = None
 
         embed = text.SafeEmbed(
-            title=f":ping_pong:  {title}", description="[**status.discord.com**](https://status.discord.com/)\n\n"
+            title=f":ping_pong:  {title}", description="**[status.discord.com](https://status.discord.com/)**\n\n"
         )
         embed.add_field(
             name="Discord",

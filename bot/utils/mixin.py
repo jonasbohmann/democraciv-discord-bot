@@ -2,7 +2,6 @@ import typing
 import discord
 
 from discord.embeds import EmptyEmbed
-from discord.ext import menus
 
 from bot.config import mk, config
 from bot.utils import exceptions, context, models, paginator, text, converter
@@ -10,62 +9,6 @@ from bot.utils import exceptions, context, models, paginator, text, converter
 
 def _make_property(role: mk.DemocracivRole):
     return property(lambda self: self._safe_get_member(role))
-
-
-class ShowBillTextMenu(paginator.SimplePages, inherit_buttons=False):
-    def __init__(self, detail_embed, **kwargs):
-        super().__init__(**kwargs)
-        self.is_showing_text = False
-        self.detail_embed: text.SafeEmbed = detail_embed
-        self.page_buttons = [menus.Button(config.HELP_FIRST, action=self.go_to_first_page, position=menus.First(0),
-                                          skip_if=menus.MenuPages._skip_double_triangle_buttons),
-                             menus.Button(config.HELP_PREVIOUS, action=self.go_to_previous_page,
-                                          position=menus.First(1)),
-                             menus.Button(config.HELP_NEXT, action=self.go_to_next_page, position=menus.Last(0)),
-                             menus.Button(config.HELP_LAST, action=self.go_to_last_page, position=menus.Last(1),
-                                          skip_if=menus.MenuPages._skip_double_triangle_buttons),
-                             ]
-
-    async def send_initial_message(self, ctx, channel):
-        pass
-
-    async def go_to_first_page(self, payload):
-        await self.show_page(0)
-
-    async def go_to_previous_page(self, payload):
-        await self.show_checked_page(self.current_page - 1)
-
-    async def go_to_next_page(self, payload):
-        await self.show_checked_page(self.current_page + 1)
-
-    async def go_to_last_page(self, payload):
-        await self.show_page(self._source.get_max_pages() - 1)
-
-    @menus.button(emoji="\U0001f4c3", position=menus.First(0))
-    async def on_bill_text(self, payload):
-        self.is_showing_text = not self.is_showing_text
-
-        if not self.is_showing_text:
-            await self.message.edit(embed=self.detail_embed)
-            for emoji in self.buttons.copy():
-                if str(emoji) == "\U0001f4c3":
-                    continue
-
-                self.remove_button(emoji=emoji, react=False)
-
-                try:
-                    await self.message.clear_reaction(emoji=emoji)
-                except discord.HTTPException:
-                    pass
-        else:
-            await self.show_page(0)
-
-            for button in self.page_buttons:
-                if button.is_valid(self):
-                    await self.add_button(button, react=True)
-
-
-
 
 
 class GovernmentMixin:
@@ -119,9 +62,9 @@ class GovernmentMixin:
                 name=f"Submitted by {obj.submitter.name}",
                 icon_url=obj.submitter.avatar_url_as(static_format="png"),
             )
-            submitted_by_value = f"{obj.submitter.mention} (during Session #{obj.session.id})"
+            submitted_by_value = f"{obj.submitter.mention} {obj.submitter}"
         else:
-            submitted_by_value = f"*Person left {self.bot.dciv.name}* (during Session #{obj.session.id})"
+            submitted_by_value = f"*Unknown Person*"
 
         embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
 
@@ -146,9 +89,10 @@ class GovernmentMixin:
                 embed.add_field(name="History", value="\n".join(history))
 
             if obj.status.is_law:
-                embed.set_footer(text="All dates are in UTC. This is an active law.")
+                # todo remove session when mk8 ends
+                embed.set_footer(text=f"All dates are in UTC. This is an active law. Session #{obj.session.id}")
             else:
-                embed.set_footer(text="All dates are in UTC.")
+                embed.set_footer(text=f"All dates are in UTC. Session #{obj.session.id}")
 
             view = await ctx.send(embed=embed)
 

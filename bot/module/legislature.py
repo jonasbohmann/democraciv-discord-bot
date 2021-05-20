@@ -27,7 +27,9 @@ class PassScheduler(text.RedditAnnouncementScheduler):
         message = [f"The following bills were **passed into law** by {self.bot.mk.LEGISLATURE_NAME}.\n"]
 
         for obj in self._objects:
-            message.append(f"Bill #{obj.id} - [**{obj.name}**]({obj.link})")
+            submitter = obj.submitter or context.MockUser()
+            message.append(f"__Bill #{obj.id} - **[{obj.name}]({obj.link})**__"
+                           f"\n*Submitted by {submitter.mention}*\n{obj.description}\n")
             # if obj.is_vetoable:
             #    message.append(f"-  **{obj.name}** (<{obj.link}>)")
             # else:
@@ -90,7 +92,11 @@ class OverrideScheduler(text.AnnouncementScheduler):
 
 
 LEG_COMMAND_ALIASES = ["leg", "legislature"]
-LEG_COMMAND_ALIASES.remove(mk.MarkConfig.LEGISLATURE_COMMAND.lower())
+
+try:
+    LEG_COMMAND_ALIASES.remove(mk.MarkConfig.LEGISLATURE_COMMAND.lower())
+except ValueError:
+    pass
 
 
 class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.LEGISLATURE_NAME):
@@ -1397,8 +1403,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
                 return
 
             bill_id = await self.bot.db.fetchval(
-                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, "
-                "submitter_description, content) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, submitter_description, content) "
+                "VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
                 current_leg_session_id,
                 name,
                 google_docs_url,
@@ -1409,7 +1415,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.L
             )
 
             bill.id = bill_id
-            await bill.status.log_history(old_status=models.BillSubmitted.flag, new_status=models.BillSubmitted.flag)
+            await bill.status.log_history(old_status=models.BillSubmitted.flag,
+                                          new_status=models.BillSubmitted.flag,
+                                          note=f"Submitted to Session #{current_leg_session_id}")
 
             id_with_tags = [(bill_id, tag) for tag in tags]
             self.bot.loop.create_task(
