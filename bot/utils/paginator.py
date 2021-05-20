@@ -78,10 +78,21 @@ class SimplePageSource(menus.ListPageSource):
 
 
 class SimplePages(Pages, inherit_buttons=False):
-    def __init__(self, entries: typing.List[str], *, per_page=None, empty_message: str = "*No entries.*", **kwargs):
+    def __init__(self, entries: typing.List[str], *, per_page=None, empty_message: str = "*No entries.*",
+                 reply=False, **kwargs):
+        self.reply = reply
         if len(entries) == 0:
             entries.append(empty_message)
         super().__init__(SimplePageSource(entries, per_page=per_page), **kwargs)
+
+    async def send_initial_message(self, ctx, channel):
+        page = await self._source.get_page(0)
+        kwargs = await self._get_kwargs_from_page(page)
+
+        if self.reply:
+            return await ctx.reply(**kwargs)
+
+        return await channel.send(**kwargs)
 
     @menus.button(config.HELP_FIRST, position=menus.First(0), skip_if=menus.MenuPages._skip_double_triangle_buttons)
     async def go_to_first_page(self, payload):

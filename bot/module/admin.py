@@ -120,9 +120,6 @@ class Experiments(context.CustomCog):
         if not response:
             return await ctx.send(f"{config.NO} I couldn't find an answer to that question. Sorry!")
 
-        embed = text.SafeEmbed()
-        embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL, name=f"[BETA] Results for '{question}'")
-
         fmt = ["This uses deep learning, a particular machine learning method, with neural networks to try to "
                "find answers to a legal question you're asking. All currently existing bills are taken into account "
                "to try to find the best answer. Google's BERT model in combination with Tensorflow Keras "
@@ -134,18 +131,18 @@ class Experiments(context.CustomCog):
                 continue
 
             if len(result['full_answer']) - len(result['answer']) <= 3:
-                cntxt = ""
+                cntxt = []
             else:
-                cntxt = f"\n__Context__\n```{result['full_answer']}```"
+                cntxt = [f"__Context__", f"```{result['full_answer']}```"]
 
             bill = await models.Bill.convert(ctx, result['bill'])
-            fmt.append(f"**__Found answer in {bill.formatted} with a confidence of {result['score'] * 100:.2f}%__**"
-                       f"\n```{result['answer']}```{cntxt}")
+            fmt.append(f"**__Found answer in {bill.formatted} with a confidence of {result['score'] * 100:.2f}%__**")
+            fmt.append(f"```{result['answer']}```")
+            fmt.extend(cntxt)
 
-        embed.description = "\n\n".join(fmt)
-        embed.set_footer(icon_url="https://cdn.onlinewebfonts.com/svg/img_1326.png",
-                         text="This experimental feature is a work in progress and will probably change in the future.")
-        await ctx.reply(embed=embed)
+        pages = paginator.SimplePages(entries=fmt, author=f"[BETA] Results for '{question}'",
+                                      icon=self.bot.mk.NATION_ICON_URL, reply=True)
+        await pages.start(ctx)
 
     @commands.command(name="extract")
     async def match(self, ctx, *, query):
@@ -165,24 +162,15 @@ class Experiments(context.CustomCog):
                f"beta, then it will probably be integrated into the `{config.BOT_PREFIX}laws search` and "
                f"`{config.BOT_PREFIX}legislature bills search` commands.\n\n"]
 
-        for result in response[:3]:
+        for result in response:
             bill = await models.Bill.convert(ctx, result['document_label'])
-
             txt = result['text']
-
-            if len(txt) > 450:
-                txt = f"{txt[:447]}..."
-
             fmt.append(f"**__{bill.formatted}__**")
             fmt.append(f"```{txt}```\n")
 
-        pages = paginator.SimplePages(entries=fmt,
-                                      icon=self.bot.mk.NATION_ICON_URL,
+        pages = paginator.SimplePages(entries=fmt, icon=self.bot.mk.NATION_ICON_URL,
                                       author=f"[BETA] Results for '{query}'")
 
-        pages.embed.set_footer(icon_url="https://cdn.onlinewebfonts.com/svg/img_1326.png",
-                               text="This experimental feature is a work in progress and will probably "
-                                    "change in the future.")
         await pages.start(ctx)
 
 
