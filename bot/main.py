@@ -41,6 +41,8 @@ from bot.config import token, config, mk
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [BOT] %(message)s", datefmt="%d.%m.%Y %H:%M:%S")
 
 
+BOT_VERSION = "2.3.0"
+
 all_extensions = {
     "bot.module.logs",
     "bot.module.meta",
@@ -133,6 +135,7 @@ class DemocracivBot(commands.Bot):
 
     def __init__(self):
         self.start_time = time.time()
+        self.BOT_VERSION = BOT_VERSION
         self.IS_DEBUG = platform.system() == "Windows"
         logging.info(f"Starting bot for {'debug' if self.IS_DEBUG else 'production'}")
 

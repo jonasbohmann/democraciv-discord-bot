@@ -4,7 +4,6 @@ import uuid
 import decimal
 import aiohttp
 import discord
-import typing
 
 from aiohttp import web
 from dataclasses import dataclass
@@ -140,7 +139,7 @@ class BankRoute:
         self.path = path
         self.url = self.DEMOCRACIV_BANK_API_BASE + self.path
         self.user_agent = (
-            f"Democraciv Discord Bot {config.BOT_VERSION} - Python/{sys.version_info[0]}."
+            f"Democraciv Discord Bot - Python/{sys.version_info[0]}."
             f"{sys.version_info[1]}.{sys.version_info[2]} aiohttp/{aiohttp.__version__}"
         )
         self.headers = {
