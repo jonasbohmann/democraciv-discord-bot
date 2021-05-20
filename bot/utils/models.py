@@ -11,9 +11,9 @@ from discord.ext import commands
 from discord.utils import maybe_coroutine
 
 from bot.config import config, mk
-from bot.utils import context, text
+from bot.utils import context
 from bot.utils.exceptions import DemocracivBotException, NotFoundError, NotLawError
-from utils.converter import FuzzyableMixin
+from bot.utils.converter import FuzzyableMixin
 
 
 class SessionStatus(enum.Enum):
@@ -316,42 +316,6 @@ class Bill(commands.Converter, FuzzyableMixin):
         return obj
 
 
-class FuzzyBill(Bill):
-    async def convert(self, ctx: context.CustomContext, argument):
-        try:
-            return await super().convert(ctx, argument)
-        except Exception as e:
-            lowered = argument.lower()
-
-            matches = await ctx.bot.db.fetch(
-                "SELECT id FROM bill WHERE lower(name) % $1 OR lower(name) LIKE '%' || $1 || '%'"
-                " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;", lowered
-            )
-
-            tag_matches = await ctx.bot.db.fetch(
-                "SELECT DISTINCT bill_id AS id FROM bill_lookup_tag WHERE tag % $1 LIMIT 2;", lowered
-            )
-
-            matches.extend(tag_matches)
-
-            matches = {await Bill.convert(ctx, match['id']): None for match in matches}
-
-            if not matches:
-                raise e
-
-            menu = text.FuzzyChoose(question="Which Bill did you mean?",
-                                    description=f"Maybe you were looking for the "
-                                                f"`{config.BOT_PREFIX}{ctx.bot.mk.LEGISLATURE_COMMAND} bill search` "
-                                                f"command instead?\n",
-                                    choices=list(matches.keys()))
-            bill = await menu.prompt(ctx)
-
-            if bill:
-                return bill
-
-            raise e
-
-
 class Law(Bill, FuzzyableMixin):
     model = "Law"
     fuzzy_description = (f"Maybe you were looking for the "
@@ -393,44 +357,6 @@ class Law(Bill, FuzzyableMixin):
                 raise NotLawError(f"{config.NO} `{bill.name}` (#{bill.id}) is not an active law.")
 
         return bill
-
-
-class FuzzyLaw(Law):
-    async def convert(self, ctx: context.CustomContext, argument, silent=False):
-        try:
-            return await super().convert(ctx, argument, silent=silent)
-        except Exception as e:
-            lowered = argument.lower()
-
-            matches = await ctx.bot.db.fetch(
-                "SELECT id FROM bill WHERE status = $2 AND (lower(name) % $1 OR lower(name) LIKE '%' || $1 || '%')"
-                " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;", lowered, BillIsLaw.flag.value
-            )
-
-            tag_matches = await ctx.bot.db.fetch(
-                "SELECT DISTINCT bill_id AS id FROM bill_lookup_tag WHERE tag % $1 LIMIT 2;", lowered
-            )
-
-            matches.extend(tag_matches)
-
-            matches = {await Law.convert(ctx, match['id'], silent=True): None for match in matches}
-
-            matches = list(filter(None, matches))
-
-            if not matches:
-                raise e
-
-            menu = text.FuzzyChoose(question="Which Law did you mean?",
-                                    description=f"Maybe you were looking for the "
-                                                f"`{config.BOT_PREFIX}law search` "
-                                                f"command instead?\n",
-                                    choices=matches)
-            law = await menu.prompt(ctx)
-
-            if law:
-                return law
-
-            raise e
 
 
 class Motion(commands.Converter, FuzzyableMixin):
@@ -515,33 +441,6 @@ class Motion(commands.Converter, FuzzyableMixin):
 
         session = await Session.convert(ctx, motion["leg_session"])
         return cls(**motion, session=session, bot=ctx.bot)
-
-
-class FuzzyMotion(Motion):
-    async def convert(self, ctx: context.CustomContext, argument):
-        try:
-            return await super().convert(ctx, argument)
-        except Exception as e:
-            matches = await ctx.bot.db.fetch(
-                "SELECT id FROM motion WHERE lower(title) % $1 OR lower(title) LIKE '%' || $1 || '%'"
-                " ORDER BY similarity(lower(title), $1) DESC LIMIT 6;", argument.lower())
-
-            matches = [await Motion.convert(ctx, match['id']) for match in matches]
-
-            if not matches:
-                raise e
-
-            menu = text.FuzzyChoose(question="Which Motion did you mean?",
-                                    description=f"Maybe you were looking for the "
-                                                f"`{config.BOT_PREFIX}{ctx.bot.mk.LEGISLATURE_COMMAND} motion search` "
-                                                f"command instead?\n",
-                                    choices=matches)
-            motion = await menu.prompt(ctx)
-
-            if motion:
-                return motion
-
-            raise e
 
 
 class LegalConsumer:

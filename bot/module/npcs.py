@@ -9,7 +9,7 @@ from fuzzywuzzy import process
 from bot.config import config
 from bot.utils.context import CustomContext, CustomCog
 from bot.utils import text, converter, paginator
-from utils.converter import FuzzyableMixin, Fuzzy, FuzzySettings
+from bot.utils.converter import FuzzyableMixin, Fuzzy, FuzzySettings
 
 NPCPrefixSuffix = collections.namedtuple("NPCPrefixSuffix", ["npc_id", "prefix", "suffix"])
 
@@ -78,35 +78,12 @@ class NPCConverter(commands.Converter, FuzzyableMixin):
         raise commands.BadArgument(f"{config.NO} You don't have an NPC that matches `{argument}`.")
 
 
-class FuzzyNPCConverter(NPCConverter):
-    @classmethod
-    async def convert(cls, ctx, argument):
-        try:
-            return await super().convert(ctx, argument)
-        except commands.BadArgument as e:
-            npc_cog = ctx.bot.get_cog("NPC")
-            try:
-                npc_cache = npc_cog._npc_access_cache[ctx.author.id]
-            except KeyError:
-                raise e
-
-            npcs = {npc_id: npc_cog._npc_cache[npc_id]['name'] for npc_id in npc_cache
-                    if npc_cog._npc_cache[npc_id]['owner_id'] == ctx.author.id}
-            match = fuzzy_get_npc(ctx, argument, npcs)
-
-            if match:
-                return match
-
-            raise e
-
-
 class AnyNPCConverter(NPCConverter):
 
     async def get_fuzzy_source(self, ctx, argument: str) -> typing.Iterable:
         npc_cache = ctx.bot.get_cog("NPC")._npc_cache
         npcs = {npc['id']: npc['name'] for npc in npc_cache.values()}
         return fuzzy_get_npc(ctx, argument, npcs)
-
 
     @classmethod
     async def convert(cls, ctx, argument):
@@ -146,23 +123,6 @@ def fuzzy_get_npc(ctx, arg, iterable):
         fmt[npc_obj] = None
 
     return list(fmt.keys())[:5]
-
-
-class FuzzyAnyNPCConverter(AnyNPCConverter):
-    @classmethod
-    async def convert(cls, ctx, argument):
-        try:
-            return await super().convert(ctx, argument)
-        except commands.BadArgument as e:
-            npc_cache = ctx.bot.get_cog("NPC")._npc_cache
-            npcs = {npc['id']: npc['name'] for npc in npc_cache.values()}
-
-            match = fuzzy_get_npc(ctx, argument, npcs)
-
-            if match:
-                return match
-
-            raise e
 
 
 class AccessToNPCConverter(NPCConverter):
@@ -205,28 +165,6 @@ class AccessToNPCConverter(NPCConverter):
                 return cls(**match, bot=ctx.bot)
 
             raise commands.BadArgument(f"{config.NO} You don't have access to an NPC that matches `{argument}`.")
-
-
-class FuzzyAccessToNPCConverter(AccessToNPCConverter):
-    @classmethod
-    async def convert(cls, ctx, argument):
-        try:
-            return await super().convert(ctx, argument)
-        except commands.BadArgument as e:
-            npc_cog = ctx.bot.get_cog("NPC")
-
-            try:
-                npc_cache = npc_cog._npc_access_cache[ctx.author.id]
-            except KeyError:
-                raise e
-
-            npcs = {npc_id: npc_cog._npc_cache[npc_id]['name'] for npc_id in npc_cache}
-            match = fuzzy_get_npc(ctx, argument, npcs)
-
-            if match:
-                return match
-
-            raise e
 
 
 class NPC(CustomCog):
@@ -806,9 +744,11 @@ class NPC(CustomCog):
 
         channel = []
 
+        conv = Fuzzy[converter.CaseInsensitiveTextChannel, converter.CaseInsensitiveCategoryChannel]
+
         for chan in channel_text:
             try:
-                converted = await converter.CaseInsensitiveTextChannelOrCategoryChannel().convert(ctx, chan.strip())
+                converted = await conv.convert(ctx, chan.strip())
                 channel.append(converted.id)
             except commands.BadArgument:
                 continue

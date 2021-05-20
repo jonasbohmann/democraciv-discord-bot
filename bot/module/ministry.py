@@ -93,9 +93,12 @@ class Ministry(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINI
 
         return pretty_bills
 
+    MINISTRY_ALIASES = ["min", "exec", "cabinet", "minister", "ministry"]
+    MINISTRY_ALIASES.remove(mk.MarkConfig.MINISTRY_COMMAND.lower())
+
     @commands.group(
         name=mk.MarkConfig.MINISTRY_COMMAND,
-        aliases=["min", "exec", "cabinet", "minister", "ministry"],
+        aliases=MINISTRY_ALIASES,
         case_insensitive=True,
         invoke_without_command=True,
     )

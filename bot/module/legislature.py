@@ -13,7 +13,7 @@ from discord.ext.commands import Greedy
 from bot.config import config, mk
 from bot.utils import models, text, paginator, context, mixin, checks, converter, exceptions
 from bot.utils.models import Bill, Session, Motion, SessionStatus
-from utils.converter import Fuzzy, FuzzySettings
+from bot.utils.converter import Fuzzy, FuzzySettings
 
 
 class PassScheduler(text.RedditAnnouncementScheduler):
@@ -89,7 +89,8 @@ class OverrideScheduler(text.AnnouncementScheduler):
         return "\n".join(message)
 
 
-LEG_COMMAND_ALIASES = ["leg", "legislature"] if mk.MarkConfig.LEGISLATURE_COMMAND.lower() != "legislature" else ["leg"]
+LEG_COMMAND_ALIASES = ["leg", "legislature"]
+LEG_COMMAND_ALIASES.remove(mk.MarkConfig.LEGISLATURE_COMMAND.lower())
 
 
 class Legislature(context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.LEGISLATURE_NAME):

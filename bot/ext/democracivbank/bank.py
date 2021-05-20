@@ -13,6 +13,8 @@ from bot.utils import converter, exceptions, text, paginator, context
 from bot.config import config, token
 from discord.ext import menus
 
+from bot.utils.converter import Fuzzy, FuzzySettings
+
 
 class CurrencySelector(menus.Menu):
     def __init__(self, currencies):
@@ -148,6 +150,14 @@ class BankRoute:
         }
 
 
+class BankUUIDConverter(commands.Converter):
+    async def convert(self, ctx, argument):
+        try:
+            return uuid.UUID(argument)
+        except (ValueError, TypeError):
+            raise BankInvalidIBANFormat()
+
+
 class BankCorporationMarketplace(commands.Converter):
     def __init__(self, **kwargs):
         self.name = kwargs.get("name")
@@ -181,6 +191,7 @@ class BankCorporationMarketplace(commands.Converter):
 
 
 class BankCorporationAbbreviation(commands.Converter):
+
     @classmethod
     async def convert(cls, ctx, argument):
         try:
@@ -522,13 +533,15 @@ class Bank(context.CustomCog):
     async def send(
             self,
             ctx,
-            to_person_or_iban_or_organization: typing.Union[
+            to_person_or_iban_or_organization:
+            Fuzzy[
                 converter.CaseInsensitiveMember,
                 converter.CaseInsensitiveUser,
-                uuid.UUID,
                 BankCorporationAbbreviation,
-                converter.FuzzyCIMember,
+                BankUUIDConverter,
+                FuzzySettings(weights=(5, 1))
             ],
+
             amount: decimal.Decimal,
             *,
             purpose: str = None,
@@ -594,12 +607,12 @@ class Bank(context.CustomCog):
 
         embed = text.SafeEmbed(
             description=f"\n\nThere are a total of {stats['total_bank_accounts']} open bank accounts across "
-            f"all currencies with a total of {stats['total_transactions']} transactions between "
-            f"all of them. Japan has {stats['organizations']['Japan']} registered "
-            f"organizations.\n\nThe shown circulation of a currency does not include any currency reserves that "
-            f"were provided by the {self.BANK_NAME} when this currency "
-            f"was originally created.\n\nThe velocity is calculated as the amount of currency transferred "
-            f"in the last 7 days divided by its total circulation."
+                        f"all currencies with a total of {stats['total_transactions']} transactions between "
+                        f"all of them. Japan has {stats['organizations']['Japan']} registered "
+                        f"organizations.\n\nThe shown circulation of a currency does not include any currency reserves that "
+                        f"were provided by the {self.BANK_NAME} when this currency "
+                        f"was originally created.\n\nThe velocity is calculated as the amount of currency transferred "
+                        f"in the last 7 days divided by its total circulation."
         )
 
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)

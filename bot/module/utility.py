@@ -11,7 +11,6 @@ import logging
 import traceback
 import typing
 import random
-
 import aiohttp
 import discord
 import operator
@@ -28,6 +27,7 @@ from bot.utils import context, paginator, text
 from bot.utils.converter import (
     PoliticalParty,
     CaseInsensitiveUser,
+    CaseInsensitiveRole,
     DemocracivCaseInsensitiveRole,
     CaseInsensitiveMember, Fuzzy, FuzzySettings,
 )
@@ -470,8 +470,8 @@ class Utility(context.CustomCog):
             ctx,
             *,
             person: Fuzzy[
-                CaseInsensitiveMember, CaseInsensitiveUser, DemocracivCaseInsensitiveRole, PoliticalParty,
-                FuzzySettings(weights=(5, 2, 1, 1))
+                CaseInsensitiveMember, CaseInsensitiveUser, CaseInsensitiveRole, DemocracivCaseInsensitiveRole, PoliticalParty,
+                FuzzySettings(weights=(5, 1, 2, 1, 1))
             ] = None,
     ):
         """See detailed information about someone
@@ -660,10 +660,10 @@ class Utility(context.CustomCog):
             self,
             ctx,
             *,
-            role: Fuzzy[DemocracivCaseInsensitiveRole, PoliticalParty,
+            role: Fuzzy[CaseInsensitiveRole, DemocracivCaseInsensitiveRole, PoliticalParty,
                         FuzzySettings(no_choice_exception=f"{config.NO} There is no role on this or the "
                                                           f"Democraciv server that matches `{{argument}}`.",
-                                      weights=(5, 1))]
+                                      weights=(5, 2, 2))]
     ):
         """Detailed information about a role"""
 

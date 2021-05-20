@@ -6,7 +6,7 @@ from bot.config import config
 from discord.ext import commands
 
 from bot.utils import text, converter, paginator, exceptions, context
-from utils.converter import Fuzzy
+from bot.utils.converter import Fuzzy
 
 
 class _Guild(context.CustomCog, name="Server"):

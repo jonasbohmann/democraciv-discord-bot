@@ -168,12 +168,13 @@ class SafeEmbed(discord.Embed):
 
 
 class FuzzyChoose(menus.Menu):
-    def __init__(self, question: str, choices: typing.Iterable, *, description=None):
+    def __init__(self, question: str, choices: typing.Sequence, *, description=None, **kwargs):
         super().__init__(timeout=120.0, delete_message_after=True)
         self.question = question
         self.choices = choices
         self.result = None
         self._mapping = {}
+        self._reverse_mapping = {}
         self.description = description
 
         for i, choice in enumerate(choices, start=1):
@@ -181,11 +182,12 @@ class FuzzyChoose(menus.Menu):
             button = menus.Button(emoji=emoji, action=self.on_button)
             self.add_button(button=button)
             self._mapping[emoji] = choice
+            self._reverse_mapping[choice] = emoji
 
         cancel = menus.Button(emoji=config.NO, action=self.cancel)
         self.add_button(button=cancel)
 
-    async def send_initial_message(self, ctx, channel):
+    def get_embed(self) -> discord.Embed:
         embed = SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}  {self.question}")
 
         fmt = []
@@ -197,9 +199,11 @@ class FuzzyChoose(menus.Menu):
             fmt.append(f"{emoji}  {choice}")
 
         fmt = "\n".join(fmt)
-
         embed.description = fmt
-        return await ctx.send(embed=embed)
+        return embed
+
+    async def send_initial_message(self, ctx, channel):
+        return await ctx.send(embed=self.get_embed())
 
     async def on_button(self, payload):
         self.result = self._mapping[str(payload.emoji)]
@@ -212,6 +216,32 @@ class FuzzyChoose(menus.Menu):
     async def prompt(self, ctx):
         await self.start(ctx, wait=True)
         return self.result
+
+
+class FuzzyMultiModelChoose(FuzzyChoose):
+
+    def __init__(self, models: typing.Mapping[str, typing.Sequence], *args, **kwargs):
+        self.models = models
+        super().__init__(*args, **kwargs)
+
+    def get_embed(self) -> discord.Embed:
+        embed = SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}  {self.question}")
+
+        fmt = []
+        if self.description:
+            fmt.insert(0, self.description)
+
+        for group, choices in self.models.items():
+            fmt.append(f"__**{group}**__")
+
+            for choice in choices:
+                fmt.append(f"{self._reverse_mapping[choice]}  {choice}")
+
+            fmt.append(" ")
+
+        fmt = "\n".join(fmt)
+        embed.description = fmt
+        return embed
 
 
 EditModelResult = collections.namedtuple("EditModelResult", ["confirmed", "choices"])

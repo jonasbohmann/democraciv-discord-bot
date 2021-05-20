@@ -1,6 +1,8 @@
 import functools
-from discord.ext import commands
 import discord
+
+from discord.ext import commands
+
 from bot.config import config, mk
 from bot.utils import exceptions
 

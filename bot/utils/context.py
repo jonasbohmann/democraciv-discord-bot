@@ -20,8 +20,9 @@ class MockContext:
         The bot instance
     """
 
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self, _bot: "bot.DemocracivBot", *, guild=None):
+        self.bot = _bot
+        self.guild = guild
 
 
 class CustomCog(commands.Cog):
@@ -42,8 +43,8 @@ class CustomCog(commands.Cog):
 
     hidden = False
 
-    def __init__(self, bot):
-        self.bot: "bot.DemocracivBot" = bot
+    def __init__(self, _bot):
+        self.bot: "bot.DemocracivBot" = _bot
         self.bot.loop.create_task(self._transform_description())
 
         for command in self.walk_commands():
