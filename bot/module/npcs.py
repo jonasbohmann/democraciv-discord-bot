@@ -5,6 +5,7 @@ import collections
 
 from discord.ext import commands
 from fuzzywuzzy import process
+from lru import LRU
 
 from bot.config import config
 from bot.utils.context import CustomContext, CustomCog
@@ -206,7 +207,8 @@ class NPC(CustomCog):
         ] = collections.defaultdict(dict)
 
         # channel id -> {message id -> real author id}
-        self._recent_npc_messages = collections.defaultdict(dict)
+        # self._recent_npc_messages = collections.defaultdict(dict)
+        self._recent_npc_messages = collections.defaultdict(lambda: LRU(size=100))
 
         self.bot.loop.create_task(self._make_webhook_adapter())
         self.bot.loop.create_task(self._load_webhook_cache())
@@ -1039,14 +1041,6 @@ class NPC(CustomCog):
         embed.add_field(name="Message", value=npc_message_content)
         await log_channel.send(embed=embed)
 
-    async def _check_recent_npc_messages_size(self, channel):
-        # todo deque lru
-
-        messages = self._recent_npc_messages[channel]
-
-        if len(messages) > 100:
-            self._recent_npc_messages[channel].pop(min(messages.keys()))
-
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         if not payload.guild_id:
@@ -1275,12 +1269,11 @@ class NPC(CustomCog):
             else ""
         )
         msg_cntnt = msg.content[:1020] if msg else "*unknown*"
+
         self._recent_npc_messages[message.channel.id][msg.id] = message.author.id
+
         self.bot.loop.create_task(
             self._log_npc_usage(npc, message, jump_url, msg_cntnt)
-        )
-        self.bot.loop.create_task(
-            self._check_recent_npc_messages_size(message.channel.id)
         )
 
 

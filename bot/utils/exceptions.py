@@ -36,10 +36,9 @@ class NotLawError(DemocracivBotException):
 
 class GoogleAPIError(DemocracivBotException):
     message = (
-        f"{config.NO} Something went wrong during the execution of a Google Apps Script. "
-        f"Please try again later or contact the developer. If you have given me the URL "
-        f"of a Google Docs or Google Forms, make sure that link is an edit link, so that I have edit permissions "
-        f"for this document or form if needed."
+        f"{config.NO} Something went wrong. Please try again later or contact the developer.\n{config.HINT} If you "
+        f"have given me the URL of a Google Docs or Google Forms, make sure that link is an **edit link**, so that "
+        f"I have edit permissions for this document or form if needed."
     )
 
 

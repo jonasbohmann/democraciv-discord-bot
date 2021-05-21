@@ -265,14 +265,14 @@ class GovernmentMixin:
 
         if search_laws:
             objs = await con.fetch(
-                "SELECT id FROM bill WHERE lower(name) LIKE '%' || $1 || '%' AND status = $2"
+                "SELECT id FROM bill WHERE (lower(name) LIKE '%' || $1 || '%' OR lower(name) % $1) AND status = $2"
                 " ORDER BY similarity(lower(name), $1) DESC LIMIT 10;",
                 name.lower(),
                 models.BillIsLaw.flag.value,
             )
         else:
             objs = await con.fetch(
-                "SELECT id FROM bill WHERE lower(name) LIKE '%' || $1 || '%'"
+                "SELECT id FROM bill WHERE (lower(name) LIKE '%' || $1 || '%' OR lower(name) % $1)"
                 " ORDER BY similarity(lower(name), $1) DESC LIMIT 10;",
                 name.lower(),
             )
@@ -280,16 +280,11 @@ class GovernmentMixin:
         found = {}
 
         for record in objs:
-            # todo fix this
-
-            try:
-                obj = await model.convert(context.MockContext(self.bot), record["id"])
-                if return_model:
-                    found[obj] = None
-                else:
-                    found[obj.formatted] = None
-            except exceptions.NotLawError:
-                continue
+            obj = await model.convert(context.MockContext(self.bot), record["id"])
+            if return_model:
+                found[obj] = None
+            else:
+                found[obj.formatted] = None
 
         return found
 
@@ -325,18 +320,11 @@ class GovernmentMixin:
         formatted = {}
 
         for record in found_bills:
-            # todo fix this
-
-            try:
-                obj = await model.convert(
-                    context.MockContext(self.bot), record["bill_id"]
-                )
-                if return_model:
-                    formatted[obj] = None
-                else:
-                    formatted[obj.formatted] = None
-            except exceptions.NotLawError:
-                continue
+            obj = await model.convert(context.MockContext(self.bot), record["bill_id"])
+            if return_model:
+                formatted[obj] = None
+            else:
+                formatted[obj.formatted] = None
 
         return formatted
 

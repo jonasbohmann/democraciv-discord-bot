@@ -249,16 +249,13 @@ class Utility(context.CustomCog):
         **Example**
         `{PREFIX}{COMMAND} https://www.reddit.com/r/democraciv/comments/ibr37f/introducing_the_bank_of_democraciv/`"""
 
-        # todo make regex
-
         if (
             f"reddit.com/r/{config.DEMOCRACIV_SUBREDDIT.lower()}" not in url.lower()
             and "comments" not in url.lower()
         ):
             return await ctx.send(
                 f"{config.NO} Make sure the link to your Reddit press post is in this exact format: "
-                f"`https://www.reddit.com/r/democraciv/comments/ibr37f/"
-                f"introducing_the_bank_of_democraciv/`."
+                f"`https://www.reddit.com/r/democraciv/comments/ibr37f/introducing_the_bank_of_democraciv/`."
             )
 
         error_msg = (
@@ -403,7 +400,7 @@ class Utility(context.CustomCog):
                 "806577378314289162/Wikipedia-logo-v2.png",
             )
 
-            embed.add_field(name="Link", value=url)
+            embed.add_field(name="Link", value=self.percentage_encode_url(url))
 
             if isinstance(thumbnail_url, str):
                 embed.set_thumbnail(url=thumbnail_url)

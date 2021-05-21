@@ -136,8 +136,7 @@ class _Log(context.CustomCog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        embed_fields = {"Person": [member, False],
-                        "ID": [member.id, False]}
+        embed_fields = {"Person": [member, False], "ID": [member.id, False]}
 
         await self.log_event(
             member.guild,

@@ -136,6 +136,8 @@ class MarkConfig:
             ):
                 return name[len(self.NATION_ROLE_PREFIX) :]
 
+            return name
+
         except exceptions.RoleNotFoundError:
             return alt
 

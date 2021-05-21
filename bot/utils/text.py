@@ -8,32 +8,23 @@ from discord.ext import tasks, menus, commands
 from bot.config import config, mk
 
 
-def split_string(string: str, length: int):
-    return list((string[0 + i : length + i] for i in range(0, len(string), length)))
+def split_string_into_multiple(string: str, length: int):
+    prefix = suffix = ""
 
+    if string.startswith("```"):
+        prefix = "```"
+        string = string[3:]
 
-# todo fix this shit
+    if string.endswith("```"):
+        suffix = "```"
+        string = string[:-3]
 
+    paginator = commands.Paginator(prefix=prefix, suffix=suffix, max_size=length)
 
-def split_string_by_paragraphs(string: str, length: int):
-    lines = string.splitlines(keepends=True)
-    split_into_length = {}
-    index = 0
+    for line in string.splitlines():
+        paginator.add_line(line)
 
-    for paragraph in lines:
-        if len(paragraph) > length:
-            paragraph = split_string(paragraph, length)
-        try:
-            split_into_length[index]
-        except KeyError:
-            split_into_length[index] = ""
-
-        split_into_length[index] = split_into_length[index] + "".join(paragraph)
-
-        if (len("".join(split_into_length[index]))) > length:
-            index += 1
-
-    return split_into_length
+    return paginator.pages
 
 
 class AnnouncementScheduler:
@@ -165,7 +156,7 @@ class SafeEmbed(discord.Embed):
 
         if len(self.description) > 2048:
             if self.description.endswith("```"):
-                self.description = f"{self.description[:2037]}...```"
+                self.description = f"{self.description[:2035]}...```"
             else:
                 self.description = f"{self.description[:2040]}..."
 
@@ -192,13 +183,16 @@ class SafeEmbed(discord.Embed):
         value = str(value)
 
         if len(value) > 1024:
-            fields = split_string_by_paragraphs(value, 924)
+            try:
+                pages = split_string_into_multiple(value, 1004)
+            except RuntimeError:
+                pages = [too_long_value]
 
-            for index in fields:
-                if index == 0:
-                    super().add_field(name=name, value=fields[index], inline=inline)
-                else:
-                    super().add_field(name=name, value=fields[index], inline=False)
+            for index, page in enumerate(pages):
+                super().add_field(
+                    name=name, value=page, inline=inline if index == 0 else False
+                )
+
         else:
             super().add_field(name=name, value=value, inline=inline)
 

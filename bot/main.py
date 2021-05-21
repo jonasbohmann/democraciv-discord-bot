@@ -105,13 +105,16 @@ async def safe_send(self, content=None, **kwargs) -> discord.Message:
         embed.clean()
 
     if content and len(content) > 2000:
-        split_messages = text.split_string(content, 1800)
+        try:
+            pages = text.split_string_into_multiple(content, 1900)
+        except RuntimeError:
+            pages = ["This message was too long for me to send."]
 
-        for index in split_messages:
-            if index == len(split_messages) - 1:
-                return await _old_send(self, index, embed=embed, **kwargs)
+        for i, page in enumerate(pages):
+            if i == len(pages) - 1:
+                return await _old_send(self, page, embed=embed, **kwargs)
             else:
-                await _old_send(self, index, **kwargs)
+                await _old_send(self, page, **kwargs)
 
     else:
         return await _old_send(self, content, embed=embed, **kwargs)

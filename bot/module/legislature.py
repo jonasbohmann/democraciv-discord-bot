@@ -1576,8 +1576,8 @@ class Legislature(
 
         email = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the **email address** "
-            f"of your Google Account if you want me to transfer ownership of the document to you. "
-            f"If not, just reply with gibberish.",
+            f"of your Google Account if you want me to add you as editor and transfer ownership of the document "
+            f"to you. If not, just reply with gibberish.",
             delete_after=True,
         )
 
@@ -2442,8 +2442,6 @@ class Legislature(
         return "\n".join(fmt) or "None"
 
     async def _get_leg_stats(self, ctx):
-        # todo fix this
-
         query = """SELECT COUNT(id) FROM legislature_session
                    UNION ALL
                    SELECT COUNT(id) FROM bill

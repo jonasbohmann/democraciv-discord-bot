@@ -128,7 +128,12 @@ class SimplePages(Pages, inherit_buttons=False):
         # The call here is safe because it's guarded by skip_if
         await self.show_page(self._source.get_max_pages() - 1)
 
-    @menus.button(config.HELP_NUMBERS, position=menus.Last(1.5), lock=False)
+    @menus.button(
+        config.HELP_NUMBERS,
+        position=menus.Last(1.5),
+        lock=False,
+        skip_if=menus.MenuPages._skip_double_triangle_buttons,
+    )
     async def numbered_page(self, payload):
         """lets you type a page number to go to"""
         if self.input_lock.locked():

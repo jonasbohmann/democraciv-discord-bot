@@ -576,6 +576,7 @@ class Party(context.CustomCog, name="Political Parties"):
         invite=True,
         join_mode=True,
         commit=True,
+        merge=False,
     ) -> typing.Union[typing.Dict, PoliticalParty]:
 
         result = {"role": None, "invite": None, "leaders": [], "join_mode": None}
@@ -603,6 +604,19 @@ class Party(context.CustomCog, name="Political Parties"):
 
             else:
                 discord_role = role_name
+
+                try:
+                    match = await PoliticalParty.convert(ctx, role_name)
+
+                    if match and merge:
+                        await ctx.send(
+                            f"{config.YES} I'll use the **already existing** party `{discord_role.name}` to merge "
+                            f"the others into."
+                        )
+                        return match
+
+                except exceptions.NotFoundError:
+                    pass
 
                 await ctx.send(
                     f"{config.YES} I'll use the **pre-existing role** `{discord_role.name}` for the new party."
@@ -799,7 +813,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
         if updated_party["invite"] == "None":
             new_invite = None
-        elif not updated_party:
+        elif not updated_party["invite"]:
             new_invite = party.discord_invite
         else:
             new_invite = updated_party["invite"]
@@ -947,9 +961,7 @@ class Party(context.CustomCog, name="Political Parties"):
     async def mergeparties(self, ctx, amount_of_parties: int):
         """Merge multiple parties into a single, new party"""
 
-        # todo
-
-        to_be_merged = []
+        to_be_merged = set()
 
         for i in range(1, amount_of_parties + 1):
             name = await ctx.input(
@@ -967,7 +979,7 @@ class Party(context.CustomCog, name="Political Parties"):
                     f"{config.NO} There is no party that matches `{name}`. Aborted."
                 )
 
-            to_be_merged.append(party)
+            to_be_merged.add(party)
 
         members_to_merge = {
             member for party in to_be_merged for member in party.role.members
@@ -982,8 +994,13 @@ class Party(context.CustomCog, name="Political Parties"):
         if not reaction:
             return await ctx.send("Cancelled.")
 
+        if len(to_be_merged) < 2:
+            return await ctx.send(
+                f"{config.NO} You have to merge at least 2 parties, you can't merge just one."
+            )
+
         try:
-            new_party = await self.create_new_party(ctx, commit=True)
+            new_party = await self.create_new_party(ctx, commit=True, merge=True)
         except exceptions.DemocracivBotException as e:
             return await ctx.send(
                 f"{e.message}\n{config.NO} Party creation failed, old parties were not deleted."
@@ -1009,7 +1026,7 @@ class Party(context.CustomCog, name="Political Parties"):
                             "DELETE FROM party WHERE id = $1", party.role.id
                         )
 
-                await party.role.delete()
+                        await party.role.delete()
 
         await ctx.send(
             f"{config.YES} The old parties were deleted and all their members now have the role of the new party.\n"
