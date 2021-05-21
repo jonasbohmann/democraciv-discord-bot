@@ -199,9 +199,15 @@ class _Guild(context.CustomCog, name="Server"):
                     f"`{{channel}}` - The welcome channel  (For example: #welcome)\n"
                 )
 
+                welcome_mention = (
+                    current_welcome_channel.mention
+                    if current_welcome_channel
+                    else "your welcome channel"
+                )
+
                 welcome_message = await ctx.input(
                     f"{config.USER_INTERACTION_REQUIRED} Reply with the message that should be sent to "
-                    f"{current_welcome_channel.mention} every time a new person joins.\n{config.HINT} "
+                    f"{welcome_mention} every time a new person joins.\n{config.HINT} "
                     f"You can use the following variables in the welcome message.\n\n{translations}"
                 )
             else:

@@ -9,7 +9,7 @@ services:
       - postgresdata:/var/lib/postgresql/data
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=ehre
+      - POSTGRES_PASSWORD=put_password_here
       - POSTGRES_DB=democraciv
 
   api:

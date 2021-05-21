@@ -71,8 +71,6 @@ class Meta(context.CustomCog):
             if k in choices:
                 choices[k].append(v)
 
-        print(choices)
-
         menu = text.EditSettingsWithEmojifiedLiveToggles(
             settings=choices,
             description=f"You can toggle each notification on and off. Once you're "

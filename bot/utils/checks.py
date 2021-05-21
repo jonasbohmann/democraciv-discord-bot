@@ -54,11 +54,11 @@ def has_any_democraciv_role(*roles: mk.DemocracivRole):
         if not isinstance(ctx.channel, discord.abc.GuildChannel):
             raise commands.NoPrivateMessage()
 
-        if ctx.author.id == ctx.bot.owner_id:
-            return True
-
         if config.DEMOCRACIV_GUILD_ID != ctx.guild.id:
             raise exceptions.NotDemocracivGuildError()
+
+        if ctx.author.id == ctx.bot.owner_id:
+            return True
 
         getter = functools.partial(discord.utils.get, ctx.author.roles)
 

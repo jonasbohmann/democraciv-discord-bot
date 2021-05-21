@@ -3,8 +3,12 @@ import asyncpg
 
 
 async def main():
-    old_db = await asyncpg.create_pool("postgres://jonas:ehrenbruder@localhost/democraciv")
-    new_db = await asyncpg.create_pool("postgres://jonas:ehrenbruder@localhost/dciv_two")
+    old_db = await asyncpg.create_pool(
+        "postgres://user:password@host/old_database"
+    )
+    new_db = await asyncpg.create_pool(
+        "postgres://user:password@host/new_database"
+    )
 
     guilds = await old_db.fetch("SELECT * FROM guilds")
 
@@ -27,7 +31,9 @@ async def main():
 
                 for chan in grecord["logging_excluded"]:
                     await connection.execute(
-                        "INSERT INTO guild_private_channel (guild_id, channel_id) VALUES ($1, $2)", grecord["id"], chan
+                        "INSERT INTO guild_private_channel (guild_id, channel_id) VALUES ($1, $2)",
+                        grecord["id"],
+                        chan,
                     )
 
                 print(f"Guild {grecord['id']} added.")
@@ -60,11 +66,15 @@ async def main():
                     tr["is_embedded"],
                 )
 
-                alias = await old_db.fetch("SELECT * from guild_tags_alias WHERE tag_id = $1", tr["id"])
+                alias = await old_db.fetch(
+                    "SELECT * from guild_tags_alias WHERE tag_id = $1", tr["id"]
+                )
 
                 for al in alias:
                     await connection.execute(
-                        "INSERT INTO tag_lookup (tag_id, alias) VALUES ($1, $2)", t_id, al["alias"]
+                        "INSERT INTO tag_lookup (tag_id, alias) VALUES ($1, $2)",
+                        t_id,
+                        al["alias"],
                     )
 
                 print(f"Tag '-{tr['name']}' added.")
@@ -100,11 +110,15 @@ async def main():
                     sr["starboard_message_created_at"],
                 )
 
-                starr = await old_db.fetch("SELECT * FROM starboard_starrers WHERE entry_id = $1", sr["id"])
+                starr = await old_db.fetch(
+                    "SELECT * FROM starboard_starrers WHERE entry_id = $1", sr["id"]
+                )
 
                 for s in starr:
                     await connection.execute(
-                        "INSERT INTO starboard_starrer (entry_id, starrer_id) VALUES ($1, $2)", e_id, s["starrer_id"]
+                        "INSERT INTO starboard_starrer (entry_id, starrer_id) VALUES ($1, $2)",
+                        e_id,
+                        s["starrer_id"],
                     )
 
                 print(f"Starboard entry {e_id} added.")

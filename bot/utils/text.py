@@ -74,8 +74,10 @@ class AnnouncementScheduler:
         self._last_addition = None
         self._objects.sort(key=lambda obj: obj.id)
         await self.send_messages()
-        self._task.cancel()
         self._objects.clear()
+
+        if self._task:
+            self._task.cancel()
 
     def _split_embeds(
         self, original_embed: discord.Embed
