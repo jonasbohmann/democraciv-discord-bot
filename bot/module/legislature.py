@@ -2013,7 +2013,7 @@ class Legislature(
         )
 
         bills_that_might_repeal_something = [
-            f" - Law #{bill.id} - {bill.name}"
+            f" - Law #{bill.id} - **{bill.name}**"
             for bill in consumer.passed
             if "repeal" in bill.content.lower()
         ]

@@ -31,6 +31,9 @@ class _Fuzzy(commands.Converter):
         self.converter = converter
         self.settings = settings
 
+    def __call__(self, *args, **kwargs):
+        return self
+
     def __getitem__(self, converter: typing.Union[typing.Tuple[T], T]) -> Fuzzy[T]:
         if not isinstance(converter, tuple):
             converter = (converter,)

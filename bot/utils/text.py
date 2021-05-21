@@ -226,7 +226,7 @@ class FuzzyChoose(menus.Menu):
         self.add_button(button=cancel)
 
     def get_embed(self) -> discord.Embed:
-        embed = SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}  {self.question}")
+        embed = SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}   {self.question}")
 
         fmt = []
 
@@ -262,7 +262,7 @@ class FuzzyMultiModelChoose(FuzzyChoose):
         super().__init__(*args, **kwargs)
 
     def get_embed(self) -> discord.Embed:
-        embed = SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}  {self.question}")
+        embed = SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}   {self.question}")
 
         fmt = []
         if self.description:

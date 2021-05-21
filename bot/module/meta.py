@@ -88,7 +88,7 @@ class Meta(context.CustomCog):
             "UPDATE dm_setting SET ban_kick_mute = $1, leg_session_open = $2, "
             "leg_session_update = $3, leg_session_submit = $4, "
             "leg_session_withdraw = $5, party_join_leave = $6 WHERE user_id = $7",
-            *result.result.values(),
+            *result.choices.values(),
             ctx.author.id,
         )
 

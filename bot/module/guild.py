@@ -172,7 +172,7 @@ class _Guild(context.CustomCog, name="Server"):
             if to_change["channel"]:
                 current_welcome_channel = await ctx.converted_input(
                     f"{config.USER_INTERACTION_REQUIRED} Reply with the name or mention of the new welcome channel.",
-                    converter=converter.CaseInsensitiveTextChannel,
+                    converter=Fuzzy[converter.CaseInsensitiveTextChannel],
                 )
 
                 if isinstance(current_welcome_channel, str):
@@ -294,7 +294,7 @@ class _Guild(context.CustomCog, name="Server"):
                 current_logging_channel = await ctx.converted_input(
                     f"{config.USER_INTERACTION_REQUIRED} Reply with the name or mention of the channel"
                     " where I should log all events to.",
-                    converter=converter.CaseInsensitiveTextChannel,
+                    converter=Fuzzy[converter.CaseInsensitiveTextChannel],
                 )
 
                 if isinstance(current_logging_channel, str):
@@ -608,7 +608,7 @@ class _Guild(context.CustomCog, name="Server"):
                 current_default_role = await ctx.converted_input(
                     f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the role that every "
                     "new person should get once they join this server.",
-                    converter=converter.CaseInsensitiveRole,
+                    converter=Fuzzy[converter.CaseInsensitiveRole],
                 )
 
                 if isinstance(current_default_role, str):
@@ -924,7 +924,7 @@ class _Guild(context.CustomCog, name="Server"):
 
         channel = await ctx.converted_input(
             f"{config.USER_INTERACTION_REQUIRED} In which channel should new posts from `r/{subreddit}` be posted?",
-            converter=converter.CaseInsensitiveTextChannel,
+            converter=Fuzzy[converter.CaseInsensitiveTextChannel],
             return_input_on_fail=False,
         )
 
@@ -1012,7 +1012,7 @@ class _Guild(context.CustomCog, name="Server"):
 
         channel = await ctx.converted_input(
             f"{config.USER_INTERACTION_REQUIRED} In which channel should I post when `{streamer}` is going live?",
-            converter=converter.CaseInsensitiveTextChannel,
+            converter=Fuzzy[converter.CaseInsensitiveTextChannel],
             return_input_on_fail=False,
         )
 
