@@ -104,7 +104,7 @@ class _Guild(context.CustomCog, name="Server"):
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def welcome(self, ctx: context.CustomContext):
-        """Add a welcome message that every new member will see once they join this server"""
+        """Add a welcome message that every new person will see once they join this server"""
 
         settings = await self.ensure_guild_settings(ctx.guild.id)
         current_welcome_channel = await self.bot.get_welcome_channel(ctx.guild)

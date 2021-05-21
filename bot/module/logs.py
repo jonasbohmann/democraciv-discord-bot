@@ -122,13 +122,13 @@ class _Log(context.CustomCog):
     @commands.Cog.listener()
     async def on_member_join(self, member):
         embed_fields = {
-            "Member": [f"{member.mention} {member}", False],
+            "Person": [f"{member.mention} {member}", False],
             "ID": [member.id, False],
         }
 
         await self.log_event(
             member.guild,
-            ":tada:  Member Joined",
+            ":tada:  Person Joined",
             embed_fields,
             thumbnail=member.avatar_url_as(static_format="png"),
             reason="logging_member_join_leave",
@@ -136,11 +136,12 @@ class _Log(context.CustomCog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
-        embed_fields = {"Name": [member, False], "ID": [member.id, False]}
+        embed_fields = {"Person": [member, False],
+                        "ID": [member.id, False]}
 
         await self.log_event(
             member.guild,
-            ":no_pedestrians:  Member Left",
+            ":no_pedestrians:  Person Left",
             embed_fields,
             thumbnail=member.avatar_url_as(static_format="png"),
             reason="logging_member_join_leave",
@@ -150,7 +151,7 @@ class _Log(context.CustomCog):
     async def on_member_update(self, before, after):
         if before.display_name != after.display_name:
             embed_fields = {
-                "Member": [f"{before.mention} {before}", False],
+                "Person": [f"{before.mention} {before}", False],
                 "Before": [before.display_name, False],
                 "After": [after.display_name, False],
             }
@@ -173,13 +174,13 @@ class _Log(context.CustomCog):
                         break
 
                 embed_fields = {
-                    "Member": [f"{before.mention} {before}", False],
+                    "Person": [f"{before.mention} {before}", False],
                     "Role": [given_role, False],
                 }
 
                 await self.log_event(
                     before.guild,
-                    ":sunglasses:  Role given to Member",
+                    ":sunglasses:  Role given to Person",
                     embed_fields,
                     thumbnail=before.avatar_url_as(static_format="png"),
                     reason="logging_member_role_change",
@@ -194,13 +195,13 @@ class _Log(context.CustomCog):
                         break
 
                 embed_fields = {
-                    "Member": [f"{before.mention} {before}", False],
+                    "Person": [f"{before.mention} {before}", False],
                     "Role": [removed_role, False],
                 }
 
                 await self.log_event(
                     before.guild,
-                    ":zipper_mouth:  Role removed from Member",
+                    ":zipper_mouth:  Role removed from Person",
                     embed_fields,
                     thumbnail=before.avatar_url_as(static_format="png"),
                     reason="logging_member_role_change",
@@ -212,7 +213,7 @@ class _Log(context.CustomCog):
 
         await self.log_event(
             guild,
-            ":no_entry:  Member Banned",
+            ":no_entry:  Person Banned",
             embed_fields,
             thumbnail=user.avatar_url_as(static_format="png"),
             to_owner=True,
@@ -225,7 +226,7 @@ class _Log(context.CustomCog):
 
         await self.log_event(
             guild,
-            ":dove:  Member Unbanned",
+            ":dove:  Person Unbanned",
             embed_fields,
             thumbnail=user.avatar_url_as(static_format="png"),
             to_owner=True,

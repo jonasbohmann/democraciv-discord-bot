@@ -160,7 +160,7 @@ class Moderation(context.CustomCog):
         if chance >= 0.2:
             embed = text.SafeEmbed(title="Possible Alt Account Joined", description="")
             embed.add_field(
-                name="Member", value=f"{member.mention} ({member.id})", inline=False
+                name="Person", value=f"{member.mention} ({member.id})", inline=False
             )
             embed.add_field(
                 name="Chance",
