@@ -376,6 +376,7 @@ def roll_dice(dice_to_roll: Dice, auth: str = Depends(ensure_auth)):
 
 class Question(pydantic.BaseModel):
     question: str
+    batch_size: int = 1
 
 
 @app.middleware("http")
@@ -394,9 +395,12 @@ async def ml_qa_force_index(auth: str = Depends(ensure_auth)):
 
 @app.post("/ml/question_answering")
 def ml_qa(question: Question, auth: str = Depends(ensure_auth)):
+    if question.batch_size > 10:
+        return {"error": "batch_size too large. maximum is 10"}
+
     try:
         answers = bert_qa.qa.ask(
-            question.question, n_answers=5, n_docs_considered=10, batch_size=1
+            question.question, n_answers=10, n_docs_considered=15, batch_size=question.batch_size
         )
         result = []
 

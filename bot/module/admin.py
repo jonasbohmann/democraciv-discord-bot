@@ -1,3 +1,5 @@
+import typing
+
 from discord.ext import commands
 from jishaku.cog import JishakuBase, jsk
 from jishaku.metacog import GroupCogMeta
@@ -108,7 +110,7 @@ class Experiments(context.CustomCog):
 
     @commands.command(name="ask")
     @commands.max_concurrency(1, wait=False)
-    async def ask(self, ctx, *, question):
+    async def ask(self, ctx, batch_size: typing.Optional[int] = 1, *, question):
         """Get answers to a legal question with Deep (Machine) Learning:tm: and Neural Networks:tm:
 
         This is an experimental command and probably still a work-in-progress."""
@@ -122,7 +124,7 @@ class Experiments(context.CustomCog):
 
         async with ctx.typing():
             response = await self.bot.api_request(
-                "POST", "ml/question_answering", json={"question": question}
+                "POST", "ml/question_answering", json={"question": question, "batch_size": batch_size}
             )
 
         await wait.delete()
