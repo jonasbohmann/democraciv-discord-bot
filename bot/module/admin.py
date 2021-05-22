@@ -1,3 +1,4 @@
+import time
 import typing
 
 from discord.ext import commands
@@ -123,9 +124,13 @@ class Experiments(context.CustomCog):
         )
 
         async with ctx.typing():
+            start = time.time()
             response = await self.bot.api_request(
                 "POST", "ml/question_answering", json={"question": question, "batch_size": batch_size}
             )
+            end = time.time()
+
+        duration = end - start
 
         await wait.delete()
 
@@ -164,6 +169,9 @@ class Experiments(context.CustomCog):
             icon=self.bot.mk.NATION_ICON_URL,
             reply=True,
         )
+
+        await ctx.reply(f"{config.HINT} Keep in mind that this feature is still a work-in-progress in Beta. "
+                        f"Question answering took ~{duration} seconds with a batch size of {batch_size}.")
         await pages.start(ctx)
 
     @commands.command(name="extract")
