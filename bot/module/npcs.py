@@ -186,8 +186,6 @@ class AccessToNPCConverter(NPCConverter):
 class NPC(CustomCog):
     """NPCs can be used to write messages as someone else, for example as an role-played character, or on behalf on an organization or group."""
 
-    hidden = True
-
     def __init__(self, bot):
         super().__init__(bot)
         # channel_id -> webhook url

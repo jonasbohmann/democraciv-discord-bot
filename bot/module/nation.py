@@ -192,11 +192,15 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
 
-        role = self.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
+        try:
+            role = self.bot.get_democraciv_role(mk.DemocracivRole.NATION_ADMIN)
 
-        if role:
-            fmt = [m.mention for m in role.members] or ["-"]
-            embed.add_field(name="Nation Admins", value="\n".join(fmt))
+            if role:
+                fmt = [m.mention for m in role.members] or ["-"]
+                embed.add_field(name="Nation Admins", value="\n".join(fmt))
+
+        except exceptions.RoleNotFoundError:
+            pass
 
         await ctx.send(embed=embed)
 

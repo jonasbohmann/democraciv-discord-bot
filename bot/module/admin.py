@@ -137,7 +137,7 @@ class Experiments(context.CustomCog):
             "find answers to a legal question you're asking. All currently existing bills are taken into account "
             "to try to find the best answer. Google's BERT model in combination with Tensorflow Keras "
             "are used here.\n\nThis comes with no guarantees about the correctness of the answers. Do not expect "
-            "this to be free of wrong, misleading or irrelevant answers."
+            "this to be free of wrong, misleading or irrelevant answers.\n\n"
         ]
 
         for result in response:
