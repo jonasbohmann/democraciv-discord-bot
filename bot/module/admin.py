@@ -171,7 +171,7 @@ class Experiments(context.CustomCog):
         )
 
         await ctx.reply(f"{config.HINT} Keep in mind that this feature is still a work-in-progress in Beta. "
-                        f"Question answering took ~{duration} seconds with a batch size of {batch_size}.")
+                        f"Question answering took ~{duration:.2f} seconds with a batch size of {batch_size}.")
         await pages.start(ctx)
 
     @commands.command(name="extract")

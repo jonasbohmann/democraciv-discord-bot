@@ -58,7 +58,7 @@ class PassScheduler(text.RedditAnnouncementScheduler):
         # )
 
         message.append(
-            f"\nAll these bills are now laws and can be found in `{p}laws`, as well with `{p}laws search`."
+            f"\nAll these bills are now laws. They were added to `{p}laws` and can be found with `{p}laws search`."
         )
         embed.description = "\n".join(message)
         return embed

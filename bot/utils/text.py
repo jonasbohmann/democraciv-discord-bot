@@ -80,11 +80,15 @@ class AnnouncementScheduler:
 
         embeds = []
 
-        for page in paginator.pages:
-            em = SafeEmbed(title=original_embed.title, description=page)
-            em.set_author(
-                icon_url=original_embed.author.icon_url, name=original_embed.author.name
-            )
+        for i, page in enumerate(paginator.pages):
+            em = SafeEmbed(description=page)
+
+            if i == 0:
+                em.title = original_embed.title
+                em.set_author(
+                    icon_url=original_embed.author.icon_url, name=original_embed.author.name
+                )
+
             embeds.append(em)
 
         return embeds
