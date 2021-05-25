@@ -54,10 +54,19 @@ class BERTQuestionAnswering:
             shutil.rmtree(self.index_directory, ignore_errors=True)
 
             await self.db.ready.wait()
-            laws = await self.db.pool.fetch("SELECT id, content FROM bill")
 
-            documents = [record["content"] for record in laws]
-            references = [str(record["id"]) for record in laws]
+            bills = await self.db.pool.fetch("SELECT id, content FROM bill")
+            motions = await self.db.pool.fetch(
+                "SELECT id, title, description FROM motion"
+            )
+
+            documents = [record["content"] for record in bills]
+            references = [f"bill_{record['id']}" for record in bills]
+
+            documents.extend(
+                [f"{record['title']}\n\n{record['description']}" for record in motions]
+            )
+            references.extend([f"motion_{record['id']}" for record in motions])
 
             text.SimpleQA.initialize_index(self.index_directory)
 
@@ -76,16 +85,3 @@ class BERTQuestionAnswering:
             end = time.time()
             self._is_index_queued = False
             logger.info(f"indexing successful after {end - start} seconds")
-
-    async def add_bill(self, bill_id: int):
-        # figuring this out is a hassle so let's just re-index
-        await self.index()
-
-        # content = await self.db.pool.fetchval("SELECT content FROM bill WHERE id = $1", bill_id)
-        #
-        # if not content:
-        #     return
-        #
-        # index = self.qa._open_ix()
-        # writer = index.writer()
-        # writer.add_document()

@@ -228,7 +228,7 @@ class Bill(commands.Converter, FuzzyableMixin):
             "DELETE FROM bill_lookup_tag WHERE bill_id = $1", self.id
         )
         await self._bot.api_request(
-            "POST", "bill/update", silent=True, json={"id": self.id}
+            "POST", "document/update", silent=True, json={"label": f"bill_{self.id}"}
         )
 
         id_with_kws = [(self.id, keyword) for keyword in keywords]
@@ -481,6 +481,9 @@ class Motion(commands.Converter, FuzzyableMixin):
 
     async def withdraw(self):
         await self._bot.db.execute("DELETE FROM motion WHERE id = $1", self.id)
+        await self._bot.api_request(
+            "POST", "document/delete", silent=True, json={"label": f"motion_{self.id}"}
+        )
 
     async def get_fuzzy_source(
         self, ctx: context.CustomContext, argument: str
@@ -711,7 +714,10 @@ class BillSubmitted(BillStatus):
 
         await self._bot.db.execute("DELETE FROM bill WHERE id = $1", self._bill.id)
         await self._bot.api_request(
-            "POST", "bill/delete", silent=True, json={"id": self._bill.id}
+            "POST",
+            "document/delete",
+            silent=True,
+            json={"label": f"bill_{self._bill.id}"},
         )
 
     async def fail_in_legislature(self, dry=False, **kwargs):

@@ -186,8 +186,8 @@ class DeleteRedditPost(pydantic.BaseModel):
     id: str
 
 
-class Bill(pydantic.BaseModel):
-    id: int
+class Document(pydantic.BaseModel):
+    label: str
 
 
 @app.on_event("startup")
@@ -414,7 +414,7 @@ def ml_qa(question: Question, auth: str = Depends(ensure_auth)):
                     "score": float(answer["confidence"]),
                     "context": answer["context"],
                     "full_answer": answer["full_answer"],
-                    "bill": answer["reference"],
+                    "document": answer["reference"],
                 }
             )
 
@@ -430,25 +430,25 @@ def ml_ie(question: Question, auth: str = Depends(ensure_auth)):
     return answers
 
 
-@app.post("/bill/add")
-async def new_bill(bill: Bill, auth: str = Depends(ensure_auth)):
-    await bert_qa.add_bill(bill.id)
-    await holmes_ie.add_bill(bill.id)
-    return {"ok": "ok"}
-
-
-@app.post("/bill/update")
-async def update_bill(bill: Bill, auth: str = Depends(ensure_auth)):
-    await holmes_ie.add_bill(bill.id)
-
-    # documents in our index are not unique so we cannot reasonably delete just the one bill
+@app.post("/document/add")
+async def new_bill(document: Document, auth: str = Depends(ensure_auth)):
+    await holmes_ie.add_document(document.label)
     await bert_qa.index()
     return {"ok": "ok"}
 
 
-@app.post("/bill/delete")
-async def delete_bill(bill: Bill, auth: str = Depends(ensure_auth)):
-    await holmes_ie.delete_bill(bill.id)
+@app.post("/document/update")
+async def update_bill(document: Document, auth: str = Depends(ensure_auth)):
+    await holmes_ie.add_document(document.label)
+
+    # documents in our index are not unique so we cannot reasonably update just the one bill
+    await bert_qa.index()
+    return {"ok": "ok"}
+
+
+@app.post("/document/delete")
+async def delete_bill(document: Document, auth: str = Depends(ensure_auth)):
+    holmes_ie.delete_document(document.label)
 
     # documents in our index are not unique so we cannot reasonably delete just the one bill
     await bert_qa.index()

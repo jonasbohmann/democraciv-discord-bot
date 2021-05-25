@@ -9,31 +9,54 @@ class InformationExtraction:
     async def register_documents(self):
         await self.db.ready.wait()
 
-        records = await self.db.pool.fetch("SELECT id, content FROM bill")
+        bills = await self.db.pool.fetch("SELECT id, content FROM bill")
+        motions = await self.db.pool.fetch("SELECT id, description FROM motion")
 
-        for record in records:
+        for bill in bills:
             self.holmes_manager.parse_and_register_document(
-                document_text=record["content"], label=str(record["id"])
+                document_text=bill["content"], label=f"bill_{bill['id']}"
             )
 
-    async def add_bill(self, bill_id):
-        bill = await self.db.pool.fetchrow(
-            "SELECT id, content FROM bill WHERE id = $1", bill_id
-        )
+        for motion in motions:
+            self.holmes_manager.parse_and_register_document(
+                document_text=motion["description"], label=f"motion_{motion['id']}"
+            )
+
+    async def add_document(self, label: str):
+        thing, thing_id = label.split("_")
+
+        if thing == "bill":
+            doc = await self.db.pool.fetchrow(
+                "SELECT id, content FROM bill WHERE id = $1", thing_id
+            )
+
+            content = doc["content"]
+
+        elif thing == "motion":
+            doc = await self.db.pool.fetchrow(
+                "SELECT id, title, description FROM motion WHERE id = $1", thing_id
+            )
+            content = f"{doc['title']}\n\n{doc['description']}"
+
+        else:
+            return "invalid label"
 
         try:
-            self.holmes_manager.remove_document(label=str(bill["id"]))
+            self.holmes_manager.remove_document(label=label)
         except KeyError:
             pass
 
         self.holmes_manager.parse_and_register_document(
-            document_text=bill["content"], label=str(bill["id"])
+            document_text=content, label=label
         )
 
-    async def delete_bill(self, bill_id):
-        self.holmes_manager.remove_document(str(bill_id))
+    def delete_document(self, label: str):
+        try:
+            self.holmes_manager.remove_document(label)
+        except KeyError:
+            pass
 
     def search(self, query: str):
-        return self.holmes_manager.topic_match_documents_returning_dictionaries_against(
+        return self.holmes_manager.topic_match_documents_against(
             query, number_of_results=5
         )

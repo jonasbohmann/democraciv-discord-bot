@@ -143,8 +143,8 @@ class Experiments(context.CustomCog):
 
         fmt = [
             "This uses deep learning, a particular machine learning method, with neural networks to try to "
-            "find answers to a legal question you're asking. All currently existing bills are taken into account "
-            "to try to find the best answer. Google's BERT model in combination with Tensorflow Keras "
+            "find answers to a legal question you're asking. All currently existing bills & motions are taken into "
+            "account to try to find the best answer. Google's BERT model in combination with Tensorflow Keras "
             "are used here.\n\nThis comes with no guarantees about the correctness of the answers. Do not expect "
             "this to be free of wrong, misleading or irrelevant answers.\n\n"
         ]
@@ -158,9 +158,19 @@ class Experiments(context.CustomCog):
             else:
                 cntxt = [f"__Context__", f"```{result['full_answer']}```"]
 
-            bill = await models.Bill.convert(ctx, result["bill"])
+            thing, thing_id = result["document"].split("_")
+
+            if thing == "bill":
+                obj = await models.Bill.convert(ctx, thing_id)
+
+            elif thing == "motion":
+                obj = await models.Motion.convert(ctx, thing_id)
+
+            else:
+                continue
+
             fmt.append(
-                f"**__Found answer in {bill.formatted} with a confidence of {result['score'] * 100:.2f}%__**"
+                f"**__Found answer in {obj.formatted} with a confidence of {result['score'] * 100:.2f}%__**"
             )
             fmt.append(f"```{result['answer']}```")
             fmt.extend(cntxt)
@@ -180,7 +190,7 @@ class Experiments(context.CustomCog):
 
     @commands.command(name="extract")
     async def match(self, ctx, *, query):
-        """Extract information from bills & laws with Natural Language Processing:tm:
+        """Extract information from bills, laws & motions with Natural Language Processing:tm:
 
         This is an experimental command and probably still a work-in-progress."""
 
@@ -195,7 +205,7 @@ class Experiments(context.CustomCog):
             )
 
         fmt = [
-            "This uses Natural Language Processing to topic match your query against all existing bills "
+            "This uses Natural Language Processing to topic match your query against all existing bills & motions "
             "and shows the most closely corresponding excerpts. Using full, grammatical expressions with "
             f"no spelling errors will improve the quality of your results.\n\nShould this feature come out of "
             f"beta, then it will probably be integrated into the `{config.BOT_PREFIX}laws search` and "
@@ -203,9 +213,19 @@ class Experiments(context.CustomCog):
         ]
 
         for result in response:
-            bill = await models.Bill.convert(ctx, result["document_label"])
+            thing, thing_id = result["document_label"].split("_")
+
+            if thing == "bill":
+                obj = await models.Bill.convert(ctx, thing_id)
+
+            elif thing == "motion":
+                obj = await models.Motion.convert(ctx, thing_id)
+
+            else:
+                continue
+
             txt = result["text"]
-            fmt.append(f"**__{bill.formatted}__**")
+            fmt.append(f"**__{obj.formatted}__**")
             fmt.append(f"```{txt}```\n")
 
         pages = paginator.SimplePages(

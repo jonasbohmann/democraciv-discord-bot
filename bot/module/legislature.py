@@ -393,7 +393,7 @@ class Legislature(
                         )
 
                         await self.bot.api_request(
-                            "POST", "bill/update", json={"id": bill.id}
+                            "POST", "document/update", json={"label": f"bill_{bill.id}"}
                         )
 
         msg = f"{config.YES} Synchronized {len(bills) - len(errs)}/{len(bills)} bills with Google Docs."
@@ -715,6 +715,10 @@ class Legislature(
             content,
             paste,
             motion.id,
+        )
+
+        await self.bot.api_request(
+            "POST", "document/update", json={"label": f"motion_{motion.id}"}
         )
 
         await ctx.send(f"{config.YES} Motion #{motion.id} `{motion.name}` was updated.")
@@ -1780,7 +1784,7 @@ class Legislature(
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
         await self.bot.api_request(
-            "POST", "bill/add", silent=True, json={"id": bill_id}
+            "POST", "document/add", silent=True, json={"label": f"bill_{bill_id}"}
         )
         return embed
 
@@ -1845,6 +1849,9 @@ class Legislature(
 
         await ctx.send(
             f"{config.YES} Your motion `{title}` was submitted for session #{current_leg_session_id}."
+        )
+        await self.bot.api_request(
+            "POST", "document/add", silent=True, json={"label": f"motion_{motion_id}"}
         )
         return embed
 
