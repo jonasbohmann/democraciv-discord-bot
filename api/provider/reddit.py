@@ -91,6 +91,8 @@ class RedditManager(ProviderManager):
             "title": title,
             "spoiler": False,
             "ad": False,
+            "api_type": "json",
+            "resubmit": True,
         }
 
         if content and url:
@@ -107,22 +109,28 @@ class RedditManager(ProviderManager):
         async with self._session.post(
             "https://oauth.reddit.com/api/submit?raw_json=1", data=data, headers=headers
         ) as response:
+            js = await response.json()
+
+            if js["json"]["errors"]:
+                logger.warning(f"got error while posting to reddit: {js}")
+                return {"error": js}
 
             if response.status in (401, 403):
 
                 if not retry:
                     await self.refresh_reddit_bearer_token()
                     return await self.post_to_reddit(
-                        subreddit=subreddit, title=title, content=content, retry=True
+                        subreddit=subreddit,
+                        title=title,
+                        content=content,
+                        url=url,
+                        retry=True,
                     )
 
                 logger.warning("got 403 while posting to reddit")
-                return {"error": await response.json()}
+                return {"error": js}
 
-            try:
-                return await response.json()
-            except aiohttp.ContentTypeError:
-                return {"error": "error"}
+            return js
 
     async def delete_reddit_post(self, *, post_id: str, retry=False):
         headers = {

@@ -126,7 +126,9 @@ class Experiments(context.CustomCog):
         async with ctx.typing():
             start = time.time()
             response = await self.bot.api_request(
-                "POST", "ml/question_answering", json={"question": question, "batch_size": batch_size}
+                "POST",
+                "ml/question_answering",
+                json={"question": question, "batch_size": batch_size},
             )
             end = time.time()
 
@@ -170,8 +172,10 @@ class Experiments(context.CustomCog):
             reply=True,
         )
 
-        await ctx.reply(f"{config.HINT} Keep in mind that this feature is still a work-in-progress in Beta. "
-                        f"Question answering took ~{duration:.2f} seconds with a batch size of {batch_size}.")
+        await ctx.reply(
+            f"{config.HINT} Keep in mind that this feature is still a work-in-progress in Beta. "
+            f"Question answering took ~{duration:.2f} seconds with a batch size of {batch_size}."
+        )
         await pages.start(ctx)
 
     @commands.command(name="extract")

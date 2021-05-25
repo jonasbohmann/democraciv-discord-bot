@@ -1026,7 +1026,7 @@ class BillRepealed(BillStatus):
         await self.log_history(
             self.flag,
             _BillStatusFlag.LEG_PASSED,
-            note=f"Repeal reversed & Passed into law by {mk.MarkConfig.LEGISLATURE_NAME}"
+            note=f"Repeal reversed & Passed into law by {mk.MarkConfig.LEGISLATURE_NAME}",
         )
 
     async def resubmit(self, dry=False, *, resubmitter, **kwargs):

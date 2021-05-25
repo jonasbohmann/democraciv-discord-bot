@@ -130,7 +130,7 @@ class TwitchManager(ProviderManager):
         async with self._session.request(
             method, url, **kwargs, headers=self._headers
         ) as resp:
-            print(f"method {method} to {url}", resp.status, await resp.json())
+
             if resp.status in (401, 403):
                 if not retry:
                     await self._refresh_twitch_oauth_token()

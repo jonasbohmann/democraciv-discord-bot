@@ -400,7 +400,10 @@ def ml_qa(question: Question, auth: str = Depends(ensure_auth)):
 
     try:
         answers = bert_qa.qa.ask(
-            question.question, n_answers=10, n_docs_considered=15, batch_size=question.batch_size
+            question.question,
+            n_answers=10,
+            n_docs_considered=15,
+            batch_size=question.batch_size,
         )
         result = []
 

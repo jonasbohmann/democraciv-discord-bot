@@ -86,7 +86,8 @@ class AnnouncementScheduler:
             if i == 0:
                 em.title = original_embed.title
                 em.set_author(
-                    icon_url=original_embed.author.icon_url, name=original_embed.author.name
+                    icon_url=original_embed.author.icon_url,
+                    name=original_embed.author.name,
                 )
 
             embeds.append(em)
