@@ -57,6 +57,6 @@ class InformationExtraction:
             pass
 
     def search(self, query: str):
-        return self.holmes_manager.topic_match_documents_against(
+        return self.holmes_manager.topic_match_documents_returning_dictionaries_against(
             query, number_of_results=5
         )
