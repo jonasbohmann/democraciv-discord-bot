@@ -1013,6 +1013,22 @@ class BillRepealed(BillStatus):
     flag = _BillStatusFlag.REPEALED
     verbose_name = "Repealed"
 
+    async def pass_from_legislature(self, dry=False, **kwargs):
+        if dry:
+            return
+
+        await self._bot.db.execute(
+            "UPDATE bill SET status = $1 WHERE id = $2",
+            _BillStatusFlag.LEG_PASSED.value,
+            self._bill.id,
+        )
+
+        await self.log_history(
+            self.flag,
+            _BillStatusFlag.LEG_PASSED,
+            note=f"Repeal reversed & Passed into law by {mk.MarkConfig.LEGISLATURE_NAME}"
+        )
+
     async def resubmit(self, dry=False, *, resubmitter, **kwargs):
         session = await self._bot.db.fetchval(
             "SELECT id FROM legislature_session WHERE status = 'Submission Period'"
