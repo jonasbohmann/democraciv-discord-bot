@@ -20,8 +20,8 @@ class MockContext:
         The bot instance
     """
 
-    def __init__(self, _bot: "bot.DemocracivBot", *, guild=None):
-        self.bot = _bot
+    def __init__(self, bot: "bot.DemocracivBot", *, guild=None):
+        self.bot = bot
         self.guild = guild
 
 
