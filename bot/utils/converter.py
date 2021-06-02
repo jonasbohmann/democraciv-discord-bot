@@ -89,10 +89,10 @@ class _Fuzzy(commands.Converter):
             for thing in source[:weight]:
                 sources[group][thing] = None
 
-            if source and converter.model not in model:
+            if source and converter.model not in model and weight != 0:
                 model.append(converter.model)
 
-            if source and converter.fuzzy_description:
+            if source and converter.fuzzy_description and weight != 0:
                 description.append(converter.fuzzy_description)
 
         if hasattr(exception_mapping[self.converter[0].converter], "message"):
@@ -101,7 +101,7 @@ class _Fuzzy(commands.Converter):
             first_exception = str(exception_mapping[self.converter[0][0]])
 
         exception = (
-            self.settings.no_choice_exception
+            self.settings.no_choice_exception.replace("{{argument}}", argument)
             if self.settings and self.settings.no_choice_exception
             else first_exception
         )
