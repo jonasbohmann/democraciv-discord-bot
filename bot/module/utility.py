@@ -525,7 +525,7 @@ class Utility(context.CustomCog):
             CaseInsensitiveRole,
             DemocracivCaseInsensitiveRole,
             PoliticalParty,
-            FuzzySettings(weights=(5, 1, 2, 1, 1)),
+            FuzzySettings(weights=(5, 1, 2, 1, 0)),
         ] = None,
     ):
         """See detailed information about someone

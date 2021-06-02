@@ -1,11 +1,12 @@
 import time
 import typing
 
+import discord.utils
 from discord.ext import commands
 from jishaku.cog import JishakuBase, jsk
 from jishaku.metacog import GroupCogMeta
 
-from bot.utils import models, context, text, paginator
+from bot.utils import models, context, paginator
 from bot.config import config, token
 
 
@@ -156,7 +157,7 @@ class Experiments(context.CustomCog):
             if len(result["full_answer"]) - len(result["answer"]) <= 3:
                 cntxt = []
             else:
-                cntxt = [f"__Context__", f"```{result['full_answer']}```"]
+                cntxt = [f"__Context__", f"```{discord.utils.escape_markdown(result['full_answer'])}```"]
 
             thing, thing_id = result["document"].split("_")
 
@@ -172,7 +173,7 @@ class Experiments(context.CustomCog):
             fmt.append(
                 f"**__Found answer in {obj.formatted} with a confidence of {result['score'] * 100:.2f}%__**"
             )
-            fmt.append(f"```{result['answer']}```")
+            fmt.append(f"```{discord.utils.escape_markdown(result['answer'])}```")
             fmt.extend(cntxt)
 
         pages = paginator.SimplePages(
@@ -224,7 +225,7 @@ class Experiments(context.CustomCog):
             else:
                 continue
 
-            txt = result["text"]
+            txt = discord.utils.escape_markdown(result["text"])
             fmt.append(f"**__{obj.formatted}__**")
             fmt.append(f"```{txt}```\n")
 

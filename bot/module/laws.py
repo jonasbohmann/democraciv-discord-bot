@@ -70,11 +70,11 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
                 icon_url=law.submitter.avatar_url_as(static_format="png"),
             )
             submitted_by_value = (
-                f"{law.submitter.mention} (during Session #{law.session.id})"
+                f"{law.submitter.mention} {law.submitter}"
             )
         else:
             submitted_by_value = (
-                f"*Person left {self.bot.dciv.name}* (during Session #{law.session.id})"
+                f"*Person left {self.bot.dciv.name}*"
             )
 
         embed.add_field(name="Author", value=submitted_by_value, inline=False)
@@ -87,7 +87,8 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         if history:
             embed.add_field(name="History", value="\n".join(history))
 
-        embed.set_footer(text=f"All dates are in UTC.")
+        # todo remove session when MK8 ends
+        embed.set_footer(text=f"All dates are in UTC. Session #{law.session.id}")
         message = await ctx.send(embed=embed)
 
         if await ctx.ask_to_continue(message=message, emoji="\U0001f4c3"):

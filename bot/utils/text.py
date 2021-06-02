@@ -239,7 +239,8 @@ class FuzzyChoose(menus.Menu):
             fmt.insert(0, self.description)
 
         for emoji, choice in self._mapping.items():
-            fmt.append(f"{emoji}  {choice}")
+            safe_choice = discord.utils.escape_markdown(str(choice))
+            fmt.append(f"{emoji}  {safe_choice}")
 
         fmt = "\n".join(fmt)
         embed.description = fmt
@@ -277,7 +278,8 @@ class FuzzyMultiModelChoose(FuzzyChoose):
             fmt.append(f"__**{group}**__")
 
             for choice in choices:
-                fmt.append(f"{self._reverse_mapping[choice]}  {choice}")
+                safe_choice = discord.utils.escape_markdown(str(choice))
+                fmt.append(f"{self._reverse_mapping[choice]}  {safe_choice}")
 
             fmt.append(" ")
 
