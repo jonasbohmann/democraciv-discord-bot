@@ -101,7 +101,7 @@ class _Fuzzy(commands.Converter):
             first_exception = str(exception_mapping[self.converter[0][0]])
 
         exception = (
-            self.settings.no_choice_exception.replace("{{argument}}", argument)
+            self.settings.no_choice_exception.replace("{argument}", argument)
             if self.settings and self.settings.no_choice_exception
             else first_exception
         )
