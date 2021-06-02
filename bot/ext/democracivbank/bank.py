@@ -15,9 +15,10 @@ from discord.ext import menus
 from bot.utils.converter import Fuzzy, FuzzySettings
 
 
-class CurrencySelector(menus.Menu):
-    def __init__(self, currencies):
-        super().__init__(timeout=120.0, delete_message_after=True)
+class CurrencySelector(discord.ui.View):
+    def __init__(self, ctx, currencies):
+        super().__init__()
+        self.ctx = ctx
         self.result = None
         self.currencies: dict = currencies
         self._make_buttons()
@@ -25,51 +26,28 @@ class CurrencySelector(menus.Menu):
     def get_curr_name(self, code):
         return self.currencies.get(code).name
 
-    async def send_initial_message(self, ctx, channel):
-        embed = text.SafeEmbed(
-            title=f"{config.USER_INTERACTION_REQUIRED}  Currency Selection"
-        )
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
 
-        description = (
-            "Since you did not specify an IBAN to send the money to, "
-            "I cannot automatically determine the currency for this "
-            "transaction. Once you've chosen a currency, I will send the money "
-            "from your default account for the chosen currency, to the recipient's default "
-            "account for the chosen currency.\n\n"
-            "This only works provided that both you and the "
-            "recipient have previously selected a default account for the chosen currency on "
-            "[democracivbank.com](https://democracivbank.com)\n\n"
-            "__**In which currency would you like to send the money?**__\n"
-        )
+        return False
 
-        currs = []
+    def callback(self, code):
+        async def inner(*args, **kwargs):
+            self.result = code
+            self.stop()
 
-        for emoji, code in self.mapping.items():
-            currs.append(f"{emoji}  {self.get_curr_name(code)}")
-
-        currs = "\n".join(currs)
-
-        embed.description = f"{description}{currs}"
-
-        return await channel.send(embed=embed)
+        return inner
 
     def _make_buttons(self):
-        self.mapping = {}
-
         for i, kv in enumerate(self.currencies.items(), start=1):
-            code, _ = kv
-            emoji = f"{i}\N{variation selector-16}\N{combining enclosing keycap}"
-            button = menus.Button(emoji=emoji, action=self.on_button)
-            self.add_button(button=button)
-            self.mapping[emoji] = code
+            code, curr = kv
+            button = discord.ui.Button(label=curr.name, style=discord.ButtonStyle.grey)
+            button.callback = self.callback(code)
+            self.add_item(button)
 
-    async def on_button(self, payload):
-        code = self.mapping.get(str(payload.emoji))
-        self.result = code
-        self.stop()
-
-    async def prompt(self, ctx):
-        await self.start(ctx, wait=True)
+    async def prompt(self):
+        await self.wait()
         return self.result
 
 
@@ -154,7 +132,14 @@ class BankRoute:
 class BankUUIDConverter(commands.Converter):
     async def convert(self, ctx, argument):
         try:
-            return uuid.UUID(argument)
+            ret = uuid.UUID(argument)
+
+            if ret.version != 4:
+                raise BankInvalidIBANFormat(
+                    f"{config.NO} That is not a valid IBAN, it needs to be in this "
+                    "format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`"
+                )
+
         except (ValueError, TypeError):
             raise BankInvalidIBANFormat()
 
@@ -408,21 +393,21 @@ class Bank(context.CustomCog):
 
         embed = text.SafeEmbed(
             description=f"The [{self.BANK_NAME}](https://democracivbank.com) provides the international community "
-            f"with free financial "
-            f"services: Personal & Shared Bank Accounts with complete transaction records, a "
-            f"corporate registry, personalized notifications, support for multiple currencies and a "
-            f"deep integration into the Democraciv Discord Bot.\n\nYou can register at "
-            f"[democracivbank.com](https://democracivbank.com) and open as many bank accounts as you want. "
-            f"We don't have, give out or loan any money ourselves, so to actually get some "
-            f"money you need to consult with our third-party partners (usually governments) "
-            f"that issue the currencies.\n\n"
-            f"Connect your Discord Account on "
-            f"[democracivbank.com/me/discord](https://democracivbank.com/me/discord) to get access to "
-            f"the `{config.BOT_PREFIX}bank` commands, like "
-            f"`{config.BOT_PREFIX}bank accounts` to view all of your balances right here in Discord, "
-            f"and to enable personalized "
-            f"notifications in real-time whenever someone sends you money.\n\nSee `{config.BOT_PREFIX}help "
-            f"bank` for a list of all bank related commands here on Discord."
+                        f"with free financial "
+                        f"services: Personal & Shared Bank Accounts with complete transaction records, a "
+                        f"corporate registry, personalized notifications, support for multiple currencies and a "
+                        f"deep integration into the Democraciv Discord Bot.\n\nYou can register at "
+                        f"[democracivbank.com](https://democracivbank.com) and open as many bank accounts as you want. "
+                        f"We don't have, give out or loan any money ourselves, so to actually get some "
+                        f"money you need to consult with our third-party partners (usually governments) "
+                        f"that issue the currencies.\n\n"
+                        f"Connect your Discord Account on "
+                        f"[democracivbank.com/me/discord](https://democracivbank.com/me/discord) to get access to "
+                        f"the `{config.BOT_PREFIX}bank` commands, like "
+                        f"`{config.BOT_PREFIX}bank accounts` to view all of your balances right here in Discord, "
+                        f"and to enable personalized "
+                        f"notifications in real-time whenever someone sends you money.\n\nSee `{config.BOT_PREFIX}help "
+                        f"bank` for a list of all bank related commands here on Discord."
         )
 
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
@@ -442,9 +427,9 @@ class Bank(context.CustomCog):
 
             embed = text.SafeEmbed(
                 description="Check out all corporations and organizations from around"
-                " the world and what they have to offer on "
-                "[**democracivbank.com/marketplace**]"
-                "(https://democracivbank.com/marketplace)",
+                            " the world and what they have to offer on "
+                            "[**democracivbank.com/marketplace**]"
+                            "(https://democracivbank.com/marketplace)",
                 url="https://democracivbank.com/marketplace",
             )
 
@@ -487,7 +472,7 @@ class Bank(context.CustomCog):
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
         embed.set_footer(
             text=f"Send money to this organization with: {config.BOT_PREFIX}bank send "
-            f"{organization.abbreviation} <amount>"
+                 f"{organization.abbreviation} <amount>"
         )
 
         if organization.discord_server:
@@ -510,9 +495,9 @@ class Bank(context.CustomCog):
             embed = text.SafeEmbed(
                 title=f"{config.HINT}  Privacy Prompt",
                 description="Are you sure that you want to proceed?\n\n"
-                "Everyone in this channel would be able to see the balance of all bank accounts "
-                "you have access to.\n\n*Using this command in DMs with me does not "
-                "trigger this question.*",
+                            "Everyone in this channel would be able to see the balance of all bank accounts "
+                            "you have access to.\n\n*Using this command in DMs with me does not "
+                            "trigger this question.*",
             )
             privacy_q = await ctx.send(embed=embed)
             reaction = await ctx.confirm(message=privacy_q)
@@ -572,18 +557,18 @@ class Bank(context.CustomCog):
 
     @bank.command(name="send", aliases=["s", "transfer", "t", "give"])
     async def send(
-        self,
-        ctx,
-        to_person_or_iban_or_organization: Fuzzy[
-            converter.CaseInsensitiveMember,
-            converter.CaseInsensitiveUser,
-            BankCorporationAbbreviation,
-            BankUUIDConverter,
-            FuzzySettings(weights=(5, 1)),
-        ],
-        amount: decimal.Decimal,
-        *,
-        purpose: str = None,
+            self,
+            ctx,
+            to_person_or_iban_or_organization: Fuzzy[
+                converter.CaseInsensitiveMember,
+                converter.CaseInsensitiveUser,
+                BankCorporationAbbreviation,
+                BankUUIDConverter,
+                FuzzySettings(weights=(5, 1)),
+            ],
+            amount: decimal.Decimal,
+            *,
+            purpose: str = None,
     ):
         """Send money to a specific bank account, organization, or person on this server
 
@@ -595,20 +580,31 @@ class Bank(context.CustomCog):
         """
 
         await self.is_connected_with_bank_user(ctx)
-        currency = "XYZ"  # linter
+        currency = ""
 
         if not isinstance(to_person_or_iban_or_organization, uuid.UUID):
             # if IBAN, skip currency selection
-            currency = await CurrencySelector(self._currencies).prompt(ctx)
+            embed = text.SafeEmbed(
+                title=f"{config.USER_INTERACTION_REQUIRED}  Currency Selection",
+                description="Since you did not specify an IBAN to send the money to, "
+                            "I cannot automatically determine the currency for this "
+                            "transaction. Once you've chosen a currency, I will send the money to the recipient's "
+                            "default account for the chosen currency.\n\n"
+                            "This only works provided that the recipient have previously selected a default account "
+                            "for the chosen currency on [democracivbank.com](https://democracivbank.com)."
+            )
+
+            view = CurrencySelector(ctx, self._currencies)
+            msg = await ctx.send(embed=embed, view=view)
+            currency = await view.prompt()
 
             if not currency:
-                return await ctx.send(
-                    f"{config.NO} You did not select a currency, the transaction was cancelled."
-                )
+                return
 
-            from_iban = await self.resolve_iban(ctx.author.id, currency, is_sender=True)
+            await msg.delete()
+            # from_iban = await self.resolve_iban(ctx.author.id, currency, is_sender=True)
 
-        if isinstance(to_person_or_iban_or_organization, discord.Member):
+        if isinstance(to_person_or_iban_or_organization, discord.abc.User):
             to_iban = await self.resolve_iban(
                 to_person_or_iban_or_organization.id, currency
             )
@@ -618,23 +614,47 @@ class Bank(context.CustomCog):
             )
         else:
             # is UUID
-            if to_person_or_iban_or_organization.version != 4:
-                raise BankInvalidIBANFormat(
-                    f"{config.NO} That is not a valid IBAN, it needs to be in this "
-                    "format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`"
-                )
-
             to_iban = str(to_person_or_iban_or_organization)
             currency = await self.get_currency_from_iban(to_iban)
-            from_iban = await self.resolve_iban(ctx.author.id, currency, is_sender=True)
+            # from_iban = await self.resolve_iban(ctx.author.id, currency, is_sender=True)
+
+        view = PickBankAccountView(ctx, currency, amount, to_iban)
+        msg = await ctx.send(
+            content=f"{config.USER_INTERACTION_REQUIRED} From what bank account would you like to send "
+                    f"the money?",
+            view=view)
+
+        from_iban = await view.prompt()
+
+        await msg.delete()
+
+        pretty_amount = self.get_currency(currency).with_amount(
+            amount
+        )
+        fmt = ""
+
+        if isinstance(to_person_or_iban_or_organization, discord.abc.User):
+            fmt = to_person_or_iban_or_organization.mention
+        elif isinstance(to_person_or_iban_or_organization, str):
+            r = await self.request(BankRoute("GET", f"account/{to_iban}/"))
+            pretty_target = await r.json()
+            fmt = f"**{pretty_target['corporate_holder']['name']}**"
+
+        em = text.SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}  Confirm Transaction",
+                            description=f"Do you really want to send **{pretty_amount}** "
+                                        f"to {fmt}?")
+        v = ConfirmView(ctx)
+        m = await ctx.send(embed=em, view=v)
+
+        result = await v.prompt()
+        await m.delete()
+
+        if not result:
+            return
 
         purpose = "Sent via the Democraciv Discord Bot" if not purpose else purpose
         transaction = await self.send_money(
             ctx.author.id, from_iban, to_iban, amount, purpose
-        )
-
-        pretty_amount = self.get_currency(transaction["amount_currency"]).with_amount(
-            amount
         )
 
         embed = text.SafeEmbed(
@@ -656,12 +676,12 @@ class Bank(context.CustomCog):
 
         embed = text.SafeEmbed(
             description=f"\n\nThere are a total of {stats['total_bank_accounts']} open bank accounts across "
-            f"all currencies with a total of {stats['total_transactions']} transactions between "
-            f"all of them. Japan has {stats['organizations']['Japan']} registered "
-            f"organizations.\n\nThe shown circulation of a currency does not include any currency reserves that "
-            f"were provided by the {self.BANK_NAME} when this currency "
-            f"was originally created.\n\nThe velocity is calculated as the amount of currency transferred "
-            f"in the last 7 days divided by its total circulation."
+                        f"all currencies with a total of {stats['total_transactions']} transactions between "
+                        f"all of them. Japan has {stats['organizations']['Japan']} registered "
+                        f"organizations.\n\nThe shown circulation of a currency does not include any currency reserves that "
+                        f"were provided by the {self.BANK_NAME} when this currency "
+                        f"was originally created.\n\nThe velocity is calculated as the amount of currency transferred "
+                        f"in the last 7 days divided by its total circulation."
         )
 
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
@@ -680,6 +700,97 @@ class Bank(context.CustomCog):
             embed.add_field(name=currency["name"], value=value)
 
         await ctx.send(embed=embed)
+
+
+class PickBankAccountView(discord.ui.View):
+
+    def __init__(self, ctx, currency: str, amount, target_iban: str, *args, **kwargs):
+        self.ctx: context.CustomContext = ctx
+        self.bot = ctx.bot
+        self.currency = currency  # code
+        self.result = None
+        self.amount = amount
+        self.target_iban = target_iban
+        self.cog: Bank = self.bot.get_cog("Bank")
+
+        super().__init__(*args, **kwargs)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
+
+        return False
+
+    async def prompt(self):
+        await self.wait()
+        return self.result
+
+    @discord.ui.button(label="Send from Default Personal Bank Account", style=discord.ButtonStyle.green)
+    async def default(self, button: discord.Button, interaction: discord.Interaction):
+        self.result = await self.cog.resolve_iban(self.ctx.author.id, self.currency, is_sender=True)
+        self.stop()
+
+    @discord.ui.button(label="Pick a different Bank Account", style=discord.ButtonStyle.primary)
+    async def not_default(self, button: discord.Button, interaction: discord.Interaction):
+        resp = await self.cog.request(BankRoute("GET", f"accounts/{self.ctx.author.id}/"))
+
+        available_accounts = await resp.json()
+        available_accounts = [acc for acc in available_accounts if acc['balance_currency'] == self.currency
+                              and decimal.Decimal(acc['balance']) >= self.amount and acc['iban'] != self.target_iban]
+
+        if not available_accounts:
+            await interaction.response.send_message(f"{config.NO} You don't have any bank accounts in that currency "
+                                                    f"with sufficient funds.",
+                                                    ephemeral=True)
+            self.result = None
+            self.stop()
+
+        fmt = []
+
+        for i, acc in enumerate(available_accounts, start=1):
+            if acc['corporate_holder']:
+                fmt.append(f"{i}. **{acc['corporate_holder']['name']}** - {acc['name']}")
+            else:
+                fmt.append(f"{i}. {acc['name']}")
+
+        fmt = '\n'.join(fmt)
+        emb = text.SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}  Choose a Bank Account", description=fmt)
+
+        await interaction.response.send_message(embed=emb, ephemeral=True)
+        await interaction.followup.send("y")
+
+        # todo this will be a SelectMenu
+        acc = await self.ctx.input(delete_after=True)
+        self.result = available_accounts[int(acc) - 1]['iban']
+        self.stop()
+
+
+class ConfirmView(discord.ui.View):
+    def __init__(self, ctx, *args, **kwargs):
+        self.ctx: context.CustomContext = ctx
+        self.bot = ctx.bot
+        self.result = False
+        super().__init__(*args, **kwargs)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
+
+        return False
+
+    async def prompt(self):
+        await self.wait()
+        return self.result
+
+    @discord.ui.button(label="Send Money", style=discord.ButtonStyle.green)
+    async def send(self, button: discord.Button, interaction: discord.Interaction):
+        self.result = True
+        self.stop()
+
+    @discord.ui.button(label="Cancel Transaction", style=discord.ButtonStyle.red)
+    async def cancel(self, button: discord.Button, interaction: discord.Interaction):
+        self.result = False
+        self.stop()
 
 
 def setup(bot):

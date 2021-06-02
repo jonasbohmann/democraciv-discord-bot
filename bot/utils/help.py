@@ -321,9 +321,8 @@ class PaginatedHelpCommand(commands.HelpCommand):
     def __init__(self):
         super().__init__(
             command_attrs={
-                "cooldown": commands.Cooldown(
-                    1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user
-                ),
+                "cooldown": commands.CooldownMapping(commands.Cooldown(1, config.BOT_COMMAND_COOLDOWN),
+                                                     commands.BucketType.user),
                 "help": "Shows help about the bot, a command, or a category",
                 "aliases": ["man", "manual", "h"],
             },
@@ -334,7 +333,8 @@ class PaginatedHelpCommand(commands.HelpCommand):
         return f"{config.NO} `{string}` is neither a command, nor a category."
 
     def subcommand_not_found(self, command, string):
-        return f"{config.NO} `{string}` is not a subcommand of the `{config.BOT_PREFIX}{command.qualified_name}` command."
+        return f"{config.NO} `{string}` is not a subcommand of the `{config.BOT_PREFIX}{command.qualified_name}` " \
+               f"command."
 
     def get_command_signature(self, command):
         parent = command.full_parent_name

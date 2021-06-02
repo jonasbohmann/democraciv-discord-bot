@@ -225,6 +225,7 @@ class NPC(CustomCog):
 
     async def _make_webhook_adapter(self):
         await self.bot.wait_until_ready()
+
         self._adapter = discord.AsyncWebhookAdapter(session=self.bot.session)
 
     async def _load_webhook_cache(self):

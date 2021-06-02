@@ -5,7 +5,7 @@ from discord.ext import commands
 from jishaku.cog import JishakuBase, jsk
 from jishaku.metacog import GroupCogMeta
 
-from bot.utils import models, context, text, paginator
+from bot.utils import models, context, paginator
 from bot.config import config, token
 
 
@@ -85,7 +85,7 @@ class Experiments(context.CustomCog):
         self.bot.loop.create_task(self._eject_self_if_no_experiments())
 
     async def _eject_self_if_no_experiments(self):
-        # remove_cog can't be done in __init__ for some reason
+        # remove_cog can't be done in __init__
         await self.bot.wait_until_ready()
 
         public_cmds = filter(
