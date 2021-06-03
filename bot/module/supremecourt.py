@@ -1,6 +1,8 @@
 import discord
 
 from discord.ext import commands
+from discord.utils import escape_markdown
+
 from bot.utils import text, mixin, exceptions, context
 from bot.config import mk
 
@@ -18,17 +20,17 @@ class SupremeCourt(
 
         if isinstance(self.chief_justice, discord.Member):
             justices = [
-                justice.mention
+                f"{justice.mention} {escape_markdown(str(justice))}"
                 for justice in _justices.members
                 if justice.id != self.chief_justice.id
             ]
             justices.insert(
                 0,
-                f"{self.chief_justice.mention} ({self.bot.mk.COURT_CHIEF_JUSTICE_NAME})",
+                f"{self.chief_justice.mention} {escape_markdown(str(self.chief_justice))} **({self.bot.mk.COURT_CHIEF_JUSTICE_NAME})**",
             )
             return justices
         else:
-            return [justice.mention for justice in _justices.members]
+            return [f"{justice.mention} {escape_markdown(str(justice))}" for justice in _justices.members]
 
     def get_judges(self):
         try:
@@ -36,7 +38,7 @@ class SupremeCourt(
         except exceptions.RoleNotFoundError:
             return None
 
-        return [judge.mention for judge in _judges.members]
+        return [f"{judge.mention} {escape_markdown(str(judge))}" for judge in _judges.members]
 
     @commands.group(
         name="court",

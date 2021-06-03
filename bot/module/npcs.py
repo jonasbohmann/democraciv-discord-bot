@@ -5,6 +5,7 @@ import collections
 
 from discord.ext import commands
 from fuzzywuzzy import process
+from discord.utils import escape_markdown
 from lru import LRU
 
 from bot.config import config
@@ -618,10 +619,10 @@ class NPC(CustomCog):
             )
 
             owner = self.bot.get_user(record["owner_id"])
-            owner_value = "\n" if not owner else f"Owner: {owner.mention} ({owner})\n"
+            owner_value = "\n" if not owner else f"Owner: {owner.mention} {escape_markdown(str(owner))}\n"
 
-            pretty_npcs.append(f"**__NPC #{record['id']} - {record['name']}__**")
-            pretty_npcs.append(f"{avatar}Trigger Phrase: `{record['trigger_phrase']}`")
+            pretty_npcs.append(f"**__NPC #{record['id']} - {escape_markdown(record['name'])}__**")
+            pretty_npcs.append(f"{avatar}Trigger Phrase: `{escape_markdown(record['trigger_phrase'])}`")
             pretty_npcs.append(owner_value)
 
         if pretty_npcs:
@@ -692,7 +693,7 @@ class NPC(CustomCog):
                 f"allowed with `{config.BOT_PREFIX}npc unshare {npc.id}`.\n"
             )
 
-        pretty_people.append(f"{npc.owner.mention} ({npc.owner})")
+        pretty_people.append(f"{npc.owner.mention} ({escape_markdown(str(npc.owner))})")
 
         for record in allowed_people:
             user = self.bot.dciv.get_member(record["user_id"]) or self.bot.get_user(
@@ -700,7 +701,7 @@ class NPC(CustomCog):
             )
 
             if user:
-                pretty_people.append(f"{user.mention} ({user})")
+                pretty_people.append(f"{user.mention} ({escape_markdown(str(user))})")
 
         embed.add_field(
             name="People with access to this NPC",

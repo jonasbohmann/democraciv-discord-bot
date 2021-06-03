@@ -9,6 +9,7 @@ import re
 
 from discord.ext import commands
 from discord.ext.commands import Greedy
+from discord.utils import escape_markdown
 
 from bot.config import config, mk
 from bot.utils import (
@@ -210,13 +211,13 @@ class Legislature(
         speaker_value = []
 
         if isinstance(self.speaker, discord.Member):
-            speaker_value.append(f"{self.bot.mk.speaker_term}: {self.speaker.mention}")
+            speaker_value.append(f"{self.bot.mk.speaker_term}: {self.speaker.mention} {escape_markdown(str(self.speaker))}")
         else:
             speaker_value.append(f"{self.bot.mk.speaker_term}: -")
 
         if isinstance(self.vice_speaker, discord.Member):
             speaker_value.append(
-                f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention}"
+                f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention} {escape_markdown(str(self.vice_speaker))}"
             )
         else:
             speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")

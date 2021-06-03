@@ -3,8 +3,10 @@ import enum
 import typing
 import discord
 
-from bot.config import config, mk
 from discord.ext import commands
+from discord.utils import escape_markdown
+
+from bot.config import config, mk
 from bot.utils.converter import (
     Tag,
     OwnedTag,
@@ -91,7 +93,7 @@ class Tags(context.CustomCog):
 
         for record in global_tags:
             pretty_tags.append(
-                f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}"
+                f"`{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
             )
 
         if ctx.guild:
@@ -109,7 +111,7 @@ class Tags(context.CustomCog):
 
             for record in all_tags:
                 pretty_tags.append(
-                    f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}"
+                    f"`{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
                 )
 
             author = f"All Tags in {ctx.guild.name}"
@@ -146,7 +148,7 @@ class Tags(context.CustomCog):
 
         for record in all_tags:
             pretty_tags.append(
-                f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}"
+                f"`{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
             )
 
         pages = paginator.SimplePages(
@@ -181,7 +183,7 @@ class Tags(context.CustomCog):
 
         for record in all_tags:
             pretty_tags.append(
-                f"`{config.BOT_PREFIX}{record['name']}`  {record['title']}"
+                f"`{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
             )
 
         pages = paginator.SimplePages(

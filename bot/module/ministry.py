@@ -3,6 +3,7 @@ import typing
 import discord
 
 from discord.ext import commands
+from discord.utils import escape_markdown
 
 from bot.config import config, mk
 from bot.utils import text, context, mixin, models, exceptions
@@ -111,7 +112,7 @@ class Ministry(
 
         return pretty_bills
 
-    MINISTRY_ALIASES = ["min", "exec", "cabinet", "minister", "ministry"]
+    MINISTRY_ALIASES = ["min", "exec", "cabinet", "minister", "ministry", "ministers"]
 
     try:
         MINISTRY_ALIASES.remove(mk.MarkConfig.MINISTRY_COMMAND.lower())
@@ -149,13 +150,13 @@ class Ministry(
         emperor = self._safe_get_member(mk.DemocracivRole.EMPEROR)
 
         if isinstance(emperor, discord.Member):
-            minister_value.append(f"Emperor of Japan: {emperor.mention}")
+            minister_value.append(f"Emperor of Japan: {emperor.mention} {escape_markdown(str(emperor))}")
         else:
             minister_value.append(f"Emperor of Japan: -")
 
         if isinstance(self.prime_minister, discord.Member):
             minister_value.append(
-                f"{self.bot.mk.pm_term}: {self.prime_minister.mention}"
+                f"{self.bot.mk.pm_term}: {self.prime_minister.mention} {escape_markdown(str(self.prime_minister))}"
             )
         else:
             minister_value.append(f"{self.bot.mk.pm_term}: -")
@@ -173,7 +174,7 @@ class Ministry(
 
         try:
             ministers = self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER)
-            ministers = [m.mention for m in ministers.members] or ["-"]
+            ministers = [f"{m.mention} {escape_markdown(str(m))}" for m in ministers.members] or ["-"]
         except exceptions.RoleNotFoundError:
             ministers = ["-"]
 

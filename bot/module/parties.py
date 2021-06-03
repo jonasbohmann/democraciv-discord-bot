@@ -7,6 +7,7 @@ import asyncpg
 import discord
 
 from discord.ext import commands, menus
+from discord.utils import escape_markdown
 
 from bot.config import config
 from bot.utils import exceptions, checks, converter, context, text
@@ -171,14 +172,14 @@ class Party(context.CustomCog, name="Political Parties"):
             members_name = "Independents"
 
         party_members = [
-            f"{member.mention} {member}"
+            f"{member.mention} {escape_markdown(str(member))}"
             for member in party.role.members
             if member.id not in party.leader_ids
         ]
 
         for i, leader in enumerate(party.leaders):
             if leader in party.role.members:
-                party_members.insert(i, f"{leader.mention} **{leader} (Leader)**")
+                party_members.insert(i, f"{leader.mention} **{escape_markdown(str(leader))} (Leader)**")
 
         embed.add_field(
             name=f"{members_name} ({len(party.role.members)})",
