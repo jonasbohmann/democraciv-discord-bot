@@ -435,12 +435,25 @@ class BanConverter(commands.Converter):
     async def convert(self, ctx, argument):
         member = None
 
-        try:
-            member = await CaseInsensitiveMember().convert(ctx, argument)
-        except commands.BadArgument:
-            id_regex = re.compile(r"([0-9]{15,21})$")
-            if id_regex.match(argument):
-                member = int(argument)
+        id_regex = re.compile(r"([0-9]{15,21})$")
+        conv = Fuzzy[
+            CaseInsensitiveMember, CaseInsensitiveUser, FuzzySettings(weights=(5, 3))
+        ]
+
+        if id_regex.match(argument):
+            try:
+                member = await CaseInsensitiveMember().convert(ctx, argument)
+            except commands.BadArgument:
+                try:
+                    member = await CaseInsensitiveUser().convert(ctx, argument)
+                except commands.BadArgument:
+                    member = int(argument)
+
+        else:
+            try:
+                member = await conv.convert(ctx, argument)
+            except commands.BadArgument:
+                member = None
 
         if member:
             return member
@@ -453,7 +466,10 @@ class UnbanConverter(commands.Converter):
         user = None
 
         def find_by_name(ban_entry):
-            return ban_entry.user.name.lower() == argument.lower()
+            return (
+                ban_entry.user.name.lower() == argument.lower()
+                or str(ban_entry.user).lower() == argument.lower()
+            )
 
         def find_by_id(ban_entry):
             return ban_entry.user.id == argument

@@ -619,10 +619,18 @@ class NPC(CustomCog):
             )
 
             owner = self.bot.get_user(record["owner_id"])
-            owner_value = "\n" if not owner else f"Owner: {owner.mention} {escape_markdown(str(owner))}\n"
+            owner_value = (
+                "\n"
+                if not owner
+                else f"Owner: {owner.mention} {escape_markdown(str(owner))}\n"
+            )
 
-            pretty_npcs.append(f"**__NPC #{record['id']} - {escape_markdown(record['name'])}__**")
-            pretty_npcs.append(f"{avatar}Trigger Phrase: `{escape_markdown(record['trigger_phrase'])}`")
+            pretty_npcs.append(
+                f"**__NPC #{record['id']} - {escape_markdown(record['name'])}__**"
+            )
+            pretty_npcs.append(
+                f"{avatar}Trigger Phrase: `{escape_markdown(record['trigger_phrase'])}`"
+            )
             pretty_npcs.append(owner_value)
 
         if pretty_npcs:

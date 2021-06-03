@@ -69,13 +69,9 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
                 name=f"Written by {law.submitter.name}",
                 icon_url=law.submitter.avatar_url_as(static_format="png"),
             )
-            submitted_by_value = (
-                f"{law.submitter.mention} {law.submitter}"
-            )
+            submitted_by_value = f"{law.submitter.mention} {law.submitter}"
         else:
-            submitted_by_value = (
-                f"*Person left {self.bot.dciv.name}*"
-            )
+            submitted_by_value = f"*Person left {self.bot.dciv.name}*"
 
         embed.add_field(name="Author", value=submitted_by_value, inline=False)
 

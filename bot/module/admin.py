@@ -157,7 +157,10 @@ class Experiments(context.CustomCog):
             if len(result["full_answer"]) - len(result["answer"]) <= 3:
                 cntxt = []
             else:
-                cntxt = [f"__Context__", f"```{discord.utils.escape_markdown(result['full_answer'])}```"]
+                cntxt = [
+                    f"__Context__",
+                    f"```{discord.utils.escape_markdown(result['full_answer'])}```",
+                ]
 
             thing, thing_id = result["document"].split("_")
 

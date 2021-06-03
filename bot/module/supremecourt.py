@@ -30,7 +30,10 @@ class SupremeCourt(
             )
             return justices
         else:
-            return [f"{justice.mention} {escape_markdown(str(justice))}" for justice in _justices.members]
+            return [
+                f"{justice.mention} {escape_markdown(str(justice))}"
+                for justice in _justices.members
+            ]
 
     def get_judges(self):
         try:
@@ -38,7 +41,10 @@ class SupremeCourt(
         except exceptions.RoleNotFoundError:
             return None
 
-        return [f"{judge.mention} {escape_markdown(str(judge))}" for judge in _judges.members]
+        return [
+            f"{judge.mention} {escape_markdown(str(judge))}"
+            for judge in _judges.members
+        ]
 
     @commands.group(
         name="court",

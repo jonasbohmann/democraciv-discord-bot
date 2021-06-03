@@ -30,6 +30,7 @@ class Moderation(context.CustomCog):
             "https://cdn.discordapp.com/embed/avatars/2.png",
             "https://cdn.discordapp.com/embed/avatars/3.png",
             "https://cdn.discordapp.com/embed/avatars/4.png",
+            "https://cdn.discordapp.com/embed/avatars/5.png",
         ]
 
         if member.bot:
@@ -533,7 +534,7 @@ class Moderation(context.CustomCog):
             `{PREFIX}{COMMAND} darthspectrum#4924` ban by username#discriminator
             `{PREFIX}{COMMAND} 561280863464062977` ban by ID"""
 
-        if isinstance(person, discord.Member):
+        if isinstance(person, (discord.Member, discord.User)):
             member_object = person
             member_id = person.id
         elif isinstance(person, int):
@@ -555,7 +556,11 @@ class Moderation(context.CustomCog):
         if member_id == ctx.guild.me.id:
             return await ctx.send(f"{config.NO} I can't ban myself.")
 
-        if member_object is not None and member_object.top_role >= ctx.author.top_role:
+        if (
+            member_object
+            and isinstance(member_object, discord.Member)
+            and member_object.top_role >= ctx.author.top_role
+        ):
             return await ctx.send(
                 f"{config.NO} You aren't allowed to ban someone with a higher role than yours."
             )

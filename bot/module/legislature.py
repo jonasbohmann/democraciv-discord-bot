@@ -211,7 +211,9 @@ class Legislature(
         speaker_value = []
 
         if isinstance(self.speaker, discord.Member):
-            speaker_value.append(f"{self.bot.mk.speaker_term}: {self.speaker.mention} {escape_markdown(str(self.speaker))}")
+            speaker_value.append(
+                f"{self.bot.mk.speaker_term}: {self.speaker.mention} {escape_markdown(str(self.speaker))}"
+            )
         else:
             speaker_value.append(f"{self.bot.mk.speaker_term}: -")
 

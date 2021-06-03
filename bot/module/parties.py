@@ -179,7 +179,9 @@ class Party(context.CustomCog, name="Political Parties"):
 
         for i, leader in enumerate(party.leaders):
             if leader in party.role.members:
-                party_members.insert(i, f"{leader.mention} **{escape_markdown(str(leader))} (Leader)**")
+                party_members.insert(
+                    i, f"{leader.mention} **{escape_markdown(str(leader))} (Leader)**"
+                )
 
         embed.add_field(
             name=f"{members_name} ({len(party.role.members)})",
