@@ -35,7 +35,7 @@ from async_lru import alru_cache
 
 sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
-from bot.utils import exceptions, text, context
+from bot.utils import exceptions, text, context, converter
 from bot.config import token, config, mk
 
 logging.basicConfig(
@@ -364,7 +364,7 @@ class DemocracivBot(commands.Bot):
 
     async def on_command_error(self, ctx, error):
         error = getattr(error, "original", error)
-        ignored = (commands.CommandNotFound,)
+        ignored = (commands.CommandNotFound, converter.SilentBadArgument)
 
         if ctx.command is not None:
             ctx.command.reset_cooldown(ctx)

@@ -44,6 +44,9 @@ class NPCConverter(commands.Converter, FuzzyableMixin):
     def __hash__(self):
         return hash(self.id)
 
+    def __eq__(self, other):
+        return isinstance(other, NPCConverter) and other.id == self.id
+
     async def get_fuzzy_source(self, ctx, argument: str) -> typing.Iterable:
         npc_cog = ctx.bot.get_cog("NPC")
         try:
@@ -510,14 +513,10 @@ class NPC(CustomCog):
             }
         )
         result = await menu.prompt(ctx)
-
-        if not result.confirmed:
-            return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
-
         to_change = result.choices
 
-        if True not in to_change.values():
-            return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
+        if not result.confirmed or True not in to_change.values():
+            return
 
         if to_change["name"]:
             name = await ctx.input(

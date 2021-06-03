@@ -760,13 +760,10 @@ class Party(context.CustomCog, name="Political Parties"):
 
         result = await EditPartyMenu().prompt(ctx)
 
-        if not result.confirmed:
-            return await ctx.send(f"{config.NO} You didn't decide on what to change.")
-
         to_change = result.result
 
-        if True not in to_change.values():
-            return await ctx.send(f"{config.NO} You didn't decide on what to change.")
+        if not result.confirmed or True not in to_change.values():
+            return
 
         if to_change["name"]:
             new_name = await ctx.input(

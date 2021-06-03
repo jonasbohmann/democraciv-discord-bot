@@ -22,6 +22,10 @@ ConvertersWithWeights = collections.namedtuple(
 )
 
 
+class SilentBadArgument(commands.BadArgument):
+    pass
+
+
 class _Fuzzy(commands.Converter):
     def __init__(
         self,
@@ -130,7 +134,7 @@ class _Fuzzy(commands.Converter):
         if result:
             return result
 
-        raise commands.BadArgument(exception)
+        raise SilentBadArgument(exception)
 
 
 Fuzzy = _Fuzzy()
@@ -745,6 +749,9 @@ class Tag(commands.Converter, FuzzyableMixin):
     """
 
     model = "Tag"
+
+    def __eq__(self, other):
+        return isinstance(other, Tag) and other.id == self.id
 
     def __hash__(self):
         return hash(self.id)

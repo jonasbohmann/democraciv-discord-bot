@@ -495,14 +495,10 @@ class Legislature(
         )
 
         result = await menu.prompt(ctx)
-
-        if not result.confirmed:
-            return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
-
         to_change = result.choices
 
-        if True not in to_change.values():
-            return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
+        if not result.confirmed or True not in to_change.values():
+            return
 
         link = None
         description = None
@@ -671,14 +667,10 @@ class Legislature(
         )
 
         result = await menu.prompt(ctx)
-
-        if not result.confirmed:
-            return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
-
         to_change = result.choices
 
-        if True not in to_change.values():
-            return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
+        if not result.confirmed or True not in to_change.values():
+            return
 
         if to_change["title"]:
             title = await ctx.input(
