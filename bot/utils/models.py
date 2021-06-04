@@ -445,6 +445,7 @@ class Motion(commands.Converter, FuzzyableMixin):
         self.name: str = self.title  # compatibility
         self.submitter_id: int = kwargs.get("submitter")
         self._bot = kwargs.get("bot")
+        self.sponsor_ids: typing.List[int] = kwargs.get("sponsors", [])
 
     def __hash__(self):
         return hash(self.id)
@@ -454,6 +455,18 @@ class Motion(commands.Converter, FuzzyableMixin):
 
     def __str__(self):
         return self.formatted
+
+    @property
+    def sponsors(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
+        return list(
+            filter(
+                None,
+                [
+                    self._bot.dciv.get_member(sponsor) or self._bot.get_user(sponsor)
+                    for sponsor in self.sponsor_ids
+                ],
+            )
+        )
 
     @property
     def formatted(self):
@@ -520,8 +533,13 @@ class Motion(commands.Converter, FuzzyableMixin):
                 f"{config.NO} There is no motion that matches `{argument}`."
             )
 
+        sponsors = await ctx.bot.db.fetch(
+            "SELECT sponsor FROM motion_sponsor WHERE motion_id = $1", motion["id"]
+        )
+        sponsors = [record["sponsor"] for record in sponsors]
+
         session = await Session.convert(ctx, motion["leg_session"])
-        return cls(**motion, session=session, bot=ctx.bot)
+        return cls(**motion, session=session, bot=ctx.bot, sponsors=sponsors)
 
 
 class LegalConsumer:

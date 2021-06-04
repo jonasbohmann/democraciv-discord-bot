@@ -137,6 +137,13 @@ CREATE TABLE IF NOT EXISTS motion(
     submitter bigint NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS motion_sponsor(
+    id serial UNIQUE PRIMARY KEY,
+    motion_id serial references motion(id) ON DELETE CASCADE,
+    sponsor bigint NOT NULL,
+    UNIQUE (motion_id, sponsor)
+);
+
 CREATE INDEX IF NOT EXISTS bill_lookup_tag_tag_trgm_idx ON bill_lookup_tag USING gin (tag gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS bill_name_lower_idx ON bill (LOWER(name));
 

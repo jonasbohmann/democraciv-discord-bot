@@ -718,6 +718,140 @@ class Legislature(
 
         await ctx.send(f"{config.YES} Motion #{motion.id} `{motion.name}` was updated.")
 
+    @motion.command(name="sponsor", aliases=["sp", "cosponsor", "second"])
+    async def m_sponsor(self, ctx, motion_ids: Greedy[Motion]):
+        """Show your support for one or multiple motions by sponsoring them
+
+        **Example**
+           `{PREFIX}{COMMAND} 56`
+           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
+
+        if not motion_ids:
+            return await ctx.send_help(ctx.command)
+
+        failed = {}
+        passed = []
+
+        last_session = await self.get_active_leg_session()
+
+        for motion in motion_ids:
+            if ctx.author.id == motion.submitter_id:
+                failed[motion] = "The motion's author cannot sponsor their own motion."
+                continue
+
+            if ctx.author in motion.sponsors:
+                failed[motion] = "You already sponsored this motion."
+                continue
+
+            if not last_session or motion.session.id != last_session.id:
+                failed[
+                    motion
+                ] = "You can only sponsor motions if the session they were submitted in is still open."
+                continue
+
+            passed.append(motion)
+
+        if failed:
+            fmt = "\n".join(
+                [
+                    f"-  **{m.name}** (#{m.id}): _{reason}_"
+                    for m, reason in failed.items()
+                ]
+            )
+
+            await ctx.send(
+                f":warning: The following motions cannot be sponsored.\n{fmt}"
+            )
+
+        if not passed:
+            return
+
+        fmt_passed = "\n".join(f"-  **{m.name}** (#{m.id})" for m in passed)
+
+        reaction = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
+            f"to sponsor the following motions?\n{fmt_passed}"
+        )
+
+        if not reaction:
+            return await ctx.send("Cancelled.")
+
+        for passed_motion in passed:
+            await self.bot.db.execute(
+                "INSERT INTO motion_sponsor (motion_id, sponsor) VALUES ($1, $2) "
+                "ON CONFLICT DO NOTHING ",
+                passed_motion.id,
+                ctx.author.id,
+            )
+
+        await ctx.send(f"{config.YES} All motions were sponsored by you.")
+
+    @motion.command(name="unsponsor", aliases=["usp"])
+    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+    async def m_unsponsor(self, ctx: context.CustomContext, motion_ids: Greedy[Motion]):
+        """Remove yourself from the list of sponsors of one or multiple motions
+
+        **Example**
+           `{PREFIX}{COMMAND} 56`
+           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
+
+        if not motion_ids:
+            return await ctx.send_help(ctx.command)
+
+        failed = {}
+        passed = []
+
+        last_session = await self.get_active_leg_session()
+
+        for motion in motion_ids:
+            if ctx.author not in motion.sponsors:
+                failed[motion] = "You are not a sponsor of this motion."
+                continue
+
+            if not last_session or motion.session.id != last_session.id:
+                failed[
+                    motion
+                ] = "You can only unsponsor motions if the session they were submitted in is still open."
+                continue
+
+            passed.append(motion)
+
+        if failed:
+            fmt = "\n".join(
+                [
+                    f"-  **{m.name}** (#{m.id}): _{reason}_"
+                    for m, reason in failed.items()
+                ]
+            )
+
+            await ctx.send(
+                f":warning: The following motions cannot be unsponsored.\n{fmt}"
+            )
+
+        if not passed:
+            return
+
+        fmt_passed = "\n".join(f"-  **{m.name}** (#{m.id})" for m in passed)
+
+        reaction = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
+            f"to unsponsor the following motions?\n{fmt_passed}"
+        )
+
+        if not reaction:
+            return await ctx.send("Cancelled.")
+
+        for passed_motion in passed:
+            await self.bot.db.execute(
+                "DELETE FROM motion_sponsor WHERE motion_id = $1 and sponsor = $2",
+                passed_motion.id,
+                ctx.author.id,
+            )
+
+        await ctx.send(
+            f"{config.YES} You were removed from the list of sponsors from all motions."
+        )
+
     @motion.command(name="from", aliases=["f", "by"])
     async def m_from(
         self,
@@ -1314,18 +1448,29 @@ class Legislature(
                 f"{config.NO} That doesn't look like a Google Forms URL. This process was cancelled."
             )
 
-        min_sponsors = await ctx.input(
+        bill_min_sponsors = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the minimum amount of "
-            f"sponsors a bill needs to have to be included on the "
+            f"sponsors a **bill** needs to have to be included on the "
             f"Voting Form.\n{config.HINT} If you "
             f"reply with `0`, every bill will be included, "
             f"regardless the amount of sponsors it has."
-            f"\n{config.HINT} Motions don't have a lot of the features that bills have. "
-            f"Motions cannot be sponsored, so all motions will be on the form."
         )
 
         try:
-            min_sponsors = int(min_sponsors)
+            bill_min_sponsors = int(bill_min_sponsors)
+        except ValueError:
+            return await ctx.send(f"{config.NO} You didn't reply with a number.")
+
+        motion_min_sponsors = await ctx.input(
+            f"{config.USER_INTERACTION_REQUIRED} Reply with the minimum amount of "
+            f"sponsors a **motion** needs to have to be included on the "
+            f"Voting Form.\n{config.HINT} If you "
+            f"reply with `0`, every motion will be included, "
+            f"regardless the amount of sponsors it has."
+        )
+
+        try:
+            motion_min_sponsors = int(motion_min_sponsors)
         except ValueError:
             return await ctx.send(f"{config.NO} You didn't reply with a number.")
 
@@ -1345,7 +1490,10 @@ class Legislature(
                 await Motion.convert(ctx, motion_id) for motion_id in session.motions
             ]
 
-            bills = list(filter(lambda b: len(b.sponsors) >= min_sponsors, bills))
+            bills = list(filter(lambda b: len(b.sponsors) >= bill_min_sponsors, bills))
+            motions = list(
+                filter(lambda m: len(m.sponsors) >= motion_min_sponsors, motions)
+            )
 
             bills_info = {
                 f"{b.name} (#{b.id})": f"Submitted by {safe_get_submitter(b)} with "
@@ -1738,7 +1886,7 @@ class Legislature(
             name="Sponsors",
             value="Depending on current legislative procedures or laws, your bill might need a specific "
             f"amount of sponsors before the Speaker allows a vote on it. "
-            f"Tell your supporters to sponsor your bill with `{p}{l} sponsor {bill_id}`. The list "
+            f"Tell your supporters to sponsor your bill with `{p}{l} bill sponsor {bill_id}`. The list "
             f"of sponsors will be displayed on your bill's detail page, `{p}{l} bill {bill_id}`.",
             inline=False,
         )
@@ -1774,7 +1922,7 @@ class Legislature(
             f"with `{p}{l} bill search <keyword>`.",
         )
         await ctx.send(
-            f"{config.YES} Your bill `{name}` was submitted for session #{current_leg_session_id}.",
+            f"{config.YES} Your bill `{name}` (#{bill_id}) was submitted for session #{current_leg_session_id}.",
         )
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
@@ -1843,7 +1991,9 @@ class Legislature(
         )
 
         await ctx.send(
-            f"{config.YES} Your motion `{title}` was submitted for session #{current_leg_session_id}."
+            f"{config.YES} Your motion `{title}` (#{motion_id}) was submitted for session #{current_leg_session_id}.\n"
+            f"{config.HINT} Tell your supporters to sponsor your motion with "
+            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion sponsor {motion_id}`."
         )
         await self.bot.api_request(
             "POST", "document/add", silent=True, json={"label": f"motion_{motion_id}"}
@@ -1903,9 +2053,9 @@ class Legislature(
                 f"{config.LEG_SUBMIT_MOTION} for a motion."
                 f"\n{config.HINT} *Motions lack a lot of features that bills have, "
                 f"for example they cannot be passed into Law by the Government. They will not "
-                f"show up in `{config.BOT_PREFIX}laws`, nor will they make it on the Legal Code. They can also not "
-                f"be sponsored. If you want to submit something small "
-                f"that results in some __temporary__ action and where it's not important to track if it passed, "
+                f"show up in `{config.BOT_PREFIX}laws`, nor will they make it on the Legal Code. If you want to submit "
+                f"something small that results in some __temporary__ action and where it's not important to track "
+                f"if it passed, "
                 f"use a motion, otherwise use a bill. __In most cases you should probably use bills.__ "
                 f"Common examples for motions: `Motion to repeal Law #12`, or "
                 f"`Motion to recall {self.bot.mk.legislator_term} XY`.*",
@@ -2262,9 +2412,9 @@ class Legislature(
     #        f"`{config.BOT_PREFIX}laws` now."
     #    )
 
-    @legislature.command(name="sponsor", aliases=["sp", "cosponsor", "second"])
+    @bill.command(name="sponsor", aliases=["sp", "cosponsor", "second"])
     @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
-    async def sponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
+    async def b_sponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Show your support for one or multiple bills by sponsoring them
 
         **Example**
@@ -2306,23 +2456,9 @@ class Legislature(
         await consumer.consume(sponsor=ctx.author)
         await ctx.send(f"{config.YES} All bills were sponsored by you.")
 
-    @bill.command(name="sponsor", hidden=True)
+    @bill.command(name="unsponsor", aliases=["usp"])
     @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
-    async def _sponsor_bill_alias(
-        self, ctx: context.CustomContext, bill_ids: Greedy[Bill]
-    ):
-        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} sponsor`
-
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} sponsor` for the help page of the actual command."""
-
-        await ctx.invoke(
-            self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} sponsor"),
-            bill_ids=bill_ids,
-        )
-
-    @legislature.command(name="unsponsor", aliases=["usp"])
-    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
-    async def unsponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
+    async def b_unsponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Remove yourself from the list of sponsors of one or multiple bills
 
         **Example**
@@ -2361,20 +2497,6 @@ class Legislature(
         await consumer.consume(sponsor=ctx.author)
         await ctx.send(
             f"{config.YES} You were removed from the list of sponsors from all bills."
-        )
-
-    @bill.command(name="unsponsor", hidden=True)
-    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
-    async def _unsponsor_bill_alias(
-        self, ctx: context.CustomContext, bill_ids: Greedy[Bill]
-    ):
-        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} unsponsor`
-
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} unsponsor` for the help page of the actual command."""
-
-        await ctx.invoke(
-            self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} unsponsor"),
-            bill_ids=bill_ids,
         )
 
     @legislature.command(name="resubmit", aliases=["rs"])
@@ -2495,6 +2617,77 @@ class Legislature(
         )
         embed.add_field(name="Top Lawmakers", value=pretty_top_lawmaker, inline=False)
         await ctx.send(embed=embed)
+
+    @legislature.command(
+        name="sponsor", aliases=["second", "sp", "cosponsor"], hidden=True
+    )
+    async def sponsor(self, ctx, *, bill_or_motion_ids):
+        """Show your support for one or multiple bills or motions by sponsoring them
+
+        **Example**
+           `{PREFIX}{COMMAND} 56`
+           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
+
+        reaction = await ctx.choose(
+            f"{config.USER_INTERACTION_REQUIRED} Do you want to sponsor bills or motions? "
+            f"React with {config.LEG_SUBMIT_BILL} for bills, and with {config.LEG_SUBMIT_MOTION} for motions.\n"
+            f"{config.HINT} You can use the `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} "
+            f"bill sponsor` and `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion sponsor` commands "
+            f"to skip this step.",
+            reactions=[config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION],
+        )
+
+        print(reaction)
+
+        if not reaction:
+            return
+
+        if str(reaction.emoji) == config.LEG_SUBMIT_BILL:
+            print("b")
+            ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill sponsor {bill_or_motion_ids}"
+
+        elif str(reaction.emoji) == config.LEG_SUBMIT_MOTION:
+            print("a")
+            ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion sponsor {bill_or_motion_ids}"
+
+        else:
+            return
+
+        new_ctx = await self.bot.get_context(ctx.message)
+        print(new_ctx)
+        await self.bot.invoke(new_ctx)
+
+    @legislature.command(name="unsponsor", aliases=["usp"], hidden=True)
+    async def unsponsor(self, ctx, *, bill_or_motion_ids):
+        """Remove yourself from the list of sponsors of one or multiple bills or motions
+
+        **Example**
+           `{PREFIX}{COMMAND} 56`
+           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
+
+        reaction = await ctx.choose(
+            f"{config.USER_INTERACTION_REQUIRED} Do you want to unsponsor bills or motions? "
+            f"React with {config.LEG_SUBMIT_BILL} for bills, and with {config.LEG_SUBMIT_MOTION} for motions.\n"
+            f"{config.HINT} You can use the `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} "
+            f"bill unsponsor` and `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion unsponsor` commands "
+            f"to skip this step.",
+            reactions=[config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION],
+        )
+
+        if not reaction:
+            return
+
+        if str(reaction.emoji) == config.LEG_SUBMIT_BILL:
+            ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill unsponsor {bill_or_motion_ids}"
+
+        elif str(reaction.emoji) == config.LEG_SUBMIT_MOTION:
+            ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion unsponsor {bill_or_motion_ids}"
+
+        else:
+            return
+
+        new_ctx = await self.bot.get_context(ctx.message)
+        await self.bot.invoke(new_ctx)
 
     @legislature.command(name="statistics", aliases=["stat", "stats", "statistic"])
     async def stats(

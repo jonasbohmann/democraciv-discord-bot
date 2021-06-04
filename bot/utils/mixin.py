@@ -119,6 +119,13 @@ class GovernmentMixin:
 
             return
 
+        else:
+            if obj.sponsors:
+                fmt_sponsors = "\n".join(
+                    [f"{sponsor.mention} {sponsor}" for sponsor in obj.sponsors]
+                )
+                embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
+
         await ctx.send(embed=embed)
 
     async def _show_bill_text(self, ctx, bill: models.Bill):
