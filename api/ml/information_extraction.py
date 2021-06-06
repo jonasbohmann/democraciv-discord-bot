@@ -25,6 +25,8 @@ class InformationExtraction:
     async def add_document(self, label: str):
         thing, thing_id = label.split("_")
 
+        thing_id = int(thing_id)
+
         if thing == "bill":
             doc = await self.db.pool.fetchrow(
                 "SELECT id, content FROM bill WHERE id = $1", thing_id

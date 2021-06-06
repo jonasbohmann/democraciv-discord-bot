@@ -2182,14 +2182,32 @@ class Legislature(
 
     @legislature.group(name="withdraw", aliases=["w"], hidden=True)
     @checks.is_democraciv_guild()
-    async def withdraw(self, ctx):
+    async def withdraw(self, ctx, *, bill_or_motion_ids):
         """Withdraw one or multiple bills or motions from the current session"""
-        if ctx.invoked_subcommand is None:
-            await ctx.send(
-                f"{config.NO} You have to tell me whether you want to withdraw motions or bills!"
-                " Take a look at the help page:"
-            )
-            await ctx.send_help(ctx.command)
+
+        reaction = await ctx.choose(
+            f"{config.USER_INTERACTION_REQUIRED} Do you want to withdraw bills or motions? "
+            f"React with {config.LEG_SUBMIT_BILL} for bills, and with {config.LEG_SUBMIT_MOTION} for motions.\n"
+            f"{config.HINT} You can use the `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} "
+            f"bill withdraw` and `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion withdraw` commands "
+            f"to skip this step.",
+            reactions=[config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION],
+        )
+
+        if not reaction:
+            return
+
+        if str(reaction.emoji) == config.LEG_SUBMIT_BILL:
+            ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill withdraw {bill_or_motion_ids}"
+
+        elif str(reaction.emoji) == config.LEG_SUBMIT_MOTION:
+            ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion withdraw {bill_or_motion_ids}"
+
+        else:
+            return
+
+        new_ctx = await self.bot.get_context(ctx.message)
+        await self.bot.invoke(new_ctx)
 
     async def withdraw_objects(
         self,
@@ -2253,19 +2271,17 @@ class Legislature(
         elif obj_name == "motion":
             # doing it the old (ugly) way for motions since LegalConsumer is only for bills
             unverified_objects = []
+            passed = []
 
             for obj in objects:
                 error = verify_object(ctx, obj)
+
                 if error:
                     unverified_objects.append((obj, error))
+                else:
+                    passed.append(obj)
 
             if unverified_objects:
-                objects = [
-                    o
-                    for o in objects
-                    if o not in list(map(list, zip(*unverified_objects)))[0]
-                ]
-
                 error_messages = "\n".join(
                     [
                         f"-  **{_object.name}** (#{_object.id}): _{reason}_"
@@ -2276,11 +2292,11 @@ class Legislature(
                     f":warning: The following {obj_name}s can not be withdrawn by you.\n{error_messages}"
                 )
 
-            if not objects:
+            if not passed:
                 return
 
             pretty_objects = "\n".join(
-                [f"-  **{_object.name}** (#{_object.id})" for _object in objects]
+                [f"-  **{_object.name}** (#{_object.id})" for _object in passed]
             )
             are_you_sure = await ctx.confirm(
                 f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want"
@@ -2291,7 +2307,7 @@ class Legislature(
             if not are_you_sure:
                 return await ctx.send("Cancelled.")
 
-            for obj in objects:
+            for obj in passed:
                 await obj.withdraw()
 
             message = f"The following {obj_name}s were withdrawn by {ctx.author}.\n{pretty_objects}"
@@ -2310,7 +2326,7 @@ class Legislature(
                     message=message,
                 )
 
-    @withdraw.command(name="bill", aliases=["b"])
+    @bill.command(name="withdraw", aliases=["w"])
     @checks.is_democraciv_guild()
     async def withdrawbill(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Withdraw one or multiple bills from the current session
@@ -2327,21 +2343,26 @@ class Legislature(
 
         await self.withdraw_objects(ctx, bill_ids)
 
-    @bill.command(name="withdraw", aliases=["w"], hidden=True)
+    @withdraw.command(name="bill", aliases=["b"], hidden=True)
     @checks.is_democraciv_guild()
     async def _withdraw_bill_alias(
         self, ctx: context.CustomContext, bill_ids: Greedy[Bill]
     ):
-        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} withdraw bill`
+        """Withdraw one or multiple bills from the current session
 
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} withdraw bill` for the help page of the actual command."""
+        The {speaker_term} can withdraw every submitted bill during both the Submission Period and the Voting Period.
+           The original submitter of the bill can only withdraw their own bill during the Submission Period.
+
+        **Example**
+            `{PREFIX}{COMMAND} 56` will withdraw bill #56
+            `{PREFIX}{COMMAND} 12 13 14 15 16` will withdraw all those bills"""
 
         await ctx.invoke(
             self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw bill"),
             bill_ids=bill_ids,
         )
 
-    @withdraw.command(name="motion", aliases=["m"])
+    @motion.command(name="withdraw", aliases=["w"])
     @checks.is_democraciv_guild()
     async def withdrawmotion(
         self, ctx: context.CustomContext, motion_ids: Greedy[Motion]
@@ -2360,14 +2381,19 @@ class Legislature(
 
         await self.withdraw_objects(ctx, motion_ids)
 
-    @motion.command(name="withdraw", aliases=["w"], hidden=True)
+    @withdraw.command(name="motion", aliases=["m"], hidden=True)
     @checks.is_democraciv_guild()
     async def _withdraw_motion_alias(
-        self, ctx: context.CustomContext, motion_ids: Greedy[Bill]
+        self, ctx: context.CustomContext, motion_ids: Greedy[Motion]
     ):
-        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} withdraw motion`
+        """Withdraw one or multiple motions from the current session
 
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} withdraw motion` for the help page of the actual command."""
+        The {speaker_term} can withdraw every submitted motion during both the Submission Period and the Voting Period.
+           The original submitter of the motion can only withdraw their own motion during the Submission Period.
+
+        **Example**
+            `{PREFIX}{COMMAND} 56` will withdraw motion #56
+            `{PREFIX}{COMMAND} 12 13 14 15 16` will withdraw all those motions"""
 
         await ctx.invoke(
             self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw motion"),
@@ -2637,24 +2663,19 @@ class Legislature(
             reactions=[config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION],
         )
 
-        print(reaction)
-
         if not reaction:
             return
 
         if str(reaction.emoji) == config.LEG_SUBMIT_BILL:
-            print("b")
             ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill sponsor {bill_or_motion_ids}"
 
         elif str(reaction.emoji) == config.LEG_SUBMIT_MOTION:
-            print("a")
             ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion sponsor {bill_or_motion_ids}"
 
         else:
             return
 
         new_ctx = await self.bot.get_context(ctx.message)
-        print(new_ctx)
         await self.bot.invoke(new_ctx)
 
     @legislature.command(name="unsponsor", aliases=["usp"], hidden=True)

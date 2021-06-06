@@ -109,9 +109,12 @@ class RedditManager(ProviderManager):
         async with self._session.post(
             "https://oauth.reddit.com/api/submit?raw_json=1", data=data, headers=headers
         ) as response:
-            js = await response.json()
+            try:
+                js = await response.json()
+            except aiohttp.ContentTypeError:
+                js = None
 
-            if js["json"]["errors"]:
+            if js and js["json"]["errors"]:
                 logger.warning(f"got error while posting to reddit: {js}")
                 return {"error": js}
 

@@ -31,7 +31,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from starlette import status
 
 TOKEN_PATH = f"{pathlib.Path(__file__).parent}/token.json"
-ML_ENABLED = True
+ML_ENABLED = False
 
 
 class Database:
