@@ -657,8 +657,7 @@ class Bank(context.CustomCog):
         embed = text.SafeEmbed(
             description=f"\n\nThere are a total of {stats['total_bank_accounts']} open bank accounts across "
             f"all currencies with a total of {stats['total_transactions']} transactions between "
-            f"all of them. Japan has {stats['organizations']['Japan']} registered "
-            f"organizations.\n\nThe shown circulation of a currency does not include any currency reserves that "
+            f"all of them.\n\nThe shown circulation of a currency does not include any currency reserves that "
             f"were provided by the {self.BANK_NAME} when this currency "
             f"was originally created.\n\nThe velocity is calculated as the amount of currency transferred "
             f"in the last 7 days divided by its total circulation."
