@@ -164,7 +164,7 @@ class MarkConfig:
 
     @property
     def safe_flag(self):
-        return self.NATION_FLAG_URL or self.bot.dciv.icon_url_as(static_format="png")
+        return self.NATION_FLAG_URL or self.bot.dciv.icon.url
 
     @property
     def courts_term(self):

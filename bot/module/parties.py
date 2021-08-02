@@ -320,7 +320,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
         embed = text.SafeEmbed(description=message)
         embed.set_author(
-            name=before, icon_url=before.avatar_url_as(static_format="png")
+            name=before, icon_url=before.avatar.url
         )
 
         for leader in party.leaders:
@@ -734,6 +734,12 @@ class Party(context.CustomCog, name="Political Parties"):
     @checks.moderation_or_nation_leader()
     async def addparty(self, ctx):
         """Add a new political party"""
+
+        if "alias" in ctx.message.content.lower():
+            return await ctx.send(
+                f"{config.HINT} Did you mean the `{config.BOT_PREFIX}party addalias` command?"
+            )
+
         party = await self.create_new_party(ctx, commit=True)
         await ctx.send(
             f"{config.YES} `{party.role.name}` was added as a new Political Party."
@@ -854,6 +860,11 @@ class Party(context.CustomCog, name="Political Parties"):
         **Usage**
          `{PREFIX}{COMMAND} <party>`
         """
+
+        if "alias" in ctx.message.content.lower():
+            return await ctx.send(
+                f"{config.HINT} Did you mean the `{config.BOT_PREFIX}party deletealias` command?"
+            )
 
         name = party.role.name
 

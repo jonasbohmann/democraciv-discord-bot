@@ -86,11 +86,11 @@ class CustomContext(commands.Context):
     @property
     def guild_icon(self):
         if self.guild:
-            return self.guild.icon_url_as(static_format="png")
+            return self.guild.icon.url
 
     @property
     def author_icon(self):
-        return self.author.avatar_url_as(static_format="png")
+        return self.author.avatar.url
 
     def _wait_for_message_check(self):
         def check(message):

@@ -749,7 +749,7 @@ class _Guild(context.CustomCog, name="Server"):
                 return (
                     (w.user and w.user.id == self.bot.user.id)
                     or w.name == self.bot.user.name
-                    or w.avatar_url == self.bot.user.avatar_url
+                    or w.avatar == self.bot.user.avatar
                 )
 
             webhook = discord.utils.find(pred, channel_webhooks)
@@ -846,7 +846,7 @@ class _Guild(context.CustomCog, name="Server"):
         if response["safe_to_delete"]:
             webhook = discord.Webhook.from_url(
                 response["webhook_url"],
-                adapter=discord.AsyncWebhookAdapter(self.bot.session),
+                session=self.bot.session,
             )
 
             try:
@@ -867,7 +867,7 @@ class _Guild(context.CustomCog, name="Server"):
             if removed_hook["safe_to_delete"]:
                 webhook = discord.Webhook.from_url(
                     removed_hook["webhook_url"],
-                    adapter=discord.AsyncWebhookAdapter(self.bot.session),
+                    session=self.bot.session,
                 )
                 try:
                     await webhook.delete()

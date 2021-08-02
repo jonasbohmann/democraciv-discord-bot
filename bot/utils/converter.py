@@ -270,7 +270,7 @@ class PoliticalParty(commands.Converter, FuzzyableMixin):
 
         try:
             invite = await self._bot.fetch_invite(self.discord_invite)
-            return invite.guild.icon_url_as(format="png")
+            return invite.guild.icon.url
         except (discord.NotFound, discord.HTTPException):
             return None
 
@@ -880,6 +880,20 @@ class CollaboratorOfTag(Tag):
 
     def _is_allowed(self, ctx, tag: Tag) -> bool:
         if tag.author_id == ctx.author.id or ctx.author.id in tag.collaborator_ids:
+            return True
+
+        if ctx.bot.mk.IS_NATION_BOT:
+            try:
+                nation_admin = ctx.bot.get_democraciv_role(
+                    mk.DemocracivRole.NATION_ADMIN
+                )
+
+                if nation_admin in ctx.author.roles:
+                    return True
+            except exceptions.RoleNotFoundError:
+                pass
+
+        if ctx.author.guild_permissions.administrator or ctx.author.id == ctx.bot.owner_id:
             return True
 
         return False

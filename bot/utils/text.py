@@ -56,7 +56,7 @@ class AnnouncementScheduler:
             self._task.start()
 
         self._objects.append(obj)
-        self._last_addition = datetime.datetime.utcnow()
+        self._last_addition = discord.utils.utcnow()
 
     async def trigger_now(self):
         await self._trigger()
@@ -71,7 +71,7 @@ class AnnouncementScheduler:
             self._task.cancel()
 
     def _split_embeds(
-        self, original_embed: discord.Embed
+            self, original_embed: discord.Embed
     ) -> typing.List[discord.Embed]:
         paginator = commands.Paginator(prefix="", suffix="", max_size=2035)
 
@@ -120,9 +120,9 @@ class AnnouncementScheduler:
     @tasks.loop(seconds=30)
     async def _wait(self):
         if (
-            self._last_addition is not None
-            and datetime.datetime.utcnow() - self._last_addition
-            > datetime.timedelta(minutes=self.wait_time)
+                self._last_addition is not None
+                and discord.utils.utcnow() - self._last_addition
+                > datetime.timedelta(minutes=self.wait_time)
         ):
             await self._trigger()
 
@@ -147,6 +147,39 @@ class RedditAnnouncementScheduler(AnnouncementScheduler):
 
         await super().send_messages()
         await self.bot.api_request("POST", "reddit/post", silent=True, json=js)
+
+
+class CustomView(discord.ui.View):
+
+    def __init__(self, ctx, *args, **kwargs):
+        self.ctx = ctx
+        self.bot = ctx.bot
+        super().__init__(*args, **kwargs)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
+
+        return False
+
+
+class PromptView(discord.ui.View):
+
+    def __init__(self, ctx, *args, **kwargs):
+        self.ctx = ctx
+        self.bot = ctx.bot
+        self.result = None
+        super().__init__(*args, **kwargs)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
+
+        return False
+
+    async def prompt(self):
+        await self.wait()
+        return self.result
 
 
 class SafeEmbed(discord.Embed):
@@ -176,12 +209,12 @@ class SafeEmbed(discord.Embed):
             )
 
     def add_field(
-        self,
-        *,
-        name: typing.Any,
-        value: typing.Any,
-        inline: bool = True,
-        too_long_value: str = "*Too long to display.*",
+            self,
+            *,
+            name: typing.Any,
+            value: typing.Any,
+            inline: bool = True,
+            too_long_value: str = "*Too long to display.*",
     ):
         field_index = len(self.fields)
         name = str(name)
@@ -210,7 +243,7 @@ class SafeEmbed(discord.Embed):
 
 class FuzzyChoose(menus.Menu):
     def __init__(
-        self, question: str, choices: typing.Sequence, *, description=None, **kwargs
+            self, question: str, choices: typing.Sequence, *, description=None, **kwargs
     ):
         super().__init__(timeout=120.0, delete_message_after=True)
         self.question = question
@@ -291,10 +324,10 @@ EditModelResult = collections.namedtuple("EditModelResult", ["confirmed", "choic
 
 class EditModelMenu(menus.Menu):
     def __init__(
-        self,
-        choices_with_formatted_explanation: typing.Dict[str, str],
-        *,
-        title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
+            self,
+            choices_with_formatted_explanation: typing.Dict[str, str],
+            *,
+            title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
     ):
         super().__init__(timeout=120.0, delete_message_after=True)
         self.choices = choices_with_formatted_explanation

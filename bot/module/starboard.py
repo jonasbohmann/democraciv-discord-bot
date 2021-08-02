@@ -73,7 +73,7 @@ class Starboard(context.CustomCog):
     async def get_starred_from_last_week(self) -> typing.List[asyncpg.Record]:
         """Returns all rows from starboard_entries that are from last week and have enough stars."""
 
-        today = datetime.datetime.utcnow().today()
+        today = discord.utils.utcnow().today()
         start_of_last_week = today - datetime.timedelta(days=7)
 
         starred_messages = await self.bot.db.fetch(
@@ -106,7 +106,7 @@ class Starboard(context.CustomCog):
             markdown.append(title)
 
             for record in group:
-                channel = self.bot.dciv.get_channel(record["channel_id"])
+                channel = self.bot.dciv.get_channel_or_thread(record["channel_id"])
 
                 if not channel:
                     continue
@@ -190,7 +190,7 @@ class Starboard(context.CustomCog):
     async def weekly_starboard_to_reddit_task(self):
         """If today is Monday, post all entries of last week's starboard to r/Democraciv"""
 
-        if datetime.datetime.utcnow().weekday() != 0:
+        if discord.utils.utcnow().weekday() != 0:
             return
 
         if await self.has_posted_to_reddit_today():
@@ -211,7 +211,7 @@ class Starboard(context.CustomCog):
 
         logging.info(msg)
 
-        today = datetime.datetime.utcnow().today()
+        today = discord.utils.utcnow().today()
         start_of_last_week = today - datetime.timedelta(days=7)
 
         post_content = await self.get_reddit_post_content(grouped_stars)
@@ -260,7 +260,7 @@ class Starboard(context.CustomCog):
         embed.timestamp = message.created_at
         embed.set_author(
             name=f"{message.author.display_name} in #{message.channel.name}",
-            icon_url=message.author.avatar_url_as(static_format="png"),
+            icon_url=message.author.avatar.url,
         )
         embed.add_field(
             name="Original", value=f"[Jump]({message.jump_url})", inline=False
@@ -308,7 +308,7 @@ class Starboard(context.CustomCog):
 
     @commands.Cog.listener(name="on_raw_reaction_add")
     async def star_listener(self, payload: discord.RawReactionActionEvent):
-        channel = self.bot.dciv.get_channel(payload.channel_id)
+        channel = self.bot.dciv.get_channel_or_thread(payload.channel_id)
 
         if not await self.verify_reaction(payload, channel):
             return
@@ -319,7 +319,7 @@ class Starboard(context.CustomCog):
         if payload.user_id == message.author.id:
             return
 
-        max_age = datetime.datetime.utcnow() - datetime.timedelta(
+        max_age = discord.utils.utcnow() - datetime.timedelta(
             days=config.STARBOARD_MAX_AGE
         )
 
@@ -328,7 +328,7 @@ class Starboard(context.CustomCog):
 
         if (
             not message.content and len(message.attachments) == 0
-        ) or message.type is not discord.MessageType.default:
+        ) or message.type not in (discord.MessageType.default, discord.MessageType.reply):
             return
 
         if await self.bot.is_channel_excluded(self.bot.dciv.id, payload.channel_id):
@@ -350,7 +350,7 @@ class Starboard(context.CustomCog):
 
     @commands.Cog.listener(name="on_raw_reaction_remove")
     async def unstar_listener(self, payload: discord.RawReactionActionEvent):
-        channel = self.bot.dciv.get_channel(payload.channel_id)
+        channel = self.bot.dciv.get_channel_or_thread(payload.channel_id)
 
         if not await self.verify_reaction(payload, channel):
             return
@@ -545,7 +545,7 @@ class Starboard(context.CustomCog):
     async def star_member_stats(self, ctx, member):
         embed = text.SafeEmbed(colour=0xFFAC33)
         embed.set_author(
-            name=member.display_name, icon_url=member.avatar_url_as(static_format="png")
+            name=member.display_name, icon_url=member.avatar.url
         )
 
         stars_received = await self.bot.db.fetchval(

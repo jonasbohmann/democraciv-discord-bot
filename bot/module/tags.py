@@ -117,7 +117,7 @@ class Tags(context.CustomCog):
             empty_message = "There are no tags on this server."
         else:
             author = "All Global Tags"
-            icon = self.bot.user.avatar_url_as(static_format="png")
+            icon = self.bot.user.avatar.url
             empty_message = "There are no global tags yet."
 
         if len(pretty_tags) < 2:
@@ -187,7 +187,7 @@ class Tags(context.CustomCog):
         pages = paginator.SimplePages(
             entries=pretty_tags,
             author=f"Tags from {member.display_name}",
-            icon=member.avatar_url_as(static_format="png"),
+            icon=member.avatar.url,
             empty_message=f"{member} hasn't made any tags on this server yet.",
             per_page=12,
         )
@@ -233,13 +233,13 @@ class Tags(context.CustomCog):
             f"`{config.BOT_PREFIX}tag share {tag.name}`."
         )
 
-    @tags.command(name="removealias", aliases=["deletealias", "ra", "da"])
+    @tags.command(name="deletealias", aliases=["removealias", "ra", "da"])
     @commands.guild_only()
     @checks.tag_check()
     async def removetagalias(
         self, ctx: context.CustomContext, *, alias: Fuzzy[CollaboratorOfTag]
     ):
-        """Remove an alias from a tag"""
+        """Delete a tag alias"""
 
         if alias.invoked_with == alias.name:
             return await ctx.send(
@@ -464,7 +464,7 @@ class Tags(context.CustomCog):
             embed.add_field(name="Author", value=tag.author.mention, inline=False)
             embed.set_author(
                 name=tag.author.name,
-                icon_url=tag.author.avatar_url_as(static_format="png"),
+                icon_url=tag.author.avatar.url,
             )
 
         elif isinstance(tag.author, discord.User):
@@ -477,7 +477,7 @@ class Tags(context.CustomCog):
             )
             embed.set_author(
                 name=tag.author.name,
-                icon_url=tag.author.avatar_url_as(static_format="png"),
+                icon_url=tag.author.avatar.url,
             )
 
         elif tag.author is None:
@@ -695,7 +695,7 @@ class Tags(context.CustomCog):
 
         guild_id = 0 if not ctx.guild else ctx.guild.id
         icon = (
-            self.bot.user.avatar_url_as(static_format="png")
+            self.bot.user.avatar.url
             if not ctx.guild
             else ctx.guild_icon
         )
@@ -745,7 +745,7 @@ class Tags(context.CustomCog):
 
         embed = text.SafeEmbed()
         embed.set_author(
-            name=person.display_name, icon_url=person.avatar_url_as(static_format="png")
+            name=person.display_name, icon_url=person.avatar.url
         )
 
         embed.add_field(name="Amount of Tags from any Server", value=amount[0]["count"])
@@ -906,11 +906,16 @@ class Tags(context.CustomCog):
                 f"{config.YES} `{config.BOT_PREFIX}{tag.name}` is no longer a global tag."
             )
 
-    @tags.command(name="remove", aliases=["delete"])
+    @tags.command(name="delete", aliases=["remove"])
     @commands.guild_only()
     @checks.tag_check()
     async def removetag(self, ctx: context.CustomContext, *, tag: Fuzzy[OwnedTag]):
-        """Remove a tag"""
+        """Delete a tag"""
+
+        if "alias" in ctx.message.content.lower():
+            return await ctx.send(
+                f"{config.HINT} Did you mean the `{config.BOT_PREFIX}tag deletealias` command?"
+            )
 
         are_you_sure = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to remove the tag "

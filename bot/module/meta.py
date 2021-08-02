@@ -125,7 +125,7 @@ class Meta(context.CustomCog):
         )
 
         embed.set_author(
-            icon_url=self.bot.owner.avatar_url_as(static_format="png"),
+            icon_url=self.bot.owner.avatar.url,
             name=f"Made by {self.bot.owner}",
         )
 

@@ -11,6 +11,23 @@ def _make_property(role: mk.DemocracivRole):
     return property(lambda self: self._safe_get_member(role))
 
 
+class ReadDocumentView(text.PromptView):
+
+    result = (False, "")
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return True
+
+    @discord.ui.button(label="Read Document", style=discord.ButtonStyle.primary)
+    async def on_button(self, button, interaction):
+        if interaction.user.id == self.ctx.user.id:
+            self.result = (True, "public")
+        else:
+            self.result = (True, "private")
+
+        self.stop()
+
+
 class GovernmentMixin:
     def __init__(self, b):
         self.bot = b
@@ -61,7 +78,7 @@ class GovernmentMixin:
         self,
         ctx: context.CustomContext,
         *,
-        obj: typing.Union[models.Bill, models.Motion],
+        obj: typing.Union[models.Bill, models.Motion, models.Law],
     ):
         embed = text.SafeEmbed(
             title=f"{obj.name} (#{obj.id})", description=obj.description, url=obj.link
@@ -70,7 +87,7 @@ class GovernmentMixin:
         if obj.submitter is not None:
             embed.set_author(
                 name=f"Submitted by {obj.submitter.name}",
-                icon_url=obj.submitter.avatar_url_as(static_format="png"),
+                icon_url=obj.submitter.avatar.url,
             )
             submitted_by_value = f"{obj.submitter.mention} {obj.submitter}"
         else:
@@ -78,7 +95,7 @@ class GovernmentMixin:
 
         embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
 
-        if isinstance(obj, models.Bill):
+        if isinstance(obj, models.Bill) and not isinstance(obj, models.Law):
             # is_vetoable = "Yes" if obj.is_vetoable else "No"
 
             # embed.add_field(name="Veto-able", value=is_vetoable, inline=True)
@@ -112,9 +129,12 @@ class GovernmentMixin:
                     text=f"All dates are in UTC. Session #{obj.session.id}"
                 )
 
-            view = await ctx.send(embed=embed)
+            view = ReadDocumentView(ctx=ctx)
+            await ctx.send(embed=embed, view=view)
+            do_continue, mode = await view.prompt()
 
-            if await ctx.ask_to_continue(message=view, emoji="\U0001f4c3"):
+            if do_continue:
+                # todo: mode == "private" empheral
                 await self._show_bill_text(ctx, obj)
 
             return
@@ -215,7 +235,7 @@ class GovernmentMixin:
             members = [member.id]
             empty = f"{name} hasn't {submit_term} any {model.__name__.lower()}s yet."
             title = f"{model.__name__}s from {name}"
-            icon = member.avatar_url_as(static_format="png")
+            icon = member.avatar.url
 
         if model is models.Bill:
             objs_from_thing = await self.bot.db.fetch(

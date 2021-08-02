@@ -1,5 +1,4 @@
 import discord
-import datetime
 
 from discord.ext import commands
 from bot.utils import exceptions, text, context, checks, converter
@@ -37,7 +36,7 @@ class Moderation(context.CustomCog):
 
         # Check how long it has been since the user registered
         discord_registration_duration_in_s = (
-            datetime.datetime.utcnow() - member.created_at
+            discord.utils.utcnow() - member.created_at
         ).total_seconds()
         hours_since = divmod(discord_registration_duration_in_s, 3600)[0]
 
@@ -45,7 +44,7 @@ class Moderation(context.CustomCog):
             # If the account is new, check if the they bothered to change the default avatar
             is_alt_chance += 0.1
             factor_details += "Less than 48 hours since registration (+10%)\n"
-            if str(member.avatar_url_as(static_format="png")) in default_avatars:
+            if str(member.avatar.url) in default_avatars:
                 is_alt_chance += 0.55
                 factor_details += "Default avatar (+55%)\n"
             if hours_since <= 24:

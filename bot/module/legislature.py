@@ -31,7 +31,7 @@ class PassScheduler(text.RedditAnnouncementScheduler):
         embed.set_author(
             name=f"Passed Bills from {self.bot.mk.LEGISLATURE_NAME}",
             icon_url=self.bot.mk.NATION_ICON_URL
-            or self.bot.dciv.icon_url_as(static_format="png")
+            or self.bot.dciv.icon.url
             or discord.embeds.EmptyEmbed,
         )
         message = [
@@ -310,7 +310,7 @@ class Legislature(
             name = member_or_party.display_name
             empty = f"{name} hasn't submitted anything yet."
             title = f"Bills & Motions from {name}"
-            icon = member_or_party.avatar_url_as(static_format="png")
+            icon = member_or_party.avatar.url
 
         if things:
             things.insert(
@@ -897,7 +897,7 @@ class Legislature(
         new_session = await self.bot.db.fetchval(
             "INSERT INTO legislature_session (speaker, opened_on) VALUES ($1, $2) RETURNING id",
             ctx.author.id,
-            datetime.datetime.utcnow(),
+            discord.utils.utcnow(),
         )
 
         p = config.BOT_PREFIX
@@ -1264,7 +1264,7 @@ class Legislature(
             ]
 
             exported = [
-                f"Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session {session.id} -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n",
+                f"Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session {session.id} -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
                 f"Xth Session - {session.opened_on.strftime('%B %d %Y')} (Bot Session {session.id})\n\n"
                 "----- Submitted Bills -----\n",
             ]
@@ -1526,7 +1526,7 @@ class Legislature(
         )
 
         messages = []
-        start = datetime.datetime.utcnow()
+        start = discord.utils.utcnow()
 
         while True:
             try:
@@ -1553,7 +1553,7 @@ class Legislature(
                     f"reflect that change in the text of your bill."
                 )
             except asyncio.TimeoutError:
-                if datetime.datetime.utcnow() - start >= datetime.timedelta(minutes=15):
+                if discord.utils.utcnow() - start >= datetime.timedelta(minutes=15):
                     break
                 else:
                     continue
@@ -1724,7 +1724,7 @@ class Legislature(
 
         embed.add_field(
             name="Exact Time of Submission",
-            value=datetime.datetime.utcnow().strftime("%B %d, %Y %H:%M:%S UTC"),
+            value=discord.utils.utcnow().strftime("%B %d, %Y %H:%M:%S UTC"),
         )
 
         embed.set_author(
@@ -1840,7 +1840,7 @@ class Legislature(
         embed.add_field(name="Author", value=f"{ctx.author.mention} {ctx.author}")
         embed.add_field(
             name="Exact Time of Submission",
-            value=datetime.datetime.utcnow().strftime("%B %d, %Y %H:%M:%S UTC"),
+            value=discord.utils.utcnow().strftime("%B %d, %Y %H:%M:%S UTC"),
             inline=False,
         )
         embed.set_author(
@@ -2548,7 +2548,7 @@ class Legislature(
 
         else:
             ids = [person_or_political_party.id]
-            icon_url = person_or_political_party.avatar_url_as(static_format="png")
+            icon_url = person_or_political_party.avatar.url
             name = (
                 f"{person_or_political_party.display_name} in the {self.bot.mk.NATION_ADJECTIVE} "
                 f"{self.bot.mk.LEGISLATURE_NAME}"

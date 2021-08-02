@@ -69,7 +69,7 @@ class Utility(context.CustomCog):
 
         self.active_press_flows.add(message.author.id)
         # wait for any other messages from same author
-        start = datetime.datetime.utcnow()
+        start = discord.utils.utcnow()
         messages = [message]
 
         while True:
@@ -87,9 +87,9 @@ class Utility(context.CustomCog):
                     continue
 
                 messages.append(_m)
-                start = datetime.datetime.utcnow()
+                start = discord.utils.utcnow()
             except asyncio.TimeoutError:
-                if datetime.datetime.utcnow() - start >= datetime.timedelta(minutes=2):
+                if discord.utils.utcnow() - start >= datetime.timedelta(minutes=2):
                     break
                 else:
                     continue
@@ -445,7 +445,7 @@ class Utility(context.CustomCog):
             fixed = zone.replace("-", "+")
             tz = pytz.timezone(fixed)
 
-        utc_now = datetime.datetime.now(tz=datetime.timezone.utc)
+        utc_now = discord.utils.utcnow()
         date = utc_now.astimezone(tz)
 
         embed = text.SafeEmbed(title=f":clock1:  Current Time in {title}")
@@ -465,7 +465,7 @@ class Utility(context.CustomCog):
         if member.guild.id != self.bot.dciv.id:
             return
 
-        joined_on = member.joined_at or datetime.datetime.utcnow()
+        joined_on = member.joined_at or discord.utils.utcnow()
 
         await self.bot.db.execute(
             "INSERT INTO original_join_date (member, join_date) VALUES ($1, $2) ON CONFLICT DO NOTHING",
@@ -594,7 +594,7 @@ class Utility(context.CustomCog):
                 inline=False,
             )
 
-        embed.set_thumbnail(url=member.avatar_url_as(static_format="png"))
+        embed.set_thumbnail(url=member.avatar.url)
         await ctx.send(embed=embed)
 
     @commands.command(name="avatar", aliases=["pfp", "avy"])
@@ -616,8 +616,8 @@ class Utility(context.CustomCog):
              `{PREFIX}{COMMAND} DerJonas#8109`
         """
 
-        member = person or ctx.author
-        avatar_png = str(member.avatar_url_as(static_format="png", size=4096))
+        member: discord.Member = person or ctx.author
+        avatar_png = member.avatar.with_size(4096).url
         embed = text.SafeEmbed()
         embed.set_image(url=avatar_png)
         embed.set_author(name=member, icon_url=avatar_png, url=avatar_png)
