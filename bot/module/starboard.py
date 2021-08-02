@@ -73,7 +73,7 @@ class Starboard(context.CustomCog):
     async def get_starred_from_last_week(self) -> typing.List[asyncpg.Record]:
         """Returns all rows from starboard_entries that are from last week and have enough stars."""
 
-        today = discord.utils.utcnow().today()
+        today = datetime.datetime.utcnow().today()
         start_of_last_week = today - datetime.timedelta(days=7)
 
         starred_messages = await self.bot.db.fetch(

@@ -897,7 +897,7 @@ class Legislature(
         new_session = await self.bot.db.fetchval(
             "INSERT INTO legislature_session (speaker, opened_on) VALUES ($1, $2) RETURNING id",
             ctx.author.id,
-            discord.utils.utcnow(),
+            datetime.datetime.utcnow(),
         )
 
         p = config.BOT_PREFIX

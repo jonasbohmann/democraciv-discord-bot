@@ -56,7 +56,7 @@ class Session(commands.Converter):
             " voting_started_on = $2, vote_form = $3"
             " WHERE id = $1",
             self.id,
-            discord.utils.utcnow(),
+            datetime.datetime.utcnow(),
             voting_form,
         )
 
@@ -64,7 +64,7 @@ class Session(commands.Converter):
         await self._bot.db.execute(
             "UPDATE legislature_session SET closed_on = $2, status = 'Closed' WHERE id = $1",
             self.id,
-            discord.utils.utcnow(),
+            datetime.datetime.utcnow(),
         )
 
     @classmethod
@@ -655,7 +655,7 @@ class BillStatus:
         await self._bot.db.execute(
             "INSERT INTO bill_history (bill_id, date, before_status, after_status, note) VALUES ($1, $2, $3, $4, $5)",
             self._bill.id,
-            discord.utils.utcnow(),
+            datetime.datetime.utcnow(),
             old_status.value,
             new_status.value,
             note,

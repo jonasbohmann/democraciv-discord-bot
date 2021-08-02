@@ -466,6 +466,7 @@ class Utility(context.CustomCog):
             return
 
         joined_on = member.joined_at or discord.utils.utcnow()
+        joined_on = joined_on.astimezone(datetime.timezone.utc).replace(tzinfo=None) # remove tz info since db doesnt care
 
         await self.bot.db.execute(
             "INSERT INTO original_join_date (member, join_date) VALUES ($1, $2) ON CONFLICT DO NOTHING",

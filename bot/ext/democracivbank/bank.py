@@ -655,8 +655,7 @@ class Bank(context.CustomCog):
         embed = text.SafeEmbed(
             description=f"\n\nThere are a total of {stats['total_bank_accounts']} open bank accounts across "
             f"all currencies with a total of {stats['total_transactions']} transactions between "
-            f"all of them. Japan has {stats['organizations']['Japan']} registered "
-            f"organizations.\n\nThe shown circulation of a currency does not include any currency reserves that "
+            f"all of them.\n\nThe shown circulation of a currency does not include any currency reserves that "
             f"were provided by the {self.BANK_NAME} when this currency "
             f"was originally created.\n\nThe velocity is calculated as the amount of currency transferred "
             f"in the last 7 days divided by its total circulation."
@@ -707,7 +706,7 @@ class PickBankAccountView(discord.ui.View):
         return self.result
 
     @discord.ui.button(
-        label="Send from Default Personal Bank Account", style=discord.ButtonStyle.green
+        label="Send from my default Personal Bank Account", style=discord.ButtonStyle.green
     )
     async def default(self, button: discord.Button, interaction: discord.Interaction):
         self.result = await self.cog.resolve_iban(
@@ -716,7 +715,7 @@ class PickBankAccountView(discord.ui.View):
         self.stop()
 
     @discord.ui.button(
-        label="Pick a different Bank Account", style=discord.ButtonStyle.primary
+        label="Let me choose a different Bank Account", style=discord.ButtonStyle.primary
     )
     async def not_default(
         self, button: discord.Button, interaction: discord.Interaction
