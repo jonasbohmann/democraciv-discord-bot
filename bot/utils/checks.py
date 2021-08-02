@@ -11,7 +11,7 @@ def is_democraciv_guild():
     """Commands check decorator to check if a command was invoked on the Democraciv guild"""
 
     def check(ctx):
-        if not isinstance(ctx.channel, discord.abc.GuildChannel):
+        if not isinstance(ctx.channel, (discord.abc.GuildChannel, discord.Thread)):
             raise commands.NoPrivateMessage()
 
         if config.DEMOCRACIV_GUILD_ID != ctx.guild.id:
@@ -27,7 +27,7 @@ def has_democraciv_role(role: mk.DemocracivRole):
     person has the specified role from text.py"""
 
     def predicate(ctx):
-        if not isinstance(ctx.channel, discord.abc.GuildChannel):
+        if not isinstance(ctx.channel, (discord.abc.GuildChannel, discord.Thread)):
             raise commands.NoPrivateMessage()
 
         if config.DEMOCRACIV_GUILD_ID != ctx.guild.id:
@@ -51,7 +51,7 @@ def has_any_democraciv_role(*roles: mk.DemocracivRole):
     person has any of the specified roles from text.py"""
 
     def predicate(ctx):
-        if not isinstance(ctx.channel, discord.abc.GuildChannel):
+        if not isinstance(ctx.channel, (discord.abc.GuildChannel, discord.Thread)):
             raise commands.NoPrivateMessage()
 
         if config.DEMOCRACIV_GUILD_ID != ctx.guild.id:

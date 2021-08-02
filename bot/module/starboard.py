@@ -301,7 +301,7 @@ class Starboard(context.CustomCog):
         if payload.channel_id == self.starboard_channel.id:
             return False
 
-        if not isinstance(channel, discord.TextChannel):
+        if not isinstance(channel, (discord.TextChannel, discord.Thread)):
             return False
 
         return True
