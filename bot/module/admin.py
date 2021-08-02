@@ -2,40 +2,34 @@ import time
 import typing
 
 from discord.ext import commands
-from jishaku.cog import JishakuBase, jsk
-from jishaku.metacog import GroupCogMeta
+from jishaku.cog import STANDARD_FEATURES
+from jishaku.features.baseclass import Feature
+
 
 from bot.utils import models, context, paginator
 from bot.config import config, token
+from config import mk
 
 
-class Admin(
-    JishakuBase,
-    metaclass=GroupCogMeta,
-    command_parent=jsk,
-    command_attrs=dict(hidden=True),
-):
+class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
     """Administrative commands to debug and monitor the bot."""
 
     hidden = True
 
-    @commands.command(name="restart", aliases=["stop"])
-    @commands.is_owner()
-    async def restart(self, ctx):
+    @Feature.Command(parent="jsk", name="restart", aliases=["stop"])
+    async def jsk_restart(self, ctx):
         """Restarts the bot"""
         await ctx.send(":wave: Restarting...")
         await self.bot.close()
 
-    @commands.command(name="backup")
-    @commands.is_owner()
-    async def backup(self, ctx):
+    @Feature.Command(parent="jsk", name="backup")
+    async def jsk_backup(self, ctx):
         """Trigger a database backup"""
         await self.bot.do_db_backup(token.POSTGRESQL_DATABASE)
         await ctx.send(config.YES)
 
-    @commands.command(name="sql")
-    @commands.is_owner()
-    async def sql(self, ctx, *, query: str):
+    @Feature.Command(parent="jsk", name="sql")
+    async def jsk_sql(self, ctx, *, query: str):
         """Debug the bot's database"""
 
         is_multistatement = query.count(";") > 1
@@ -54,9 +48,8 @@ class Admin(
         else:
             await ctx.send(result)
 
-    @commands.command(name="addbilltag", aliases=["lt", "addlawtag", "bt"])
-    @commands.is_owner()
-    async def billtag(self, ctx, bill: models.Bill, tag: str):
+    @Feature.Command(parent="jsk", name="addbilltag", aliases=["bt", "lt", "addlawtag"])
+    async def jsk_billtag(self, ctx, bill: models.Bill, tag: str):
         """Add a search tag to a law to be used in `{PREFIX}bill/laws search`"""
 
         await self.bot.db.execute(
@@ -68,9 +61,8 @@ class Admin(
             f"{config.YES} `{tag}` was added as a search tag to `{bill.name}` (#{bill.id})"
         )
 
-    @commands.command(name="forceindex", aliases=["force-index"])
-    @commands.is_owner()
-    async def ml_qa_force_index(self, ctx):
+    @Feature.Command(parent="jsk", name="forceindex")
+    async def jsk_ml_qa_force_index(self, ctx):
         """Force rebuilding the document index for BERTQuestionAnswering"""
 
         await self.bot.api_request("POST", "ml/question_answering/force_index")
@@ -79,6 +71,8 @@ class Admin(
 
 class Experiments(context.CustomCog):
     """Test unfinished commands in beta & experimental features"""
+
+    hidden = mk.MarkConfig.IS_MULTICIV
 
     def __init__(self, bot):
         super().__init__(bot)
@@ -115,6 +109,9 @@ class Experiments(context.CustomCog):
         """Get answers to a legal question with Deep (Machine) Learning:tm: and Neural Networks:tm:
 
         This is an experimental command and probably still a work-in-progress."""
+
+        if self.bot.mk.IS_MULTICIV:
+            return await ctx.send(f"{config.NO} This command is disabled during Multiciv MKs.")
 
         wait = await ctx.send(
             f"{config.HINT} This might take 30 to 60 seconds. Should this feature make it out "
@@ -194,6 +191,9 @@ class Experiments(context.CustomCog):
 
         This is an experimental command and probably still a work-in-progress."""
 
+        if self.bot.mk.IS_MULTICIV:
+            return await ctx.send(f"{config.NO} This command is disabled during Multiciv MKs.")
+
         async with ctx.typing():
             response = await self.bot.api_request(
                 "POST", "ml/information_extraction", json={"question": query}
@@ -239,4 +239,4 @@ class Experiments(context.CustomCog):
 
 def setup(bot):
     bot.add_cog(Experiments(bot))
-    bot.add_cog(Admin(bot))
+    bot.add_cog(Admin(bot=bot))
