@@ -211,7 +211,7 @@ class Starboard(context.CustomCog):
 
         logging.info(msg)
 
-        today = discord.utils.utcnow().today()
+        today = datetime.datetime.utcnow().today()
         start_of_last_week = today - datetime.timedelta(days=7)
 
         post_content = await self.get_reddit_post_content(grouped_stars)
@@ -374,13 +374,15 @@ class Starboard(context.CustomCog):
                    message_creation_date, message_jump_url) VALUES ($1, $2, $3, $4, $5, $6)
                    ON CONFLICT DO NOTHING RETURNING id"""
 
+        created_at = message.created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+
         entry_id = await self.bot.db.fetchval(
             query,
             message.author.id,
             message.id,
             message.channel.id,
             message.guild.id,
-            message.created_at,
+            created_at,
             message.jump_url,
         )
 
@@ -421,7 +423,7 @@ class Starboard(context.CustomCog):
                 " starboard_message_created_at = $3 WHERE id = $2",
                 new_bot_message.id,
                 entry_id,
-                new_bot_message.created_at,
+                new_bot_message.created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None),
             )
 
         else:

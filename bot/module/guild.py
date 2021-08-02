@@ -396,6 +396,8 @@ class _Guild(context.CustomCog, name="Server"):
 
         Both text channels and entire categories can be hidden.
 
+        Threads inherit whether they are hidden from the channel they belong to.
+
          **Usage**
              `{PREFIX}{COMMAND}` to see all hidden channels/categories
              `{PREFIX}{COMMAND} <channel>` to hide or unhide a channel or category
@@ -411,8 +413,8 @@ class _Guild(context.CustomCog, name="Server"):
             )
 
         help_description = (
-            f"When you hide a channel, it will no longer show up in {current_logging_channel.mention}.\n\nAdditionally,"
-            f" :star: reactions for the starboard will no longer count in that channel.\n\nYou can hide a channel, "
+            f"When you hide a channel, it (and all its threads) will no longer show up in {current_logging_channel.mention}.\n\nAdditionally,"
+            f" :star: reactions for the starboard will no longer count in that channel (and in all its threads).\n\nYou can hide a channel, "
             f"or even an entire category at once, with "
             f"`{config.BOT_PREFIX}server hidechannel <channel_name>`\n\n__**Hidden Channels**__"
         )
@@ -461,23 +463,23 @@ class _Guild(context.CustomCog, name="Server"):
 
                 if is_category:
                     star = (
-                        f"\n{config.HINT} *Note that :star: reactions for the starboard will now count again in every one of these channels.*"
+                        f"\n{config.HINT} *Note that :star: reactions for the starboard will now count again in every one of these channels and their threads.*"
                         if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED
                         else ""
                     )
                     await ctx.send(
-                        f"{config.YES} The {channel} category **is no longer hidden**, and all channels in it "
+                        f"{config.YES} The {channel} category **is no longer hidden**, and all channels in it and their threads "
                         f"will show up in {current_logging_channel.mention} again.{star}"
                     )
                 else:
                     star = (
-                        f"\n{config.HINT} *Note that :star: reactions for the starboard will now count again in this channel.*"
+                        f"\n{config.HINT} *Note that :star: reactions for the starboard will now count again in this channel and in all its threads.*"
                         if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED
                         else ""
                     )
                     await ctx.send(
                         f"{config.YES} {channel.mention} **is no longer hidden**, "
-                        f"and it will show up in {current_logging_channel.mention} again.{star}"
+                        f"and it and all its threads will show up in {current_logging_channel.mention} again.{star}"
                     )
 
             # Add channel
@@ -490,24 +492,24 @@ class _Guild(context.CustomCog, name="Server"):
 
                 if is_category:
                     star = (
-                        f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in any of these channels.*"
+                        f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in any of these channels and their threads.*"
                         if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED
                         else ""
                     )
 
                     await ctx.send(
-                        f"{config.YES} The {channel} category **is now hidden**, and all the channel in it "
+                        f"{config.YES} The {channel} category **is now hidden**, and all the channels in it and their threads "
                         f"will no longer show up in {current_logging_channel.mention}.{star}"
                     )
                 else:
                     star = (
-                        f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in this channel.*"
+                        f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in this channel and its threads.*"
                         if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED
                         else ""
                     )
 
                     await ctx.send(
-                        f"{config.YES} {channel.mention} **is now hidden** and will no longer show up "
+                        f"{config.YES} {channel.mention} (and all its threads) **are now hidden** and will no longer show up "
                         f"in {current_logging_channel.mention}.{star}"
                     )
                 await self.bot.update_guild_config_cache()

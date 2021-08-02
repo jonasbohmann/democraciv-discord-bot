@@ -999,13 +999,16 @@ class DemocracivBot(commands.Bot):
         if excluded_channels is None:
             return False
 
-        channel: discord.TextChannel = self.get_guild(guild_id).get_channel_or_thread(channel_id)
+        channel = self.get_guild(guild_id).get_channel_or_thread(channel_id)
+
+        if not channel:
+            return False
 
         if isinstance(channel, discord.Thread):
             channel = channel.parent
 
         return (
-            channel_id in excluded_channels or channel.category_id in excluded_channels
+            channel.id in excluded_channels or channel.category_id in excluded_channels
         )
 
     async def make_paste(self, txt: str) -> typing.Optional[str]:
