@@ -8,6 +8,8 @@ Based on RoboDanny by Rapptz: https://github.com/Rapptz/RoboDanny/blob/rewrite/L
 
 import asyncio
 
+import discord
+
 from bot.config import config, mk
 from bot.utils import text
 from bot.utils.paginator import Pages
@@ -239,18 +241,18 @@ class HelpMenu(Pages, inherit_buttons=False):
         await self.show_page(self._source.get_max_pages() - 1)
 
     @menus.button(config.HELP_NUMBERS, position=menus.Last(1.5), lock=False)
-    async def numbered_page(self, payload):
+    async def numbered_page(self, payload: discord.Interaction):
         """lets you type a page number to go to"""
         if self.input_lock.locked():
             return
 
         async with self.input_lock:
             channel = self.message.channel
-            author_id = payload.user_id
-            question = await channel.send(
-                f"{config.USER_INTERACTION_REQUIRED} What page do you want to go to?"
+            author_id = payload.user.id
+            question = await payload.followup.send(
+                f"{config.USER_INTERACTION_REQUIRED} What page do you want to go to?", ephemeral=True
             )
-            to_delete = [question]
+            to_delete = []
 
             def message_check(m):
                 return (

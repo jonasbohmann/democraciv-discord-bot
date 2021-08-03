@@ -1192,7 +1192,7 @@ class NPC(CustomCog):
             )
             return
 
-        file = None
+        file = discord.utils.MISSING
 
         if message.attachments:
             file = await message.attachments[0].to_file(

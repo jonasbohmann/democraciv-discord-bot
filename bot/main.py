@@ -76,6 +76,8 @@ if mk.MarkConfig.IS_MULTICIV:
             "bot.module.moderation",
             "bot.ext.democracivbank.bank",
             "bot.module.roles",
+            "bot.module.guild",
+            "bot.module.npcs",
         }
     else:
         initial_extensions = initial_extensions - {

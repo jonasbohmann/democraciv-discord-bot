@@ -14,17 +14,19 @@ def _make_property(role: mk.DemocracivRole):
 class ReadDocumentView(text.PromptView):
 
     result = (False, "")
+    webhook = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return True
 
     @discord.ui.button(label="Read Document", style=discord.ButtonStyle.primary)
     async def on_button(self, button, interaction):
-        if interaction.user.id == self.ctx.user.id:
+        if interaction.user.id == self.ctx.author.id:
             self.result = (True, "public")
         else:
             self.result = (True, "private")
 
+        self.webhook = interaction.followup
         self.stop()
 
 
@@ -111,37 +113,39 @@ class GovernmentMixin:
                 )
                 embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
 
+        if not isinstance(obj, models.Motion):
             history = [
                 f"{entry.date.strftime('%d %B %Y')} - {entry.note if entry.note else entry.after}"
                 for entry in obj.history[:5]
             ]
 
             if history:
-                embed.add_field(name="History", value="\n".join(history))
+                embed.add_field(name="History", value="\n".join(history), inline=False)
 
-            if obj.status.is_law:
-                # todo remove session when mk8 ends
+            if not isinstance(obj, models.Law) and obj.status.is_law:
                 embed.set_footer(
-                    text=f"All dates are in UTC. This is an active law. Session #{obj.session.id}"
+                    text="All dates are in UTC. This is an active law."
                 )
             else:
                 embed.set_footer(
-                    text=f"All dates are in UTC. Session #{obj.session.id}"
+                    text="All dates are in UTC."
                 )
 
             view = ReadDocumentView(ctx=ctx)
             await ctx.send(embed=embed, view=view)
             do_continue, mode = await view.prompt()
+            followup = None
+
+            if mode == "private":
+                followup = view.webhook
 
             if do_continue:
-                # todo: mode == "private" empheral
-                await self._show_bill_text(ctx, obj)
-
-            return
+                await self._show_bill_text(ctx, obj, ephemeral_webhook=followup)
+                return
 
         await ctx.send(embed=embed)
 
-    async def _show_bill_text(self, ctx, bill: models.Bill):
+    async def _show_bill_text(self, ctx, bill: models.Bill, *, ephemeral_webhook=None):
         entries = bill.content.splitlines()
         entries.insert(
             0,
@@ -154,6 +158,7 @@ class GovernmentMixin:
             entries=entries,
             icon=self.bot.mk.NATION_ICON_URL,
             author=f"{bill.name} (#{bill.id})",
+            ephemeral_webhook=ephemeral_webhook
         )
 
         await pages.start(ctx)
