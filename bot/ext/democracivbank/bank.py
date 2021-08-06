@@ -723,7 +723,7 @@ class Bank(context.CustomCog):
         embed.add_field(name="IBAN", value=js["iban"], inline=False)
         embed.add_field(
             name="Owner",
-            value=f"{discord.utils.remove_markdown(js['pretty_holder'])} {'*(Person)*' if js['individual_holder'] else '*(Organization)*'}",
+            value=f"{discord.utils.escape_markdown(js['pretty_holder'])} {'*(Person)*' if js['individual_holder'] else '*(Organization)*'}",
             inline=False,
         )
 
@@ -805,7 +805,7 @@ class Bank(context.CustomCog):
             )
             desc.append(
                 f"__**Bank Account with IBAN {account['iban']}**__\n"
-                f"Owner: {discord.utils.remove_markdown(account['pretty_holder'])} {'*(Person)*' if account['individual_holder'] else '*(Organization)*'}\n"
+                f"Owner: {discord.utils.escape_markdown(account['pretty_holder'])} {'*(Person)*' if account['individual_holder'] else '*(Organization)*'}\n"
                 f"Balance: {self.get_currency(account['balance_currency']).with_amount(account['balance'])}\n"
                 f"Opened on: {discord.utils.format_dt(opened_on, 'F')}\n"
             )
