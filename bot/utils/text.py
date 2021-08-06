@@ -256,7 +256,7 @@ class FuzzyChoose(PromptView):
         select = DynamicSelect(
             options=[
                 discord.SelectOption(
-                    label=textwrap.shorten(str(x), width=100, placeholder="..."),
+                    label=textwrap.shorten(discord.utils.remove_markdown(str(x)), width=100, placeholder="..."),
                     value=str(self.choices.index(x)),
                 )
                 for x in self.choices
@@ -296,10 +296,10 @@ class FuzzyMultiModelChoose(FuzzyChoose):
                 options.append(
                     discord.SelectOption(
                         label=textwrap.shorten(
-                            str(choice), width=100, placeholder="..."
+                            discord.utils.remove_markdown(str(choice)), width=100, placeholder="..."
                         ),
                         description=textwrap.shorten(
-                            group, width=100, placeholder="..."
+                            discord.utils.remove_markdown(group), width=100, placeholder="..."
                         ),
                         value=str(self.choices.index(choice)),
                     )
