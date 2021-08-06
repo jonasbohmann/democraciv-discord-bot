@@ -1,3 +1,4 @@
+import datetime
 import sys
 import textwrap
 import uuid
@@ -8,8 +9,8 @@ import discord
 from aiohttp import web
 from dataclasses import dataclass
 from discord.ext import commands, tasks
-from bot.utils import converter, exceptions, text, paginator, context
-from bot.config import config, token
+from bot.utils import converter, exceptions, text, paginator, context, checks
+from bot.config import config, token, mk
 
 from bot.utils.converter import Fuzzy, FuzzySettings
 
@@ -104,6 +105,8 @@ class BankUUIDConverter(commands.Converter):
                     "format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`"
                 )
 
+            return ret
+
         except (ValueError, TypeError):
             raise BankError()
 
@@ -180,6 +183,8 @@ class Currency:
 
 class Bank(context.CustomCog):
     """Open as many bank accounts as you want and send money in multiple currencies with https://democracivbank.com"""
+
+    BANANA_INC_IBAN = "de2f6399-ea16-4687-b5bf-a3840271ebf8"
 
     def __init__(self, bot):
         super().__init__(bot)
@@ -665,6 +670,147 @@ class Bank(context.CustomCog):
             embed.add_field(name=currency["name"], value=value)
 
         await ctx.send(embed=embed)
+
+    # --- BANANA INC. COMMANDS ---
+
+    @bank.group(name="banana", aliases=["banana_inc"], hidden=True)
+    async def banana(self, ctx):
+        """The parent command for all Banana Inc. related commands"""
+        await ctx.send("\U0001f34c")
+
+    @banana.command(name="take")
+    @checks.has_democraciv_role(mk.DemocracivRole.BANANA_COIN_MANAGER)
+    async def take(
+        self,
+        ctx: context.CustomContext,
+        from_iban: BankUUIDConverter,
+        amount: decimal.Decimal,
+        *,
+        reason=None,
+    ):
+        """Withdraw an amount of Banana Coin from any bank account"""
+
+        if amount <= decimal.Decimal("0"):
+            return await ctx.send(
+                f"{config.NO} You can't withdraw less than {self.get_currency('BNC').with_amount('0')}."
+            )
+
+        response = await self.request(BankRoute("GET", f"account/{from_iban}/"))
+        js = await response.json()
+
+        diff = decimal.Decimal(js["balance"]) - amount
+
+        if diff < decimal.Decimal("0"):
+            return await ctx.send(
+                f"{config.NO} That Bank Account doesn't have that much money."
+            )
+
+        amount_with_curr = self.get_currency(js["balance_currency"]).with_amount(amount)
+        new_balance_with_curr = self.get_currency(js["balance_currency"]).with_amount(
+            diff
+        )
+
+        embed = text.SafeEmbed()
+        embed.set_author(
+            name="Banana Coin - Bank Account Overview",
+            icon_url=self.bot.mk.NATION_ICON_URL,
+        )
+        embed.add_field(name="IBAN", value=js["iban"], inline=False)
+        embed.add_field(
+            name="Owner",
+            value=f"{js['pretty_holder']} {'*(Person)*' if js['individual_holder'] else '*(Organization)*'}",
+            inline=False,
+        )
+
+        opened_on = datetime.datetime.fromisoformat(
+            js["created_on"].replace("Z", "+00:00")
+        )
+        embed.add_field(
+            name="Account Opened On",
+            value=discord.utils.format_dt(opened_on, "F"),
+            inline=False,
+        )
+
+        embed.add_field(
+            name="Balance",
+            value=self.get_currency(js["balance_currency"]).with_amount(js["balance"]),
+        )
+        embed.add_field(
+            name="New Balance after Withdrawal", value=new_balance_with_curr
+        )
+
+        msg = await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to withdraw {amount_with_curr} from this account?",
+            embed=embed,
+        )
+
+        result = await ctx.confirm(message=msg)
+        await msg.delete()
+
+        if not result:
+            return
+
+        reason = (
+            discord.utils.remove_markdown(reason) or "No reason provided by Banana Inc."
+        )
+
+        reason_fix = (
+            f"This was an automated withdrawal performed by the Banana Inc. leadership. For "
+            f"questions regarding why or how this happened, please contact a Banana Inc. representative. "
+            f"The stated reason for this withdrawal of Banana Coin was the following:\n\n{reason}"
+        )
+
+        transaction = await self.send_money(
+            ctx.author.id, js["iban"], self.BANANA_INC_IBAN, amount, reason_fix
+        )
+
+        trans_embed = text.SafeEmbed(
+            title=f"Banana Inc. withdrew {amount_with_curr} from {transaction['safe_to_account']}",
+            description=f"[See the transaction details here.](https://democracivbank.com/transaction/{transaction['id']})",
+        )
+        trans_embed.set_author(
+            name=f"{self.BANK_NAME} on behalf of Banana Inc.",
+            icon_url=self.BANK_ICON_URL,
+        )
+        await ctx.send(embed=trans_embed)
+
+        for d_id in js["discord_ids"]:
+            user = self.bot.get_user(d_id)
+
+            if user and not user.bot:
+                await user.send(
+                    f"{config.HINT} The leadership of Banana Inc. has withdrawn {amount_with_curr} from a "
+                    f"bank account you have access to. The new balance is {new_balance_with_curr}.\n\n"
+                    f"Their reason for this action was the following: `{reason}`",
+                    embed=trans_embed,
+                )
+
+    @banana.command(name="list", aliases=["all"])
+    @checks.has_democraciv_role(mk.DemocracivRole.BANANA_COIN_MANAGER)
+    async def list(self, ctx):
+        """List all bank accounts with the Banana Coin currency"""
+
+        response = await self.request(BankRoute("GET", "accounts/currency/BNC"))
+        json = await response.json()
+        desc = []
+
+        for account in json:
+            opened_on = datetime.datetime.fromisoformat(
+                account["created_on"].replace("Z", "+00:00")
+            )
+            desc.append(
+                f"__**Bank Account with IBAN {account['iban']}**__\n"
+                f"Owner: {account['pretty_holder']} {'*(Person)*' if account['individual_holder'] else '*(Organization)*'}\n"
+                f"Balance: {self.get_currency(account['balance_currency']).with_amount(account['balance'])}\n"
+                f"Opened on: {discord.utils.format_dt(opened_on, 'F')}\n"
+            )
+
+        pages = paginator.SimplePages(
+            entries=desc,
+            icon=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url,
+            author=f"All Bank Accounts with Banana Coin ({len(json)})",
+        )
+        await pages.start(ctx)
 
 
 class PickBankAccountView(text.PromptView):
