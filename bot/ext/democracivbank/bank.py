@@ -673,7 +673,7 @@ class Bank(context.CustomCog):
 
     # --- BANANA INC. COMMANDS ---
 
-    @bank.group(name="banana", aliases=["banana_inc"], hidden=True)
+    @bank.group(name="banana", aliases=["banana_inc"], hidden=True, case_insensitive=True, invoke_without_command=True)
     async def banana(self, ctx):
         """The parent command for all Banana Inc. related commands"""
         await ctx.send("\U0001f34c")
