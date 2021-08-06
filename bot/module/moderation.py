@@ -227,7 +227,7 @@ class Moderation(context.CustomCog):
         await ctx.send(f"{config.YES} Report was sent.")
 
     async def safe_send_mod_links(self, ctx, embed):
-        if len(ctx.channel.members) >= 20:
+        if isinstance(ctx.channel, discord.Thread) or len(ctx.channel.members) >= 20:
             await ctx.message.add_reaction("\U0001f4e9")
             return await ctx.author.send(embed=embed)
 
