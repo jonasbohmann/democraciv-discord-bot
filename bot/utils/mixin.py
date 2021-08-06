@@ -123,13 +123,9 @@ class GovernmentMixin:
                 embed.add_field(name="History", value="\n".join(history), inline=False)
 
             if not isinstance(obj, models.Law) and obj.status.is_law:
-                embed.set_footer(
-                    text="All dates are in UTC. This is an active law."
-                )
+                embed.set_footer(text="All dates are in UTC. This is an active law.")
             else:
-                embed.set_footer(
-                    text="All dates are in UTC."
-                )
+                embed.set_footer(text="All dates are in UTC.")
 
             view = ReadDocumentView(ctx=ctx)
             await ctx.send(embed=embed, view=view)
@@ -158,7 +154,7 @@ class GovernmentMixin:
             entries=entries,
             icon=self.bot.mk.NATION_ICON_URL,
             author=f"{bill.name} (#{bill.id})",
-            ephemeral_webhook=ephemeral_webhook
+            ephemeral_webhook=ephemeral_webhook,
         )
 
         await pages.start(ctx)

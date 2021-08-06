@@ -117,15 +117,19 @@ class _Fuzzy(commands.Converter):
             fmt = model[0]
             menu_cls = text.FuzzyChoose
 
-        menu = menu_cls(
-            question=f"Which {fmt} did you mean?",
-            description="\n".join(description),
-            choices=list(
+        kwargs = {
+            "question": f"Which {fmt} did you mean?",
+            "description": "\n".join(description),
+            "choices": list(
                 itertools.chain.from_iterable(list(s.keys()) for s in sources.values())
             ),
-            models=sources,
-        )
-        result = await menu.prompt(ctx)
+        }
+
+        if len(model) > 1:
+            kwargs["models"] = sources
+
+        menu = menu_cls(ctx, **kwargs)
+        result = await menu.prompt()
 
         if result:
             return result
@@ -475,15 +479,6 @@ class UnbanConverter(commands.Converter):
             return user
 
         raise BadArgument(f"{config.NO} I couldn't find that person.")
-
-
-async def fuzzy_search(ctx, arg, iterable, model):
-    match = process.extract(arg, iterable, limit=5)
-
-    menu = text.FuzzyChoose(
-        question=f"Which {model} did you mean?", choices=[mtch for mtch, _ in match]
-    )
-    return await menu.prompt(ctx)
 
 
 def _find_channel(arg, what):
@@ -893,7 +888,10 @@ class CollaboratorOfTag(Tag):
             except exceptions.RoleNotFoundError:
                 pass
 
-        if ctx.author.guild_permissions.administrator or ctx.author.id == ctx.bot.owner_id:
+        if (
+            ctx.author.guild_permissions.administrator
+            or ctx.author.id == ctx.bot.owner_id
+        ):
             return True
 
         return False

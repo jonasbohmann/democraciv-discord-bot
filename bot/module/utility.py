@@ -421,10 +421,11 @@ class Utility(context.CustomCog):
             match = process.extract(zone, pytz.all_timezones, limit=5)
 
             menu = text.FuzzyChoose(
+                ctx,
                 question="Which time zone did you mean?",
                 choices=[zone for zone, _ in match],
             )
-            zone = await menu.prompt(ctx)
+            zone = await menu.prompt()
 
             if not zone:
                 return
@@ -466,7 +467,9 @@ class Utility(context.CustomCog):
             return
 
         joined_on = member.joined_at or discord.utils.utcnow()
-        joined_on = joined_on.astimezone(datetime.timezone.utc).replace(tzinfo=None) # remove tz info since db doesnt care
+        joined_on = joined_on.astimezone(datetime.timezone.utc).replace(
+            tzinfo=None
+        )  # remove tz info since db doesnt care
 
         await self.bot.db.execute(
             "INSERT INTO original_join_date (member, join_date) VALUES ($1, $2) ON CONFLICT DO NOTHING",

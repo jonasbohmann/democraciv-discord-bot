@@ -111,7 +111,9 @@ class Experiments(context.CustomCog):
         This is an experimental command and probably still a work-in-progress."""
 
         if self.bot.mk.IS_MULTICIV:
-            return await ctx.send(f"{config.NO} This command is disabled during Multiciv MKs.")
+            return await ctx.send(
+                f"{config.NO} This command is disabled during Multiciv MKs."
+            )
 
         wait = await ctx.send(
             f"{config.HINT} This might take 30 to 60 seconds. Should this feature make it out "
@@ -192,7 +194,9 @@ class Experiments(context.CustomCog):
         This is an experimental command and probably still a work-in-progress."""
 
         if self.bot.mk.IS_MULTICIV:
-            return await ctx.send(f"{config.NO} This command is disabled during Multiciv MKs.")
+            return await ctx.send(
+                f"{config.NO} This command is disabled during Multiciv MKs."
+            )
 
         async with ctx.typing():
             response = await self.bot.api_request(

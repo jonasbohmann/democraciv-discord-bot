@@ -706,7 +706,8 @@ class PickBankAccountView(discord.ui.View):
         return self.result
 
     @discord.ui.button(
-        label="Send from my default Personal Bank Account", style=discord.ButtonStyle.green
+        label="Send from my default Personal Bank Account",
+        style=discord.ButtonStyle.green,
     )
     async def default(self, button: discord.Button, interaction: discord.Interaction):
         self.result = await self.cog.resolve_iban(
@@ -715,7 +716,8 @@ class PickBankAccountView(discord.ui.View):
         self.stop()
 
     @discord.ui.button(
-        label="Let me choose a different Bank Account", style=discord.ButtonStyle.primary
+        label="Let me choose a different Bank Account",
+        style=discord.ButtonStyle.primary,
     )
     async def not_default(
         self, button: discord.Button, interaction: discord.Interaction
@@ -726,7 +728,10 @@ class PickBankAccountView(discord.ui.View):
 
         available_accounts = await resp.json()
         available_accounts = {
-            acc["iban"]: (acc["name"], acc["corporate_holder"]["name"] if acc["corporate_holder"] else None)
+            acc["iban"]: (
+                acc["name"],
+                acc["corporate_holder"]["name"] if acc["corporate_holder"] else None,
+            )
             for acc in available_accounts
             if acc["balance_currency"] == self.currency
             and decimal.Decimal(acc["balance"]) >= self.amount
@@ -745,8 +750,13 @@ class PickBankAccountView(discord.ui.View):
         self.clear_items()
 
         options = [
-            discord.SelectOption(value=k, label=textwrap.shorten(v[0], width=25, placeholder="..."),
-                                 description=textwrap.shorten(v[1], width=100, placeholder="...") if v[1] else None)
+            discord.SelectOption(
+                value=k,
+                label=textwrap.shorten(v[0], width=25, placeholder="..."),
+                description=textwrap.shorten(v[1], width=100, placeholder="...")
+                if v[1]
+                else None,
+            )
             for k, v in available_accounts.items()
         ]
 

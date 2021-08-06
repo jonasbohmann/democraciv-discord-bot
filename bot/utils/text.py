@@ -1,11 +1,13 @@
 import collections
 import copy
 import datetime
+import textwrap
 import typing
 import discord
 
 from discord.ext import tasks, menus, commands
 from bot.config import config, mk
+from bot.utils import exceptions
 
 
 def split_string_into_multiple(string: str, length: int):
@@ -71,7 +73,7 @@ class AnnouncementScheduler:
             self._task.cancel()
 
     def _split_embeds(
-            self, original_embed: discord.Embed
+        self, original_embed: discord.Embed
     ) -> typing.List[discord.Embed]:
         paginator = commands.Paginator(prefix="", suffix="", max_size=2035)
 
@@ -120,9 +122,9 @@ class AnnouncementScheduler:
     @tasks.loop(seconds=30)
     async def _wait(self):
         if (
-                self._last_addition is not None
-                and discord.utils.utcnow() - self._last_addition
-                > datetime.timedelta(minutes=self.wait_time)
+            self._last_addition is not None
+            and discord.utils.utcnow() - self._last_addition
+            > datetime.timedelta(minutes=self.wait_time)
         ):
             await self._trigger()
 
@@ -150,7 +152,6 @@ class RedditAnnouncementScheduler(AnnouncementScheduler):
 
 
 class CustomView(discord.ui.View):
-
     def __init__(self, ctx, *args, **kwargs):
         self.ctx = ctx
         self.bot = ctx.bot
@@ -163,22 +164,20 @@ class CustomView(discord.ui.View):
         return False
 
 
-class PromptView(discord.ui.View):
-
-    def __init__(self, ctx, *args, **kwargs):
-        self.ctx = ctx
-        self.bot = ctx.bot
+class PromptView(CustomView):
+    def __init__(self, *args, **kwargs):
         self.result = None
         super().__init__(*args, **kwargs)
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id == self.ctx.author.id:
-            return True
-
-        return False
+    async def on_timeout(self):
+        raise exceptions.InvalidUserInputError(":zzz: You took too long to react.")
 
     async def prompt(self):
-        await self.wait()
+        timed_out = await self.wait()
+
+        if timed_out:
+            await self.ctx.reply(":zzz: You took too long to react.")
+
         return self.result
 
 
@@ -209,12 +208,12 @@ class SafeEmbed(discord.Embed):
             )
 
     def add_field(
-            self,
-            *,
-            name: typing.Any,
-            value: typing.Any,
-            inline: bool = True,
-            too_long_value: str = "*Too long to display.*",
+        self,
+        *,
+        name: typing.Any,
+        value: typing.Any,
+        inline: bool = True,
+        too_long_value: str = "*Too long to display.*",
     ):
         field_index = len(self.fields)
         name = str(name)
@@ -241,9 +240,60 @@ class SafeEmbed(discord.Embed):
             super().add_field(name=name, value=too_long_value, inline=inline)
 
 
-class FuzzyChoose(menus.Menu):
+class DynamicSelect(discord.ui.Select):
+    async def callback(self, interaction):
+        index = int(self.values[0])
+        self.view.result = self.view.choices[index]
+        self.view.stop()
+
+
+class FuzzyChoose(PromptView):
+    def __init__(self, ctx, *args, **kwargs):
+        self.question: str = kwargs.pop("question")
+        self.choices: typing.Sequence = kwargs.pop("choices")
+        self.description = kwargs.pop("description", None)
+        super().__init__(ctx, *args, **kwargs, timeout=120.0)
+        self._make_select()
+
+    def _make_select(self):
+        select = DynamicSelect(
+            options=[
+                discord.SelectOption(
+                    label=textwrap.shorten(str(x), width=100, placeholder="..."),
+                    value=str(self.choices.index(x)),
+                )
+                for x in self.choices
+            ],
+            row=0,
+        )
+
+        self.add_item(select)
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red, row=1)
+    async def cancel(self, button, interaction):
+        self.stop()
+
+    async def prompt(self):
+        if self.description:
+            embed = SafeEmbed(
+                title=f"{config.USER_INTERACTION_REQUIRED}   {self.question}",
+                description=self.description,
+            )
+
+            msg = await self.ctx.send(embed=embed, view=self)
+        else:
+            msg = await self.ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} {self.question}", view=self
+            )
+
+        await self.wait()
+        await msg.delete()
+        return self.result
+
+
+class FuzzyChooseAlt(menus.Menu):
     def __init__(
-            self, question: str, choices: typing.Sequence, *, description=None, **kwargs
+        self, question: str, choices: typing.Sequence, *, description=None, **kwargs
     ):
         super().__init__(timeout=120.0, delete_message_after=True)
         self.question = question
@@ -295,28 +345,30 @@ class FuzzyChoose(menus.Menu):
 
 
 class FuzzyMultiModelChoose(FuzzyChoose):
-    def __init__(self, models: typing.Mapping[str, typing.Sequence], *args, **kwargs):
-        self.models = models
-        super().__init__(*args, **kwargs)
+    def __init__(self, ctx, *args, **kwargs):
+        self.models: typing.Mapping[str, typing.Sequence] = kwargs.pop("models")
+        super().__init__(ctx, *args, **kwargs)
 
-    def get_embed(self) -> discord.Embed:
-        embed = SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}   {self.question}")
-
-        fmt = []
-        if self.description:
-            fmt.insert(0, self.description)
+    def _make_select(self):
+        options = []
 
         for group, choices in self.models.items():
-            fmt.append(f"__**{group}**__")
-
             for choice in choices:
-                fmt.append(f"{self._reverse_mapping[choice]}  {choice}")
+                options.append(
+                    discord.SelectOption(
+                        label=textwrap.shorten(
+                            str(choice), width=100, placeholder="..."
+                        ),
+                        description=textwrap.shorten(
+                            group, width=50, placeholder="..."
+                        ),
+                        value=str(self.choices.index(choice)),
+                    )
+                )
 
-            fmt.append(" ")
+        select = DynamicSelect(options=options, row=0)
 
-        fmt = "\n".join(fmt)
-        embed.description = fmt
-        return embed
+        self.add_item(select)
 
 
 EditModelResult = collections.namedtuple("EditModelResult", ["confirmed", "choices"])
@@ -324,10 +376,10 @@ EditModelResult = collections.namedtuple("EditModelResult", ["confirmed", "choic
 
 class EditModelMenu(menus.Menu):
     def __init__(
-            self,
-            choices_with_formatted_explanation: typing.Dict[str, str],
-            *,
-            title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
+        self,
+        choices_with_formatted_explanation: typing.Dict[str, str],
+        *,
+        title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
     ):
         super().__init__(timeout=120.0, delete_message_after=True)
         self.choices = choices_with_formatted_explanation

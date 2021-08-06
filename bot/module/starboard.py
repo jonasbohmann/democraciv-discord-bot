@@ -328,7 +328,10 @@ class Starboard(context.CustomCog):
 
         if (
             not message.content and len(message.attachments) == 0
-        ) or message.type not in (discord.MessageType.default, discord.MessageType.reply):
+        ) or message.type not in (
+            discord.MessageType.default,
+            discord.MessageType.reply,
+        ):
             return
 
         if await self.bot.is_channel_excluded(self.bot.dciv.id, payload.channel_id):
@@ -374,7 +377,9 @@ class Starboard(context.CustomCog):
                    message_creation_date, message_jump_url) VALUES ($1, $2, $3, $4, $5, $6)
                    ON CONFLICT DO NOTHING RETURNING id"""
 
-        created_at = message.created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+        created_at = message.created_at.astimezone(datetime.timezone.utc).replace(
+            tzinfo=None
+        )
 
         entry_id = await self.bot.db.fetchval(
             query,
@@ -423,7 +428,9 @@ class Starboard(context.CustomCog):
                 " starboard_message_created_at = $3 WHERE id = $2",
                 new_bot_message.id,
                 entry_id,
-                new_bot_message.created_at.astimezone(datetime.timezone.utc).replace(tzinfo=None),
+                new_bot_message.created_at.astimezone(datetime.timezone.utc).replace(
+                    tzinfo=None
+                ),
             )
 
         else:
@@ -546,9 +553,7 @@ class Starboard(context.CustomCog):
 
     async def star_member_stats(self, ctx, member):
         embed = text.SafeEmbed(colour=0xFFAC33)
-        embed.set_author(
-            name=member.display_name, icon_url=member.avatar.url
-        )
+        embed.set_author(name=member.display_name, icon_url=member.avatar.url)
 
         stars_received = await self.bot.db.fetchval(
             """SELECT COUNT(*)

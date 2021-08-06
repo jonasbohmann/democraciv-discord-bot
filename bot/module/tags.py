@@ -694,11 +694,7 @@ class Tags(context.CustomCog):
                     """
 
         guild_id = 0 if not ctx.guild else ctx.guild.id
-        icon = (
-            self.bot.user.avatar.url
-            if not ctx.guild
-            else ctx.guild_icon
-        )
+        icon = self.bot.user.avatar.url if not ctx.guild else ctx.guild_icon
         tags = await self.bot.db.fetch(db_query, query.lower(), guild_id)
         pretty_names = (
             {}
@@ -744,9 +740,7 @@ class Tags(context.CustomCog):
         )
 
         embed = text.SafeEmbed()
-        embed.set_author(
-            name=person.display_name, icon_url=person.avatar.url
-        )
+        embed.set_author(name=person.display_name, icon_url=person.avatar.url)
 
         embed.add_field(name="Amount of Tags from any Server", value=amount[0]["count"])
         embed.add_field(

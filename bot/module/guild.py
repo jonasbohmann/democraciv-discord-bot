@@ -9,6 +9,26 @@ from bot.utils import text, converter, paginator, exceptions, context
 from bot.utils.converter import Fuzzy
 
 
+class SelectTagCreationView(text.PromptView):
+    @discord.ui.select(
+        options=[
+            discord.SelectOption(
+                label="Everyone",
+                value="Everyone",
+                emoji="\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467",
+            ),
+            discord.SelectOption(
+                label="Only Server Administrators",
+                value="Administrators",
+                emoji="\U0001f46e",
+            ),
+        ]
+    )
+    async def slct(self, select, interaction):
+        self.result = select.values[0]
+        self.stop()
+
+
 class _Guild(context.CustomCog, name="Server"):
     """Configure various features of this bot for this server."""
 
@@ -136,7 +156,9 @@ class _Guild(context.CustomCog, name="Server"):
         info_embed = await ctx.send(embed=embed)
 
         if await ctx.ask_to_continue(
-            message=info_embed, emoji=config.GUILD_SETTINGS_GEAR
+            message=info_embed,
+            emoji=config.GUILD_SETTINGS_GEAR,
+            label="Change Settings",
         ):
             menu = text.EditModelMenu(
                 choices_with_formatted_explanation={
@@ -258,7 +280,9 @@ class _Guild(context.CustomCog, name="Server"):
         info_embed = await ctx.send(embed=embed)
 
         if await ctx.ask_to_continue(
-            message=info_embed, emoji=config.GUILD_SETTINGS_GEAR
+            message=info_embed,
+            emoji=config.GUILD_SETTINGS_GEAR,
+            label="Change Settings",
         ):
             menu = text.EditModelMenu(
                 choices_with_formatted_explanation={
@@ -574,7 +598,9 @@ class _Guild(context.CustomCog, name="Server"):
         info_embed = await ctx.send(embed=embed)
 
         if await ctx.ask_to_continue(
-            message=info_embed, emoji=config.GUILD_SETTINGS_GEAR
+            message=info_embed,
+            emoji=config.GUILD_SETTINGS_GEAR,
+            label="Change Settings",
         ):
             menu = text.EditModelMenu(
                 choices_with_formatted_explanation={
@@ -660,21 +686,24 @@ class _Guild(context.CustomCog, name="Server"):
         info_embed = await ctx.send(embed=embed)
 
         if await ctx.ask_to_continue(
-            message=info_embed, emoji=config.GUILD_SETTINGS_GEAR
+            message=info_embed,
+            emoji=config.GUILD_SETTINGS_GEAR,
+            label="Change Settings",
         ):
-            everyone = (
-                "\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467"
-            )
-            only_admins = "\U0001f46e"
+            view = SelectTagCreationView(ctx)
 
-            reaction = await ctx.choose(
+            await ctx.send(
                 f"{config.USER_INTERACTION_REQUIRED} Who should be able to create new tags "
-                f"on this server with `{config.BOT_PREFIX}tag add`?\n\n{everyone} - Everyone"
-                f"\n{only_admins} - Only Server Administrators",
-                reactions=[everyone, only_admins],
+                f"on this server with `{config.BOT_PREFIX}tag add`?",
+                view=view,
             )
 
-            if str(reaction) == everyone:
+            result = await view.prompt()
+
+            if not result:
+                return
+
+            if result == "Everyone":
                 await self.bot.db.execute(
                     "UPDATE guild SET tag_creation_allowed = true WHERE id = $1",
                     ctx.guild.id,
@@ -683,7 +712,7 @@ class _Guild(context.CustomCog, name="Server"):
                     f"{config.YES} Everyone can now make tags with `{config.BOT_PREFIX}tag add` on this server."
                 )
 
-            elif str(reaction) == only_admins:
+            elif result == "Administrators":
                 await self.bot.db.execute(
                     "UPDATE guild SET tag_creation_allowed = false WHERE id = $1",
                     ctx.guild.id,
@@ -716,7 +745,9 @@ class _Guild(context.CustomCog, name="Server"):
         info_embed = await ctx.send(embed=embed)
 
         if await ctx.ask_to_continue(
-            message=info_embed, emoji=config.GUILD_SETTINGS_GEAR
+            message=info_embed,
+            emoji=config.GUILD_SETTINGS_GEAR,
+            label="Change Settings",
         ):
             reaction = await ctx.confirm(
                 f"React with {config.YES} to allow everyone to use NPCs on this server, "

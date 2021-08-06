@@ -335,10 +335,7 @@ class NPC(CustomCog):
             f"`{p}commands` to see every NPC-related command and learn more about them."
         )
 
-        embed.set_author(
-            name="What are NPCs?",
-            icon_url=self.bot.dciv.icon.url
-        )
+        embed.set_author(name="What are NPCs?", icon_url=self.bot.dciv.icon.url)
         embed.set_image(
             url="https://cdn.discordapp.com/attachments/818226072805179392/818230819835215882/npc.gif"
         )
@@ -1042,7 +1039,9 @@ class NPC(CustomCog):
         except KeyError:
             return
 
-        channel = self.bot.get_guild(payload.guild_id).get_channel_or_thread(payload.channel_id)
+        channel = self.bot.get_guild(payload.guild_id).get_channel_or_thread(
+            payload.channel_id
+        )
 
         webhook_url = await self._get_webhook(channel)
 

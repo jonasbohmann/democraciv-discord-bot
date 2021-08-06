@@ -18,7 +18,14 @@ from bot.utils.text import SafeEmbed
 from bot.config import config
 
 
-class Pages(ViewMenuPages):
+class Yea(ViewMenuPages):
+    async def interaction_check(self, interaction) -> bool:
+        print(interaction.user.id)
+        print(self._author_id)
+        return True
+
+
+class Pages(Yea):
     def __init__(
         self,
         source: menus.PageSource,
@@ -149,7 +156,8 @@ class SimplePages(Pages, inherit_buttons=False):
             channel = self.message.channel
             author_id = payload.user.id
             question = await payload.followup.send(
-                f"{config.USER_INTERACTION_REQUIRED} What page do you want to go to?", ephemeral=True
+                f"{config.USER_INTERACTION_REQUIRED} What page do you want to go to?",
+                ephemeral=True,
             )
             to_delete = []
 

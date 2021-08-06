@@ -20,6 +20,34 @@ from bot.utils.context import MockContext
 from bot.utils.exceptions import ForbiddenTask
 
 
+class SelectJoinModeView(text.PromptView):
+    @discord.ui.select(
+        options=[
+            discord.SelectOption(
+                label="Public",
+                value="Public",
+                description="Everyone can join",
+                emoji="\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467",
+            ),
+            discord.SelectOption(
+                label="Request",
+                value="Request",
+                description="Everyone can ask to join & leaders can accept/deny",
+                emoji="\U0001f4e9",
+            ),
+            discord.SelectOption(
+                label="Private",
+                value="Private",
+                description="No one can join & moderation has to give role out",
+                emoji="\U0001f575",
+            ),
+        ]
+    )
+    async def select(self, component, interaction):
+        self.result = component.values[0]
+        self.stop()
+
+
 class EditPartyMenu(menus.Menu):
     def __init__(self):
         super().__init__(timeout=120.0, delete_message_after=True)
@@ -319,9 +347,7 @@ class Party(context.CustomCog, name="Political Parties"):
             return
 
         embed = text.SafeEmbed(description=message)
-        embed.set_author(
-            name=before, icon_url=before.avatar.url
-        )
+        embed.set_author(name=before, icon_url=before.avatar.url)
 
         for leader in party.leaders:
             if leader.id == before.id:
@@ -672,22 +698,15 @@ class Party(context.CustomCog, name="Political Parties"):
             result["invite"] = party_invite
 
         if join_mode:
-            reactions = {
-                "\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467": PoliticalPartyJoinMode.PUBLIC,
-                "\U0001f4e9": PoliticalPartyJoinMode.REQUEST,
-                "\U0001f575": PoliticalPartyJoinMode.PRIVATE,
-            }
+            view = SelectJoinModeView(ctx)
 
-            reaction = await ctx.choose(
-                f"{config.USER_INTERACTION_REQUIRED} Should this party be public, request-based, or private?\n"
-                f"\n\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467 - **Public**: Everyone can join\n"
-                f"\U0001f4e9 - **Request-based**: Everyone can request to join this party, and the party's leaders can then accept/deny each request\n"
-                f"\U0001f575 - **Private**: No one can join, and only {self.bot.dciv.name} Moderation can give out the party's role",
-                reactions=reactions.keys(),
+            await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Should this party be public, request-based, or private?",
+                view=view,
             )
 
-            join_mode = reactions[str(reaction)]
-            result["join_mode"] = join_mode.value
+            join_mode = await view.prompt()
+            result["join_mode"] = join_mode
 
         if commit:
             async with self.bot.db.acquire() as connection:

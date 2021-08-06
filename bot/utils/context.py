@@ -7,6 +7,7 @@ import typing
 from discord.ext import commands
 from bot.config import config
 from bot.utils import exceptions
+from bot.utils.text import PromptView
 
 
 class MockContext:
@@ -146,27 +147,24 @@ class CustomContext(commands.Context):
             raise exceptions.InvalidUserInputError(":zzz: You took too long to react.")
 
     async def ask_to_continue(
-        self, *, message: discord.Message, emoji: str, timeout: int = 300
+        self,
+        *,
+        message: discord.Message,
+        emoji: str = None,
+        timeout: int = 300,
+        label=None,
     ) -> bool:
-        await message.add_reaction(emoji)
+        class ContinueView(PromptView):
+            @discord.ui.button(label=label, emoji=emoji)
+            async def btn(self, button, interaction):
+                self.result = True
+                self.stop()
 
-        try:
-            await self.bot.wait_for(
-                "reaction_add",
-                check=self._wait_for_specific_emoji_reaction_check(
-                    original_message=message, emoji=emoji
-                ),
-                timeout=timeout,
-            )
-        except asyncio.TimeoutError:
-            return False
-        else:
-            return True
-        finally:
-            try:
-                await message.clear_reaction(emoji)
-            except discord.HTTPException:
-                pass
+        view = ContinueView(self, timeout=timeout)
+        await message.edit(view=view)
+        result = await view.prompt()
+
+        return bool(result)
 
     async def confirm(
         self, text: str = None, *, message: discord.Message = None, timeout=300
@@ -176,40 +174,35 @@ class CustomContext(commands.Context):
 
         Returns None if the user did nothing."""
 
+        class ConfirmView(PromptView):
+            @discord.ui.button(label="Yes", style=discord.ButtonStyle.green)
+            async def yes(self, *args, **kwargs):
+                self.result = True
+                self.stop()
+
+            @discord.ui.button(label="No", style=discord.ButtonStyle.red)
+            async def no(self, *args, **kwargs):
+                self.result = False
+                self.stop()
+
+        view = ConfirmView(self, timeout=timeout)
+
         if text:
-            message = await self.send(text)
+            message = await self.send(text, view=view)
 
-        yes_emoji = config.YES
-        no_emoji = config.NO
+        if message:
+            await message.edit(view=view)
 
-        await message.add_reaction(yes_emoji)
-        await message.add_reaction(no_emoji)
-
-        try:
-            reaction, user = await self.bot.wait_for(
-                "reaction_add",
-                check=self._wait_for_reaction_check(original_message=message),
-                timeout=timeout,
-            )
-        except asyncio.TimeoutError:
-            raise exceptions.InvalidUserInputError(":zzz: You took too long to react.")
-
-        else:
-            if reaction is None:
-                raise exceptions.InvalidUserInputError(
-                    ":zzz: You took too long to react."
-                )
-
-            if str(reaction.emoji) == yes_emoji:
-                return True
-
-            elif str(reaction.emoji) == no_emoji:
-                return False
+        result = await view.prompt()
+        return bool(result)
 
     async def send_with_timed_delete(self, content=None, *, embed=None, timeout=200):
         message = await self.send(content=content, embed=embed)
         should_delete = await self.ask_to_continue(
-            message=message, emoji="\U0001f5d1", timeout=timeout
+            message=message,
+            emoji="\U0001f5d1",
+            timeout=timeout,
+            label="Delete this Message",
         )
 
         if should_delete:
