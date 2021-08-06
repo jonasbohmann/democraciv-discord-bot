@@ -171,6 +171,7 @@ class Pokemon(context.CustomCog, name="Pokémon"):
         invoke_without_command=True,
     )
     async def pokemon(self, ctx):
+        """What is this?"""
         embed = text.SafeEmbed(
             description="Catch em all! This will be filled with useful information soon.\n\nThese Pokémon commands were "
             "made by Pep."
