@@ -5,7 +5,7 @@ import textwrap
 import typing
 import discord
 
-from discord.ext import tasks, menus, commands
+from discord.ext import tasks, commands
 from bot.config import config, mk
 from bot.utils import exceptions
 
@@ -256,7 +256,12 @@ class FuzzyChoose(PromptView):
         select = DynamicSelect(
             options=[
                 discord.SelectOption(
-                    label=textwrap.shorten(discord.utils.remove_markdown(str(x)), width=100, placeholder="..."),
+                    label=textwrap.shorten(
+                        discord.utils.remove_markdown(str(x)),
+                        width=100,
+                        placeholder="...",
+                    ),
+                    description=getattr(x, "_fuzzy_menu_description", "") or None,
                     value=str(self.choices.index(x)),
                 )
                 for x in self.choices
@@ -296,10 +301,14 @@ class FuzzyMultiModelChoose(FuzzyChoose):
                 options.append(
                     discord.SelectOption(
                         label=textwrap.shorten(
-                            discord.utils.remove_markdown(str(choice)), width=100, placeholder="..."
+                            discord.utils.remove_markdown(str(choice)),
+                            width=100,
+                            placeholder="...",
                         ),
                         description=textwrap.shorten(
-                            discord.utils.remove_markdown(group), width=100, placeholder="..."
+                            discord.utils.remove_markdown(group),
+                            width=100,
+                            placeholder="...",
                         ),
                         value=str(self.choices.index(choice)),
                     )

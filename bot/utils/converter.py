@@ -752,7 +752,7 @@ class Tag(commands.Converter, FuzzyableMixin):
         return hash(self.id)
 
     def __str__(self):
-        return f"`{config.BOT_PREFIX}{self.name}`"
+        return f"{config.BOT_PREFIX}{self.name}"
 
     def __init__(self, **kwargs):
         self.id: int = kwargs.get("id")

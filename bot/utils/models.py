@@ -182,7 +182,11 @@ class Bill(commands.Converter, FuzzyableMixin):
         return isinstance(other, Bill) and self.id == other.id
 
     def __str__(self):
-        return self.formatted
+        return self.name
+
+    @property
+    def _fuzzy_menu_description(self):
+        return f"Bill #{self.id}"
 
     async def get_fuzzy_source(
         self, ctx: context.CustomContext, argument: str
@@ -377,6 +381,10 @@ class Law(Bill, FuzzyableMixin):
     def formatted(self):
         return f"Law #{self.id} - [{self.name}]({self.link})"
 
+    @property
+    def _fuzzy_menu_description(self):
+        return f"Law #{self.id}"
+
     async def get_fuzzy_source(
         self, ctx: context.CustomContext, argument: str
     ) -> typing.Iterable:
@@ -454,7 +462,11 @@ class Motion(commands.Converter, FuzzyableMixin):
         return isinstance(other, Motion) and self.id == other.id
 
     def __str__(self):
-        return self.formatted
+        return self.name
+
+    @property
+    def _fuzzy_menu_description(self):
+        return f"Motion #{self.id}"
 
     @property
     def sponsors(self) -> typing.List[typing.Union[discord.Member, discord.User]]:
