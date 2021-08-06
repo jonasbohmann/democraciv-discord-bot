@@ -698,11 +698,16 @@ class Bank(context.CustomCog):
         response = await self.request(BankRoute("GET", f"account/{from_iban}/"))
         js = await response.json()
 
+        if js['balance_currency'] != "BNC":
+            return await ctx.send(
+                f"{config.NO} That's not a bank account with Banana Coin."
+            )
+
         diff = decimal.Decimal(js["balance"]) - amount
 
         if diff < decimal.Decimal("0"):
             return await ctx.send(
-                f"{config.NO} That Bank Account doesn't have that much money."
+                f"{config.NO} That bank account doesn't have that much money."
             )
 
         amount_with_curr = self.get_currency(js["balance_currency"]).with_amount(amount)
@@ -718,7 +723,7 @@ class Bank(context.CustomCog):
         embed.add_field(name="IBAN", value=js["iban"], inline=False)
         embed.add_field(
             name="Owner",
-            value=f"{js['pretty_holder']} {'*(Person)*' if js['individual_holder'] else '*(Organization)*'}",
+            value=f"{discord.utils.remove_markdown(js['pretty_holder'])} {'*(Person)*' if js['individual_holder'] else '*(Organization)*'}",
             inline=False,
         )
 
@@ -770,7 +775,7 @@ class Bank(context.CustomCog):
         )
         trans_embed.set_author(
             name=f"{self.BANK_NAME} on behalf of Banana Inc.",
-            icon_url=self.BANK_ICON_URL,
+            icon_url=self.bot.mk.NATION_ICON_URL or self.BANK_ICON_URL,
         )
         await ctx.send(embed=trans_embed)
 
@@ -800,7 +805,7 @@ class Bank(context.CustomCog):
             )
             desc.append(
                 f"__**Bank Account with IBAN {account['iban']}**__\n"
-                f"Owner: {account['pretty_holder']} {'*(Person)*' if account['individual_holder'] else '*(Organization)*'}\n"
+                f"Owner: {discord.utils.remove_markdown(account['pretty_holder'])} {'*(Person)*' if account['individual_holder'] else '*(Organization)*'}\n"
                 f"Balance: {self.get_currency(account['balance_currency']).with_amount(account['balance'])}\n"
                 f"Opened on: {discord.utils.format_dt(opened_on, 'F')}\n"
             )
