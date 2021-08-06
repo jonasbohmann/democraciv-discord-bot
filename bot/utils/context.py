@@ -234,10 +234,10 @@ class CustomContext(commands.Context):
         except asyncio.TimeoutError:
             raise exceptions.InvalidUserInputError(":zzz: You took too long to reply.")
 
-        if not message.content:
-            if image_allowed and message.attachments:
-                return message.attachments[0].url
+        if image_allowed and message.attachments:
+            return message.attachments[0].url
 
+        if not message.content:
             raise exceptions.InvalidUserInputError(
                 f"{config.NO} You didn't reply with text."
             )

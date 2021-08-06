@@ -65,6 +65,7 @@ all_extensions = {
     "bot.module.ministry",
     "bot.module.supremecourt",
     "bot.module.nation",
+    "bot.ext.pokeciv.pokemon",
 }
 
 if mk.MarkConfig.IS_MULTICIV:
