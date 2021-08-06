@@ -90,9 +90,7 @@ class BotHelpPageSource(menus.ListPageSource):
     async def format_page(self, menu, cogs):
         prefix = config.BOT_PREFIX
         description = (
-            f"Use `{prefix}help thing` for more info on a category or command.\nOptionally, [this guide]"
-            f"(https://drive.google.com/file/d/1fUWBeRPszLolRtX47OyhAMALudjqWaXc/view?usp=sharing) "
-            f"explains some additional topics of the bot."
+            f"Use `{prefix}help <thing>` for more info on a category or command."
         )
 
         embed = text.SafeEmbed(title="All Categories | Help", description=description)

@@ -299,7 +299,7 @@ class FuzzyMultiModelChoose(FuzzyChoose):
                             str(choice), width=100, placeholder="..."
                         ),
                         description=textwrap.shorten(
-                            group, width=50, placeholder="..."
+                            group, width=100, placeholder="..."
                         ),
                         value=str(self.choices.index(choice)),
                     )
@@ -392,7 +392,7 @@ class EditSettingsWithEmojifiedLiveToggles(EditModelMenu):
             options=[
                 discord.SelectOption(
                     label=textwrap.shorten(desc[1], width=100, placeholder="..."),
-                    description=textwrap.shorten(desc[0], width=50, placeholder="...")
+                    description=textwrap.shorten(desc[0], width=100, placeholder="...")
                     if desc[0]
                     else None,
                     value=choice,

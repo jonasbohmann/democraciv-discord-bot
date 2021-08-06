@@ -14,7 +14,7 @@ from bot.config import config, token
 from bot.utils.converter import Fuzzy, FuzzySettings
 
 
-class CurrencySelector(discord.ui.View):
+class CurrencySelector(text.PromptView):
     class Button(discord.ui.Button):
         def __init__(self, code, *args, **kwargs):
             self.code = code
@@ -25,9 +25,7 @@ class CurrencySelector(discord.ui.View):
             self.view.stop()
 
     def __init__(self, ctx, currencies):
-        super().__init__()
-        self.ctx = ctx
-        self.result = None
+        super().__init__(ctx)
         self.currencies: dict = currencies
 
         for code, curr in self.currencies.items():
@@ -35,16 +33,6 @@ class CurrencySelector(discord.ui.View):
                 code=code, label=curr.name, style=discord.ButtonStyle.grey
             )
             self.add_item(button)
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id == self.ctx.author.id:
-            return True
-
-        return False
-
-    async def prompt(self):
-        await self.wait()
-        return self.result
 
 
 class BankError(exceptions.DemocracivBotException):
@@ -478,10 +466,10 @@ class Bank(context.CustomCog):
             privacy_q = await ctx.send(embed=embed)
             reaction = await ctx.confirm(message=privacy_q)
 
+            await privacy_q.delete()
+
             if not reaction:
                 return
-
-            await privacy_q.delete()
 
         response = await self.request(BankRoute("GET", f"accounts/{ctx.author.id}/"))
         if response.status != 200:
@@ -679,31 +667,18 @@ class Bank(context.CustomCog):
         await ctx.send(embed=embed)
 
 
-class PickBankAccountView(discord.ui.View):
-    def __init__(self, ctx, currency: str, amount, target_iban: str, *args, **kwargs):
-        self.ctx: context.CustomContext = ctx
-        self.bot = ctx.bot
+class PickBankAccountView(text.PromptView):
+    def __init__(self, ctx, currency: str, amount, target_iban: str):
+        super().__init__(ctx)
         self.currency = currency  # code
-        self.result = None
         self.amount = amount
         self.target_iban = target_iban
         self.cog: Bank = self.bot.get_cog("Bank")
-        super().__init__(*args, **kwargs)
 
     class AccountChooser(discord.ui.Select):
         async def callback(self, interaction):
             self.view.result = self.values[0]
             self.view.stop()
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id == self.ctx.author.id:
-            return True
-
-        return False
-
-    async def prompt(self):
-        await self.wait()
-        return self.result
 
     @discord.ui.button(
         label="Send from my default Personal Bank Account",
@@ -740,8 +715,7 @@ class PickBankAccountView(discord.ui.View):
 
         if not available_accounts:
             await interaction.response.send_message(
-                f"{config.NO} You don't have any bank accounts in that currency "
-                f"with sufficient funds.",
+                f"{config.NO} You don't have any bank accounts with sufficient funds of that currency.",
                 ephemeral=True,
             )
             self.result = None
@@ -752,7 +726,7 @@ class PickBankAccountView(discord.ui.View):
         options = [
             discord.SelectOption(
                 value=k,
-                label=textwrap.shorten(v[0], width=25, placeholder="..."),
+                label=textwrap.shorten(v[0], width=100, placeholder="..."),
                 description=textwrap.shorten(v[1], width=100, placeholder="...")
                 if v[1]
                 else None,
@@ -769,22 +743,10 @@ class PickBankAccountView(discord.ui.View):
         )
 
 
-class ConfirmView(discord.ui.View):
+class ConfirmView(text.PromptView):
     def __init__(self, ctx, *args, **kwargs):
-        self.ctx: context.CustomContext = ctx
-        self.bot = ctx.bot
+        super().__init__(ctx, *args, **kwargs)
         self.result = False
-        super().__init__(*args, **kwargs)
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id == self.ctx.author.id:
-            return True
-
-        return False
-
-    async def prompt(self):
-        await self.wait()
-        return self.result
 
     @discord.ui.button(label="Send Money", style=discord.ButtonStyle.green)
     async def send(self, button: discord.Button, interaction: discord.Interaction):

@@ -899,7 +899,7 @@ class CollaboratorOfTag(Tag):
     def _is_allowed(self, ctx, tag: Tag) -> bool:
         if tag.author_id == ctx.author.id or ctx.author.id in tag.collaborator_ids:
             return True
-        
+
         if ctx.bot.mk.IS_NATION_BOT:
             try:
                 nation_admin = ctx.bot.get_democraciv_role(
@@ -911,7 +911,10 @@ class CollaboratorOfTag(Tag):
             except exceptions.RoleNotFoundError:
                 pass
 
-        if ctx.author.guild_permissions.administrator or ctx.author.id == ctx.bot.owner_id:
+        if (
+            ctx.author.guild_permissions.administrator
+            or ctx.author.id == ctx.bot.owner_id
+        ):
             return True
 
         if ctx.bot.mk.IS_NATION_BOT:
