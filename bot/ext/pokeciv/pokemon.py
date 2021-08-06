@@ -185,7 +185,7 @@ class Pokemon(context.CustomCog, name="Pokémon"):
             "pokeball": ["Tier 1"],
             "greatball": ["Tier 1", "Tier 2"],
             "ultraball": ["Tier 2", "Tier 3"],
-            "masterball": ["Tier 4", "Legendary"],
+            "masterball": ["Tier 3", "Legendary"],
         }
 
         result = self.throw_ball(lookup[ball])  # type: ignore
