@@ -38,6 +38,18 @@ class SubmitChooserView(text.PromptView):
         self.stop()
 
 
+class ModelChooseView(text.PromptView):
+    @discord.ui.button(label="Bills", style=discord.ButtonStyle.grey)
+    async def bill(self, button, interaction):
+        self.result = "bill"
+        self.stop()
+
+    @discord.ui.button(label="Motions", style=discord.ButtonStyle.grey)
+    async def motion(self, button, interaction):
+        self.result = "motion"
+        self.stop()
+
+
 class PassScheduler(text.RedditAnnouncementScheduler):
     def get_embed(self):
         embed = text.SafeEmbed()
@@ -2199,26 +2211,26 @@ class Legislature(
     async def withdraw(self, ctx, *, bill_or_motion_ids):
         """Withdraw one or multiple bills or motions from the current session"""
 
-        reaction = await ctx.choose(
+        view = ModelChooseView(ctx)
+
+        await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Do you want to withdraw bills or motions? "
-            f"React with {config.LEG_SUBMIT_BILL} for bills, and with {config.LEG_SUBMIT_MOTION} for motions.\n"
-            f"{config.HINT} You can use the `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} "
+            f"You can use the `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} "
             f"bill withdraw` and `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion withdraw` commands "
             f"to skip this step.",
-            reactions=[config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION],
+            view=view,
         )
 
-        if not reaction:
+        result = await view.prompt()
+
+        if not result:
             return
 
-        if str(reaction.emoji) == config.LEG_SUBMIT_BILL:
+        if result == "bill":
             ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill withdraw {bill_or_motion_ids}"
 
-        elif str(reaction.emoji) == config.LEG_SUBMIT_MOTION:
+        elif result == "motion":
             ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion withdraw {bill_or_motion_ids}"
-
-        else:
-            return
 
         new_ctx = await self.bot.get_context(ctx.message)
         await self.bot.invoke(new_ctx)
@@ -2668,26 +2680,26 @@ class Legislature(
            `{PREFIX}{COMMAND} 56`
            `{PREFIX}{COMMAND} 12 13 14 15 16`"""
 
-        reaction = await ctx.choose(
-            f"{config.USER_INTERACTION_REQUIRED} Do you want to sponsor bills or motions? "
-            f"React with {config.LEG_SUBMIT_BILL} for bills, and with {config.LEG_SUBMIT_MOTION} for motions.\n"
+        view = ModelChooseView(ctx)
+
+        await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} Do you want to sponsor bills or motions?\n"
             f"{config.HINT} You can use the `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} "
             f"bill sponsor` and `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion sponsor` commands "
             f"to skip this step.",
-            reactions=[config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION],
+            view=view,
         )
 
-        if not reaction:
+        result = await view.prompt()
+
+        if not result:
             return
 
-        if str(reaction.emoji) == config.LEG_SUBMIT_BILL:
+        if result == "bill":
             ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill sponsor {bill_or_motion_ids}"
 
-        elif str(reaction.emoji) == config.LEG_SUBMIT_MOTION:
+        elif result == "motion":
             ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion sponsor {bill_or_motion_ids}"
-
-        else:
-            return
 
         new_ctx = await self.bot.get_context(ctx.message)
         await self.bot.invoke(new_ctx)
@@ -2700,26 +2712,26 @@ class Legislature(
            `{PREFIX}{COMMAND} 56`
            `{PREFIX}{COMMAND} 12 13 14 15 16`"""
 
-        reaction = await ctx.choose(
-            f"{config.USER_INTERACTION_REQUIRED} Do you want to unsponsor bills or motions? "
-            f"React with {config.LEG_SUBMIT_BILL} for bills, and with {config.LEG_SUBMIT_MOTION} for motions.\n"
+        view = ModelChooseView(ctx)
+
+        await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} Do you want to unsponsor bills or motions?\n"
             f"{config.HINT} You can use the `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} "
             f"bill unsponsor` and `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion unsponsor` commands "
             f"to skip this step.",
-            reactions=[config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION],
+            view=view,
         )
 
-        if not reaction:
+        result = await view.prompt()
+
+        if not result:
             return
 
-        if str(reaction.emoji) == config.LEG_SUBMIT_BILL:
+        if result == "bill":
             ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill unsponsor {bill_or_motion_ids}"
 
-        elif str(reaction.emoji) == config.LEG_SUBMIT_MOTION:
+        elif result == "motion":
             ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion unsponsor {bill_or_motion_ids}"
-
-        else:
-            return
 
         new_ctx = await self.bot.get_context(ctx.message)
         await self.bot.invoke(new_ctx)
