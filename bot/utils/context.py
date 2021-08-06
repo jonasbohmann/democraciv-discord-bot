@@ -162,7 +162,7 @@ class CustomContext(commands.Context):
 
         view = ContinueView(self, timeout=timeout)
         await message.edit(view=view)
-        result = await view.prompt()
+        result = await view.prompt(silent=True)
 
         return bool(result)
 

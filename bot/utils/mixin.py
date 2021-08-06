@@ -19,7 +19,9 @@ class ReadDocumentView(text.PromptView):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return True
 
-    @discord.ui.button(label="Read Document", style=discord.ButtonStyle.primary)
+    @discord.ui.button(
+        label="Read Document", style=discord.ButtonStyle.primary, emoji="\U0001f4c3"
+    )
     async def on_button(self, button, interaction):
         if interaction.user.id == self.ctx.author.id:
             self.result = (True, "public")
@@ -130,13 +132,15 @@ class GovernmentMixin:
             view = ReadDocumentView(ctx=ctx)
             await ctx.send(embed=embed, view=view)
             do_continue, mode = await view.prompt()
-            followup = None
+            # followup = None
 
             if mode == "private":
-                followup = view.webhook
+                # followup = view.webhook
+                return
 
             if do_continue:
-                await self._show_bill_text(ctx, obj, ephemeral_webhook=followup)
+                # await self._show_bill_text(ctx, obj, ephemeral_webhook=followup)
+                await self._show_bill_text(ctx, obj)
                 return
 
         await ctx.send(embed=embed)

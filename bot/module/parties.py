@@ -48,67 +48,6 @@ class SelectJoinModeView(text.PromptView):
         self.stop()
 
 
-class EditPartyMenu(menus.Menu):
-    def __init__(self):
-        super().__init__(timeout=120.0, delete_message_after=True)
-        self._make_result()
-
-    def _make_result(self):
-        self.result = collections.namedtuple(
-            "EditPartyMenuResult", ["confirmed", "result"]
-        )
-        self.result.confirmed = False
-        self.result.result = {
-            "invite": False,
-            "leaders": False,
-            "join_mode": False,
-            "name": False,
-        }
-        return self.result
-
-    async def send_initial_message(self, ctx, channel):
-        embed = text.SafeEmbed(
-            title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
-            description=f"Select as many things as you want, then click "
-            f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
-            f":one: Name\n"
-            f":two: Discord Server Invite\n"
-            f":three: Party Leaders\n"
-            f":four: Join Mode",
-        )
-        return await ctx.send(embed=embed)
-
-    @menus.button("1\N{variation selector-16}\N{combining enclosing keycap}")
-    async def on_first_choice(self, payload):
-        self.result.result["name"] = not self.result.result["name"]
-
-    @menus.button("2\N{variation selector-16}\N{combining enclosing keycap}")
-    async def second(self, payload):
-        self.result.result["invite"] = not self.result.result["invite"]
-
-    @menus.button("3\N{variation selector-16}\N{combining enclosing keycap}")
-    async def third(self, payload):
-        self.result.result["leaders"] = not self.result.result["leaders"]
-
-    @menus.button("4\N{variation selector-16}\N{combining enclosing keycap}")
-    async def fourth(self, payload):
-        self.result.result["join_mode"] = not self.result.result["join_mode"]
-
-    @menus.button(config.YES)
-    async def confirm(self, payload):
-        self.result.confirmed = True
-        self.stop()
-
-    @menus.button(config.NO)
-    async def cancel(self, payload):
-        self._make_result()
-        self.stop()
-
-    async def prompt(self, ctx):
-        await self.start(ctx, wait=True)
-        return self.result
-
-
 class Party(context.CustomCog, name="Political Parties"):
     """Interact with the political parties of {NATION_NAME}."""
 
@@ -379,6 +318,20 @@ class Party(context.CustomCog, name="Political Parties"):
             )
 
         if party.join_mode is PoliticalPartyJoinMode.PRIVATE:
+            if person_in_dciv in party.leaders:
+
+                try:
+                    await person_in_dciv.add_roles(party.role)
+                except discord.Forbidden:
+                    raise exceptions.ForbiddenError(
+                        ForbiddenTask.ADD_ROLE, party.role.name
+                    )
+
+                return await ctx.send(
+                    f"{config.YES} You joined {party.role.name}.\n{config.HINT} "
+                    f"*As you're a leader of this party, you ignored this party's join mode of `Private`.*\n"
+                )
+
             return await ctx.send(
                 f"{config.NO} {party.role.name} is a private party. Contact the party leaders for further information."
             )
@@ -780,12 +733,22 @@ class Party(context.CustomCog, name="Political Parties"):
                 f"{config.NO} You can't change the Independent party."
             )
 
-        result = await EditPartyMenu().prompt(ctx)
+        menu = text.EditModelMenu(
+            ctx,
+            choices_with_formatted_explanation={
+                "name": "Name",
+                "leaders": "Leaders",
+                "join_mode": "Join Mode",
+                "invite": "Server Invite",
+            },
+        )
+
+        result = await menu.prompt()
 
         if not result.confirmed:
             return await ctx.send(f"{config.NO} You didn't decide on what to change.")
 
-        to_change = result.result
+        to_change = result.choices
 
         if True not in to_change.values():
             return await ctx.send(f"{config.NO} You didn't decide on what to change.")

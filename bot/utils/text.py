@@ -169,14 +169,11 @@ class PromptView(CustomView):
         self.result = None
         super().__init__(*args, **kwargs)
 
-    async def on_timeout(self):
-        raise exceptions.InvalidUserInputError(":zzz: You took too long to react.")
-
-    async def prompt(self):
+    async def prompt(self, silent=False):
         timed_out = await self.wait()
 
-        if timed_out:
-            await self.ctx.reply(":zzz: You took too long to react.")
+        if timed_out and not silent:
+            raise exceptions.InvalidUserInputError(":zzz: You took too long to react.")
 
         return self.result
 
@@ -269,11 +266,7 @@ class FuzzyChoose(PromptView):
 
         self.add_item(select)
 
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red, row=1)
-    async def cancel(self, button, interaction):
-        self.stop()
-
-    async def prompt(self):
+    async def prompt(self, silent=True):
         if self.description:
             embed = SafeEmbed(
                 title=f"{config.USER_INTERACTION_REQUIRED}   {self.question}",
@@ -288,59 +281,6 @@ class FuzzyChoose(PromptView):
 
         await self.wait()
         await msg.delete()
-        return self.result
-
-
-class FuzzyChooseAlt(menus.Menu):
-    def __init__(
-        self, question: str, choices: typing.Sequence, *, description=None, **kwargs
-    ):
-        super().__init__(timeout=120.0, delete_message_after=True)
-        self.question = question
-        self.choices = choices
-        self.result = None
-        self._mapping = {}
-        self._reverse_mapping = {}
-        self.description = description
-
-        for i, choice in enumerate(choices, start=1):
-            emoji = f"{i}\N{variation selector-16}\N{combining enclosing keycap}"
-            button = menus.Button(emoji=emoji, action=self.on_button)
-            self.add_button(button=button)
-            self._mapping[emoji] = choice
-            self._reverse_mapping[choice] = emoji
-
-        cancel = menus.Button(emoji=config.NO, action=self.cancel)
-        self.add_button(button=cancel)
-
-    def get_embed(self) -> discord.Embed:
-        embed = SafeEmbed(title=f"{config.USER_INTERACTION_REQUIRED}   {self.question}")
-
-        fmt = []
-
-        if self.description:
-            fmt.insert(0, self.description)
-
-        for emoji, choice in self._mapping.items():
-            fmt.append(f"{emoji}  {choice}")
-
-        fmt = "\n".join(fmt)
-        embed.description = fmt
-        return embed
-
-    async def send_initial_message(self, ctx, channel):
-        return await ctx.send(embed=self.get_embed())
-
-    async def on_button(self, payload):
-        self.result = self._mapping[str(payload.emoji)]
-        self.stop()
-
-    async def cancel(self, payload):
-        self.result = None
-        self.stop()
-
-    async def prompt(self, ctx):
-        await self.start(ctx, wait=True)
         return self.result
 
 
@@ -428,7 +368,7 @@ class EditModelMenu(PromptView):
         self.result = EditModelResult(confirmed=self._confirmed, choices=self._result)
         return self.result
 
-    async def prompt(self):
+    async def prompt(self, silent=True):
         msg = await self.ctx.send(self.title, view=self)
         await self.wait()
         await msg.delete()
@@ -490,7 +430,7 @@ class EditSettingsWithEmojifiedLiveToggles(EditModelMenu):
         self._make_result()
         self.stop()
 
-    async def prompt(self):
+    async def prompt(self, silent=True):
         self.msg = await self.ctx.send(embed=self._make_embed(), view=self)
         await self.wait()
         await self.msg.delete()

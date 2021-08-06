@@ -35,6 +35,18 @@ from bot.utils.converter import (
 )
 
 
+class ConfirmView(text.PromptView):
+    @discord.ui.button(label="Yes, post to Reddit", style=discord.ButtonStyle.green)
+    async def yes(self, *args):
+        self.result = True
+        self.stop()
+
+    @discord.ui.button(label="No, cancel", style=discord.ButtonStyle.red)
+    async def no(self, *args):
+        self.result = False
+        self.stop()
+
+
 class Utility(context.CustomCog):
     """Utility commands. Some more useful than others."""
 
@@ -104,6 +116,7 @@ class Utility(context.CustomCog):
             return
 
         messages = list(filter(None, messages))
+        view = ConfirmView(ctx, timeout=120)
 
         confirm = await message.channel.send(
             f"{config.USER_INTERACTION_REQUIRED} {message.author.mention}, do you want "
@@ -114,32 +127,17 @@ class Utility(context.CustomCog):
             f"\n{config.HINT} *If you would like to opt-out from this feature entirely so that I "
             f"no longer ask you this, give yourself the `{never_role_name}` selfrole with "
             f"`{config.BOT_PREFIX}role {never_role_name}`.*",
+            view=view,
             allowed_mentions=discord.AllowedMentions(users=True),
-            delete_after=120,
+            delete_after=125,
         )
 
-        yes_emoji = config.YES
-        no_emoji = config.NO
+        do_post = await view.prompt(silent=True)
 
-        await confirm.add_reaction(yes_emoji)
-        await confirm.add_reaction(no_emoji)
-
-        try:
-            reaction, user = await self.bot.wait_for(
-                "reaction_add",
-                check=lambda r, u: u.id == message.author.id
-                and r.message.id == confirm.id,
-                timeout=120,
-            )
-        except asyncio.TimeoutError:
+        if not do_post:
             self.active_press_flows.remove(message.author.id)
             self.bot.loop.create_task(confirm.delete())
             return
-        else:
-            if not reaction or str(reaction.emoji) != yes_emoji:
-                self.active_press_flows.remove(message.author.id)
-                self.bot.loop.create_task(confirm.delete())
-                return
 
         title_q = await message.channel.send(
             f"{config.USER_INTERACTION_REQUIRED} {message.author.mention}, what should be the "

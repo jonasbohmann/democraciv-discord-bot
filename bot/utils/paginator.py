@@ -10,7 +10,7 @@ import typing
 import discord
 
 from discord.embeds import EmptyEmbed
-from discord.ext import menus, commands
+from discord.ext import menus
 from discord.ext.commands import Paginator as CommandPaginator
 from discord.ext.menus.views import ViewMenuPages
 
@@ -18,14 +18,7 @@ from bot.utils.text import SafeEmbed
 from bot.config import config
 
 
-class Yea(ViewMenuPages):
-    async def interaction_check(self, interaction) -> bool:
-        print(interaction.user.id)
-        print(self._author_id)
-        return True
-
-
-class Pages(Yea):
+class Pages(ViewMenuPages):
     def __init__(
         self,
         source: menus.PageSource,
