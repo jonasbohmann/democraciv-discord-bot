@@ -1,7 +1,8 @@
-discord.py>=1.6.0
+git+https://github.com/Rapptz/discord.py@master
 aiodns
 cchardet
-git+https://github.com/Rapptz/discord-ext-menus
+git+https://github.com/Rapptz/discord-ext-menus@master
+git+https://github.com/oliver-ni/discord-ext-menus-views
 jishaku
 psutil
 asyncpg

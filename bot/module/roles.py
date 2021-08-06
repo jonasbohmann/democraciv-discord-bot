@@ -30,7 +30,7 @@ class Selfroles(context.CustomCog):
         embed = text.SafeEmbed(description="\n".join(embed_message))
         embed.set_author(
             name=f"Selfroles in {ctx.guild.name}",
-            icon_url=ctx.guild.icon_url_as(static_format="png"),
+            icon_url=ctx.guild.icon.url,
         )
         embed.set_footer(
             text=f"In order to add or remove a role from you, use: {config.BOT_PREFIX}role <role>"
@@ -156,7 +156,7 @@ class Selfroles(context.CustomCog):
             f"{config.YES} The join message for `{role.role.name}` was updated."
         )
 
-    @roles.command(name="delete", aliases=["remove"])
+    @roles.command(name="remove", aliases=["delete"])
     @commands.guild_only()
     @commands.has_guild_permissions(manage_roles=True)
     async def deleterole(self, ctx: context.CustomContext, *, role: str):

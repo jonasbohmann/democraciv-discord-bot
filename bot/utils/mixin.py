@@ -11,6 +11,27 @@ def _make_property(role: mk.DemocracivRole):
     return property(lambda self: self._safe_get_member(role))
 
 
+class ReadDocumentView(text.PromptView):
+
+    result = (False, "")
+    webhook = None
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return True
+
+    @discord.ui.button(
+        label="Read Document", style=discord.ButtonStyle.primary, emoji="\U0001f4c3"
+    )
+    async def on_button(self, button, interaction):
+        if interaction.user.id == self.ctx.author.id:
+            self.result = (True, "public")
+        else:
+            self.result = (True, "private")
+
+        self.webhook = interaction.followup
+        self.stop()
+
+
 class GovernmentMixin:
     def __init__(self, b):
         self.bot = b
@@ -61,7 +82,7 @@ class GovernmentMixin:
         self,
         ctx: context.CustomContext,
         *,
-        obj: typing.Union[models.Bill, models.Motion],
+        obj: typing.Union[models.Bill, models.Motion, models.Law],
     ):
         embed = text.SafeEmbed(
             title=f"{obj.name} (#{obj.id})", description=obj.description, url=obj.link
@@ -70,7 +91,7 @@ class GovernmentMixin:
         if obj.submitter is not None:
             embed.set_author(
                 name=f"Submitted by {obj.submitter.name}",
-                icon_url=obj.submitter.avatar_url_as(static_format="png"),
+                icon_url=obj.submitter.avatar.url,
             )
             submitted_by_value = f"{obj.submitter.mention} {obj.submitter}"
         else:
@@ -78,7 +99,7 @@ class GovernmentMixin:
 
         embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
 
-        if isinstance(obj, models.Bill):
+        if isinstance(obj, models.Bill) and not isinstance(obj, models.Law):
             # is_vetoable = "Yes" if obj.is_vetoable else "No"
 
             # embed.add_field(name="Veto-able", value=is_vetoable, inline=True)
@@ -94,30 +115,33 @@ class GovernmentMixin:
                 )
                 embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
 
+        if not isinstance(obj, models.Motion):
             history = [
                 f"{entry.date.strftime('%d %B %Y')} - {entry.note if entry.note else entry.after}"
                 for entry in obj.history[:5]
             ]
 
             if history:
-                embed.add_field(name="History", value="\n".join(history))
+                embed.add_field(name="History", value="\n".join(history), inline=False)
 
-            if obj.status.is_law:
-                # todo remove session when mk8 ends
-                embed.set_footer(
-                    text=f"All dates are in UTC. This is an active law. Session #{obj.session.id}"
-                )
+            if not isinstance(obj, models.Law) and obj.status.is_law:
+                embed.set_footer(text="All dates are in UTC. This is an active law.")
             else:
-                embed.set_footer(
-                    text=f"All dates are in UTC. Session #{obj.session.id}"
-                )
+                embed.set_footer(text="All dates are in UTC.")
 
-            view = await ctx.send(embed=embed)
+            view = ReadDocumentView(ctx=ctx)
+            await ctx.send(embed=embed, view=view)
+            do_continue, mode = await view.prompt()
+            # followup = None
 
-            if await ctx.ask_to_continue(message=view, emoji="\U0001f4c3"):
+            if mode == "private":
+                # followup = view.webhook
+                return
+
+            if do_continue:
+                # await self._show_bill_text(ctx, obj, ephemeral_webhook=followup)
                 await self._show_bill_text(ctx, obj)
-
-            return
+                return
 
         else:
             if obj.sponsors:
@@ -128,7 +152,7 @@ class GovernmentMixin:
 
         await ctx.send(embed=embed)
 
-    async def _show_bill_text(self, ctx, bill: models.Bill):
+    async def _show_bill_text(self, ctx, bill: models.Bill, *, ephemeral_webhook=None):
         entries = bill.content.splitlines()
         entries.insert(
             0,
@@ -141,6 +165,7 @@ class GovernmentMixin:
             entries=entries,
             icon=self.bot.mk.NATION_ICON_URL,
             author=f"{bill.name} (#{bill.id})",
+            ephemeral_webhook=ephemeral_webhook,
         )
 
         await pages.start(ctx)
@@ -222,7 +247,7 @@ class GovernmentMixin:
             members = [member.id]
             empty = f"{name} hasn't {submit_term} any {model.__name__.lower()}s yet."
             title = f"{model.__name__}s from {name}"
-            icon = member.avatar_url_as(static_format="png")
+            icon = member.avatar.url
 
         if model is models.Bill:
             objs_from_thing = await self.bot.db.fetch(

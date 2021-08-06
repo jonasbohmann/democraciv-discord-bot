@@ -121,15 +121,19 @@ class _Fuzzy(commands.Converter):
             fmt = model[0]
             menu_cls = text.FuzzyChoose
 
-        menu = menu_cls(
-            question=f"Which {fmt} did you mean?",
-            description="\n".join(description),
-            choices=list(
+        kwargs = {
+            "question": f"Which {fmt} did you mean?",
+            "description": "\n".join(description),
+            "choices": list(
                 itertools.chain.from_iterable(list(s.keys()) for s in sources.values())
             ),
-            models=sources,
-        )
-        result = await menu.prompt(ctx)
+        }
+
+        if len(model) > 1:
+            kwargs["models"] = sources
+
+        menu = menu_cls(ctx, **kwargs)
+        result = await menu.prompt()
 
         if result:
             return result
@@ -274,7 +278,7 @@ class PoliticalParty(commands.Converter, FuzzyableMixin):
 
         try:
             invite = await self._bot.fetch_invite(self.discord_invite)
-            return invite.guild.icon_url_as(format="png")
+            return invite.guild.icon.url
         except (discord.NotFound, discord.HTTPException):
             return None
 
@@ -495,15 +499,6 @@ class UnbanConverter(commands.Converter):
             return user
 
         raise BadArgument(f"{config.NO} I couldn't find that person.")
-
-
-async def fuzzy_search(ctx, arg, iterable, model):
-    match = process.extract(arg, iterable, limit=5)
-
-    menu = text.FuzzyChoose(
-        question=f"Which {model} did you mean?", choices=[mtch for mtch, _ in match]
-    )
-    return await menu.prompt(ctx)
 
 
 def _find_channel(arg, what):
@@ -903,6 +898,23 @@ class CollaboratorOfTag(Tag):
 
     def _is_allowed(self, ctx, tag: Tag) -> bool:
         if tag.author_id == ctx.author.id or ctx.author.id in tag.collaborator_ids:
+            return True
+
+        if ctx.bot.mk.IS_NATION_BOT:
+            try:
+                nation_admin = ctx.bot.get_democraciv_role(
+                    mk.DemocracivRole.NATION_ADMIN
+                )
+
+                if nation_admin in ctx.author.roles:
+                    return True
+            except exceptions.RoleNotFoundError:
+                pass
+
+        if (
+            ctx.author.guild_permissions.administrator
+            or ctx.author.id == ctx.bot.owner_id
+        ):
             return True
 
         return False

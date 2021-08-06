@@ -9,6 +9,26 @@ from bot.utils import text, converter, paginator, exceptions, context
 from bot.utils.converter import Fuzzy
 
 
+class SelectTagCreationView(text.PromptView):
+    @discord.ui.select(
+        options=[
+            discord.SelectOption(
+                label="Everyone",
+                value="Everyone",
+                emoji="\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467",
+            ),
+            discord.SelectOption(
+                label="Only Server Administrators",
+                value="Administrators",
+                emoji="\U0001f46e",
+            ),
+        ]
+    )
+    async def slct(self, select, interaction):
+        self.result = select.values[0]
+        self.stop()
+
+
 class _Guild(context.CustomCog, name="Server"):
     """Configure various features of this bot for this server."""
 
@@ -136,18 +156,21 @@ class _Guild(context.CustomCog, name="Server"):
         info_embed = await ctx.send(embed=embed)
 
         if await ctx.ask_to_continue(
-            message=info_embed, emoji=config.GUILD_SETTINGS_GEAR
+            message=info_embed,
+            emoji=config.GUILD_SETTINGS_GEAR,
+            label="Change Settings",
         ):
             menu = text.EditModelMenu(
+                ctx,
                 choices_with_formatted_explanation={
                     "status": "Enable Welcome Messages"
                     if not settings["welcome_enabled"]
                     else "Disable Welcome Messages",
                     "channel": "Welcome Channel",
                     "message": "Welcome Message",
-                }
+                },
             )
-            result = await menu.prompt(ctx)
+            result = await menu.prompt()
 
             if not result.confirmed or True not in result.choices.values():
                 return
@@ -258,17 +281,20 @@ class _Guild(context.CustomCog, name="Server"):
         info_embed = await ctx.send(embed=embed)
 
         if await ctx.ask_to_continue(
-            message=info_embed, emoji=config.GUILD_SETTINGS_GEAR
+            message=info_embed,
+            emoji=config.GUILD_SETTINGS_GEAR,
+            label="Change Settings",
         ):
             menu = text.EditModelMenu(
+                ctx,
                 choices_with_formatted_explanation={
                     "status": "Enable Logging"
                     if not settings["logging_enabled"]
                     else "Disable Logging",
                     "channel": "Logging Channel",
-                }
+                },
             )
-            result = await menu.prompt(ctx)
+            result = await menu.prompt()
 
             if not result.confirmed or True not in result.choices.values():
                 return
@@ -330,14 +356,16 @@ class _Guild(context.CustomCog, name="Server"):
         """Customize what specific events I should log on this server"""
 
         choices = {
-            "logging_message_edit": ["Message edits"],
-            "logging_message_delete": ["Message deletions"],
-            "logging_member_nickname_change": ["Nickname changes"],
-            "logging_member_role_change": ["Someone gets or loses a role"],
-            "logging_member_join_leave": ["Joins & Leaves"],
-            "logging_ban_unban": ["Bans & Unbans"],
-            "logging_guild_channel_create_delete": ["Channel creations & deletions"],
-            "logging_role_create_delete": ["Role creations & deletions"],
+            "logging_message_edit": [("", "Message edits")],
+            "logging_message_delete": [("", "Message deletions")],
+            "logging_member_nickname_change": [("", "Nickname changes")],
+            "logging_member_role_change": [("", "Someone gets or loses a role")],
+            "logging_member_join_leave": [("", "Joins & Leaves")],
+            "logging_ban_unban": [("", "Bans & Unbans")],
+            "logging_guild_channel_create_delete": [
+                ("", "Channel creations & deletions")
+            ],
+            "logging_role_create_delete": [("", "Role creations & deletions")],
         }
 
         current_settings = await self.ensure_guild_settings(ctx.guild.id)
@@ -347,15 +375,16 @@ class _Guild(context.CustomCog, name="Server"):
                 choices[k].append(v)
 
         menu = text.EditSettingsWithEmojifiedLiveToggles(
+            ctx,
             settings=choices,
             description=f"You can toggle as many events on and off as you want. "
-            f"Once you're done, hit {config.YES} to confirm, or "
-            f"{config.NO} to cancel.\n",
+            f"Once you're done, either confirm to save the updated settings, or "
+            f"cancel.\n",
             title=f"Events to Log on {ctx.guild.name}",
             icon=ctx.guild_icon,
         )
 
-        result = await menu.prompt(ctx)
+        result = await menu.prompt()
 
         if not result.confirmed:
             return
@@ -396,6 +425,8 @@ class _Guild(context.CustomCog, name="Server"):
 
         Both text channels and entire categories can be hidden.
 
+        Threads inherit whether they are hidden from the channel they belong to.
+
          **Usage**
              `{PREFIX}{COMMAND}` to see all hidden channels/categories
              `{PREFIX}{COMMAND} <channel>` to hide or unhide a channel or category
@@ -411,8 +442,8 @@ class _Guild(context.CustomCog, name="Server"):
             )
 
         help_description = (
-            f"When you hide a channel, it will no longer show up in {current_logging_channel.mention}.\n\nAdditionally,"
-            f" :star: reactions for the starboard will no longer count in that channel.\n\nYou can hide a channel, "
+            f"When you hide a channel, it (and all its threads) will no longer show up in {current_logging_channel.mention}.\n\nAdditionally,"
+            f" :star: reactions for the starboard will no longer count in that channel (and in all its threads).\n\nYou can hide a channel, "
             f"or even an entire category at once, with "
             f"`{config.BOT_PREFIX}server hidechannel <channel_name>`\n\n__**Hidden Channels**__"
         )
@@ -461,23 +492,23 @@ class _Guild(context.CustomCog, name="Server"):
 
                 if is_category:
                     star = (
-                        f"\n{config.HINT} *Note that :star: reactions for the starboard will now count again in every one of these channels.*"
+                        f"\n{config.HINT} *Note that :star: reactions for the starboard will now count again in every one of these channels and their threads.*"
                         if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED
                         else ""
                     )
                     await ctx.send(
-                        f"{config.YES} The {channel} category **is no longer hidden**, and all channels in it "
+                        f"{config.YES} The {channel} category **is no longer hidden**, and all channels in it and their threads "
                         f"will show up in {current_logging_channel.mention} again.{star}"
                     )
                 else:
                     star = (
-                        f"\n{config.HINT} *Note that :star: reactions for the starboard will now count again in this channel.*"
+                        f"\n{config.HINT} *Note that :star: reactions for the starboard will now count again in this channel and in all its threads.*"
                         if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED
                         else ""
                     )
                     await ctx.send(
                         f"{config.YES} {channel.mention} **is no longer hidden**, "
-                        f"and it will show up in {current_logging_channel.mention} again.{star}"
+                        f"and it and all its threads will show up in {current_logging_channel.mention} again.{star}"
                     )
 
             # Add channel
@@ -490,24 +521,24 @@ class _Guild(context.CustomCog, name="Server"):
 
                 if is_category:
                     star = (
-                        f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in any of these channels.*"
+                        f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in any of these channels and their threads.*"
                         if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED
                         else ""
                     )
 
                     await ctx.send(
-                        f"{config.YES} The {channel} category **is now hidden**, and all the channel in it "
+                        f"{config.YES} The {channel} category **is now hidden**, and all the channels in it and their threads "
                         f"will no longer show up in {current_logging_channel.mention}.{star}"
                     )
                 else:
                     star = (
-                        f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in this channel.*"
+                        f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in this channel and its threads.*"
                         if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED
                         else ""
                     )
 
                     await ctx.send(
-                        f"{config.YES} {channel.mention} **is now hidden** and will no longer show up "
+                        f"{config.YES} {channel.mention} (and all its threads) **are now hidden** and will no longer show up "
                         f"in {current_logging_channel.mention}.{star}"
                     )
                 await self.bot.update_guild_config_cache()
@@ -572,17 +603,20 @@ class _Guild(context.CustomCog, name="Server"):
         info_embed = await ctx.send(embed=embed)
 
         if await ctx.ask_to_continue(
-            message=info_embed, emoji=config.GUILD_SETTINGS_GEAR
+            message=info_embed,
+            emoji=config.GUILD_SETTINGS_GEAR,
+            label="Change Settings",
         ):
             menu = text.EditModelMenu(
+                ctx,
                 choices_with_formatted_explanation={
                     "status": "Enable Role on Join"
                     if not settings["default_role_enabled"]
                     else "Disable Role on Join",
                     "role": "Role",
-                }
+                },
             )
-            result = await menu.prompt(ctx)
+            result = await menu.prompt()
 
             if not result.confirmed or True not in result.choices.values():
                 return
@@ -658,21 +692,24 @@ class _Guild(context.CustomCog, name="Server"):
         info_embed = await ctx.send(embed=embed)
 
         if await ctx.ask_to_continue(
-            message=info_embed, emoji=config.GUILD_SETTINGS_GEAR
+            message=info_embed,
+            emoji=config.GUILD_SETTINGS_GEAR,
+            label="Change Settings",
         ):
-            everyone = (
-                "\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467"
-            )
-            only_admins = "\U0001f46e"
+            view = SelectTagCreationView(ctx)
 
-            reaction = await ctx.choose(
+            await ctx.send(
                 f"{config.USER_INTERACTION_REQUIRED} Who should be able to create new tags "
-                f"on this server with `{config.BOT_PREFIX}tag add`?\n\n{everyone} - Everyone"
-                f"\n{only_admins} - Only Server Administrators",
-                reactions=[everyone, only_admins],
+                f"on this server with `{config.BOT_PREFIX}tag add`?",
+                view=view,
             )
 
-            if str(reaction) == everyone:
+            result = await view.prompt()
+
+            if not result:
+                return
+
+            if result == "Everyone":
                 await self.bot.db.execute(
                     "UPDATE guild SET tag_creation_allowed = true WHERE id = $1",
                     ctx.guild.id,
@@ -681,7 +718,7 @@ class _Guild(context.CustomCog, name="Server"):
                     f"{config.YES} Everyone can now make tags with `{config.BOT_PREFIX}tag add` on this server."
                 )
 
-            elif str(reaction) == only_admins:
+            elif result == "Administrators":
                 await self.bot.db.execute(
                     "UPDATE guild SET tag_creation_allowed = false WHERE id = $1",
                     ctx.guild.id,
@@ -714,7 +751,9 @@ class _Guild(context.CustomCog, name="Server"):
         info_embed = await ctx.send(embed=embed)
 
         if await ctx.ask_to_continue(
-            message=info_embed, emoji=config.GUILD_SETTINGS_GEAR
+            message=info_embed,
+            emoji=config.GUILD_SETTINGS_GEAR,
+            label="Change Settings",
         ):
             reaction = await ctx.confirm(
                 f"React with {config.YES} to allow everyone to use NPCs on this server, "
@@ -749,7 +788,7 @@ class _Guild(context.CustomCog, name="Server"):
                 return (
                     (w.user and w.user.id == self.bot.user.id)
                     or w.name == self.bot.user.name
-                    or w.avatar_url == self.bot.user.avatar_url
+                    or w.avatar == self.bot.user.avatar
                 )
 
             webhook = discord.utils.find(pred, channel_webhooks)
@@ -846,7 +885,7 @@ class _Guild(context.CustomCog, name="Server"):
         if response["safe_to_delete"]:
             webhook = discord.Webhook.from_url(
                 response["webhook_url"],
-                adapter=discord.AsyncWebhookAdapter(self.bot.session),
+                session=self.bot.session,
             )
 
             try:
@@ -867,7 +906,7 @@ class _Guild(context.CustomCog, name="Server"):
             if removed_hook["safe_to_delete"]:
                 webhook = discord.Webhook.from_url(
                     removed_hook["webhook_url"],
-                    adapter=discord.AsyncWebhookAdapter(self.bot.session),
+                    session=self.bot.session,
                 )
                 try:
                     await webhook.delete()

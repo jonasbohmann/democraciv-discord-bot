@@ -21,65 +21,32 @@ from bot.utils.context import MockContext
 from bot.utils.exceptions import ForbiddenTask
 
 
-class EditPartyMenu(menus.Menu):
-    def __init__(self):
-        super().__init__(timeout=120.0, delete_message_after=True)
-        self._make_result()
-
-    def _make_result(self):
-        self.result = collections.namedtuple(
-            "EditPartyMenuResult", ["confirmed", "result"]
-        )
-        self.result.confirmed = False
-        self.result.result = {
-            "invite": False,
-            "leaders": False,
-            "join_mode": False,
-            "name": False,
-        }
-        return self.result
-
-    async def send_initial_message(self, ctx, channel):
-        embed = text.SafeEmbed(
-            title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
-            description=f"Select as many things as you want, then click "
-            f"the {config.YES} button to continue, or {config.NO} to cancel.\n\n"
-            f":one: Name\n"
-            f":two: Discord Server Invite\n"
-            f":three: Party Leaders\n"
-            f":four: Join Mode",
-        )
-        return await ctx.send(embed=embed)
-
-    @menus.button("1\N{variation selector-16}\N{combining enclosing keycap}")
-    async def on_first_choice(self, payload):
-        self.result.result["name"] = not self.result.result["name"]
-
-    @menus.button("2\N{variation selector-16}\N{combining enclosing keycap}")
-    async def second(self, payload):
-        self.result.result["invite"] = not self.result.result["invite"]
-
-    @menus.button("3\N{variation selector-16}\N{combining enclosing keycap}")
-    async def third(self, payload):
-        self.result.result["leaders"] = not self.result.result["leaders"]
-
-    @menus.button("4\N{variation selector-16}\N{combining enclosing keycap}")
-    async def fourth(self, payload):
-        self.result.result["join_mode"] = not self.result.result["join_mode"]
-
-    @menus.button(config.YES)
-    async def confirm(self, payload):
-        self.result.confirmed = True
+class SelectJoinModeView(text.PromptView):
+    @discord.ui.select(
+        options=[
+            discord.SelectOption(
+                label="Public",
+                value="Public",
+                description="Everyone can join",
+                emoji="\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467",
+            ),
+            discord.SelectOption(
+                label="Request",
+                value="Request",
+                description="Everyone can ask to join & leaders can accept/deny",
+                emoji="\U0001f4e9",
+            ),
+            discord.SelectOption(
+                label="Private",
+                value="Private",
+                description="No one can join & moderation has to give role out",
+                emoji="\U0001f575",
+            ),
+        ]
+    )
+    async def select(self, component, interaction):
+        self.result = component.values[0]
         self.stop()
-
-    @menus.button(config.NO)
-    async def cancel(self, payload):
-        self._make_result()
-        self.stop()
-
-    async def prompt(self, ctx):
-        await self.start(ctx, wait=True)
-        return self.result
 
 
 class Party(context.CustomCog, name="Political Parties"):
@@ -322,9 +289,7 @@ class Party(context.CustomCog, name="Political Parties"):
             return
 
         embed = text.SafeEmbed(description=message)
-        embed.set_author(
-            name=before, icon_url=before.avatar_url_as(static_format="png")
-        )
+        embed.set_author(name=before, icon_url=before.avatar.url)
 
         for leader in party.leaders:
             if leader.id == before.id:
@@ -356,6 +321,20 @@ class Party(context.CustomCog, name="Political Parties"):
             )
 
         if party.join_mode is PoliticalPartyJoinMode.PRIVATE:
+            if person_in_dciv in party.leaders:
+
+                try:
+                    await person_in_dciv.add_roles(party.role)
+                except discord.Forbidden:
+                    raise exceptions.ForbiddenError(
+                        ForbiddenTask.ADD_ROLE, party.role.name
+                    )
+
+                return await ctx.send(
+                    f"{config.YES} You joined {party.role.name}.\n{config.HINT} "
+                    f"*As you're a leader of this party, you ignored this party's join mode of `Private`.*\n"
+                )
+
             return await ctx.send(
                 f"{config.NO} {party.role.name} is a private party. Contact the party leaders for further information."
             )
@@ -675,22 +654,15 @@ class Party(context.CustomCog, name="Political Parties"):
             result["invite"] = party_invite
 
         if join_mode:
-            reactions = {
-                "\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467": PoliticalPartyJoinMode.PUBLIC,
-                "\U0001f4e9": PoliticalPartyJoinMode.REQUEST,
-                "\U0001f575": PoliticalPartyJoinMode.PRIVATE,
-            }
+            view = SelectJoinModeView(ctx)
 
-            reaction = await ctx.choose(
-                f"{config.USER_INTERACTION_REQUIRED} Should this party be public, request-based, or private?\n"
-                f"\n\U0001f468\U0000200d\U0001f468\U0000200d\U0001f467\U0000200d\U0001f467 - **Public**: Everyone can join\n"
-                f"\U0001f4e9 - **Request-based**: Everyone can request to join this party, and the party's leaders can then accept/deny each request\n"
-                f"\U0001f575 - **Private**: No one can join, and only {self.bot.dciv.name} Moderation can give out the party's role",
-                reactions=reactions.keys(),
+            await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Should this party be public, request-based, or private?",
+                view=view,
             )
 
-            join_mode = reactions[str(reaction)]
-            result["join_mode"] = join_mode.value
+            join_mode = await view.prompt()
+            result["join_mode"] = join_mode
 
         if commit:
             async with self.bot.db.acquire() as connection:
@@ -737,6 +709,12 @@ class Party(context.CustomCog, name="Political Parties"):
     @checks.moderation_or_nation_leader()
     async def addparty(self, ctx):
         """Add a new political party"""
+
+        if "alias" in ctx.message.content.lower():
+            return await ctx.send(
+                f"{config.HINT} Did you mean the `{config.BOT_PREFIX}party addalias` command?"
+            )
+
         party = await self.create_new_party(ctx, commit=True)
         await ctx.send(
             f"{config.YES} `{party.role.name}` was added as a new Political Party."
@@ -758,9 +736,18 @@ class Party(context.CustomCog, name="Political Parties"):
                 f"{config.NO} You can't change the Independent party."
             )
 
-        result = await EditPartyMenu().prompt(ctx)
+        menu = text.EditModelMenu(
+            ctx,
+            choices_with_formatted_explanation={
+                "name": "Name",
+                "leaders": "Leaders",
+                "join_mode": "Join Mode",
+                "invite": "Server Invite",
+            },
+        )
 
-        to_change = result.result
+        result = await menu.prompt()
+        to_change = result.choices
 
         if not result.confirmed or True not in to_change.values():
             return
@@ -854,6 +841,11 @@ class Party(context.CustomCog, name="Political Parties"):
         **Usage**
          `{PREFIX}{COMMAND} <party>`
         """
+
+        if "alias" in ctx.message.content.lower():
+            return await ctx.send(
+                f"{config.HINT} Did you mean the `{config.BOT_PREFIX}party deletealias` command?"
+            )
 
         name = party.role.name
 

@@ -1,4 +1,3 @@
-import datetime
 import typing
 import discord
 
@@ -15,7 +14,7 @@ class LawPassScheduler(text.AnnouncementScheduler):
         embed.set_author(
             name=f"Passed Bills from the {self.bot.mk.MINISTRY_NAME}",
             icon_url=self.bot.mk.NATION_ICON_URL
-            or self.bot.dciv.icon_url_as(static_format="png")
+            or self.bot.dciv.icon.url
             or discord.embeds.EmptyEmbed,
         )
         message = [
@@ -39,7 +38,7 @@ class LawVetoScheduler(text.AnnouncementScheduler):
         embed.set_author(
             name=f"The {self.bot.mk.MINISTRY_NAME} vetoed Bills",
             icon_url=self.bot.mk.NATION_ICON_URL
-            or self.bot.dciv.icon_url_as(static_format="png")
+            or self.bot.dciv.icon.url
             or discord.embeds.EmptyEmbed,
         )
         message = [
@@ -94,7 +93,7 @@ class Ministry(
             )
 
         exported = [
-            f"Export of Veto-able Bills -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n",
+            f"Export of Veto-able Bills -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
             "----- Veto-able Bills -----\n",
         ]
 

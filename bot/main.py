@@ -76,6 +76,8 @@ if mk.MarkConfig.IS_MULTICIV:
             "bot.module.moderation",
             "bot.ext.democracivbank.bank",
             "bot.module.roles",
+            "bot.module.guild",
+            "bot.module.npcs",
         }
     else:
         initial_extensions = initial_extensions - {
@@ -248,7 +250,7 @@ class DemocracivBot(commands.Bot):
         try:
             return self._avatar_bytes
         except AttributeError:
-            self._avatar_bytes = avatar = await self.user.avatar_url_as().read()
+            self._avatar_bytes = avatar = await self.user.avatar.read()
             return avatar
 
     def get_democraciv_role(
@@ -421,13 +423,13 @@ class DemocracivBot(commands.Bot):
 
         elif isinstance(error, commands.MaxConcurrencyReached):
             return await ctx.send(
-                f"{config.NO} This command can only be used by one person at the same time, and it "
-                f"is already being used right now. Try again later."
+                f"{config.NO} This command can only be used by a certain amount of people at the same time, and that "
+                f"limit was reached right now. Try again later."
             )
 
         elif isinstance(error, commands.MissingPermissions):
             return await ctx.send(
-                f"{config.NO} You need {self.format_permissions(error.missing_perms)} permission(s) to use this command."
+                f"{config.NO} You need {self.format_permissions(error.missing_permissions)} permission(s) to use this command."
             )
 
         elif isinstance(error, commands.MissingRole):
@@ -456,7 +458,7 @@ class DemocracivBot(commands.Bot):
         elif isinstance(error, commands.BotMissingPermissions):
             await self.log_error(ctx, error, to_log_channel=True, to_owner=False)
             return await ctx.send(
-                f"{config.NO} I don't have {self.format_permissions(error.missing_perms)} permission(s)"
+                f"{config.NO} I don't have {self.format_permissions(error.missing_permissions)} permission(s)"
                 f" to perform this action for you."
             )
 
@@ -999,9 +1001,16 @@ class DemocracivBot(commands.Bot):
         if excluded_channels is None:
             return False
 
-        channel: discord.TextChannel = self.get_guild(guild_id).get_channel(channel_id)
+        channel = self.get_guild(guild_id).get_channel_or_thread(channel_id)
+
+        if not channel:
+            return False
+
+        if isinstance(channel, discord.Thread):
+            channel = channel.parent
+
         return (
-            channel_id in excluded_channels or channel.category_id in excluded_channels
+            channel.id in excluded_channels or channel.category_id in excluded_channels
         )
 
     async def make_paste(self, txt: str) -> typing.Optional[str]:

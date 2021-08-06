@@ -10,90 +10,44 @@ from dataclasses import dataclass
 from discord.ext import commands, tasks
 from bot.utils import converter, exceptions, text, paginator, context
 from bot.config import config, token
-from discord.ext import menus
 
 from bot.utils.converter import Fuzzy, FuzzySettings
 
 
-class CurrencySelector(menus.Menu):
-    def __init__(self, currencies):
-        super().__init__(timeout=120.0, delete_message_after=True)
+class CurrencySelector(discord.ui.View):
+    class Button(discord.ui.Button):
+        def __init__(self, code, *args, **kwargs):
+            self.code = code
+            super().__init__(*args, **kwargs)
+
+        async def callback(self, interaction):
+            self.view.result = self.code
+            self.view.stop()
+
+    def __init__(self, ctx, currencies):
+        super().__init__()
+        self.ctx = ctx
         self.result = None
         self.currencies: dict = currencies
-        self._make_buttons()
 
-    def get_curr_name(self, code):
-        return self.currencies.get(code).name
+        for code, curr in self.currencies.items():
+            button = self.Button(
+                code=code, label=curr.name, style=discord.ButtonStyle.grey
+            )
+            self.add_item(button)
 
-    async def send_initial_message(self, ctx, channel):
-        embed = text.SafeEmbed(
-            title=f"{config.USER_INTERACTION_REQUIRED}  Currency Selection"
-        )
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
 
-        description = (
-            "Since you did not specify an IBAN to send the money to, "
-            "I cannot automatically determine the currency for this "
-            "transaction. Once you've chosen a currency, I will send the money "
-            "from your default account for the chosen currency, to the recipient's default "
-            "account for the chosen currency.\n\n"
-            "This only works provided that both you and the "
-            "recipient have previously selected a default account for the chosen currency on "
-            "[democracivbank.com](https://democracivbank.com)\n\n"
-            "__**In which currency would you like to send the money?**__\n"
-        )
+        return False
 
-        currs = []
-
-        for emoji, code in self.mapping.items():
-            currs.append(f"{emoji}  {self.get_curr_name(code)}")
-
-        currs = "\n".join(currs)
-
-        embed.description = f"{description}{currs}"
-
-        return await channel.send(embed=embed)
-
-    def _make_buttons(self):
-        self.mapping = {}
-
-        for i, kv in enumerate(self.currencies.items(), start=1):
-            code, _ = kv
-            emoji = f"{i}\N{variation selector-16}\N{combining enclosing keycap}"
-            button = menus.Button(emoji=emoji, action=self.on_button)
-            self.add_button(button=button)
-            self.mapping[emoji] = code
-
-    async def on_button(self, payload):
-        code = self.mapping.get(str(payload.emoji))
-        self.result = code
-        self.stop()
-
-    async def prompt(self, ctx):
-        await self.start(ctx, wait=True)
+    async def prompt(self):
+        await self.wait()
         return self.result
 
 
-class BankConnectionError(exceptions.DemocracivBotException):
-    pass
-
-
-class BankDiscordUserNotConnected(exceptions.DemocracivBotException):
-    pass
-
-
-class BankNoDefaultAccountForCurrency(exceptions.DemocracivBotException):
-    pass
-
-
-class BankNoAccountFound(exceptions.DemocracivBotException):
-    pass
-
-
-class BankInvalidIBANFormat(exceptions.DemocracivBotException):
-    pass
-
-
-class BankTransactionError(exceptions.DemocracivBotException):
+class BankError(exceptions.DemocracivBotException):
     pass
 
 
@@ -154,9 +108,16 @@ class BankRoute:
 class BankUUIDConverter(commands.Converter):
     async def convert(self, ctx, argument):
         try:
-            return uuid.UUID(argument)
+            ret = uuid.UUID(argument)
+
+            if ret.version != 4:
+                raise BankError(
+                    f"{config.NO} That is not a valid IBAN, it needs to be in this "
+                    "format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`"
+                )
+
         except (ValueError, TypeError):
-            raise BankInvalidIBANFormat()
+            raise BankError()
 
 
 class BankCorporationMarketplace(commands.Converter):
@@ -260,7 +221,7 @@ class Bank(context.CustomCog):
         )
 
         if response.status != 200:
-            raise BankDiscordUserNotConnected(
+            raise BankError(
                 f"{config.NO} {ctx.author.mention}, your Discord account is not connected to any "
                 f"user on <https://democracivbank.com>.\n\nYou can connect here: "
                 f"https://democracivbank.com/me/discord"
@@ -275,7 +236,7 @@ class Bank(context.CustomCog):
             params=kwargs.get("params", None),
         )
         if response.status >= 500:
-            raise BankConnectionError(
+            raise BankError(
                 f"{config.NO} {self.bot.owner.mention}, something went wrong!\n`Status >= 500`"
             )
 
@@ -307,7 +268,7 @@ class Bank(context.CustomCog):
         response = await self.request(BankRoute("GET", f"account/{iban}/"))
 
         if response.status != 200:
-            raise BankConnectionError(
+            raise BankError(
                 f"{config.NO} {self.bot.owner.mention}, something went wrong!"
             )
 
@@ -333,14 +294,14 @@ class Bank(context.CustomCog):
         elif response.status == 404:
             if "discord_id" in get_params:
                 name = self.bot.get_user(get_params["discord_id"])
-                raise BankDiscordUserNotConnected(
+                raise BankError(
                     f"{config.NO} {name} is not connected with any user account on "
                     f"<https://democracivbank.com>. Tell them to connect their "
                     f"Discord account here: https://democracivbank.com/me/discord"
                 )
 
             else:
-                raise BankNoAccountFound(
+                raise BankError(
                     f"{config.NO} {member_id_or_corp} is either not the abbreviation of an existing "
                     f"organization, or they decided not to publish their organization."
                 )
@@ -349,20 +310,20 @@ class Bank(context.CustomCog):
             if "discord_id" in get_params:
                 if not is_sender:
                     name = self.bot.get_user(get_params["discord_id"])
-                    raise BankNoDefaultAccountForCurrency(
+                    raise BankError(
                         f"{config.NO} **{name}** does not have a default bank account "
                         f"for this currency. Tell them to open a bank account in this currency at "
                         "https://democracivbank.com/account/new/."
                     )
                 if is_sender:
-                    raise BankNoDefaultAccountForCurrency(
+                    raise BankError(
                         f"{config.NO} You do not have a default bank account for "
                         "this currency. Open a bank account in this currency at "
                         "https://democracivbank.com/account/new/ and set "
                         "it as your default bank account for that currency."
                     )
             else:
-                raise BankNoDefaultAccountForCurrency(
+                raise BankError(
                     f"{config.NO} This organization does not have a default bank account for this currency."
                 )
 
@@ -390,10 +351,10 @@ class Bank(context.CustomCog):
                 for error in json["non_field_errors"]:
                     message.append(f"- {error}")
 
-                raise BankTransactionError("\n".join(message))
+                raise BankError("\n".join(message))
 
             else:
-                raise BankTransactionError(
+                raise BankError(
                     f"{config.NO} The transaction could not be completed, please notify {self.bot.owner}."
                 )
 
@@ -524,7 +485,7 @@ class Bank(context.CustomCog):
 
         response = await self.request(BankRoute("GET", f"accounts/{ctx.author.id}/"))
         if response.status != 200:
-            raise BankConnectionError(
+            raise BankError(
                 f"{config.NO} {self.bot.owner.mention}, something went wrong!"
             )
 
@@ -595,20 +556,32 @@ class Bank(context.CustomCog):
         """
 
         await self.is_connected_with_bank_user(ctx)
-        currency = "XYZ"  # linter
+        currency = ""
 
         if not isinstance(to_person_or_iban_or_organization, uuid.UUID):
             # if IBAN, skip currency selection
-            currency = await CurrencySelector(self._currencies).prompt(ctx)
+            embed = text.SafeEmbed(
+                title=f"{config.USER_INTERACTION_REQUIRED}  Currency Selection",
+                description="Since you did not specify an IBAN to send the money to, "
+                "I cannot automatically determine the currency for this "
+                "transaction. Once you've chosen a currency, I will send the money to the recipient's "
+                "default account for the chosen currency.\n\n"
+                "This only works provided that the recipient have previously selected a default account "
+                "for the chosen currency on [democracivbank.com](https://democracivbank.com).",
+            )
+
+            view = CurrencySelector(ctx, self._currencies)
+            msg = await ctx.send(embed=embed, view=view)
+            currency = await view.prompt()
 
             if not currency:
-                return await ctx.send(
-                    f"{config.NO} You did not select a currency, the transaction was cancelled."
-                )
+                return
 
-            from_iban = await self.resolve_iban(ctx.author.id, currency, is_sender=True)
+            await msg.delete()
 
-        if isinstance(to_person_or_iban_or_organization, discord.Member):
+        if isinstance(
+            to_person_or_iban_or_organization, (discord.Member, discord.User)
+        ):
             to_iban = await self.resolve_iban(
                 to_person_or_iban_or_organization.id, currency
             )
@@ -618,23 +591,48 @@ class Bank(context.CustomCog):
             )
         else:
             # is UUID
-            if to_person_or_iban_or_organization.version != 4:
-                raise BankInvalidIBANFormat(
-                    f"{config.NO} That is not a valid IBAN, it needs to be in this "
-                    "format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`"
-                )
-
             to_iban = str(to_person_or_iban_or_organization)
             currency = await self.get_currency_from_iban(to_iban)
-            from_iban = await self.resolve_iban(ctx.author.id, currency, is_sender=True)
+
+        view = PickBankAccountView(ctx, currency, amount, to_iban)
+        msg = await ctx.send(
+            content=f"{config.USER_INTERACTION_REQUIRED} From what bank account would you like to send "
+            f"the money?",
+            view=view,
+        )
+
+        from_iban = await view.prompt()
+        await msg.delete()
+
+        if not from_iban:
+            return
+
+        pretty_amount = self.get_currency(currency).with_amount(amount)
+        fmt = ""
+
+        if isinstance(to_person_or_iban_or_organization, discord.abc.User):
+            fmt = to_person_or_iban_or_organization.mention
+        elif isinstance(to_person_or_iban_or_organization, str):
+            r = await self.request(BankRoute("GET", f"account/{to_iban}/"))
+            pretty_target = await r.json()
+            fmt = f"**{pretty_target['corporate_holder']['name']}**"
+
+        em = text.SafeEmbed(
+            title=f"{config.USER_INTERACTION_REQUIRED}  Confirm Transaction",
+            description=f"Do you really want to send **{pretty_amount}** " f"to {fmt}?",
+        )
+        v = ConfirmView(ctx)
+        m = await ctx.send(embed=em, view=v)
+
+        result = await v.prompt()
+        await m.delete()
+
+        if not result:
+            return
 
         purpose = "Sent via the Democraciv Discord Bot" if not purpose else purpose
         transaction = await self.send_money(
             ctx.author.id, from_iban, to_iban, amount, purpose
-        )
-
-        pretty_amount = self.get_currency(transaction["amount_currency"]).with_amount(
-            amount
         )
 
         embed = text.SafeEmbed(
@@ -657,8 +655,7 @@ class Bank(context.CustomCog):
         embed = text.SafeEmbed(
             description=f"\n\nThere are a total of {stats['total_bank_accounts']} open bank accounts across "
             f"all currencies with a total of {stats['total_transactions']} transactions between "
-            f"all of them. Japan has {stats['organizations']['Japan']} registered "
-            f"organizations.\n\nThe shown circulation of a currency does not include any currency reserves that "
+            f"all of them.\n\nThe shown circulation of a currency does not include any currency reserves that "
             f"were provided by the {self.BANK_NAME} when this currency "
             f"was originally created.\n\nThe velocity is calculated as the amount of currency transferred "
             f"in the last 7 days divided by its total circulation."
@@ -680,6 +677,124 @@ class Bank(context.CustomCog):
             embed.add_field(name=currency["name"], value=value)
 
         await ctx.send(embed=embed)
+
+
+class PickBankAccountView(discord.ui.View):
+    def __init__(self, ctx, currency: str, amount, target_iban: str, *args, **kwargs):
+        self.ctx: context.CustomContext = ctx
+        self.bot = ctx.bot
+        self.currency = currency  # code
+        self.result = None
+        self.amount = amount
+        self.target_iban = target_iban
+        self.cog: Bank = self.bot.get_cog("Bank")
+        super().__init__(*args, **kwargs)
+
+    class AccountChooser(discord.ui.Select):
+        async def callback(self, interaction):
+            self.view.result = self.values[0]
+            self.view.stop()
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
+
+        return False
+
+    async def prompt(self):
+        await self.wait()
+        return self.result
+
+    @discord.ui.button(
+        label="Send from my default Personal Bank Account",
+        style=discord.ButtonStyle.green,
+    )
+    async def default(self, button: discord.Button, interaction: discord.Interaction):
+        self.result = await self.cog.resolve_iban(
+            self.ctx.author.id, self.currency, is_sender=True
+        )
+        self.stop()
+
+    @discord.ui.button(
+        label="Let me choose a different Bank Account",
+        style=discord.ButtonStyle.primary,
+    )
+    async def not_default(
+        self, button: discord.Button, interaction: discord.Interaction
+    ):
+        resp = await self.cog.request(
+            BankRoute("GET", f"accounts/{self.ctx.author.id}/")
+        )
+
+        available_accounts = await resp.json()
+        available_accounts = {
+            acc["iban"]: (
+                acc["name"],
+                acc["corporate_holder"]["name"] if acc["corporate_holder"] else None,
+            )
+            for acc in available_accounts
+            if acc["balance_currency"] == self.currency
+            and decimal.Decimal(acc["balance"]) >= self.amount
+            and acc["iban"] != self.target_iban
+        }
+
+        if not available_accounts:
+            await interaction.response.send_message(
+                f"{config.NO} You don't have any bank accounts in that currency "
+                f"with sufficient funds.",
+                ephemeral=True,
+            )
+            self.result = None
+            self.stop()
+
+        self.clear_items()
+
+        options = [
+            discord.SelectOption(
+                value=k,
+                label=textwrap.shorten(v[0], width=25, placeholder="..."),
+                description=textwrap.shorten(v[1], width=100, placeholder="...")
+                if v[1]
+                else None,
+            )
+            for k, v in available_accounts.items()
+        ]
+
+        self.add_item(self.AccountChooser(options=options[:25]))
+
+        await interaction.response.send_message(
+            content=f"{config.USER_INTERACTION_REQUIRED}  Choose a Bank Account",
+            view=self,
+            ephemeral=True,
+        )
+
+
+class ConfirmView(discord.ui.View):
+    def __init__(self, ctx, *args, **kwargs):
+        self.ctx: context.CustomContext = ctx
+        self.bot = ctx.bot
+        self.result = False
+        super().__init__(*args, **kwargs)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.ctx.author.id:
+            return True
+
+        return False
+
+    async def prompt(self):
+        await self.wait()
+        return self.result
+
+    @discord.ui.button(label="Send Money", style=discord.ButtonStyle.green)
+    async def send(self, button: discord.Button, interaction: discord.Interaction):
+        self.result = True
+        self.stop()
+
+    @discord.ui.button(label="Cancel Transaction", style=discord.ButtonStyle.red)
+    async def cancel(self, button: discord.Button, interaction: discord.Interaction):
+        self.result = False
+        self.stop()
 
 
 def setup(bot):

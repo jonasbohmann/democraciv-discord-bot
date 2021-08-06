@@ -26,13 +26,25 @@ from bot.utils.models import Bill, Session, Motion, SessionStatus
 from bot.utils.converter import Fuzzy, FuzzySettings
 
 
+class SubmitChooserView(text.PromptView):
+    @discord.ui.button(label="Submit a Bill", style=discord.ButtonStyle.primary)
+    async def bill(self, button, interaction):
+        self.result = "bill"
+        self.stop()
+
+    @discord.ui.button(label="Submit a Motion", style=discord.ButtonStyle.grey)
+    async def motion(self, button, interaction):
+        self.result = "motion"
+        self.stop()
+
+
 class PassScheduler(text.RedditAnnouncementScheduler):
     def get_embed(self):
         embed = text.SafeEmbed()
         embed.set_author(
             name=f"Passed Bills from {self.bot.mk.LEGISLATURE_NAME}",
             icon_url=self.bot.mk.NATION_ICON_URL
-            or self.bot.dciv.icon_url_as(static_format="png")
+            or self.bot.dciv.icon.url
             or discord.embeds.EmptyEmbed,
         )
         message = [
@@ -313,7 +325,7 @@ class Legislature(
             name = member_or_party.display_name
             empty = f"{name} hasn't submitted anything yet."
             title = f"Bills & Motions from {name}"
-            icon = member_or_party.avatar_url_as(static_format="png")
+            icon = member_or_party.avatar.url
 
         if things:
             things.insert(
@@ -486,6 +498,7 @@ class Legislature(
             )
 
         menu = text.EditModelMenu(
+            ctx,
             choices_with_formatted_explanation={
                 "link": "Google Docs Link",
                 "description": "Short Summary",
@@ -494,7 +507,7 @@ class Legislature(
             f"you want to change?",
         )
 
-        result = await menu.prompt(ctx)
+        result = await menu.prompt()
         to_change = result.choices
 
         if not result.confirmed or True not in to_change.values():
@@ -661,12 +674,13 @@ class Legislature(
                 )
 
         menu = text.EditModelMenu(
+            ctx,
             choices_with_formatted_explanation={"title": "Title", "content": "Content"},
             title=f"{config.USER_INTERACTION_REQUIRED}  What about {motion.name} (#{motion.id}) "
             f"do you want to change?",
         )
 
-        result = await menu.prompt(ctx)
+        result = await menu.prompt()
         to_change = result.choices
 
         if not result.confirmed or True not in to_change.values():
@@ -1393,7 +1407,7 @@ class Legislature(
             ]
 
             exported = [
-                f"Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session {session.id} -- {datetime.datetime.utcnow().strftime('%c')}\n\n\n",
+                f"Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session {session.id} -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
                 f"Xth Session - {session.opened_on.strftime('%B %d %Y')} (Bot Session {session.id})\n\n"
                 "----- Submitted Bills -----\n",
             ]
@@ -1669,7 +1683,7 @@ class Legislature(
         )
 
         messages = []
-        start = datetime.datetime.utcnow()
+        start = discord.utils.utcnow()
 
         while True:
             try:
@@ -1696,7 +1710,7 @@ class Legislature(
                     f"reflect that change in the text of your bill."
                 )
             except asyncio.TimeoutError:
-                if datetime.datetime.utcnow() - start >= datetime.timedelta(minutes=15):
+                if discord.utils.utcnow() - start >= datetime.timedelta(minutes=15):
                     break
                 else:
                     continue
@@ -1867,7 +1881,7 @@ class Legislature(
 
         embed.add_field(
             name="Exact Time of Submission",
-            value=datetime.datetime.utcnow().strftime("%B %d, %Y %H:%M:%S UTC"),
+            value=discord.utils.utcnow().strftime("%B %d, %Y %H:%M:%S UTC"),
         )
 
         embed.set_author(
@@ -1983,7 +1997,7 @@ class Legislature(
         embed.add_field(name="Author", value=f"{ctx.author.mention} {ctx.author}")
         embed.add_field(
             name="Exact Time of Submission",
-            value=datetime.datetime.utcnow().strftime("%B %d, %Y %H:%M:%S UTC"),
+            value=discord.utils.utcnow().strftime("%B %d, %Y %H:%M:%S UTC"),
             inline=False,
         )
         embed.set_author(
@@ -2047,27 +2061,27 @@ class Legislature(
                 )
 
         if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
-            reaction = await ctx.choose(
-                f"{config.USER_INTERACTION_REQUIRED} Do you want to submit a motion or a bill? "
-                f"React with {config.LEG_SUBMIT_BILL} for bill, and with "
-                f"{config.LEG_SUBMIT_MOTION} for a motion."
+            view = SubmitChooserView(ctx)
+
+            await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Do you want to submit a bill or a motion?"
                 f"\n{config.HINT} *Motions lack a lot of features that bills have, "
                 f"for example they cannot be passed into Law by the Government. They will not "
                 f"show up in `{config.BOT_PREFIX}laws`, nor will they make it on the Legal Code. If you want to submit "
-                f"something small that results in some __temporary__ action and where it's not important to track "
-                f"if it passed, "
+                f"something small that results in some __temporary__ action and where it's not important to track if it passed, "
                 f"use a motion, otherwise use a bill. __In most cases you should probably use bills.__ "
                 f"Common examples for motions: `Motion to repeal Law #12`, or "
                 f"`Motion to recall {self.bot.mk.legislator_term} XY`.*",
-                reactions=[config.LEG_SUBMIT_BILL, config.LEG_SUBMIT_MOTION],
+                view=view,
             )
 
+            result = await view.prompt()
             embed = None
 
-            if not reaction:
+            if not result:
                 return
 
-            if str(reaction.emoji) == config.LEG_SUBMIT_BILL:
+            if result == "bill":
                 if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
                     if self.legislator_role not in ctx.author.roles:
                         return await ctx.send(
@@ -2077,7 +2091,7 @@ class Legislature(
 
                 embed = await self.submit_bill(ctx, current_leg_session.id)
 
-            elif str(reaction.emoji) == config.LEG_SUBMIT_MOTION:
+            elif result == "motion":
                 ctx.command.reset_cooldown(ctx)
 
                 if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS:
@@ -2757,7 +2771,7 @@ class Legislature(
 
         else:
             ids = [person_or_political_party.id]
-            icon_url = person_or_political_party.avatar_url_as(static_format="png")
+            icon_url = person_or_political_party.avatar.url
             name = (
                 f"{person_or_political_party.display_name} in the {self.bot.mk.NATION_ADJECTIVE} "
                 f"{self.bot.mk.LEGISLATURE_NAME}"

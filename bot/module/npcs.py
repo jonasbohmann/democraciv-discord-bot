@@ -212,7 +212,6 @@ class NPC(CustomCog):
         # self._recent_npc_messages = collections.defaultdict(dict)
         self._recent_npc_messages = collections.defaultdict(lambda: LRU(size=100))
 
-        self.bot.loop.create_task(self._make_webhook_adapter())
         self.bot.loop.create_task(self._load_webhook_cache())
         self.bot.loop.create_task(self._load_npc_cache())
         self.bot.loop.create_task(self._load_automatic_trigger_cache())
@@ -227,21 +226,15 @@ class NPC(CustomCog):
                 self._default_webhook_avatar = avatar = await resp.read()
                 return avatar
 
-    async def _make_webhook_adapter(self):
-        await self.bot.wait_until_ready()
-        self._adapter = discord.AsyncWebhookAdapter(session=self.bot.session)
-
     async def _load_webhook_cache(self):
         await self.bot.wait_until_ready()
 
         webhooks = await self.bot.db.fetch(
             "SELECT channel_id, webhook_id, webhook_token FROM npc_webhook"
         )
-        # adapter = discord.AsyncWebhookAdapter(session=self.bot.session)
 
         for record in webhooks:
             webhook_url = f"https://discord.com/api/webhooks/{record['webhook_id']}/{record['webhook_token']}"
-            # webhook = discord.Webhook.partial(id=record['webhook_id'], token=record['webhook_token'], adapter=adapter)
             self._webhook_cache[record["channel_id"]] = webhook_url
 
     async def _load_npc_cache(self):
@@ -346,10 +339,7 @@ class NPC(CustomCog):
             f"`{p}commands` to see every NPC-related command and learn more about them."
         )
 
-        embed.set_author(
-            name="What are NPCs?",
-            icon_url=self.bot.dciv.icon_url_as(static_format="png"),
-        )
+        embed.set_author(name="What are NPCs?", icon_url=self.bot.dciv.icon.url)
         embed.set_image(
             url="https://cdn.discordapp.com/attachments/818226072805179392/818230819835215882/npc.gif"
         )
@@ -506,13 +496,15 @@ class NPC(CustomCog):
            `{PREFIX}{COMMAND} Ecological Democratic Party` using the NPC's name"""
 
         menu = text.EditModelMenu(
+            ctx,
             choices_with_formatted_explanation={
                 "name": "Name",
                 "avatar": "Avatar",
                 "trigger_phrase": "Trigger Phrase",
-            }
+            },
         )
-        result = await menu.prompt(ctx)
+
+        result = await menu.prompt()
         to_change = result.choices
 
         if not result.confirmed or True not in to_change.values():
@@ -642,7 +634,7 @@ class NPC(CustomCog):
 
         pages = paginator.SimplePages(
             author=f"{member.display_name}'s NPCs",
-            icon=member.avatar_url_as(static_format="png"),
+            icon=member.avatar.url,
             entries=pretty_npcs,
             per_page=20,
             empty_message="This person hasn't made any NPCs yet.",
@@ -1057,14 +1049,16 @@ class NPC(CustomCog):
         except KeyError:
             return
 
-        channel = self.bot.get_guild(payload.guild_id).get_channel(payload.channel_id)
+        channel = self.bot.get_guild(payload.guild_id).get_channel_or_thread(
+            payload.channel_id
+        )
 
         webhook_url = await self._get_webhook(channel)
 
         if not webhook_url:
             return
 
-        webhook = discord.Webhook.from_url(webhook_url, adapter=self._adapter)
+        webhook = discord.Webhook.from_url(webhook_url, session=self.bot.session)
 
         if not webhook:
             return
@@ -1207,7 +1201,7 @@ class NPC(CustomCog):
             )
             return
 
-        file = None
+        file = discord.utils.MISSING
 
         if message.attachments:
             file = await message.attachments[0].to_file(
@@ -1221,7 +1215,7 @@ class NPC(CustomCog):
                 f"{config.NO} I don't have permissions to manage webhooks in this channel."
             )
 
-        webhook = discord.Webhook.from_url(webhook_url, adapter=self._adapter)
+        webhook = discord.Webhook.from_url(webhook_url, session=self.bot.session)
 
         try:
             await message.delete()
@@ -1257,7 +1251,7 @@ class NPC(CustomCog):
                 )
 
             new_webhook = discord.Webhook.from_url(
-                new_webhook_url, adapter=self._adapter
+                new_webhook_url, session=self.bot.session
             )
 
             msg = await new_webhook.send(

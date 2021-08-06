@@ -35,6 +35,18 @@ from bot.utils.converter import (
 )
 
 
+class ConfirmView(text.PromptView):
+    @discord.ui.button(label="Yes, post to Reddit", style=discord.ButtonStyle.green)
+    async def yes(self, *args):
+        self.result = True
+        self.stop()
+
+    @discord.ui.button(label="No, cancel", style=discord.ButtonStyle.red)
+    async def no(self, *args):
+        self.result = False
+        self.stop()
+
+
 class Utility(context.CustomCog):
     """Utility commands. Some more useful than others."""
 
@@ -69,7 +81,7 @@ class Utility(context.CustomCog):
 
         self.active_press_flows.add(message.author.id)
         # wait for any other messages from same author
-        start = datetime.datetime.utcnow()
+        start = discord.utils.utcnow()
         messages = [message]
 
         while True:
@@ -87,9 +99,9 @@ class Utility(context.CustomCog):
                     continue
 
                 messages.append(_m)
-                start = datetime.datetime.utcnow()
+                start = discord.utils.utcnow()
             except asyncio.TimeoutError:
-                if datetime.datetime.utcnow() - start >= datetime.timedelta(minutes=2):
+                if discord.utils.utcnow() - start >= datetime.timedelta(minutes=2):
                     break
                 else:
                     continue
@@ -104,6 +116,7 @@ class Utility(context.CustomCog):
             return
 
         messages = list(filter(None, messages))
+        view = ConfirmView(ctx, timeout=120)
 
         confirm = await message.channel.send(
             f"{config.USER_INTERACTION_REQUIRED} {message.author.mention}, do you want "
@@ -114,32 +127,17 @@ class Utility(context.CustomCog):
             f"\n{config.HINT} *If you would like to opt-out from this feature entirely so that I "
             f"no longer ask you this, give yourself the `{never_role_name}` selfrole with "
             f"`{config.BOT_PREFIX}role {never_role_name}`.*",
+            view=view,
             allowed_mentions=discord.AllowedMentions(users=True),
-            delete_after=120,
+            delete_after=125,
         )
 
-        yes_emoji = config.YES
-        no_emoji = config.NO
+        do_post = await view.prompt(silent=True)
 
-        await confirm.add_reaction(yes_emoji)
-        await confirm.add_reaction(no_emoji)
-
-        try:
-            reaction, user = await self.bot.wait_for(
-                "reaction_add",
-                check=lambda r, u: u.id == message.author.id
-                and r.message.id == confirm.id,
-                timeout=120,
-            )
-        except asyncio.TimeoutError:
+        if not do_post:
             self.active_press_flows.remove(message.author.id)
             self.bot.loop.create_task(confirm.delete())
             return
-        else:
-            if not reaction or str(reaction.emoji) != yes_emoji:
-                self.active_press_flows.remove(message.author.id)
-                self.bot.loop.create_task(confirm.delete())
-                return
 
         title_q = await message.channel.send(
             f"{config.USER_INTERACTION_REQUIRED} {message.author.mention}, what should be the "
@@ -421,10 +419,11 @@ class Utility(context.CustomCog):
             match = process.extract(zone, pytz.all_timezones, limit=5)
 
             menu = text.FuzzyChoose(
+                ctx,
                 question="Which time zone did you mean?",
                 choices=[zone for zone, _ in match],
             )
-            zone = await menu.prompt(ctx)
+            zone = await menu.prompt()
 
             if not zone:
                 return
@@ -445,7 +444,7 @@ class Utility(context.CustomCog):
             fixed = zone.replace("-", "+")
             tz = pytz.timezone(fixed)
 
-        utc_now = datetime.datetime.now(tz=datetime.timezone.utc)
+        utc_now = discord.utils.utcnow()
         date = utc_now.astimezone(tz)
 
         embed = text.SafeEmbed(title=f":clock1:  Current Time in {title}")
@@ -465,7 +464,10 @@ class Utility(context.CustomCog):
         if member.guild.id != self.bot.dciv.id:
             return
 
-        joined_on = member.joined_at or datetime.datetime.utcnow()
+        joined_on = member.joined_at or discord.utils.utcnow()
+        joined_on = joined_on.astimezone(datetime.timezone.utc).replace(
+            tzinfo=None
+        )  # remove tz info since db doesnt care
 
         await self.bot.db.execute(
             "INSERT INTO original_join_date (member, join_date) VALUES ($1, $2) ON CONFLICT DO NOTHING",
@@ -594,7 +596,7 @@ class Utility(context.CustomCog):
                 inline=False,
             )
 
-        embed.set_thumbnail(url=member.avatar_url_as(static_format="png"))
+        embed.set_thumbnail(url=member.avatar.url)
         await ctx.send(embed=embed)
 
     @commands.command(name="avatar", aliases=["pfp", "avy"])
@@ -616,8 +618,8 @@ class Utility(context.CustomCog):
              `{PREFIX}{COMMAND} DerJonas#8109`
         """
 
-        member = person or ctx.author
-        avatar_png = str(member.avatar_url_as(static_format="png", size=4096))
+        member: discord.Member = person or ctx.author
+        avatar_png = member.avatar.with_size(4096).url
         embed = text.SafeEmbed()
         embed.set_image(url=avatar_png)
         embed.set_author(name=member, icon_url=avatar_png, url=avatar_png)

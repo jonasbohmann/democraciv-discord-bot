@@ -1,5 +1,4 @@
 import discord
-import datetime
 
 from discord.ext import commands
 
@@ -105,7 +104,7 @@ class _Log(context.CustomCog):
         if await self.bot.is_channel_excluded(guild.id, payload.channel_id):
             return
 
-        channel = self.bot.get_channel(payload.channel_id)
+        channel = guild.get_channel_or_thread(payload.channel_id)
 
         embed_fields = {
             "Amount": [len(payload.message_ids), True],
@@ -130,7 +129,7 @@ class _Log(context.CustomCog):
             member.guild,
             ":tada:  Person Joined",
             embed_fields,
-            thumbnail=member.avatar_url_as(static_format="png"),
+            thumbnail=member.avatar.url,
             reason="logging_member_join_leave",
         )
 
@@ -142,7 +141,7 @@ class _Log(context.CustomCog):
             member.guild,
             ":no_pedestrians:  Person Left",
             embed_fields,
-            thumbnail=member.avatar_url_as(static_format="png"),
+            thumbnail=member.avatar.url,
             reason="logging_member_join_leave",
         )
 
@@ -159,7 +158,7 @@ class _Log(context.CustomCog):
                 before.guild,
                 ":arrows_counterclockwise:  Nickname Changed",
                 embed_fields,
-                thumbnail=before.avatar_url_as(static_format="png"),
+                thumbnail=before.avatar.url,
                 reason="logging_member_nickname_change",
             )
 
@@ -181,7 +180,7 @@ class _Log(context.CustomCog):
                     before.guild,
                     ":sunglasses:  Role given to Person",
                     embed_fields,
-                    thumbnail=before.avatar_url_as(static_format="png"),
+                    thumbnail=before.avatar.url,
                     reason="logging_member_role_change",
                 )
 
@@ -202,7 +201,7 @@ class _Log(context.CustomCog):
                     before.guild,
                     ":zipper_mouth:  Role removed from Person",
                     embed_fields,
-                    thumbnail=before.avatar_url_as(static_format="png"),
+                    thumbnail=before.avatar.url,
                     reason="logging_member_role_change",
                 )
 
@@ -214,7 +213,7 @@ class _Log(context.CustomCog):
             guild,
             ":no_entry:  Person Banned",
             embed_fields,
-            thumbnail=user.avatar_url_as(static_format="png"),
+            thumbnail=user.avatar.url,
             to_owner=True,
             reason="logging_ban_unban",
         )
@@ -227,7 +226,7 @@ class _Log(context.CustomCog):
             guild,
             ":dove:  Person Unbanned",
             embed_fields,
-            thumbnail=user.avatar_url_as(static_format="png"),
+            thumbnail=user.avatar.url,
             to_owner=True,
             reason="logging_ban_unban",
         )
@@ -253,11 +252,11 @@ class _Log(context.CustomCog):
             return
 
     @commands.Cog.listener()
-    async def on_guild_role_delete(self, role):
+    async def on_guild_role_delete(self, role: discord.Role):
         embed_fields = {
             "Role": [role.name, True],
             "Created On": [
-                datetime.datetime.strftime(role.created_at, "%B %d, %Y"),
+                role.created_at.strftime("%B %d, %Y"),
                 True,
             ],
             "ID": [role.id, False],

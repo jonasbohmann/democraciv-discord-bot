@@ -8,6 +8,8 @@ Based on RoboDanny by Rapptz: https://github.com/Rapptz/RoboDanny/blob/rewrite/L
 
 import asyncio
 
+import discord
+
 from bot.config import config, mk
 from bot.utils import text
 from bot.utils.paginator import Pages
@@ -208,7 +210,7 @@ class HelpMenu(Pages, inherit_buttons=False):
         embed.description = BOT_INTRO
         embed.set_author(
             name=f"Made by {ctx.bot.owner}",
-            icon_url=ctx.bot.owner.avatar_url_as(static_format="png"),
+            icon_url=ctx.bot.owner.avatar.url,
         )
         self.current_page = -1
         return await channel.send(embed=embed)
@@ -239,18 +241,19 @@ class HelpMenu(Pages, inherit_buttons=False):
         await self.show_page(self._source.get_max_pages() - 1)
 
     @menus.button(config.HELP_NUMBERS, position=menus.Last(1.5), lock=False)
-    async def numbered_page(self, payload):
+    async def numbered_page(self, payload: discord.Interaction):
         """lets you type a page number to go to"""
         if self.input_lock.locked():
             return
 
         async with self.input_lock:
             channel = self.message.channel
-            author_id = payload.user_id
-            question = await channel.send(
-                f"{config.USER_INTERACTION_REQUIRED} What page do you want to go to?"
+            author_id = payload.user.id
+            question = await payload.followup.send(
+                f"{config.USER_INTERACTION_REQUIRED} What page do you want to go to?",
+                ephemeral=True,
             )
-            to_delete = [question]
+            to_delete = []
 
             def message_check(m):
                 return (
@@ -321,8 +324,9 @@ class PaginatedHelpCommand(commands.HelpCommand):
     def __init__(self):
         super().__init__(
             command_attrs={
-                "cooldown": commands.Cooldown(
-                    1, config.BOT_COMMAND_COOLDOWN, commands.BucketType.user
+                "cooldown": commands.CooldownMapping(
+                    commands.Cooldown(1, config.BOT_COMMAND_COOLDOWN),
+                    commands.BucketType.user,
                 ),
                 "help": "Shows help about the bot, a command, or a category",
                 "aliases": ["man", "manual", "h"],
@@ -334,7 +338,10 @@ class PaginatedHelpCommand(commands.HelpCommand):
         return f"{config.NO} `{string}` is neither a command, nor a category."
 
     def subcommand_not_found(self, command, string):
-        return f"{config.NO} `{string}` is not a subcommand of the `{config.BOT_PREFIX}{command.qualified_name}` command."
+        return (
+            f"{config.NO} `{string}` is not a subcommand of the `{config.BOT_PREFIX}{command.qualified_name}` "
+            f"command."
+        )
 
     def get_command_signature(self, command):
         parent = command.full_parent_name

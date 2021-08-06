@@ -12,12 +12,13 @@ import discord
 from discord.embeds import EmptyEmbed
 from discord.ext import menus
 from discord.ext.commands import Paginator as CommandPaginator
+from discord.ext.menus.views import ViewMenuPages
 
 from bot.utils.text import SafeEmbed
 from bot.config import config
 
 
-class Pages(menus.MenuPages):
+class Pages(ViewMenuPages):
     def __init__(
         self,
         source: menus.PageSource,
@@ -87,9 +88,11 @@ class SimplePages(Pages, inherit_buttons=False):
         per_page=None,
         empty_message: str = "*No entries.*",
         reply=False,
+        ephemeral_webhook=None,
         **kwargs,
     ):
         self.reply = reply
+        self.ephemeral_webhook = ephemeral_webhook
         if len(entries) == 0:
             entries.append(empty_message)
         super().__init__(SimplePageSource(entries, per_page=per_page), **kwargs)
@@ -98,10 +101,13 @@ class SimplePages(Pages, inherit_buttons=False):
         page = await self._source.get_page(0)
         kwargs = await self._get_kwargs_from_page(page)
 
-        if self.reply:
-            return await ctx.reply(**kwargs)
+        if self.ephemeral_webhook:
+            kwargs["ephemeral"] = True
 
-        return await channel.send(**kwargs)
+        if self.reply:
+            kwargs["reference"] = ctx.message
+
+        return await self.send_with_view(self.ephemeral_webhook or ctx, **kwargs)
 
     @menus.button(
         config.HELP_FIRST,
@@ -134,18 +140,19 @@ class SimplePages(Pages, inherit_buttons=False):
         lock=False,
         skip_if=menus.MenuPages._skip_double_triangle_buttons,
     )
-    async def numbered_page(self, payload):
+    async def numbered_page(self, payload: discord.Interaction):
         """lets you type a page number to go to"""
         if self.input_lock.locked():
             return
 
         async with self.input_lock:
             channel = self.message.channel
-            author_id = payload.user_id
-            question = await channel.send(
-                f"{config.USER_INTERACTION_REQUIRED} What page do you want to go to?"
+            author_id = payload.user.id
+            question = await payload.followup.send(
+                f"{config.USER_INTERACTION_REQUIRED} What page do you want to go to?",
+                ephemeral=True,
             )
-            to_delete = [question]
+            to_delete = []
 
             def message_check(m):
                 return (

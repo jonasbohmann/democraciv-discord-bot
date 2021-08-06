@@ -1,4 +1,3 @@
-import datetime
 import discord
 
 from discord.ext import commands
@@ -21,7 +20,7 @@ class RepealScheduler(text.AnnouncementScheduler):
         embed.set_author(
             name=f"{self.bot.mk.LEGISLATURE_NAME} repealed Bills",
             icon_url=self.bot.mk.NATION_ICON_URL
-            or self.bot.dciv.icon_url_as(static_format="png")
+            or self.bot.dciv.icon.url
             or discord.embeds.EmptyEmbed,
         )
         message = [f"The following laws were **repealed**.\n"]
@@ -57,38 +56,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         if not law_id:
             return await self._paginate_all_(ctx, model=models.Law)
 
-        # If the user did specify a law_id, send details about that law
-        law = law_id  # At this point, law_id is already a Law object, so calling it law_id makes no sense
-
-        embed = text.SafeEmbed(
-            title=f"{law.name} (#{law.id})", description=law.description, url=law.link
-        )
-
-        if law.submitter is not None:
-            embed.set_author(
-                name=f"Written by {law.submitter.name}",
-                icon_url=law.submitter.avatar_url_as(static_format="png"),
-            )
-            submitted_by_value = f"{law.submitter.mention} {law.submitter}"
-        else:
-            submitted_by_value = f"*Person left {self.bot.dciv.name}*"
-
-        embed.add_field(name="Author", value=submitted_by_value, inline=False)
-
-        history = [
-            f"{entry.date.strftime('%d %B %Y')} - {entry.note if entry.note else entry.after}"
-            for entry in law.history[:5]
-        ]
-
-        if history:
-            embed.add_field(name="History", value="\n".join(history))
-
-        # todo remove session when MK8 ends
-        embed.set_footer(text=f"All dates are in UTC. Session #{law.session.id}")
-        message = await ctx.send(embed=embed)
-
-        if await ctx.ask_to_continue(message=message, emoji="\U0001f4c3"):
-            await self._show_bill_text(ctx, law)
+        return await self._detail_view(ctx, obj=law_id)
 
     @law.command(
         name="export", aliases=["e", "exp", "ex", "generate", "generatelegalcode"]
@@ -126,7 +94,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
                 models.BillIsLaw.flag.value,
             )
             ugly_laws = [dict(r) for r in all_laws]
-            date = datetime.datetime.utcnow().strftime("%B %d, %Y at %H:%M")
+            date = discord.utils.utcnow().strftime("%B %d, %Y at %H:%M")
 
             result = await self.bot.run_apps_script(
                 script_id="MMV-pGVACMhaf_DjTn8jfEGqnXKElby-M",
