@@ -593,8 +593,8 @@ class Tags(context.CustomCog):
             ):
                 choices["global"] = "Change Tag to be Global or Local"
 
-        menu = text.EditModelMenu(choices_with_formatted_explanation=choices)
-        result = await menu.prompt(ctx)
+        menu = text.EditModelMenu(ctx, choices_with_formatted_explanation=choices)
+        result = await menu.prompt()
         p = config.BOT_PREFIX
         to_change = result.choices
 

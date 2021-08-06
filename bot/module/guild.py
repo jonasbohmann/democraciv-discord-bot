@@ -161,15 +161,16 @@ class _Guild(context.CustomCog, name="Server"):
             label="Change Settings",
         ):
             menu = text.EditModelMenu(
+                ctx,
                 choices_with_formatted_explanation={
                     "status": "Enable Welcome Messages"
                     if not settings["welcome_enabled"]
                     else "Disable Welcome Messages",
                     "channel": "Welcome Channel",
                     "message": "Welcome Message",
-                }
+                },
             )
-            result = await menu.prompt(ctx)
+            result = await menu.prompt()
 
             if not result.confirmed or True not in result.choices.values():
                 return
@@ -285,14 +286,15 @@ class _Guild(context.CustomCog, name="Server"):
             label="Change Settings",
         ):
             menu = text.EditModelMenu(
+                ctx,
                 choices_with_formatted_explanation={
                     "status": "Enable Logging"
                     if not settings["logging_enabled"]
                     else "Disable Logging",
                     "channel": "Logging Channel",
-                }
+                },
             )
-            result = await menu.prompt(ctx)
+            result = await menu.prompt()
 
             if not result.confirmed or True not in result.choices.values():
                 return
@@ -354,14 +356,16 @@ class _Guild(context.CustomCog, name="Server"):
         """Customize what specific events I should log on this server"""
 
         choices = {
-            "logging_message_edit": ["Message edits"],
-            "logging_message_delete": ["Message deletions"],
-            "logging_member_nickname_change": ["Nickname changes"],
-            "logging_member_role_change": ["Someone gets or loses a role"],
-            "logging_member_join_leave": ["Joins & Leaves"],
-            "logging_ban_unban": ["Bans & Unbans"],
-            "logging_guild_channel_create_delete": ["Channel creations & deletions"],
-            "logging_role_create_delete": ["Role creations & deletions"],
+            "logging_message_edit": [("", "Message edits")],
+            "logging_message_delete": [("", "Message deletions")],
+            "logging_member_nickname_change": [("", "Nickname changes")],
+            "logging_member_role_change": [("", "Someone gets or loses a role")],
+            "logging_member_join_leave": [("", "Joins & Leaves")],
+            "logging_ban_unban": [("", "Bans & Unbans")],
+            "logging_guild_channel_create_delete": [
+                ("", "Channel creations & deletions")
+            ],
+            "logging_role_create_delete": [("", "Role creations & deletions")],
         }
 
         current_settings = await self.ensure_guild_settings(ctx.guild.id)
@@ -371,15 +375,16 @@ class _Guild(context.CustomCog, name="Server"):
                 choices[k].append(v)
 
         menu = text.EditSettingsWithEmojifiedLiveToggles(
+            ctx,
             settings=choices,
             description=f"You can toggle as many events on and off as you want. "
-            f"Once you're done, hit {config.YES} to confirm, or "
-            f"{config.NO} to cancel.\n",
+            f"Once you're done, either confirm to save the updated settings, or "
+            f"cancel.\n",
             title=f"Events to Log on {ctx.guild.name}",
             icon=ctx.guild_icon,
         )
 
-        result = await menu.prompt(ctx)
+        result = await menu.prompt()
 
         if not result.confirmed:
             return
@@ -603,14 +608,15 @@ class _Guild(context.CustomCog, name="Server"):
             label="Change Settings",
         ):
             menu = text.EditModelMenu(
+                ctx,
                 choices_with_formatted_explanation={
                     "status": "Enable Role on Join"
                     if not settings["default_role_enabled"]
                     else "Disable Role on Join",
                     "role": "Role",
-                }
+                },
             )
-            result = await menu.prompt(ctx)
+            result = await menu.prompt()
 
             if not result.confirmed or True not in result.choices.values():
                 return

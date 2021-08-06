@@ -495,6 +495,7 @@ class Legislature(
             )
 
         menu = text.EditModelMenu(
+            ctx,
             choices_with_formatted_explanation={
                 "link": "Google Docs Link",
                 "description": "Short Summary",
@@ -503,7 +504,7 @@ class Legislature(
             f"you want to change?",
         )
 
-        result = await menu.prompt(ctx)
+        result = await menu.prompt()
 
         if not result.confirmed:
             return await ctx.send(f"{config.NO} You didn't decide on what to edit.")
@@ -674,12 +675,13 @@ class Legislature(
                 )
 
         menu = text.EditModelMenu(
+            ctx,
             choices_with_formatted_explanation={"title": "Title", "content": "Content"},
             title=f"{config.USER_INTERACTION_REQUIRED}  What about {motion.name} (#{motion.id}) "
             f"do you want to change?",
         )
 
-        result = await menu.prompt(ctx)
+        result = await menu.prompt()
 
         if not result.confirmed:
             return await ctx.send(f"{config.NO} You didn't decide on what to edit.")

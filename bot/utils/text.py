@@ -374,98 +374,124 @@ class FuzzyMultiModelChoose(FuzzyChoose):
 EditModelResult = collections.namedtuple("EditModelResult", ["confirmed", "choices"])
 
 
-class EditModelMenu(menus.Menu):
+class MultiDynamicSelect(discord.ui.Select):
+    async def callback(self, interaction):
+        for value in self.values:
+            self.view._result[value] = not self.view._result[value]
+
+        self.view._confirmed = True
+        self.view._make_result()
+        self.view.stop()
+
+
+class MultiDynamicSelectWithEdit(discord.ui.Select):
+    async def callback(self, interaction):
+        for value in self.values:
+            self.view._result[value] = not self.view._result[value]
+
+        await self.view.msg.edit(embed=self.view._make_embed())
+
+
+class EditModelMenu(PromptView):
     def __init__(
         self,
+        ctx,
         choices_with_formatted_explanation: typing.Dict[str, str],
         *,
         title=f"{config.USER_INTERACTION_REQUIRED}  What do you want to edit?",
     ):
-        super().__init__(timeout=120.0, delete_message_after=True)
+        super().__init__(ctx)
         self.choices = choices_with_formatted_explanation
         self.title = title
         self._confirmed = False
         self._result = {choice: False for choice in self.choices.keys()}
-        self._mapping = {}
         self._make_result()
+        self._make_select()
 
-        for i, choice in enumerate(self.choices.keys(), start=1):
-            emoji = f"{i}\N{variation selector-16}\N{combining enclosing keycap}"
-            button = menus.Button(emoji=emoji, action=self.on_button)
-            self.add_button(button=button)
-            self._mapping[emoji] = choice
+    def _make_select(self):
+        select = MultiDynamicSelect(
+            max_values=len(self.choices),
+            placeholder="Select as many things as you want",
+            options=[
+                discord.SelectOption(
+                    label=textwrap.shorten(desc, width=100, placeholder="..."),
+                    value=choice,
+                )
+                for choice, desc in self.choices.items()
+            ],
+            row=0,
+        )
 
-        confirm = menus.Button(emoji=config.YES, action=self.confirm)
-        self.add_button(confirm)
-
-        cancel = menus.Button(emoji=config.NO, action=self.cancel)
-        self.add_button(cancel)
+        self.add_item(select)
 
     def _make_result(self):
         self.result = EditModelResult(confirmed=self._confirmed, choices=self._result)
         return self.result
 
-    async def send_initial_message(self, ctx, channel):
-        embed = SafeEmbed(title=self.title)
-
-        fmt = [
-            f"Select as many things as you want, then click the {config.YES} button to continue, "
-            f"or {config.NO} to cancel.\n"
-        ]
-
-        for emoji, choice in self._mapping.items():
-            fmt.append(f"{emoji}  {self.choices[choice]}")
-
-        fmt = "\n".join(fmt)
-        embed.description = fmt
-        return await ctx.send(embed=embed)
-
-    async def on_button(self, payload):
-        choice = self._mapping[str(payload.emoji)]
-        self._result[choice] = not self._result[choice]
-
-    async def confirm(self, payload):
-        self._confirmed = True
-        self._make_result()
-        self.stop()
-
-    async def cancel(self, payload):
-        self._make_result()
-        self.stop()
-
-    async def prompt(self, ctx):
-        await self.start(ctx, wait=True)
+    async def prompt(self):
+        msg = await self.ctx.send(self.title, view=self)
+        await self.wait()
+        await msg.delete()
         return self.result
 
 
 class EditSettingsWithEmojifiedLiveToggles(EditModelMenu):
-    def __init__(self, settings, description, icon=discord.Embed.Empty, **kwargs):
+    def __init__(self, ctx, settings, description, icon=discord.Embed.Empty, **kwargs):
         self.icon = icon
         self.description = description
         super().__init__(
+            ctx,
             choices_with_formatted_explanation={k: v[0] for k, v in settings.items()},
             **kwargs,
         )
         self._result = {k: v[1] for k, v in settings.items()}
+
+    def _make_select(self):
+        select = MultiDynamicSelectWithEdit(
+            max_values=len(self.choices),
+            placeholder="Select as many things as you want",
+            options=[
+                discord.SelectOption(
+                    label=textwrap.shorten(desc[1], width=100, placeholder="..."),
+                    description=textwrap.shorten(desc[0], width=50, placeholder="...")
+                    if desc[0]
+                    else None,
+                    value=choice,
+                )
+                for choice, desc in self.choices.items()
+            ],
+            row=0,
+        )
+
+        self.add_item(select)
 
     def _make_embed(self):
         embed = SafeEmbed()
         embed.set_author(name=self.title, icon_url=self.icon)
         fmt = [self.description]
 
-        for emoji, choice in self._mapping.items():
+        for choice in self.choices:
             fmt.append(
-                f"{emoji}  -  {self.bot.emojify_boolean(self._result[choice])} {self.choices[choice]}"
+                f"{self.bot.emojify_boolean(self._result[choice])} {self.choices[choice][1]}"
             )
 
         fmt = "\n".join(fmt)
         embed.description = fmt
         return embed
 
-    async def send_initial_message(self, ctx, channel):
-        return await ctx.send(embed=self._make_embed())
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green, row=1)
+    async def confirm(self, btn, interaction):
+        self._confirmed = True
+        self._make_result()
+        self.stop()
 
-    async def on_button(self, payload):
-        choice = self._mapping[str(payload.emoji)]
-        self._result[choice] = not self._result[choice]
-        await self.message.edit(embed=self._make_embed())
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red, row=1)
+    async def cancel(self, btn, interaction):
+        self._make_result()
+        self.stop()
+
+    async def prompt(self):
+        self.msg = await self.ctx.send(embed=self._make_embed(), view=self)
+        await self.wait()
+        await self.msg.delete()
+        return self.result

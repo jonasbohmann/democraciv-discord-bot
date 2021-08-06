@@ -492,13 +492,14 @@ class NPC(CustomCog):
            `{PREFIX}{COMMAND} Ecological Democratic Party` using the NPC's name"""
 
         menu = text.EditModelMenu(
+            ctx,
             choices_with_formatted_explanation={
                 "name": "Name",
                 "avatar": "Avatar",
                 "trigger_phrase": "Trigger Phrase",
-            }
+            },
         )
-        result = await menu.prompt(ctx)
+        result = await menu.prompt()
 
         if not result.confirmed:
             return await ctx.send(f"{config.NO} You didn't decide on what to edit.")

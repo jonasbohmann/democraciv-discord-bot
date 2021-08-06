@@ -47,21 +47,33 @@ class Meta(context.CustomCog):
         """Manage your DM notifications from me"""
 
         choices = {
-            "ban_kick_mute": ["DM when you get muted, kicked or banned"],
+            "ban_kick_mute": [("", "You get muted, kicked or banned")],
             "leg_session_open": [
-                f"*({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when a {self.bot.mk.LEGISLATURE_ADJECTIVE} Session opens"
+                (
+                    f"{self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only",
+                    f"{self.bot.mk.LEGISLATURE_ADJECTIVE} Session opens",
+                )
             ],
             "leg_session_update": [
-                f"*({self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only)* DM when voting starts for a {self.bot.mk.LEGISLATURE_ADJECTIVE} Session"
+                (
+                    f"{self.bot.mk.LEGISLATURE_LEGISLATOR_NAME} Only",
+                    f"Voting starts for a {self.bot.mk.LEGISLATURE_ADJECTIVE} Session",
+                )
             ],
             "leg_session_submit": [
-                f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when someone submits a Bill or Motion"
+                (
+                    f"{self.bot.mk.LEGISLATURE_CABINET_NAME} Only",
+                    "Someone submits a Bill or Motion",
+                )
             ],
             "leg_session_withdraw": [
-                f"*({self.bot.mk.LEGISLATURE_CABINET_NAME} Only)* DM when someone withdraws a Bill or Motion"
+                (
+                    f"{self.bot.mk.LEGISLATURE_CABINET_NAME} Only",
+                    "Someone withdraws a Bill or Motion",
+                )
             ],
             "party_join_leave": [
-                f"*(Party Leaders Only)* DM when someone joins or leaves your political party"
+                (f"Party Leaders Only", "Someone joins or leaves your political party")
             ],
         }
 
@@ -72,14 +84,15 @@ class Meta(context.CustomCog):
                 choices[k].append(v)
 
         menu = text.EditSettingsWithEmojifiedLiveToggles(
+            ctx,
             settings=choices,
             description=f"You can toggle each notification on and off. Once you're "
-            f"done, hit {config.YES} to confirm, or {config.NO} to "
+            f"done, either confirm to save the updated settings, or "
             f"cancel.\n",
             title=f"DM Notifications for {ctx.author}",
             icon=ctx.author_icon,
         )
-        result = await menu.prompt(ctx)
+        result = await menu.prompt()
 
         if not result.confirmed:
             return
