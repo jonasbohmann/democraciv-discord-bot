@@ -673,7 +673,13 @@ class Bank(context.CustomCog):
 
     # --- BANANA INC. COMMANDS ---
 
-    @bank.group(name="banana", aliases=["banana_inc"], hidden=True, case_insensitive=True, invoke_without_command=True)
+    @bank.group(
+        name="banana",
+        aliases=["banana_inc"],
+        hidden=True,
+        case_insensitive=True,
+        invoke_without_command=True,
+    )
     async def banana(self, ctx):
         """The parent command for all Banana Inc. related commands"""
         await ctx.send("\U0001f34c")
@@ -698,7 +704,7 @@ class Bank(context.CustomCog):
         response = await self.request(BankRoute("GET", f"account/{from_iban}/"))
         js = await response.json()
 
-        if js['balance_currency'] != "BNC":
+        if js["balance_currency"] != "BNC":
             return await ctx.send(
                 f"{config.NO} That's not a bank account with Banana Coin."
             )
