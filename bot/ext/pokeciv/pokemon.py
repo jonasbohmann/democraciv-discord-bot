@@ -16,7 +16,8 @@ from bot.config import config, mk
 
 class PokeballConverter(commands.Converter):
     async def convert(self, ctx, argument: str):
-        if argument.lower() not in {"pokeball", "greatball", "ultraball", "masterball"}:
+        argument = argument.lower()
+        if argument not in {"pokeball", "greatball", "ultraball", "masterball"}:
             raise commands.BadArgument(
                 f"{config.NO} That's not a ball you can throw. Try `pokeball`, "
                 f"`greatball`, `ultraball` or `masterball`."
