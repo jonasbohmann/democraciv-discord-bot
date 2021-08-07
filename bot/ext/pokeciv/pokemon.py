@@ -1,7 +1,10 @@
+import collections
 import io
 import pathlib
+import textwrap
 import traceback
 import aiofiles
+import aiohttp
 import discord
 import random
 import typing
@@ -12,6 +15,10 @@ from discord.ext import commands
 
 from bot.utils import context, checks, text
 from bot.config import config, mk
+
+PokeInfo = collections.namedtuple(
+    "PokeInfo", "is_legendary is_mythical types description"
+)
 
 
 class PokeballConverter(commands.Converter):
@@ -40,6 +47,7 @@ class Pokemon(context.CustomCog, name="Pokémon"):
             "Legendary": [],
         }
         self.load_dex()
+        self._cached_poke_info: typing.Dict[str, PokeInfo] = {}
 
     def load_dex(self) -> None:
         dex_file = open(self.path / "dex.csv")
@@ -132,32 +140,19 @@ class Pokemon(context.CustomCog, name="Pokémon"):
         return img
 
     async def combined_image(self, pokemon_list: typing.List[str]) -> discord.File:
-        width = 0
-        height = 0
         images = [await self.pokemon_image(pkmn) for pkmn in pokemon_list]
+        return await self.bot.loop.run_in_executor(None, self._combined_image, images)
 
-        for img in images:
-            new_width, new_height = img.size
-            width += new_width
-            if new_height > height:
-                height = new_height
-
-        combined_size = (width, height)
-
-        return await self.bot.loop.run_in_executor(
-            None, self._combined_image, combined_size, images
-        )
-
-    def _combined_image(
-        self, combined_size: typing.Tuple[int, int], images: typing.List[Image.Image]
-    ) -> discord.File:
-        _, height = combined_size
-        result = Image.new("RGBA", combined_size)
+    def _combined_image(self, images: typing.List[Image.Image]) -> discord.File:
+        result: Image.Image = Image.open(self.path / "background.png")
 
         indent = 0
         for pkmn in images:
-            result.paste(pkmn, (indent, height - pkmn.size[1]))
+            result.paste(
+                pkmn, (indent, result.height - pkmn.size[1]), pkmn.convert("RGBA")
+            )
             indent += pkmn.size[0]
+            pkmn.close()
 
         buffer = io.BytesIO()
         result.save(buffer, "png")
@@ -174,15 +169,48 @@ class Pokemon(context.CustomCog, name="Pokémon"):
     async def pokemon(self, ctx):
         """What is this?"""
         embed = text.SafeEmbed(
-            description="Catch em all! This will be filled with useful information soon.\n\nThese Pokémon commands were "
-            "made by Pep."
+            description="Catch em all! This will be filled with useful information soon.\n\nThese Pokémon commands "
+            "were made by Pep and integrated into the Democraciv Discord Bot by Jonas."
         )
         embed.set_author(icon_url=self.bot.mk.NATION_ICON_URL, name="The Hatima Region")
         await ctx.send(embed=embed)
 
+    async def _get_poke_info(self, pokemon: str):
+        pokemon = pokemon.lower()
+        _types = []
+
+        try:
+            async with self.bot.session.get(
+                f"https://pokeapi.co/api/v2/pokemon/{pokemon}"
+            ) as response:
+                js = await response.json()
+
+                for _typ in js["types"]:
+                    _types.append(_typ["type"]["name"].title())
+
+                async with self.bot.session.get(js["species"]["url"]) as rsp:
+                    jss = await rsp.json()
+
+                    is_legendary = jss["is_legendary"]
+                    is_mythical = jss["is_mythical"]
+
+                    first_english_text = ""
+
+                    for flavour in jss["flavor_text_entries"]:
+                        if flavour["language"]["name"] == "en":
+                            first_english_text = flavour["flavor_text"]
+                            break
+
+                _types = ", ".join(_types)
+
+            return PokeInfo(is_legendary, is_mythical, _types, first_english_text)
+        except (aiohttp.ClientError, KeyError):
+            return None
+
     @pokemon.command()
     async def throw(self, ctx, ball: PokeballConverter):
         """Throw a Pokéball and catch some randomly spawning Pokémon"""
+
         lookup = {
             "pokeball": ["Tier 1"],
             "greatball": ["Tier 1", "Tier 2"],
@@ -190,9 +218,54 @@ class Pokemon(context.CustomCog, name="Pokémon"):
             "masterball": ["Tier 3", "Legendary"],
         }
 
-        result = self.throw_ball(lookup[ball])  # type: ignore
-        file = await self.combined_image(result)
-        await ctx.reply("\t\t\t".join(result), file=file)
+        async with ctx.typing():
+            result = self.throw_ball(lookup[ball])  # type: ignore
+            file = await self.combined_image(result)
+
+        embed = text.SafeEmbed(
+            description="After you've chosen which one of these Pokémon you want to catch, reply "
+            "with the name of that Pokémon to let the bookkeepers know."
+            "\n\nGood luck catching 'em all!"
+        )
+        embed.set_author(
+            name="Tall Grass in the Hatima Region", icon_url=self.bot.mk.NATION_ICON_URL
+        )
+        embed.set_image(url="attachment://pokemon.png")
+
+        poke_info = {}
+
+        for pkmn in result:
+            cached_info = self._cached_poke_info.get(pkmn, None)
+
+            if not cached_info:
+                info = await self._get_poke_info(pkmn)
+                self._cached_poke_info[pkmn] = info
+                logging.info(
+                    f"PokeInfo: Caching {pkmn}. Size Cache: {len(self._cached_poke_info)}"
+                )
+                poke_info[pkmn] = info
+            else:
+                logging.info(f"PokeInfo: Cache hit for {pkmn}")
+                poke_info[pkmn] = cached_info
+
+        len_text = min([len(pk.description) if pk else 50 for pk in poke_info.values()])
+
+        for poke, info in poke_info.items():
+            if info:
+                desc = textwrap.shorten(
+                    info.description, width=len_text, placeholder="..."
+                )
+                fmt = (
+                    f"{desc}\n\n`Type`: {info.types}\n`Legendary`: "
+                    f"{'Yes' if info.is_legendary else 'No'}\n`Mythical`: "
+                    f"{'Yes' if info.is_mythical else 'No'}"
+                )
+            else:
+                fmt = "*Couldn't get Pokémon Info*"
+
+            embed.add_field(name=poke, value=fmt)
+
+        await ctx.reply(embed=embed, file=file)
 
     async def _get_attachment(self, ctx, question: str) -> typing.Optional[bytes]:
         attachment_bytes = None

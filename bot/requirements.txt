@@ -13,6 +13,6 @@ async-lru
 lru-dict
 fuzzywuzzy
 python-Levenshtein
-
 aiofiles
+Pillow
 
