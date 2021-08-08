@@ -675,7 +675,7 @@ class Bank(context.CustomCog):
 
     @bank.group(
         name="banana",
-        aliases=["banana_inc"],
+        aliases=["banana_inc", "ba"],
         hidden=True,
         case_insensitive=True,
         invoke_without_command=True,
@@ -720,6 +720,7 @@ class Bank(context.CustomCog):
         new_balance_with_curr = self.get_currency(js["balance_currency"]).with_amount(
             diff
         )
+        pretty_holder = discord.utils.escape_markdown(js['pretty_holder'])
 
         embed = text.SafeEmbed()
         embed.set_author(
@@ -729,7 +730,7 @@ class Bank(context.CustomCog):
         embed.add_field(name="IBAN", value=js["iban"], inline=False)
         embed.add_field(
             name="Owner",
-            value=f"{discord.utils.escape_markdown(js['pretty_holder'])} {'*(Person)*' if js['individual_holder'] else '*(Organization)*'}",
+            value=f"{pretty_holder} {'*(Person)*' if js['individual_holder'] else '*(Organization)*'}",
             inline=False,
         )
 
@@ -766,7 +767,8 @@ class Bank(context.CustomCog):
         )
 
         reason_fix = (
-            f"This was an automated withdrawal performed by the Banana Inc. leadership. For "
+            f"This was an automated withdrawal performed by {ctx.author} of the "
+            f"Banana Inc. leadership. For "
             f"questions regarding why or how this happened, please contact a Banana Inc. representative. "
             f"The stated reason for this withdrawal of Banana Coin was the following:\n\n{reason}"
         )
@@ -776,7 +778,7 @@ class Bank(context.CustomCog):
         )
 
         trans_embed = text.SafeEmbed(
-            title=f"Banana Inc. withdrew {amount_with_curr} from {transaction['safe_to_account']}",
+            title=f"Banana Inc. withdrew {amount_with_curr} from {pretty_holder}",
             description=f"[See the transaction details here.](https://democracivbank.com/transaction/{transaction['id']})",
         )
         trans_embed.set_author(
@@ -790,7 +792,7 @@ class Bank(context.CustomCog):
 
             if user and not user.bot:
                 await user.send(
-                    f"{config.HINT} The leadership of Banana Inc. has withdrawn {amount_with_curr} from a "
+                    f"{config.HINT} `{ctx.author}` of Banana Inc. has withdrawn {amount_with_curr} from a "
                     f"bank account you have access to. The new balance is {new_balance_with_curr}.\n\n"
                     f"Their reason for this action was the following: `{reason}`",
                     embed=trans_embed,
@@ -810,7 +812,7 @@ class Bank(context.CustomCog):
                 account["created_on"].replace("Z", "+00:00")
             )
             desc.append(
-                f"__**Bank Account with IBAN {account['iban']}**__\n"
+                f"__**{account['iban']}**__\n"
                 f"Owner: {discord.utils.escape_markdown(account['pretty_holder'])} {'*(Person)*' if account['individual_holder'] else '*(Organization)*'}\n"
                 f"Balance: {self.get_currency(account['balance_currency']).with_amount(account['balance'])}\n"
                 f"Opened on: {discord.utils.format_dt(opened_on, 'F')}\n"
