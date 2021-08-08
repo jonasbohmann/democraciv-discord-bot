@@ -675,14 +675,36 @@ class Bank(context.CustomCog):
 
     @bank.group(
         name="banana",
-        aliases=["banana_inc", "ba"],
+        aliases=["banana_inc", "ba", "bananainc", "banana-inc"],
         hidden=True,
         case_insensitive=True,
         invoke_without_command=True,
     )
+    @checks.has_democraciv_role(mk.DemocracivRole.BANANA_COIN_MANAGER)
     async def banana(self, ctx):
-        """The parent command for all Banana Inc. related commands"""
-        await ctx.send("\U0001f34c")
+        """List all bank accounts with the Banana Coin currency"""
+
+        response = await self.request(BankRoute("GET", "accounts/currency/BNC"))
+        json = await response.json()
+        desc = []
+
+        for account in json:
+            opened_on = datetime.datetime.fromisoformat(
+                account["created_on"].replace("Z", "+00:00")
+            )
+            desc.append(
+                f"__**{account['iban']}**__\n"
+                f"Owner: {discord.utils.escape_markdown(account['pretty_holder'])} {'*(Person)*' if account['individual_holder'] else '*(Organization)*'}\n"
+                f"Balance: {self.get_currency(account['balance_currency']).with_amount(account['balance'])}\n"
+                f"Opened on: {discord.utils.format_dt(opened_on, 'F')}\n"
+            )
+
+        pages = paginator.SimplePages(
+            entries=desc,
+            icon=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url,
+            author=f"All Bank Accounts with Banana Coin ({len(json)})",
+        )
+        await pages.start(ctx)
 
     @banana.command(name="take")
     @checks.has_democraciv_role(mk.DemocracivRole.BANANA_COIN_MANAGER)
@@ -720,7 +742,7 @@ class Bank(context.CustomCog):
         new_balance_with_curr = self.get_currency(js["balance_currency"]).with_amount(
             diff
         )
-        pretty_holder = discord.utils.escape_markdown(js['pretty_holder'])
+        pretty_holder = discord.utils.escape_markdown(js["pretty_holder"])
 
         embed = text.SafeEmbed()
         embed.set_author(
@@ -797,33 +819,6 @@ class Bank(context.CustomCog):
                     f"Their reason for this action was the following: `{reason}`",
                     embed=trans_embed,
                 )
-
-    @banana.command(name="list", aliases=["all"])
-    @checks.has_democraciv_role(mk.DemocracivRole.BANANA_COIN_MANAGER)
-    async def list(self, ctx):
-        """List all bank accounts with the Banana Coin currency"""
-
-        response = await self.request(BankRoute("GET", "accounts/currency/BNC"))
-        json = await response.json()
-        desc = []
-
-        for account in json:
-            opened_on = datetime.datetime.fromisoformat(
-                account["created_on"].replace("Z", "+00:00")
-            )
-            desc.append(
-                f"__**{account['iban']}**__\n"
-                f"Owner: {discord.utils.escape_markdown(account['pretty_holder'])} {'*(Person)*' if account['individual_holder'] else '*(Organization)*'}\n"
-                f"Balance: {self.get_currency(account['balance_currency']).with_amount(account['balance'])}\n"
-                f"Opened on: {discord.utils.format_dt(opened_on, 'F')}\n"
-            )
-
-        pages = paginator.SimplePages(
-            entries=desc,
-            icon=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url,
-            author=f"All Bank Accounts with Banana Coin ({len(json)})",
-        )
-        await pages.start(ctx)
 
 
 class PickBankAccountView(text.PromptView):
