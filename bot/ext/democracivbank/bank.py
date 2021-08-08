@@ -679,7 +679,6 @@ class Bank(context.CustomCog):
         case_insensitive=True,
         invoke_without_command=True,
     )
-    @checks.has_democraciv_role(mk.DemocracivRole.BANANA_COIN_MANAGER)
     async def banana(self, ctx):
         """List all bank accounts with the Banana Coin currency"""
 
