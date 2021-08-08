@@ -676,7 +676,6 @@ class Bank(context.CustomCog):
     @bank.group(
         name="banana",
         aliases=["banana_inc", "ba", "bananainc", "banana-inc"],
-        hidden=True,
         case_insensitive=True,
         invoke_without_command=True,
     )
