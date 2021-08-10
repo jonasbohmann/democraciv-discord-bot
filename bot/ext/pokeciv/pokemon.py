@@ -222,11 +222,7 @@ class Pokemon(context.CustomCog, name="Pokémon"):
             result = self.throw_ball(lookup[ball])  # type: ignore
             file = await self.combined_image(result)
 
-        embed = text.SafeEmbed(
-            description="After you've chosen which one of these Pokémon you want to catch, reply "
-            "with the name of that Pokémon to let the bookkeepers know."
-            "\n\nGood luck catching 'em all!"
-        )
+        embed = text.SafeEmbed()
         embed.set_author(
             name="Tall Grass in the Hatima Region", icon_url=self.bot.mk.NATION_ICON_URL
         )
