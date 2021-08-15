@@ -248,7 +248,6 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
             )
 
         await message.pin()
-        await ctx.send(f"{config.YES} Done.")
 
     @nation.group(
         name="roles",
