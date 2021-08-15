@@ -141,9 +141,9 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         )
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
 
-        try:
+        if self.legislator_role:
             legislators = len(self.legislator_role.members)
-        except exceptions.RoleNotFoundError:
+        else:
             legislators = 0
 
         try:
