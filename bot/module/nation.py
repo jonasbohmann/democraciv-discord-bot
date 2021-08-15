@@ -133,18 +133,12 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         """{NATION_NAME}"""
 
         description = ""
-        nation_wiki = self.bot.mk.NATION_NAME.lower()
 
         embed = text.SafeEmbed(
             description=f"{description}\n\n[Constitution]({self.bot.mk.CONSTITUTION})\n"
-            f"[Wiki](https://reddit.com/r/democraciv/wiki/{nation_wiki})"
+            f"[Wiki](https://reddit.com/r/democraciv/wiki/mk9/nsa)"
         )
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
-
-        if self.legislator_role:
-            legislators = len(self.legislator_role.members)
-        else:
-            legislators = 0
 
         try:
             citizens = self.bot.get_democraciv_role(mk.DemocracivRole.NATION_CITIZEN)
@@ -154,25 +148,6 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         parties = await self.bot.db.fetchval("SELECT COUNT(id) FROM party")
         embed.add_field(name="Political Parties", value=parties)
-
-        if isinstance(self.speaker, discord.Member):
-            speaker = f"{self.bot.mk.speaker_term}: {self.speaker.mention}"
-        else:
-            speaker = f"{self.bot.mk.speaker_term}: -"
-
-        if isinstance(self.prime_minister, discord.Member):
-            prime_minister = f"{self.bot.mk.pm_term}: {self.prime_minister.mention}"
-        else:
-            prime_minister = f"{self.bot.mk.pm_term}: -"
-
-        embed.add_field(
-            name="Government",
-            value=f"{prime_minister}\n"
-            f"{speaker}\n"
-            f"Amount of {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL}: {legislators}",
-            inline=False,
-        )
-
         await ctx.send(embed=embed)
 
     @nation.command(name="admin")
