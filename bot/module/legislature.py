@@ -253,8 +253,8 @@ class Legislature(
         )
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
-            f"\n[Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})",
+            value=f"[Articles of Incorporation]({self.bot.mk.CONSTITUTION})\n[Corporate Orders Register]({self.bot.mk.LEGAL_CODE})"
+            f"\n[Master Sheet]({self.bot.mk.LEGISLATURE_DOCKET})",
             inline=True,
         )
         embed.add_field(
