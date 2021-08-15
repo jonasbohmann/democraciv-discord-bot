@@ -147,12 +147,10 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
     async def nation(self, ctx):
         """{NATION_NAME}"""
 
-        description = ""
-        nation_wiki = self.bot.mk.NATION_NAME.lower()
 
         embed = text.SafeEmbed(
-            description=f"{description}\n\n[PokéCiv Charter](https://docs.google.com/document/d/1nwItBFQmHPrcQ_QwyVQzIX47I4RRSFa7JxkjGaOUalQ/edit)[Code of Metagame and Procedure]({self.bot.mk.CONSTITUTION})\n[Master Sheet](https://docs.google.com/spreadsheets/d/1mfYh1lLsQR955NwxdzvUoX9PXZYFeWP62h0tSM_DUdc/edit#gid=616614951)"
-                        f"[Wiki](https://reddit.com/r/democraciv/wiki/{nation_wiki})"
+            description=f"[PokéCiv Charter](https://docs.google.com/document/d/1nwItBFQmHPrcQ_QwyVQzIX47I4RRSFa7JxkjGaOUalQ/edit)\n[Code of Metagame and Procedure]({self.bot.mk.CONSTITUTION})\n[Master Sheet](https://docs.google.com/spreadsheets/d/1mfYh1lLsQR955NwxdzvUoX9PXZYFeWP62h0tSM_DUdc/edit#gid=616614951)\n"
+                        f"[Wiki](https://reddit.com/r/democraciv/wiki/pokeciv)"
         )
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
 
