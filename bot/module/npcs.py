@@ -1208,7 +1208,16 @@ class NPC(CustomCog):
                 spoiler=message.attachments[0].is_spoiler()
             )
 
-        webhook_url = await self._get_webhook(message.channel)
+        send_to_thread = discord.utils.MISSING
+
+        if isinstance(message.channel, discord.Thread):
+            send_to_thread = message.channel
+            webhook_channel = message.channel.parent
+
+        else:
+            webhook_channel = message.channel
+
+        webhook_url = await self._get_webhook(webhook_channel)
 
         if not webhook_url:
             return await message.channel.send(
@@ -1233,6 +1242,7 @@ class NPC(CustomCog):
                 content=content,
                 file=file,
                 wait=True,
+                thread=send_to_thread,
                 allowed_mentions=discord.AllowedMentions.none(),
             )
         except (discord.NotFound, discord.Forbidden):
@@ -1243,7 +1253,7 @@ class NPC(CustomCog):
                 webhook.id,
                 webhook.token,
             )
-            new_webhook_url = await self._make_new_webhook(message.channel)
+            new_webhook_url = await self._make_new_webhook(webhook_channel)
 
             if not new_webhook_url:
                 return await message.channel.send(
@@ -1260,6 +1270,7 @@ class NPC(CustomCog):
                 content=content,
                 file=file,
                 wait=True,
+                thread=send_to_thread,
                 allowed_mentions=discord.AllowedMentions.none(),
             )
 
