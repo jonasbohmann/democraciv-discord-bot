@@ -241,19 +241,19 @@ class Legislature(
         else:
             speaker_value.append(f"{self.bot.mk.speaker_term}: -")
 
-        if isinstance(self.vice_speaker, discord.Member):
-            speaker_value.append(
-                f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention} {escape_markdown(str(self.vice_speaker))}"
-            )
-        else:
-            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
+        # if isinstance(self.vice_speaker, discord.Member):
+        #    speaker_value.append(
+        #        f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention} {escape_markdown(str(self.vice_speaker))}"
+        #    )
+        # else:
+        #    speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
 
         embed.add_field(
             name=self.bot.mk.LEGISLATURE_CABINET_NAME, value="\n".join(speaker_value)
         )
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
+            value=f"[Code of Metagame and Procedure]({self.bot.mk.CONSTITUTION})\n[Master Sheet]({self.bot.mk.LEGAL_CODE})"
             f"\n[Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})",
             inline=True,
         )
