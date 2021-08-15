@@ -300,11 +300,13 @@ class Party(context.CustomCog, name="Political Parties"):
             )
 
     @party.command(name="join", hidden=True)
+    @checks.is_citizen_if_multiciv()
     async def _join_alias(self, ctx, *, party: Fuzzy[PoliticalParty]):
         """Join a political party"""
         return await ctx.invoke(self.bot.get_command("join"), party=party)
 
     @commands.command(name="join")
+    @checks.is_citizen_if_multiciv()
     async def join(self, ctx, *, party: Fuzzy[PoliticalParty]):
         """Join a political party"""
 
@@ -445,11 +447,13 @@ class Party(context.CustomCog, name="Political Parties"):
             await ctx.send(message)
 
     @party.command(name="leave", hidden=True)
+    @checks.is_citizen_if_multiciv()
     async def _leave_alias(self, ctx, *, party: Fuzzy[PoliticalParty]):
         """Leave a political party"""
         return await ctx.invoke(self.bot.get_command("leave"), party=party)
 
     @commands.command(name="leave")
+    @checks.is_citizen_if_multiciv()
     async def leave(self, ctx, *, party: Fuzzy[PoliticalParty]):
         """Leave a political party"""
 

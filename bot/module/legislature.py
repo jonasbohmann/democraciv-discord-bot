@@ -745,6 +745,8 @@ class Legislature(
         await ctx.send(f"{config.YES} Motion #{motion.id} `{motion.name}` was updated.")
 
     @motion.command(name="sponsor", aliases=["sp", "cosponsor", "second"])
+    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+    @checks.is_citizen_if_multiciv()
     async def m_sponsor(self, ctx, motion_ids: Greedy[Motion]):
         """Show your support for one or multiple motions by sponsoring them
 
@@ -2044,6 +2046,7 @@ class Legislature(
     @commands.cooldown(1, 15, commands.BucketType.user)
     @commands.max_concurrency(2, per=commands.BucketType.guild, wait=False)
     @checks.is_democraciv_guild()
+    @checks.is_citizen_if_multiciv()
     async def submit(self, ctx):
         """Submit a new bill or motion to the currently active session"""
 
@@ -2480,6 +2483,7 @@ class Legislature(
 
     @bill.command(name="sponsor", aliases=["sp", "cosponsor", "second"])
     @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+    @checks.is_citizen_if_multiciv()
     async def b_sponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Show your support for one or multiple bills by sponsoring them
 
@@ -2566,6 +2570,7 @@ class Legislature(
         )
 
     @legislature.command(name="resubmit", aliases=["rs"])
+    @checks.is_citizen_if_multiciv()
     async def resubmit(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Resubmit any bills that failed in the {LEGISLATURE_NAME} to the currently active session
 
@@ -2687,6 +2692,7 @@ class Legislature(
     @legislature.command(
         name="sponsor", aliases=["second", "sp", "cosponsor"], hidden=True
     )
+    @checks.is_citizen_if_multiciv()
     async def sponsor(self, ctx, *, bill_or_motion_ids):
         """Show your support for one or multiple bills or motions by sponsoring them
 
