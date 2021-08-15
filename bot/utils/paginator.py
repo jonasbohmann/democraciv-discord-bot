@@ -31,7 +31,12 @@ class Pages(ViewMenuPages):
         thumbnail=None,
         message=None,
     ):
-        super().__init__(source=source, check_embeds=True, message=message)
+        super().__init__(
+            source=source,
+            check_embeds=True,
+            message=message,
+            clear_reactions_after=True,
+        )
         self.embed = SafeEmbed(title=title, url=title_url, colour=colour)
         self.embed.set_author(name=author, icon_url=icon)
         self.input_lock = asyncio.Lock()

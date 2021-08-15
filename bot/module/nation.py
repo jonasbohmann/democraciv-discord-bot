@@ -2,6 +2,7 @@ import collections
 
 import discord
 from discord.ext import commands, menus
+from fuzzywuzzy import process
 
 from bot.config import config, mk
 from bot.utils import context, checks, paginator, text, mixin, exceptions
@@ -16,6 +17,20 @@ from bot.utils.converter import (
 
 
 class NationRoleConverter(CaseInsensitiveRole):
+    async def get_fuzzy_source(self, ctx: context.CustomContext, argument: str):
+        pred = lambda r: r.name.lower().startswith(
+            ctx.bot.mk.NATION_ROLE_PREFIX.lower()
+        )
+        found = filter(pred, ctx.guild.roles)
+        found = [r.name for r in found]
+
+        match = process.extract(argument, found, limit=5)
+        fmt = []
+        for m, _ in match:
+            fmt.append(discord.utils.get(ctx.guild.roles, name=m))
+
+        return fmt
+
     async def convert(self, ctx: context.CustomContext, argument):
         if not ctx.bot.mk.NATION_ROLE_PREFIX:
             raise exceptions.DemocracivBotException(
@@ -141,9 +156,9 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         )
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
 
-        try:
+        if self.legislator_role:
             legislators = len(self.legislator_role.members)
-        except exceptions.RoleNotFoundError:
+        else:
             legislators = 0
 
         try:
@@ -216,11 +231,6 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
             `{PREFIX}{COMMAND} https://discord.com/channels/208984105310879744/499669824847478785/784598328666619934` use the message's URL
 
         """
-        if message.channel.category_id not in self.bot.mk.NATION_CATEGORIES:
-            raise exceptions.DemocracivBotException(
-                f"{config.NO} You're not allowed to pin messages in this channel."
-            )
-
         if not message and ctx.message.reference:
             message = ctx.message.reference.resolved
 
@@ -232,8 +242,12 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
                 if not message:
                     return
 
+        if message.channel.category_id not in self.bot.mk.NATION_CATEGORIES:
+            raise exceptions.DemocracivBotException(
+                f"{config.NO} You're not allowed to pin messages in this channel."
+            )
+
         await message.pin()
-        await ctx.send(f"{config.YES} Done.")
 
     @nation.group(
         name="roles",
@@ -269,7 +283,11 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
     @checks.moderation_or_nation_leader()
     @nation_role_prefix_not_blank()
     async def toggle_role(
-        self, ctx, people: commands.Greedy[CIMemberNoBot], *, role: NationRoleConverter
+        self,
+        ctx,
+        people: commands.Greedy[CIMemberNoBot],
+        *,
+        role: Fuzzy[NationRoleConverter],
     ):
         """Give someone a role, or remove one from them
 
@@ -318,7 +336,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
     @nationroles.command(name="delete", aliases=["remove"])
     @checks.moderation_or_nation_leader()
     @nation_role_prefix_not_blank()
-    async def delete_nation_role(self, ctx, *, nation_role: NationRoleConverter):
+    async def delete_nation_role(self, ctx, *, nation_role: Fuzzy[NationRoleConverter]):
         """Delete a nation role
 
         **Example**:
@@ -377,7 +395,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         if not channel:
             channel = await ctx.converted_input(
                 f"{config.USER_INTERACTION_REQUIRED} Which channel's permissions should be changed?",
-                converter=CaseInsensitiveTextChannel,
+                converter=Fuzzy[CaseInsensitiveTextChannel],
                 return_input_on_fail=False,
             )
 
@@ -391,8 +409,8 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
             f"permissions in {channel.mention} be changed?"
         )
 
-        conv = await Fuzzy[
-            CaseInsensitiveRole, CaseInsensitiveMember, FuzzySettings(weights=(4, 2))
+        conv = Fuzzy[
+            CaseInsensitiveRole, CaseInsensitiveMember, FuzzySettings(weights=(6, 4))
         ]
         role = await conv.convert(ctx, user_input)
 

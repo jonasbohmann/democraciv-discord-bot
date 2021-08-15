@@ -13,21 +13,16 @@ def _make_property(role: mk.DemocracivRole):
 
 class ReadDocumentView(text.PromptView):
 
-    result = (False, "")
     webhook = None
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return True
+    #async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    #    return True
 
     @discord.ui.button(
         label="Read Document", style=discord.ButtonStyle.primary, emoji="\U0001f4c3"
     )
     async def on_button(self, button, interaction):
-        if interaction.user.id == self.ctx.author.id:
-            self.result = (True, "public")
-        else:
-            self.result = (True, "private")
-
+        self.result = True
         self.webhook = interaction.followup
         self.stop()
 
@@ -131,12 +126,12 @@ class GovernmentMixin:
 
             view = ReadDocumentView(ctx=ctx)
             await ctx.send(embed=embed, view=view)
-            do_continue, mode = await view.prompt()
+            do_continue = await view.prompt(silent=True)
             # followup = None
 
-            if mode == "private":
-                # followup = view.webhook
-                return
+            #if mode == "private":
+            #    # followup = view.webhook
+            #    return
 
             if do_continue:
                 # await self._show_bill_text(ctx, obj, ephemeral_webhook=followup)
@@ -150,7 +145,7 @@ class GovernmentMixin:
                 )
                 embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
 
-        await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
 
     async def _show_bill_text(self, ctx, bill: models.Bill, *, ephemeral_webhook=None):
         entries = bill.content.splitlines()

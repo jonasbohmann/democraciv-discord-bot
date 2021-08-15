@@ -534,7 +534,7 @@ class Party(context.CustomCog, name="Political Parties"):
             embed.add_field(name="\u200b", value="\n\n".join(second_half))
 
         else:
-            if sorted_parties_and_members:
+            if sorted_parties_and_members and independent_role:
                 party_list_embed_content.append(
                     f"⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}"
                     f" citizen"
