@@ -14,8 +14,8 @@ class LawPassScheduler(text.AnnouncementScheduler):
         embed.set_author(
             name=f"Passed Bills from the {self.bot.mk.MINISTRY_NAME}",
             icon_url=self.bot.mk.NATION_ICON_URL
-            or self.bot.dciv.icon.url
-            or discord.embeds.EmptyEmbed,
+                     or self.bot.dciv.icon.url
+                     or discord.embeds.EmptyEmbed,
         )
         message = [
             f"The following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"
@@ -38,8 +38,8 @@ class LawVetoScheduler(text.AnnouncementScheduler):
         embed.set_author(
             name=f"The {self.bot.mk.MINISTRY_NAME} vetoed Bills",
             icon_url=self.bot.mk.NATION_ICON_URL
-            or self.bot.dciv.icon.url
-            or discord.embeds.EmptyEmbed,
+                     or self.bot.dciv.icon.url
+                     or discord.embeds.EmptyEmbed,
         )
         message = [
             f"The following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"
@@ -125,14 +125,14 @@ class Ministry(
         invoke_without_command=True,
     )
     async def ministry(self, ctx):
-        """Dashboard for {minister_term} with important links"""
+        """Dashboard for Banana Inc. personnel with important links"""
 
         # """Dashboard for {minister_term} with important links and updates on new bills"""
 
         embed = text.SafeEmbed()
         embed.set_author(
             icon_url=self.bot.mk.NATION_ICON_URL,
-            name=f"The {self.bot.mk.MINISTRY_NAME} of {self.bot.mk.NATION_FULL_NAME}",
+            name="The Executive Board of Banana Inc.",
         )
 
         # pretty_bills = await self.get_pretty_vetoes()
@@ -146,29 +146,26 @@ class Ministry(
 
         minister_value = []
 
-        emperor = self._safe_get_member(mk.DemocracivRole.EMPEROR)
+        ceo = self._safe_get_member(mk.DemocracivRole.CEO)
 
-        if isinstance(emperor, discord.Member):
+        if isinstance(ceo, discord.Member):
             minister_value.append(
-                f"Emperor of Japan: {emperor.mention} {escape_markdown(str(emperor))}"
+                f"Chief Executive Officer: {ceo.mention} {escape_markdown(str(ceo))}"
             )
         else:
-            minister_value.append(f"Emperor of Japan: -")
+            minister_value.append("Chief Executive Officer: -")
 
-        if isinstance(self.prime_minister, discord.Member):
+        ceb = self._safe_get_member(mk.DemocracivRole.CEB)
+
+        if isinstance(ceb, discord.Member):
             minister_value.append(
-                f"{self.bot.mk.pm_term}: {self.prime_minister.mention} {escape_markdown(str(self.prime_minister))}"
+                f"Chairperson of the Executive Board: {ceb.mention} {escape_markdown(str(ceb))}"
             )
         else:
-            minister_value.append(f"{self.bot.mk.pm_term}: -")
-
-        # if isinstance(self.lt_prime_minister, discord.Member):
-        #    minister_value.append(f"{self.bot.mk.lt_pm_term}: {self.lt_prime_minister.mention}")
-        # else:
-        #    minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
+            minister_value.append("Chairperson of the Executive Board: -")
 
         embed.add_field(
-            name=self.bot.mk.MINISTRY_LEADERSHIP_NAME,
+            name="Leadership",
             value="\n".join(minister_value),
             inline=False,
         )
@@ -176,21 +173,21 @@ class Ministry(
         try:
             ministers = self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER)
             ministers = [
-                f"{m.mention} {escape_markdown(str(m))}" for m in ministers.members
-            ] or ["-"]
+                            f"{m.mention} {escape_markdown(str(m))}" for m in ministers.members
+                        ] or ["-"]
         except exceptions.RoleNotFoundError:
             ministers = ["-"]
 
         embed.add_field(
-            name=f"{self.bot.mk.minister_term}s",
+            name="Sector COs",
             value="\n".join(ministers),
             inline=False,
         )
 
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})\n"
-            f"[Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})",
+            value=f"[Articles of Incorporation]({self.bot.mk.CONSTITUTION})\n[Corporate Orders Register]({self.bot.mk.LEGAL_CODE})\n"
+                  f"[Master Sheet]({self.bot.mk.LEGISLATURE_DOCKET})",
             inline=False,
         )
 

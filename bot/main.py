@@ -63,7 +63,7 @@ all_extensions = {
     "bot.module.legislature",
     "bot.module.laws",
     "bot.module.ministry",
-    "bot.module.supremecourt",
+    #"bot.module.supremecourt",
     "bot.module.nation",
 }
 
@@ -85,7 +85,7 @@ if mk.MarkConfig.IS_MULTICIV:
             "bot.module.legislature",
             "bot.module.laws",
             "bot.module.ministry",
-            "bot.module.supremecourt",
+            #"bot.module.supremecourt",
             "bot.module.nation",
         }
 
