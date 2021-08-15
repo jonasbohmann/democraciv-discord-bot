@@ -923,19 +923,19 @@ class Legislature(
     ):
         """Get details about a session from {LEGISLATURE_NAME}
 
-        You can filter the list of bills by their amount of sponsors. Support notation: `<`, `<=`, `=`, `==`, `!=`, `!`, `>`, `>=` followed by a number.
+        You can filter the list of bills & motions by their amount of sponsors. Support notation: `<`, `<=`, `=`, `==`, `!=`, `!`, `>`, `>=` followed by a number.
 
         **Example**
         `{PREFIX}{COMMAND}` to see details about the most recent session
         `{PREFIX}{COMMAND} 9` to see details about Session #9
 
         **Example with sponsor filter**
-        `{PREFIX}{COMMAND} >1` to see details about the most recent session, but only show bills that have more than 1 sponsor
-        `{PREFIX}{COMMAND} >=2` to see details about the most recent session, but only show bills that have more than or exactly 2 sponsors
-        `{PREFIX}{COMMAND} =5` to see details about the most recent session, but only show bills that have exactly 5 sponsors
+        `{PREFIX}{COMMAND} >1` to see details about the most recent session, but only show bills & motions that have more than 1 sponsor
+        `{PREFIX}{COMMAND} >=2` to see details about the most recent session, but only show bills & motions that have more than or exactly 2 sponsors
+        `{PREFIX}{COMMAND} =5` to see details about the most recent session, but only show bills & motions that have exactly 5 sponsors
 
-        `{PREFIX}{COMMAND} 9 =1` to see details about Session #9, but only show bills that have exactly 1 sponsor
-        `{PREFIX}{COMMAND} 21 >=1` to see details about Session #21, but only show bills that have more than or exactly 1 sponsor
+        `{PREFIX}{COMMAND} 9 =1` to see details about Session #9, but only show bills & motions that have exactly 1 sponsor
+        `{PREFIX}{COMMAND} 21 >=1` to see details about Session #21, but only show bills & motions that have more than or exactly 1 sponsor
 
         """
 
@@ -995,11 +995,25 @@ class Legislature(
             entries.append(f"**__Vote Form__**\n{session.vote_form}\n")
 
         if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
-            motions = [
-                (await Motion.convert(ctx, m)).formatted for m in session.motions
-            ]
-            pretty_motions = motions or ["-"]
-            entries.append(f"**__Submitted Motions ({len(motions)})__**")
+            motions = [(await Motion.convert(ctx, m)) for m in session.motions]
+
+            amount_of_all_motions = len(motions)
+
+            if sponsor_filter:
+                motions = list(filter(filter_func, motions))
+
+            pretty_motions = [
+                f"{m.formatted} ({len(m.sponsors)} sponsor{'s' if len(m.sponsors) != 1 else ''})"
+                for m in motions
+            ] or ["-"]
+            m_amount = (
+                f"{len(motions)}/{amount_of_all_motions}"
+                if sponsor_filter
+                else amount_of_all_motions
+            )
+            entries.append(
+                f"**__Submitted Motions {'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'} ({m_amount})__**"
+            )
 
             last_motion = pretty_motions.pop()
             last_motion += "\n"
@@ -1019,9 +1033,9 @@ class Legislature(
 
         if not sponsor_filter:
             entries.append(
-                f"*You can filter the list of submitted bills of a session by their amount of sponsors. "
+                f"*You can filter the list of submitted bills & motions of a session by their amount of sponsors. "
                 f"For example, using `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session >=2` "
-                f"would only show bills that have 2 or more sponsors. See the help page of this command "
+                f"would only show bills & motions that have 2 or more sponsors. See the help page of this command "
                 f"for more information.*\n"
             )
 
