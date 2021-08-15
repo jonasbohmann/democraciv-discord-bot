@@ -60,10 +60,10 @@ all_extensions = {
     "bot.ext.democracivbank.bank",
     "bot.module.roles",
     "bot.module.parties",
-    #"bot.module.legislature",
-    #"bot.module.laws",
-    #"bot.module.ministry",
-    #"bot.module.supremecourt",
+    # "bot.module.legislature",
+    # "bot.module.laws",
+    # "bot.module.ministry",
+    # "bot.module.supremecourt",
     "bot.module.nation",
 }
 
@@ -82,10 +82,10 @@ if mk.MarkConfig.IS_MULTICIV:
     else:
         initial_extensions = initial_extensions - {
             "bot.module.parties",
-            #"bot.module.legislature",
-            #"bot.module.laws",
-            #"bot.module.ministry",
-            #"bot.module.supremecourt",
+            # "bot.module.legislature",
+            # "bot.module.laws",
+            # "bot.module.ministry",
+            # "bot.module.supremecourt",
             "bot.module.nation",
         }
 

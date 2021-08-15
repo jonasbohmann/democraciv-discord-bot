@@ -150,7 +150,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         description = ""
 
         embed = text.SafeEmbed(
-            description=f"{description}\n\n[Constitution]({self.bot.mk.CONSTITUTION})\n"
+            description=f"{description}\n\n[Constitution of the North Sea Alliance]({self.bot.mk.CONSTITUTION})\n[North Sea Naval Service Operational Handbook](https://docs.google.com/document/d/1rvzn1YzNFtH_P153GpwW6JPhxPEcamyo_o4A1U5kWoo/edit?usp=sharing)\n"
             f"[Wiki](https://reddit.com/r/democraciv/wiki/mk9/nsa)"
         )
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
@@ -163,6 +163,14 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         parties = await self.bot.db.fetchval("SELECT COUNT(id) FROM party")
         embed.add_field(name="Political Parties", value=parties)
+
+        try:
+            board_of_admiralty = self.bot.get_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+            fmt = [m.mention for m in board_of_admiralty.members] or ["-"]
+            embed.add_field(name="Board of Admiralty", value="\n".join(fmt), inline=False)
+        except exceptions.RoleNotFoundError:
+            pass
+
         await ctx.send(embed=embed)
 
     @nation.command(name="admin")
