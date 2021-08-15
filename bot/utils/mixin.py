@@ -131,7 +131,7 @@ class GovernmentMixin:
 
             view = ReadDocumentView(ctx=ctx)
             await ctx.send(embed=embed, view=view)
-            do_continue, mode = await view.prompt()
+            do_continue, mode = await view.prompt(silent=True)
             # followup = None
 
             if mode == "private":
