@@ -94,6 +94,13 @@ def tag_check():
     return commands.check(check)
 
 
+def is_citizen_if_multiciv():
+    if not mk.MarkConfig.IS_MULTICIV:
+        return commands.check(lambda _: True)
+
+    return has_democraciv_role(mk.DemocracivRole.NATION_CITIZEN)
+
+
 def moderation_or_nation_leader():
     if mk.MarkConfig.IS_MULTICIV:
         return has_any_democraciv_role(

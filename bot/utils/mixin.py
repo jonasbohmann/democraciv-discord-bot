@@ -15,7 +15,7 @@ class ReadDocumentView(text.PromptView):
 
     webhook = None
 
-    #async def interaction_check(self, interaction: discord.Interaction) -> bool:
+    # async def interaction_check(self, interaction: discord.Interaction) -> bool:
     #    return True
 
     @discord.ui.button(
@@ -129,7 +129,7 @@ class GovernmentMixin:
             do_continue = await view.prompt(silent=True)
             # followup = None
 
-            #if mode == "private":
+            # if mode == "private":
             #    # followup = view.webhook
             #    return
 
