@@ -145,7 +145,7 @@ class GovernmentMixin:
                 )
                 embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
 
-        await ctx.send(embed=embed)
+            await ctx.send(embed=embed)
 
     async def _show_bill_text(self, ctx, bill: models.Bill, *, ephemeral_webhook=None):
         entries = bill.content.splitlines()
