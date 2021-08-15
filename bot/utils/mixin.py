@@ -19,7 +19,7 @@ class ReadDocumentView(text.PromptView):
     #    return True
 
     @discord.ui.button(
-        label="Read Document", style=discord.ButtonStyle.primary, emoji="\U0001f4c3"
+        label="Read Document", style=discord.ButtonStyle.grey, emoji="\U0001f4c3"
     )
     async def on_button(self, button, interaction):
         self.result = True
