@@ -7,6 +7,7 @@ Based on RoboDanny by Rapptz: https://github.com/Rapptz/RoboDanny/blob/rewrite/L
 """
 
 import asyncio
+import textwrap
 
 import discord
 
@@ -195,10 +196,46 @@ class CogHelpPageSource(menus.ListPageSource):
         return embed
 
 
+class HelpSelect(discord.ui.Select):
+    def __init__(self, menu, *args, **kwargs):
+        self.menu: HelpMenu = menu
+        super().__init__(*args, **kwargs)
+
+    async def callback(self, interaction):
+        cog = self.values[0]
+        await self.menu.ctx.send_help(cog)
+
+
 class HelpMenu(Pages, inherit_buttons=False):
     def __init__(self, source, *, send_intro=True):
         super().__init__(source)
         self.send_intro = send_intro
+        self.is_bot_help = isinstance(source, BotHelpPageSource)
+
+    def build_view(self):
+        view = super().build_view()
+
+        if view and self.is_bot_help:
+            options = [
+                discord.SelectOption(
+                    label=cog.qualified_name,
+                    description=textwrap.shorten(
+                        cog.description, width=100, placeholder="..."
+                    ),
+                    value=name,
+                )
+                for name, cog in sorted(self.bot.cogs.items(), key=lambda x: x[0])
+                if not cog.hidden
+            ]
+            view.add_item(
+                HelpSelect(
+                    self,
+                    options=options,
+                    placeholder="Select a category to get help for",
+                )
+            )
+
+        return view
 
     async def send_initial_message(self, ctx, channel):
         if not self.send_intro:
@@ -238,7 +275,7 @@ class HelpMenu(Pages, inherit_buttons=False):
         # The call here is safe because it's guarded by skip_if
         await self.show_page(self._source.get_max_pages() - 1)
 
-    @menus.button(config.HELP_NUMBERS, position=menus.Last(1.5), lock=False)
+    # @menus.button(config.HELP_NUMBERS, position=menus.Last(1.5), lock=False)
     async def numbered_page(self, payload: discord.Interaction):
         """lets you type a page number to go to"""
         if self.input_lock.locked():
