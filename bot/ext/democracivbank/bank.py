@@ -1,3 +1,4 @@
+import collections
 import datetime
 import sys
 import textwrap
@@ -501,16 +502,19 @@ class Bank(context.CustomCog):
 
             desc.append(f"{name}\n*{account['iban']}*\n```diff\n+ {amount}```")
 
-            try:
-                total_per_currency[
-                    account["pretty_balance_currency"]
-                ] += decimal.Decimal(account["balance"])
-            except KeyError:
-                total_per_currency[
-                    account["pretty_balance_currency"]
-                ] = decimal.Decimal(account["balance"])
+            if not account["is_reserve"]:
+                try:
+                    total_per_currency[
+                        account["pretty_balance_currency"]
+                    ] += decimal.Decimal(account["balance"])
+                except KeyError:
+                    total_per_currency[
+                        account["pretty_balance_currency"]
+                    ] = decimal.Decimal(account["balance"])
 
-        prepend_desc = ["**Total Balance per Currency**"]
+        prepend_desc = [
+            "**Total Balance per Currency**\n*Reserve accounts aren't counted*"
+        ]
         for cur, amount in total_per_currency.items():
             prepend_desc.append(f"{cur}: {amount}")
 
@@ -685,17 +689,20 @@ class Bank(context.CustomCog):
         response = await self.request(BankRoute("GET", "accounts/currency/BNC"))
         json = await response.json()
         desc = []
+        accounts_by_person = collections.defaultdict(list)
 
         for account in json:
-            opened_on = datetime.datetime.fromisoformat(
-                account["created_on"].replace("Z", "+00:00")
+            fmt = (
+                f"{account['iban']}: "
+                f"`{self.get_currency(account['balance_currency']).with_amount(account['balance'])}`"
             )
-            desc.append(
-                f"__**{account['iban']}**__\n"
-                f"Owner: {discord.utils.escape_markdown(account['pretty_holder'])} {'*(Person)*' if account['individual_holder'] else '*(Organization)*'}\n"
-                f"Balance: {self.get_currency(account['balance_currency']).with_amount(account['balance'])}\n"
-                f"Opened on: {discord.utils.format_dt(opened_on, 'F')}\n"
-            )
+
+            accounts_by_person[account["pretty_holder"]].append(fmt)
+
+        for person, accounts in accounts_by_person.items():
+            person = discord.utils.remove_markdown(person)
+            fmt = "\n".join(accounts)
+            desc.append(f"**__{person}__**\n{fmt}\n")
 
         pages = paginator.SimplePages(
             entries=desc,
