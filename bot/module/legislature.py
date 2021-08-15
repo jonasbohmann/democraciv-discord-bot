@@ -2045,6 +2045,7 @@ class Legislature(
     @legislature.command(name="submit")
     @commands.cooldown(1, 15, commands.BucketType.user)
     @commands.max_concurrency(2, per=commands.BucketType.guild, wait=False)
+    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
     @checks.is_democraciv_guild()
     @checks.is_citizen_if_multiciv()
     async def submit(self, ctx):
@@ -2693,6 +2694,7 @@ class Legislature(
         name="sponsor", aliases=["second", "sp", "cosponsor"], hidden=True
     )
     @checks.is_citizen_if_multiciv()
+    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
     async def sponsor(self, ctx, *, bill_or_motion_ids):
         """Show your support for one or multiple bills or motions by sponsoring them
 
