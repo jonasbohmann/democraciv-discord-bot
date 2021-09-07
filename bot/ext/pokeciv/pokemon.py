@@ -13,8 +13,9 @@ import logging
 
 from PIL import Image
 from discord.ext import commands
+from fuzzywuzzy import process
 
-from bot.utils import context, checks, text, exceptions, paginator
+from bot.utils import context, checks, text, exceptions, paginator, converter
 from bot.config import config, mk
 
 PokeInfo = collections.namedtuple(
@@ -22,10 +23,21 @@ PokeInfo = collections.namedtuple(
 )
 
 
-class PokeballConverter(commands.Converter):
+class PokeballConverter(commands.Converter, converter.FuzzyableMixin):
+    model = "Pokéball"
+
+    async def get_fuzzy_source(self, ctx, argument: str):
+        choices = ctx.bot.get_cog("Pokémon").pokeball_lookup.keys()
+        match = process.extract(argument, choices, limit=5)
+
+        if not match:
+            return []
+
+        return [m for m, _ in match]
+
     async def convert(self, ctx, argument: str):
-        argument = argument.lower()
-        if argument not in {"pokeball", "greatball", "ultraball", "masterball"}:
+        argument = argument.title()
+        if argument not in ctx.bot.get_cog("Pokémon").pokeball_lookup.keys():
             raise commands.BadArgument(
                 f"{config.NO} That's not a ball you can throw. Try `pokeball`, "
                 f"`greatball`, `ultraball` or `masterball`."
@@ -49,10 +61,10 @@ class Pokemon(context.CustomCog, name="Pokémon"):
         }
 
         self.pokeball_lookup = {
-            "pokeball": ["Tier 1"],
-            "greatball": ["Tier 1", "Tier 2"],
-            "ultraball": ["Tier 2", "Tier 3"],
-            "masterball": ["Tier 3", "Tier 4", "Legendary"],
+            "Pokeball": ["Tier 1"],
+            "Greatball": ["Tier 1", "Tier 2"],
+            "Ultraball": ["Tier 2", "Tier 3"],
+            "Masterball": ["Tier 3", "Tier 4", "Legendary"],
         }
 
         self.load_dex()
@@ -222,7 +234,7 @@ class Pokemon(context.CustomCog, name="Pokémon"):
             return None
 
     @pokemon.command()
-    async def throw(self, ctx, ball: PokeballConverter):
+    async def throw(self, ctx, ball: converter.Fuzzy[PokeballConverter]):
         """Throw a Pokéball and catch some randomly spawning Pokémon"""
 
         async with ctx.typing():
@@ -234,6 +246,7 @@ class Pokemon(context.CustomCog, name="Pokémon"):
             name="Tall Grass in the Hatima Region", icon_url=self.bot.mk.NATION_ICON_URL
         )
         embed.set_image(url="attachment://pokemon.png")
+        embed.set_footer(text=ball)
 
         poke_info = {}
 
@@ -390,7 +403,7 @@ class Pokemon(context.CustomCog, name="Pokémon"):
             for ball in self.pokeball_lookup.keys():
                 counted = self._simulate_ball_throw(ball, times)
 
-                fmt.append(f"__**{ball.title()}**__")
+                fmt.append(f"__**{ball}**__")
 
                 for mon, tries in counted:
                     fmt.append(f"{mon}: {tries}x")
