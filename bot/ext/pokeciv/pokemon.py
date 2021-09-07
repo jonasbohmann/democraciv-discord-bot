@@ -1,5 +1,6 @@
 import collections
 import io
+import itertools
 import pathlib
 import textwrap
 import traceback
@@ -13,7 +14,7 @@ import logging
 from PIL import Image
 from discord.ext import commands
 
-from bot.utils import context, checks, text, exceptions
+from bot.utils import context, checks, text, exceptions, paginator
 from bot.config import config, mk
 
 PokeInfo = collections.namedtuple(
@@ -46,6 +47,14 @@ class Pokemon(context.CustomCog, name="Pokémon"):
             "Tier 4": [],
             "Legendary": [],
         }
+
+        self.pokeball_lookup = {
+            "pokeball": ["Tier 1"],
+            "greatball": ["Tier 1", "Tier 2"],
+            "ultraball": ["Tier 2", "Tier 3"],
+            "masterball": ["Tier 3", "Tier 4", "Legendary"],
+        }
+
         self.load_dex()
         self._cached_poke_info: typing.Dict[str, PokeInfo] = {}
 
@@ -216,15 +225,8 @@ class Pokemon(context.CustomCog, name="Pokémon"):
     async def throw(self, ctx, ball: PokeballConverter):
         """Throw a Pokéball and catch some randomly spawning Pokémon"""
 
-        lookup = {
-            "pokeball": ["Tier 1"],
-            "greatball": ["Tier 1", "Tier 2"],
-            "ultraball": ["Tier 2", "Tier 3"],
-            "masterball": ["Tier 3", "Tier 4", "Legendary"],
-        }
-
         async with ctx.typing():
-            result = self.throw_ball(lookup[ball])  # type: ignore
+            result = self.throw_ball(self.pokeball_lookup[ball])  # type: ignore
             file = await self.combined_image(result)
 
         embed = text.SafeEmbed()
@@ -352,6 +354,53 @@ class Pokemon(context.CustomCog, name="Pokémon"):
         await ctx.send(
             f"{config.YES} The image for `{pokemon}` was updated successfully."
         )
+
+    def _simulate_ball_throw(self, ball: str, times: int):
+        throws = []
+
+        for _ in range(times):
+            throws.append(self.throw_ball(self.pokeball_lookup[ball]))  # type: ignore
+
+        flat_throws = itertools.chain.from_iterable(throws)
+        return collections.Counter(flat_throws).most_common()
+
+    @pokemon.command()
+    async def simulate(
+        self, ctx, ball: typing.Optional[PokeballConverter] = None, times=1000
+    ):
+        """Repeatedly simulate the throwing of pokéballs"""
+
+        if times < 1 or times >= 1000000:
+            return await ctx.send(
+                f"{config.NO} You can only simulate between 1 and 1000000 throws."
+            )
+
+        fmt = []
+
+        if ball:
+            author = f"Simulated Throw of {times} {ball.title()}s"  # type: ignore
+            counted = self._simulate_ball_throw(ball, times)  # type: ignore
+
+            for mon, tries in counted:
+                fmt.append(f"{mon}: {tries}x")
+
+        else:
+            author = f"{times} Simulated Throws of each Ball"  # type: ignore
+
+            for ball in self.pokeball_lookup.keys():
+                counted = self._simulate_ball_throw(ball, times)
+
+                fmt.append(f"__**{ball.title()}**__")
+
+                for mon, tries in counted:
+                    fmt.append(f"{mon}: {tries}x")
+
+                fmt.append("\n")
+
+        pages = paginator.SimplePages(
+            entries=fmt, author=author, icon=self.bot.mk.NATION_ICON_URL
+        )
+        await pages.start(ctx)
 
 
 def setup(bot):
