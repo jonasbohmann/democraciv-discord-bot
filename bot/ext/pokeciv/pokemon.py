@@ -13,7 +13,7 @@ import logging
 from PIL import Image
 from discord.ext import commands
 
-from bot.utils import context, checks, text
+from bot.utils import context, checks, text, exceptions
 from bot.config import config, mk
 
 PokeInfo = collections.namedtuple(
@@ -103,6 +103,10 @@ class Pokemon(context.CustomCog, name="Pokémon"):
         pokemon_name = pokemon_name.lower()
         img = None
 
+        # todo jonas - move all Image.open in executor
+
+        # todo jonas - only use one image provider?
+
         try:
             return Image.open(self.path / "pokemon_imgs" / f"{pokemon_name}.png")
 
@@ -148,6 +152,7 @@ class Pokemon(context.CustomCog, name="Pokémon"):
 
         indent = 0
         for pkmn in images:
+            # todo jonas - pre convert all images to RGBA
             result.paste(
                 pkmn, (indent, result.height - pkmn.size[1]), pkmn.convert("RGBA")
             )
@@ -283,9 +288,35 @@ class Pokemon(context.CustomCog, name="Pokémon"):
 
         return attachment_bytes
 
-    @pokemon.command()
+    @pokemon.group(
+        aliases=["pokédex", "dex"], case_insensitive=True, invoke_without_command=True
+    )
+    async def pokedex(self, ctx):
+        """See what Pokémon and tiers there are in the Pokédex"""
+
+        try:
+            role = self.bot.get_democraciv_role(mk.DemocracivRole.POKECIV_BOT_MANAGER)
+            role = role.name
+        except exceptions.RoleNotFoundError:
+            role = "Pokéciv Bot Manager"
+
+        embed = text.SafeEmbed(
+            description=f"In order to update the Pokédex, people with the {role} role "
+            f"can use my `{config.BOT_PREFIX}pk dex update` command."
+        )
+        embed.set_author(
+            name="The Pokédex of the Hatima Region",
+            icon_url=self.bot.mk.NATION_ICON_URL,
+        )
+
+        for tier, pokemom in self.dex.items():
+            embed.add_field(name=tier, value=", ".join(pokemom) or "-", inline=False)
+
+        await ctx.send(embed=embed)
+
+    @pokedex.command()
     @checks.has_democraciv_role(mk.DemocracivRole.POKECIV_BOT_MANAGER)
-    async def updatepokedex(self, ctx: context.CustomContext):
+    async def update(self, ctx: context.CustomContext):
         """Update the Pokédex by uploading a .csv file"""
         attachment_bytes = await self._get_attachment(
             ctx,

@@ -104,11 +104,11 @@ class PermissionSelectorMenu(menus.Menu):
         send = "Deny" if self.overwrites.send_messages else "Allow"
         embed = text.SafeEmbed(
             title=f"{config.USER_INTERACTION_REQUIRED}  Which Permissions in #{self.channel.name} do you want "
-                  f"to change?",
+            f"to change?",
             description=f"Select as many things as you want, then click the {config.YES} button to continue, "
-                        f"or {config.NO} to cancel.\n\n"
-                        f":one: {read} Read Messages Permission for `{self.role}` in {self.channel.mention}\n"
-                        f":two: {send} Send Messages Permission for `{self.role}` in {self.channel.mention}",
+            f"or {config.NO} to cancel.\n\n"
+            f":one: {read} Read Messages Permission for `{self.role}` in {self.channel.mention}\n"
+            f":two: {send} Send Messages Permission for `{self.role}` in {self.channel.mention}",
         )
         return await ctx.send(embed=embed)
 
@@ -147,10 +147,9 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
     async def nation(self, ctx):
         """{NATION_NAME}"""
 
-
         embed = text.SafeEmbed(
             description=f"[PokéCiv Charter](https://docs.google.com/document/d/1nwItBFQmHPrcQ_QwyVQzIX47I4RRSFa7JxkjGaOUalQ/edit)\n[Code of Metagame and Procedure]({self.bot.mk.CONSTITUTION})\n[Master Sheet](https://docs.google.com/spreadsheets/d/1mfYh1lLsQR955NwxdzvUoX9PXZYFeWP62h0tSM_DUdc/edit#gid=616614951)\n"
-                        f"[Wiki](https://reddit.com/r/democraciv/wiki/pokeciv)"
+            f"[Wiki](https://reddit.com/r/democraciv/wiki/pokeciv)"
         )
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
 
@@ -176,12 +175,14 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         embed.add_field(
             name="Government",
             value=f"{speaker}\n"
-                  f"Amount of {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL}: {legislators}",
+            f"Amount of {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL}: {legislators}",
             inline=False,
         )
 
         try:
-            role = self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER)  # elite four
+            role = self.bot.get_democraciv_role(
+                mk.DemocracivRole.MINISTER
+            )  # elite four
             fmt = [m.mention for m in role.members] or ["-"]
             embed.add_field(name="The Elite Four", value="\n".join(fmt))
         except exceptions.RoleNotFoundError:
@@ -197,11 +198,11 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         embed = text.SafeEmbed(
             description=f"Nation Admins are allowed to make roles and "
-                        f"channels on the {self.bot.dciv.name} server that are "
-                        f"specific for their nation (`{p}help Nation`).\n\nAdditionally, they are "
-                        f"allowed to create, edit and delete political parties "
-                        f"(`{p}help Political Parties`).\n\nNation Admins can also pin messages "
-                        f"in every category that belongs to their nation."
+            f"channels on the {self.bot.dciv.name} server that are "
+            f"specific for their nation (`{p}help Nation`).\n\nAdditionally, they are "
+            f"allowed to create, edit and delete political parties "
+            f"(`{p}help Political Parties`).\n\nNation Admins can also pin messages "
+            f"in every category that belongs to their nation."
         )
 
         embed.set_author(name=self.bot.mk.NATION_NAME, icon_url=self.bot.mk.safe_flag)
@@ -282,11 +283,11 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
     @checks.moderation_or_nation_leader()
     @nation_role_prefix_not_blank()
     async def toggle_role(
-            self,
-            ctx,
-            people: commands.Greedy[CIMemberNoBot],
-            *,
-            role: Fuzzy[NationRoleConverter],
+        self,
+        ctx,
+        people: commands.Greedy[CIMemberNoBot],
+        *,
+        role: Fuzzy[NationRoleConverter],
     ):
         """Give someone a role, or remove one from them
 
@@ -387,7 +388,7 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
     @nation.command(name="permissions", aliases=["perms", "permission", "perm"])
     @checks.moderation_or_nation_leader()
     async def set_channel_perms(
-            self, ctx, *, channel: Fuzzy[CaseInsensitiveTextChannel] = None
+        self, ctx, *, channel: Fuzzy[CaseInsensitiveTextChannel] = None
     ):
         """Toggle Read and/or Send Messages permissions for a role or person in one of your nation's channels"""
 
