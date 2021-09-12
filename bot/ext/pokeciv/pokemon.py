@@ -1,3 +1,4 @@
+import asyncio
 import collections
 import io
 import itertools
@@ -10,6 +11,7 @@ import discord
 import random
 import typing
 import logging
+import jishaku.codeblocks
 
 from PIL import Image
 from discord.ext import commands
@@ -347,6 +349,14 @@ class Pokemon(context.CustomCog, name="Pokémon"):
 
         self.load_dex()
         await ctx.send(f"{config.YES} The pokédex was updated successfully.")
+
+    @pokemon.command(aliases=['pull', 'reload'], hidden=True)
+    @checks.has_democraciv_role(mk.DemocracivRole.POKECIV_BOT_MANAGER)
+    async def update(self, ctx):
+        """Pull from GitHub & reload the Pokemon cog"""
+        await ctx.invoke(self.bot.get_command("jsk git"), argument=jishaku.codeblocks.codeblock_converter("pull"))
+        await asyncio.sleep(7)
+        await ctx.invoke(self.bot.get_command("jsk reload"), ("bot.ext.pokeciv.pokemon",))
 
     @pokemon.command()
     @checks.has_democraciv_role(mk.DemocracivRole.POKECIV_BOT_MANAGER)
