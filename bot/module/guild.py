@@ -788,7 +788,7 @@ class _Guild(context.CustomCog, name="Server"):
                 return (
                     (w.user and w.user.id == self.bot.user.id)
                     or w.name == self.bot.user.name
-                    or w.avatar == self.bot.user.avatar
+                    or w.avatar == self.bot.user.display_avatar
                 )
 
             webhook = discord.utils.find(pred, channel_webhooks)

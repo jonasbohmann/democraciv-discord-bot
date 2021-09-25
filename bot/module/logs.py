@@ -129,7 +129,7 @@ class _Log(context.CustomCog):
             member.guild,
             ":tada:  Person Joined",
             embed_fields,
-            thumbnail=member.avatar.url,
+            thumbnail=member.display_avatar.url,
             reason="logging_member_join_leave",
         )
 
@@ -141,7 +141,7 @@ class _Log(context.CustomCog):
             member.guild,
             ":no_pedestrians:  Person Left",
             embed_fields,
-            thumbnail=member.avatar.url,
+            thumbnail=member.display_avatar.url,
             reason="logging_member_join_leave",
         )
 
@@ -158,7 +158,7 @@ class _Log(context.CustomCog):
                 before.guild,
                 ":arrows_counterclockwise:  Nickname Changed",
                 embed_fields,
-                thumbnail=before.avatar.url,
+                thumbnail=before.display_avatar.url,
                 reason="logging_member_nickname_change",
             )
 
@@ -180,7 +180,7 @@ class _Log(context.CustomCog):
                     before.guild,
                     ":sunglasses:  Role given to Person",
                     embed_fields,
-                    thumbnail=before.avatar.url,
+                    thumbnail=before.display_avatar.url,
                     reason="logging_member_role_change",
                 )
 
@@ -201,7 +201,7 @@ class _Log(context.CustomCog):
                     before.guild,
                     ":zipper_mouth:  Role removed from Person",
                     embed_fields,
-                    thumbnail=before.avatar.url,
+                    thumbnail=before.display_avatar.url,
                     reason="logging_member_role_change",
                 )
 
@@ -213,7 +213,7 @@ class _Log(context.CustomCog):
             guild,
             ":no_entry:  Person Banned",
             embed_fields,
-            thumbnail=user.avatar.url,
+            thumbnail=user.display_avatar.url,
             to_owner=True,
             reason="logging_ban_unban",
         )
@@ -226,7 +226,7 @@ class _Log(context.CustomCog):
             guild,
             ":dove:  Person Unbanned",
             embed_fields,
-            thumbnail=user.avatar.url,
+            thumbnail=user.display_avatar.url,
             to_owner=True,
             reason="logging_ban_unban",
         )

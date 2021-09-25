@@ -23,15 +23,6 @@ class Moderation(context.CustomCog):
         is_alt_chance = 0
         factor_details = ""
 
-        default_avatars = [
-            "https://cdn.discordapp.com/embed/avatars/0.png",
-            "https://cdn.discordapp.com/embed/avatars/1.png",
-            "https://cdn.discordapp.com/embed/avatars/2.png",
-            "https://cdn.discordapp.com/embed/avatars/3.png",
-            "https://cdn.discordapp.com/embed/avatars/4.png",
-            "https://cdn.discordapp.com/embed/avatars/5.png",
-        ]
-
         if member.bot:
             return 0, "Bot Account (0%)"
 
@@ -45,7 +36,7 @@ class Moderation(context.CustomCog):
             # If the account is new, check if the they bothered to change the default avatar
             is_alt_chance += 0.1
             factor_details += "Less than 48 hours since registration (+10%)\n"
-            if str(member.avatar.url) in default_avatars:
+            if member.avatar is None:
                 is_alt_chance += 0.55
                 factor_details += "Default avatar (+55%)\n"
             if hours_since <= 24:

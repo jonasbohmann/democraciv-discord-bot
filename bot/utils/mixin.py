@@ -86,7 +86,7 @@ class GovernmentMixin:
         if obj.submitter is not None:
             embed.set_author(
                 name=f"Submitted by {obj.submitter.name}",
-                icon_url=obj.submitter.avatar.url,
+                icon_url=obj.submitter.display_avatar.url,
             )
             submitted_by_value = f"{obj.submitter.mention} {obj.submitter}"
         else:
@@ -242,7 +242,7 @@ class GovernmentMixin:
             members = [member.id]
             empty = f"{name} hasn't {submit_term} any {model.__name__.lower()}s yet."
             title = f"{model.__name__}s from {name}"
-            icon = member.avatar.url
+            icon = member.display_avatar.url
 
         if model is models.Bill:
             objs_from_thing = await self.bot.db.fetch(

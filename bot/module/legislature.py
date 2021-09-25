@@ -337,7 +337,7 @@ class Legislature(
             name = member_or_party.display_name
             empty = f"{name} hasn't submitted anything yet."
             title = f"Bills & Motions from {name}"
-            icon = member_or_party.avatar.url
+            icon = member_or_party.display_avatar.url
 
         if things:
             things.insert(
@@ -2805,7 +2805,7 @@ class Legislature(
 
         else:
             ids = [person_or_political_party.id]
-            icon_url = person_or_political_party.avatar.url
+            icon_url = person_or_political_party.display_avatar.url
             name = (
                 f"{person_or_political_party.display_name} in the {self.bot.mk.NATION_ADJECTIVE} "
                 f"{self.bot.mk.LEGISLATURE_NAME}"
