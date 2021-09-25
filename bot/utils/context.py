@@ -91,7 +91,7 @@ class CustomContext(commands.Context):
 
     @property
     def author_icon(self):
-        return self.author.avatar.url
+        return self.author.display_avatar.url
 
     def _wait_for_message_check(self):
         def check(message):

@@ -251,7 +251,7 @@ class DemocracivBot(commands.Bot):
         try:
             return self._avatar_bytes
         except AttributeError:
-            self._avatar_bytes = avatar = await self.user.avatar.read()
+            self._avatar_bytes = avatar = await self.user.display_avatar.read()
             return avatar
 
     def get_democraciv_role(
