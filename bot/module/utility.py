@@ -596,7 +596,7 @@ class Utility(context.CustomCog):
                 inline=False,
             )
 
-        embed.set_thumbnail(url=member.avatar.url)
+        embed.set_thumbnail(url=member.display_avatar.url)
         await ctx.send(embed=embed)
 
     @commands.command(name="avatar", aliases=["pfp", "avy"])
@@ -619,7 +619,7 @@ class Utility(context.CustomCog):
         """
 
         member: discord.Member = person or ctx.author
-        avatar_png = member.avatar.with_size(4096).url
+        avatar_png = member.display_avatar.with_size(4096).url
         embed = text.SafeEmbed()
         embed.set_image(url=avatar_png)
         embed.set_author(name=member, icon_url=avatar_png, url=avatar_png)
