@@ -634,7 +634,7 @@ class NPC(CustomCog):
 
         pages = paginator.SimplePages(
             author=f"{member.display_name}'s NPCs",
-            icon=member.avatar.url,
+            icon=member.display_avatar.url,
             entries=pretty_npcs,
             per_page=20,
             empty_message="This person hasn't made any NPCs yet.",

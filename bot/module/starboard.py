@@ -260,7 +260,7 @@ class Starboard(context.CustomCog):
         embed.timestamp = message.created_at
         embed.set_author(
             name=f"{message.author.display_name} in #{message.channel.name}",
-            icon_url=message.author.avatar.url,
+            icon_url=message.author.display_avatar.url,
         )
         embed.add_field(
             name="Original", value=f"[Jump]({message.jump_url})", inline=False
@@ -553,7 +553,7 @@ class Starboard(context.CustomCog):
 
     async def star_member_stats(self, ctx, member):
         embed = text.SafeEmbed(colour=0xFFAC33)
-        embed.set_author(name=member.display_name, icon_url=member.avatar.url)
+        embed.set_author(name=member.display_name, icon_url=member.display_avatar.url)
 
         stars_received = await self.bot.db.fetchval(
             """SELECT COUNT(*)

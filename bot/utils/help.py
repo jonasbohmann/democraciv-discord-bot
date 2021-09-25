@@ -245,7 +245,7 @@ class HelpMenu(Pages, inherit_buttons=False):
         embed.description = BOT_INTRO
         embed.set_author(
             name=f"Made by {ctx.bot.owner}",
-            icon_url=ctx.bot.owner.avatar.url,
+            icon_url=ctx.bot.owner.display_avatar.url,
         )
         self.current_page = -1
         return await channel.send(embed=embed)

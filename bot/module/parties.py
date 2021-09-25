@@ -289,7 +289,7 @@ class Party(context.CustomCog, name="Political Parties"):
             return
 
         embed = text.SafeEmbed(description=message)
-        embed.set_author(name=before, icon_url=before.avatar.url)
+        embed.set_author(name=before, icon_url=before.display_avatar.url)
 
         for leader in party.leaders:
             if leader.id == before.id:

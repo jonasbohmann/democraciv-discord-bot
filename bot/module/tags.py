@@ -119,7 +119,7 @@ class Tags(context.CustomCog):
             empty_message = "There are no tags on this server."
         else:
             author = "All Global Tags"
-            icon = self.bot.user.avatar.url
+            icon = self.bot.user.display_avatar.url
             empty_message = "There are no global tags yet."
 
         if len(pretty_tags) < 2:
@@ -189,7 +189,7 @@ class Tags(context.CustomCog):
         pages = paginator.SimplePages(
             entries=pretty_tags,
             author=f"Tags from {member.display_name}",
-            icon=member.avatar.url,
+            icon=member.display_avatar.url,
             empty_message=f"{member} hasn't made any tags on this server yet.",
             per_page=12,
         )
@@ -466,7 +466,7 @@ class Tags(context.CustomCog):
             embed.add_field(name="Author", value=tag.author.mention, inline=False)
             embed.set_author(
                 name=tag.author.name,
-                icon_url=tag.author.avatar.url,
+                icon_url=tag.author.display_avatar.url,
             )
 
         elif isinstance(tag.author, discord.User):
@@ -479,7 +479,7 @@ class Tags(context.CustomCog):
             )
             embed.set_author(
                 name=tag.author.name,
-                icon_url=tag.author.avatar.url,
+                icon_url=tag.author.display_avatar.url,
             )
 
         elif tag.author is None:
@@ -696,7 +696,7 @@ class Tags(context.CustomCog):
                     """
 
         guild_id = 0 if not ctx.guild else ctx.guild.id
-        icon = self.bot.user.avatar.url if not ctx.guild else ctx.guild_icon
+        icon = self.bot.user.display_avatar.url if not ctx.guild else ctx.guild_icon
         tags = await self.bot.db.fetch(db_query, query.lower(), guild_id)
         pretty_names = (
             {}
@@ -742,7 +742,7 @@ class Tags(context.CustomCog):
         )
 
         embed = text.SafeEmbed()
-        embed.set_author(name=person.display_name, icon_url=person.avatar.url)
+        embed.set_author(name=person.display_name, icon_url=person.display_avatar.url)
 
         embed.add_field(name="Amount of Tags from any Server", value=amount[0]["count"])
         embed.add_field(
