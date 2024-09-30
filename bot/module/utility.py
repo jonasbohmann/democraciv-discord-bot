@@ -964,5 +964,5 @@ class Utility(context.CustomCog):
             await ctx.reply(js["result"])
 
 
-def setup(bot):
-    bot.add_cog(Utility(bot))
+async def setup(bot):
+    await bot.add_cog(Utility(bot))

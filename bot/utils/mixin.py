@@ -1,8 +1,6 @@
 import typing
 import discord
 
-from discord.embeds import EmptyEmbed
-
 from bot.config import mk, config
 from bot.utils import exceptions, context, models, paginator, text, converter
 
@@ -236,7 +234,7 @@ class GovernmentMixin:
                 f"No member of {name} has {submit_term} a {model.__name__.lower()} yet."
             )
             title = f"{model.__name__}s from members of {name}"
-            icon = await member.get_logo() or self.bot.mk.NATION_ICON_URL or EmptyEmbed
+            icon = await member.get_logo() or self.bot.mk.NATION_ICON_URL or None
         else:
             name = member.display_name
             members = [member.id]

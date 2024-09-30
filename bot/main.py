@@ -45,7 +45,7 @@ logging.basicConfig(
 )
 
 
-BOT_VERSION = "2.4.0a"
+BOT_VERSION = "3.0.0"
 
 all_extensions = {
     "bot.module.logs",
@@ -145,13 +145,14 @@ class DemocracivBot(commands.Bot):
     def __init__(self):
         self.start_time = time.time()
         self.BOT_VERSION = BOT_VERSION
-        self.IS_DEBUG = platform.system() == "Windows"
+        self.IS_DEBUG = platform.system() in ("Windows", "Darwin")
         logging.info(f"Starting bot for {'debug' if self.IS_DEBUG else 'production'}")
 
         intents = discord.Intents.default()
         intents.typing = False
         intents.voice_states = False
         intents.members = True
+        intents.message_content = True
 
         super().__init__(
             max_messages=100 if mk.MarkConfig.IS_NATION_BOT else 1000,
@@ -168,30 +169,32 @@ class DemocracivBot(commands.Bot):
             commands.core._CaseInsensitiveDict()
         )  # case-insensitive cog names
 
+        self.db_ready = False
+        self.mk = mk.MarkConfig(self)
+        self.is_api_running = False
+
+        # for Google Apps Script
+        socket.setdefaulttimeout(600)
+
+    async def setup_hook(self) -> None:
         self.loop.create_task(self.initialize_aiohttp_session())
 
-        self.db_ready = False
         self.loop.create_task(self.connect_to_db())
 
         if config.DATABASE_DAILY_BACKUP_ENABLED and not self.IS_DEBUG:
             self.daily_db_backup.start()
 
         self.loop.create_task(self.initialize_democraciv_guild())
-        self.mk = mk.MarkConfig(self)
 
         self.loop.create_task(self.check_custom_emoji_availability())
         self.loop.create_task(self.fetch_owner())
         self.loop.create_task(self.update_guild_config_cache())
 
-        self.is_api_running = False
         self.loop.create_task(self.check_api_running(first_time=True))
-
-        # for Google Apps Script
-        socket.setdefaulttimeout(600)
 
         for extension in initial_extensions:
             try:
-                self.load_extension(extension)
+                await self.load_extension(extension)
                 logging.info(f"Successfully loaded {extension}")
             except Exception:
                 logging.error(f"Failed to load module {extension}.")
@@ -564,7 +567,7 @@ class DemocracivBot(commands.Bot):
         img.seek(0)
         return discord.File(img, filename="image.png")
 
-    @alru_cache(cache_exceptions=False)
+    @alru_cache()
     async def _make_file_from_image_link(self, url: str):
         async with self.session.get(url) as response:
             image = await response.read()
@@ -1029,7 +1032,7 @@ class DemocracivBot(commands.Bot):
 
                 return f"https://mystb.in/{key}"
 
-    @alru_cache(cache_exceptions=False)
+    @alru_cache()
     async def tinyurl(self, url: str) -> typing.Optional[str]:
         async with self.session.post(
             f"https://api.shrtco.de/v2/shorten?url={url}"

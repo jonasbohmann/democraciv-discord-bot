@@ -9,7 +9,6 @@ import asyncio
 import typing
 import discord
 
-from discord.embeds import EmptyEmbed
 from discord.ext import menus
 from discord.ext.commands import Paginator as CommandPaginator
 from discord.ext.menus.views import ViewMenuPages
@@ -23,10 +22,10 @@ class Pages(ViewMenuPages):
         self,
         source: menus.PageSource,
         *,
-        title=EmptyEmbed,
+        title=None,
         author="",
-        icon=EmptyEmbed,
-        title_url=EmptyEmbed,
+        icon=None,
+        title_url=None,
         colour=config.BOT_EMBED_COLOUR,
         thumbnail=None,
         message=None,

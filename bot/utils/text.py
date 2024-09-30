@@ -188,16 +188,16 @@ class SafeEmbed(discord.Embed):
     def clean(self):
         # called by monkey patched Messageable.send
 
-        if len(self.description) > 2048:
+        if self.description and len(self.description) > 2048:
             if self.description.endswith("```"):
                 self.description = f"{self.description[:2035]}...```"
             else:
                 self.description = f"{self.description[:2040]}..."
 
-        if len(self.title) > 256:
+        if self.title and len(self.title) > 256:
             self.title = f"{self.title[:250]}..."
 
-        if len(self.author.name) > 256:
+        if self.author and len(self.author.name) > 256:
             self.set_author(
                 name=f"{self.author.name[:250]}...",
                 url=self.author.url,
@@ -384,7 +384,7 @@ class EditModelMenu(PromptView):
 
 
 class EditSettingsWithEmojifiedLiveToggles(EditModelMenu):
-    def __init__(self, ctx, settings, description, icon=discord.Embed.Empty, **kwargs):
+    def __init__(self, ctx, settings, description, icon=None, **kwargs):
         self.icon = icon
         self.description = description
         super().__init__(

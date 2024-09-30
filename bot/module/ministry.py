@@ -15,7 +15,7 @@ class LawPassScheduler(text.AnnouncementScheduler):
             name=f"Passed Bills from the {self.bot.mk.MINISTRY_NAME}",
             icon_url=self.bot.mk.NATION_ICON_URL
             or self.bot.dciv.icon.url
-            or discord.embeds.EmptyEmbed,
+            or None,
         )
         message = [
             f"The following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"
@@ -39,7 +39,7 @@ class LawVetoScheduler(text.AnnouncementScheduler):
             name=f"The {self.bot.mk.MINISTRY_NAME} vetoed Bills",
             icon_url=self.bot.mk.NATION_ICON_URL
             or self.bot.dciv.icon.url
-            or discord.embeds.EmptyEmbed,
+            or None,
         )
         message = [
             f"The following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"
@@ -288,5 +288,5 @@ class Ministry(
     #     )
 
 
-def setup(bot):
-    bot.add_cog(Ministry(bot))
+async def setup(bot):
+    await bot.add_cog(Ministry(bot))

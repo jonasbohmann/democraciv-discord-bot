@@ -1,4 +1,4 @@
-git+https://github.com/Rapptz/discord.py@master
+discord.py
 aiodns
 cchardet
 git+https://github.com/Rapptz/discord-ext-menus@master
@@ -13,4 +13,5 @@ async-lru
 lru-dict
 fuzzywuzzy
 python-Levenshtein
+pytz
 

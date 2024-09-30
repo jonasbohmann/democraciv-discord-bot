@@ -202,5 +202,5 @@ class Selfroles(context.CustomCog):
         )
 
 
-def setup(bot):
-    bot.add_cog(Selfroles(bot))
+async def setup(bot):
+    await bot.add_cog(Selfroles(bot))

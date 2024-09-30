@@ -244,6 +244,6 @@ class Experiments(context.CustomCog):
         await pages.start(ctx)
 
 
-def setup(bot):
-    bot.add_cog(Experiments(bot))
-    bot.add_cog(Admin(bot=bot))
+async def setup(bot):
+    await bot.add_cog(Experiments(bot))
+    await bot.add_cog(Admin(bot=bot))

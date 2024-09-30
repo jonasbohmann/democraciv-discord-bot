@@ -1030,5 +1030,5 @@ class Party(context.CustomCog, name="Political Parties"):
         )
 
 
-def setup(bot):
-    bot.add_cog(Party(bot))
+async def setup(bot):
+    await bot.add_cog(Party(bot))

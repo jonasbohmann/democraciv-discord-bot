@@ -1,5 +1,6 @@
 import collections
 import datetime
+import logging
 import sys
 import textwrap
 import uuid
@@ -222,22 +223,31 @@ class Bank(context.CustomCog):
             )
 
     async def request(self, route: BankRoute, **kwargs):
-        response = await self.bot.session.request(
-            route.method,
-            route.url,
-            headers=route.headers,
-            data=kwargs.get("data", None),
-            params=kwargs.get("params", None),
-        )
-        if response.status >= 500:
-            raise BankError(
-                f"{config.NO} {self.bot.owner.mention}, something went wrong!\n`Status >= 500`"
+        try:
+            response = await self.bot.session.request(
+                route.method,
+                route.url,
+                headers=route.headers,
+                data=kwargs.get("data", None),
+                params=kwargs.get("params", None),
             )
 
-        return response
+            if response.status >= 500:
+                raise BankError(
+                    f"{config.NO} {self.bot.owner.mention}, something went wrong!\n`Status >= 500`"
+                )
+
+            return response
+        except aiohttp.ClientConnectionError:
+            logging.warning(f"cannot connect to {route.url}")
+
 
     async def _fetch_currencies(self):
         response = await self.request(BankRoute("GET", f"currencies/"))
+
+        if not response:
+            return
+
         js = await response.json()
         currencies = {}
 
@@ -918,5 +928,5 @@ class ConfirmView(text.PromptView):
         self.stop()
 
 
-def setup(bot):
-    bot.add_cog(Bank(bot))
+async def setup(bot):
+    await bot.add_cog(Bank(bot))

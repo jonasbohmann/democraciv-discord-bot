@@ -57,7 +57,7 @@ class PassScheduler(text.RedditAnnouncementScheduler):
             name=f"Passed Bills from {self.bot.mk.LEGISLATURE_NAME}",
             icon_url=self.bot.mk.NATION_ICON_URL
             or self.bot.dciv.icon.url
-            or discord.embeds.EmptyEmbed,
+            or None,
         )
         message = [
             f"The following bills were **passed into law** by {self.bot.mk.LEGISLATURE_NAME}.\n"
@@ -331,7 +331,7 @@ class Legislature(
             icon = (
                 await member_or_party.get_logo()
                 or self.bot.mk.NATION_ICON_URL
-                or discord.Embed.Empty
+                or None
             )
         else:
             name = member_or_party.display_name
@@ -2794,7 +2794,7 @@ class Legislature(
             icon_url = (
                 await person_or_political_party.get_logo()
                 or self.bot.mk.NATION_ICON_URL
-                or discord.Embed.Empty
+                or None
             )
             name = (
                 f"Members of {person_or_political_party.role.name} in the "
@@ -2831,5 +2831,5 @@ class Legislature(
         await ctx.send(embed=embed)
 
 
-def setup(bot):
-    bot.add_cog(Legislature(bot))
+async def setup(bot):
+    await bot.add_cog(Legislature(bot))

@@ -1125,5 +1125,5 @@ class _Guild(context.CustomCog, name="Server"):
         )
 
 
-def setup(bot):
-    bot.add_cog(_Guild(bot))
+async def setup(bot):
+    await bot.add_cog(_Guild(bot))

@@ -705,6 +705,6 @@ class Starboard(context.CustomCog):
         await ctx.send(embed=embed)
 
 
-def setup(bot):
+async def setup(bot):
     if config.STARBOARD_ENABLED:
-        bot.add_cog(Starboard(bot))
+        await bot.add_cog(Starboard(bot))

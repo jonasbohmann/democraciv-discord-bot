@@ -21,7 +21,7 @@ class RepealScheduler(text.AnnouncementScheduler):
             name=f"{self.bot.mk.LEGISLATURE_NAME} repealed Bills",
             icon_url=self.bot.mk.NATION_ICON_URL
             or self.bot.dciv.icon.url
-            or discord.embeds.EmptyEmbed,
+            or None,
         )
         message = [f"The following laws were **repealed**.\n"]
 
@@ -198,5 +198,5 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         )
 
 
-def setup(bot):
-    bot.add_cog(Laws(bot))
+async def setup(bot):
+    await bot.add_cog(Laws(bot))

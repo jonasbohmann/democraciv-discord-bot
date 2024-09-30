@@ -437,5 +437,5 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
         await ctx.send(f"{config.YES} Done.")
 
 
-def setup(bot):
-    bot.add_cog(Nation(bot))
+async def setup(bot):
+    await bot.add_cog(Nation(bot))

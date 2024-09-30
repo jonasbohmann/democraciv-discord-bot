@@ -737,5 +737,5 @@ class Moderation(context.CustomCog):
         await ctx.send(f"{config.YES} Done.")
 
 
-def setup(bot):
-    bot.add_cog(Moderation(bot))
+async def setup(bot):
+    await bot.add_cog(Moderation(bot))

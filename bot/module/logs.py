@@ -303,5 +303,5 @@ class _Log(context.CustomCog):
         )
 
 
-def setup(bot):
-    bot.add_cog(_Log(bot))
+async def setup(bot):
+    await bot.add_cog(_Log(bot))
