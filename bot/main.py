@@ -1032,21 +1032,6 @@ class DemocracivBot(commands.Bot):
 
                 return f"https://mystb.in/{key}"
 
-    @alru_cache()
-    async def tinyurl(self, url: str) -> typing.Optional[str]:
-        async with self.session.post(
-            f"https://api.shrtco.de/v2/shorten?url={url}"
-        ) as response:
-            if response.status in (200, 201):
-                tiny_url = await response.json()
-
-                try:
-                    return tiny_url["result"]["full_short_link"]
-                except KeyError:
-                    raise exceptions.DemocracivBotException(
-                        f"{config.NO} The URL shortening service returned an error, try again later."
-                    )
-
 
 if __name__ == "__main__":
     dciv = DemocracivBot()
