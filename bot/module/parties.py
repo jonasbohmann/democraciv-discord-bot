@@ -44,7 +44,7 @@ class SelectJoinModeView(text.PromptView):
             ),
         ]
     )
-    async def select(self, component, interaction):
+    async def select(self, interaction, component):
         self.result = component.values[0]
         self.stop()
 

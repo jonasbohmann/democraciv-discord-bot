@@ -428,13 +428,13 @@ class EditSettingsWithEmojifiedLiveToggles(EditModelMenu):
         return embed
 
     @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green, row=1)
-    async def confirm(self, btn, interaction):
+    async def confirm(self, interaction, btn):
         self._confirmed = True
         self._make_result()
         self.stop()
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red, row=1)
-    async def cancel(self, btn, interaction):
+    async def cancel(self, interaction, btn):
         self._make_result()
         self.stop()
 

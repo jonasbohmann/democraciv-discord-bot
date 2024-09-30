@@ -24,7 +24,7 @@ class SelectTagCreationView(text.PromptView):
             ),
         ]
     )
-    async def slct(self, select, interaction):
+    async def slct(self, interaction: discord.Interaction, select):
         self.result = select.values[0]
         self.stop()
 

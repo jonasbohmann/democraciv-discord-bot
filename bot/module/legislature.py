@@ -28,24 +28,24 @@ from bot.utils.converter import Fuzzy, FuzzySettings
 
 class SubmitChooserView(text.PromptView):
     @discord.ui.button(label="Submit a Bill", style=discord.ButtonStyle.primary)
-    async def bill(self, button, interaction):
+    async def bill(self, interaction, button):
         self.result = "bill"
         self.stop()
 
     @discord.ui.button(label="Submit a Motion", style=discord.ButtonStyle.grey)
-    async def motion(self, button, interaction):
+    async def motion(self, interaction, button):
         self.result = "motion"
         self.stop()
 
 
 class ModelChooseView(text.PromptView):
     @discord.ui.button(label="Bills", style=discord.ButtonStyle.grey)
-    async def bill(self, button, interaction):
+    async def bill(self, interaction, button):
         self.result = "bill"
         self.stop()
 
     @discord.ui.button(label="Motions", style=discord.ButtonStyle.grey)
-    async def motion(self, button, interaction):
+    async def motion(self, interaction, button):
         self.result = "motion"
         self.stop()
 

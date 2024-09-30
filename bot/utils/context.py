@@ -156,7 +156,7 @@ class CustomContext(commands.Context):
     ) -> bool:
         class ContinueView(PromptView):
             @discord.ui.button(label=label, emoji=emoji)
-            async def btn(self, button, interaction):
+            async def btn(self, interaction, button):
                 self.result = True
                 self.stop()
 

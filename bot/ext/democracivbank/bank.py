@@ -853,7 +853,7 @@ class PickBankAccountView(text.PromptView):
         label="Send from my default Personal Bank Account",
         style=discord.ButtonStyle.green,
     )
-    async def default(self, button: discord.Button, interaction: discord.Interaction):
+    async def default(self, interaction: discord.Interaction, button: discord.Button):
         self.result = await self.cog.resolve_iban(
             self.ctx.author.id, self.currency, is_sender=True
         )
@@ -864,7 +864,7 @@ class PickBankAccountView(text.PromptView):
         style=discord.ButtonStyle.primary,
     )
     async def not_default(
-        self, button: discord.Button, interaction: discord.Interaction
+        self, interaction: discord.Interaction, button: discord.Button
     ):
         resp = await self.cog.request(
             BankRoute("GET", f"accounts/{self.ctx.author.id}/")
@@ -918,12 +918,12 @@ class ConfirmView(text.PromptView):
         self.result = False
 
     @discord.ui.button(label="Send Money", style=discord.ButtonStyle.green)
-    async def send(self, button: discord.Button, interaction: discord.Interaction):
+    async def send(self, interaction: discord.Interaction, button: discord.Button):
         self.result = True
         self.stop()
 
     @discord.ui.button(label="Cancel Transaction", style=discord.ButtonStyle.red)
-    async def cancel(self, button: discord.Button, interaction: discord.Interaction):
+    async def cancel(self, interaction: discord.Interaction, button: discord.Button):
         self.result = False
         self.stop()
 

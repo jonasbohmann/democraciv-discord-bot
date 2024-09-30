@@ -1,7 +1,6 @@
-discord.py
+discord.py[speed]
 aiodns
-cchardet
-git+https://github.com/Rapptz/discord-ext-menus@master
+discord-ext-menus
 git+https://github.com/oliver-ni/discord-ext-menus-views
 jishaku
 psutil
