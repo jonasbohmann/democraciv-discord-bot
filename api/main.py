@@ -299,6 +299,10 @@ async def twitch_subscription_verify(
 
 
 def _roll_dice(dice_to_roll: str):
+    # todo oct-2024: temporarily disabled
+
+    return
+
     dice_pattern = xdice.Pattern(dice_to_roll)
 
     # Ensure the number of dice the user asked to roll is reasonable
@@ -368,6 +372,10 @@ def _roll_dice(dice_to_roll: str):
 
 @app.post("/roll")
 def roll_dice(dice_to_roll: Dice, auth: str = Depends(ensure_auth)):
+    # todo oct-2024: temporarily disabled
+    
+    return {"error": "error"}
+
     try:
         return {"ok": "ok", "result": _roll_dice(dice_to_roll.dices)}
     except (SyntaxError, TypeError, ValueError, IndexError):

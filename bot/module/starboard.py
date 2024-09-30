@@ -190,7 +190,7 @@ class Starboard(context.CustomCog):
     async def weekly_starboard_to_reddit_task(self):
         """If today is Monday, post all entries of last week's starboard to r/Democraciv"""
 
-        if discord.utils.utcnow().weekday() != 0:
+        if discord.utils.utcnow().weekday() != 6:
             return
 
         if await self.has_posted_to_reddit_today():

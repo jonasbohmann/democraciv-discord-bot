@@ -921,7 +921,7 @@ class _Guild(context.CustomCog, name="Server"):
         name="reddit", case_insensitive=True, invoke_without_command=True, aliases=["r"]
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    # @commands.has_permissions(manage_guild=True)
     async def reddit(self, ctx: context.CustomContext):
         """List all active subreddit feeds on this server"""
 
@@ -1020,10 +1020,10 @@ class _Guild(context.CustomCog, name="Server"):
         name="twitch", case_insensitive=True, invoke_without_command=True, aliases=["t"]
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    # @commands.has_permissions(manage_guild=True)
     async def twitch(self, ctx: context.CustomContext):
         """List all active twitch notifications on this server"""
-
+        return await ctx.send(f"{config.NO} Twitch notifications are disabled due to democracivbank.com, which is needed for them to work, being offline. Reddit notifications continue to work. See `-bank` for more details.")
         def fmt(webhook, discord_webhook):
             return (
                 f"**#{webhook['id']}**  -  [twitch.tv/{webhook['streamer']}]"
@@ -1041,10 +1041,10 @@ class _Guild(context.CustomCog, name="Server"):
 
     @twitch.command(name="add", aliases=["make", "create", "a", "m"])
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    #@commands.has_permissions(manage_guild=True)
     async def twitch_add(self, ctx: context.CustomContext):
         """Add a twitch notification to this server"""
-
+        return await ctx.send(f"{config.NO} Twitch notifications are disabled due to democracivbank.com, which is needed for them to work, being offline. Reddit notifications continue to work. See `-bank` for more details.")
         streamer = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the streamer."
         )
@@ -1095,14 +1095,14 @@ class _Guild(context.CustomCog, name="Server"):
 
     @twitch.command(name="remove", aliases=["delete", "r", "d"])
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    #@commands.has_permissions(manage_guild=True)
     async def twitch_remove(
         self,
         ctx: context.CustomContext,
         notification_id: converter.InternalAPIWebhookConverter = None,
     ):
         """Remove a twitch notification from this server"""
-
+        return await ctx.send(f"{config.NO} Twitch notifications are disabled due to democracivbank.com, which is needed for them to work, being offline. Reddit notifications continue to work. See `-bank` for more details.")
         def fmt(response, channel_fmt):
             return f"{config.YES} Notifications for when `{response['streamer']}` goes live will no longer be posted to {channel_fmt}."
 
@@ -1117,9 +1117,10 @@ class _Guild(context.CustomCog, name="Server"):
 
     @twitch.command(name="clear", aliases=["removeall", "deleteall"])
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    #@commands.has_permissions(manage_guild=True)
     async def twitch_clear(self, ctx: context.CustomContext):
         """Remove all twitch notifications on this server"""
+        return await ctx.send(f"{config.NO} Twitch notifications are disabled due to democracivbank.com, which is needed for them to work, being offline. Reddit notifications continue to work. See `-bank` for more details.")
         await self._clear_webhooks(
             ctx, endpoint="twitch/clear", webhook_name="twitch notifications"
         )

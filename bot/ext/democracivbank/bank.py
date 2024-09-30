@@ -183,6 +183,82 @@ class Currency:
     _ = with_amount
 
 
+class MockBank(context.CustomCog, name="Bank"):
+    """Open as many bank accounts as you want and send money in multiple currencies with https://democracivbank.com"""
+
+
+    def __init__(self, bot):
+        super().__init__(bot)
+        self.BANK_NAME = "Bank of Democraciv"
+        self.BANK_ICON_URL = "https://cdn.discordapp.com/attachments/663076007426785300/717434510861533344/ezgif-5-8a4edb1f0306.png"
+
+    @commands.group(
+        name="bank",
+        aliases=["ba", "economy", "cash", "currency"],
+        case_insensitive=True,
+        invoke_without_command=True,
+    )
+    async def bank(self, ctx):
+        """The Bank of Democraciv"""
+
+        embed = text.SafeEmbed(
+            description=f"The [{self.BANK_NAME}](https://democracivbank.com) provides the international community "
+            f"with free financial "
+            f"services: Personal & Shared Bank Accounts with complete transaction records, a "
+            f"corporate registry, personalized notifications, support for multiple currencies and a "
+            f"deep integration into the Democraciv Discord Bot.\n\nYou can register at "
+            f"[democracivbank.com](https://democracivbank.com) and open as many bank accounts as you want. "
+            f"We don't have, give out or loan any money ourselves, so to actually get some "
+            f"money you need to consult with our third-party partners (usually governments) "
+            f"that issue the currencies.\n\n"
+            f"Connect your Discord Account on "
+            f"[democracivbank.com/me/discord](https://democracivbank.com/me/discord) to get access to "
+            f"the `{config.BOT_PREFIX}bank` commands, like "
+            f"`{config.BOT_PREFIX}bank accounts` to view all of your balances right here in Discord, "
+            f"and to enable personalized "
+            f"notifications in real-time whenever someone sends you money.\n\nSee `{config.BOT_PREFIX}help "
+            f"bank` for a list of all bank related commands here on Discord."
+        )
+
+        embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
+        embed.add_field(name=":warning:  democracivbank.com offline indefinitly", 
+                        value="In order to save money (domain & server costs, maintenance work hours) while the Bank of Democraciv is not actively being used, democracivbank.com has been taken offline. Once there is a need for the Bank of Democraciv again, operation can be resumed.")
+        embed.set_image(
+            url="https://cdn.discordapp.com/attachments/738903909535318086/837833943377903616/bank.PNG"
+        )
+        await ctx.send(embed=embed)
+
+    @bank.command(
+        name="organization",
+        aliases=["org", "corp", "company", "corporation", "marketplace", "m"],
+    )
+    async def organization(self, ctx):
+        """Details about a specific organization or corporation on the Marketplace"""
+        await ctx.send(f"{config.NO} democracivbank.com has been shutdown indefinitly. See `-bank` for more details.")
+
+    @bank.command(
+        name="accounts",
+        aliases=["bal", "money", "cash", "b", "account", "balance", "a", "acc"],
+    )
+    async def accounts(self, ctx):
+        """See the balance of every bank account you have access to"""
+        await ctx.send(f"{config.NO} democracivbank.com has been shutdown indefinitly. See `-bank` for more details.")
+
+
+    @bank.command(name="send", aliases=["s", "transfer", "t", "give"])
+    async def send(self, ctx):
+        """Send money to a specific bank account, organization, or person on this server
+
+        **Examples**
+            `-bank send @DerJonas 9.99`
+            `-bank send DerJonas#8036 250`
+            `-bank send c4a3ec17-cba4-462f-bdda-05620f574dce 32.10 Thanks ;)`
+            `-bank send GOOGLE 1000.21` assuming 'GOOGLE' is the abbreviation of an existing, published organization
+        """
+
+        await ctx.send(f"{config.NO} democracivbank.com has been shutdown indefinitly. See `-bank` for more details.")
+
+
 class Bank(context.CustomCog):
     """Open as many bank accounts as you want and send money in multiple currencies with https://democracivbank.com"""
 
@@ -929,4 +1005,4 @@ class ConfirmView(text.PromptView):
 
 
 async def setup(bot):
-    await bot.add_cog(Bank(bot))
+    await bot.add_cog(MockBank(bot))

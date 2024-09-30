@@ -110,6 +110,8 @@ class Experiments(context.CustomCog):
 
         This is an experimental command and probably still a work-in-progress."""
 
+        return await ctx.send(f"{config.NO} All AI features (`-ask` & `-extract`) are currently disabled.")
+
         if self.bot.mk.IS_MULTICIV:
             return await ctx.send(
                 f"{config.NO} This command is disabled during Multiciv MKs."
@@ -195,6 +197,8 @@ class Experiments(context.CustomCog):
         """Extract information from bills, laws & motions with Natural Language Processing:tm:
 
         This is an experimental command and probably still a work-in-progress."""
+
+        return await ctx.send(f"{config.NO} All AI features (`-ask` & `-extract`) are currently disabled.")
 
         if self.bot.mk.IS_MULTICIV:
             return await ctx.send(

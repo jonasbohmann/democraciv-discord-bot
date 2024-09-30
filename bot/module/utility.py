@@ -866,7 +866,7 @@ class Utility(context.CustomCog):
         invite = await ctx.channel.create_invite(max_age=0, unique=False)
         await ctx.send(invite.url)
 
-    @commands.command(name="roll", aliases=["r", "dice"])
+    @commands.command(name="roll", enabled=False, hidden=True, aliases=["r", "dice"])
     async def roll(self, ctx, *, dices="1d20"):
         """Roll some dice
 
@@ -884,7 +884,7 @@ class Utility(context.CustomCog):
 
         *Full notation can be found [here.](https://xdice.readthedocs.io/en/latest/dice_notation.html)*
         """
-
+        return await ctx.send(f"{config.NO} This feature has been disabled indefinitely.")
         js = await self.bot.api_request("POST", "roll", json={"dices": dices})
 
         if "error" in js:
