@@ -3,7 +3,6 @@ uvicorn
 discord.py
 asyncpg
 xdice
-numpy
-holmes-extractor
+# holmes-extractor
 tensorflow
 ktrain
