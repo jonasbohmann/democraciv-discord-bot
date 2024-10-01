@@ -293,7 +293,8 @@ class Nation(context.CustomCog, mixin.GovernmentMixin):
 
         **Example**:
             `{PREFIX}{COMMAND} @DerJonas Builder` will give DerJonas the 'Rome - Builder' role
-            `{PREFIX}{COMMAND} @DerJonas @Archwizard @Bird Builder` will give those 3 people the 'Rome - Builder' role"""
+            `{PREFIX}{COMMAND} @DerJonas @Archwizard @Bird Builder` will give those 3 people the 'Rome - Builder' role
+        """
 
         if not people:
             raise commands.BadArgument()

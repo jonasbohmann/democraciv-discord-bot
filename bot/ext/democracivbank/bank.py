@@ -24,6 +24,7 @@ class CurrencySelector(text.PromptView):
             super().__init__(*args, **kwargs)
 
         async def callback(self, interaction):
+            await interaction.response.defer()
             self.view.result = self.code
             self.view.stop()
 
@@ -186,7 +187,6 @@ class Currency:
 class MockBank(context.CustomCog, name="Bank"):
     """Open as many bank accounts as you want and send money in multiple currencies with https://democracivbank.com"""
 
-
     def __init__(self, bot):
         super().__init__(bot)
         self.BANK_NAME = "Bank of Democraciv"
@@ -221,8 +221,10 @@ class MockBank(context.CustomCog, name="Bank"):
         )
 
         embed.set_author(name=self.BANK_NAME, icon_url=self.BANK_ICON_URL)
-        embed.add_field(name=":warning:  democracivbank.com offline indefinitly", 
-                        value="In order to save money (domain & server costs, maintenance work hours) while the Bank of Democraciv is not actively being used, democracivbank.com has been taken offline. Once there is a need for the Bank of Democraciv again, operation can be resumed.")
+        embed.add_field(
+            name=":warning:  democracivbank.com offline indefinitly",
+            value="In order to save money (domain & server costs, maintenance work hours) while the Bank of Democraciv is not actively being used, democracivbank.com has been taken offline. Once there is a need for the Bank of Democraciv again, operation can be resumed.",
+        )
         embed.set_image(
             url="https://cdn.discordapp.com/attachments/738903909535318086/837833943377903616/bank.PNG"
         )
@@ -234,7 +236,9 @@ class MockBank(context.CustomCog, name="Bank"):
     )
     async def organization(self, ctx):
         """Details about a specific organization or corporation on the Marketplace"""
-        await ctx.send(f"{config.NO} democracivbank.com has been shutdown indefinitly. See `-bank` for more details.")
+        await ctx.send(
+            f"{config.NO} democracivbank.com has been shutdown indefinitly. See `-bank` for more details."
+        )
 
     @bank.command(
         name="accounts",
@@ -242,8 +246,9 @@ class MockBank(context.CustomCog, name="Bank"):
     )
     async def accounts(self, ctx):
         """See the balance of every bank account you have access to"""
-        await ctx.send(f"{config.NO} democracivbank.com has been shutdown indefinitly. See `-bank` for more details.")
-
+        await ctx.send(
+            f"{config.NO} democracivbank.com has been shutdown indefinitly. See `-bank` for more details."
+        )
 
     @bank.command(name="send", aliases=["s", "transfer", "t", "give"])
     async def send(self, ctx):
@@ -256,7 +261,9 @@ class MockBank(context.CustomCog, name="Bank"):
             `-bank send GOOGLE 1000.21` assuming 'GOOGLE' is the abbreviation of an existing, published organization
         """
 
-        await ctx.send(f"{config.NO} democracivbank.com has been shutdown indefinitly. See `-bank` for more details.")
+        await ctx.send(
+            f"{config.NO} democracivbank.com has been shutdown indefinitly. See `-bank` for more details."
+        )
 
 
 class Bank(context.CustomCog):
@@ -316,7 +323,6 @@ class Bank(context.CustomCog):
             return response
         except aiohttp.ClientConnectionError:
             logging.warning(f"cannot connect to {route.url}")
-
 
     async def _fetch_currencies(self):
         response = await self.request(BankRoute("GET", f"currencies/"))
@@ -594,9 +600,9 @@ class Bank(context.CustomCog):
                         account["pretty_balance_currency"]
                     ] += decimal.Decimal(account["balance"])
                 except KeyError:
-                    total_per_currency[
-                        account["pretty_balance_currency"]
-                    ] = decimal.Decimal(account["balance"])
+                    total_per_currency[account["pretty_balance_currency"]] = (
+                        decimal.Decimal(account["balance"])
+                    )
 
         prepend_desc = [
             "**Total Balance per Currency**\n*Reserve accounts aren't counted*"
@@ -922,6 +928,7 @@ class PickBankAccountView(text.PromptView):
 
     class AccountChooser(discord.ui.Select):
         async def callback(self, interaction):
+            await interaction.response.defer()
             self.view.result = self.values[0]
             self.view.stop()
 
@@ -930,6 +937,7 @@ class PickBankAccountView(text.PromptView):
         style=discord.ButtonStyle.green,
     )
     async def default(self, interaction: discord.Interaction, button: discord.Button):
+        await interaction.response.defer()
         self.result = await self.cog.resolve_iban(
             self.ctx.author.id, self.currency, is_sender=True
         )
@@ -972,9 +980,11 @@ class PickBankAccountView(text.PromptView):
             discord.SelectOption(
                 value=k,
                 label=textwrap.shorten(v[0], width=100, placeholder="..."),
-                description=textwrap.shorten(v[1], width=100, placeholder="...")
-                if v[1]
-                else None,
+                description=(
+                    textwrap.shorten(v[1], width=100, placeholder="...")
+                    if v[1]
+                    else None
+                ),
             )
             for k, v in available_accounts.items()
         ]
@@ -995,11 +1005,13 @@ class ConfirmView(text.PromptView):
 
     @discord.ui.button(label="Send Money", style=discord.ButtonStyle.green)
     async def send(self, interaction: discord.Interaction, button: discord.Button):
+        await interaction.response.defer()
         self.result = True
         self.stop()
 
     @discord.ui.button(label="Cancel Transaction", style=discord.ButtonStyle.red)
     async def cancel(self, interaction: discord.Interaction, button: discord.Button):
+        await interaction.response.defer()
         self.result = False
         self.stop()
 

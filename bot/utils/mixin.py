@@ -20,6 +20,7 @@ class ReadDocumentView(text.PromptView):
         label="Read Document", style=discord.ButtonStyle.grey, emoji="\U0001f4c3"
     )
     async def on_button(self, interaction, button):
+        await interaction.response.defer()
         self.result = True
         self.webhook = interaction.followup
         self.stop()

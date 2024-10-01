@@ -31,7 +31,8 @@ class Starboard(context.CustomCog):
     """The Starboard.
 
     If a message on the {democraciv} Server has at least 5 :star: reactions,
-    it will be posted to the Starboard channel and in a weekly summary to the subreddit every Saturday."""
+    it will be posted to the Starboard channel and in a weekly summary to the subreddit every Saturday.
+    """
 
     def __init__(self, bot):
         super().__init__(bot)
@@ -533,7 +534,8 @@ class Starboard(context.CustomCog):
 
         **Usage**
              `{PREFIX}{COMMAND}` for statistics on the general starboard usage
-             `{PREFIX}{COMMAND} <member>` for statistics on the starboard usage of a specific member"""
+             `{PREFIX}{COMMAND} <member>` for statistics on the starboard usage of a specific member
+        """
         if person is None:
             await self.star_overall_stats(ctx)
         else:

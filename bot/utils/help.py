@@ -202,6 +202,7 @@ class HelpSelect(discord.ui.Select):
         super().__init__(*args, **kwargs)
 
     async def callback(self, interaction):
+        await interaction.response.defer()
         cog = self.values[0]
         await self.menu.ctx.send_help(cog)
 

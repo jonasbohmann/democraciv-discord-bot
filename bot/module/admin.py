@@ -110,7 +110,9 @@ class Experiments(context.CustomCog):
 
         This is an experimental command and probably still a work-in-progress."""
 
-        return await ctx.send(f"{config.NO} All AI features (`-ask` & `-extract`) are currently disabled.")
+        return await ctx.send(
+            f"{config.NO} All AI features (`-ask` & `-extract`) are currently disabled."
+        )
 
         if self.bot.mk.IS_MULTICIV:
             return await ctx.send(
@@ -198,7 +200,9 @@ class Experiments(context.CustomCog):
 
         This is an experimental command and probably still a work-in-progress."""
 
-        return await ctx.send(f"{config.NO} All AI features (`-ask` & `-extract`) are currently disabled.")
+        return await ctx.send(
+            f"{config.NO} All AI features (`-ask` & `-extract`) are currently disabled."
+        )
 
         if self.bot.mk.IS_MULTICIV:
             return await ctx.send(

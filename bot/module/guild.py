@@ -25,6 +25,7 @@ class SelectTagCreationView(text.PromptView):
         ]
     )
     async def slct(self, interaction: discord.Interaction, select):
+        await interaction.response.defer()
         self.result = select.values[0]
         self.stop()
 
@@ -163,9 +164,11 @@ class _Guild(context.CustomCog, name="Server"):
             menu = text.EditModelMenu(
                 ctx,
                 choices_with_formatted_explanation={
-                    "status": "Enable Welcome Messages"
-                    if not settings["welcome_enabled"]
-                    else "Disable Welcome Messages",
+                    "status": (
+                        "Enable Welcome Messages"
+                        if not settings["welcome_enabled"]
+                        else "Disable Welcome Messages"
+                    ),
                     "channel": "Welcome Channel",
                     "message": "Welcome Message",
                 },
@@ -288,9 +291,11 @@ class _Guild(context.CustomCog, name="Server"):
             menu = text.EditModelMenu(
                 ctx,
                 choices_with_formatted_explanation={
-                    "status": "Enable Logging"
-                    if not settings["logging_enabled"]
-                    else "Disable Logging",
+                    "status": (
+                        "Enable Logging"
+                        if not settings["logging_enabled"]
+                        else "Disable Logging"
+                    ),
                     "channel": "Logging Channel",
                 },
             )
@@ -610,9 +615,11 @@ class _Guild(context.CustomCog, name="Server"):
             menu = text.EditModelMenu(
                 ctx,
                 choices_with_formatted_explanation={
-                    "status": "Enable Role on Join"
-                    if not settings["default_role_enabled"]
-                    else "Disable Role on Join",
+                    "status": (
+                        "Enable Role on Join"
+                        if not settings["default_role_enabled"]
+                        else "Disable Role on Join"
+                    ),
                     "role": "Role",
                 },
             )
@@ -1023,7 +1030,10 @@ class _Guild(context.CustomCog, name="Server"):
     # @commands.has_permissions(manage_guild=True)
     async def twitch(self, ctx: context.CustomContext):
         """List all active twitch notifications on this server"""
-        return await ctx.send(f"{config.NO} Twitch notifications are disabled due to democracivbank.com, which is needed for them to work, being offline. Reddit notifications continue to work. See `-bank` for more details.")
+        return await ctx.send(
+            f"{config.NO} Twitch notifications are disabled due to democracivbank.com, which is needed for them to work, being offline. Reddit notifications continue to work. See `-bank` for more details."
+        )
+
         def fmt(webhook, discord_webhook):
             return (
                 f"**#{webhook['id']}**  -  [twitch.tv/{webhook['streamer']}]"
@@ -1041,10 +1051,12 @@ class _Guild(context.CustomCog, name="Server"):
 
     @twitch.command(name="add", aliases=["make", "create", "a", "m"])
     @commands.guild_only()
-    #@commands.has_permissions(manage_guild=True)
+    # @commands.has_permissions(manage_guild=True)
     async def twitch_add(self, ctx: context.CustomContext):
         """Add a twitch notification to this server"""
-        return await ctx.send(f"{config.NO} Twitch notifications are disabled due to democracivbank.com, which is needed for them to work, being offline. Reddit notifications continue to work. See `-bank` for more details.")
+        return await ctx.send(
+            f"{config.NO} Twitch notifications are disabled due to democracivbank.com, which is needed for them to work, being offline. Reddit notifications continue to work. See `-bank` for more details."
+        )
         streamer = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the streamer."
         )
@@ -1095,14 +1107,17 @@ class _Guild(context.CustomCog, name="Server"):
 
     @twitch.command(name="remove", aliases=["delete", "r", "d"])
     @commands.guild_only()
-    #@commands.has_permissions(manage_guild=True)
+    # @commands.has_permissions(manage_guild=True)
     async def twitch_remove(
         self,
         ctx: context.CustomContext,
         notification_id: converter.InternalAPIWebhookConverter = None,
     ):
         """Remove a twitch notification from this server"""
-        return await ctx.send(f"{config.NO} Twitch notifications are disabled due to democracivbank.com, which is needed for them to work, being offline. Reddit notifications continue to work. See `-bank` for more details.")
+        return await ctx.send(
+            f"{config.NO} Twitch notifications are disabled due to democracivbank.com, which is needed for them to work, being offline. Reddit notifications continue to work. See `-bank` for more details."
+        )
+
         def fmt(response, channel_fmt):
             return f"{config.YES} Notifications for when `{response['streamer']}` goes live will no longer be posted to {channel_fmt}."
 
@@ -1117,10 +1132,12 @@ class _Guild(context.CustomCog, name="Server"):
 
     @twitch.command(name="clear", aliases=["removeall", "deleteall"])
     @commands.guild_only()
-    #@commands.has_permissions(manage_guild=True)
+    # @commands.has_permissions(manage_guild=True)
     async def twitch_clear(self, ctx: context.CustomContext):
         """Remove all twitch notifications on this server"""
-        return await ctx.send(f"{config.NO} Twitch notifications are disabled due to democracivbank.com, which is needed for them to work, being offline. Reddit notifications continue to work. See `-bank` for more details.")
+        return await ctx.send(
+            f"{config.NO} Twitch notifications are disabled due to democracivbank.com, which is needed for them to work, being offline. Reddit notifications continue to work. See `-bank` for more details."
+        )
         await self._clear_webhooks(
             ctx, endpoint="twitch/clear", webhook_name="twitch notifications"
         )

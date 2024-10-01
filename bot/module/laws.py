@@ -19,9 +19,7 @@ class RepealScheduler(text.AnnouncementScheduler):
         embed = text.SafeEmbed()
         embed.set_author(
             name=f"{self.bot.mk.LEGISLATURE_NAME} repealed Bills",
-            icon_url=self.bot.mk.NATION_ICON_URL
-            or self.bot.dciv.icon.url
-            or None,
+            icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         message = [f"The following laws were **repealed**.\n"]
 

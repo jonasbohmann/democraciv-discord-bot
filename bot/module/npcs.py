@@ -199,14 +199,14 @@ class NPC(CustomCog):
         self._npc_cache: typing.Dict[int, typing.Dict] = {}
 
         # user_id -> set of NPC ids that user has access to
-        self._npc_access_cache: typing.Dict[
-            int, typing.Set[int]
-        ] = collections.defaultdict(set)
+        self._npc_access_cache: typing.Dict[int, typing.Set[int]] = (
+            collections.defaultdict(set)
+        )
 
         # user id -> {channel_id -> npc_id}
-        self._automatic_npc_cache: typing.Dict[
-            int, typing.Dict[int, int]
-        ] = collections.defaultdict(dict)
+        self._automatic_npc_cache: typing.Dict[int, typing.Dict[int, int]] = (
+            collections.defaultdict(dict)
+        )
 
         # channel id -> {message id -> real author id}
         # self._recent_npc_messages = collections.defaultdict(dict)

@@ -13,9 +13,7 @@ class LawPassScheduler(text.AnnouncementScheduler):
         embed = text.SafeEmbed()
         embed.set_author(
             name=f"Passed Bills from the {self.bot.mk.MINISTRY_NAME}",
-            icon_url=self.bot.mk.NATION_ICON_URL
-            or self.bot.dciv.icon.url
-            or None,
+            icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         message = [
             f"The following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"
@@ -37,9 +35,7 @@ class LawVetoScheduler(text.AnnouncementScheduler):
         embed = text.SafeEmbed()
         embed.set_author(
             name=f"The {self.bot.mk.MINISTRY_NAME} vetoed Bills",
-            icon_url=self.bot.mk.NATION_ICON_URL
-            or self.bot.dciv.icon.url
-            or None,
+            icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         message = [
             f"The following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"

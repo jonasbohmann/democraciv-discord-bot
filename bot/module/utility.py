@@ -5,6 +5,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 The -cat and -dog commands are based on RoboDanny by Rapptz: https://github.com/Rapptz/RoboDanny/blob/rewrite/LICENSE.txt
 """
+
 import asyncio
 import io
 import logging
@@ -37,12 +38,14 @@ from bot.utils.converter import (
 
 class ConfirmView(text.PromptView):
     @discord.ui.button(label="Yes, post to Reddit", style=discord.ButtonStyle.green)
-    async def yes(self, *args):
+    async def yes(self, interaction, item):
+        await interaction.response.defer()
         self.result = True
         self.stop()
 
     @discord.ui.button(label="No, cancel", style=discord.ButtonStyle.red)
-    async def no(self, *args):
+    async def no(self, interaction, item):
+        await interaction.response.defer()
         self.result = False
         self.stop()
 
@@ -245,7 +248,8 @@ class Utility(context.CustomCog):
         """Make me delete a reddit post that I made out of your #press messages and posted to our subreddit
 
         **Example**
-        `{PREFIX}{COMMAND} https://www.reddit.com/r/democraciv/comments/ibr37f/introducing_the_bank_of_democraciv/`"""
+        `{PREFIX}{COMMAND} https://www.reddit.com/r/democraciv/comments/ibr37f/introducing_the_bank_of_democraciv/`
+        """
 
         if (
             f"reddit.com/r/{config.DEMOCRACIV_SUBREDDIT.lower()}" not in url.lower()
@@ -884,7 +888,9 @@ class Utility(context.CustomCog):
 
         *Full notation can be found [here.](https://xdice.readthedocs.io/en/latest/dice_notation.html)*
         """
-        return await ctx.send(f"{config.NO} This feature has been disabled indefinitely.")
+        return await ctx.send(
+            f"{config.NO} This feature has been disabled indefinitely."
+        )
         js = await self.bot.api_request("POST", "roll", json={"dices": dices})
 
         if "error" in js:

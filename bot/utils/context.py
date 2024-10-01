@@ -157,6 +157,7 @@ class CustomContext(commands.Context):
         class ContinueView(PromptView):
             @discord.ui.button(label=label, emoji=emoji)
             async def btn(self, interaction, button):
+                await interaction.response.defer()
                 self.result = True
                 self.stop()
 
@@ -176,12 +177,14 @@ class CustomContext(commands.Context):
 
         class ConfirmView(PromptView):
             @discord.ui.button(label="Yes", style=discord.ButtonStyle.green)
-            async def yes(self, *args, **kwargs):
+            async def yes(self, interaction, item):
+                await interaction.response.defer()
                 self.result = True
                 self.stop()
 
             @discord.ui.button(label="No", style=discord.ButtonStyle.red)
-            async def no(self, *args, **kwargs):
+            async def no(self, interaction, item):
+                await interaction.response.defer()
                 self.result = False
                 self.stop()
 

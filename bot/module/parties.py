@@ -45,6 +45,7 @@ class SelectJoinModeView(text.PromptView):
         ]
     )
     async def select(self, interaction, component):
+        await interaction.response.defer()
         self.result = component.values[0]
         self.stop()
 

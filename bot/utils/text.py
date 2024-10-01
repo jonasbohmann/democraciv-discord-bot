@@ -239,6 +239,7 @@ class SafeEmbed(discord.Embed):
 
 class DynamicSelect(discord.ui.Select):
     async def callback(self, interaction):
+        await interaction.response.defer()
         index = int(self.values[0])
         self.view.result = self.view.choices[index]
         self.view.stop()
@@ -324,6 +325,7 @@ EditModelResult = collections.namedtuple("EditModelResult", ["confirmed", "choic
 
 class MultiDynamicSelect(discord.ui.Select):
     async def callback(self, interaction):
+        await interaction.response.defer()
         for value in self.values:
             self.view._result[value] = not self.view._result[value]
 
@@ -334,6 +336,7 @@ class MultiDynamicSelect(discord.ui.Select):
 
 class MultiDynamicSelectWithEdit(discord.ui.Select):
     async def callback(self, interaction):
+        await interaction.response.defer()
         for value in self.values:
             self.view._result[value] = not self.view._result[value]
 
@@ -401,9 +404,11 @@ class EditSettingsWithEmojifiedLiveToggles(EditModelMenu):
             options=[
                 discord.SelectOption(
                     label=textwrap.shorten(desc[1], width=100, placeholder="..."),
-                    description=textwrap.shorten(desc[0], width=100, placeholder="...")
-                    if desc[0]
-                    else None,
+                    description=(
+                        textwrap.shorten(desc[0], width=100, placeholder="...")
+                        if desc[0]
+                        else None
+                    ),
                     value=choice,
                 )
                 for choice, desc in self.choices.items()
@@ -429,12 +434,14 @@ class EditSettingsWithEmojifiedLiveToggles(EditModelMenu):
 
     @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green, row=1)
     async def confirm(self, interaction, btn):
+        await interaction.response.defer()
         self._confirmed = True
         self._make_result()
         self.stop()
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red, row=1)
     async def cancel(self, interaction, btn):
+        await interaction.response.defer()
         self._make_result()
         self.stop()
 

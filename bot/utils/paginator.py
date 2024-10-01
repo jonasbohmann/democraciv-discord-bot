@@ -5,6 +5,7 @@ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 Based on RoboDanny by Rapptz: https://github.com/Rapptz/RoboDanny/blob/rewrite/LICENSE.txt
 """
+
 import asyncio
 import typing
 import discord

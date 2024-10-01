@@ -653,9 +653,11 @@ class Moderation(context.CustomCog):
             )
 
         await channel.edit(
-            name=f"mk{self.bot.mk.MARK}-{channel.name}"
-            if not channel.name.startswith(f"mk{self.bot.mk.MARK}-")
-            else channel.name,
+            name=(
+                f"mk{self.bot.mk.MARK}-{channel.name}"
+                if not channel.name.startswith(f"mk{self.bot.mk.MARK}-")
+                else channel.name
+            ),
             overwrites={everyone_role: everyone_perms, archives_role: archive_perms},
             category=archive_category,
         )
@@ -718,9 +720,11 @@ class Moderation(context.CustomCog):
                     f":tada: Thanks for playing Democraciv MK{self.bot.mk.MARK}!"
                 )
                 await channel.edit(
-                    name=f"mk{self.bot.mk.MARK}-{channel.name}"
-                    if not channel.name.startswith(f"mk{self.bot.mk.MARK}-")
-                    else channel.name,
+                    name=(
+                        f"mk{self.bot.mk.MARK}-{channel.name}"
+                        if not channel.name.startswith(f"mk{self.bot.mk.MARK}-")
+                        else channel.name
+                    ),
                     overwrites={
                         everyone_role: everyone_perms,
                         archives_role: archive_perms,

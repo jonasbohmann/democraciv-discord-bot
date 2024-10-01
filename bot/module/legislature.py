@@ -28,12 +28,14 @@ from bot.utils.converter import Fuzzy, FuzzySettings
 
 class SubmitChooserView(text.PromptView):
     @discord.ui.button(label="Submit a Bill", style=discord.ButtonStyle.primary)
-    async def bill(self, interaction, button):
+    async def bill(self, interaction: discord.Interaction, button):
+        await interaction.response.defer()
         self.result = "bill"
         self.stop()
 
     @discord.ui.button(label="Submit a Motion", style=discord.ButtonStyle.grey)
     async def motion(self, interaction, button):
+        await interaction.response.defer()
         self.result = "motion"
         self.stop()
 
@@ -41,11 +43,13 @@ class SubmitChooserView(text.PromptView):
 class ModelChooseView(text.PromptView):
     @discord.ui.button(label="Bills", style=discord.ButtonStyle.grey)
     async def bill(self, interaction, button):
+        await interaction.response.defer()
         self.result = "bill"
         self.stop()
 
     @discord.ui.button(label="Motions", style=discord.ButtonStyle.grey)
     async def motion(self, interaction, button):
+        await interaction.response.defer()
         self.result = "motion"
         self.stop()
 
@@ -55,9 +59,7 @@ class PassScheduler(text.RedditAnnouncementScheduler):
         embed = text.SafeEmbed()
         embed.set_author(
             name=f"Passed Bills from {self.bot.mk.LEGISLATURE_NAME}",
-            icon_url=self.bot.mk.NATION_ICON_URL
-            or self.bot.dciv.icon.url
-            or None,
+            icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         message = [
             f"The following bills were **passed into law** by {self.bot.mk.LEGISLATURE_NAME}.\n"
@@ -173,7 +175,8 @@ class Legislature(
     async def _bill(self, ctx: context.CustomContext):
         """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} bill`
 
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} bill` for the help page of the actual command."""
+        Use `{PREFIX}help {LEGISLATURE_COMMAND} bill` for the help page of the actual command.
+        """
 
         ctx.message.content = ctx.message.content.replace(
             f"{ctx.prefix}{ctx.invoked_with}",
@@ -187,7 +190,8 @@ class Legislature(
     async def _motion(self, ctx: context.CustomContext):
         """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} motion`
 
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} motion` for the help page of the actual command."""
+        Use `{PREFIX}help {LEGISLATURE_COMMAND} motion` for the help page of the actual command.
+        """
         ctx.message.content = ctx.message.content.replace(
             f"{ctx.prefix}{ctx.invoked_with}",
             f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
@@ -200,7 +204,8 @@ class Legislature(
     async def _session(self, ctx: context.CustomContext):
         """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} session`
 
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} session` for the help page of the actual command."""
+        Use `{PREFIX}help {LEGISLATURE_COMMAND} session` for the help page of the actual command.
+        """
         ctx.message.content = ctx.message.content.replace(
             f"{ctx.prefix}{ctx.invoked_with}",
             f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
@@ -267,7 +272,8 @@ class Legislature(
         """Search for both bills & motions at once
 
         If you want to limit your search to either just bills or just motions, consider
-        the `{PREFIX}{LEGISLATURE_COMMAND} bill search` and `{PREFIX}{LEGISLATURE_COMMAND} motion search` commands."""
+        the `{PREFIX}{LEGISLATURE_COMMAND} bill search` and `{PREFIX}{LEGISLATURE_COMMAND} motion search` commands.
+        """
 
         matches = await self._search_model(
             ctx, model=models.Bill, query=query, return_model=True
@@ -329,9 +335,7 @@ class Legislature(
             empty = f"No member of {name} has submitted something yet."
             title = f"Bills & Motions from members of {name}"
             icon = (
-                await member_or_party.get_logo()
-                or self.bot.mk.NATION_ICON_URL
-                or None
+                await member_or_party.get_logo() or self.bot.mk.NATION_ICON_URL or None
             )
         else:
             name = member_or_party.display_name
@@ -772,9 +776,9 @@ class Legislature(
                 continue
 
             if not last_session or motion.session.id != last_session.id:
-                failed[
-                    motion
-                ] = "You can only sponsor motions if the session they were submitted in is still open."
+                failed[motion] = (
+                    "You can only sponsor motions if the session they were submitted in is still open."
+                )
                 continue
 
             passed.append(motion)
@@ -837,9 +841,9 @@ class Legislature(
                 continue
 
             if not last_session or motion.session.id != last_session.id:
-                failed[
-                    motion
-                ] = "You can only unsponsor motions if the session they were submitted in is still open."
+                failed[motion] = (
+                    "You can only unsponsor motions if the session they were submitted in is still open."
+                )
                 continue
 
             passed.append(motion)
@@ -2773,7 +2777,8 @@ class Legislature(
         **Example**
         `{PREFIX}{COMMAND}` to get the overall statistics about the {LEGISLATURE_NAME}
         `{PREFIX}{COMMAND} DerJonas` to get personalized statistics for that person
-        `{PREFIX}{COMMAND} Ecological Democratic Union` to get statistics for a political party"""
+        `{PREFIX}{COMMAND} Ecological Democratic Union` to get statistics for a political party
+        """
 
         if not person_or_political_party:
             return await self._get_leg_stats(ctx)

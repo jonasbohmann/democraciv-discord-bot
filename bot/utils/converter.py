@@ -77,9 +77,9 @@ class _Fuzzy(commands.Converter):
                     exception_mapping[converter] = e
                     continue
 
-        sources: typing.Dict[
-            str, typing.Dict[typing.Any, None]
-        ] = collections.defaultdict(dict)
+        sources: typing.Dict[str, typing.Dict[typing.Any, None]] = (
+            collections.defaultdict(dict)
+        )
         model = []
         description = []
 
@@ -153,7 +153,8 @@ class FuzzyableMixin:
     ) -> typing.Iterable:
         """This must return an Iterable of the _already converted_, final objects.
 
-        The __str__ of each object will be shown in the FuzzyChoose menu for the user to choose."""
+        The __str__ of each object will be shown in the FuzzyChoose menu for the user to choose.
+        """
         raise NotImplementedError()
 
 
