@@ -1019,14 +1019,20 @@ class DemocracivBot(commands.Bot):
     async def make_paste(self, txt: str) -> typing.Optional[str]:
         """Post text to mystb.in"""
 
+        payload = {
+            "expires": None,
+            "files": [{"content": txt, "filename": f"dciv-discord-bot.txt"}],
+            "password": None,
+        }
+
         async with self.session.post(
-            "https://mystb.in/documents", data=txt
+            "https://mystb.in/api/paste", json=payload
         ) as response:
             if response.status == 200:
                 data = await response.json()
 
                 try:
-                    key = data["key"]
+                    key = data["id"]
                 except KeyError:
                     return None
 
