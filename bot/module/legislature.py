@@ -138,7 +138,7 @@ class OverrideScheduler(text.AnnouncementScheduler):
         return "\n".join(message)
 
 
-LEG_COMMAND_ALIASES = ["leg", "legislature"]
+LEG_COMMAND_ALIASES = ["leg", "legislature", "s"]
 
 try:
     LEG_COMMAND_ALIASES.remove(mk.MarkConfig.LEGISLATURE_COMMAND.lower())
@@ -200,7 +200,7 @@ class Legislature(
         new_ctx = await self.bot.get_context(ctx.message)
         return await self.bot.invoke(new_ctx)
 
-    @commands.command(name="session", aliases=["sessions", "s"], hidden=True)
+    @commands.command(name="session", aliases=["sessions"], hidden=True)
     async def _session(self, ctx: context.CustomContext):
         """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} session`
 
@@ -265,6 +265,21 @@ class Legislature(
         embed.add_field(
             name="Current Session", value=current_session_value, inline=False
         )
+
+        try:
+            legislators = self.bot.get_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+            legislators = [
+                f"{l.mention} {escape_markdown(str(l))}" for l in legislators.members
+            ] or ["-"]
+        except exceptions.RoleNotFoundError:
+            legislators = ["-"]
+
+        embed.add_field(
+            name=f"{self.bot.mk.legislator_term}s ({len(legislators) if legislators[0] != "-" else 0})",
+            value="\n".join(legislators),
+            inline=True,
+        )
+
         await ctx.send(embed=embed)
 
     @legislature.command(name="search")
@@ -969,21 +984,15 @@ class Legislature(
         ] or ["-"]
         speaker = session.speaker or context.MockUser()
 
-        description = (
-            f"This session was opened by {speaker.mention} on "
-            f"{session.opened_on.strftime('%A, %B %d %Y at %H:%M')}.\n"
-        )
+        description = f"**__Presiding Speaker__**\n{speaker.mention}\n\n**__Opened__**\n<t:{int(session.voting_started_on.timestamp())}:F>\n\n\n"
 
         if session.voting_started_on:
-            description = (
-                f"{description[:-1]} Voting started on {session.voting_started_on.strftime('%A, %B %d %Y at %H:%M')} on"
-                f" [this form]({session.vote_form}).\n"
-            )
+            description = f"{description[:-1]}**__Voting started__**\n<t:{int(session.voting_started_on.timestamp())}:F>\n\n\n"
 
         if session.closed_on:
             description = (
-                f"{description[:-1]} Finally, the session was closed on "
-                f"{session.closed_on.strftime('%A, %B %d %Y at %H:%M')}.\n"
+                f"{description[:-1]}**__Closed__**\n"
+                f"<t:{int(session.closed_on.timestamp())}:F>\n"
             )
 
         if session.status is SessionStatus.SUBMISSION_PERIOD:
@@ -998,7 +1007,7 @@ class Legislature(
         entries.append(f"**__Status__**\n{session.status.value}\n")
 
         if session.vote_form:
-            entries.append(f"**__Vote Form__**\n{session.vote_form}\n")
+            entries.append(f"**__Voting Form__**\n{session.vote_form}\n")
 
         if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
             motions = [(await Motion.convert(ctx, m)) for m in session.motions]
@@ -1050,7 +1059,7 @@ class Legislature(
         pages = paginator.SimplePages(
             entries=entries,
             icon=self.bot.mk.NATION_ICON_URL,
-            author=f"Legislative Session #{session.id}",
+            author=f"Senate Session #{session.id}",
         )
         await pages.start(ctx)
 

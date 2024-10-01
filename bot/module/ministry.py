@@ -142,15 +142,6 @@ class Ministry(
 
         minister_value = []
 
-        emperor = self._safe_get_member(mk.DemocracivRole.EMPEROR)
-
-        if isinstance(emperor, discord.Member):
-            minister_value.append(
-                f"Emperor of Japan: {emperor.mention} {escape_markdown(str(emperor))}"
-            )
-        else:
-            minister_value.append(f"Emperor of Japan: -")
-
         if isinstance(self.prime_minister, discord.Member):
             minister_value.append(
                 f"{self.bot.mk.pm_term}: {self.prime_minister.mention} {escape_markdown(str(self.prime_minister))}"
@@ -177,9 +168,23 @@ class Ministry(
         except exceptions.RoleNotFoundError:
             ministers = ["-"]
 
+        try:
+            governors = self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNOR)
+            governors = [
+                f"{g.mention} {escape_markdown(str(g))}" for g in governors.members
+            ] or ["-"]
+        except exceptions.RoleNotFoundError:
+            governors = ["-"]
+
         embed.add_field(
-            name=f"{self.bot.mk.minister_term}s",
+            name=f"{self.bot.mk.minister_term}s ({len(ministers) if ministers[0] != "-" else 0})",
             value="\n".join(ministers),
+            inline=False,
+        )
+
+        embed.add_field(
+            name=f"{self.bot.mk.governor_term}s ({len(governors) if governors[0] != "-" else 0})",
+            value="\n".join(governors),
             inline=False,
         )
 

@@ -62,9 +62,10 @@ all_extensions = {
     "bot.module.parties",
     "bot.module.legislature",
     "bot.module.laws",
-    "bot.module.ministry",
-    "bot.module.supremecourt",
+    # "bot.module.ministry",
+    # "bot.module.supremecourt",
     "bot.module.nation",
+    "bot.module.government",
 }
 
 if mk.MarkConfig.IS_MULTICIV:

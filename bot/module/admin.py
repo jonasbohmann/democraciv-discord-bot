@@ -89,7 +89,7 @@ class Experiments(context.CustomCog):
 
         if not any(public_cmds):
             # hide this cog if no public experiments
-            self.bot.remove_cog(name=self.qualified_name)
+            await self.bot.remove_cog(self.qualified_name)
 
     @commands.command(name="experiments", aliases=["beta", "test", "testing"])
     async def experiments(self, ctx):
@@ -103,7 +103,7 @@ class Experiments(context.CustomCog):
         )
         await ctx.send_help(self)
 
-    @commands.command(name="ask")
+    @commands.command(name="ask", hidden=True)
     @commands.max_concurrency(1, wait=False)
     async def ask(self, ctx, batch_size: typing.Optional[int] = 1, *, question):
         """Get answers to a legal question with Deep (Machine) Learning:tm: and Neural Networks:tm:
@@ -194,7 +194,7 @@ class Experiments(context.CustomCog):
         )
         await pages.start(ctx)
 
-    @commands.command(name="extract")
+    @commands.command(name="extract", hidden=True)
     async def match(self, ctx, *, query):
         """Extract information from bills, laws & motions with Natural Language Processing:tm:
 

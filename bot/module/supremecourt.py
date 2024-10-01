@@ -65,14 +65,14 @@ class SupremeCourt(
         judges = self.get_judges() or ["-"]
 
         embed.add_field(
-            name=f"{self.bot.mk.COURT_NAME} {self.bot.mk.COURT_JUSTICE_NAME}s",
+            name=f"{self.bot.mk.COURT_NAME} {self.bot.mk.COURT_JUSTICE_NAME}s ({len(justices) if justices[0] != "-" else 0})",
             value="\n".join(justices),
             inline=False,
         )
 
         if self.bot.mk.COURT_HAS_INFERIOR_COURT:
             embed.add_field(
-                name=f"{self.bot.mk.COURT_INFERIOR_NAME} {self.bot.mk.COURT_JUDGE_NAME}s",
+                name=f"{self.bot.mk.COURT_INFERIOR_NAME} {self.bot.mk.COURT_JUDGE_NAME}s ({len(judges) if judges[0] != "-" else 0})",
                 value="\n".join(judges),
                 inline=False,
             )
@@ -80,10 +80,8 @@ class SupremeCourt(
         embed.add_field(
             name="Links",
             value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
-            f"\n[Submit a Case](https://forms.gle/ovDr3MsjTubuerZw9)\n"
-            f"[All Case Filings of the Supreme Court](https://docs.google.com/spreadsheets/d/1BuBk7n-_"
-            f"TSHPEQIT9fGyk7z9RRQxGGrEc-gC5Vc2DkI/edit?usp=sharing)\n[Judicial Procedure](https://docs.google."
-            f"com/document/d/1xogDLs2zZ7IA8SN6rqxy-ivCuxm9lE6lFINt8V7vuOE/edit?usp=sharing)",
+            f"\n[Submit a Case](https://bot-placeholder.democraciv.com/)\n"
+            f"[All Case Filings of the Supreme Court](https://bot-placeholder.democraciv.com/)\n[Judicial Procedure](https://bot-placeholder.democraciv.com/)",
             inline=False,
         )
 
