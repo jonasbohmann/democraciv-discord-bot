@@ -2,6 +2,7 @@ import asyncio
 import collections
 import datetime
 import difflib
+import logging
 import asyncpg
 import discord
 import typing
@@ -164,12 +165,14 @@ class Legislature(
         )
 
         if not self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
-            self.bot.get_command(self.bot.mk.LEGISLATURE_COMMAND).remove_command(
-                "motion"
-            )
-            self.bot.get_command(
-                f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw"
-            ).remove_command("motion")
+            logging.warning("motion commands still visible")
+            # todo oct-24
+            # self.bot.get_command(self.bot.mk.LEGISLATURE_COMMAND).remove_command(
+            #     "motion"
+            # )
+            # self.bot.get_command(
+            #     f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw"
+            # ).remove_command("motion")
 
     @commands.command(name="bill", aliases=["bills", "b"], hidden=True)
     async def _bill(self, ctx: context.CustomContext):
@@ -984,14 +987,14 @@ class Legislature(
         ] or ["-"]
         speaker = session.speaker or context.MockUser()
 
-        description = f"**__Presiding Speaker__**\n{speaker.mention}\n\n**__Opened__**\n<t:{int(session.voting_started_on.timestamp())}:F>\n\n\n"
+        description = f"**__Presiding Speaker__**\n{speaker.mention}\n\n**__Opened__**\n<t:{int(session.opened_on.timestamp())}:F>\n"
 
         if session.voting_started_on:
-            description = f"{description[:-1]}**__Voting started__**\n<t:{int(session.voting_started_on.timestamp())}:F>\n\n\n"
+            description = f"{description[:-1]}\n\n**__Voting started__**\n<t:{int(session.voting_started_on.timestamp())}:F>\n"
 
         if session.closed_on:
             description = (
-                f"{description[:-1]}**__Closed__**\n"
+                f"{description[:-1]}\n\n**__Closed__**\n"
                 f"<t:{int(session.closed_on.timestamp())}:F>\n"
             )
 
@@ -2106,13 +2109,13 @@ class Legislature(
 
             await ctx.send(
                 f"{config.USER_INTERACTION_REQUIRED} Do you want to submit a bill or a motion?"
-                f"\n{config.HINT} *Motions lack a lot of features that bills have, "
+                f"\n\n{config.HINT} *Motions lack a lot of features that bills have, "
                 f"for example they cannot be passed into Law by the Government. They will not "
                 f"show up in `{config.BOT_PREFIX}laws`, nor will they make it on the Legal Code. If you want to submit "
                 f"something small that results in some __temporary__ action and where it's not important to track if it passed, "
                 f"use a motion, otherwise use a bill. __In most cases you should probably use bills.__ "
                 f"Common examples for motions: `Motion to repeal Law #12`, or "
-                f"`Motion to recall {self.bot.mk.legislator_term} XY`.*",
+                f"`Motion to recall {self.bot.mk.legislator_term} XY`.*\n\n### {config.HINT} In 80% of cases, you should use bills instead of motions!",
                 view=view,
             )
 
