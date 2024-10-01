@@ -1479,7 +1479,7 @@ class Legislature(
             "*Create a new Google Form here: <https://forms.new>, then click on the three dots in the upper right, "
             "then on 'Add collaborators', after which a new window should pop up. "
             "Click on 'Change' on the bottom left, and change the link from 'Restricted' to the other option. "
-            "Then copy the link and send it here.*",
+            "Then copy the link from your browser's address bar (do not click on 'Copy link' button on the pop-up!) and send it here.*",
             delete_after=True,
             timeout=400,
         )
@@ -1769,8 +1769,7 @@ class Legislature(
 
         email = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the **email address** "
-            f"of your Google Account if you want me to add you as editor and transfer ownership of the document "
-            f"to you. If not, just reply with gibberish.",
+            f"of your Google Account if you want me to add you as an editor to the document. If not, just reply with gibberish.",
             delete_after=True,
         )
 

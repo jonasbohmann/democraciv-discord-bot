@@ -3,6 +3,7 @@ import enum
 import re
 import textwrap
 import typing
+import yake
 import discord
 
 from collections import namedtuple
@@ -255,6 +256,11 @@ class Bill(commands.Converter, FuzzyableMixin):
             )
         )
 
+    def extract_keywords(self, content):
+        kw_extractor = yake.KeywordExtractor(lan="en", n=2, top=20)
+        keywords = kw_extractor.extract_keywords(content)
+        return [kw[0] for kw in keywords if kw[0]]
+
     async def fetch_name_and_keywords(self) -> typing.Tuple[str, typing.List[str], str]:
 
         try:
@@ -266,31 +272,14 @@ class Bill(commands.Converter, FuzzyableMixin):
 
             self.name = name = response["response"]["result"]["title"]
             self.content = content = response["response"]["result"]["content"]
-            keywords = [
-                word["ngram"]
-                for word in response["response"]["result"]["keywords"]["keywords"]
-                if word["ngram"]
-            ]
+            keywords = await self._bot.loop.run_in_executor(
+                None, self.extract_keywords, content
+            )
 
         except (DemocracivBotException, KeyError):
             keywords = []
             self.name = name = ""
             self.content = content = ""
-
-        async with self._bot.session.post(
-            "http://yake.inesctec.pt/yake/v2/extract_keywords?max_ngram_size=2&number_of_keywords=20&highlight=false",
-            data={"content": self.description},
-        ) as r:
-
-            if r.status == 200:
-                js = await r.json()
-
-                try:
-                    keywords.extend(
-                        [word["ngram"] for word in js["keywords"] if word["ngram"]]
-                    )
-                except KeyError:
-                    pass
 
         name_abbreviation = "".join([c[0].lower() for c in self.name.split()])
 

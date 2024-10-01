@@ -13,4 +13,4 @@ lru-dict
 fuzzywuzzy
 python-Levenshtein
 pytz
-
+git+https://github.com/LIAAD/yake
