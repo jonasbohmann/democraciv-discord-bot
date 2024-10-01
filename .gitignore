@@ -150,3 +150,5 @@ bot/config/mk.py
 /api/ml/index
 api/ml/index
 todo.txt
+
+.DS_Store
