@@ -542,7 +542,7 @@ class Party(context.CustomCog, name="Political Parties"):
             if sorted_parties_and_members and independent_role:
                 party_list_embed_content.append(
                     f"⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}"
-                    f" citizen"
+                    f" citizen{'s' if len(independent_role.members) != 1 else ''}"
                 )
             fmt = "\n\n".join(party_list_embed_content)
             embed.description = f"{base_description}\n\n{fmt}"
