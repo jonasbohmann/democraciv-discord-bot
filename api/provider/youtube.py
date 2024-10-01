@@ -203,7 +203,12 @@ class YouTubeManager:
             embed.set_image(url=thumbnail_url)
 
             async with self.session.post(
-                self.YOUTUBE_WEBHOOK, json={"embeds": [embed.to_dict()]}
+                self.YOUTUBE_WEBHOOK,
+                json={
+                    "username": "Democraciv",
+                    "avatar_url": "https://cdn.discordapp.com/avatars/486971089222631455/2e2226d75feca59cc71898f5c24323b6.png?size=4096",
+                    "embeds": [embed.to_dict()],
+                },
             ) as response:
                 if response.status not in (200, 204):
                     logger.error(

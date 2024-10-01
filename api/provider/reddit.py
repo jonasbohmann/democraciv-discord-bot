@@ -260,7 +260,11 @@ class SubredditScraper:
             self._task = None
 
     async def send_webhook(self, reddit_post: RedditPost):
-        post_data = {"embeds": [reddit_post.to_embed()]}
+        post_data = {
+            "username": "Democraciv",
+            "avatar_url": "https://cdn.discordapp.com/avatars/486971089222631455/2e2226d75feca59cc71898f5c24323b6.png?size=4096",
+            "embeds": [reddit_post.to_embed()],
+        }
 
         for webhook in self.webhook_urls:
             async with self._session.post(url=webhook, json=post_data) as response:

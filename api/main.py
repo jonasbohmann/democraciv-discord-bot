@@ -9,6 +9,8 @@ import pydantic
 import uvicorn
 import xdice
 
+from contextlib import asynccontextmanager
+
 try:
     import uvloop
 
@@ -108,10 +110,54 @@ class Database:
             return self.pool
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    db = Database()
+    app.db = db
+    app.reddit_manager = RedditManager(
+        db=app.db, token_path=TOKEN_PATH, app_ready=app_ready
+    )
+    app.twitch_manager = TwitchManager(
+        db=app.db,
+        token_path=TOKEN_PATH,
+        reddit_manager=app.reddit_manager,
+        app_ready=app_ready,
+    )
+    app.youtube_manager = YouTubeManager(
+        db=app.db,
+        token_path=TOKEN_PATH,
+        reddit_manager=app.reddit_manager,
+        app_ready=app_ready,
+    )
+
+    await app.db.make_pool()
+
+    if ML_ENABLED:
+        await bert_qa.make()
+        await holmes_ie.register_documents()
+
+    logger.info("API ready to serve")
+    app_ready.set()
+
+    yield
+
+    logger.info("Waiting 10 seconds for all tasks to finish...")
+    await asyncio.wait(asyncio.all_tasks() - {asyncio.current_task()}, timeout=10)
+
+    await app.youtube_manager.session.close()
+    await app.reddit_manager._session.close()
+    await app.twitch_manager._session.close()
+
+
+app = FastAPI(lifespan=lifespan)
+app.db = None
+app.reddit_manager = None
+app.twitch_manager = None
+app.youtube_manager = None
+
 app_ready = asyncio.Event()
 security = HTTPBasic()
-db = Database()
+
 
 with open(TOKEN_PATH, "r") as token_file:
     token_json = json.load(token_file)
@@ -135,19 +181,11 @@ if ML_ENABLED:
     from api.ml import question_answering, information_extraction
 
     bert_qa = question_answering.BERTQuestionAnswering(
-        db=db, index_directory=str(pathlib.Path(__file__).parent) + "/ml/index"
+        db=app.db, index_directory=str(pathlib.Path(__file__).parent) + "/ml/index"
     )
-    holmes_ie = information_extraction.InformationExtraction(db=db)
+    holmes_ie = information_extraction.InformationExtraction(db=app.db)
 else:
     bert_qa = holmes_ie = None
-
-reddit_manager = RedditManager(db=db, token_path=TOKEN_PATH, app_ready=app_ready)
-twitch_manager = TwitchManager(
-    db=db, token_path=TOKEN_PATH, reddit_manager=reddit_manager, app_ready=app_ready
-)
-youtube_manager = YouTubeManager(
-    db=db, token_path=TOKEN_PATH, reddit_manager=reddit_manager, app_ready=app_ready
-)
 
 
 class AddWebhook(pydantic.BaseModel):
@@ -190,18 +228,6 @@ class Document(pydantic.BaseModel):
     label: str
 
 
-@app.on_event("startup")
-async def startup_event():
-    await db.make_pool()
-
-    if ML_ENABLED:
-        await bert_qa.make()
-        await holmes_ie.register_documents()
-
-    logger.info("API ready to serve")
-    app_ready.set()
-
-
 @app.get("/")
 async def ok():
     return {"ok": "ok"}
@@ -209,7 +235,7 @@ async def ok():
 
 @app.get("/reddit/list/{guild_id}")
 async def reddit_list(guild_id: int, auth: str = Depends(ensure_auth)):
-    webhooks = await reddit_manager.get_webhooks_per_guild(guild_id)
+    webhooks = await app.reddit_manager.get_webhooks_per_guild(guild_id)
     return {"webhooks": webhooks}
 
 
@@ -218,13 +244,13 @@ async def reddit_add(reddit_config: AddWebhook, auth: str = Depends(ensure_auth)
     reddit_config.target = (
         reddit_config.target.lower()
     )  # subreddit names are case-insensitive right?
-    await reddit_manager.add_webhook(config=reddit_config)
+    await app.reddit_manager.add_webhook(config=reddit_config)
     return reddit_config
 
 
 @app.post("/reddit/remove")
 async def reddit_remove(reddit_config: RemoveWebhook, auth: str = Depends(ensure_auth)):
-    response = await reddit_manager.remove_webhook(
+    response = await app.reddit_manager.remove_webhook(
         hook_id=reddit_config.id, guild_id=reddit_config.guild_id
     )
 
@@ -236,7 +262,7 @@ async def reddit_remove(reddit_config: RemoveWebhook, auth: str = Depends(ensure
 
 @app.post("/reddit/post")
 async def reddit_post(submission: SubmitRedditPost, auth: str = Depends(ensure_auth)):
-    return await reddit_manager.post_to_reddit(
+    return await app.reddit_manager.post_to_reddit(
         subreddit=submission.subreddit,
         title=submission.title,
         content=submission.content,
@@ -245,31 +271,31 @@ async def reddit_post(submission: SubmitRedditPost, auth: str = Depends(ensure_a
 
 @app.post("/reddit/post/delete")
 async def reddit_post_delete(post: DeleteRedditPost, auth: str = Depends(ensure_auth)):
-    return await reddit_manager.delete_reddit_post(post_id=post.id)
+    return await app.reddit_manager.delete_reddit_post(post_id=post.id)
 
 
 @app.post("/reddit/clear")
 async def reddit_clear(reddit_config: ClearPerGuild, auth: str = Depends(ensure_auth)):
-    removed = await reddit_manager.clear_per_guild(guild_id=reddit_config.guild_id)
+    removed = await app.reddit_manager.clear_per_guild(guild_id=reddit_config.guild_id)
     return {"ok": "ok", "removed": removed}
 
 
 @app.get("/twitch/list/{guild_id}")
 async def twitch_list(guild_id: int, auth: str = Depends(ensure_auth)):
-    webhooks = await twitch_manager.get_webhooks_per_guild(guild_id)
+    webhooks = await app.twitch_manager.get_webhooks_per_guild(guild_id)
     return {"webhooks": webhooks}
 
 
 @app.post("/twitch/add")
 async def twitch_add(twitch_config: AddTwitchHook, auth: str = Depends(ensure_auth)):
     twitch_config.target = twitch_config.target.lower()
-    result = await twitch_manager.add_webhook(config=twitch_config)
+    result = await app.twitch_manager.add_webhook(config=twitch_config)
     return result
 
 
 @app.post("/twitch/remove")
 async def twitch_remove(twitch_config: RemoveWebhook, auth: str = Depends(ensure_auth)):
-    response = await twitch_manager.remove_webhook(
+    response = await app.twitch_manager.remove_webhook(
         hook_id=twitch_config.id, guild_id=twitch_config.guild_id
     )
 
@@ -281,7 +307,7 @@ async def twitch_remove(twitch_config: RemoveWebhook, auth: str = Depends(ensure
 
 @app.post("/twitch/clear")
 async def twitch_clear(twitch_config: ClearPerGuild, auth: str = Depends(ensure_auth)):
-    removed = await twitch_manager.clear_per_guild(guild_id=twitch_config.guild_id)
+    removed = await app.twitch_manager.clear_per_guild(guild_id=twitch_config.guild_id)
     return {"ok": "ok", "removed": removed}
 
 
@@ -289,7 +315,7 @@ async def twitch_clear(twitch_config: ClearPerGuild, auth: str = Depends(ensure_
 async def twitch_subscription_verify(
     request: Request, background_tasks: BackgroundTasks
 ):
-    background_tasks.add_task(twitch_manager.handle_twitch_callback, request)
+    background_tasks.add_task(app.twitch_manager.handle_twitch_callback, request)
     js = await request.json()
 
     if "challenge" in js:
@@ -373,7 +399,7 @@ def _roll_dice(dice_to_roll: str):
 @app.post("/roll")
 def roll_dice(dice_to_roll: Dice, auth: str = Depends(ensure_auth)):
     # todo oct-2024: temporarily disabled
-    
+
     return {"error": "error"}
 
     try:
@@ -465,4 +491,4 @@ async def delete_bill(document: Document, auth: str = Depends(ensure_auth)):
 
 if __name__ == "__main__":
     logger.info("Starting app...")
-    uvicorn.run("main:app", host="0.0.0.0", port="8000")
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)
