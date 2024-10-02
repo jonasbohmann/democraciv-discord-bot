@@ -296,7 +296,7 @@ class SubredditScraper:
             if response.status == 200:
                 return await response.json()
 
-    @tasks.loop(seconds=5)
+    @tasks.loop(seconds=60)
     async def reddit_task(self):
         reddit_json = await self.get_newest_reddit_post()
 
