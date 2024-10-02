@@ -354,15 +354,10 @@ class Tags(context.CustomCog):
         if not await self.validate_tag_name(ctx, name.lower()):
             return
 
-        img = await self.bot.make_file_from_image_link(
-            "https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png"
-        )
-
         embed_q = await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?"
             f"\n{config.HINT} *Embeds behave differently than plain text, see the image below "
-            f"for the key differences.*",
-            file=img,
+            f"for the key differences.*\n\nhttps://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png",
         )
 
         is_embedded = await ctx.confirm(message=embed_q)
@@ -604,15 +599,10 @@ class Tags(context.CustomCog):
             return
 
         if to_change["embed"]:
-            img = await self.bot.make_file_from_image_link(
-                "https://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png"
-            )
-
             embed_q = await ctx.send(
                 f"{config.USER_INTERACTION_REQUIRED} Should the tag be sent as an embed?"
                 f"\n{config.HINT} *Embeds behave differently than plain text, see the image below "
-                f"for the key differences.*",
-                file=img,
+                f"for the key differences.*\n\nhttps://cdn.discordapp.com/attachments/499669824847478785/784226879149834282/em_vs_plain2.png",
             )
             is_embedded = await ctx.confirm(message=embed_q)
         else:

@@ -133,6 +133,15 @@ class _Fuzzy(commands.Converter):
             kwargs["models"] = sources
 
         menu = menu_cls(ctx, **kwargs)
+
+        # todo oct-24
+        if fmt == "Selfrole":
+            await ctx.send(
+                f"{config.HINT} If you're trying to join or leave a political party,"
+                f" check `{config.BOT_PREFIX}party` and `{config.BOT_PREFIX}join <party>`.\n"
+                f"{config.HINT} Use `{config.BOT_PREFIX}help party` to see all available commands for political parties."
+            )
+
         result = await menu.prompt()
 
         if result:
@@ -190,7 +199,7 @@ class InternalAPIWebhookConverter(commands.Converter):
             argument = argument[1:]
 
         if not argument.isdigit():
-            return await ctx.send(f"{config.NO} `{argument}` is not a real ID.")
+            raise commands.BadArgument(f"{config.NO} `{argument}` is not a real ID.")
 
         return int(argument)
 
@@ -279,7 +288,7 @@ class PoliticalParty(commands.Converter, FuzzyableMixin):
 
         try:
             invite = await self._bot.fetch_invite(self.discord_invite)
-            return invite.guild.icon.url
+            return invite.guild.icon.url if invite.guild.icon else None
         except (discord.NotFound, discord.HTTPException):
             return None
 

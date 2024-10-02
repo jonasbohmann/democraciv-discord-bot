@@ -460,16 +460,11 @@ class Legislature(
     async def b_bulkedit(self, ctx: context.CustomContext):
         """Bulk edit the Google Docs links of multiple bills at once"""
 
-        img = await self.bot.make_file_from_image_link(
-            "https://cdn.discordapp.com/attachments/759894147628269588/843804262777225226/bulkbill.PNG"
-        )
-
         await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Reply with a list of bills and their "
             f"respective new links. First, type the bill's id (like `12`), then type a space, "
             f"and then the new link for that bill.\n"
-            f"{config.HINT} For each bill/link pair, use a new line like in the image below.",
-            file=img,
+            f"{config.HINT} For each bill/link pair, use a new line like in the image below.\n\nhttps://cdn.discordapp.com/attachments/759894147628269588/843804262777225226/bulkbill.PNG",
         )
 
         bulks = await ctx.input()

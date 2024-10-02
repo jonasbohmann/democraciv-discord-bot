@@ -17,7 +17,9 @@ class Selfroles(context.CustomCog):
             "SELECT role_id FROM selfrole WHERE guild_id = $1", ctx.guild.id
         )
 
-        embed_message = [f"Looking for political parties? Try `{config.BOT_PREFIX}party` and `{config.BOT_PREFIX}join <party>`.\nIn order to add or remove a role from you, use `{config.BOT_PREFIX}role <role>`.\n\n"]
+        embed_message = [
+            f"Looking for political parties? Try `{config.BOT_PREFIX}party` and `{config.BOT_PREFIX}join <party>`.\nIn order to add or remove a role from you, use `{config.BOT_PREFIX}role <role>`.\n\n"
+        ]
 
         for role in role_list:
             role_object = ctx.guild.get_role(role["role_id"])
@@ -30,9 +32,9 @@ class Selfroles(context.CustomCog):
         embed = text.SafeEmbed(description="\n".join(embed_message))
         embed.set_author(
             name=f"Selfroles in {ctx.guild.name}",
-            icon_url=ctx.guild.icon.url,
+            icon_url=ctx.guild.icon.url if ctx.guild.icon else None,
         )
-        
+
         await ctx.send(embed=embed)
 
     @commands.group(

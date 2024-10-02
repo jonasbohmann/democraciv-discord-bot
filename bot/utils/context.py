@@ -86,7 +86,7 @@ class CustomContext(commands.Context):
 
     @property
     def guild_icon(self):
-        if self.guild:
+        if self.guild and self.guild.icon:
             return self.guild.icon.url
 
     @property
