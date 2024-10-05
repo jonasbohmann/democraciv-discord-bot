@@ -76,7 +76,7 @@ class Utility(context.CustomCog):
         if ctx.valid:
             return
 
-        never_role_name = "Reddit Press"
+        never_role_name = "Reddit Crosspost Opt-out"
         never_role = discord.utils.get(self.bot.dciv.roles, name=never_role_name)
 
         if never_role and never_role in message.author.roles:

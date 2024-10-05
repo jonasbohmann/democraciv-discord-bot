@@ -290,11 +290,22 @@ class SubredditScraper:
                         traceback.print_exception(type(e), e, e.__traceback__)
 
     async def get_newest_reddit_post(self) -> typing.Optional[typing.Dict]:
+        headers = {
+            "Authorization": f"bearer {self.manager.REDDIT_BEARER_TOKEN}",
+            "User-Agent": "democraciv-discord-bot by DerJonas - u/Jovanos",
+        }
+
         async with self._session.get(
-            f"https://www.reddit.com/r/{self.subreddit}/new.json?limit={self.post_limit}"
+            f"https://oauth.reddit.com/r/{self.subreddit}/new.json?limit={self.post_limit}",
+            headers=headers,
         ) as response:
             if response.status == 200:
                 return await response.json()
+
+            if response.status in (401, 403):
+                await self.manager.refresh_reddit_bearer_token()
+                logger.warning("got 403 while getting newest reddit post")
+                return None
 
     @tasks.loop(seconds=60)
     async def reddit_task(self):
