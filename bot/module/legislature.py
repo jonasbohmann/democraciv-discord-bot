@@ -59,7 +59,7 @@ class PassScheduler(text.RedditAnnouncementScheduler):
     def get_embed(self):
         embed = text.SafeEmbed()
         embed.set_author(
-            name=f"Passed Bills from {self.bot.mk.LEGISLATURE_NAME}",
+            name=f"Bills passed into Law by the {self.bot.mk.LEGISLATURE_NAME}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         message = [
@@ -92,11 +92,11 @@ class PassScheduler(text.RedditAnnouncementScheduler):
         return embed
 
     def get_reddit_post_title(self) -> str:
-        return f"Passed Bills from {self.bot.mk.LEGISLATURE_NAME}"
+        return f"New Bills passed into Law by the {self.bot.mk.LEGISLATURE_NAME} - {discord.utils.utcnow().strftime('%d %B %Y')}"
 
     def get_reddit_post_content(self) -> str:
         content = [
-            f"The following bills were passed into law by {self.bot.mk.LEGISLATURE_NAME}."
+            f"The following bills were passed into law by the {self.bot.mk.LEGISLATURE_NAME}."
             f"\n\n###Relevant Links\n\n"
             f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
             f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `-laws` in #bot on our "
@@ -940,7 +940,7 @@ class Legislature(
         *,
         sponsor_filter: models.SessionSponsorFilter = None,
     ):
-        """Get details about a session from {LEGISLATURE_NAME}
+        """Get details about a session from the {LEGISLATURE_NAME}
 
         You can filter the list of bills & motions by their amount of sponsors. Support notation: `<`, `<=`, `=`, `==`, `!=`, `!`, `>`, `>=` followed by a number.
 
