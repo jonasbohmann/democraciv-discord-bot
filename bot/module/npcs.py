@@ -595,7 +595,7 @@ class NPC(CustomCog):
         **Example**
            `{PREFIX}{COMMAND}` list all of your NPCs
            `{PREFIX}{COMMAND} @DerJonas` to see what NPCs someone else has access to
-           `{PREFIX}{COMMAND} DerJonas#8036`
+           `{PREFIX}{COMMAND} DerJonas`
            `{PREFIX}{COMMAND} Jonas`"""
 
         member = person or ctx.author

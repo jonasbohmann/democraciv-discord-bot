@@ -256,7 +256,7 @@ class MockBank(context.CustomCog, name="Bank"):
 
         **Examples**
             `-bank send @DerJonas 9.99`
-            `-bank send DerJonas#8036 250`
+            `-bank send derjonas 250`
             `-bank send c4a3ec17-cba4-462f-bdda-05620f574dce 32.10 Thanks ;)`
             `-bank send GOOGLE 1000.21` assuming 'GOOGLE' is the abbreviation of an existing, published organization
         """
@@ -639,7 +639,7 @@ class Bank(context.CustomCog):
 
         **Examples**
             `-bank send @DerJonas 9.99`
-            `-bank send DerJonas#8036 250`
+            `-bank send derjonas 250`
             `-bank send c4a3ec17-cba4-462f-bdda-05620f574dce 32.10 Thanks ;)`
             `-bank send GOOGLE 1000.21` assuming 'GOOGLE' is the abbreviation of an existing, published organization
         """

@@ -213,7 +213,7 @@ class Utility(context.CustomCog):
 
         outro = f"""\n\n &nbsp; \n\n --- \n\n*This is an automated press post from our Discord server. I am a 
         [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) and this is an automated service. 
-        Contact u/Jovanos (DerJonas#8036 on Discord) for further questions or bug reports. !A_ID: {message.author.id}*"""
+        Contact u/Jovanos (DerJonas on Discord) for further questions or bug reports. !A_ID: {message.author.id}*"""
 
         cleaned_up.append(outro)
 

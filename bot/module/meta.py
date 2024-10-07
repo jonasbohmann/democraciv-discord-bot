@@ -118,9 +118,7 @@ class Meta(context.CustomCog):
             description=f"[Invite this bot to your Discord Server.]({invite_url})",
         )
 
-        embed.add_field(
-            name="Developer", value="DerJonas#8036 (u/Jovanos)", inline=False
-        )
+        embed.add_field(name="Developer", value="DerJonas (u/Jovanos)", inline=False)
         embed.add_field(name="Version", value=self.bot.BOT_VERSION, inline=True)
         embed.add_field(name="Servers", value=len(self.bot.guilds), inline=True)
         embed.add_field(name="Prefix", value=f"`{config.BOT_PREFIX}`", inline=True)

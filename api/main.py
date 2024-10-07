@@ -466,17 +466,21 @@ def ml_ie(question: Question, auth: str = Depends(ensure_auth)):
 
 @app.post("/document/add")
 async def new_bill(document: Document, auth: str = Depends(ensure_auth)):
-    await holmes_ie.add_document(document.label)
-    await bert_qa.index()
+    if ML_ENABLED:
+        await holmes_ie.add_document(document.label)
+        await bert_qa.index()
+
     return {"ok": "ok"}
 
 
 @app.post("/document/update")
 async def update_bill(document: Document, auth: str = Depends(ensure_auth)):
-    await holmes_ie.add_document(document.label)
+    if ML_ENABLED:
+        await holmes_ie.add_document(document.label)
 
-    # documents in our index are not unique so we cannot reasonably update just the one bill
-    await bert_qa.index()
+        # documents in our index are not unique so we cannot reasonably update just the one bill
+        await bert_qa.index()
+
     return {"ok": "ok"}
 
 

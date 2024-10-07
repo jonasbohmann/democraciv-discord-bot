@@ -114,7 +114,7 @@ class PassScheduler(text.RedditAnnouncementScheduler):
 
         outro = f"""\n\n &nbsp; \n\n---\n\nAll these bills are now active laws and have to be followed. 
                 \n\n\n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) 
-                and this is an automated service. Contact u/Jovanos (DerJonas#8036 on Discord) for further questions 
+                and this is an automated service. Contact u/Jovanos (DerJonas on Discord) for further questions 
                 or bug reports.*"""
 
         content.append(outro)
@@ -1655,7 +1655,7 @@ class Legislature(
             )
 
         outro = f"""\n\n &nbsp; \n\n--- \n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) 
-        and this is an automated service. Contact u/Jovanos (DerJonas#8036 on Discord) for further questions or bug 
+        and this is an automated service. Contact u/Jovanos (DerJonas on Discord) for further questions or bug 
         reports.*"""
 
         cntnt.append(outro)
