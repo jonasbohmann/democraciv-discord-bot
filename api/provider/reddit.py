@@ -219,6 +219,7 @@ class RedditPost:
             icon_url="https://cdn.discordapp.com/attachments/730898526040752291/781547428087201792/Reddit_Mark_OnWhite.png",
         )
         e.add_field(name="Author", value=f"u/{self.author}", inline=False)
+        e.set_image(url=self.thumbnail)
         return e.to_dict()
 
     @property
