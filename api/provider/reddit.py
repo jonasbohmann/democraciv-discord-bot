@@ -195,7 +195,7 @@ class RedditManager(ProviderManager):
 class RedditPost:
     def __init__(self, **kwargs):
         self.id: str = kwargs.get("id")
-        self.title: str = kwargs.get("title")
+        self.title: str = html.unescape(kwargs.get("title"))
         self.author: str = kwargs.get("author")
         self._link: str = kwargs.get("permalink")
         self.link: str = f"https://reddit.com{self._link}"
