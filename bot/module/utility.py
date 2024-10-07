@@ -35,18 +35,56 @@ from bot.utils.converter import (
     FuzzySettings,
 )
 
+never_role_name = "Reddit Crosspost Opt-out"
+
+
+class RedditPressPostTitleModal(
+    discord.ui.Modal, title=f"r/{config.DEMOCRACIV_SUBREDDIT} Reddit Post"
+):
+    name = discord.ui.TextInput(
+        label="What should be the title of the Reddit post?",
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+    async def on_error(
+        self, interaction: discord.Interaction, error: Exception
+    ) -> None:
+        await interaction.response.send_message(
+            f"{config.NO} Something went wrong.", ephemeral=True
+        )
+        traceback.print_exception(type(error), error, error.__traceback__)
+
 
 class ConfirmView(text.PromptView):
     @discord.ui.button(label="Yes, post to Reddit", style=discord.ButtonStyle.green)
     async def yes(self, interaction, item):
-        await interaction.response.defer()
-        self.result = True
+        modal = RedditPressPostTitleModal()
+        await interaction.response.send_modal(modal)
+        await modal.wait()
+        self.result = modal.name.value
         self.stop()
 
     @discord.ui.button(label="No, cancel", style=discord.ButtonStyle.red)
     async def no(self, interaction, item):
         await interaction.response.defer()
         self.result = False
+        self.stop()
+
+    @discord.ui.button(label="No, and stop asking me", style=discord.ButtonStyle.gray)
+    async def stop_asking(self, interaction, item):
+        await interaction.response.defer()
+        self.result = False
+
+        if isinstance(interaction.user, discord.Member):
+            never_role = discord.utils.get(self.bot.dciv.roles, name=never_role_name)
+
+            if not never_role:
+                return
+
+            await interaction.user.add_roles(never_role)
+
         self.stop()
 
 
@@ -76,7 +114,6 @@ class Utility(context.CustomCog):
         if ctx.valid:
             return
 
-        never_role_name = "Reddit Crosspost Opt-out"
         never_role = discord.utils.get(self.bot.dciv.roles, name=never_role_name)
 
         if never_role and never_role in message.author.roles:
@@ -119,55 +156,30 @@ class Utility(context.CustomCog):
             return
 
         messages = list(filter(None, messages))
-        view = ConfirmView(ctx, timeout=120)
+        view = ConfirmView(ctx, timeout=300)
 
         confirm = await message.channel.send(
             f"{config.USER_INTERACTION_REQUIRED} {message.author.mention}, do you want "
             f"me to post these last {len(messages)} messages from you to our "
             f"subreddit **r/{config.DEMOCRACIV_SUBREDDIT}** in one, single press post?"
-            f"\n{config.HINT} *You have 2 minutes to decide. After that with no reaction from you I "
+            f"\n{config.HINT} *You have 5 minutes to decide. After 5 minutes with no reaction from you, I "
             f"will cancel this process and delete this message.*"
             f"\n{config.HINT} *If you would like to opt-out from this feature entirely so that I "
             f"no longer ask you this, give yourself the `{never_role_name}` selfrole with "
-            f"`{config.BOT_PREFIX}role {never_role_name}`.*",
+            f"`{config.BOT_PREFIX}role {never_role_name}` or click on 'No, and stop asking me'.*",
             view=view,
             allowed_mentions=discord.AllowedMentions(users=True),
             delete_after=125,
         )
 
-        do_post = await view.prompt(silent=True)
+        post_title = await view.prompt(silent=True)
 
-        if not do_post:
+        if not post_title:
             self.active_press_flows.remove(message.author.id)
             self.bot.loop.create_task(confirm.delete())
             return
 
-        title_q = await message.channel.send(
-            f"{config.USER_INTERACTION_REQUIRED} {message.author.mention}, what should be the "
-            f"title of the Reddit post?\n{config.HINT} *You have 3 minutes to respond. "
-            f"After that with no reply from you I will cancel this process and delete this message.*",
-            allowed_mentions=discord.AllowedMentions(users=True),
-            delete_after=180,
-        )
-
-        try:
-            title_message = await self.bot.wait_for(
-                "message",
-                check=lambda m: m.author == message.author
-                and m.channel == message.channel,
-                timeout=180,
-            )
-
-        except asyncio.TimeoutError:
-            self.active_press_flows.remove(message.author.id)
-            return
-
-        else:
-            if not title_message.content:
-                self.active_press_flows.remove(message.author.id)
-                return
-
-        title = f"{title_message.clean_content} — by {message.author.name}"
+        title = f"{post_title} — by {message.author.display_name}"
         cleaned_up = [
             f"*The following was written by the journalist {message.author.display_name} ({message.author}) "
             f"in #{message.channel.name} on our [Discord server](https://discord.gg/AK7dYMG)*."
@@ -195,7 +207,8 @@ class Utility(context.CustomCog):
             self.active_press_flows.remove(message.author.id)
             return await ctx.send(
                 f"{config.HINT} {message.author}, you deleted your messages, "
-                f"so I cancelled this process."
+                f"so I cancelled this process.",
+                delete_after=15,
             )
 
         outro = f"""\n\n &nbsp; \n\n --- \n\n*This is an automated press post from our Discord server. I am a 
@@ -237,8 +250,6 @@ class Utility(context.CustomCog):
             )
 
         self.bot.loop.create_task(confirm.delete())
-        self.bot.loop.create_task(title_q.delete())
-        self.bot.loop.create_task(title_message.delete())
 
     @commands.command(
         name="deletepresspost",
