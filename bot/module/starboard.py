@@ -94,7 +94,7 @@ class Starboard(context.CustomCog):
     ) -> str:
         """Formats the starred messages that are about to be posted to Reddit into raw markdown."""
 
-        intro = f"""**This is a list of messages from our [Discord](https://discord.gg/AK7dYMG) that at least
+        intro = f"""**This is a list of messages from our [Discord](https://discord.gg/tVmHVcZPVs) that at least
                 {self.star_threshold} people marked as newsworthy.**\n\nShould there be messages that 
                 break the content policy of Reddit or are against the rules of this subreddit, then please contact 
                 the Moderators.\n\nIf you don't want your Discord messages being shown here,

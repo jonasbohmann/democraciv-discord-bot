@@ -182,7 +182,7 @@ class Utility(context.CustomCog):
         title = f"{post_title} — by {message.author.display_name}"
         cleaned_up = [
             f"*The following was written by the journalist {message.author.display_name} ({message.author}) "
-            f"in #{message.channel.name} on our [Discord server](https://discord.gg/AK7dYMG)*."
+            f"in #{message.channel.name} on our [Discord server](https://discord.gg/tVmHVcZPVs)*."
         ]
 
         for mes in messages:

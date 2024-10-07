@@ -100,7 +100,7 @@ class PassScheduler(text.RedditAnnouncementScheduler):
             f"\n\n###Relevant Links\n\n"
             f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
             f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `-laws` in #bot on our "
-            f"[Discord Server](https://discord.gg/AK7dYMG)\n"
+            f"[Discord Server](https://discord.gg/tVmHVcZPVs)\n"
             f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n---\n  &nbsp; \n\n"
         ]
 
@@ -1626,7 +1626,7 @@ class Legislature(
             f"in case voting has not started yet.\n\n###Relevant Links\n\n* "
             f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
             f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `-laws` in #bot on our "
-            f"[Discord Server](https://discord.gg/AK7dYMG)\n"
+            f"[Discord Server](https://discord.gg/tVmHVcZPVs)\n"
             f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n  &nbsp; \n\n"
         )
 
