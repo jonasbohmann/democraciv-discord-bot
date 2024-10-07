@@ -521,7 +521,6 @@ class Moderation(context.CustomCog):
             `{PREFIX}{COMMAND} @Das` ban by mention
             `{PREFIX}{COMMAND} Queen Das` ban by nickname
             `{PREFIX}{COMMAND} darthspectrum` ban by username
-            `{PREFIX}{COMMAND} darthspectrum#4924` ban by username#discriminator
             `{PREFIX}{COMMAND} 561280863464062977` ban by ID"""
 
         if isinstance(person, (discord.Member, discord.User)):

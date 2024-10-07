@@ -113,8 +113,7 @@ class _Guild(context.CustomCog, name="Server"):
             message = message.replace("{member}", member.mention)  # deprecated
             message = message.replace("{mention}", member.mention)
             message = message.replace("{username}", member.name)
-            message = message.replace("{discriminator}", member.discriminator)
-            message = message.replace("{user}", str(member))
+            message = message.replace("{user}", member.display_name)
             message = message.replace("{server}", member.guild.name)
             message = message.replace("{channel}", welcome_channel.mention)
             await welcome_channel.send(
@@ -218,9 +217,8 @@ class _Guild(context.CustomCog, name="Server"):
 
                 translations = (
                     f"`{{mention}}` - Mention (ping) the person that just joined  (For example: @DerJonas)\n"
-                    f"`{{user}}` - Username#Discriminator  (For example: DerJonas#8036)\n"
-                    f"`{{username}}` - Username  (For example: DerJonas)\n"
-                    f"`{{discriminator}}` - Discriminator  (For example: 8036)\n"
+                    f"`{{user}}` - Display Name  (For example: DerJonas)\n"
+                    f"`{{username}}` - Discord Username  (For example: derjonas)\n"
                     f"`{{server}}` - Name of the server  (For example: Democraciv)\n"
                     f"`{{channel}}` - The welcome channel  (For example: #welcome)\n"
                 )
