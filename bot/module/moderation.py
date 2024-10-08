@@ -102,14 +102,14 @@ class Moderation(context.CustomCog):
 
     @commands.Cog.listener(name="on_message")
     async def mod_request_listener(self, message):
+        if message.author.bot:
+            return
+
         # If it's a command, ignore
         if (await self.bot.get_context(message)).valid:
             return
 
         if message.guild != self.bot.dciv:
-            return
-
-        if message.author.bot:
             return
 
         try:
@@ -140,10 +140,10 @@ class Moderation(context.CustomCog):
 
     @commands.Cog.listener(name="on_member_join")
     async def possible_alt_listener(self, member):
-        if member.guild != self.bot.dciv:
+        if member.bot:
             return
 
-        if member.bot:
+        if member.guild != self.bot.dciv:
             return
 
         chance, details = await self.calculate_alt_chance(member)

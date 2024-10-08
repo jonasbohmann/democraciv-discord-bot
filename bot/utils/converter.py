@@ -670,6 +670,9 @@ class CaseInsensitiveMember(commands.MemberConverter, FuzzyableMixin):
         members = {}
         all_tries = []
 
+        if not ctx.guild:
+            return []
+
         for member in ctx.guild.members:
             all_tries.append(member.name)
 
@@ -701,6 +704,9 @@ class CaseInsensitiveMember(commands.MemberConverter, FuzzyableMixin):
                     or (m.nick and m.nick.lower() == arg)
                     or str(m).lower() == arg
                 )
+
+            if not ctx.guild:
+                raise BadArgument(f"{config.NO} I couldn't find that person.")
 
             member = discord.utils.find(predicate, ctx.guild.members)
 
