@@ -939,9 +939,9 @@ class DemocracivBot(commands.Bot):
 
     async def do_db_backup(self, database_name: str):
         now = time.time()
-        pretty_time = datetime.datetime.utcfromtimestamp(now).strftime(
-            "%A, %B %d %Y %H:%M:%S"
-        )
+        pretty_time = datetime.datetime.fromtimestamp(
+            now, tz=datetime.timezone.utc
+        ).strftime("%A, %B %d %Y %H:%M:%S")
         file_name = f"{database_name}-backup-{now}"
 
         parent = str(pathlib.Path(__file__).parent) + "/db/"
