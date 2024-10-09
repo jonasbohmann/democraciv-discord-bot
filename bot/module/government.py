@@ -177,8 +177,8 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
             members_of_gov = ["-"]
 
         embed.add_field(
-            name=f"Total Members of Government ({len(members_of_gov) if members_of_gov[0] != "-" else 0})",
-            value="\n".join(members_of_gov),
+            name=f"Total Members of Government",
+            value=f"{len(members_of_gov)}" if members_of_gov[0] != "-" else "0",
             inline=False,
         )
 
