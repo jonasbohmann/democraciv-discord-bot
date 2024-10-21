@@ -116,6 +116,7 @@ class SearchClient:
             "cropLength": 40,
             "highlightPreTag": "<DBS>",
             "highlightPostTag": "<DBE>",
+            "hybrid": {"embedder": "default", "semanticRatio": question.semantic_ratio},
         }
 
         if question.index == "bill" and question.is_law:
