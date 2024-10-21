@@ -128,14 +128,14 @@ discord.abc.Messageable.send = safe_send
 
 def get_prefix(bot, msg):
     # invoke command in main and all nation bots
-    if msg.author.id == bot.owner.id and msg.content.startswith("a-"):
-        return "a-"
+    # if msg.author.id == bot.owner.id and msg.content.startswith("a-"):
+    #    return "a-"
 
-    for prefix in config.BOT_ADDITIONAL_PREFIXES:
-        r = re.compile(f"^({prefix}).*", flags=re.I)
-        m = r.match(msg.content)
-        if m:
-            return commands.when_mentioned_or(m.group(1))(bot, msg)
+    # for prefix in config.BOT_ADDITIONAL_PREFIXES:
+    #    r = re.compile(f"^({prefix}).*", flags=re.I)
+    #    m = r.match(msg.content)
+    #    if m:
+    #        return commands.when_mentioned_or(m.group(1))(bot, msg)
 
     return commands.when_mentioned_or(config.BOT_PREFIX)(bot, msg)
 

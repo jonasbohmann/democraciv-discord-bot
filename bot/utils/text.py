@@ -35,7 +35,7 @@ class AnnouncementScheduler:
         self._channel: mk.DemocracivChannel = channel
         self._objects: typing.List = []
         self._last_addition = None
-        self.wait_time = 5
+        self.wait_time = 20
         self._task = None
 
     def __del__(self):
