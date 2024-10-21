@@ -1,3 +1,4 @@
+import datetime
 import time
 import typing
 
@@ -61,12 +62,94 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
             f"{config.YES} `{tag}` was added as a search tag to `{bill.name}` (#{bill.id})"
         )
 
-    @Feature.Command(parent="jsk", name="forceindex")
-    async def jsk_ml_qa_force_index(self, ctx):
-        """Force rebuilding the document index for BERTQuestionAnswering"""
+    @Feature.Command(parent="jsk", name="legopen")
+    async def jsk_opensession(self, ctx, speaker: discord.User):
+        new_session = await self.bot.db.fetchval(
+            "INSERT INTO legislature_session (speaker, opened_on) VALUES ($1, $2) RETURNING id",
+            speaker.id,
+            datetime.datetime.utcnow(),
+        )
+        await ctx.send(f"{config.YES} Session {new_session} was opened.")
 
-        await self.bot.api_request("POST", "ml/question_answering/force_index")
-        await ctx.send(config.YES)
+    @Feature.Command(parent="jsk", name="legclose")
+    async def jsk_closesession(self, ctx):
+        cog = self.bot.get_cog("Law")
+        active_leg_session = await cog.get_active_leg_session()
+
+        await active_leg_session.close()
+
+        consumer = models.LegalConsumer(
+            ctx=ctx,
+            objects=[
+                await models.Bill.convert(ctx, b) for b in active_leg_session.bills
+            ],
+            action=models.BillStatus.fail_in_legislature,
+        )
+
+        await consumer.filter()
+        await consumer.consume()
+
+        await ctx.send(f"{config.YES} Ok.")
+
+    @Feature.Command(parent="jsk", name="submitbill", aliases=["sb"])
+    async def jsk_insertbill(
+        self,
+        ctx,
+        leg_session_id: int,
+        submitter: discord.User,
+        is_vetoable: bool,
+        google_docs_url: str,
+        *,
+        bill_description: str,
+    ):
+        """Submit a bill"""
+
+        async with ctx.typing():
+            bill = models.Bill(
+                bot=self.bot,
+                link=google_docs_url,
+                submitter_description=bill_description,
+            )
+            name, tags, content = await bill.fetch_name_and_keywords()
+
+            if not name:
+                await ctx.send(
+                    f"{config.NO} Something went wrong. Are you sure you made your "
+                    f"Google Docs document public for everyone to view?"
+                )
+                return
+
+            bill_id = await self.bot.db.fetchval(
+                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, submitter_description, content) "
+                "VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+                leg_session_id,
+                name,
+                google_docs_url,
+                submitter.id,
+                is_vetoable,
+                bill_description,
+                content,
+            )
+
+            bill.id = bill_id
+            await bill.status.log_history(
+                old_status=models.BillSubmitted.flag,
+                new_status=models.BillSubmitted.flag,
+                note=f"Submitted to Session #{leg_session_id}",
+            )
+
+            id_with_tags = [(bill_id, tag) for tag in tags]
+            self.bot.loop.create_task(
+                self.bot.db.executemany(
+                    "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES "
+                    "($1, $2) ON CONFLICT DO NOTHING ",
+                    id_with_tags,
+                )
+            )
+
+        await ctx.send(
+            f"{config.YES} `{bill.name}` (#{bill.id}) was submitted by {submitter} to session #{leg_session_id}."
+        )
 
 
 class Experiments(context.CustomCog):
