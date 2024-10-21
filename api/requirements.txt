@@ -2,7 +2,4 @@ fastapi
 uvicorn
 discord.py
 asyncpg
-xdice
-# holmes-extractor
-tensorflow
-ktrain
+meilisearch

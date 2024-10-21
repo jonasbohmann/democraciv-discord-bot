@@ -487,7 +487,9 @@ class Legislature(
                         )
 
                         await self.bot.api_request(
-                            "POST", "document/update", json={"label": f"bill_{bill.id}"}
+                            "POST",
+                            "document/update",
+                            json={"id": bill.id, "type": "bill"},
                         )
 
         msg = f"{config.YES} Synchronized {len(bills) - len(errs)}/{len(bills)} bills with Google Docs."
@@ -690,6 +692,58 @@ class Legislature(
 
         await pages.start(ctx)
 
+    @bill.command(
+        name="full-text-search", aliases=["fs", "fts", "fst", "fulltextsearch"]
+    )
+    async def fulltextsearch(self, ctx, *, query):
+        """This is an experimental command and still a work-in-progress."""
+
+        if self.bot.mk.IS_MULTICIV:
+            return await ctx.send(
+                f"{config.NO} This command is disabled during Multiciv MKs."
+            )
+
+        async with ctx.typing():
+            response = await self.bot.api_request(
+                "POST",
+                "document/search",
+                json={"question": query, "index": "bill", "is_law": False},
+            )
+
+        if not response or not response["result"]["hits"]:
+            return await ctx.send(
+                f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
+            )
+
+        fmt = [
+            "This feature is a work-in-progress. Should this feature come out of "
+            f"beta, then it will probably be integrated into the `{config.BOT_PREFIX}laws search` and "
+            f"`{config.BOT_PREFIX}legislature bills search` commands.\n\nKnown issue: This only shows 1 search result per bill.\n"
+        ]
+
+        for hit in response["result"]["hits"]:
+            try:
+                bill = await models.Bill.convert(ctx, hit["id"])
+            except Exception:
+                continue
+
+            trimmed = hit["_formatted"]["content"].strip()
+            txt = discord.utils.escape_markdown(trimmed)
+            txt = txt.replace("<DBS>", "[**")
+            txt = txt.replace(
+                "<DBE>", "**](https://this-is-not-a-real-url.democraciv.com)"
+            )
+            fmt.append(f"**__{bill.formatted}__**")
+            fmt.append(f"{txt}\n")
+
+        pages = paginator.SimplePages(
+            entries=fmt,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"[BETA] Results for '{query}'",
+        )
+
+        await pages.start(ctx)
+
     @bill.command(name="from", aliases=["f", "by"])
     async def b_from(
         self,
@@ -802,7 +856,7 @@ class Legislature(
         )
 
         await self.bot.api_request(
-            "POST", "document/update", json={"label": f"motion_{motion.id}"}
+            "POST", "document/update", json={"id": motion.id, "type": "motion"}
         )
 
         await ctx.send(f"{config.YES} Motion #{motion.id} `{motion.name}` was updated.")
@@ -2034,7 +2088,7 @@ class Legislature(
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
         await self.bot.api_request(
-            "POST", "document/add", silent=True, json={"label": f"bill_{bill_id}"}
+            "POST", "document/add", silent=True, json={"id": bill_id, "type": "bill"}
         )
         return embed
 
@@ -2103,7 +2157,10 @@ class Legislature(
             f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion sponsor {motion_id}`."
         )
         await self.bot.api_request(
-            "POST", "document/add", silent=True, json={"label": f"motion_{motion_id}"}
+            "POST",
+            "document/add",
+            silent=True,
+            json={"id": motion_id, "type": "motion"},
         )
         return embed
 

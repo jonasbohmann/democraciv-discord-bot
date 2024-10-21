@@ -29,11 +29,11 @@ from api.provider import RedditManager, TwitchManager, YouTubeManager
 from fastapi import FastAPI, BackgroundTasks, Request, HTTPException, Depends
 from fastapi.responses import PlainTextResponse, JSONResponse
 from fastapi.logger import logger
+from api.search import meilisearch
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from starlette import status
 
 TOKEN_PATH = f"{pathlib.Path(__file__).parent}/token.json"
-ML_ENABLED = False
 
 
 class Database:
@@ -130,23 +130,24 @@ async def lifespan(app: FastAPI):
         app_ready=app_ready,
     )
 
+    app.search_client = meilisearch.SearchClient(db=app.db, token_path=TOKEN_PATH)
+
     await app.db.make_pool()
 
-    if ML_ENABLED:
-        await bert_qa.make()
-        await holmes_ie.register_documents()
+    await app.search_client.setup()
 
     logger.info("API ready to serve")
     app_ready.set()
 
     yield
 
-    logger.info("Waiting 10 seconds for all tasks to finish...")
-    await asyncio.wait(asyncio.all_tasks() - {asyncio.current_task()}, timeout=10)
+    logger.info("Waiting 5 seconds for all tasks to finish...")
+    await asyncio.wait(asyncio.all_tasks() - {asyncio.current_task()}, timeout=5)
 
     await app.youtube_manager.session.close()
     await app.reddit_manager._session.close()
     await app.twitch_manager._session.close()
+    await app.search_client._session.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -171,21 +172,10 @@ def ensure_auth(credentials: HTTPBasicCredentials = Depends(security)):
     if not (correct_username and correct_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect user or password",
             headers={"WWW-Authenticate": "Basic"},
         )
     return credentials.username
-
-
-if ML_ENABLED:
-    from api.ml import question_answering, information_extraction
-
-    bert_qa = question_answering.BERTQuestionAnswering(
-        db=app.db, index_directory=str(pathlib.Path(__file__).parent) + "/ml/index"
-    )
-    holmes_ie = information_extraction.InformationExtraction(db=app.db)
-else:
-    bert_qa = holmes_ie = None
 
 
 class AddWebhook(pydantic.BaseModel):
@@ -225,7 +215,15 @@ class DeleteRedditPost(pydantic.BaseModel):
 
 
 class Document(pydantic.BaseModel):
-    label: str
+    id: int
+    type: str
+
+
+class Question(pydantic.BaseModel):
+    question: str
+    index: str
+    is_law: bool = False
+    semantic_ratio: float = 0.7
 
 
 @app.get("/")
@@ -408,88 +406,27 @@ def roll_dice(dice_to_roll: Dice, auth: str = Depends(ensure_auth)):
         return {"error": "invalid dice syntax"}
 
 
-class Question(pydantic.BaseModel):
-    question: str
-    batch_size: int = 1
-
-
-@app.middleware("http")
-async def check_if_ml_enabled(request: Request, call_next):
-    if request.url.path.startswith("/ml") and not ML_ENABLED:
-        return JSONResponse(content={"error": "ml endpoints are disabled"})
-
-    return await call_next(request)
-
-
-@app.post("/ml/question_answering/force_index")
-async def ml_qa_force_index(auth: str = Depends(ensure_auth)):
-    await bert_qa.index(force=True)
-    return {"ok": "ok"}
-
-
-@app.post("/ml/question_answering")
-def ml_qa(question: Question, auth: str = Depends(ensure_auth)):
-    if question.batch_size > 10:
-        return {"error": "batch_size too large. maximum is 10"}
-
-    try:
-        answers = bert_qa.qa.ask(
-            question.question,
-            n_answers=10,
-            n_docs_considered=15,
-            batch_size=question.batch_size,
-        )
-        result = []
-
-        for answer in answers:
-            result.append(
-                {
-                    "answer": answer["answer"],
-                    "score": float(answer["confidence"]),
-                    "context": answer["context"],
-                    "full_answer": answer["full_answer"],
-                    "document": answer["reference"],
-                }
-            )
-
-        return result
-    except Exception as e:
-        logger.error(f"error in /ml/question_answering: {type(e)}: {e}")
-        return {"error": "who knows"}
-
-
-@app.post("/ml/information_extraction")
-def ml_ie(question: Question, auth: str = Depends(ensure_auth)):
-    answers = holmes_ie.search(question.question)
-    return answers
+@app.post("/document/search")
+async def search_bill(question: Question, auth: str = Depends(ensure_auth)):
+    result = app.search_client.search(question)
+    return {"ok": "ok", "result": result}
 
 
 @app.post("/document/add")
 async def new_bill(document: Document, auth: str = Depends(ensure_auth)):
-    if ML_ENABLED:
-        await holmes_ie.add_document(document.label)
-        await bert_qa.index()
-
+    await app.search_client.add_document(document.type, document.id)
     return {"ok": "ok"}
 
 
 @app.post("/document/update")
 async def update_bill(document: Document, auth: str = Depends(ensure_auth)):
-    if ML_ENABLED:
-        await holmes_ie.add_document(document.label)
-
-        # documents in our index are not unique so we cannot reasonably update just the one bill
-        await bert_qa.index()
-
+    await app.search_client.add_document(document.type, document.id)
     return {"ok": "ok"}
 
 
 @app.post("/document/delete")
 async def delete_bill(document: Document, auth: str = Depends(ensure_auth)):
-    holmes_ie.delete_document(document.label)
-
-    # documents in our index are not unique so we cannot reasonably delete just the one bill
-    await bert_qa.index()
+    await app.search_client.delete_document(document.type, document.id)
     return {"ok": "ok"}
 
 

@@ -233,7 +233,7 @@ class Bill(commands.Converter, FuzzyableMixin):
             "DELETE FROM bill_lookup_tag WHERE bill_id = $1", self.id
         )
         await self._bot.api_request(
-            "POST", "document/update", silent=True, json={"label": f"bill_{self.id}"}
+            "POST", "document/update", silent=True, json={"id": self.id, "type": "bill"}
         )
 
         id_with_kws = [(self.id, keyword) for keyword in keywords]
@@ -496,7 +496,10 @@ class Motion(commands.Converter, FuzzyableMixin):
     async def withdraw(self):
         await self._bot.db.execute("DELETE FROM motion WHERE id = $1", self.id)
         await self._bot.api_request(
-            "POST", "document/delete", silent=True, json={"label": f"motion_{self.id}"}
+            "POST",
+            "document/delete",
+            silent=True,
+            json={"id": self.id, "type": "motion"},
         )
 
     async def get_fuzzy_source(
@@ -684,6 +687,14 @@ class BillStatus:
             self._bot, self._bill
         )
 
+        if old_status is _BillStatusFlag.LAW or new_status is _BillStatusFlag.LAW:
+            await self._bot.api_request(
+                "POST",
+                "document/update",
+                silent=True,
+                json={"id": self._bill.id, "type": "bill"},
+            )
+
     async def veto(self, dry=False, **kwargs):
         raise IllegalBillOperation()
 
@@ -739,7 +750,7 @@ class BillSubmitted(BillStatus):
             "POST",
             "document/delete",
             silent=True,
-            json={"label": f"bill_{self._bill.id}"},
+            json={"id": self._bill.id, "type": "bill"},
         )
 
     async def fail_in_legislature(self, dry=False, **kwargs):

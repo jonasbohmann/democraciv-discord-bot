@@ -209,7 +209,9 @@ class RedditPost:
             self._thumbnail = None
 
         self._created_utc: float = kwargs.get("created_utc")
-        self.timestamp = datetime.datetime.fromtimestamp(self._created_utc, tz=datetime.timezone.utc)
+        self.timestamp = datetime.datetime.fromtimestamp(
+            self._created_utc, tz=datetime.timezone.utc
+        )
 
     def to_embed(self):
         # old colour 16723228

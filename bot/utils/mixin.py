@@ -230,13 +230,18 @@ class GovernmentMixin:
                 "document/search",
                 json={"question": query, "index": "bill", "is_law": True},
             )
+
         else:
             response = await self.bot.api_request(
                 "POST",
                 "document/search",
-                json={"question": query, "index": "bill", "is_law": True},
+                json={"question": query, "index": model.model.lower()},
             )
-            print(response)
+
+        if not response or response["result"]["error"]:
+            raise exceptions.DemocracivBotException(f"{config.NO}.")
+
+        print(response)
 
     async def _ai_embedding_search_with_meilisearch(self, ctx, *, model, query):
         if model is models.Law:
