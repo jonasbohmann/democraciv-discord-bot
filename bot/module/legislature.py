@@ -55,51 +55,82 @@ class ModelChooseView(text.PromptView):
         self.stop()
 
 
-class PassScheduler(text.RedditAnnouncementScheduler):
+class SuperPassScheduler(text.AnnouncementScheduler):
     def get_embed(self):
         embed = text.SafeEmbed()
         embed.set_author(
-            name=f"Bills passed into Law by the {self.bot.mk.LEGISLATURE_NAME}",
+            name=f"Bills passed into law with a super-majority by the {self.bot.mk.LEGISLATURE_NAME}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
+
         message = [
-            f"The following bills were **passed into law** by {self.bot.mk.LEGISLATURE_NAME}.\n"
+            f"The following bills were **passed into law** with a super-majority by the {self.bot.mk.LEGISLATURE_NAME}.\n"
         ]
 
         for obj in self._objects:
             submitter = obj.submitter or context.MockUser()
+
             message.append(
                 f"__Bill #{obj.id} - **[{obj.name}]({obj.link})**__"
                 f"\n*Submitted by {submitter.mention}*\n{obj.description}\n"
             )
-            # if obj.is_vetoable:
-            #    message.append(f"-  **{obj.name}** (<{obj.link}>)")
-            # else:
-            #    message.append(f"-  __**{obj.name}**__ (<{obj.link}>)")
-
-        p = config.BOT_PREFIX
-        # message.append(
-        #    f"\nAll non veto-able bills are now laws (marked as __underlined__) and can be found in `{p}laws`, "
-        #    f"as well with `{p}laws search`. The others were sent to the {self.bot.mk.MINISTRY_NAME} "
-        #    f"(`{p}{self.bot.mk.MINISTRY_COMMAND} bills`) to either pass "
-        #    f"(`{p}{self.bot.mk.MINISTRY_COMMAND} pass`) or veto (`{p}{self.bot.mk.MINISTRY_COMMAND} veto`) them."
-        # )
 
         message.append(
-            f"\nAll these bills are now laws. They were added to `{p}laws` and can be found with `{p}laws search`."
+            f"\nAll of the above bills are now law and can be found in `{config.BOT_PREFIX}laws`, "
+            f"as well with `{config.BOT_PREFIX}laws search`."
         )
         embed.description = "\n".join(message)
         return embed
 
+
+class PassScheduler(text.RedditAnnouncementScheduler):
+    def get_embed(self):
+        embed = text.SafeEmbed()
+        embed.set_author(
+            name=f"Bills passed by the {self.bot.mk.LEGISLATURE_NAME}",
+            icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
+        )
+        message = [
+            f"The following bills were **passed** by the {self.bot.mk.LEGISLATURE_NAME}.\n"
+        ]
+
+        for obj in self._objects:
+            submitter = obj.submitter or context.MockUser()
+
+            if obj.is_vetoable:
+                message.append(
+                    f"__Bill #{obj.id} - **[{obj.name}]({obj.link})**__"
+                    f"\n*Submitted by {submitter.mention}*\n{obj.description}\n"
+                )
+            else:
+                message.append(
+                    f"__*Bill #{obj.id}* - **[{obj.name}]({obj.link})**__"
+                    f"\n*Submitted by {submitter.mention}*\n{obj.description}\n"
+                )
+
+        p = config.BOT_PREFIX
+        message.append(
+            f"\nAll non-vetoable bills are now laws (marked as cursive *Bill ...*) and can be found in `{p}laws`, "
+            f"as well with `{p}laws search`. The others were sent to the {self.bot.mk.MINISTRY_NAME} "
+            f"(`{p}{self.bot.mk.MINISTRY_COMMAND} bills`) to either pass "
+            f"(`{p}{self.bot.mk.MINISTRY_COMMAND} pass`) or veto (`{p}{self.bot.mk.MINISTRY_COMMAND} veto`) them."
+        )
+
+        # message.append(
+        #    f"\nAll these bills are now laws. They were added to `{p}laws` and can be found with `{p}laws search`."
+        # )
+        embed.description = "\n".join(message)
+        return embed
+
     def get_reddit_post_title(self) -> str:
-        return f"New Bills passed into Law by the {self.bot.mk.LEGISLATURE_NAME} - {discord.utils.utcnow().strftime('%d %B %Y')}"
+        return f"New Bills passed by the {self.bot.mk.LEGISLATURE_NAME} - {discord.utils.utcnow().strftime('%d %B %Y')}"
 
     def get_reddit_post_content(self) -> str:
         content = [
-            f"The following bills were passed into law by the {self.bot.mk.LEGISLATURE_NAME}."
+            f"The following bills were passed by the {self.bot.mk.LEGISLATURE_NAME}."
             f"\n\n###Relevant Links\n\n"
             f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
-            f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `-laws` in #bot on our "
+            f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `{config.BOT_PREFIX}laws` in #bot on our "
             f"[Discord Server](https://discord.gg/tVmHVcZPVs)\n"
             f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n---\n  &nbsp; \n\n"
         ]
@@ -107,12 +138,12 @@ class PassScheduler(text.RedditAnnouncementScheduler):
         for bill in self._objects:
             submitter = bill.submitter or context.MockUser()
             content.append(
-                f"__**Law #{bill.id} - [{bill.name}]({bill.link})**__\n\n*Written by "
+                f"__**Bill #{bill.id} - [{bill.name}]({bill.link})**__\n\n*Written by "
                 f"{submitter.display_name} ({submitter})*"
                 f"\n\n{bill.description}\n\n &nbsp;"
             )
 
-        outro = f"""\n\n &nbsp; \n\n---\n\nAll these bills are now active laws and have to be followed. 
+        outro = f"""\n\n &nbsp; \n\n---\n\nAll non-vetoable bills are now laws. The others were sent to the {self.bot.mk.MINISTRY_NAME} for them to either veto or pass them into law.
                 \n\n\n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) 
                 and this is an automated service. Contact u/Jovanos (DerJonas on Discord) for further questions 
                 or bug reports.*"""
@@ -122,21 +153,32 @@ class PassScheduler(text.RedditAnnouncementScheduler):
 
 
 class OverrideScheduler(text.AnnouncementScheduler):
-    def get_message(self) -> str:
+    def get_embed(self):
+        embed = text.SafeEmbed()
+        embed.set_author(
+            name=f"Veto overridden by the {self.bot.mk.LEGISLATURE_NAME}",
+            icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
+        )
+
         message = [
-            f"The {self.bot.mk.MINISTRY_NAME}'s **veto of the following bills were overridden** "
+            f"The {self.bot.mk.MINISTRY_NAME}'s **veto of the following bills was overridden** "
             f"by the {self.bot.mk.LEGISLATURE_NAME}.\n"
         ]
 
         for obj in self._objects:
-            message.append(f"Bill #{obj.id} - **{obj.name}** (<{obj.link}>)")
+            submitter = obj.submitter or context.MockUser()
+
+            message.append(
+                f"__Bill #{obj.id} - **[{obj.name}]({obj.link})**__"
+                f"\n*Submitted by {submitter.mention}*\n{obj.description}\n"
+            )
 
         message.append(
             f"\nAll of the above bills are now law and can be found in `{config.BOT_PREFIX}laws`, "
             f"as well with `{config.BOT_PREFIX}laws search`."
         )
-
-        return "\n".join(message)
+        embed.description = "\n".join(message)
+        return embed
 
 
 LEG_COMMAND_ALIASES = ["leg", "legislature", "s"]
@@ -161,6 +203,9 @@ class Legislature(
             subreddit=config.DEMOCRACIV_SUBREDDIT,
         )
         self.override_scheduler = OverrideScheduler(
+            bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL
+        )
+        self.superpass_scheduler = SuperPassScheduler(
             bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL
         )
 
@@ -189,7 +234,7 @@ class Legislature(
         new_ctx = await self.bot.get_context(ctx.message)
         return await self.bot.invoke(new_ctx)
 
-    @commands.command(name="motion", aliases=["motions", "m"], hidden=True)
+    @commands.command(name="motion", aliases=["motions", "mo"], hidden=True)
     async def _motion(self, ctx: context.CustomContext):
         """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} motion`
 
@@ -642,6 +687,7 @@ class Legislature(
             author=f"Bills matching '{query}'",
             empty_message="Nothing found.",
         )
+
         await pages.start(ctx)
 
     @bill.command(name="from", aliases=["f", "by"])
@@ -761,7 +807,7 @@ class Legislature(
 
         await ctx.send(f"{config.YES} Motion #{motion.id} `{motion.name}` was updated.")
 
-    @motion.command(name="sponsor", aliases=["sp", "cosponsor", "second"])
+    @motion.command(name="sponsor", aliases=["cosponsor", "second"])
     @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
     @checks.is_citizen_if_multiciv()
     async def m_sponsor(self, ctx, motion_ids: Greedy[Motion]):
@@ -1053,6 +1099,9 @@ class Legislature(
             )
 
         entries.extend(pretty_bills)
+
+        if session.status is SessionStatus.CLOSED:
+            await ctx.send(f":warning: This session is already closed.")
 
         pages = paginator.SimplePages(
             entries=entries,
@@ -1353,6 +1402,12 @@ class Legislature(
         )
 
         info.add_field(
+            name="Pass with a super-majority",
+            value=f"Bills that received a super-majority can be passed directly into law, skipping the {self.bot.mk.MINISTRY_NAME}'s vote, with `{p}{l} superpass <bill_ids>`",
+            inline=False,
+        )
+
+        info.add_field(
             name="Why can't I pass motions?",
             value="Motions are intended for short-term, temporary actions that do not "
             f"require to be kept as record in `{p}laws`. As such, they lack some features that bills "
@@ -1375,12 +1430,12 @@ class Legislature(
             inline=False,
         )
 
-        # info.add_field(
-        #    name="'Help! Someone submitted a bill as not veto-able but it's not' or vice-versa",
-        #    value="Don't worry, while there isn't a command (yet) for you to fix that, "
-        #          f"you can just ping {self.bot.owner.mention} to fix this.",
-        #    inline=False,
-        # )
+        info.add_field(
+            name="'Help! Someone submitted a bill as not vetoable but it's not' or vice-versa",
+            value="Don't worry, while there isn't a command (yet) for you to fix that, "
+            f"you can just ping {self.bot.owner.mention} to fix this.",
+            inline=False,
+        )
 
         info.add_field(
             name="Keep it rolling",
@@ -1843,9 +1898,9 @@ class Legislature(
         is_vetoable = False
 
         # Vetoable
-        # is_vetoable = await ctx.confirm(
-        #   f"{config.USER_INTERACTION_REQUIRED} Is the {self.bot.mk.MINISTRY_NAME} legally allowed to vote on (veto) this bill?"
-        # )
+        is_vetoable = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Is the {self.bot.mk.MINISTRY_NAME} legally allowed to vote on (veto) this bill?"
+        )
 
         bill_description = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with a **short** summary of what your bill does.",
@@ -1912,10 +1967,10 @@ class Legislature(
             name="Google Docs Document", value=google_docs_url, inline=False
         )
 
-        # embed.add_field(
-        #    name=f"{self.bot.mk.MINISTRY_NAME} Veto Allowed",
-        #    value="Yes" if is_vetoable else "No",
-        # )
+        embed.add_field(
+            name=f"{self.bot.mk.MINISTRY_NAME} Veto Allowed",
+            value="Yes" if is_vetoable else "No",
+        )
 
         embed.add_field(
             name="Exact Time of Submission",
@@ -2169,7 +2224,7 @@ class Legislature(
         mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
     )
     async def pass_bill(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Mark one or multiple bills as passed from the {LEGISLATURE_NAME} to pass them into law
+        """Mark one or multiple bills as passed from the {LEGISLATURE_NAME}
 
         **Example**
             `{PREFIX}{COMMAND} 12` will mark Bill #12 as passed from the {LEGISLATURE_NAME}
@@ -2232,6 +2287,46 @@ class Legislature(
                 f"You can repeal laws with `{config.BOT_PREFIX}law repeal`.",
                 allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
             )
+
+    @legislature.command(name="superpass", aliases=["sp"])
+    @checks.has_any_democraciv_role(
+        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
+    )
+    async def superpass(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
+        """Pass bills that received a super-majority in the {LEGISLATURE_NAME} into law
+
+        **Example**
+           `{PREFIX}{COMMAND} 56`
+           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
+
+        if not bill_ids:
+            return await ctx.send_help(ctx.command)
+
+        consumer = models.LegalConsumer(
+            ctx=ctx, objects=bill_ids, action=models.BillStatus.superpass
+        )
+        await consumer.filter()
+
+        if consumer.failed:
+            await ctx.send(
+                f":warning: The following bills cannot be passed with a super-majority.\n{consumer.failed_formatted}"
+            )
+
+        if not consumer.passed:
+            return
+
+        reaction = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
+            f"to pass the following bills with a super-majority?\n{consumer.passed_formatted}"
+        )
+
+        if not reaction:
+            return await ctx.send("Cancelled.")
+
+        await consumer.consume(scheduler=self.superpass_scheduler)
+        await ctx.send(
+            f"{config.YES} All bills were passed with a super-majority and are now active laws."
+        )
 
     @legislature.group(name="withdraw", aliases=["w"], hidden=True)
     @checks.is_democraciv_guild()
@@ -2453,45 +2548,49 @@ class Legislature(
             motion_ids=motion_ids,
         )
 
-    # @legislature.command(name="override", aliases=["ov"], hidden=True, enabled=False)
-    # @checks.has_any_democraciv_role(mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER)
-    # async def override(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-    #    """Override the veto of one or multiple bills to pass them into law
-    #
-    #    **Example**
-    #       `{PREFIX}{COMMAND} 56`
-    #       `{PREFIX}{COMMAND} 12 13 14 15 16`"""
-    #
-    #    if not bill_ids:
-    #        return await ctx.send_help(ctx.command)
-    #
-    #    consumer = models.LegalConsumer(ctx=ctx, objects=bill_ids, action=models.BillStatus.override_veto)
-    #    await consumer.filter()
+    @legislature.command(name="override", aliases=["ov"], hidden=True)
+    @checks.has_any_democraciv_role(
+        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
+    )
+    async def override(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
+        """Override the veto of one or multiple bills to pass them into law
 
-    #    if consumer.failed:
-    #        await ctx.send(
-    #            f":warning: The vetoes of the following bills can not be overridden.\n{consumer.failed_formatted}"
-    #        )
+        **Example**
+           `{PREFIX}{COMMAND} 56`
+           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
 
-    #    if not consumer.passed:
-    #        return
+        if not bill_ids:
+            return await ctx.send_help(ctx.command)
 
-    #    reaction = await ctx.confirm(
-    #        f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-    #        f"to override the {self.bot.mk.MINISTRY_NAME}'s veto of the following "
-    #        f"bills?\n{consumer.passed_formatted}"
-    #    )
+        consumer = models.LegalConsumer(
+            ctx=ctx, objects=bill_ids, action=models.BillStatus.override_veto
+        )
+        await consumer.filter()
 
-    #    if not reaction:
-    #        return await ctx.send("Cancelled.")
+        if consumer.failed:
+            await ctx.send(
+                f":warning: The vetoes of the following bills can not be overridden.\n{consumer.failed_formatted}"
+            )
 
-    #    await consumer.consume(scheduler=self.override_scheduler)
-    #    await ctx.send(
-    #        f"{config.YES} The vetoes of all bills were overridden, and all bills are active laws and in "
-    #        f"`{config.BOT_PREFIX}laws` now."
-    #    )
+        if not consumer.passed:
+            return
 
-    @bill.command(name="sponsor", aliases=["sp", "cosponsor", "second"])
+        reaction = await ctx.confirm(
+            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
+            f"to override the {self.bot.mk.MINISTRY_NAME}'s veto of the following "
+            f"bills?\n{consumer.passed_formatted}"
+        )
+
+        if not reaction:
+            return await ctx.send("Cancelled.")
+
+        await consumer.consume(scheduler=self.override_scheduler)
+        await ctx.send(
+            f"{config.YES} The vetoes of all bills were overridden, and all bills are active laws and in "
+            f"`{config.BOT_PREFIX}laws` now."
+        )
+
+    @bill.command(name="sponsor", aliases=["cosponsor", "second"])
     @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
     @checks.is_citizen_if_multiciv()
     async def b_sponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
@@ -2699,9 +2798,7 @@ class Legislature(
         embed.add_field(name="Top Lawmakers", value=pretty_top_lawmaker, inline=False)
         await ctx.send(embed=embed)
 
-    @legislature.command(
-        name="sponsor", aliases=["second", "sp", "cosponsor"], hidden=True
-    )
+    @legislature.command(name="sponsor", aliases=["second", "cosponsor"], hidden=True)
     @checks.is_citizen_if_multiciv()
     async def sponsor(self, ctx, *, bill_or_motion_ids):
         """Show your support for one or multiple bills or motions by sponsoring them

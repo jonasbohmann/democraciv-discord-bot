@@ -94,9 +94,9 @@ class GovernmentMixin:
         embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
 
         if isinstance(obj, models.Bill) and not isinstance(obj, models.Law):
-            # is_vetoable = "Yes" if obj.is_vetoable else "No"
+            is_vetoable = "Yes" if obj.is_vetoable else "No"
 
-            # embed.add_field(name="Veto-able", value=is_vetoable, inline=True)
+            embed.add_field(name="Vetoable", value=is_vetoable, inline=True)
             embed.add_field(
                 name="Status",
                 value=obj.status.emojified_status(verbose=True),
@@ -222,6 +222,36 @@ class GovernmentMixin:
             formatted = list(results)
 
         return formatted
+
+    async def _full_text_search_with_meilisearch(self, ctx, *, model, query):
+        if model is models.Law:
+            response = await self.bot.api_request(
+                "POST",
+                "document/search",
+                json={"question": query, "index": "bill", "is_law": True},
+            )
+        else:
+            response = await self.bot.api_request(
+                "POST",
+                "document/search",
+                json={"question": query, "index": "bill", "is_law": True},
+            )
+            print(response)
+
+    async def _ai_embedding_search_with_meilisearch(self, ctx, *, model, query):
+        if model is models.Law:
+            response = await self.bot.api_request(
+                "POST",
+                "document/search",
+                json={"question": query, "index": "bill", "is_law": True},
+            )
+        else:
+            response = await self.bot.api_request(
+                "POST",
+                "document/search",
+                json={"question": query, "index": "bill", "is_law": True},
+            )
+            print(response)
 
     async def _from_person_model(self, ctx, *, member_or_party, model, paginate=True):
         member = member_or_party or ctx.author

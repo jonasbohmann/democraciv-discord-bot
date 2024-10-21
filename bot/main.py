@@ -62,7 +62,7 @@ all_extensions = {
     "bot.module.parties",
     "bot.module.legislature",
     "bot.module.laws",
-    # "bot.module.ministry",
+    "bot.module.ministry",
     # "bot.module.supremecourt",
     "bot.module.nation",
     "bot.module.government",
@@ -173,6 +173,7 @@ class DemocracivBot(commands.Bot):
         self.db_ready = False
         self.mk = mk.MarkConfig(self)
         self.is_api_running = False
+        self.democraciv_guild_id = 0
 
         # for Google Apps Script
         socket.setdefaulttimeout(600)

@@ -24,7 +24,12 @@ class RepealScheduler(text.AnnouncementScheduler):
         message = [f"The following laws were **repealed**.\n"]
 
         for obj in self._objects:
-            message.append(f"Bill #{obj.id} - **[{obj.name}]({obj.link})**")
+            submitter = obj.submitter or context.MockUser()
+
+            message.append(
+                f"__Bill #{obj.id} - **[{obj.name}]({obj.link})**__"
+                f"\n*Written by {submitter.mention}*\n{obj.description}\n"
+            )
 
         message.append(f"\nThe laws were removed from `{config.BOT_PREFIX}laws`.")
         embed.description = "\n".join(message)
