@@ -1,6 +1,6 @@
 services:
   db:
-    image: "postgres:16"
+    image: "postgres:17"
     ports:
       - "5432:5432"
     volumes:
@@ -26,6 +26,16 @@ services:
       - db
       - api
 
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    ports:
+      - "7700:7700"
+    environment:
+      - MEILI_MASTER_KEY=zMaced2bA7yBdrISw-7x0BoCRJOUDYSrHbhrCqK2T_w
+    volumes:
+      - meili_data:/meili_data
+    
 volumes:
   postgresdata:
       external: true
+  meili_data:
