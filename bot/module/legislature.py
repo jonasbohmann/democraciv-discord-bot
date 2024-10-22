@@ -687,14 +687,13 @@ class Legislature(
     async def b_history(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill]):
         """See when a bill was first introduced, passed into Law, repealed, etc."""
         fmt_history = [
-            f"**{entry.date.strftime('%d %B %Y')}** - {entry.note if entry.note else entry.after}   "
+            f"<t:{int(entry.date.timestamp())}:D> - {entry.note if entry.note else entry.after}   "
             f"({entry.after.emojified_status(verbose=False)})"
             for entry in bill_id.history
         ]
         fmt_history.insert(
             0,
-            f"[Link to the Google Docs document of this Bill]({bill_id.link}).\n"
-            f"All dates are in UTC.\n",
+            f"[Link to the Google Docs document of this Bill]({bill_id.link}).\n",
         )
 
         pages = paginator.SimplePages(
@@ -1847,10 +1846,10 @@ class Legislature(
         pretty_sessions = []
 
         for record in all_sessions:
-            opened_on = record["opened_on"].strftime("%B %d")
+            opened_on = f"<t:{int(record["opened_on"].timestamp())}:D>"
 
             if record["closed_on"]:
-                closed_on = record["closed_on"].strftime("%B %d %Y")
+                closed_on = f"<t:{int(record["closed_on"].timestamp())}:D>"
                 pretty_sessions.append(
                     f"**Session #{record['id']}**  - {opened_on} to {closed_on}"
                 )
@@ -2082,7 +2081,7 @@ class Legislature(
 
         embed.add_field(
             name="Exact Time of Submission",
-            value=discord.utils.utcnow().strftime("%B %d, %Y %H:%M:%S UTC"),
+            value=f"<t:{int(discord.utils.utcnow().timestamp())}:F>",
         )
 
         embed.set_author(
@@ -2198,7 +2197,7 @@ class Legislature(
         embed.add_field(name="Author", value=f"{ctx.author.mention} {ctx.author}")
         embed.add_field(
             name="Exact Time of Submission",
-            value=discord.utils.utcnow().strftime("%B %d, %Y %H:%M:%S UTC"),
+            value=f"<t:{int(discord.utils.utcnow().timestamp())}:F>",
             inline=False,
         )
         embed.set_author(
