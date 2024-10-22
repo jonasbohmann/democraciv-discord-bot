@@ -71,15 +71,37 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
         else:
             minister_value.append(f"{self.bot.mk.pm_term}: -")
 
-        # if isinstance(self.lt_prime_minister, discord.Member):
-        #    minister_value.append(f"{self.bot.mk.lt_pm_term}: {self.lt_prime_minister.mention}")
-        # else:
-        #    minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
+        if isinstance(self.lt_prime_minister, discord.Member):
+            minister_value.append(
+                f"{self.bot.mk.lt_pm_term}: {self.lt_prime_minister.mention}"
+            )
+        else:
+            minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
+
+        attorney_general = self._safe_get_member(mk.DemocracivRole.ATTORNEY_GENERAL)
+
+        if isinstance(attorney_general, discord.Member):
+            minister_value.append(f"Attorney General: {attorney_general.mention}")
+        else:
+            minister_value.append(f"Attorney General: -")
+
+        supreme_commander = self._safe_get_member(mk.DemocracivRole.SUPREME_COMMANDER)
+
+        if isinstance(supreme_commander, discord.Member):
+            minister_value.append(f"Supreme Commander: {supreme_commander.mention}")
+        else:
+            minister_value.append(f"Supreme Commander: -")
 
         embed.add_field(
             name=self.bot.mk.MINISTRY_LEADERSHIP_NAME,
             value="\n".join(minister_value),
-            inline=False,
+            inline=True,
+        )
+
+        embed.add_field(
+            name=f"{self.bot.mk.COURT_NAME} {self.bot.mk.COURT_JUSTICE_NAME}s ({len(justices) if justices[0] != "-" else 0})",
+            value="\n".join(justices),
+            inline=True,
         )
 
         try:
@@ -101,18 +123,12 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
         embed.add_field(
             name=f"{self.bot.mk.minister_term}s ({len(ministers) if ministers[0] != "-" else 0})",
             value="\n".join(ministers),
-            inline=True,
+            inline=False,
         )
 
         embed.add_field(
             name=f"{self.bot.mk.governor_term}s ({len(governors) if governors[0] != "-" else 0})",
             value="\n".join(governors),
-            inline=True,
-        )
-
-        embed.add_field(
-            name=f"{self.bot.mk.COURT_NAME} {self.bot.mk.COURT_JUSTICE_NAME}s ({len(justices) if justices[0] != "-" else 0})",
-            value="\n".join(justices),
             inline=False,
         )
 
@@ -138,20 +154,6 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
             inline=True,
         )
 
-        try:
-            legislators = self.bot.get_democraciv_role(mk.DemocracivRole.LEGISLATOR)
-            legislators = [
-                f"{l.mention} {escape_markdown(str(l))}" for l in legislators.members
-            ] or ["-"]
-        except exceptions.RoleNotFoundError:
-            legislators = ["-"]
-
-        embed.add_field(
-            name=f"{self.bot.mk.legislator_term}s ({len(legislators) if legislators[0] != "-" else 0})",
-            value="\n".join(legislators),
-            inline=True,
-        )
-
         active_leg_session = await self.get_active_leg_session()
 
         if active_leg_session is None:
@@ -164,6 +166,20 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
         embed.add_field(
             name=f"Current {self.bot.mk.LEGISLATURE_NAME} Session",
             value=current_session_value,
+            inline=True,
+        )
+
+        try:
+            legislators = self.bot.get_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+            legislators = [
+                f"{l.mention} {escape_markdown(str(l))}" for l in legislators.members
+            ] or ["-"]
+        except exceptions.RoleNotFoundError:
+            legislators = ["-"]
+
+        embed.add_field(
+            name=f"{self.bot.mk.legislator_term}s ({len(legislators) if legislators[0] != "-" else 0})",
+            value="\n".join(legislators),
             inline=False,
         )
 
@@ -176,17 +192,21 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
         except exceptions.RoleNotFoundError:
             members_of_gov = ["-"]
 
-        embed.add_field(
-            name=f"Total Members of Government",
-            value=f"{len(members_of_gov)}" if members_of_gov[0] != "-" else "0",
-            inline=False,
+        # embed.add_field(
+        #    name=f"Total Members of Government",
+        #    value=f"{len(members_of_gov)}" if members_of_gov[0] != "-" else "0",
+        #    inline=False,
+        # )
+
+        embed.description = (
+            f"There are {len(members_of_gov)} members of government in total."
         )
 
-        embed.add_field(
-            name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})",
-            inline=False,
-        )
+        # embed.add_field(
+        #    name="Links",
+        #    value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})",
+        #    inline=False,
+        # )
 
         await ctx.send(embed=embed)
 

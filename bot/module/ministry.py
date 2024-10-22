@@ -217,7 +217,7 @@ class Ministry(
         if not pretty_bills:
             pretty_bills = "There are no new bills to vote on."
         else:
-            pretty_bills = f"You can vote on new bills, check `{config.BOT_PREFIX}{mk.MarkConfig.MINISTRY_COMMAND} bills`."
+            pretty_bills = f"{config.HINT}    You can vote on new bills, check `{config.BOT_PREFIX}{mk.MarkConfig.MINISTRY_COMMAND} bills`."
 
         minister_value = []
 
@@ -234,6 +234,20 @@ class Ministry(
             )
         else:
             minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
+
+        attorney_general = self._safe_get_member(mk.DemocracivRole.ATTORNEY_GENERAL)
+
+        if isinstance(attorney_general, discord.Member):
+            minister_value.append(f"Attorney General: {attorney_general.mention}")
+        else:
+            minister_value.append(f"Attorney General: -")
+
+        supreme_commander = self._safe_get_member(mk.DemocracivRole.SUPREME_COMMANDER)
+
+        if isinstance(supreme_commander, discord.Member):
+            minister_value.append(f"Supreme Commander: {supreme_commander.mention}")
+        else:
+            minister_value.append(f"Supreme Commander: -")
 
         embed.add_field(
             name=self.bot.mk.MINISTRY_LEADERSHIP_NAME,
@@ -272,7 +286,7 @@ class Ministry(
         embed.add_field(
             name="Links",
             value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})\n"
-            f"[Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})",
+            f"[Ministry Worksheet]({self.bot.mk.MINISTRY_WORKSHEET})\n[Ministry Procedures]({self.bot.mk.MINISTRY_PROCEDURES})",
             inline=False,
         )
 
