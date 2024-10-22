@@ -403,9 +403,9 @@ class GovernmentMixin:
         """Checks whether a link is a valid Google Docs or Google Forms link"""
 
         valid_google_docs_url_strings = (
-            "https://docs.google.com/",
-            "https://drive.google.com/",
-            "https://forms.gle/",
+            "https://docs.google.com",
+            "https://drive.google.com",
+            "https://forms.gle",
             "https://goo.gl/forms",
         )
 

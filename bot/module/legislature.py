@@ -1278,11 +1278,26 @@ class Legislature(
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
 
-        await self.gov_announcements_channel.send(
-            f"The **submission period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
-            f"#{new_session} has started! Bills and motions can be "
-            f"submitted with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit`."
+        announcement = text.SafeEmbed()
+        announcement.description = f"The cabinet has opened the Submission Period for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{new_session}."
+        announcement.set_author(
+            name=f"Submission Period open for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{new_session}",
+            icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
+        announcement.add_field(
+            name="Submissions",
+            value="Bills and motions can be "
+            f"submitted with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit`.\nYou can see all submissions with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session`.",
+            inline=False,
+        )
+        announcement.add_field(
+            name="Sponsors",
+            value="Bills and motions can be "
+            f"sponsored with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill sponsor` and `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion sponsor`.\n\nThe list of submissions can be filtered by the amount of sponsors they have. For example, `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session >=1` will only show bills & motions with 1 or more sponsors.",
+            inline=False,
+        )
+
+        await self.gov_announcements_channel.send(embed=announcement)
 
         if should_dm_legislators:
             await self.dm_legislators(
@@ -1427,11 +1442,14 @@ class Legislature(
             f"I'll go over what happens after that once you close the session."
         )
 
-        await self.gov_announcements_channel.send(
-            f"The **voting period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
-            f"Session #{active_leg_session.id} "
-            f"has started!\n{self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} can vote here: <{voting_form}>"
+        announcement = text.SafeEmbed()
+        announcement.description = f"{self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} can vote here:\n{voting_form}"
+        announcement.set_author(
+            name=f"Voting has started for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{active_leg_session.id}",
+            icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
+
+        await self.gov_announcements_channel.send(embed=announcement)
 
         if should_dm_legislators:
             await self.dm_legislators(
@@ -1538,10 +1556,13 @@ class Legislature(
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
 
-        await self.gov_announcements_channel.send(
-            f"{self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{active_leg_session.id} has been **closed** by the "
-            f"{self.bot.mk.LEGISLATURE_CABINET_NAME}."
+        announcement = text.SafeEmbed()
+        announcement.set_author(
+            name=f"{self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{active_leg_session.id} has been closed",
+            icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
+
+        await self.gov_announcements_channel.send(embed=announcement)
 
     @session.group(
         name="export",
@@ -2006,7 +2027,8 @@ class Legislature(
             if not name:
                 await ctx.send(
                     f"{config.NO} Something went wrong. Are you sure you made your "
-                    f"Google Docs document public for everyone to view?"
+                    f"Google Docs document public for everyone to view?\n"
+                    f"{config.HINT} Word (.docx) documents on Google Docs are not supported."
                 )
                 return
 

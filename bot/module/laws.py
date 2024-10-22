@@ -71,8 +71,9 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
     def __init__(self, bot):
         super().__init__(bot)
         self.repeal_scheduler = RepealScheduler(
-            bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL,
-            subreddit=config.DEMOCRACIV_SUBREDDIT
+            bot,
+            mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL,
+            subreddit=config.DEMOCRACIV_SUBREDDIT,
         )
 
     @commands.group(
