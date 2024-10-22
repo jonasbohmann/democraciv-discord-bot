@@ -14,7 +14,36 @@ from bot.utils.converter import (
 )
 
 
-class RepealScheduler(text.AnnouncementScheduler):
+class RepealScheduler(text.RedditAnnouncementScheduler):
+    def get_reddit_post_title(self) -> str:
+        return f"Laws repealed by the {self.bot.mk.LEGISLATURE_NAME} - {discord.utils.utcnow().strftime('%d %B %Y')}"
+
+    def get_reddit_post_content(self) -> str:
+        content = [
+            f"The following laws were repealed by the {self.bot.mk.LEGISLATURE_NAME}."
+            f"\n\n###Relevant Links\n\n"
+            f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
+            f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `{config.BOT_PREFIX}laws` in #bot on our "
+            f"[Discord Server](https://discord.gg/tVmHVcZPVs)\n"
+            f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n---\n  &nbsp; \n\n"
+        ]
+
+        for bill in self._objects:
+            submitter = bill.submitter or context.MockUser()
+            content.append(
+                f"__**Bill #{bill.id} - [{bill.name}]({bill.link})**__\n\n*Written by "
+                f"{submitter.display_name} ({submitter})*"
+                f"\n\n{bill.description}\n\n &nbsp;"
+            )
+
+        outro = f"""\n\n &nbsp; \n\n---\n\nThese laws were removed from the legal code.
+                \n\n\n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/)
+                and this is an automated service. Contact u/Jovanos (DerJonas on Discord) for further questions
+                or bug reports.*"""
+
+        content.append(outro)
+        return "\n\n".join(content)
+
     def get_embed(self):
         embed = text.SafeEmbed()
         embed.set_author(
@@ -42,7 +71,8 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
     def __init__(self, bot):
         super().__init__(bot)
         self.repeal_scheduler = RepealScheduler(
-            bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL
+            bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL,
+            subreddit=config.DEMOCRACIV_SUBREDDIT
         )
 
     @commands.group(

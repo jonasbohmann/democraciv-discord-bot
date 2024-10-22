@@ -55,7 +55,36 @@ class ModelChooseView(text.PromptView):
         self.stop()
 
 
-class SuperPassScheduler(text.AnnouncementScheduler):
+class SuperPassScheduler(text.RedditAnnouncementScheduler):
+    def get_reddit_post_title(self) -> str:
+        return f"New Bills passed into law with a super-majority by the {self.bot.mk.LEGISLATURE_NAME} - {discord.utils.utcnow().strftime('%d %B %Y')}"
+
+    def get_reddit_post_content(self) -> str:
+        content = [
+            f"The following bills were passed into law with a super-majority by the {self.bot.mk.LEGISLATURE_NAME}."
+            f"\n\n###Relevant Links\n\n"
+            f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
+            f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `{config.BOT_PREFIX}laws` in #bot on our "
+            f"[Discord Server](https://discord.gg/tVmHVcZPVs)\n"
+            f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n---\n  &nbsp; \n\n"
+        ]
+
+        for bill in self._objects:
+            submitter = bill.submitter or context.MockUser()
+            content.append(
+                f"__**Bill #{bill.id} - [{bill.name}]({bill.link})**__\n\n*Written by "
+                f"{submitter.display_name} ({submitter})*"
+                f"\n\n{bill.description}\n\n &nbsp;"
+            )
+
+        outro = f"""\n\n &nbsp; \n\n---\n\nAll these bills are now laws.
+                \n\n\n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/)
+                and this is an automated service. Contact u/Jovanos (DerJonas on Discord) for further questions
+                or bug reports.*"""
+
+        content.append(outro)
+        return "\n\n".join(content)
+
     def get_embed(self):
         embed = text.SafeEmbed()
         embed.set_author(
@@ -110,8 +139,7 @@ class PassScheduler(text.RedditAnnouncementScheduler):
 
         p = config.BOT_PREFIX
         message.append(
-            f"\nAll non-vetoable bills are now laws (marked as cursive *Bill ...*) and can be found in `{p}laws`, "
-            f"as well with `{p}laws search`. The others were sent to the {self.bot.mk.MINISTRY_NAME} "
+            f"\nThe bills were sent to the {self.bot.mk.MINISTRY_NAME} "
             f"(`{p}{self.bot.mk.MINISTRY_COMMAND} bills`) to either pass "
             f"(`{p}{self.bot.mk.MINISTRY_COMMAND} pass`) or veto (`{p}{self.bot.mk.MINISTRY_COMMAND} veto`) them."
         )
@@ -143,9 +171,9 @@ class PassScheduler(text.RedditAnnouncementScheduler):
                 f"\n\n{bill.description}\n\n &nbsp;"
             )
 
-        outro = f"""\n\n &nbsp; \n\n---\n\nAll non-vetoable bills are now laws. The others were sent to the {self.bot.mk.MINISTRY_NAME} for them to either veto or pass them into law.
-                \n\n\n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) 
-                and this is an automated service. Contact u/Jovanos (DerJonas on Discord) for further questions 
+        outro = f"""\n\n &nbsp; \n\n---\n\nThe bills were sent to the {self.bot.mk.MINISTRY_NAME} for them to either veto or pass them into law.
+                \n\n\n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/)
+                and this is an automated service. Contact u/Jovanos (DerJonas on Discord) for further questions
                 or bug reports.*"""
 
         content.append(outro)
@@ -206,7 +234,9 @@ class Legislature(
             bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL
         )
         self.superpass_scheduler = SuperPassScheduler(
-            bot, mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL
+            bot,
+            mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL,
+            subreddit=config.DEMOCRACIV_SUBREDDIT,
         )
 
         if not self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
@@ -1763,8 +1793,8 @@ class Legislature(
                 f"\n\n{motion.description}\n\n &nbsp;"
             )
 
-        outro = f"""\n\n &nbsp; \n\n--- \n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/) 
-        and this is an automated service. Contact u/Jovanos (DerJonas on Discord) for further questions or bug 
+        outro = f"""\n\n &nbsp; \n\n--- \n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/)
+        and this is an automated service. Contact u/Jovanos (DerJonas on Discord) for further questions or bug
         reports.*"""
 
         cntnt.append(outro)
@@ -2951,7 +2981,7 @@ class Legislature(
                                UNION ALL
                                SELECT COUNT(id) FROM bill_sponsor WHERE sponsor = ANY($1::bigint[])
                                UNION ALL
-                               SELECT COUNT(bill_sponsor.sponsor) FROM bill_sponsor JOIN bill 
+                               SELECT COUNT(bill_sponsor.sponsor) FROM bill_sponsor JOIN bill
                                ON bill_sponsor.bill_id = bill.id WHERE bill.submitter = ANY($1::bigint[])"""
 
         if isinstance(person_or_political_party, converter.PoliticalParty):
