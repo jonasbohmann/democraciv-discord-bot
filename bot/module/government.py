@@ -98,12 +98,6 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
             inline=True,
         )
 
-        embed.add_field(
-            name=f"{self.bot.mk.COURT_NAME} {self.bot.mk.COURT_JUSTICE_NAME}s ({len(justices) if justices[0] != "-" else 0})",
-            value="\n".join(justices),
-            inline=True,
-        )
-
         try:
             ministers = self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER)
             ministers = [
@@ -132,6 +126,12 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
             inline=False,
         )
 
+        embed.add_field(
+            name=f"{self.bot.mk.COURT_NAME} {self.bot.mk.COURT_JUSTICE_NAME}s ({len(justices) if justices[0] != "-" else 0})",
+            value="\n".join(justices),
+            inline=False,
+        )
+
         speaker_value = []
 
         if isinstance(self.speaker, discord.Member):
@@ -151,22 +151,7 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
         embed.add_field(
             name=f"{self.bot.mk.LEGISLATURE_NAME} {self.bot.mk.LEGISLATURE_CABINET_NAME}",
             value="\n".join(speaker_value),
-            inline=True,
-        )
-
-        active_leg_session = await self.get_active_leg_session()
-
-        if active_leg_session is None:
-            current_session_value = "There currently is no open session."
-        else:
-            current_session_value = (
-                f"Session #{active_leg_session.id} - {active_leg_session.status.value}"
-            )
-
-        embed.add_field(
-            name=f"Current {self.bot.mk.LEGISLATURE_NAME} Session",
-            value=current_session_value,
-            inline=True,
+            inline=False,
         )
 
         try:

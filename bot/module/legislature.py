@@ -334,15 +334,6 @@ class Legislature(
         embed.add_field(
             name=self.bot.mk.LEGISLATURE_CABINET_NAME, value="\n".join(speaker_value)
         )
-        embed.add_field(
-            name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
-            f"\n[Senate Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n[Senate Procedures]({self.bot.mk.LEGISLATURE_PROCEDURES})",
-            inline=True,
-        )
-        embed.add_field(
-            name="Current Session", value=current_session_value, inline=False
-        )
 
         try:
             legislators = self.bot.get_democraciv_role(mk.DemocracivRole.LEGISLATOR)
@@ -355,7 +346,18 @@ class Legislature(
         embed.add_field(
             name=f"{self.bot.mk.legislator_term}s ({len(legislators) if legislators[0] != "-" else 0})",
             value="\n".join(legislators),
-            inline=True,
+            inline=False,
+        )
+
+        embed.add_field(
+            name="Links",
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
+            f"\n[Senate Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n[Senate Procedures]({self.bot.mk.LEGISLATURE_PROCEDURES})",
+            inline=False,
+        )
+
+        embed.add_field(
+            name="Current Session", value=current_session_value, inline=False
         )
 
         await ctx.send(embed=embed)
