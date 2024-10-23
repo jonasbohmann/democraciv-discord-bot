@@ -88,12 +88,12 @@ class SuperPassScheduler(text.RedditAnnouncementScheduler):
     def get_embed(self):
         embed = text.SafeEmbed()
         embed.set_author(
-            name=f"Bills passed into law with a super-majority by the {self.bot.mk.LEGISLATURE_NAME}",
+            name=f"Supermajority Pass",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
 
         message = [
-            f"The following bills were **passed into law** with a super-majority by the {self.bot.mk.LEGISLATURE_NAME}.\n"
+            f"The following bills were **passed into law** with a supermajority by the {self.bot.mk.LEGISLATURE_NAME}.\n"
         ]
 
         for obj in self._objects:
@@ -104,10 +104,6 @@ class SuperPassScheduler(text.RedditAnnouncementScheduler):
                 f"\n*Submitted by {submitter.mention}*\n{obj.description}\n"
             )
 
-        message.append(
-            f"\nAll of the above bills are now law and can be found in `{config.BOT_PREFIX}laws`, "
-            f"as well with `{config.BOT_PREFIX}laws search`."
-        )
         embed.description = "\n".join(message)
         return embed
 

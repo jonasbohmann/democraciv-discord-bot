@@ -27,10 +27,6 @@ class LawPassScheduler(text.RedditAnnouncementScheduler):
                 f"\n*Submitted by {submitter.mention}*\n{obj.description}\n"
             )
 
-        message.append(
-            f"\nAll new laws were added to `{config.BOT_PREFIX}laws` and can now be found with "
-            f"`{config.BOT_PREFIX}laws search <query>`."
-        )
         embed.description = "\n".join(message)
         return embed
 
@@ -97,7 +93,7 @@ class LawVetoScheduler(text.RedditAnnouncementScheduler):
     def get_embed(self):
         embed = text.SafeEmbed()
         embed.set_author(
-            name=f"Bills vetoed by the {self.bot.mk.MINISTRY_NAME}",
+            name=f"Vetoes",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         message = [
