@@ -239,7 +239,7 @@ class SubredditScraper:
         db,
         subreddit: str,
         session: aiohttp.ClientSession,
-        post_limit: int = 1,
+        post_limit: int = 5,
         manager: RedditManager,
     ):
         self.subreddit = subreddit

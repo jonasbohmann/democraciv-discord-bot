@@ -9,6 +9,19 @@ def _make_property(role: mk.DemocracivRole):
     return property(lambda self: self._safe_get_member(role))
 
 
+class FullTextSearchView(text.PromptView):
+
+    @discord.ui.button(
+        label="Yes, perform full-text search",
+        style=discord.ButtonStyle.gray,
+        emoji="\U0001F50D",
+    )
+    async def full_text_search(self, interaction, button):
+        await interaction.response.defer()
+        self.result = True
+        self.stop()
+
+
 class ReadDocumentView(text.PromptView):
 
     webhook = None
@@ -254,7 +267,48 @@ class GovernmentMixin:
                 "document/search",
                 json={"question": query, "index": "bill", "is_law": True},
             )
-            print(response)
+
+    async def prepare_full_text_search_paginator(
+        self, ctx, query, *, index="bill", is_law=False
+    ):
+        if index == "bill":
+            model = models.Law if is_law else models.Bill
+        else:
+            model = models.Motion
+
+        response = await self.bot.api_request(
+            "POST",
+            "document/search",
+            json={"question": query, "index": index, "is_law": is_law},
+        )
+
+        if not response or not response["result"]["hits"]:
+            return None
+
+        fmt = [
+            f"Full-text search is a work-in-progress.\nKnown issue: This **only shows 1 search result per {model.model}**, even if there were more occurrences found.\n"
+        ]
+
+        for hit in response["result"]["hits"]:
+            try:
+                obj = await model.convert(ctx, hit["id"])
+            except Exception:
+                continue
+
+            trimmed = hit["_formatted"]["content"].strip()
+            txt = discord.utils.escape_markdown(trimmed)
+            txt = txt.replace("<DBS>", "[**")
+            txt = txt.replace(
+                "<DBE>", "**](https://this-is-not-a-real-url.democraciv.com)"
+            )
+            fmt.append(f"**__{obj.formatted}__**")
+            fmt.append(f"{txt}\n")
+
+        return paginator.SimplePages(
+            entries=fmt,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"[BETA] Full-text search results for '{query}'",
+        )
 
     async def _from_person_model(self, ctx, *, member_or_party, model, paginate=True):
         member = member_or_party or ctx.author

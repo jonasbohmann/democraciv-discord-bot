@@ -25,6 +25,17 @@ class SearchClient:
 
     async def setup(self):
         await self._make_aiohttp_session()
+
+        try:
+            self.meilisearch_client.get_index("bill")
+        except meilisearch.errors.MeilisearchApiError:
+            self.meilisearch_client.create_index("bill", {"primaryKey": "id"})
+
+        try:
+            self.meilisearch_client.get_index("motion")
+        except meilisearch.errors.MeilisearchApiError:
+            self.meilisearch_client.create_index("motion", {"primaryKey": "id"})
+
         await self.enable_vector_store()
         await self.register_documents()
 
@@ -45,6 +56,7 @@ class SearchClient:
                     "source": "openAi",
                     "apiKey": self.OPENAI_KEY,
                     "model": "text-embedding-3-small",
+                    "documentTemplate": "a fictional legal document of a fictional, democratic government for a role-playing gaming community. the name of the document is '{{doc.title}}' and the content is as follows: {{doc.content}}",
                 }
             }
         }
@@ -107,6 +119,10 @@ class SearchClient:
     def delete_document(self, document):
         return self.meilisearch_client.index(document.type).delete_document(document.id)
 
+    def drop_index(self):
+        self.meilisearch_client.delete_index("bill")
+        self.meilisearch_client.delete_index("motion")
+
     def search(self, question):
         parameters = {
             "showMatchesPosition": True,
@@ -116,6 +132,8 @@ class SearchClient:
             "cropLength": 40,
             "highlightPreTag": "<DBS>",
             "highlightPostTag": "<DBE>",
+            "showRankingScore": True,
+            "rankingScoreThreshold": 0.2,
             "hybrid": {"embedder": "default", "semanticRatio": question.semantic_ratio},
         }
 

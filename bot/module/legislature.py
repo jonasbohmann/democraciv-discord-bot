@@ -402,6 +402,28 @@ class Legislature(
         )
         await pages.start(ctx)
 
+        view = mixin.FullTextSearchView(ctx)
+        await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per bill, even if there were more occurrences found.",
+            view=view,
+        )
+        yes = await view.prompt(silent=True)
+
+        if yes:
+            try:
+                fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
+            except Exception:
+                return await ctx.send(
+                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
+                )
+
+            if not fts_pages:
+                return await ctx.send(
+                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
+                )
+
+            await fts_pages.start(ctx)
+
     @legislature.command(name="from", aliases=["f", "by"])
     async def _from(
         self,
@@ -723,10 +745,30 @@ class Legislature(
 
         await pages.start(ctx)
 
-    @bill.command(
-        name="full-text-search", aliases=["fs", "fts", "fst", "fulltextsearch"]
-    )
-    async def fulltextsearch(self, ctx, *, query):
+        view = mixin.FullTextSearchView(ctx)
+        await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per bill, even if there were more occurrences found.",
+            view=view,
+        )
+        yes = await view.prompt(silent=True)
+
+        if yes:
+            try:
+                fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
+            except Exception:
+                return await ctx.send(
+                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
+                )
+
+            if not fts_pages:
+                return await ctx.send(
+                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
+                )
+
+            await fts_pages.start(ctx)
+
+    @bill.command(name="ai-search", aliases=["ai", "semantic-search"])
+    async def aisearch(self, ctx, *, query):
         """This is an experimental command and still a work-in-progress."""
 
         if self.bot.mk.IS_MULTICIV:
@@ -738,7 +780,12 @@ class Legislature(
             response = await self.bot.api_request(
                 "POST",
                 "document/search",
-                json={"question": query, "index": "bill", "is_law": False},
+                json={
+                    "question": query,
+                    "index": "bill",
+                    "is_law": False,
+                    "semantic_ratio": 1.0,
+                },
             )
 
         if not response or not response["result"]["hits"]:
@@ -747,9 +794,7 @@ class Legislature(
             )
 
         fmt = [
-            "This feature is a work-in-progress. Should this feature come out of "
-            f"beta, then it will probably be integrated into the `{config.BOT_PREFIX}laws search` and "
-            f"`{config.BOT_PREFIX}legislature bills search` commands.\n\nKnown issue: This only shows 1 search result per bill.\n"
+            "This feature is a work-in-progress.\nKnown issue: This only shows 1 search result per bill, even if there were more occurrences found.\n"
         ]
 
         for hit in response["result"]["hits"]:
@@ -770,7 +815,7 @@ class Legislature(
         pages = paginator.SimplePages(
             entries=fmt,
             icon=self.bot.mk.NATION_ICON_URL,
-            author=f"[BETA] Results for '{query}'",
+            author=f"[BETA] AI-powered search results for '{query}'",
         )
 
         await pages.start(ctx)
@@ -794,7 +839,7 @@ class Legislature(
 
     @legislature.group(
         name="motion",
-        aliases=["m", "motions"],
+        aliases=["m", "motions", "mo"],
         case_insensitive=True,
         invoke_without_command=True,
     )
@@ -1057,6 +1102,30 @@ class Legislature(
             empty_message="Nothing found.",
         )
         await pages.start(ctx)
+
+        view = mixin.FullTextSearchView(ctx)
+        await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all motions too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per motion, even if there were more occurrences found.",
+            view=view,
+        )
+        yes = await view.prompt(silent=True)
+
+        if yes:
+            try:
+                fts_pages = await self.prepare_full_text_search_paginator(
+                    ctx, query, index="motion"
+                )
+            except Exception:
+                return await ctx.send(
+                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
+                )
+
+            if not fts_pages:
+                return await ctx.send(
+                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
+                )
+
+            await fts_pages.start(ctx)
 
     @legislature.group(
         name="session",

@@ -62,6 +62,16 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
             f"{config.YES} `{tag}` was added as a search tag to `{bill.name}` (#{bill.id})"
         )
 
+    @Feature.Command(parent="jsk", name="dropmeiliindex")
+    async def jsk_dropmeiliindex(self, ctx):
+        response = await self.bot.api_request(
+            "POST",
+            "document/drop",
+        )
+
+        await ctx.send(str(response))
+        await ctx.send(f"{config.YES} Ok.")
+
     @Feature.Command(parent="jsk", name="legopen")
     async def jsk_opensession(self, ctx, speaker: discord.User):
         new_session = await self.bot.db.fetchval(

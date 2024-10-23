@@ -223,7 +223,7 @@ class Question(pydantic.BaseModel):
     question: str
     index: str
     is_law: bool = False
-    semantic_ratio: float = 0.7
+    semantic_ratio: float = 0
 
 
 @app.get("/")
@@ -426,7 +426,13 @@ async def update_bill(document: Document, auth: str = Depends(ensure_auth)):
 
 @app.post("/document/delete")
 async def delete_bill(document: Document, auth: str = Depends(ensure_auth)):
-    await app.search_client.delete_document(document.type, document.id)
+    app.search_client.delete_document(document.type, document.id)
+    return {"ok": "ok"}
+
+
+@app.post("/document/drop")
+async def delete_bill(auth: str = Depends(ensure_auth)):
+    app.search_client.drop_index()
     return {"ok": "ok"}
 
 

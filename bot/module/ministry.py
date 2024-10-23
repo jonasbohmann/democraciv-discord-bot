@@ -238,14 +238,18 @@ class Ministry(
         attorney_general = self._safe_get_member(mk.DemocracivRole.ATTORNEY_GENERAL)
 
         if isinstance(attorney_general, discord.Member):
-            minister_value.append(f"Attorney General: {attorney_general.mention}")
+            minister_value.append(
+                f"Attorney General: {attorney_general.mention} {escape_markdown(str(attorney_general))}"
+            )
         else:
             minister_value.append(f"Attorney General: -")
 
         supreme_commander = self._safe_get_member(mk.DemocracivRole.SUPREME_COMMANDER)
 
         if isinstance(supreme_commander, discord.Member):
-            minister_value.append(f"Supreme Commander: {supreme_commander.mention}")
+            minister_value.append(
+                f"Supreme Commander: {supreme_commander.mention} {escape_markdown(str(supreme_commander))}"
+            )
         else:
             minister_value.append(f"Supreme Commander: -")
 
