@@ -1021,6 +1021,37 @@ class BillVetoed(BillStatus):
     flag = _BillStatusFlag.MIN_FAILED
     verbose_name = f"Vetoed by the {mk.MarkConfig.MINISTRY_NAME}"
 
+    async def resubmit(self, dry=False, *, resubmitter, **kwargs):
+        session = await self._bot.db.fetchval(
+            "SELECT id FROM legislature_session WHERE status = 'Submission Period'"
+        )
+
+        if not session:
+            raise IllegalBillOperation(
+                f"There is no session in Submission Period right now, so the bill cannot be resubmitted."
+            )
+
+        if dry:
+            return
+
+        await self._bot.db.execute(
+            "UPDATE bill SET status = $1, leg_session = $3 WHERE id = $2",
+            _BillStatusFlag.SUBMITTED.value,
+            self._bill.id,
+            session,
+        )
+
+        await self.log_history(
+            self.flag,
+            _BillStatusFlag.SUBMITTED,
+            note=f"Resubmitted from Session #{self._bill.session.id} to Session #{session} by "
+            f"[{resubmitter}](https://democracivbank.com/u/{resubmitter.id} "
+            f'"{resubmitter.id}")',
+        )  # hyperlink to "hide" discord user id in embed, but
+        # show if user clicks on url. doesn't matter what url,
+        # just want to be able to see the resubmitter's id but
+        # in a nice way
+
     async def override_veto(self, dry=False):
         if dry:
             return
