@@ -16,7 +16,7 @@ class LawPassScheduler(text.RedditAnnouncementScheduler):
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         message = [
-            f"The following bills were **passed into law by the {self.bot.mk.MINISTRY_NAME}**.\n"
+            f"The following bills were **passed into law** by the {self.bot.mk.MINISTRY_NAME}.\n"
         ]
 
         for obj in self._objects:
@@ -97,7 +97,7 @@ class LawVetoScheduler(text.RedditAnnouncementScheduler):
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         message = [
-            f"The following bills were **vetoed by the {self.bot.mk.MINISTRY_NAME}**.\n"
+            f"The following bills were **vetoed** by the {self.bot.mk.MINISTRY_NAME}.\n"
         ]
 
         for obj in self._objects:
