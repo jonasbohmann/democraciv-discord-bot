@@ -1123,6 +1123,19 @@ class Legislature(
 
             await fts_pages.start(ctx)
 
+    def _mk12_bill_from_citizen_has_enough_sponsors(self, bill: Bill) -> bool:
+        if not bill.submitter:
+            return False
+
+        if self.legislator_role in bill.submitter.roles:
+            return True
+
+        # this assumes only Senators can sponsor
+        if bill.sponsors:
+            return True
+
+        return False
+
     @legislature.group(
         name="session",
         aliases=["s"],
@@ -1173,9 +1186,10 @@ class Legislature(
             bills = list(filter(filter_func, bills))
 
         pretty_bills = [
-            f"{b.formatted} ({len(b.sponsors)} sponsor{'s' if len(b.sponsors) != 1 else ''})"
+            f"{b.formatted} ({len(b.sponsors)} sponsor{'s' if len(b.sponsors) != 1 else ''}) {':warning:' if not self._mk12_bill_from_citizen_has_enough_sponsors(b) else ''}"
             for b in bills
         ] or ["-"]
+
         speaker = session.speaker or context.MockUser()
 
         description = f"**__Presiding Speaker__**\n{speaker.mention}\n\n**__Opened__**\n<t:{int(session.opened_on.timestamp())}:F>\n"
@@ -2284,7 +2298,7 @@ class Legislature(
 
     @legislature.command(name="submit")
     @commands.cooldown(1, 15, commands.BucketType.user)
-    @commands.max_concurrency(2, per=commands.BucketType.guild, wait=False)
+    @commands.max_concurrency(3, per=commands.BucketType.guild, wait=False)
     @checks.is_democraciv_guild()
     @checks.is_citizen_if_multiciv()
     async def submit(self, ctx):
@@ -2974,6 +2988,7 @@ class Legislature(
         await ctx.send(embed=embed)
 
     @legislature.command(name="sponsor", aliases=["second", "cosponsor"], hidden=True)
+    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
     @checks.is_citizen_if_multiciv()
     async def sponsor(self, ctx, *, bill_or_motion_ids):
         """Show your support for one or multiple bills or motions by sponsoring them
