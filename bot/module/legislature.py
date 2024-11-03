@@ -1127,6 +1127,10 @@ class Legislature(
         if not bill.submitter:
             return False
 
+        # only care about fresh bills
+        if bill.status is not models.BillSubmitted:
+            return True
+
         if self.legislator_role in bill.submitter.roles:
             return True
 
