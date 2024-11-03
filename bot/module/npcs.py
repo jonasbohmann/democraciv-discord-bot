@@ -350,22 +350,23 @@ class NPC(CustomCog):
 
         if ctx.message.attachments:
             file = ctx.message.attachments[0]
-            if file.url.lower().endswith(("png", "jpeg", "jpg", "gif", "webp")):
-                avatar_url = file.url
+            # todo 2024
+            # if file.url.lower().endswith(("png", "jpeg", "jpg", "gif", "webp")):
+            avatar_url = file.url
 
         if not avatar_url:
             avatar = await ctx.input(
                 f"{config.USER_INTERACTION_REQUIRED} Reply with a link to the avatar of your NPC."
-                f"\n{config.HINT} This should be a valid URL ending with either `.png`, "
-                f"`.jpeg`, `.jpg`, `.gif` or `.webp`.\n{config.HINT} You can also just upload the "
+                f"\n{config.HINT} This should be a valid URL that **does not expire**.\n{config.HINT} You can also just upload the "
                 f"avatar image here instead of replying with an URL.\n{config.HINT} If you don't "
                 f"want your NPC to have an avatar, just reply with gibberish.",
                 image_allowed=True,
             )
 
-            if avatar.lower().startswith("http") and avatar.lower().endswith(
-                ("png", "jpeg", "jpg", "gif", "webp")
-            ):
+            # if avatar.lower().startswith("http") and avatar.lower().endswith(
+            #    ("png", "jpeg", "jpg", "gif", "webp")
+            # ):
+            if avatar.lower().startswith("http"):
                 avatar_url = avatar
 
         return avatar_url
