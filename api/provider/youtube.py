@@ -28,6 +28,7 @@ class YouTubeManager:
             and self.YOUTUBE_WEBHOOK
         ):
             self.youtube_upload_tasks.start()
+            self.youtube_stream_task.start()
 
     def _get_token(self):
         with open(self._token_path, "r") as token_file:
@@ -84,7 +85,7 @@ class YouTubeManager:
 
         return None
 
-    @tasks.loop(minutes=15)
+    @tasks.loop(minutes=2)
     async def youtube_stream_task(self):
         """Check every 15 minutes if a YouTube channel is streaming live. If it is, send an announcement to the
         specified Discord channel."""
@@ -124,6 +125,19 @@ class YouTubeManager:
 
         if thumbnail.startswith("https://"):
             embed.set_image(url=thumbnail)
+        
+        async with self.session.post(
+                self.YOUTUBE_WEBHOOK,
+                json={
+                    "username": "Democraciv",
+                    "avatar_url": "https://cdn.discordapp.com/avatars/486971089222631455/2e2226d75feca59cc71898f5c24323b6.png?size=4096",
+                    "embeds": [embed.to_dict()],
+                },
+            ) as response:
+                if response.status not in (200, 204):
+                    logger.error(
+                        f"Error while sending Twitch webhook: {response.status} {await response.text()}"
+                    )
 
     async def get_newest_upload(self) -> typing.Optional[typing.Dict]:
         async with self.session.get(
