@@ -205,7 +205,7 @@ class OverrideScheduler(text.AnnouncementScheduler):
         return embed
 
 
-LEG_COMMAND_ALIASES = ["leg", "legislature", "s"]
+LEG_COMMAND_ALIASES = ["leg", "legislature", "s", "sen"]
 
 try:
     LEG_COMMAND_ALIASES.remove(mk.MarkConfig.LEGISLATURE_COMMAND.lower())
