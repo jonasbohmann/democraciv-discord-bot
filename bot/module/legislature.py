@@ -1499,7 +1499,7 @@ class Legislature(
 
         voting_form = await ctx.input(
             f"{config.USER_INTERACTION_REQUIRED} Reply with the link to this session's Google Forms voting "
-            f"form.\n{config.HINT} Reply with gibberish if you want me to generate that form for you."
+            f"form or to the Google Sheets voting spreadsheet.\n{config.HINT} Reply with gibberish if you want me to generate that form for you."
         )
 
         if not self.is_google_doc_link(voting_form):
@@ -1512,7 +1512,7 @@ class Legislature(
 
         should_dm_legislators = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Do you want me to DM the link "
-            f"to the Voting Form to all "
+            f"to the Voting Form/Spreadsheet to all "
             f"{self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL}?"
         )
 
@@ -1862,7 +1862,7 @@ class Legislature(
         if session.voting_started_on:
             intro += (
                 f"Voting started on {session.voting_started_on.strftime('%B %d, %Y at %H:%M')} UTC "
-                f"[on this form]({session.vote_form}). "
+                f"[here]({session.vote_form}). "
             )
 
         intro += (
