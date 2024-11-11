@@ -1098,9 +1098,21 @@ class Tags(context.CustomCog):
 
         tag_name = message.content[len(ctx.prefix) :]
         tag_details = await self.resolve_tag_name(tag_name, message.guild)
+        easter_egg_sue_rest = None
 
         if tag_details is None:
-            return
+
+            # todo nov 2024
+            # too hacky and code duplicate
+            if tag_name.lower().startswith("sue "):
+                tag_details = await self.resolve_tag_name("sue", message.guild)
+                easter_egg_sue_rest = f"`{discord.utils.remove_markdown(tag_name[4:])}` probably deserves to be sued."
+
+                if not tag_details:
+                    return
+
+            else:
+                return
 
         tag_content_type = self.get_tag_content_type(tag_details["content"])
 
@@ -1128,7 +1140,7 @@ class Tags(context.CustomCog):
                     title=tag_details["title"], description=tag_details["content"]
                 )
 
-                await message.channel.send(embed=embed)
+                await message.channel.send(content=easter_egg_sue_rest, embed=embed)
 
         else:
             await message.channel.send(
