@@ -1106,7 +1106,7 @@ class Tags(context.CustomCog):
             # too hacky and code duplicate
             if tag_name.lower().startswith("sue "):
                 tag_details = await self.resolve_tag_name("sue", message.guild)
-                easter_egg_sue_rest = f"`{discord.utils.remove_markdown(tag_name[4:])}` probably deserves to be sued."
+                easter_egg_sue_rest = f"<:loredana:772446083891593246> `{discord.utils.remove_markdown(tag_name[4:])}` probably deserves to be sued."
 
                 if not tag_details:
                     return
