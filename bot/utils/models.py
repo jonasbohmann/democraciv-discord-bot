@@ -411,9 +411,13 @@ class Law(Bill, FuzzyableMixin):
             if silent:
                 return None
             else:
-                raise NotLawError(
+                if ctx.command and ctx.command.name == "law":
+                    fmt_msg = f"{config.NO} `{bill.name}` (#{bill.id}) is not an active law.\n{config.HINT} You can use `{config.BOT_PREFIX}bill {bill.id}` instead."
+
+                else:
                     f"{config.NO} `{bill.name}` (#{bill.id}) is not an active law."
-                )
+
+                raise NotLawError(fmt_msg)
 
         return bill
 

@@ -68,6 +68,14 @@ class _Fuzzy(commands.Converter):
                 try:
                     return await converter.convert(ctx, argument)
                 except Exception as e:
+
+                    # todo nov 2024
+                    if (
+                        isinstance(e, exceptions.NotLawError)
+                        and ctx.command.name == "law"
+                    ):
+                        raise e
+
                     exception_mapping[converter] = e
                     continue
             else:
