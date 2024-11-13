@@ -1022,17 +1022,17 @@ class Tags(context.CustomCog):
         url_endings_video = (".avi", ".mp4", ".mp3", ".mov", ".flv", ".wmv")
 
         if self.url_pattern.fullmatch(tag_content) and (
-            tag_content.lower().endswith(url_endings_image)
+            any(substring in tag_content.lower() for substring in url_endings_image)
         ):
             return TagContentType.IMAGE
 
         elif self.url_pattern.match(tag_content) and (
-            tag_content.lower().endswith(url_endings_image)
+            any(substring in tag_content.lower() for substring in url_endings_image)
         ):
             return TagContentType.PARTIAL_IMAGE
 
         elif self.url_pattern.match(tag_content) and (
-            tag_content.lower().endswith(url_endings_video)
+            any(substring in tag_content.lower() for substring in url_endings_video)
         ):
             return TagContentType.VIDEO
 
