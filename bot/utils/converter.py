@@ -683,6 +683,7 @@ class CaseInsensitiveMember(commands.MemberConverter, FuzzyableMixin):
 
         for member in ctx.guild.members:
             all_tries.append(member.name)
+            all_tries.append(member.display_name)
 
             if member.nick:
                 members[member.nick] = member.id
@@ -710,7 +711,7 @@ class CaseInsensitiveMember(commands.MemberConverter, FuzzyableMixin):
                 return (
                     m.name.lower() == arg
                     or (m.nick and m.nick.lower() == arg)
-                    or str(m).lower() == arg
+                    or m.display_name.lower() == arg
                 )
 
             if not ctx.guild:
@@ -747,7 +748,7 @@ class CaseInsensitiveUser(commands.UserConverter, FuzzyableMixin):
             arg = argument.lower()
 
             def predicate(m):
-                return m.name.lower() == arg or str(m).lower() == arg
+                return m.name.lower() == arg or m.display_name.lower() == arg
 
             user = discord.utils.find(predicate, ctx.bot.users)
 

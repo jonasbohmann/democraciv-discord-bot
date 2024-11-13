@@ -245,6 +245,13 @@ class DynamicSelect(discord.ui.Select):
         self.view.stop()
 
 
+def _stringify_fuzzy_model_for_select_view_label(model):
+    if isinstance(model, discord.Member) or isinstance(model, discord.User):
+        return model.display_name
+
+    return str(model)
+
+
 class FuzzyChoose(PromptView):
     def __init__(self, ctx, *args, **kwargs):
         self.question: str = kwargs.pop("question")
@@ -258,7 +265,9 @@ class FuzzyChoose(PromptView):
             options=[
                 discord.SelectOption(
                     label=textwrap.shorten(
-                        discord.utils.remove_markdown(str(x)),
+                        discord.utils.remove_markdown(
+                            _stringify_fuzzy_model_for_select_view_label(x)
+                        ),
                         width=100,
                         placeholder="...",
                     ),
@@ -302,7 +311,9 @@ class FuzzyMultiModelChoose(FuzzyChoose):
                 options.append(
                     discord.SelectOption(
                         label=textwrap.shorten(
-                            discord.utils.remove_markdown(str(choice)),
+                            discord.utils.remove_markdown(
+                                _stringify_fuzzy_model_for_select_view_label(choice)
+                            ),
                             width=100,
                             placeholder="...",
                         ),
