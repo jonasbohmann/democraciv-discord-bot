@@ -138,7 +138,8 @@ class Moderation(context.CustomCog):
             )
             await mod_channel.send(embed=embed)
 
-    @commands.Cog.listener(name="on_member_join")
+    # todo nov 24
+    # @commands.Cog.listener(name="on_member_join")
     async def possible_alt_listener(self, member):
         if member.bot:
             return
