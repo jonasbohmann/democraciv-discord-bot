@@ -563,6 +563,38 @@ class Tags(context.CustomCog):
         safe_content = tag.clean_content.replace("```", "'")
         return await ctx.send(f"```{safe_content}```")
 
+    @tags.command(name="random")
+    async def random(self, ctx: context.CustomContext):
+        """Trigger a random tag"""
+
+        tag_name = await self.bot.db.fetchval(
+            "SELECT name FROM tag WHERE tag.global = true OR tag.guild_id = $1 ORDER BY random() limit 1",
+            ctx.guild.id if ctx.guild else 0,
+        )
+        tag = await Tag.convert(ctx, tag_name)
+
+        tag_content_type = self.get_tag_content_type(tag.content)
+
+        if tag.is_embedded:
+            if tag_content_type is TagContentType.IMAGE:
+                # invisible colour=0x2F3136
+                embed = text.SafeEmbed(title=tag.title)
+                embed.set_image(url=tag.content)
+
+                try:
+                    return await ctx.send(embed=embed)
+                except discord.HTTPException:
+                    return await ctx.send(tag.clean_content)
+            elif tag_content_type is TagContentType.VIDEO:
+                # discord doesn't allow videos in embeds
+                return await ctx.send(tag.clean_content)
+
+            embed = text.SafeEmbed(title=tag.title, description=tag.content)
+            return await ctx.send(embed=embed)
+
+        else:
+            return await ctx.send(tag.clean_content)
+
     @tags.command(name="edit", aliases=["change"])
     @commands.guild_only()
     @checks.tag_check()
