@@ -1,6 +1,7 @@
 import datetime
 import time
 import typing
+import discord
 
 import discord.utils
 from discord.ext import commands
@@ -22,6 +23,14 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
         """Restarts the bot"""
         await ctx.send(":wave: Restarting...")
         await self.bot.close()
+
+    @Feature.Command(parent="jsk", name="starboost", aliases=["star", "boost"])
+    async def jsk_starboost(
+        self, ctx, message: typing.Union[discord.Message, discord.PartialMessage]
+    ):
+        """Add a star reaction to a message"""
+        await message.add_reaction("\U00002b50")
+        await ctx.send(f"{config.YES} Ok.")
 
     @Feature.Command(parent="jsk", name="backup")
     async def jsk_backup(self, ctx):

@@ -190,7 +190,7 @@ class Meta(context.CustomCog):
         p = config.BOT_PREFIX
 
         for name, cog in sorted(self.bot.cogs.items()):
-            if cog.hidden:
+            if cog.hidden and cog.qualified_name != "Bank":
                 continue
 
             cog_cmds = sorted(

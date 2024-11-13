@@ -240,7 +240,7 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
         invoke_without_command=True,
     )
     async def court(self, ctx):
-        """Dashboard for {justice_term}"""
+        """Dashboard for {justice_term}s"""
 
         embed = text.SafeEmbed()
         embed.set_author(

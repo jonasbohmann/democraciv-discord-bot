@@ -187,6 +187,8 @@ class Currency:
 class MockBank(context.CustomCog, name="Bank"):
     """Open as many bank accounts as you want and send money in multiple currencies with https://democracivbank.com"""
 
+    hidden = True
+
     def __init__(self, bot):
         super().__init__(bot)
         self.BANK_NAME = "Bank of Democraciv"

@@ -93,7 +93,7 @@ class Moderation(context.CustomCog):
                     factor_details += "Game, Twitch or Spotify connection (-150%)\n"
                     break
 
-        if member.is_avatar_animated():
+        if member.avatar.is_animated():
             # If user has Nitro (with animated profile picture), it's likely not an alt
             is_alt_chance -= 2
             factor_details += "Discord Nitro (-200%)\n"
@@ -316,7 +316,7 @@ class Moderation(context.CustomCog):
         )
         await self.safe_send_mod_links(ctx, embed)
 
-    @commands.command(name="quire", aliases=["q"])
+    @commands.command(name="quire", aliases=["q"], hidden=True)
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def quire(self, ctx):
         """Quire Project Management"""

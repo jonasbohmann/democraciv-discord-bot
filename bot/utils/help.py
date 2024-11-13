@@ -91,7 +91,8 @@ class BotHelpPageSource(menus.ListPageSource):
     async def format_page(self, menu, cogs):
         prefix = config.BOT_PREFIX
         description = (
-            f"Use `{prefix}help <thing>` for more info on a category or command."
+            f"Use `{prefix}help <thing>` for more info on a category or command.\n"
+            f"Use `{prefix}commands` to see every available command in a single message."
         )
 
         embed = text.SafeEmbed(title="All Categories | Help", description=description)
@@ -232,7 +233,7 @@ class HelpMenu(Pages, inherit_buttons=False):
                 HelpSelect(
                     self,
                     options=options,
-                    placeholder="Select a category to get help for",
+                    placeholder="Select a category for a list of all commands",
                 )
             )
 
@@ -466,16 +467,17 @@ class PaginatedHelpCommand(commands.HelpCommand):
         if command:
             cmd = command.lower()
 
+            # todo nov24
             if cmd.startswith(
                 (
                     "bill",
                     "b",
                     "bill",
                     "motion",
-                    "m",
+                    "mo",
                     "motions",
                     "session",
-                    "s",
+                    "ses",
                     "sessions",
                 )
             ):

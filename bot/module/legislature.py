@@ -274,7 +274,7 @@ class Legislature(
         new_ctx = await self.bot.get_context(ctx.message)
         return await self.bot.invoke(new_ctx)
 
-    @commands.command(name="session", aliases=["sessions"], hidden=True)
+    @commands.command(name="session", aliases=["sessions", "ses"], hidden=True)
     async def _session(self, ctx: context.CustomContext):
         """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} session`
 
@@ -1131,7 +1131,7 @@ class Legislature(
 
     @legislature.group(
         name="session",
-        aliases=["s"],
+        aliases=["s", "ses"],
         case_insensitive=True,
         invoke_without_command=True,
     )
