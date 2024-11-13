@@ -138,9 +138,7 @@ class _Guild(context.CustomCog, name="Server"):
         elif len(current_welcome_message) > 1024:
             current_welcome_message = textwrap.shorten(current_welcome_message, 1024)
 
-        embed = text.SafeEmbed(
-            description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to change these settings.",
-        )
+        embed = text.SafeEmbed()
 
         embed.set_author(
             name=f"Welcome Messages on {ctx.guild.name}", icon_url=ctx.guild_icon
@@ -266,7 +264,7 @@ class _Guild(context.CustomCog, name="Server"):
         )
 
         embed = text.SafeEmbed(
-            description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to change these settings.\n\nIf you want "
+            description=f"If you want "
             f"to change what specific events I should log, use my `{config.BOT_PREFIX}server logs events` "
             f"command."
         )
@@ -594,9 +592,7 @@ class _Guild(context.CustomCog, name="Server"):
             "-" if not current_default_role else current_default_role.mention
         )
 
-        embed = text.SafeEmbed(
-            description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to change these settings.",
-        )
+        embed = text.SafeEmbed()
         embed.set_author(
             name=f"Role on Join on {ctx.guild.name}", icon_url=ctx.guild_icon
         )
@@ -684,10 +680,7 @@ class _Guild(context.CustomCog, name="Server"):
 
         pretty_is_allowed = "Only Administrators" if not is_allowed else "Everyone"
 
-        embed = text.SafeEmbed(
-            description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji"
-            f" to change this setting.",
-        )
+        embed = text.SafeEmbed()
 
         embed.set_author(
             name=f"Tag Creation on {ctx.guild.name}", icon_url=ctx.guild_icon
@@ -746,9 +739,7 @@ class _Guild(context.CustomCog, name="Server"):
 
         pretty_is_allowed = self.bot.emojify_boolean(is_allowed)
 
-        embed = text.SafeEmbed(
-            description=f"React with the {config.GUILD_SETTINGS_GEAR} emoji to change this setting.",
-        )
+        embed = text.SafeEmbed()
 
         embed.set_author(name=f"NPC Usage on {ctx.guild.name}", icon_url=ctx.guild_icon)
         embed.add_field(name="Allowed", value=pretty_is_allowed)
