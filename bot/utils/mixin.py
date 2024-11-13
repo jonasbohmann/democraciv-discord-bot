@@ -125,7 +125,7 @@ class GovernmentMixin:
         if not isinstance(obj, models.Motion):
             history = [
                 f"<t:{int(entry.date.timestamp())}:D> - {entry.note if entry.note else entry.after}"
-                for entry in obj.history[:5]
+                for entry in obj.history[:10]
             ]
 
             if history:
