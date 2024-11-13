@@ -87,7 +87,6 @@ class YouTubeManager:
 
         return None
 
-    @tasks.loop(minutes=2)
     async def youtube_stream_task(self):
         """Check every 15 minutes if a YouTube channel is streaming live. If it is, send an announcement to the
         specified Discord channel."""
@@ -159,7 +158,7 @@ class YouTubeManager:
 
         return description
 
-    @tasks.loop(minutes=30)
+    @tasks.loop(minutes=5)
     async def youtube_upload_tasks(self):
         """Check every 10 minutes if the 3 last uploads of a YouTube channel are new. If at least one is,
         send an announcement to the specified Discord channel."""
