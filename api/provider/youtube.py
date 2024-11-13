@@ -28,7 +28,6 @@ class YouTubeManager:
             and self.YOUTUBE_WEBHOOK
         ):
             self.youtube_upload_tasks.start()
-            self.youtube_stream_task.start()
 
     def _get_token(self):
         with open(self._token_path, "r") as token_file:
@@ -51,6 +50,9 @@ class YouTubeManager:
         """If a YouTube channel is streaming a live broadcast, returns JSON of broadcast details. Else, returns None.
         The two API requests in this method are expensive and should only be called every 15 minutes for a standard
         API key."""
+
+        # Nov 2024
+        # YouTube no longer returns live broadcoast on any Data V3 API
 
         async with self.session.get(
             f"https://www.googleapis.com/youtube/v3/search?"
@@ -125,19 +127,19 @@ class YouTubeManager:
 
         if thumbnail.startswith("https://"):
             embed.set_image(url=thumbnail)
-        
+
         async with self.session.post(
-                self.YOUTUBE_WEBHOOK,
-                json={
-                    "username": "Democraciv",
-                    "avatar_url": "https://cdn.discordapp.com/avatars/486971089222631455/2e2226d75feca59cc71898f5c24323b6.png?size=4096",
-                    "embeds": [embed.to_dict()],
-                },
-            ) as response:
-                if response.status not in (200, 204):
-                    logger.error(
-                        f"Error while sending Twitch webhook: {response.status} {await response.text()}"
-                    )
+            self.YOUTUBE_WEBHOOK,
+            json={
+                "username": "Democraciv",
+                "avatar_url": "https://cdn.discordapp.com/avatars/486971089222631455/2e2226d75feca59cc71898f5c24323b6.png?size=4096",
+                "embeds": [embed.to_dict()],
+            },
+        ) as response:
+            if response.status not in (200, 204):
+                logger.error(
+                    f"Error while sending YouTube webhook: {response.status} {await response.text()}"
+                )
 
     async def get_newest_upload(self) -> typing.Optional[typing.Dict]:
         async with self.session.get(
@@ -210,7 +212,7 @@ class YouTubeManager:
                 colour=0x1B1C20,
             )
             embed.set_author(
-                name=f"{channel} - New YouTube Video Uploaded",
+                name=f"{channel} - New Video on YouTube",
                 icon_url="https://cdn.discordapp.com/attachments/738903909535318086/"
                 "833695619838640189/youtube_social_circle_white.png",
             )
@@ -226,5 +228,5 @@ class YouTubeManager:
             ) as response:
                 if response.status not in (200, 204):
                     logger.error(
-                        f"Error while sending Twitch webhook: {response.status} {await response.text()}"
+                        f"Error while sending YouTube webhook: {response.status} {await response.text()}"
                     )
