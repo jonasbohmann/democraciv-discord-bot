@@ -397,28 +397,24 @@ class Legislature(
             empty_message="Nothing found.",
         )
         await pages.start(ctx)
+        fts_pages = None
 
-        view = mixin.FullTextSearchView(ctx)
-        await ctx.send(
-            f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per bill, even if there were more occurrences found.",
-            view=view,
-        )
-        yes = await view.prompt(silent=True)
+        try:
+            fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
+        except Exception:
+            pass
 
-        if yes:
-            try:
-                fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
-            except Exception:
-                return await ctx.send(
-                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
-                )
+        if fts_pages:
+            view = mixin.FullTextSearchView(ctx)
+            delete_after = await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per bill, even if there were more occurrences found.",
+                view=view,
+            )
+            yes = await view.prompt(silent=True)
 
-            if not fts_pages:
-                return await ctx.send(
-                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
-                )
-
-            await fts_pages.start(ctx)
+            if yes:
+                await fts_pages.start(ctx)
+                await delete_after.delete()
 
     @legislature.command(name="from", aliases=["f", "by"])
     async def _from(
@@ -740,28 +736,24 @@ class Legislature(
         )
 
         await pages.start(ctx)
+        fts_pages = None
 
-        view = mixin.FullTextSearchView(ctx)
-        await ctx.send(
-            f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per bill, even if there were more occurrences found.",
-            view=view,
-        )
-        yes = await view.prompt(silent=True)
+        try:
+            fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
+        except Exception:
+            pass
 
-        if yes:
-            try:
-                fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
-            except Exception:
-                return await ctx.send(
-                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
-                )
+        if fts_pages:
+            view = mixin.FullTextSearchView(ctx)
+            delete_after = await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per bill, even if there were more occurrences found.",
+                view=view,
+            )
+            yes = await view.prompt(silent=True)
 
-            if not fts_pages:
-                return await ctx.send(
-                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
-                )
-
-            await fts_pages.start(ctx)
+            if yes:
+                await fts_pages.start(ctx)
+                await delete_after.delete()
 
     @bill.command(name="ai-search", aliases=["ai", "semantic-search"])
     async def aisearch(self, ctx, *, query):
@@ -1098,30 +1090,27 @@ class Legislature(
             empty_message="Nothing found.",
         )
         await pages.start(ctx)
+        fts_pages = None
 
-        view = mixin.FullTextSearchView(ctx)
-        await ctx.send(
-            f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all motions too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per motion, even if there were more occurrences found.",
-            view=view,
-        )
-        yes = await view.prompt(silent=True)
+        try:
+            fts_pages = await self.prepare_full_text_search_paginator(
+                ctx, query, index="motion"
+            )
+        except Exception:
+            pass
 
-        if yes:
-            try:
-                fts_pages = await self.prepare_full_text_search_paginator(
-                    ctx, query, index="motion"
-                )
-            except Exception:
-                return await ctx.send(
-                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
-                )
+        if fts_pages:
+            view = mixin.FullTextSearchView(ctx)
+            delete_after = await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all motions too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per motion, even if there were more occurrences found.",
+                view=view,
+            )
 
-            if not fts_pages:
-                return await ctx.send(
-                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
-                )
+            yes = await view.prompt(silent=True)
 
-            await fts_pages.start(ctx)
+            if yes:
+                await fts_pages.start(ctx)
+                await delete_after.delete()
 
     def _mk12_bill_from_citizen_has_enough_sponsors(self, bill: Bill) -> bool:
         if not bill.submitter:

@@ -803,8 +803,8 @@ class Utility(context.CustomCog):
         ]
 
         vibing = [
-            "https://i.redd.it/ax6jb6lhdah31.jpg",
-            "https://i.redd.it/3a6nr5b3u4x31.png",
+            "https://preview.redd.it/i-will-give-your-ocs-a-vibe-check-v0-0y5skb0tx9sb1.jpeg?width=750&format=pjpg&auto=webp&s=b1d8598547a600f7c589a069ee92be6a08bb1589",
+            "https://images.squarespace-cdn.com/content/63c88a61bbbb6e3e419189da/1687420314895-70N8D0I60O36DB4PCRX0/You-Passed-The-Vibe-Check-Cats-y2k-png-design.jpg?format=1500w&content-type=image%2Fjpeg",
             "https://i.kym-cdn.com/photos/images/original/001/599/028/bf3.jpg",
             "https://i.redd.it/p4e6a65i3bw31.jpg",
             "https://media.makeameme.org/created/congratulations-you-have-61e05e0d4b.jpg",

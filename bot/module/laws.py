@@ -193,29 +193,27 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
 
         await pages.start(ctx)
 
-        view = mixin.FullTextSearchView(ctx)
-        await ctx.send(
-            f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all laws too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per law, even if there were more occurrences found.",
-            view=view,
-        )
-        yes = await view.prompt(silent=True)
+        fts_pages = None
 
-        if yes:
-            try:
-                fts_pages = await self.prepare_full_text_search_paginator(
-                    ctx, query, is_law=True
-                )
-            except Exception:
-                return await ctx.send(
-                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
-                )
+        try:
+            fts_pages = await self.prepare_full_text_search_paginator(
+                ctx, query, is_law=True
+            )
+        except Exception:
+            pass
 
-            if not fts_pages:
-                return await ctx.send(
-                    f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
-                )
+        if fts_pages:
+            view = mixin.FullTextSearchView(ctx)
+            delete_after = await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all laws too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per law, even if there were more occurrences found.",
+                view=view,
+            )
 
-            await fts_pages.start(ctx)
+            yes = await view.prompt(silent=True)
+
+            if yes:
+                await fts_pages.start(ctx)
+                await delete_after.delete()
 
     @law.command(name="repeal", aliases=["r"])
     @checks.has_any_democraciv_role(
