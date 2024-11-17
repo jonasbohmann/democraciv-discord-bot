@@ -690,6 +690,7 @@ class CaseInsensitiveMember(commands.MemberConverter, FuzzyableMixin):
                 all_tries.append(member.nick)
 
             members[member.name] = member.id
+            members[member.display_name] = member.id
 
         match = process.extract(argument, all_tries, limit=10)
 
