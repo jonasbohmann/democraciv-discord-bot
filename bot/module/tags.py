@@ -575,6 +575,10 @@ class Tags(context.CustomCog):
 
         tag_content_type = self.get_tag_content_type(tag.content)
 
+        await ctx.send(
+            f"{config.HINT} Showing random tag `{config.BOT_PREFIX}{tag_name}`"
+        )
+
         if tag.is_embedded:
             if tag_content_type is TagContentType.IMAGE:
                 # invisible colour=0x2F3136
