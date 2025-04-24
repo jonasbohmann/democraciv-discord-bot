@@ -1708,6 +1708,10 @@ class Legislature(
     async def export_form(self, ctx, session: Session = None):
         """Generate the Google Forms voting form with all the submitted bills & motions for a session"""
 
+        return await ctx.send(
+            f"{config.NO} This command has been disabled. Please DM @ Jonas for further information."
+        )
+
         session = session or await self.get_last_leg_session()
 
         if session is None:

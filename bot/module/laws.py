@@ -1,4 +1,5 @@
 import discord
+import asyncio
 
 from discord.ext import commands
 from discord.ext.commands import Greedy
@@ -99,28 +100,41 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
     async def exportlaws(self, ctx: context.CustomContext):
         """Generate a Legal Code as a Google Docs document from the list of active laws in {NATION_NAME}"""
 
-        doc_url = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with an **edit** link to a Google Docs "
-            "document you created. I will then fill that document to make it an up-to-date Legal Code.\n"
-            ":warning: Note that I will replace the entire content of your Google Docs document if it "
-            "isn't empty.",
-            delete_after=True,
-        )
+        # doc_url = await ctx.input(
+        #    f"{config.USER_INTERACTION_REQUIRED} Reply with an **edit** link to a Google Docs "
+        #    "document you created. I will then fill that document to make it an up-to-date Legal Code.\n"
+        #    ":warning: Note that I will replace the entire content of your Google Docs document if it "
+        #    "isn't empty.",
+        #    delete_after=True,
+        # )
 
-        if not doc_url:
-            ctx.command.reset_cooldown(ctx)
-            return
+        # if not doc_url:
+        #    ctx.command.reset_cooldown(ctx)
+        #    return
 
-        if not self.is_google_doc_link(doc_url):
-            ctx.command.reset_cooldown(ctx)
+        # if not self.is_google_doc_link(doc_url):
+        #    ctx.command.reset_cooldown(ctx)
+        #    return await ctx.send(
+        #        f"{config.NO} That doesn't look like a Google Docs URL."
+        #    )
+
+        doc_url = self.bot.mk.LEGAL_CODE
+
+        if not doc_url or not self.is_google_doc_link(doc_url):
             return await ctx.send(
-                f"{config.NO} That doesn't look like a Google Docs URL."
+                f"{config.NO} This command cannot be used right now. Please DM @ Jonas for further information."
             )
+
+        await ctx.send(
+            f"{config.HINT} You can no longer choose the Google Document that will be used for this yourself. Instead, I will always use this document: {self.bot.mk.LEGAL_CODE}\n\n{config.HINT} You can DM @ Jonas for further information."
+        )
+        await asyncio.sleep(3)  # I want people to read the above message
 
         await ctx.send(
             f"{config.YES} I will generate an up-to-date Legal Code."
             f"\n:arrows_counterclockwise: This may take a few minutes..."
         )
+        await asyncio.sleep(2)
 
         async with ctx.typing():
             all_laws = await self.bot.db.fetch(
