@@ -135,6 +135,26 @@ class RedditManager(ProviderManager):
 
             return js
 
+    async def get_reddit_post_json(self, *, url: str, retry=False):
+        headers = {
+            "Authorization": f"bearer {self.REDDIT_BEARER_TOKEN}",
+            "User-Agent": "democraciv-discord-bot by DerJonas - u/Jovanos",
+        }
+
+        async with self._session.get(f"{url}.json", headers=headers) as response:
+            if response.status in (401, 403):
+                if not retry:
+                    await self.refresh_reddit_bearer_token()
+                    return await self.get_reddit_post_json(url=url, retry=True)
+
+                logger.warning("got 403 while getting reddit post JSON")
+                return {"error": await response.json()}
+
+            try:
+                return await response.json()
+            except aiohttp.ContentTypeError:
+                return {"error": "error"}
+
     async def delete_reddit_post(self, *, post_id: str, retry=False):
         headers = {
             "Authorization": f"bearer {self.REDDIT_BEARER_TOKEN}",

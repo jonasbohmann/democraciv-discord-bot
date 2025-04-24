@@ -7,7 +7,6 @@ import sys
 import asyncpg
 import pydantic
 import uvicorn
-import xdice
 
 from contextlib import asynccontextmanager
 
@@ -141,8 +140,8 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    logger.info("Waiting 5 seconds for all tasks to finish...")
-    await asyncio.wait(asyncio.all_tasks() - {asyncio.current_task()}, timeout=5)
+    logger.info("Waiting 1 second for all tasks to finish...")
+    await asyncio.wait(asyncio.all_tasks() - {asyncio.current_task()}, timeout=1)
 
     await app.youtube_manager.session.close()
     await app.reddit_manager._session.close()
@@ -210,6 +209,10 @@ class SubmitRedditPost(pydantic.BaseModel):
     content: str
 
 
+class GetRedditPost(pydantic.BaseModel):
+    url: str
+
+
 class DeleteRedditPost(pydantic.BaseModel):
     id: str
 
@@ -265,6 +268,11 @@ async def reddit_post(submission: SubmitRedditPost, auth: str = Depends(ensure_a
         title=submission.title,
         content=submission.content,
     )
+
+
+@app.post("/reddit/post/get")
+async def reddit_post_get(post: GetRedditPost, auth: str = Depends(ensure_auth)):
+    return await app.reddit_manager.get_reddit_post_json(url=post.url)
 
 
 @app.post("/reddit/post/delete")
@@ -327,7 +335,8 @@ def _roll_dice(dice_to_roll: str):
 
     return
 
-    dice_pattern = xdice.Pattern(dice_to_roll)
+    # dice_pattern = xdice.Pattern(dice_to_roll)
+    dice_pattern = None
 
     # Ensure the number of dice the user asked to roll is reasonable
     # total_dice = 0

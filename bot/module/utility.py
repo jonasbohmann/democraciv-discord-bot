@@ -271,22 +271,28 @@ class Utility(context.CustomCog):
                 f"`https://www.reddit.com/r/democraciv/comments/ibr37f/introducing_the_bank_of_democraciv/`."
             )
 
+        partitioned_url: tuple[str, str, str] = url.partition("reddit.com/r/")
+
+        if not partitioned_url[2]:
+            return await ctx.send(
+                f"{config.NO} Make sure the link to your Reddit press post is in this exact format: "
+                f"`https://www.reddit.com/r/democraciv/comments/ibr37f/introducing_the_bank_of_democraciv/`."
+            )
+
+        url = f"https://oauth.reddit.com/r/{partitioned_url[2]}"
+
         error_msg = (
             f"{config.NO} Something went wrong. Are you sure that you gave me "
             f"a real link to a press Reddit post?"
         )
 
-        try:
-            async with self.bot.session.get(f"{url}.json") as response:
-                if response.status != 200:
-                    return await ctx.send(error_msg)
-
-                js = await response.json()
-        except aiohttp.ClientError:
-            return await ctx.send(error_msg)
+        js = await self.bot.api_request("POST", "reddit/post/get", json={"url": url})
 
         try:
             post = js[0]["data"]["children"][0]["data"]
+
+            if post["author"].lower() == "[deleted]":
+                return await ctx.send(f"{config.HINT} This post was already removed.")
 
             if (
                 post["subreddit"].lower() != config.DEMOCRACIV_SUBREDDIT.lower()
