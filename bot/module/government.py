@@ -266,9 +266,7 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
 
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
-            f"\n[Submit a Case](https://forms.gle/uhb9MP785J15f9vYA)\n"
-            f"[All Case Filings of the Supreme Court](https://docs.google.com/document/d/1IkT1Xk0BnHbbIZb_tteVCX1WV14HPGgOXsQrXuWZthA/edit?usp=sharing)\n[Judicial Procedure](https://docs.google.com/document/d/14kqyDHeY5aAqw38Mr-d-b-Lu2RRVEHSBoLeFg9xy-1g/edit?usp=sharing)",
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})",
             inline=False,
         )
 
