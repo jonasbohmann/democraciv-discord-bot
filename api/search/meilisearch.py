@@ -43,13 +43,6 @@ class SearchClient:
         self._session = aiohttp.ClientSession()
 
     async def enable_vector_store(self):
-        async with self._session.patch(
-            f"{self.MEILISEARCH_URL}/experimental-features/",
-            json={"vectorStore": True},
-            headers={"Authorization": f"Bearer {self.MEILISEARCH_API_KEY}"},
-        ) as response:
-            response.raise_for_status()
-
         embeddings_json = {
             "embedders": {
                 "default": {
