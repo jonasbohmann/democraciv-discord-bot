@@ -175,6 +175,31 @@ class GovernmentMixin:
 
         await pages.start(ctx)
 
+    async def generate_google_docs_legal_code(self):
+        doc_url = self.bot.mk.LEGAL_CODE
+
+        if not doc_url:
+            return
+
+        all_laws = await self.bot.db.fetch(
+            "SELECT id, name, link FROM bill WHERE status = $1 ORDER BY id;",
+            models.BillIsLaw.flag.value,
+        )
+        ugly_laws = [dict(r) for r in all_laws]
+        date = discord.utils.utcnow().strftime("%B %d, %Y at %H:%M")
+
+        result = await self.bot.run_apps_script(
+            script_id="MMV-pGVACMhaf_DjTn8jfEGqnXKElby-M",
+            function="generate_legal_code",
+            parameters=[
+                doc_url,
+                {"name": self.bot.mk.NATION_FULL_NAME, "date": date},
+                ugly_laws,
+            ],
+        )
+
+        return result
+
     async def _search_model(self, ctx, *, model, query: str, return_model=False):
         if len(query) < 3:
             raise exceptions.DemocracivBotException(
