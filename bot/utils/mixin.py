@@ -14,7 +14,7 @@ class FullTextSearchView(text.PromptView):
     @discord.ui.button(
         label="Yes, perform full-text search",
         style=discord.ButtonStyle.gray,
-        emoji="\U0001F50D",
+        emoji="\U0001f50d",
     )
     async def full_text_search(self, interaction, button):
         await interaction.response.defer()

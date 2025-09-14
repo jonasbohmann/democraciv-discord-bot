@@ -37,5 +37,5 @@ services:
     
 volumes:
   postgresdata:
-      external: true
+      external: false
   meili_data:

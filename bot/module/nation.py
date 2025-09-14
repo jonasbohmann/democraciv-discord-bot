@@ -112,11 +112,11 @@ class PermissionSelectorMenu(menus.Menu):
         )
         return await ctx.send(embed=embed)
 
-    @menus.button("1\N{variation selector-16}\N{combining enclosing keycap}")
+    @menus.button("1\N{VARIATION SELECTOR-16}\N{COMBINING ENCLOSING KEYCAP}")
     async def on_first_choice(self, payload):
         self.result.result["read"] = not self.result.result["read"]
 
-    @menus.button("2\N{variation selector-16}\N{combining enclosing keycap}")
+    @menus.button("2\N{VARIATION SELECTOR-16}\N{COMBINING ENCLOSING KEYCAP}")
     async def on_second_choice(self, payload):
         self.result.result["send"] = not self.result.result["send"]
 

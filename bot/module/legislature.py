@@ -3,6 +3,7 @@ import collections
 import datetime
 import difflib
 import logging
+import traceback
 import asyncpg
 import discord
 import typing
@@ -28,16 +29,24 @@ from bot.utils.converter import Fuzzy, FuzzySettings
 
 
 class SubmitChooserView(text.PromptView):
+
+    def __init__(self, *args, **kwargs):
+        self.bill_modal: SubmitBillModal = kwargs.pop("bill_modal")
+        self.motion_modal: SubmitMotionModal = kwargs.pop("motion_modal")
+        super().__init__(*args, **kwargs)
+
     @discord.ui.button(label="Submit a Bill", style=discord.ButtonStyle.primary)
     async def bill(self, interaction: discord.Interaction, button):
-        await interaction.response.defer()
         self.result = "bill"
+        await interaction.response.send_modal(self.bill_modal)
+        await self.bill_modal.wait()
         self.stop()
 
     @discord.ui.button(label="Submit a Motion", style=discord.ButtonStyle.grey)
     async def motion(self, interaction, button):
-        await interaction.response.defer()
         self.result = "motion"
+        await interaction.response.send_modal(self.motion_modal)
+        await self.motion_modal.wait()
         self.stop()
 
 
@@ -203,6 +212,101 @@ class OverrideScheduler(text.AnnouncementScheduler):
         )
         embed.description = "\n".join(message)
         return embed
+
+
+class SubmitBillModal(
+    discord.ui.Modal, title=f"Submit a Bill to the {mk.MarkConfig.LEGISLATURE_NAME}"
+):
+
+    google_docs_url = discord.ui.Label(
+        text="Link to Google Docs",
+        description="Bills are submitted as Google Docs documents. Make sure to copy the public link.",
+        component=discord.ui.TextInput(
+            style=discord.TextStyle.short,
+            max_length=512,
+            placeholder="https://docs.google.com/document/d/...",
+        ),
+    )
+
+    is_vetoable = discord.ui.Label(
+        text="Veto",
+        description=f"Is the {mk.MarkConfig.MINISTRY_NAME} legally allowed to vote on and veto this bill?",
+        component=discord.ui.Select(
+            options=[
+                discord.SelectOption(
+                    emoji="\U00002705",
+                    label=f"Yes, the {mk.MarkConfig.MINISTRY_NAME} should be able vote on this bill",
+                    value="true",
+                    default=True,
+                ),
+                discord.SelectOption(emoji="\U0000274c", label="No", value="false"),
+            ],
+        ),
+    )
+
+    bill_description = discord.ui.Label(
+        text="Summary",
+        description="What does your bill do? Write a short summary.",
+        component=discord.ui.TextInput(
+            style=discord.TextStyle.short,
+            max_length=500,
+        ),
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        self.stop()
+
+    async def on_error(
+        self, interaction: discord.Interaction, error: Exception
+    ) -> None:
+        await interaction.response.send_message(
+            f"{config.NO} Something went wrong.", ephemeral=True
+        )
+        traceback.print_exception(type(error), error, error.__traceback__)
+
+
+class SubmitMotionModal(
+    discord.ui.Modal, title=f"Submit a Motion to the {mk.MarkConfig.LEGISLATURE_NAME}"
+):
+
+    intro = discord.ui.TextDisplay(
+        content=f"Motions lack a lot of features that bills have, "
+        f"for example they cannot be passed into Law by the Government. They will not "
+        f"show up in `{config.BOT_PREFIX}laws`, nor will they make it on the Legal Code.\n\nIf you want to submit "
+        f"something small that results in some __temporary__ action and where it's not important to track if it passed, "
+        f"use a motion, otherwise use a bill.\n\n"
+        f"Common examples for motions: `Motion to repeal Law #12`, or `Motion to recall person XY`."
+    )
+
+    motion_title = discord.ui.Label(
+        text="Title",
+        description="What's the title of your motion?",
+        component=discord.ui.TextInput(
+            style=discord.TextStyle.short,
+            max_length=200,
+        ),
+    )
+
+    motion_description = discord.ui.Label(
+        text="Content",
+        description="Write your motion here. If your motion is inside a Google Docs document, just paste the link here.",
+        component=discord.ui.TextInput(
+            style=discord.TextStyle.long,
+        ),
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        self.stop()
+
+    async def on_error(
+        self, interaction: discord.Interaction, error: Exception
+    ) -> None:
+        await interaction.response.send_message(
+            f"{config.NO} Something went wrong.", ephemeral=True
+        )
+        traceback.print_exception(type(error), error, error.__traceback__)
 
 
 LEG_COMMAND_ALIASES = ["leg", "legislature", "s", "sen"]
@@ -2060,38 +2164,23 @@ class Legislature(
         return fixed_link
 
     async def submit_bill(
-        self, ctx: context.CustomContext, current_leg_session_id: int
+        self,
+        ctx: context.CustomContext,
+        current_leg_session_id: int,
+        bill_modal: SubmitBillModal,
     ) -> typing.Optional[discord.Embed]:
 
-        # Google Docs Link
-        google_docs_url = await ctx.input(
-            f"{config.YES} You will submit a **bill**.\n"
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the Google Docs link to the bill you want to submit.\n"
-            f"{config.HINT} If you don't have your bill in a Google Docs document but instead just as text, "
-            f"reply with gibberish to make me generate a Google Docs document for you."
-        )
-
-        if not self.is_google_doc_link(google_docs_url):
-            google_docs_url = await self.make_google_docs_bill(ctx)
+        google_docs_url = bill_modal.google_docs_url.component.value
 
         if not google_docs_url:
+            await ctx.send(f"{config.NO} Something went wrong.")
             return
 
-        is_vetoable = False
-
-        # Vetoable
-        is_vetoable = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Is the {self.bot.mk.MINISTRY_NAME} legally allowed to vote on (veto) this bill?"
+        is_vetoable = bool(bill_modal.is_vetoable.component.values[0])
+        bill_description = (
+            bill_modal.bill_description.component.value
+            or "*No summary provided by submitter.*"
         )
-
-        bill_description = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with a **short** summary of what your bill does.",
-            timeout=400,
-            return_cleaned=True,
-        )
-
-        if not bill_description:
-            bill_description = "*No summary provided by submitter.*"
 
         async with ctx.typing():
             bill = models.Bill(
@@ -2222,26 +2311,19 @@ class Legislature(
         return embed
 
     async def submit_motion(
-        self, ctx: context.CustomContext, current_leg_session_id: int
+        self,
+        ctx: context.CustomContext,
+        current_leg_session_id: int,
+        motion_modal: SubmitMotionModal,
     ) -> typing.Optional[discord.Embed]:
 
-        title = await ctx.input(
-            f"{config.YES} You will submit a **motion**.\n"
-            f"{config.USER_INTERACTION_REQUIRED} Reply with a short **title** for your motion.",
-            return_cleaned=True,
-        )
+        title = motion_modal.motion_title.component.value
 
         if not title:
+            await ctx.send(f"{config.NO} Something went wrong.")
             return
 
-        description = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the **content** of your motion. If your motion is"
-            " inside a Google Docs document, just use a link to that for this.",
-            return_cleaned=True,
-        )
-
-        if not description:
-            return
+        description = motion_modal.motion_description.component.value
 
         async with ctx.typing():
             haste_bin_url = await self.bot.make_paste(description)
@@ -2341,7 +2423,11 @@ class Legislature(
                 )
 
         if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
-            view = SubmitChooserView(ctx)
+            bill_modal = SubmitBillModal()
+            motion_modal = SubmitMotionModal()
+            view = SubmitChooserView(
+                ctx, bill_modal=bill_modal, motion_modal=motion_modal
+            )
 
             await ctx.send(
                 f"{config.USER_INTERACTION_REQUIRED} Do you want to submit a bill or a motion?"
@@ -2369,7 +2455,7 @@ class Legislature(
                             f"bills."
                         )
 
-                embed = await self.submit_bill(ctx, current_leg_session.id)
+                embed = await self.submit_bill(ctx, current_leg_session.id, bill_modal)
 
             elif result == "motion":
                 ctx.command.reset_cooldown(ctx)
@@ -2381,7 +2467,9 @@ class Legislature(
                             f"motions."
                         )
 
-                embed = await self.submit_motion(ctx, current_leg_session.id)
+                embed = await self.submit_motion(
+                    ctx, current_leg_session.id, motion_modal
+                )
         else:
             if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
                 if self.legislator_role not in ctx.author.roles:
@@ -2390,7 +2478,7 @@ class Legislature(
                         f"bills."
                     )
 
-            embed = await self.submit_bill(ctx, current_leg_session.id)
+            embed = await self.submit_bill(ctx, current_leg_session.id, bill_modal)
 
         if embed is None:
             return
