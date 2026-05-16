@@ -27,42 +27,10 @@ from bot.utils import (
 from bot.utils.models import Bill, Session, Motion, SessionStatus
 from bot.utils.converter import Fuzzy, FuzzySettings
 
+# todo: nur -leg submit, -leg session * müssen ja dupliziert werden oder? nicht die -bill und -motion commands
+#       mk13 ^
 
-class SubmitChooserView(text.PromptView):
-
-    def __init__(self, *args, **kwargs):
-        self.bill_modal: SubmitBillModal = kwargs.pop("bill_modal")
-        self.motion_modal: SubmitMotionModal = kwargs.pop("motion_modal")
-        super().__init__(*args, **kwargs)
-
-    @discord.ui.button(label="Submit a Bill", style=discord.ButtonStyle.primary)
-    async def bill(self, interaction: discord.Interaction, button):
-        self.result = "bill"
-        await interaction.response.send_modal(self.bill_modal)
-        await self.bill_modal.wait()
-        self.stop()
-
-    @discord.ui.button(label="Submit a Motion", style=discord.ButtonStyle.grey)
-    async def motion(self, interaction, button):
-        self.result = "motion"
-        await interaction.response.send_modal(self.motion_modal)
-        await self.motion_modal.wait()
-        self.stop()
-
-
-class ModelChooseView(text.PromptView):
-    @discord.ui.button(label="Bills", style=discord.ButtonStyle.grey)
-    async def bill(self, interaction, button):
-        await interaction.response.defer()
-        self.result = "bill"
-        self.stop()
-
-    @discord.ui.button(label="Motions", style=discord.ButtonStyle.grey)
-    async def motion(self, interaction, button):
-        await interaction.response.defer()
-        self.result = "motion"
-        self.stop()
-
+MK13_COMMONS_LEGISLATURE_NAME = "Commons"
 
 class SuperPassScheduler(text.RedditAnnouncementScheduler):
     def get_reddit_post_title(self) -> str:
@@ -309,16 +277,16 @@ class SubmitMotionModal(
         traceback.print_exception(type(error), error, error.__traceback__)
 
 
-LEG_COMMAND_ALIASES = ["leg", "legislature", "s", "sen"]
-
+LEG_COMMAND_ALIASES = ["commons", "com"]
+# todo
 try:
     LEG_COMMAND_ALIASES.remove(mk.MarkConfig.LEGISLATURE_COMMAND.lower())
 except ValueError:
     pass
 
 
-class Legislature(
-    context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.LEGISLATURE_NAME
+class Commons(
+    context.CustomCog, mixin.GovernmentMixin, name="Commons"
 ):
     """Allows the Government to organize legislative sessions and bill & motion submissions"""
 
@@ -349,57 +317,14 @@ class Legislature(
             #     f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw"
             # ).remove_command("motion")
 
-    @commands.command(name="bill", aliases=["bills", "b"], hidden=True)
-    async def _bill(self, ctx: context.CustomContext):
-        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} bill`
-
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} bill` for the help page of the actual command.
-        """
-
-        ctx.message.content = ctx.message.content.replace(
-            f"{ctx.prefix}{ctx.invoked_with}",
-            f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
-            f"{ctx.invoked_with}",
-        )
-        new_ctx = await self.bot.get_context(ctx.message)
-        return await self.bot.invoke(new_ctx)
-
-    @commands.command(name="motion", aliases=["motions", "mo"], hidden=True)
-    async def _motion(self, ctx: context.CustomContext):
-        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} motion`
-
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} motion` for the help page of the actual command.
-        """
-        ctx.message.content = ctx.message.content.replace(
-            f"{ctx.prefix}{ctx.invoked_with}",
-            f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
-            f"{ctx.invoked_with}",
-        )
-        new_ctx = await self.bot.get_context(ctx.message)
-        return await self.bot.invoke(new_ctx)
-
-    @commands.command(name="session", aliases=["sessions", "ses"], hidden=True)
-    async def _session(self, ctx: context.CustomContext):
-        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} session`
-
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} session` for the help page of the actual command.
-        """
-        ctx.message.content = ctx.message.content.replace(
-            f"{ctx.prefix}{ctx.invoked_with}",
-            f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
-            f"{ctx.invoked_with}",
-        )
-        new_ctx = await self.bot.get_context(ctx.message)
-        return await self.bot.invoke(new_ctx)
-
     @commands.group(
-        name=mk.MarkConfig.LEGISLATURE_COMMAND.lower(),
-        aliases=LEG_COMMAND_ALIASES,
+        name="commons",
+        aliases=("com", "common", "co"),
         case_insensitive=True,
         invoke_without_command=True,
     )
-    async def legislature(self, ctx):
-        """Dashboard for {LEGISLATURE_LEGISLATOR_NAME_PLURAL} with important links and the status of the current session"""
+    async def commons(self, ctx):
+        """Dashboard for the Commons with important links and the status of the current session"""
 
         active_leg_session = await self.get_active_leg_session()
 
@@ -413,7 +338,7 @@ class Legislature(
         embed = text.SafeEmbed()
         embed.set_author(
             icon_url=self.bot.mk.NATION_ICON_URL,
-            name=f"The {self.bot.mk.LEGISLATURE_NAME} of {self.bot.mk.NATION_FULL_NAME}",
+            name=f"The Commons of {self.bot.mk.NATION_FULL_NAME}",
         )
         speaker_value = []
 
@@ -431,612 +356,22 @@ class Legislature(
         else:
             speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
 
-        mk13_sen_pres = self._safe_get_member(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
-
-        if isinstance(mk13_sen_pres, discord.Member):
-            speaker_value.append(
-                f"Senator Presiding: {mk13_sen_pres.mention} {escape_markdown(str(mk13_sen_pres))}"
-            )
-        else:
-            speaker_value.append("Senator Presiding: -")
-
         embed.add_field(
             name=self.bot.mk.LEGISLATURE_CABINET_NAME, value="\n".join(speaker_value)
-        )
-
-        try:
-            legislators = self.bot.get_democraciv_role(mk.DemocracivRole.LEGISLATOR)
-            legislators = [
-                f"{l.mention} {escape_markdown(str(l))}" for l in legislators.members
-            ] or ["-"]
-        except exceptions.RoleNotFoundError:
-            legislators = ["-"]
-
-        embed.add_field(
-            name=f"{self.bot.mk.legislator_term}s ({len(legislators) if legislators[0] != "-" else 0})",
-            value="\n".join(legislators),
-            inline=False,
         )
 
         embed.add_field(
             name="Links",
             value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
-            f"\n[Legislative Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n[Legislative Procedures]({self.bot.mk.LEGISLATURE_PROCEDURES})",
+            f"\n[Commons Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n[Commons Procedures]({self.bot.mk.LEGISLATURE_PROCEDURES})",
             inline=False,
         )
 
         embed.add_field(
-            name="Current Session", value=current_session_value, inline=False
+            name="Current Commons Session", value=current_session_value, inline=False
         )
 
         await ctx.send(embed=embed)
-
-    @legislature.command(name="search")
-    async def search(self, ctx: context.CustomContext, *, query: str):
-        """Search for both bills & motions at once
-
-        If you want to limit your search to either just bills or just motions, consider
-        the `{PREFIX}{LEGISLATURE_COMMAND} bill search` and `{PREFIX}{LEGISLATURE_COMMAND} motion search` commands.
-        """
-
-        matches = await self._search_model(
-            ctx, model=models.Bill, query=query, return_model=True
-        )
-        matches.extend(
-            await self._search_model(
-                ctx, model=models.Motion, query=query, return_model=True
-            )
-        )
-
-        matches.sort(
-            key=lambda elm: difflib.SequenceMatcher(None, elm.name, query).ratio(),
-            reverse=True,
-        )
-        matches = list(map(lambda elm: elm.formatted, matches))
-
-        if matches:
-            matches.insert(
-                0,
-                f"This searches for both bills and motions. You can search for just bills with "
-                f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill search`, "
-                f"and for just motions with "
-                f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion search`.\n",
-            )
-
-        pages = paginator.SimplePages(
-            entries=matches,
-            icon=self.bot.mk.NATION_ICON_URL,
-            author=f"Bills & Motions matching '{query}'",
-            empty_message="Nothing found.",
-        )
-        await pages.start(ctx)
-        fts_pages = None
-
-        try:
-            fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
-        except Exception:
-            pass
-
-        if fts_pages:
-            view = mixin.FullTextSearchView(ctx)
-            delete_after = await ctx.send(
-                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per bill, even if there were more occurrences found.",
-                view=view,
-            )
-            yes = await view.prompt(silent=True)
-
-            if yes:
-                await fts_pages.start(ctx)
-                await delete_after.delete()
-
-    @legislature.command(name="from", aliases=["f", "by"])
-    async def _from(
-        self,
-        ctx: context.CustomContext,
-        *,
-        person_or_party: Fuzzy[
-            converter.CaseInsensitiveMember,
-            converter.CaseInsensitiveUser,
-            converter.PoliticalParty,
-            FuzzySettings(weights=(5, 0, 2)),
-        ] = None,
-    ):
-        """List all bills and motions that a specific person or Political Party submitted"""
-        member_or_party = person_or_party or ctx.author
-
-        bills = await self._from_person_model(
-            ctx, member_or_party=member_or_party, model=Bill, paginate=False
-        )
-        motions = await self._from_person_model(
-            ctx, member_or_party=member_or_party, model=Motion, paginate=False
-        )
-        things = bills + motions
-
-        if isinstance(member_or_party, converter.PoliticalParty):
-            name = member_or_party.role.name
-            empty = f"No member of {name} has submitted something yet."
-            title = f"Bills & Motions from members of {name}"
-            icon = (
-                await member_or_party.get_logo() or self.bot.mk.NATION_ICON_URL or None
-            )
-        else:
-            name = member_or_party.display_name
-            empty = f"{name} hasn't submitted anything yet."
-            title = f"Bills & Motions from {name}"
-            icon = member_or_party.display_avatar.url
-
-        if things:
-            things.insert(
-                0,
-                f"This lists both bills and motions. You can limit this to just bills by using "
-                f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bills from`, "
-                f"and to just motions by using "
-                f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motions from`.\n",
-            )
-
-        pages = paginator.SimplePages(
-            entries=things, author=title, icon=icon, empty_message=empty
-        )
-        await pages.start(ctx)
-
-    @legislature.group(
-        name="bill",
-        aliases=["b", "bills"],
-        case_insensitive=True,
-        invoke_without_command=True,
-    )
-    async def bill(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill] = None):
-        """List all bills or get details about a single bill"""
-
-        if bill_id is None:
-            return await self._paginate_all_(ctx, model=models.Bill)
-
-        return await self._detail_view(ctx, obj=bill_id)
-
-    @bill.command(name="synchronize", aliases=["sync", "refresh", "synchronise"])
-    @checks.has_any_democraciv_role(
-        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
-    )
-    async def b_refresh(self, ctx, bill_ids: commands.Greedy[models.Bill]):
-        """Synchronize the name & content of one or multiple bills with Google Docs
-
-        This gets the current title and the current content of the Google Docs document of a bill,
-         and saves that to my database. In case my search commands show outdated text of a bill,
-         or I show the wrong name of a bill, use this command to fix that.
-
-        **Example**
-            `{PREFIX}{COMMAND} 12`
-            `{PREFIX}{COMMAND} 45 46 49 51 52`"""
-
-        bills = bill_ids
-
-        if not bills:
-            return await ctx.send_help(ctx.command)
-
-        errs = []
-
-        async with ctx.typing():
-            async with self.bot.db.acquire() as connection:
-                async with connection.transaction():
-                    for bill in bills:
-                        name, keywords, content = await bill.fetch_name_and_keywords()
-
-                        if not name:
-                            errs.append(
-                                f"Error synchronizing Bill #{bill.id} - {bill.name}. Skipping update.."
-                            )
-                            continue
-
-                        await connection.execute(
-                            "UPDATE bill SET name = $1, content = $3 WHERE id = $2",
-                            name,
-                            bill.id,
-                            content,
-                        )
-                        await connection.execute(
-                            "DELETE FROM bill_lookup_tag WHERE bill_id = $1", bill.id
-                        )
-
-                        id_with_kws = [(bill.id, keyword) for keyword in keywords]
-                        self.bot.loop.create_task(
-                            connection.executemany(
-                                "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING ",
-                                id_with_kws,
-                            )
-                        )
-
-                        await self.bot.api_request(
-                            "POST",
-                            "document/update",
-                            json={"id": bill.id, "type": "bill"},
-                        )
-
-        msg = f"{config.YES} Synchronized {len(bills) - len(errs)}/{len(bills)} bills with Google Docs."
-
-        if errs:
-            fmt = "\n".join(errs)
-            msg = f"{fmt}\n\n{msg}"
-
-        await ctx.send(msg)
-
-    @bill.command(name="bulkedit", aliases=["bulkupdate", "bulkchange", "be"])
-    @checks.has_any_democraciv_role(
-        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
-    )
-    async def b_bulkedit(self, ctx: context.CustomContext):
-        """Bulk edit the Google Docs links of multiple bills at once"""
-
-        await ctx.send(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with a list of bills and their "
-            f"respective new links. First, type the bill's id (like `12`), then type a space, "
-            f"and then the new link for that bill.\n"
-            f"{config.HINT} For each bill/link pair, use a new line like in the image below.\n\nhttps://cdn.discordapp.com/attachments/759894147628269588/843804262777225226/bulkbill.PNG",
-        )
-
-        bulks = await ctx.input()
-
-        skipped = []
-        split = bulks.splitlines()
-
-        async with ctx.typing():
-            for i, bill_link in enumerate(split, start=1):
-                bill_link = bill_link.strip()
-
-                try:
-                    bill_id, link = bill_link.split(" ")
-                except ValueError:
-                    skipped.append(
-                        f"  - Incorrect input formatting on line {i}. See the image I sent for the "
-                        f"correct formatting."
-                    )
-                    continue
-
-                try:
-                    bill = await Bill.convert(ctx, bill_id)
-
-                    if not self.is_google_doc_link(link):
-                        skipped.append(
-                            f"  - The new link for Bill #{bill_id} you gave me is not a valid Google Docs link."
-                        )
-                        continue
-
-                    await bill.update_link(link)
-                except exceptions.NotFoundError:
-                    skipped.append(f"  - There is no Bill #{bill_id}.")
-                    continue
-                except exceptions.DemocracivBotException as e:
-                    skipped.append(f"  - {e.message}")
-                    continue
-
-        msg = f"{config.YES} Changed the link of {len(split) - len(skipped)}/{len(split)} bills."
-
-        if skipped:
-            fmt = "\n".join(skipped)
-            msg = f":warning: I skipped changing the link of some bills, see the errors below:\n\n{fmt}\n\n{msg}"
-
-        await ctx.send(msg)
-
-    @bill.command(name="edit", aliases=["update", "e", "change"])
-    @checks.is_democraciv_guild()
-    async def b_edit(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill]):
-        """Edit the Google Docs link or summary of a bill
-
-        **Example**
-            `{PREFIX}{COMMAND} 16`
-        """
-        bill = bill_id
-
-        if not self.is_cabinet(ctx.author) and bill.submitter_id != ctx.author.id:
-            return await ctx.send(
-                f"{config.NO} Only the {self.bot.mk.speaker_term} and the original "
-                f"submitter of a bill can edit it."
-            )
-
-        menu = text.EditModelMenu(
-            ctx,
-            choices_with_formatted_explanation={
-                "link": "Google Docs Link",
-                "description": "Short Summary",
-            },
-            title=f"{config.USER_INTERACTION_REQUIRED}  What about {bill.name} (#{bill.id}) do "
-            f"you want to change?",
-        )
-
-        result = await menu.prompt()
-        to_change = result.choices
-
-        if not result.confirmed or True not in to_change.values():
-            return
-
-        link = None
-        description = None
-
-        if to_change["link"]:
-            if (
-                not self.is_cabinet(ctx.author)
-                and bill.session.status is not SessionStatus.SUBMISSION_PERIOD
-            ):
-                return await ctx.send(
-                    f"{config.NO} You can only change the link to your bill if the "
-                    f"session it was submitted in is still in Submission Period.\n{config.HINT} "
-                    f"However, the {self.bot.mk.speaker_term} can change the link of any bill at "
-                    f"any given time."
-                )
-
-            link = await ctx.input(
-                f"{config.USER_INTERACTION_REQUIRED} Reply with the new Google Docs link to the bill."
-                f"\n{config.HINT} Did you know? You can change the link of multiple bills at once with my "
-                f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill bulkedit` command."
-            )
-
-            if not self.is_google_doc_link(link):
-                link = None
-                await ctx.send(
-                    f"{config.NO} That doesn't look like a Google Docs URL. "
-                    f"The link to the bill will not be changed."
-                )
-
-        if to_change["description"]:
-            description = await ctx.input(
-                f"{config.USER_INTERACTION_REQUIRED} Reply with a new **short** summary of what the bill does.",
-                timeout=400,
-                return_cleaned=True,
-            )
-            if not description:
-                description = "*No summary provided by submitter.*"
-
-        are_you_sure = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit `{bill.name}` (#{bill.id})?"
-        )
-
-        if not are_you_sure:
-            return await ctx.send("Cancelled.")
-
-        if link:
-            changed_bill = models.Bill(
-                id=bill.id,
-                bot=self.bot,
-                link=link,
-                submitter_description=description or bill.description,
-            )
-            await changed_bill.update_link(link)
-
-        if description:
-            await self.bot.db.execute(
-                "UPDATE bill SET submitter_description = $1 WHERE id = $2",
-                description,
-                bill.id,
-            )
-
-        await ctx.send(f"{config.YES} Bill #{bill.id} `{bill.name}` was updated.")
-
-    @bill.command(name="history", aliases=["h"])
-    async def b_history(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill]):
-        """See when a bill was first introduced, passed into Law, repealed, etc."""
-        fmt_history = [
-            f"<t:{int(entry.date.timestamp())}:D> - {entry.note if entry.note else entry.after}   "
-            f"({entry.after.emojified_status(verbose=False)})"
-            for entry in bill_id.history
-        ]
-        fmt_history.insert(
-            0,
-            f"[Link to the Google Docs document of this Bill]({bill_id.link}).\n",
-        )
-
-        pages = paginator.SimplePages(
-            entries=fmt_history,
-            author=f"{bill_id.name} (#{bill_id.id})",
-            per_page=12,
-            icon=self.bot.mk.NATION_ICON_URL,
-        )
-        await pages.start(ctx)
-
-    @bill.command(name="read", aliases=["text", "txt", "content"])
-    async def b_read(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill]):
-        """Read the content of a bill"""
-        await self._show_bill_text(ctx, bill_id)
-
-    @bill.command(name="search", aliases=["s"])
-    async def b_search(self, ctx: context.CustomContext, *, query: str):
-        """Search for a bill"""
-        results = await self._search_model(ctx, model=models.Bill, query=query)
-
-        pages = paginator.SimplePages(
-            entries=results,
-            icon=self.bot.mk.NATION_ICON_URL,
-            author=f"Bills matching '{query}'",
-            empty_message="Nothing found.",
-        )
-
-        await pages.start(ctx)
-        fts_pages = None
-
-        try:
-            fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
-        except Exception:
-            pass
-
-        if fts_pages:
-            view = mixin.FullTextSearchView(ctx)
-            delete_after = await ctx.send(
-                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per bill, even if there were more occurrences found.",
-                view=view,
-            )
-            yes = await view.prompt(silent=True)
-
-            if yes:
-                await fts_pages.start(ctx)
-                await delete_after.delete()
-
-    @bill.command(name="ai-search", aliases=["ai", "semantic-search"])
-    async def aisearch(self, ctx, *, query):
-        """This is an experimental command and still a work-in-progress."""
-
-        if self.bot.mk.IS_MULTICIV:
-            return await ctx.send(
-                f"{config.NO} This command is disabled during Multiciv MKs."
-            )
-
-        async with ctx.typing():
-            response = await self.bot.api_request(
-                "POST",
-                "document/search",
-                json={
-                    "question": query,
-                    "index": "bill",
-                    "is_law": False,
-                    "semantic_ratio": 1.0,
-                },
-            )
-
-        if not response or not response["result"]["hits"]:
-            return await ctx.send(
-                f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
-            )
-
-        fmt = [
-            "This feature is a work-in-progress.\nKnown issue: This only shows 1 search result per bill, even if there were more occurrences found.\n"
-        ]
-
-        for hit in response["result"]["hits"]:
-            try:
-                bill = await models.Bill.convert(ctx, hit["id"])
-            except Exception:
-                continue
-
-            trimmed = hit["_formatted"]["content"].strip()
-            txt = discord.utils.escape_markdown(trimmed)
-            txt = txt.replace("<DBS>", "[**")
-            txt = txt.replace(
-                "<DBE>", "**](https://this-is-not-a-real-url.democraciv.com)"
-            )
-            fmt.append(f"**__{bill.formatted}__**")
-            fmt.append(f"{txt}\n")
-
-        pages = paginator.SimplePages(
-            entries=fmt,
-            icon=self.bot.mk.NATION_ICON_URL,
-            author=f"[BETA] AI-powered search results for '{query}'",
-        )
-
-        await pages.start(ctx)
-
-    @bill.command(name="from", aliases=["f", "by"])
-    async def b_from(
-        self,
-        ctx: context.CustomContext,
-        *,
-        person_or_party: Fuzzy[
-            converter.CaseInsensitiveMember,
-            converter.CaseInsensitiveUser,
-            converter.PoliticalParty,
-            FuzzySettings(weights=(5, 0, 2)),
-        ] = None,
-    ):
-        """List all bills that a specific person or Political Party submitted"""
-        return await self._from_person_model(
-            ctx, member_or_party=person_or_party, model=models.Bill
-        )
-
-    @legislature.group(
-        name="motion",
-        aliases=["m", "motions", "mo"],
-        case_insensitive=True,
-        invoke_without_command=True,
-    )
-    async def motion(
-        self, ctx: context.CustomContext, *, motion_id: Fuzzy[Motion] = None
-    ):
-        """List all motions or get details about a single motion"""
-
-        if motion_id is None:
-            return await self._paginate_all_(ctx, model=models.Motion)
-
-        return await self._detail_view(ctx, obj=motion_id)
-
-    @motion.command(name="edit", aliases=["update", "e"])
-    @checks.is_democraciv_guild()
-    async def m_edit(self, ctx, *, motion_id: Fuzzy[Motion]):
-        """Edit the title or content of a motion
-
-        **Example**
-            `{PREFIX}{COMMAND} 16`
-        """
-        motion = motion_id
-
-        if not self.is_cabinet(ctx.author):
-            if motion.submitter_id != ctx.author.id:
-                return await ctx.send(
-                    f"{config.NO} Only the {self.bot.mk.speaker_term} and the original "
-                    f"submitter of a motion can edit it."
-                )
-
-            if motion.session.status is not SessionStatus.SUBMISSION_PERIOD:
-                return await ctx.send(
-                    f"{config.NO} You can only edit your motion if the "
-                    f"session it was submitted in is still in Submission Period.\n{config.HINT} "
-                    f"However, the {self.bot.mk.speaker_term} can edit your motion at "
-                    f"any given time."
-                )
-
-        menu = text.EditModelMenu(
-            ctx,
-            choices_with_formatted_explanation={"title": "Title", "content": "Content"},
-            title=f"{config.USER_INTERACTION_REQUIRED}  What about {motion.name} (#{motion.id}) "
-            f"do you want to change?",
-        )
-
-        result = await menu.prompt()
-        to_change = result.choices
-
-        if not result.confirmed or True not in to_change.values():
-            return
-
-        if to_change["title"]:
-            title = await ctx.input(
-                f"{config.USER_INTERACTION_REQUIRED} Reply with the new short **title** for the motion."
-            )
-
-        else:
-            title = motion.title
-
-        if to_change["content"]:
-            content = await ctx.input(
-                f"{config.USER_INTERACTION_REQUIRED} Reply with the new **content** of the motion. If the motion is"
-                " inside a Google Docs document, just use a link to that for this."
-            )
-
-            paste = await self.bot.make_paste(content)
-
-            if not paste:
-                return await ctx.send(
-                    f"{config.NO} The motion will not be updated, there was a problem with <https://mystb.in>. "
-                    "Sorry, try again in a few minutes."
-                )
-        else:
-            content = motion.description
-            paste = motion._link
-
-        are_you_sure = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit `{motion.name}` (#{motion.id})?"
-        )
-
-        if not are_you_sure:
-            return await ctx.send("Cancelled.")
-
-        await self.bot.db.execute(
-            "UPDATE motion SET title = $1, description = $2, paste_link = $3 WHERE id = $4",
-            title,
-            content,
-            paste,
-            motion.id,
-        )
-
-        await self.bot.api_request(
-            "POST", "document/update", json={"id": motion.id, "type": "motion"}
-        )
-
-        await ctx.send(f"{config.YES} Motion #{motion.id} `{motion.name}` was updated.")
 
     @motion.command(name="sponsor", aliases=["cosponsor", "second"])
     @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
@@ -1174,57 +509,6 @@ class Legislature(
             f"{config.YES} You were removed from the list of sponsors from all motions."
         )
 
-    @motion.command(name="from", aliases=["f", "by"])
-    async def m_from(
-        self,
-        ctx: context.CustomContext,
-        *,
-        person_or_party: Fuzzy[
-            converter.CaseInsensitiveMember,
-            converter.CaseInsensitiveUser,
-            converter.PoliticalParty,
-            FuzzySettings(weights=(5, 0, 2)),
-        ] = None,
-    ):
-        """List all motions that a specific person or Political Party submitted"""
-        return await self._from_person_model(
-            ctx, model=models.Motion, member_or_party=person_or_party
-        )
-
-    @motion.command(name="search", aliases=["s"])
-    async def m_search(self, ctx: context.CustomContext, *, query: str):
-        """Search for a motion"""
-        results = await self._search_model(ctx, model=models.Motion, query=query)
-
-        pages = paginator.SimplePages(
-            entries=results,
-            icon=self.bot.mk.NATION_ICON_URL,
-            author=f"Motions matching '{query}'",
-            empty_message="Nothing found.",
-        )
-        await pages.start(ctx)
-        fts_pages = None
-
-        try:
-            fts_pages = await self.prepare_full_text_search_paginator(
-                ctx, query, index="motion"
-            )
-        except Exception:
-            pass
-
-        if fts_pages:
-            view = mixin.FullTextSearchView(ctx)
-            delete_after = await ctx.send(
-                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all motions too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per motion, even if there were more occurrences found.",
-                view=view,
-            )
-
-            yes = await view.prompt(silent=True)
-
-            if yes:
-                await fts_pages.start(ctx)
-                await delete_after.delete()
-
     def _mk12_bill_from_citizen_has_enough_sponsors(self, bill: Bill) -> bool:
         if not bill.submitter:
             return False
@@ -1242,7 +526,7 @@ class Legislature(
 
         return False
 
-    @legislature.group(
+    @commons.group(
         name="session",
         aliases=["s", "ses"],
         case_insensitive=True,

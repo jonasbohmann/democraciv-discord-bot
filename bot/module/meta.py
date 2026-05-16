@@ -162,6 +162,21 @@ class Meta(context.CustomCog):
         except exceptions.DemocracivBotAPIError:
             api_http = None
 
+        try:
+            start1 = time.perf_counter()
+            cdn_http = None
+            
+            try:
+                async with self.session.request("GET", self.bot.mk.NATION_ICON_URL) as response:
+                    pass
+            except Exception:
+                pass
+
+            end1 = time.perf_counter()
+            cdn_http = (end - start) * 1000
+        except Exception:
+            cdn_http = None
+
         embed = text.SafeEmbed(
             title=f":ping_pong:  {title}",
             description="**[status.discord.com](https://status.discord.com/)**\n\n",
@@ -175,7 +190,15 @@ class Meta(context.CustomCog):
         embed.add_field(
             name="Internal API",
             value=f"{api_http:.0f}ms" if api_http else "*not running*",
+            inline=False,
         )
+
+        embed.add_field(
+            name="Democraciv CDN",
+            value=f"{cdn_http:.0f}ms" if cdn_http else "*not running*",
+            inline=False,
+        )
+
         await message.edit(content=None, embed=embed)
 
     @commands.command(name="commands", aliases=["cmd", "cmds"])

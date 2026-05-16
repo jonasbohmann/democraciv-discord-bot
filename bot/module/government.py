@@ -78,6 +78,7 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
         else:
             minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
 
+        """
         attorney_general = self._safe_get_member(mk.DemocracivRole.ATTORNEY_GENERAL)
 
         if isinstance(attorney_general, discord.Member):
@@ -94,7 +95,7 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
                 f"Supreme Commander: {supreme_commander.mention} {escape_markdown(str(supreme_commander))}"
             )
         else:
-            minister_value.append(f"Supreme Commander: -")
+            minister_value.append(f"Supreme Commander: -") """
 
         embed.add_field(
             name=self.bot.mk.MINISTRY_LEADERSHIP_NAME,
@@ -102,33 +103,52 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
             inline=True,
         )
 
-        try:
+        mk13_min_value = []
+
+        for mk13_min in [mk.DemocracivRole.MK13_FINANCE_MIN, mk.DemocracivRole.MK13_FOREIGN_MIN, mk.DemocracivRole.MK13_DEFENCE_MIN, mk.DemocracivRole.MK13_ATTORNEY_GENERAL]:
+            as_member = self._safe_get_member(mk13_min)
+            as_role = self.bot.get_democraciv_role(mk13_min)
+
+            if isinstance(as_member, discord.Member):
+                mk13_min_value.append(
+                    f"{as_role.name}: {as_member.mention} {escape_markdown(str(as_member))}"
+                )
+            else:
+                mk13_min_value.append(f"{as_role.name}: -")
+
+        """ try:
             ministers = self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER)
             ministers = [
                 f"{m.mention} {escape_markdown(str(m))}" for m in ministers.members
             ] or ["-"]
         except exceptions.RoleNotFoundError:
-            ministers = ["-"]
+            ministers = ["-"] """
 
-        try:
-            governors = self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNOR)
-            governors = [
-                f"{g.mention} {escape_markdown(str(g))}" for g in governors.members
-            ] or ["-"]
-        except exceptions.RoleNotFoundError:
-            governors = ["-"]
+        #try:
+        #    governors = self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNOR)
+        #    governors = [
+        #        f"{g.mention} {escape_markdown(str(g))}" for g in governors.members
+        #    ] or ["-"]
+        #except exceptions.RoleNotFoundError:
+        #    governors = ["-"]
 
-        embed.add_field(
+        """ embed.add_field(
             name=f"{self.bot.mk.minister_term}s ({len(ministers) if ministers[0] != "-" else 0})",
             value="\n".join(ministers),
             inline=False,
-        )
+        ) """
 
         embed.add_field(
-            name=f"{self.bot.mk.governor_term}s ({len(governors) if governors[0] != "-" else 0})",
-            value="\n".join(governors),
+            name=f"Cabinet of Advisors",
+            value="\n".join(mk13_min_value),
             inline=False,
         )
+
+        #embed.add_field(
+        #    name=f"{self.bot.mk.governor_term}s ({len(governors) if governors[0] != "-" else 0})",
+        #    value="\n".join(governors),
+        #    inline=False,
+        #)
 
         embed.add_field(
             name=f"{self.bot.mk.COURT_NAME} {self.bot.mk.COURT_JUSTICE_NAME}s ({len(justices) if justices[0] != "-" else 0})",
@@ -152,8 +172,17 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
         else:
             speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
 
+        mk13_sen_pres = self._safe_get_member(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
+
+        if isinstance(mk13_sen_pres, discord.Member):
+            speaker_value.append(
+                f"Senator Presiding: {mk13_sen_pres.mention} {escape_markdown(str(mk13_sen_pres))}"
+            )
+        else:
+            speaker_value.append("Senator Presiding: -")
+
         embed.add_field(
-            name=f"{self.bot.mk.LEGISLATURE_NAME} {self.bot.mk.LEGISLATURE_CABINET_NAME}",
+            name=f"{self.bot.mk.LEGISLATURE_CABINET_NAME}",
             value="\n".join(speaker_value),
             inline=False,
         )
@@ -167,7 +196,7 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
             legislators = ["-"]
 
         embed.add_field(
-            name=f"{self.bot.mk.legislator_term}s ({len(legislators) if legislators[0] != "-" else 0})",
+            name=f"Senators ({len(legislators) if legislators[0] != "-" else 0})",
             value="\n".join(legislators),
             inline=False,
         )
@@ -188,7 +217,7 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
         # )
 
         embed.description = (
-            f"There are {len(members_of_gov)} members of government in total."
+            f"There are {len(members_of_gov) if members_of_gov[0] != "-" else "0"} members of government in total."
         )
 
         # embed.add_field(

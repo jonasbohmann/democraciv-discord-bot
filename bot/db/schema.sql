@@ -89,7 +89,9 @@ CREATE TABLE IF NOT EXISTS legislature_session(
     vote_form text,
     opened_on timestamp WITHOUT TIME ZONE NOT NULL,
     voting_started_on timestamp WITHOUT TIME ZONE,
-    closed_on timestamp WITHOUT TIME ZONE
+    closed_on timestamp WITHOUT TIME ZONE,
+    house text,
+    display_id integer,
 );
 
 CREATE TABLE IF NOT EXISTS bill(

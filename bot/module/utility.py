@@ -161,7 +161,7 @@ class Utility(context.CustomCog):
         confirm = await message.channel.send(
             f"{config.USER_INTERACTION_REQUIRED} {message.author.mention}, do you want "
             f"me to post these last {len(messages)} messages from you to our "
-            f"subreddit **r/{config.DEMOCRACIV_SUBREDDIT}** in one, single press post?"
+            f"subreddit **r/{config.DEMOCRACIV_SUBREDDIT}** in one, single announcement or press post?"
             f"\n{config.HINT} *You have 5 minutes to decide. After 5 minutes with no reaction from you, I "
             f"will cancel this process and delete this message.*"
             f"\n{config.HINT} *If you would like to opt-out from this feature entirely so that I "
@@ -181,7 +181,7 @@ class Utility(context.CustomCog):
 
         title = f"{post_title} — by {message.author.display_name}"
         cleaned_up = [
-            f"*The following was written by the journalist {message.author.display_name} ({message.author}) "
+            f"*The following was written by {message.author.display_name} ({message.author}) "
             f"in #{message.channel.name} on our [Discord server](https://discord.gg/tVmHVcZPVs)*."
         ]
 

@@ -158,7 +158,7 @@ class YouTubeManager:
 
         return description
 
-    @tasks.loop(minutes=5)
+    @tasks.loop(minutes=20)
     async def youtube_upload_tasks(self):
         """Check every 10 minutes if the 3 last uploads of a YouTube channel are new. If at least one is,
         send an announcement to the specified Discord channel."""

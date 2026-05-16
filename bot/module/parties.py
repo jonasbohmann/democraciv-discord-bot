@@ -718,6 +718,7 @@ class Party(context.CustomCog, name="Political Parties"):
         party = await self.create_new_party(ctx, commit=True)
         await ctx.send(
             f"{config.YES} `{party.role.name}` was added as a new Political Party."
+            f"\n{config.HINT} Add abbreviations, acronyms and different spellings for **easier typing** with: `{config.BOT_PREFIX}party addalias {party.role.name}`"
             f"\n{config.HINT} Remember to update <https://reddit.com/r/democraciv/wiki> accordingly."
         )
 
