@@ -37,6 +37,7 @@ from bot.utils.converter import Fuzzy, FuzzySettings
 
 MK13_COMMONS_LEGISLATURE_NAME = "Commons"
 
+
 class SuperPassScheduler(text.RedditAnnouncementScheduler):
     def get_reddit_post_title(self) -> str:
         return f"New Bills passed into law with a super-majority by the Commons - {discord.utils.utcnow().strftime('%d %B %Y')}"
@@ -91,40 +92,34 @@ class SuperPassScheduler(text.RedditAnnouncementScheduler):
 
 
 class PassScheduler(text.RedditAnnouncementScheduler):
+    def _destination_text(self, obj: Bill) -> str:
+        if isinstance(obj.status, models.BillPassedCommonsPendingSenate):
+            return "Next stop: Senate"
+        if isinstance(obj.status, models.BillAwaitingExecutive):
+            return f"Next stop: {self.bot.mk.MINISTRY_NAME}"
+        if isinstance(obj.status, models.BillPassedLegislature):
+            return f"Next stop: {self.bot.mk.MINISTRY_NAME}"
+        if obj.status.is_law:
+            return "This bill is now law"
+        return "Next step recorded by the bot"
+
     def get_embed(self):
         embed = text.SafeEmbed()
         embed.set_author(
             name=f"Bills passed by the Commons",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
-        message = [
-            f"The following bills were **passed** by the Commons.\n"
-        ]
+        message = [f"The following bills were **passed** by the Commons.\n"]
 
         for obj in self._objects:
             submitter = obj.submitter or context.MockUser()
 
-            if obj.is_vetoable:
-                message.append(
-                    f"__Bill #{obj.id} - **[{obj.name}]({obj.link})**__"
-                    f"\n*Submitted by {submitter.mention}*\n{obj.description}\n"
-                )
-            else:
-                message.append(
-                    f"__*Bill #{obj.id}* - **[{obj.name}]({obj.link})**__"
-                    f"\n*Submitted by {submitter.mention}*\n{obj.description}\n"
-                )
+            message.append(
+                f"__Bill #{obj.id} - **[{obj.name}]({obj.link})**__"
+                f"\n*Submitted by {submitter.mention}*\n{obj.description}"
+                f"\n*{self._destination_text(obj)}*\n"
+            )
 
-        p = config.BOT_PREFIX
-        message.append(
-            f"\nThe bills were sent to the {self.bot.mk.MINISTRY_NAME} "
-            f"(`{p}{self.bot.mk.MINISTRY_COMMAND} bills`) to either pass "
-            f"(`{p}{self.bot.mk.MINISTRY_COMMAND} pass`) or veto (`{p}{self.bot.mk.MINISTRY_COMMAND} veto`) them."
-        )
-
-        # message.append(
-        #    f"\nAll these bills are now laws. They were added to `{p}laws` and can be found with `{p}laws search`."
-        # )
         embed.description = "\n".join(message)
         return embed
 
@@ -146,10 +141,10 @@ class PassScheduler(text.RedditAnnouncementScheduler):
             content.append(
                 f"__**Bill #{bill.id} - [{bill.name}]({bill.link})**__\n\n*Written by "
                 f"{submitter.display_name} ({submitter})*"
-                f"\n\n{bill.description}\n\n &nbsp;"
+                f"\n\n{bill.description}\n\n*{self._destination_text(bill)}*\n\n &nbsp;"
             )
 
-        outro = f"""\n\n &nbsp; \n\n---\n\nThe bills were sent to the {self.bot.mk.MINISTRY_NAME} for them to either veto or pass them into law.
+        outro = f"""\n\n &nbsp; \n\n---\n\nThe bot recorded the next legislative destination for each bill above.
                 \n\n\n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/)
                 and this is an automated service. Contact u/Jovanos (DerJonas on Discord) for further questions
                 or bug reports.*"""
@@ -201,22 +196,6 @@ class SubmitBillModal(
         ),
     )
 
-    is_vetoable = discord.ui.Label(
-        text="Veto",
-        description=f"Is the {mk.MarkConfig.MINISTRY_NAME} legally allowed to vote on and veto this bill?",
-        component=discord.ui.Select(
-            options=[
-                discord.SelectOption(
-                    emoji="\U00002705",
-                    label=f"Yes, the {mk.MarkConfig.MINISTRY_NAME} should be able vote on this bill",
-                    value="true",
-                    default=True,
-                ),
-                discord.SelectOption(emoji="\U0000274c", label="No", value="false"),
-            ],
-        ),
-    )
-
     bill_description = discord.ui.Label(
         text="Summary",
         description="What does your bill do? Write a short summary.",
@@ -224,6 +203,15 @@ class SubmitBillModal(
             style=discord.TextStyle.short,
             max_length=500,
         ),
+    )
+
+    is_procedure = discord.ui.Label(
+        text="Commons Procedure",
+        description=(
+            "Check this if the proposal only establishes rules or procedures for the Commons. "
+            "If checked, only the Commons vote on it."
+        ),
+        component=discord.ui.Checkbox(),
     )
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -296,9 +284,7 @@ except ValueError:
     pass
 
 
-class Commons(
-    context.CustomCog, mixin.GovernmentMixin, name="Commons"
-):
+class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
     """The Commons of the Celtic Nation"""
 
     def __init__(self, bot):
@@ -342,9 +328,7 @@ class Commons(
         if active_leg_session is None:
             current_session_value = "There currently is no open session at the Commons."
         else:
-            current_session_value = (
-                f"Commons Session #{active_leg_session.mk13_house_id} - {active_leg_session.status.value}"
-            )
+            current_session_value = f"Commons Session #{active_leg_session.mk13_house_id} - {active_leg_session.status.value}"
 
         embed = text.SafeEmbed()
         embed.set_author(
@@ -399,7 +383,6 @@ class Commons(
 
         return await self._detail_view(ctx, obj=bill_id)
 
-    
     # muss weg eig.
     @commons.group(
         name="motion",
@@ -416,7 +399,7 @@ class Commons(
             return await self._paginate_all_(ctx, model=models.Motion)
 
         return await self._detail_view(ctx, obj=motion_id)
-    
+
     @motion.command(name="sponsor", aliases=["cosponsor", "second"])
     @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
     @checks.is_citizen_if_multiciv()
@@ -641,7 +624,8 @@ class Commons(
             description = (
                 f"{description[:-1]}\n\nBills & Motions can be submitted to this session with "
                 f"`{config.BOT_PREFIX}commons submit`. Any failed bills from "
-                f"previous sessions can be resubmitted to this session with "
+                f"previous sessions can be resubmitted to the current submission-period session in their "
+                f"origin house with "
                 f"`{config.BOT_PREFIX}commons resubmit`.\n"
             )
 
@@ -723,12 +707,16 @@ class Commons(
                 f"first with `{config.BOT_PREFIX}commons session close`."
             )
 
-        new_session = await self.bot.db.fetchval(
-            "INSERT INTO legislature_session (speaker, opened_on, house, mk13_house_id) VALUES ($1, $2, $3, nextval('mk13_commons_session_seq')) RETURNING id",
+        new_session = await self.bot.db.fetchrow(
+            "INSERT INTO legislature_session (speaker, opened_on, house, mk13_house_id) VALUES ($1, $2, $3, nextval('mk13_commons_session_seq')) RETURNING id, mk13_house_id",
             ctx.author.id,
             datetime.datetime.utcnow(),
             "commons",
         )
+        queued_bill_count = await self.attach_pending_bills_to_session(
+            house="commons", session_id=new_session["id"]
+        )
+        new_session_display_id = new_session["mk13_house_id"]
 
         p = config.BOT_PREFIX
         l = "commons"
@@ -775,21 +763,30 @@ class Commons(
             value="Are there any bills from last session that "
             f"failed, that you want to give a second chance in this session? Don't bother "
             f"doing `{p}{l} submit` all over again, instead use `{p}{l} resubmit <bill_ids>` to "
-            f"move any old, failed bills to this session.",
+            f"move any old, failed bills back into the current submission-period session in their "
+            f"origin house.",
             inline=False,
         )
 
         await ctx.send(
-            f"{config.YES} The **submission period** for session #{new_session} was opened, and bills & "
+            f"{config.YES} The **submission period** for Commons Session #{new_session_display_id} was opened, and bills & "
             f"motions can now be submitted."
         )
+        if queued_bill_count:
+            await ctx.send(
+                f"{config.HINT} I also attached {queued_bill_count} bill{'s' if queued_bill_count != 1 else ''} "
+                f"that were waiting on the Commons to this new session."
+            )
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
 
         announcement = text.SafeEmbed()
-        announcement.description = f"The cabinet has opened the Submission Period for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{new_session}."
+        announcement.description = (
+            f"The cabinet has opened the Submission Period for Commons Session "
+            f"#{new_session_display_id}."
+        )
         announcement.set_author(
-            name=f"Submission Period open for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{new_session}",
+            name=f"Submission Period open for Commons Session #{new_session_display_id}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         announcement.add_field(
@@ -897,9 +894,9 @@ class Commons(
     async def updatesession(self, ctx: context.CustomContext):
         """Changes the current session's status to be open for voting"""
 
-        active_leg_session = await self.get_active_leg_session(house="commons") # todo
+        active_leg_session = await self.get_active_leg_session(house="commons")  # todo
         p = config.BOT_PREFIX
-        l = "commons" # todo
+        l = "commons"  # todo
 
         if active_leg_session is None:
             return await ctx.send(
@@ -970,8 +967,8 @@ class Commons(
             action=models.BillStatus.fail_in_legislature,
         )
 
-        await consumer.filter()
-        await consumer.consume()
+        await consumer.filter(acting_house="commons")
+        await consumer.consume(acting_house="commons")
 
         #  Update all bills that did not pass
         # await self.bot.db.execute(
@@ -989,9 +986,12 @@ class Commons(
             f"explicitly pass with `{p}{l} pass <bill_ids>` as failed.",
         )
 
-        info.add_field( # todo super majority gibbet nich?
-            name="Pass with a super-majority",
-            value=f"Bills that received a super-majority can be passed directly into law, skipping the {self.bot.mk.MINISTRY_NAME}'s vote, with `{p}{l} superpass <bill_ids>`",
+        info.add_field(
+            name="What happens after a pass?",
+            value="Bills passed by the Commons move to the Senate. If the Senate also pass them, "
+            f"they are sent to the {self.bot.mk.MINISTRY_NAME} for approval or veto.\n\n"
+            f"Commons procedures skip the Senate and the {self.bot.mk.MINISTRY_NAME} and become law "
+            f"once the Commons pass them.",
             inline=False,
         )
 
@@ -1019,13 +1019,6 @@ class Commons(
         )
 
         info.add_field(
-            name="'Help! Someone submitted a bill as not vetoable but it's not' or vice-versa",
-            value="Don't worry, while there isn't a command (yet) for you to fix that, "
-            f"you can just ping {self.bot.owner.mention} to fix this.",
-            inline=False,
-        )
-
-        info.add_field(
             name="Keep it rolling",
             value=f"Now that you've closed the last session, you can keep everyone "
             f"busy by opening the next session "
@@ -1038,7 +1031,9 @@ class Commons(
             f"collective brainstorming once the session really 'starts'.",
         )
 
-        await ctx.send(f"{config.YES} Session #{active_leg_session.mk13_house_id} was closed.")
+        await ctx.send(
+            f"{config.YES} Session #{active_leg_session.mk13_house_id} was closed."
+        )
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
 
@@ -1486,7 +1481,8 @@ class Commons(
             await ctx.send(f"{config.NO} Something went wrong.")
             return
 
-        is_vetoable = bool(bill_modal.is_vetoable.component.values[0])
+        is_procedure = bool(bill_modal.is_procedure.component.value)
+        is_vetoable = not is_procedure
         bill_description = (
             bill_modal.bill_description.component.value
             or "*No summary provided by submitter.*"
@@ -1509,22 +1505,29 @@ class Commons(
                 return
 
             bill_id = await self.bot.db.fetchval(
-                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, submitter_description, content) "
-                "VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, is_procedure, submitter_description, content, origin_house) "
+                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
                 current_leg_session_id,
                 name,
                 google_docs_url,
                 ctx.author.id,
                 is_vetoable,
+                is_procedure,
                 bill_description,
                 content,
+                "commons",
             )
 
             bill.id = bill_id
+            await self.bot.db.execute(
+                "INSERT INTO bill_session (bill_id, leg_session) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                bill_id,
+                current_leg_session_id,
+            )
             await bill.status.log_history(
                 old_status=models.BillSubmitted.flag,
                 new_status=models.BillSubmitted.flag,
-                note=f"Submitted to Commons Session #{current_leg_session_display_id}", #todo - display_id anzeigen
+                note=f"Submitted to Commons Session #{current_leg_session_display_id}",
             )
 
             id_with_tags = [(bill_id, tag) for tag in tags]
@@ -1539,7 +1542,12 @@ class Commons(
         embed = text.SafeEmbed(
             title=f"{name} (#{bill_id})",
             url=google_docs_url,
-            description=f"Hey! A new **bill** was just submitted to session #{current_leg_session_display_id}.",
+            description=f"Hey! A new **bill** was just submitted to Commons Session #{current_leg_session_display_id}.",
+        )
+        embed.add_field(
+            name="Type",
+            value="Commons Procedure" if is_procedure else "Bill",
+            inline=False,
         )
         embed.add_field(name="Description", value=bill_description, inline=False)
         embed.add_field(
@@ -1547,11 +1555,6 @@ class Commons(
         )
         embed.add_field(
             name="Google Docs Document", value=google_docs_url, inline=False
-        )
-
-        embed.add_field(
-            name=f"{self.bot.mk.MINISTRY_NAME} Veto Allowed",
-            value="Yes" if is_vetoable else "No",
         )
 
         embed.add_field(
@@ -1574,7 +1577,7 @@ class Commons(
         info.add_field(
             name="Sponsors",
             value="Depending on current legislative procedures or laws, your bill might need a specific "
-            f"amount of sponsors before the Speaker allows a vote on it. "
+            f"amount of sponsors before the {self.bot.mk.speaker_term} allows a vote on it. "
             f"Tell your supporters to sponsor your bill with `{p}{l} bill sponsor {bill_id}`. The list "
             f"of sponsors will be displayed on your bill's detail page, `{p}{l} bill {bill_id}`.",
             inline=False,
@@ -1637,7 +1640,7 @@ class Commons(
         description = motion_modal.motion_description.component.value
 
         async with ctx.typing():
-            haste_bin_url = await self.bot.make_paste(description) # todo mystbin down
+            haste_bin_url = await self.bot.make_paste(description)  # todo mystbin down
 
             if not haste_bin_url:
                 await ctx.send(
@@ -1766,7 +1769,12 @@ class Commons(
                             f"bills."
                         )
 
-                embed = await self.submit_bill(ctx, current_leg_session.id, current_leg_session.mk13_house_id, bill_modal)
+                embed = await self.submit_bill(
+                    ctx,
+                    current_leg_session.id,
+                    current_leg_session.mk13_house_id,
+                    bill_modal,
+                )
 
             elif result == "motion":
                 ctx.command.reset_cooldown(ctx)
@@ -1779,7 +1787,10 @@ class Commons(
                         )
 
                 embed = await self.submit_motion(
-                    ctx, current_leg_session.id, current_leg_session.mk13_house_id, motion_modal
+                    ctx,
+                    current_leg_session.id,
+                    current_leg_session.mk13_house_id,
+                    motion_modal,
                 )
         else:
             if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
@@ -1789,7 +1800,12 @@ class Commons(
                         f"bills."
                     )
 
-            embed = await self.submit_bill(ctx, current_leg_session.id, current_leg_session.mk13_house_id, bill_modal)
+            embed = await self.submit_bill(
+                ctx,
+                current_leg_session.id,
+                current_leg_session.mk13_house_id,
+                bill_modal,
+            )
 
         if embed is None:
             return
@@ -1818,7 +1834,7 @@ class Commons(
         if not bill_ids:
             return await ctx.send_help(ctx.command)
 
-        def verify_bill(_ctx, b: Bill, last_session: Session):
+        def verify_bill(_ctx, b: Bill, last_session: Session, **_kwargs):
             if last_session.id != b.session.id:
                 return "You can only mark bills from the most recent session as passed."
 
@@ -1829,8 +1845,11 @@ class Commons(
             ctx=ctx, objects=bill_ids, action=models.BillStatus.pass_from_legislature
         )
 
-        # await consumer.filter(filter_func=verify_bill, last_session=await self.get_last_leg_session(house="commons"))
-        await consumer.filter()
+        await consumer.filter(
+            filter_func=verify_bill,
+            last_session=await self.get_last_leg_session(house="commons"),
+            acting_house="commons",
+        )
 
         if consumer.failed:
             await ctx.send(
@@ -1849,18 +1868,17 @@ class Commons(
         if not reaction:
             return await ctx.send("Cancelled.")
 
-        await consumer.consume(scheduler=self.pass_scheduler)
+        await consumer.consume(scheduler=self.pass_scheduler, acting_house="commons")
         await ctx.send(
             f"{config.YES} All bills were marked as passed from the Commons.\n"
-            f"{config.HINT} If the Legal Code needs to "
-            f"be updated, the {self.bot.mk.speaker_term} can use my "
-            f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code. "
+            f"{config.HINT} Depending on each bill's path, it is now either waiting on the Senate "
+            f"or on the {self.bot.mk.MINISTRY_NAME}, or it is already law if it was a Commons procedure."
         )
 
         bills_that_might_repeal_something = [
             f" - Law #{bill.id} - **{bill.name}**"
             for bill in consumer.passed
-            if "repeal" in bill.content.lower()
+            if bill.status.is_law and "repeal" in bill.content.lower()
         ]
 
         if bills_that_might_repeal_something:
@@ -1868,50 +1886,19 @@ class Commons(
 
             await ctx.send(
                 f"{config.HINT} {ctx.author.mention}, I found the word `repeal` in the following laws that "
-                f"you just passed. Maybe you have to repeal some laws?\n\n{fmt}\n\n"
+                f"you just passed into law. Maybe you have to repeal some laws?\n\n{fmt}\n\n"
                 f"You can repeal laws with `{config.BOT_PREFIX}law repeal`.",
                 allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
             )
 
     # todo - gibbet nich mehr?
-    @commons.command(name="superpass", aliases=["sp"])
+    @commons.command(name="superpass", aliases=["sp"], hidden=True)
     @checks.has_any_democraciv_role(
         mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
     )
     async def superpass(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Pass bills that received a super-majority in the {LEGISLATURE_NAME} into law
-
-        **Example**
-           `{PREFIX}{COMMAND} 56`
-           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
-
-        if not bill_ids:
-            return await ctx.send_help(ctx.command)
-
-        consumer = models.LegalConsumer(
-            ctx=ctx, objects=bill_ids, action=models.BillStatus.superpass
-        )
-        await consumer.filter()
-
-        if consumer.failed:
-            await ctx.send(
-                f":warning: The following bills cannot be passed with a super-majority.\n{consumer.failed_formatted}"
-            )
-
-        if not consumer.passed:
-            return
-
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to pass the following bills with a super-majority?\n{consumer.passed_formatted}"
-        )
-
-        if not reaction:
-            return await ctx.send("Cancelled.")
-
-        await consumer.consume(scheduler=self.superpass_scheduler)
-        await ctx.send(
-            f"{config.YES} All bills were passed with a super-majority and are now active laws."
+        return await ctx.send(
+            f"{config.NO} `superpass` is a legacy-only admin path and is not part of the MK13 bicameral process."
         )
 
     @commons.group(name="withdraw", aliases=["w"], hidden=True)
@@ -1935,10 +1922,14 @@ class Commons(
             return
 
         if result == "bill":
-            ctx.message.content = f"{config.BOT_PREFIX}commons bill withdraw {bill_or_motion_ids}"
+            ctx.message.content = (
+                f"{config.BOT_PREFIX}commons bill withdraw {bill_or_motion_ids}"
+            )
 
         elif result == "motion":
-            ctx.message.content = f"{config.BOT_PREFIX}commons motion withdraw {bill_or_motion_ids}"
+            ctx.message.content = (
+                f"{config.BOT_PREFIX}commons motion withdraw {bill_or_motion_ids}"
+            )
 
         new_ctx = await self.bot.get_context(ctx.message)
         await self.bot.invoke(new_ctx)
@@ -2059,7 +2050,7 @@ class Commons(
                     reason="leg_session_withdraw",
                     message=message,
                 )
-    
+
     @bill.command(name="withdraw", aliases=["w"])
     @checks.is_democraciv_guild()
     async def withdrawbill(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
@@ -2095,8 +2086,6 @@ class Commons(
             self.bot.get_command(f"commons withdraw bill"),
             bill_ids=bill_ids,
         )
-
-    
 
     @motion.command(name="edit", aliases=["update", "e"])
     @checks.is_democraciv_guild()
@@ -2225,41 +2214,8 @@ class Commons(
         mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
     )
     async def override(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Override the veto of one or multiple bills to pass them into law
-
-        **Example**
-           `{PREFIX}{COMMAND} 56`
-           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
-
-        if not bill_ids:
-            return await ctx.send_help(ctx.command)
-
-        consumer = models.LegalConsumer(
-            ctx=ctx, objects=bill_ids, action=models.BillStatus.override_veto
-        )
-        await consumer.filter()
-
-        if consumer.failed:
-            await ctx.send(
-                f":warning: The vetoes of the following bills can not be overridden.\n{consumer.failed_formatted}"
-            )
-
-        if not consumer.passed:
-            return
-
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to override the {self.bot.mk.MINISTRY_NAME}'s veto of the following "
-            f"bills?\n{consumer.passed_formatted}"
-        )
-
-        if not reaction:
-            return await ctx.send("Cancelled.")
-
-        await consumer.consume(scheduler=self.override_scheduler)
-        await ctx.send(
-            f"{config.YES} The vetoes of all bills were overridden, and all bills are active laws and in "
-            f"`{config.BOT_PREFIX}laws` now."
+        return await ctx.send(
+            f"{config.NO} Only the Senate can override an Executive veto."
         )
 
     @bill.command(name="sponsor", aliases=["cosponsor", "second"])
@@ -2353,7 +2309,7 @@ class Commons(
     @commons.command(name="resubmit", aliases=["rs"])
     @checks.is_citizen_if_multiciv()
     async def resubmit(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Resubmit any bills that failed in the {LEGISLATURE_NAME} to the currently active session
+        """Resubmit failed bills to the current submission-period session in their origin house
 
         **Example**
            `{PREFIX}{COMMAND} 56`
@@ -2377,7 +2333,8 @@ class Commons(
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to resubmit the following bills to the current session?\n{consumer.passed_formatted}"
+            f"to resubmit the following bills to the current submission-period session in their origin house?\n"
+            f"{consumer.passed_formatted}"
         )
 
         if not reaction:
@@ -2385,7 +2342,7 @@ class Commons(
 
         await consumer.consume(resubmitter=ctx.author)
         await ctx.send(
-            f"{config.YES} All bills were resubmitted to the current session."
+            f"{config.YES} All bills were resubmitted to their origin-house submission session."
         )
 
     def format_stats(
@@ -2433,7 +2390,9 @@ class Commons(
             record=submitter, record_key="submitter", stats_name="bills"
         )
 
-        speaker = await self.bot.db.fetch("SELECT speaker from legislature_session WHERE house = 'commons'")
+        speaker = await self.bot.db.fetch(
+            "SELECT speaker from legislature_session WHERE house = 'commons'"
+        )
         pretty_top_speaker = self.format_stats(
             record=speaker, record_key="speaker", stats_name="sessions"
         )
@@ -2494,10 +2453,14 @@ class Commons(
             return
 
         if result == "bill":
-            ctx.message.content = f"{config.BOT_PREFIX}commons bill sponsor {bill_or_motion_ids}"
+            ctx.message.content = (
+                f"{config.BOT_PREFIX}commons bill sponsor {bill_or_motion_ids}"
+            )
 
         elif result == "motion":
-            ctx.message.content = f"{config.BOT_PREFIX}commons motion sponsor {bill_or_motion_ids}"
+            ctx.message.content = (
+                f"{config.BOT_PREFIX}commons motion sponsor {bill_or_motion_ids}"
+            )
 
         new_ctx = await self.bot.get_context(ctx.message)
         await self.bot.invoke(new_ctx)
@@ -2526,10 +2489,14 @@ class Commons(
             return
 
         if result == "bill":
-            ctx.message.content = f"{config.BOT_PREFIX}commons bill unsponsor {bill_or_motion_ids}"
+            ctx.message.content = (
+                f"{config.BOT_PREFIX}commons bill unsponsor {bill_or_motion_ids}"
+            )
 
         elif result == "motion":
-            ctx.message.content = f"{config.BOT_PREFIX}commons motion unsponsor {bill_or_motion_ids}"
+            ctx.message.content = (
+                f"{config.BOT_PREFIX}commons motion unsponsor {bill_or_motion_ids}"
+            )
 
         new_ctx = await self.bot.get_context(ctx.message)
         await self.bot.invoke(new_ctx)
@@ -2575,16 +2542,12 @@ class Commons(
                 or self.bot.mk.NATION_ICON_URL
                 or None
             )
-            name = (
-                f"Members of {person_or_political_party.role.name} in the Commons"
-            )
+            name = f"Members of {person_or_political_party.role.name} in the Commons"
 
         else:
             ids = [person_or_political_party.id]
             icon_url = person_or_political_party.display_avatar.url
-            name = (
-                f"{person_or_political_party.display_name} in the Commons"
-            )
+            name = f"{person_or_political_party.display_name} in the Commons"
 
         _stats = await self.bot.db.fetch(query, ids, models.BillIsLaw.flag.value)
 

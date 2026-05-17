@@ -107,14 +107,27 @@ class GovernmentMixin:
         embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
 
         if isinstance(obj, models.Bill) and not isinstance(obj, models.Law):
-            is_vetoable = "Yes" if obj.is_vetoable else "No"
+            if obj.session.house in models.HOUSE_NAMES:
+                embed.add_field(
+                    name="Origin House", value=obj.origin_house_name, inline=True
+                )
+                embed.add_field(name="Type", value=obj.type_name, inline=True)
+            else:
+                is_vetoable = "Yes" if obj.is_vetoable else "No"
+                embed.add_field(name="Vetoable", value=is_vetoable, inline=True)
 
-            embed.add_field(name="Vetoable", value=is_vetoable, inline=True)
             embed.add_field(
                 name="Status",
                 value=obj.status.emojified_status(verbose=True),
                 inline=False,
             )
+
+            if obj.executive_deadline_at is not None:
+                embed.add_field(
+                    name="Executive Deadline",
+                    value=f"<t:{int(obj.executive_deadline_at.timestamp())}:F>",
+                    inline=True,
+                )
 
             if obj.sponsors:
                 fmt_sponsors = "\n".join(
@@ -488,10 +501,13 @@ class GovernmentMixin:
 
         return len(link) >= 15 and link.startswith(valid_google_docs_url_strings)
 
-    async def get_active_leg_session(self, house=None) -> typing.Optional[models.Session]:
+    async def get_active_leg_session(
+        self, house=None
+    ) -> typing.Optional[models.Session]:
         if house is not None:
             session_id = await self.bot.db.fetchval(
-                "SELECT id FROM legislature_session WHERE status != 'Closed' AND house = $1", house
+                "SELECT id FROM legislature_session WHERE status != 'Closed' AND house = $1",
+                house,
             )
         else:
             session_id = await self.bot.db.fetchval(
@@ -518,6 +534,36 @@ class GovernmentMixin:
                 context.MockContext(self.bot), session_id
             )
 
+    async def attach_pending_bills_to_session(
+        self, *, house: str, session_id: int
+    ) -> int:
+        waiting_status = (
+            models._BillStatusFlag.PASSED_SENATE_PENDING_COMMONS.value
+            if house == "commons"
+            else models._BillStatusFlag.PASSED_COMMONS_PENDING_SENATE.value
+        )
+
+        queued_bills = await self.bot.db.fetch(
+            "SELECT id FROM bill WHERE status = $1 ORDER BY id",
+            waiting_status,
+        )
+        bill_ids = [record["id"] for record in queued_bills]
+
+        if not bill_ids:
+            return 0
+
+        await self.bot.db.execute(
+            "UPDATE bill SET leg_session = $1 WHERE id = ANY($2::int[])",
+            session_id,
+            bill_ids,
+        )
+        await self.bot.db.executemany(
+            "INSERT INTO bill_session (bill_id, leg_session) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            [(bill_id, session_id) for bill_id in bill_ids],
+        )
+
+        return len(bill_ids)
+
     class MockChannel:
         id = 0
         name = mention = "deleted channel"
@@ -538,6 +584,7 @@ class GovernmentMixin:
 
     speaker = _make_property(mk.DemocracivRole.SPEAKER)
     vice_speaker = _make_property(mk.DemocracivRole.VICE_SPEAKER)
+    senator_presiding = _make_property(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
     chief_justice = _make_property(mk.DemocracivRole.CHIEF_JUSTICE)
     prime_minister = _make_property(mk.DemocracivRole.PRIME_MINISTER)
     lt_prime_minister = _make_property(mk.DemocracivRole.LT_PRIME_MINISTER)
@@ -553,6 +600,15 @@ class GovernmentMixin:
     def vice_speaker_role(self) -> typing.Optional[discord.Role]:
         try:
             return self.bot.get_democraciv_role(mk.DemocracivRole.VICE_SPEAKER)
+        except exceptions.RoleNotFoundError:
+            return None
+
+    @property
+    def senator_presiding_role(self) -> typing.Optional[discord.Role]:
+        try:
+            return self.bot.get_democraciv_role(
+                mk.DemocracivRole.MK13_SENATOR_PRESIDING
+            )
         except exceptions.RoleNotFoundError:
             return None
 

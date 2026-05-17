@@ -83,6 +83,8 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
 
     @Feature.Command(parent="jsk", name="legopen")
     async def jsk_opensession(self, ctx, speaker: discord.User):
+        return await ctx.send(f"noch nicht für mk13 support geupdated.")
+
         new_session = await self.bot.db.fetchval(
             "INSERT INTO legislature_session (speaker, opened_on) VALUES ($1, $2) RETURNING id",
             speaker.id,
@@ -92,6 +94,8 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
 
     @Feature.Command(parent="jsk", name="legclose")
     async def jsk_closesession(self, ctx):
+        return await ctx.send(f"noch nicht für mk13 support geupdated.")
+
         cog = self.bot.get_cog("Law")
         active_leg_session = await cog.get_active_leg_session()
 
@@ -105,8 +109,12 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
             action=models.BillStatus.fail_in_legislature,
         )
 
-        await consumer.filter()
-        await consumer.consume()
+        kwargs = {}
+        if active_leg_session.house in models.HOUSE_NAMES:
+            kwargs["acting_house"] = active_leg_session.house
+
+        await consumer.filter(**kwargs)
+        await consumer.consume(**kwargs)
 
         await ctx.send(f"{config.YES} Ok.")
 
@@ -124,6 +132,16 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
         """Submit a bill"""
 
         async with ctx.typing():
+            session_record = await self.bot.db.fetchrow(
+                "SELECT house, mk13_house_id FROM legislature_session WHERE id = $1",
+                leg_session_id,
+            )
+            session_house = session_record["house"] if session_record else None
+            session_display_name = (
+                f"{models.display_house_name(session_house)} Session #{session_record['mk13_house_id']}"
+                if session_record and session_house in models.HOUSE_NAMES
+                else f"Session #{leg_session_id}"
+            )
             bill = models.Bill(
                 bot=self.bot,
                 link=google_docs_url,
@@ -139,8 +157,8 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
                 return
 
             bill_id = await self.bot.db.fetchval(
-                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, submitter_description, content) "
-                "VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, submitter_description, content, origin_house) "
+                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
                 leg_session_id,
                 name,
                 google_docs_url,
@@ -148,13 +166,19 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
                 is_vetoable,
                 bill_description,
                 content,
+                session_house or "senate",
             )
 
             bill.id = bill_id
+            await self.bot.db.execute(
+                "INSERT INTO bill_session (bill_id, leg_session) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                bill_id,
+                leg_session_id,
+            )
             await bill.status.log_history(
                 old_status=models.BillSubmitted.flag,
                 new_status=models.BillSubmitted.flag,
-                note=f"Submitted to Session #{leg_session_id}",
+                note=f"Submitted to {session_display_name}",
             )
 
             id_with_tags = [(bill_id, tag) for tag in tags]
@@ -167,7 +191,7 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
             )
 
         await ctx.send(
-            f"{config.YES} `{bill.name}` (#{bill.id}) was submitted by {submitter} to session #{leg_session_id}."
+            f"{config.YES} `{bill.name}` (#{bill.id}) was submitted by {submitter} to {session_display_name}."
         )
 
 

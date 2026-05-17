@@ -165,9 +165,11 @@ class Meta(context.CustomCog):
         try:
             start1 = time.perf_counter()
             cdn_http = None
-            
+
             try:
-                async with self.session.request("GET", self.bot.mk.NATION_ICON_URL) as response:
+                async with self.session.request(
+                    "GET", self.bot.mk.NATION_ICON_URL
+                ) as response:
                     pass
             except Exception:
                 pass

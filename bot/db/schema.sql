@@ -109,6 +109,32 @@ CREATE TABLE IF NOT EXISTS bill(
     status int DEFAULT 0 NOT NULL
 );
 
+ALTER TABLE bill ADD COLUMN IF NOT EXISTS origin_house text;
+ALTER TABLE bill ADD COLUMN IF NOT EXISTS executive_deadline_at timestamp WITHOUT TIME ZONE;
+ALTER TABLE bill ADD COLUMN IF NOT EXISTS is_procedure bool;
+
+UPDATE bill AS b
+SET origin_house = COALESCE(ls.house, 'senate')
+FROM legislature_session AS ls
+WHERE b.leg_session = ls.id
+  AND b.origin_house IS NULL;
+
+UPDATE bill SET origin_house = 'senate' WHERE origin_house IS NULL;
+UPDATE bill SET is_procedure = FALSE WHERE is_procedure IS NULL;
+
+ALTER TABLE bill ALTER COLUMN origin_house SET DEFAULT 'senate';
+ALTER TABLE bill ALTER COLUMN origin_house SET NOT NULL;
+ALTER TABLE bill ALTER COLUMN is_procedure SET DEFAULT FALSE;
+ALTER TABLE bill ALTER COLUMN is_procedure SET NOT NULL;
+
+CREATE TABLE IF NOT EXISTS bill_session(
+    id serial UNIQUE PRIMARY KEY,
+    bill_id integer references bill(id) ON DELETE CASCADE NOT NULL,
+    leg_session integer references legislature_session(id) ON DELETE CASCADE NOT NULL,
+    linked_on timestamp WITHOUT TIME ZONE DEFAULT NOW() NOT NULL,
+    UNIQUE (bill_id, leg_session)
+);
+
 CREATE TABLE IF NOT EXISTS bill_sponsor(
     id serial UNIQUE PRIMARY KEY,
     bill_id serial references bill(id) ON DELETE CASCADE,
@@ -151,6 +177,12 @@ CREATE TABLE IF NOT EXISTS motion_sponsor(
 
 CREATE INDEX IF NOT EXISTS bill_lookup_tag_tag_trgm_idx ON bill_lookup_tag USING gin (tag gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS bill_name_lower_idx ON bill (LOWER(name));
+CREATE INDEX IF NOT EXISTS bill_session_leg_session_idx ON bill_session (leg_session);
+CREATE INDEX IF NOT EXISTS bill_session_bill_id_idx ON bill_session (bill_id);
+
+INSERT INTO bill_session (bill_id, leg_session)
+SELECT id, leg_session FROM bill
+ON CONFLICT DO NOTHING;
 
 
 CREATE TABLE IF NOT EXISTS tag(

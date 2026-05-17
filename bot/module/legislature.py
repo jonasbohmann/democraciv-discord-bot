@@ -118,6 +118,17 @@ class SuperPassScheduler(text.RedditAnnouncementScheduler):
 
 
 class PassScheduler(text.RedditAnnouncementScheduler):
+    def _destination_text(self, obj: Bill) -> str:
+        if isinstance(obj.status, models.BillPassedSenatePendingCommons):
+            return "Next stop: Commons"
+        if isinstance(obj.status, models.BillAwaitingExecutive):
+            return f"Next stop: {self.bot.mk.MINISTRY_NAME}"
+        if isinstance(obj.status, models.BillPassedLegislature):
+            return f"Next stop: {self.bot.mk.MINISTRY_NAME}"
+        if obj.status.is_law:
+            return "This bill is now law"
+        return "Next step recorded by the bot"
+
     def get_embed(self):
         embed = text.SafeEmbed()
         embed.set_author(
@@ -131,27 +142,12 @@ class PassScheduler(text.RedditAnnouncementScheduler):
         for obj in self._objects:
             submitter = obj.submitter or context.MockUser()
 
-            if obj.is_vetoable:
-                message.append(
-                    f"__Bill #{obj.id} - **[{obj.name}]({obj.link})**__"
-                    f"\n*Submitted by {submitter.mention}*\n{obj.description}\n"
-                )
-            else:
-                message.append(
-                    f"__*Bill #{obj.id}* - **[{obj.name}]({obj.link})**__"
-                    f"\n*Submitted by {submitter.mention}*\n{obj.description}\n"
-                )
+            message.append(
+                f"__Bill #{obj.id} - **[{obj.name}]({obj.link})**__"
+                f"\n*Submitted by {submitter.mention}*\n{obj.description}"
+                f"\n*{self._destination_text(obj)}*\n"
+            )
 
-        p = config.BOT_PREFIX
-        message.append(
-            f"\nThe bills were sent to the {self.bot.mk.MINISTRY_NAME} "
-            f"(`{p}{self.bot.mk.MINISTRY_COMMAND} bills`) to either pass "
-            f"(`{p}{self.bot.mk.MINISTRY_COMMAND} pass`) or veto (`{p}{self.bot.mk.MINISTRY_COMMAND} veto`) them."
-        )
-
-        # message.append(
-        #    f"\nAll these bills are now laws. They were added to `{p}laws` and can be found with `{p}laws search`."
-        # )
         embed.description = "\n".join(message)
         return embed
 
@@ -173,10 +169,10 @@ class PassScheduler(text.RedditAnnouncementScheduler):
             content.append(
                 f"__**Bill #{bill.id} - [{bill.name}]({bill.link})**__\n\n*Written by "
                 f"{submitter.display_name} ({submitter})*"
-                f"\n\n{bill.description}\n\n &nbsp;"
+                f"\n\n{bill.description}\n\n*{self._destination_text(bill)}*\n\n &nbsp;"
             )
 
-        outro = f"""\n\n &nbsp; \n\n---\n\nThe bills were sent to the {self.bot.mk.MINISTRY_NAME} for them to either veto or pass them into law.
+        outro = f"""\n\n &nbsp; \n\n---\n\nThe bot recorded the next legislative destination for each bill above.
                 \n\n\n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/)
                 and this is an automated service. Contact u/Jovanos (DerJonas on Discord) for further questions
                 or bug reports.*"""
@@ -228,22 +224,6 @@ class SubmitBillModal(
         ),
     )
 
-    is_vetoable = discord.ui.Label(
-        text="Veto",
-        description=f"Is the {mk.MarkConfig.MINISTRY_NAME} legally allowed to vote on and veto this bill?",
-        component=discord.ui.Select(
-            options=[
-                discord.SelectOption(
-                    emoji="\U00002705",
-                    label=f"Yes, the {mk.MarkConfig.MINISTRY_NAME} should be able vote on this bill",
-                    value="true",
-                    default=True,
-                ),
-                discord.SelectOption(emoji="\U0000274c", label="No", value="false"),
-            ],
-        ),
-    )
-
     bill_description = discord.ui.Label(
         text="Summary",
         description="What does your bill do? Write a short summary.",
@@ -251,6 +231,15 @@ class SubmitBillModal(
             style=discord.TextStyle.short,
             max_length=500,
         ),
+    )
+
+    is_procedure = discord.ui.Label(
+        text="Senate Procedure",
+        description=(
+            "Check this if the proposal only establishes rules or procedures for the Senate. "
+            "If checked, only the Senate votes on it."
+        ),
+        component=discord.ui.Checkbox(),
     )
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -323,9 +312,7 @@ except ValueError:
     pass
 
 
-class Legislature(
-    context.CustomCog, mixin.GovernmentMixin, name="Senate"
-):
+class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
     """Allows the Government to organize legislative sessions and bill & motion submissions"""
 
     def __init__(self, bot):
@@ -354,6 +341,9 @@ class Legislature(
             # self.bot.get_command(
             #     f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw"
             # ).remove_command("motion")
+
+    def is_cabinet(self, member: discord.Member) -> bool:
+        return self.senator_presiding_role in member.roles
 
     @commands.command(name="bill", aliases=["bills", "b"], hidden=True)
     async def _bill(self, ctx: context.CustomContext):
@@ -412,9 +402,7 @@ class Legislature(
         if active_leg_session is None:
             current_session_value = "There currently is no open session."
         else:
-            current_session_value = (
-                f"Session #{active_leg_session.mk13_house_id} - {active_leg_session.status.value}"
-            )
+            current_session_value = f"Session #{active_leg_session.mk13_house_id} - {active_leg_session.status.value}"
 
         embed = text.SafeEmbed()
         embed.set_author(
@@ -423,28 +411,13 @@ class Legislature(
         )
         speaker_value = []
 
-        if isinstance(self.speaker, discord.Member):
+        if isinstance(self.senator_presiding, discord.Member):
             speaker_value.append(
-                f"{self.bot.mk.speaker_term}: {self.speaker.mention} {escape_markdown(str(self.speaker))}"
+                f"{self.bot.mk.senator_presiding_term}: {self.senator_presiding.mention} "
+                f"{escape_markdown(str(self.senator_presiding))}"
             )
         else:
-            speaker_value.append(f"{self.bot.mk.speaker_term}: -")
-
-        if isinstance(self.vice_speaker, discord.Member):
-            speaker_value.append(
-                f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention} {escape_markdown(str(self.vice_speaker))}"
-            )
-        else:
-            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
-
-        mk13_sen_pres = self._safe_get_member(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
-
-        if isinstance(mk13_sen_pres, discord.Member):
-            speaker_value.append(
-                f"Senator Presiding: {mk13_sen_pres.mention} {escape_markdown(str(mk13_sen_pres))}"
-            )
-        else:
-            speaker_value.append("Senator Presiding: -")
+            speaker_value.append(f"{self.bot.mk.senator_presiding_term}: -")
 
         embed.add_field(
             name=self.bot.mk.LEGISLATURE_CABINET_NAME, value="\n".join(speaker_value)
@@ -600,9 +573,7 @@ class Legislature(
         return await self._detail_view(ctx, obj=bill_id)
 
     @bill.command(name="synchronize", aliases=["sync", "refresh", "synchronise"])
-    @checks.has_any_democraciv_role(
-        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
-    )
+    @checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
     async def b_refresh(self, ctx, bill_ids: commands.Greedy[models.Bill]):
         """Synchronize the name & content of one or multiple bills with Google Docs
 
@@ -666,9 +637,7 @@ class Legislature(
         await ctx.send(msg)
 
     @bill.command(name="bulkedit", aliases=["bulkupdate", "bulkchange", "be"])
-    @checks.has_any_democraciv_role(
-        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
-    )
+    @checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
     async def b_bulkedit(self, ctx: context.CustomContext):
         """Bulk edit the Google Docs links of multiple bills at once"""
 
@@ -734,7 +703,7 @@ class Legislature(
 
         if not self.is_cabinet(ctx.author) and bill.submitter_id != ctx.author.id:
             return await ctx.send(
-                f"{config.NO} Only the {self.bot.mk.speaker_term} and the original "
+                f"{config.NO} Only the {self.bot.mk.senator_presiding_term} and the original "
                 f"submitter of a bill can edit it."
             )
 
@@ -765,7 +734,7 @@ class Legislature(
                 return await ctx.send(
                     f"{config.NO} You can only change the link to your bill if the "
                     f"session it was submitted in is still in Submission Period.\n{config.HINT} "
-                    f"However, the {self.bot.mk.speaker_term} can change the link of any bill at "
+                    f"However, the {self.bot.mk.senator_presiding_term} can change the link of any bill at "
                     f"any given time."
                 )
 
@@ -973,7 +942,7 @@ class Legislature(
         if not self.is_cabinet(ctx.author):
             if motion.submitter_id != ctx.author.id:
                 return await ctx.send(
-                    f"{config.NO} Only the {self.bot.mk.speaker_term} and the original "
+                    f"{config.NO} Only the {self.bot.mk.senator_presiding_term} and the original "
                     f"submitter of a motion can edit it."
                 )
 
@@ -981,7 +950,7 @@ class Legislature(
                 return await ctx.send(
                     f"{config.NO} You can only edit your motion if the "
                     f"session it was submitted in is still in Submission Period.\n{config.HINT} "
-                    f"However, the {self.bot.mk.speaker_term} can edit your motion at "
+                    f"However, the {self.bot.mk.senator_presiding_term} can edit your motion at "
                     f"any given time."
                 )
 
@@ -1284,7 +1253,7 @@ class Legislature(
         if session is None:
             return await ctx.send(
                 f"{config.NO} There hasn't been a session yet.\n{config.HINT} The "
-                f"{self.bot.mk.speaker_term} can open one at any time with "
+                f"{self.bot.mk.senator_presiding_term} can open one at any time with "
                 f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session open`."
             )
 
@@ -1304,7 +1273,10 @@ class Legislature(
 
         speaker = session.speaker or context.MockUser()
 
-        description = f"**__Presiding Speaker__**\n{speaker.mention}\n\n**__Opened__**\n<t:{int(session.opened_on.timestamp())}:F>\n"
+        description = (
+            f"**__{self.bot.mk.senator_presiding_term}__**\n{speaker.mention}\n\n"
+            f"**__Opened__**\n<t:{int(session.opened_on.timestamp())}:F>\n"
+        )
 
         if session.voting_started_on:
             description = f"{description[:-1]}\n\n**__Voting started__**\n<t:{int(session.voting_started_on.timestamp())}:F>\n"
@@ -1319,7 +1291,8 @@ class Legislature(
             description = (
                 f"{description[:-1]}\n\nBills & Motions can be submitted to this session with "
                 f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit`. Any old bills from "
-                f"previous sessions that failed can be resubmitted to this session with "
+                f"previous sessions that failed can be resubmitted to the current submission-period session "
+                f"in their origin house with "
                 f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`.\n"
             )
 
@@ -1387,9 +1360,7 @@ class Legislature(
         await pages.start(ctx)
 
     @session.command(name="open", aliases=["o"])
-    @checks.has_any_democraciv_role(
-        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
-    )
+    @checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
 
@@ -1401,12 +1372,16 @@ class Legislature(
                 f"first with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session close`."
             )
 
-        new_session = await self.bot.db.fetchval(
-            "INSERT INTO legislature_session (speaker, opened_on, house, mk13_house_id) VALUES ($1, $2, $3, nextval('mk13_senate_session_seq')) RETURNING id",
+        new_session = await self.bot.db.fetchrow(
+            "INSERT INTO legislature_session (speaker, opened_on, house, mk13_house_id) VALUES ($1, $2, $3, nextval('mk13_senate_session_seq')) RETURNING id, mk13_house_id",
             ctx.author.id,
             datetime.datetime.utcnow(),
-            "senate"
+            "senate",
         )
+        queued_bill_count = await self.attach_pending_bills_to_session(
+            house="senate", session_id=new_session["id"]
+        )
+        new_session_display_id = new_session["mk13_house_id"]
 
         p = config.BOT_PREFIX
         l = self.bot.mk.LEGISLATURE_COMMAND
@@ -1441,7 +1416,7 @@ class Legislature(
 
         info.add_field(
             name="Bill & Motion Submissions",
-            value=f"As {self.bot.mk.speaker_term}, you can remove any bill or "
+            value=f"As {self.bot.mk.senator_presiding_term}, you can remove any bill or "
             f"motion from this session with `{p}{l} withdraw`. Everyone else can use that command "
             f"too, but they're only allowed to withdraw the bills/motions that they "
             f"themselves also submitted.",
@@ -1453,7 +1428,8 @@ class Legislature(
             value="Are there any bills from last session that "
             f"failed, that you want to give a second chance in this session? Don't bother "
             f"doing `{p}{l} submit` all over again, instead use `{p}{l} resubmit <bill_ids>` to "
-            f"move any old, failed bills to this session.",
+            f"move any old, failed bills back into the current submission-period session in their "
+            f"origin house.",
             inline=False,
         )
 
@@ -1465,16 +1441,24 @@ class Legislature(
         )
 
         await ctx.send(
-            f"{config.YES} The **submission period** for session #{new_session} was opened, and bills & "
+            f"{config.YES} The **submission period** for Senate Session #{new_session_display_id} was opened, and bills & "
             f"motions can now be submitted."
         )
+        if queued_bill_count:
+            await ctx.send(
+                f"{config.HINT} I also attached {queued_bill_count} bill{'s' if queued_bill_count != 1 else ''} "
+                f"that were waiting on the Senate to this new session."
+            )
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
 
         announcement = text.SafeEmbed()
-        announcement.description = f"The cabinet has opened the Submission Period for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{new_session}."
+        announcement.description = (
+            f"The cabinet has opened the Submission Period for Senate Session "
+            f"#{new_session_display_id}."
+        )
         announcement.set_author(
-            name=f"Submission Period open for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{new_session}",
+            name=f"Submission Period open for Senate Session #{new_session_display_id}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         announcement.add_field(
@@ -1495,16 +1479,14 @@ class Legislature(
         if should_dm_legislators:
             await self.dm_legislators(
                 reason="leg_session_open",
-                message=f":envelope_with_arrow: The **submission period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
-                f"Session #{new_session} has started! Submit your bills and motions with "
+                message=f":envelope_with_arrow: The **submission period** for Senate Session "
+                f"#{new_session_display_id} has started! Submit your bills and motions with "
                 f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit` "
                 f"on the {self.bot.dciv.name} server.",
             )
 
     @session.command(name="lock")
-    @checks.has_any_democraciv_role(
-        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
-    )
+    @checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
     async def locksession(self, ctx):
         """Lock (deny) submissions for the currently active session"""
 
@@ -1530,8 +1512,8 @@ class Legislature(
         )
 
         await self.gov_announcements_channel.send(
-            f"The Speaker has locked submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
-            f"Session #{active_leg_session.mk13_house_id}. Nothing can be submitted until the Speaker decides "
+            f"The {self.bot.mk.senator_presiding_term} has locked submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
+            f"Session #{active_leg_session.mk13_house_id}. Nothing can be submitted until the {self.bot.mk.senator_presiding_term} decides "
             f"to unlock the session again."
         )
 
@@ -1546,9 +1528,7 @@ class Legislature(
         )
 
     @session.command(name="unlock")
-    @checks.has_any_democraciv_role(
-        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
-    )
+    @checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
     async def unlocksession(self, ctx):
         """Unlock (allow) submissions for the currently active session again"""
 
@@ -1574,7 +1554,7 @@ class Legislature(
         )
 
         await self.gov_announcements_channel.send(
-            f"The Speaker has unlocked submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
+            f"The {self.bot.mk.senator_presiding_term} has unlocked submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
             f"Session #{active_leg_session.mk13_house_id}, meaning you can now submit bills & motions with "
             f"`{p}{l} submit` again."
         )
@@ -1585,9 +1565,7 @@ class Legislature(
         )
 
     @session.command(name="vote", aliases=["u", "v", "update"])
-    @checks.has_any_democraciv_role(
-        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
-    )
+    @checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
     async def updatesession(self, ctx: context.CustomContext):
         """Changes the current session's status to be open for voting"""
 
@@ -1652,9 +1630,7 @@ class Legislature(
             )
 
     @session.command(name="close", aliases=["c"])
-    @checks.has_any_democraciv_role(
-        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
-    )
+    @checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
     async def closesession(self, ctx):
         """Closes the current session"""
 
@@ -1677,8 +1653,8 @@ class Legislature(
             action=models.BillStatus.fail_in_legislature,
         )
 
-        await consumer.filter()
-        await consumer.consume()
+        await consumer.filter(acting_house="senate")
+        await consumer.consume(acting_house="senate")
 
         #  Update all bills that did not pass
         # await self.bot.db.execute(
@@ -1697,8 +1673,11 @@ class Legislature(
         )
 
         info.add_field(
-            name="Pass with a super-majority",
-            value=f"Bills that received a super-majority can be passed directly into law, skipping the {self.bot.mk.MINISTRY_NAME}'s vote, with `{p}{l} superpass <bill_ids>`",
+            name="What happens after a pass?",
+            value="Bills passed by the Senate move to the Commons. If the Commons also pass them, "
+            f"they are sent to the {self.bot.mk.MINISTRY_NAME} for approval or veto.\n\n"
+            f"Senate procedures skip the Commons and the {self.bot.mk.MINISTRY_NAME} and become law "
+            f"once the Senate passes them.",
             inline=False,
         )
 
@@ -1716,19 +1695,12 @@ class Legislature(
 
         info.add_field(
             name="Updating the Legal Code",
-            value=f"As {self.bot.mk.speaker_term}, one of your obligations is "
+            value=f"As {self.bot.mk.senator_presiding_term}, one of your obligations is "
             f"probably to make sure our Legal Code is up-to-date. "
             f"While my `{p}laws` command is an always up-to-date legal code, some people might "
             f"prefer one as an old-fashioned document.\n\nYou can use my `{p}laws export` command to "
             f"make me generate that for you! Just give me the link to a Google Docs document "
             f"and I will make that an up-to-date Legal Code.",
-            inline=False,
-        )
-
-        info.add_field(
-            name="'Help! Someone submitted a bill as not vetoable but it's not' or vice-versa",
-            value="Don't worry, while there isn't a command (yet) for you to fix that, "
-            f"you can just ping {self.bot.owner.mention} to fix this.",
             inline=False,
         )
 
@@ -1745,7 +1717,9 @@ class Legislature(
             f"collective brainstorming once the session really 'starts'.",
         )
 
-        await ctx.send(f"{config.YES} Session #{active_leg_session.mk13_house_id} was closed.")
+        await ctx.send(
+            f"{config.YES} Session #{active_leg_session.mk13_house_id} was closed."
+        )
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
 
@@ -1765,7 +1739,7 @@ class Legislature(
         invoke_without_command=True,
     )
     async def export(self, ctx: context.CustomContext):
-        """Automate the most time consuming Speaker responsibilities with these commands"""
+        """Automate the most time consuming Senator Presiding responsibilities with these commands"""
         if ctx.invoked_subcommand is None:
             await ctx.send(
                 f"{config.NO} You have to tell me how you would like this session to be exported."
@@ -1819,7 +1793,7 @@ class Legislature(
             f"This session's bills and motions were exported into a format that "
             f"you can easily copy & paste into Google Spreadsheets, for example for a "
             f"Legislative Docket: **<{spreadsheet_formatting_link}>**\n\nSee the video below to see how to "
-            f"speed up your Speaker duties with this.\n"
+            f"speed up your {self.bot.mk.senator_presiding_term} duties with this.\n"
             f"https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662/howtoexport.mp4"
         )
 
@@ -1947,9 +1921,7 @@ class Legislature(
         self.bot.loop.create_task(generating.delete())
 
     @export.command(name="reddit")
-    @checks.has_any_democraciv_role(
-        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
-    )
+    @checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
     async def export_reddit(self, ctx):
         """Make me post an overview of the current session and its submissions to our subreddit"""
 
@@ -1968,7 +1940,7 @@ class Legislature(
         cntnt = []
 
         intro = (
-            f"Speaker {speaker.display_name} ({speaker}) opened the Submission Period for this session on "
+            f"{self.bot.mk.senator_presiding_term} {speaker.display_name} ({speaker}) opened the Submission Period for this session on "
             f"{session.opened_on.strftime('%B %d, %Y at %H:%M')} UTC. "
         )
 
@@ -2193,7 +2165,8 @@ class Legislature(
             await ctx.send(f"{config.NO} Something went wrong.")
             return
 
-        is_vetoable = bool(bill_modal.is_vetoable.component.values[0])
+        is_procedure = bool(bill_modal.is_procedure.component.value)
+        is_vetoable = not is_procedure
         bill_description = (
             bill_modal.bill_description.component.value
             or "*No summary provided by submitter.*"
@@ -2216,22 +2189,29 @@ class Legislature(
                 return
 
             bill_id = await self.bot.db.fetchval(
-                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, submitter_description, content) "
-                "VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, is_procedure, submitter_description, content, origin_house) "
+                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
                 current_leg_session_id,
                 name,
                 google_docs_url,
                 ctx.author.id,
                 is_vetoable,
+                is_procedure,
                 bill_description,
                 content,
+                "senate",
             )
 
             bill.id = bill_id
+            await self.bot.db.execute(
+                "INSERT INTO bill_session (bill_id, leg_session) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                bill_id,
+                current_leg_session_id,
+            )
             await bill.status.log_history(
                 old_status=models.BillSubmitted.flag,
                 new_status=models.BillSubmitted.flag,
-                note=f"Submitted to Session #{current_leg_session_display_id}",
+                note=f"Submitted to Senate Session #{current_leg_session_display_id}",
             )
 
             id_with_tags = [(bill_id, tag) for tag in tags]
@@ -2246,7 +2226,12 @@ class Legislature(
         embed = text.SafeEmbed(
             title=f"{name} (#{bill_id})",
             url=google_docs_url,
-            description=f"Hey! A new **bill** was just submitted to session #{current_leg_session_display_id}.",
+            description=f"Hey! A new **bill** was just submitted to Senate Session #{current_leg_session_display_id}.",
+        )
+        embed.add_field(
+            name="Type",
+            value="Senate Procedure" if is_procedure else "Bill",
+            inline=False,
         )
         embed.add_field(name="Description", value=bill_description, inline=False)
         embed.add_field(
@@ -2254,11 +2239,6 @@ class Legislature(
         )
         embed.add_field(
             name="Google Docs Document", value=google_docs_url, inline=False
-        )
-
-        embed.add_field(
-            name=f"{self.bot.mk.MINISTRY_NAME} Veto Allowed",
-            value="Yes" if is_vetoable else "No",
         )
 
         embed.add_field(
@@ -2274,14 +2254,14 @@ class Legislature(
         l = self.bot.mk.LEGISLATURE_COMMAND
         info = text.SafeEmbed(
             title=f"{config.HINT}  Help | Government System:  Bill Submissions",
-            description=f"The {self.bot.mk.speaker_term} has been informed about your "
+            description=f"The {self.bot.mk.senator_presiding_term} has been informed about your "
             f"bill submission.",
         )
 
         info.add_field(
             name="Sponsors",
             value="Depending on current legislative procedures or laws, your bill might need a specific "
-            f"amount of sponsors before the Speaker allows a vote on it. "
+            f"amount of sponsors before the {self.bot.mk.senator_presiding_term} allows a vote on it. "
             f"Tell your supporters to sponsor your bill with `{p}{l} bill sponsor {bill_id}`. The list "
             f"of sponsors will be displayed on your bill's detail page, `{p}{l} bill {bill_id}`.",
             inline=False,
@@ -2304,7 +2284,7 @@ class Legislature(
             value=f"If, for whatever reason, you want to withdraw your bill from this "
             f"session, use the `{p}{l} withdraw bill {bill_id}` command.\n\n"
             f"You can only withdraw your bills during the Submission Period of a legislative session, "
-            f"while the {self.bot.mk.speaker_term} can withdraw _every_ bill, at any time.",
+            f"while the {self.bot.mk.senator_presiding_term} can withdraw _every_ bill, at any time.",
             inline=False,
         )
 
@@ -2413,7 +2393,7 @@ class Legislature(
             ctx.command.reset_cooldown(ctx)
             return await ctx.send(
                 f"{config.NO} There is no open session.\n{config.HINT} The "
-                f"{self.bot.mk.speaker_term} can open the next session with "
+                f"{self.bot.mk.senator_presiding_term} can open the next session with "
                 f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session open` at any time."
             )
 
@@ -2423,14 +2403,14 @@ class Legislature(
             if current_leg_session.status is SessionStatus.LOCKED:
                 if not self.is_cabinet(ctx.author):
                     return await ctx.send(
-                        f"{config.NO} The {self.bot.mk.speaker_term} has locked submissions for Session "
+                        f"{config.NO} The {self.bot.mk.senator_presiding_term} has locked submissions for Session "
                         f"#{current_leg_session.mk13_house_id}. You "
                         f"are not allowed to submit anything."
                         f"\n{config.HINT} This session can be unlocked by the "
-                        f"{self.bot.mk.speaker_term} in order "
+                        f"{self.bot.mk.senator_presiding_term} in order "
                         f"to allow submissions again with "
                         f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session "
-                        f"unlock`.\n{config.HINT} The {self.bot.mk.speaker_term} can bypass this "
+                        f"unlock`.\n{config.HINT} The {self.bot.mk.senator_presiding_term} can bypass this "
                         f"and is allowed to submit even if submissions are locked."
                     )
 
@@ -2473,7 +2453,12 @@ class Legislature(
                             f"bills."
                         )
 
-                embed = await self.submit_bill(ctx, current_leg_session.id, current_leg_session.mk13_house_id, bill_modal)
+                embed = await self.submit_bill(
+                    ctx,
+                    current_leg_session.id,
+                    current_leg_session.mk13_house_id,
+                    bill_modal,
+                )
 
             elif result == "motion":
                 ctx.command.reset_cooldown(ctx)
@@ -2486,7 +2471,10 @@ class Legislature(
                         )
 
                 embed = await self.submit_motion(
-                    ctx, current_leg_session.id, current_leg_session.mk13_house_id, motion_modal
+                    ctx,
+                    current_leg_session.id,
+                    current_leg_session.mk13_house_id,
+                    motion_modal,
                 )
         else:
             if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
@@ -2496,25 +2484,26 @@ class Legislature(
                         f"bills."
                     )
 
-            embed = await self.submit_bill(ctx, current_leg_session.id, current_leg_session.mk13_house_id, bill_modal)
+            embed = await self.submit_bill(
+                ctx,
+                current_leg_session.id,
+                current_leg_session.mk13_house_id,
+                bill_modal,
+            )
 
         if embed is None:
             return
 
         if not self.is_cabinet(ctx.author):
-            if self.speaker is not None:
+            if self.senator_presiding is not None:
                 await self.bot.safe_send_dm(
-                    target=self.speaker, reason="leg_session_submit", embed=embed
-                )
-            if self.vice_speaker is not None:
-                await self.bot.safe_send_dm(
-                    target=self.vice_speaker, reason="leg_session_submit", embed=embed
+                    target=self.senator_presiding,
+                    reason="leg_session_submit",
+                    embed=embed,
                 )
 
     @legislature.command(name="pass", aliases=["p"])
-    @checks.has_any_democraciv_role(
-        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
-    )
+    @checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
     async def pass_bill(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Mark one or multiple bills as passed from the {LEGISLATURE_NAME}
 
@@ -2525,7 +2514,7 @@ class Legislature(
         if not bill_ids:
             return await ctx.send_help(ctx.command)
 
-        def verify_bill(_ctx, b: Bill, last_session: Session):
+        def verify_bill(_ctx, b: Bill, last_session: Session, **_kwargs):
             if last_session.id != b.session.id:
                 return "You can only mark bills from the most recent session as passed."
 
@@ -2536,8 +2525,11 @@ class Legislature(
             ctx=ctx, objects=bill_ids, action=models.BillStatus.pass_from_legislature
         )
 
-        # await consumer.filter(filter_func=verify_bill, last_session=await self.get_last_leg_session(house="senate"))
-        await consumer.filter()
+        await consumer.filter(
+            filter_func=verify_bill,
+            last_session=await self.get_last_leg_session(house="senate"),
+            acting_house="senate",
+        )
 
         if consumer.failed:
             await ctx.send(
@@ -2556,18 +2548,17 @@ class Legislature(
         if not reaction:
             return await ctx.send("Cancelled.")
 
-        await consumer.consume(scheduler=self.pass_scheduler)
+        await consumer.consume(scheduler=self.pass_scheduler, acting_house="senate")
         await ctx.send(
             f"{config.YES} All bills were marked as passed from the {self.bot.mk.LEGISLATURE_NAME}.\n"
-            f"{config.HINT} If the Legal Code needs to "
-            f"be updated, the {self.bot.mk.speaker_term} can use my "
-            f"`{config.BOT_PREFIX}laws export` command to make me generate a Google Docs Legal Code. "
+            f"{config.HINT} Depending on each bill's path, it is now either waiting on the Commons "
+            f"or on the {self.bot.mk.MINISTRY_NAME}, or it is already law if it was a Senate procedure."
         )
 
         bills_that_might_repeal_something = [
             f" - Law #{bill.id} - **{bill.name}**"
             for bill in consumer.passed
-            if "repeal" in bill.content.lower()
+            if bill.status.is_law and "repeal" in bill.content.lower()
         ]
 
         if bills_that_might_repeal_something:
@@ -2575,49 +2566,16 @@ class Legislature(
 
             await ctx.send(
                 f"{config.HINT} {ctx.author.mention}, I found the word `repeal` in the following laws that "
-                f"you just passed. Maybe you have to repeal some laws?\n\n{fmt}\n\n"
+                f"you just passed into law. Maybe you have to repeal some laws?\n\n{fmt}\n\n"
                 f"You can repeal laws with `{config.BOT_PREFIX}law repeal`.",
                 allowed_mentions=discord.AllowedMentions(users=[ctx.author]),
             )
 
-    @legislature.command(name="superpass", aliases=["sp"])
-    @checks.has_any_democraciv_role(
-        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
-    )
+    @legislature.command(name="superpass", aliases=["sp"], hidden=True)
+    @checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
     async def superpass(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Pass bills that received a super-majority in the {LEGISLATURE_NAME} into law
-
-        **Example**
-           `{PREFIX}{COMMAND} 56`
-           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
-
-        if not bill_ids:
-            return await ctx.send_help(ctx.command)
-
-        consumer = models.LegalConsumer(
-            ctx=ctx, objects=bill_ids, action=models.BillStatus.superpass
-        )
-        await consumer.filter()
-
-        if consumer.failed:
-            await ctx.send(
-                f":warning: The following bills cannot be passed with a super-majority.\n{consumer.failed_formatted}"
-            )
-
-        if not consumer.passed:
-            return
-
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to pass the following bills with a super-majority?\n{consumer.passed_formatted}"
-        )
-
-        if not reaction:
-            return await ctx.send("Cancelled.")
-
-        await consumer.consume(scheduler=self.superpass_scheduler)
-        await ctx.send(
-            f"{config.YES} All bills were passed with a super-majority and are now active laws."
+        return await ctx.send(
+            f"{config.NO} `superpass` is a legacy-only admin path and is not part of the MK13 bicameral process."
         )
 
     @legislature.group(name="withdraw", aliases=["w"], hidden=True)
@@ -2755,13 +2713,9 @@ class Legislature(
         await ctx.send(f"{config.YES} All {obj_name}s were withdrawn.")
 
         if not self.is_cabinet(ctx.author):
-            if self.speaker is not None:
+            if self.senator_presiding is not None:
                 await self.bot.safe_send_dm(
-                    target=self.speaker, reason="leg_session_withdraw", message=message
-                )
-            if self.vice_speaker is not None:
-                await self.bot.safe_send_dm(
-                    target=self.vice_speaker,
+                    target=self.senator_presiding,
                     reason="leg_session_withdraw",
                     message=message,
                 )
@@ -2771,7 +2725,7 @@ class Legislature(
     async def withdrawbill(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Withdraw one or multiple bills from the current session
 
-        The {speaker_term} can withdraw every submitted bill during both the Submission Period and the Voting Period.
+        The {senator_presiding_term} can withdraw every submitted bill during both the Submission Period and the Voting Period.
            The original submitter of the bill can only withdraw their own bill during the Submission Period.
 
         **Example**
@@ -2790,7 +2744,7 @@ class Legislature(
     ):
         """Withdraw one or multiple bills from the current session
 
-        The {speaker_term} can withdraw every submitted bill during both the Submission Period and the Voting Period.
+        The {senator_presiding_term} can withdraw every submitted bill during both the Submission Period and the Voting Period.
            The original submitter of the bill can only withdraw their own bill during the Submission Period.
 
         **Example**
@@ -2809,7 +2763,7 @@ class Legislature(
     ):
         """Withdraw one or multiple motions from the current session
 
-        The {speaker_term} can withdraw every submitted motion during both the Submission Period and the Voting Period.
+        The {senator_presiding_term} can withdraw every submitted motion during both the Submission Period and the Voting Period.
            The original submitter of the motion can only withdraw their own motion during the Submission Period.
 
         **Example**
@@ -2828,7 +2782,7 @@ class Legislature(
     ):
         """Withdraw one or multiple motions from the current session
 
-        The {speaker_term} can withdraw every submitted motion during both the Submission Period and the Voting Period.
+        The {senator_presiding_term} can withdraw every submitted motion during both the Submission Period and the Voting Period.
            The original submitter of the motion can only withdraw their own motion during the Submission Period.
 
         **Example**
@@ -2841,9 +2795,7 @@ class Legislature(
         )
 
     @legislature.command(name="override", aliases=["ov"], hidden=True)
-    @checks.has_any_democraciv_role(
-        mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
-    )
+    @checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
     async def override(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
         """Override the veto of one or multiple bills to pass them into law
 
@@ -2857,7 +2809,7 @@ class Legislature(
         consumer = models.LegalConsumer(
             ctx=ctx, objects=bill_ids, action=models.BillStatus.override_veto
         )
-        await consumer.filter()
+        await consumer.filter(acting_house="senate")
 
         if consumer.failed:
             await ctx.send(
@@ -2876,7 +2828,7 @@ class Legislature(
         if not reaction:
             return await ctx.send("Cancelled.")
 
-        await consumer.consume(scheduler=self.override_scheduler)
+        await consumer.consume(scheduler=self.override_scheduler, acting_house="senate")
         await ctx.send(
             f"{config.YES} The vetoes of all bills were overridden, and all bills are active laws and in "
             f"`{config.BOT_PREFIX}laws` now."
@@ -2973,7 +2925,7 @@ class Legislature(
     @legislature.command(name="resubmit", aliases=["rs"])
     @checks.is_citizen_if_multiciv()
     async def resubmit(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Resubmit any bills that failed in the {LEGISLATURE_NAME} to the currently active session
+        """Resubmit failed bills to the current submission-period session in their origin house
 
         **Example**
            `{PREFIX}{COMMAND} 56`
@@ -2997,7 +2949,8 @@ class Legislature(
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to resubmit the following bills to the current session?\n{consumer.passed_formatted}"
+            f"to resubmit the following bills to the current submission-period session in their origin house?\n"
+            f"{consumer.passed_formatted}"
         )
 
         if not reaction:
@@ -3005,7 +2958,7 @@ class Legislature(
 
         await consumer.consume(resubmitter=ctx.author)
         await ctx.send(
-            f"{config.YES} All bills were resubmitted to the current session."
+            f"{config.YES} All bills were resubmitted to their origin-house submission session."
         )
 
     def format_stats(
@@ -3053,7 +3006,9 @@ class Legislature(
             record=submitter, record_key="submitter", stats_name="bills"
         )
 
-        speaker = await self.bot.db.fetch("SELECT speaker from legislature_session WHERE house = 'senate'")
+        speaker = await self.bot.db.fetch(
+            "SELECT speaker from legislature_session WHERE house = 'senate'"
+        )
         pretty_top_speaker = self.format_stats(
             record=speaker, record_key="speaker", stats_name="sessions"
         )
@@ -3080,7 +3035,7 @@ class Legislature(
 
         embed.add_field(name="General Statistics", value=general_value)
         embed.add_field(
-            name=f"Top {self.bot.mk.speaker_term}s of the {self.bot.mk.LEGISLATURE_NAME}",
+            name=f"Top {self.bot.mk.senator_presiding_term}s of the {self.bot.mk.LEGISLATURE_NAME}",
             value=pretty_top_speaker,
             inline=False,
         )

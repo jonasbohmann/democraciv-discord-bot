@@ -1,7 +1,7 @@
 import typing
 import discord
 
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord.utils import escape_markdown
 
 from bot.config import config, mk
@@ -21,10 +21,14 @@ class LawPassScheduler(text.RedditAnnouncementScheduler):
 
         for obj in self._objects:
             submitter = obj.submitter or context.MockUser()
+            auto_note = ""
+
+            if getattr(obj, "_auto_passed", False):
+                auto_note = "\n*Automatically became law after 48 hours without Executive action.*"
 
             message.append(
                 f"__Bill #{obj.id} - **[{obj.name}]({obj.link})**__"
-                f"\n*Submitted by {submitter.mention}*\n{obj.description}\n"
+                f"\n*Submitted by {submitter.mention}*\n{obj.description}{auto_note}\n"
             )
 
         embed.description = "\n".join(message)
@@ -45,10 +49,14 @@ class LawPassScheduler(text.RedditAnnouncementScheduler):
 
         for bill in self._objects:
             submitter = bill.submitter or context.MockUser()
+            auto_note = ""
+
+            if getattr(bill, "_auto_passed", False):
+                auto_note = "\n\n*Automatically became law after 48 hours without Executive action.*"
             content.append(
                 f"__**Bill #{bill.id} - [{bill.name}]({bill.link})**__\n\n*Written by "
                 f"{submitter.display_name} ({submitter})*"
-                f"\n\n{bill.description}\n\n &nbsp;"
+                f"\n\n{bill.description}{auto_note}\n\n &nbsp;"
             )
 
         outro = f"""\n\n &nbsp; \n\n---\n\nAll these bills are now laws.
@@ -129,13 +137,17 @@ class Ministry(
             mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL,
             subreddit=config.DEMOCRACIV_SUBREDDIT,
         )
+        self.auto_pass_bills.start()
+
+    def cog_unload(self):
+        self.auto_pass_bills.cancel()
 
     async def get_pretty_vetoes(self) -> typing.List[str]:
-        """Gets all bills that passed the Legislature, are vetoable and were not yet voted on by the Ministry"""
+        """Gets all bills awaiting Executive action."""
 
         open_bills = await self.bot.db.fetch(
-            "SELECT id, name, link FROM bill WHERE is_vetoable = true AND status = $1 ORDER BY id",
-            models.BillPassedLegislature.flag.value,
+            "SELECT id, name, link, executive_deadline_at FROM bill WHERE status = $1 ORDER BY id",
+            models.BillAwaitingExecutive.flag.value,
         )
 
         if not open_bills:
@@ -150,13 +162,20 @@ class Ministry(
             b_hyperlinks.append(
                 f"=HYPERLINK(\"{record['link']}\"; \"{record['name']}\")"
             )
+            deadline = record["executive_deadline_at"]
+            deadline_fmt = (
+                deadline.strftime("%B %d, %Y at %H:%M UTC")
+                if deadline is not None
+                else "No deadline set"
+            )
             pretty_bills.append(
-                f"Bill #{record['id']} - [{record['name']}]({record['link']})"
+                f"Bill #{record['id']} - [{record['name']}]({record['link']}) "
+                f"*(Deadline: {deadline_fmt})*"
             )
 
         exported = [
-            f"Export of Vetoable Bills -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
-            "----- Vetoable Bills -----\n",
+            f"Export of Bills Awaiting Executive Action -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
+            "----- Bills Awaiting Executive Action -----\n",
         ]
 
         exported.extend(b_ids)
@@ -177,6 +196,39 @@ class Ministry(
             )
 
         return pretty_bills
+
+    @tasks.loop(minutes=20)
+    async def auto_pass_bills(self):
+        expired_bills = await self.bot.db.fetch(
+            "SELECT id FROM bill WHERE status = $1 AND executive_deadline_at IS NOT NULL "
+            "AND executive_deadline_at <= $2 ORDER BY id",
+            models.BillAwaitingExecutive.flag.value,
+            discord.utils.utcnow().replace(tzinfo=None),
+        )
+
+        if not expired_bills:
+            return
+
+        mock_ctx = context.MockContext(self.bot)
+        added_any = False
+
+        for record in expired_bills:
+            try:
+                bill = await models.Bill.convert(mock_ctx, record["id"])
+                await bill.status.pass_into_law(auto_pass=True)
+            except Exception:
+                continue
+
+            bill._auto_passed = True
+            self.pass_scheduler.add(bill)
+            added_any = True
+
+        if added_any:
+            await self.pass_scheduler.trigger_now()
+
+    @auto_pass_bills.before_loop
+    async def before_auto_pass_bills(self):
+        await self.bot.wait_until_ready()
 
     MINISTRY_ALIASES = [
         "min",
@@ -211,9 +263,12 @@ class Ministry(
         pretty_bills = await self.get_pretty_vetoes()
 
         if not pretty_bills:
-            pretty_bills = "There are no new bills to vote on."
+            pretty_bills = "There are no bills awaiting Executive action."
         else:
-            pretty_bills = f"{config.HINT}    You can vote on new bills, check `{config.BOT_PREFIX}{mk.MarkConfig.MINISTRY_COMMAND} bills`."
+            pretty_bills = (
+                f"{config.HINT}    You can review pending bills with "
+                f"`{config.BOT_PREFIX}{mk.MarkConfig.MINISTRY_COMMAND} bills`."
+            )
 
         minister_value = []
 
@@ -231,22 +286,22 @@ class Ministry(
         else:
             minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
 
-        #attorney_general = self._safe_get_member(mk.DemocracivRole.ATTORNEY_GENERAL)
+        # attorney_general = self._safe_get_member(mk.DemocracivRole.ATTORNEY_GENERAL)
 
-        #if isinstance(attorney_general, discord.Member):
+        # if isinstance(attorney_general, discord.Member):
         #    minister_value.append(
         #        f"Attorney General: {attorney_general.mention} {escape_markdown(str(attorney_general))}"
         #    )
-        #else:
+        # else:
         #    minister_value.append(f"Attorney General: -")
 
-        #supreme_commander = self._safe_get_member(mk.DemocracivRole.SUPREME_COMMANDER)
+        # supreme_commander = self._safe_get_member(mk.DemocracivRole.SUPREME_COMMANDER)
 
-        #if isinstance(supreme_commander, discord.Member):
+        # if isinstance(supreme_commander, discord.Member):
         #    minister_value.append(
         #        f"Supreme Commander: {supreme_commander.mention} {escape_markdown(str(supreme_commander))}"
         #    )
-        #else:
+        # else:
         #    minister_value.append(f"Supreme Commander: -")
 
         embed.add_field(
@@ -262,10 +317,15 @@ class Ministry(
             ] or ["-"]
         except exceptions.RoleNotFoundError:
             ministers = ["-"] """
-        
+
         mk13_min_value = []
 
-        for mk13_min in [mk.DemocracivRole.MK13_FINANCE_MIN, mk.DemocracivRole.MK13_FOREIGN_MIN, mk.DemocracivRole.MK13_DEFENCE_MIN, mk.DemocracivRole.MK13_ATTORNEY_GENERAL]:
+        for mk13_min in [
+            mk.DemocracivRole.MK13_FINANCE_MIN,
+            mk.DemocracivRole.MK13_FOREIGN_MIN,
+            mk.DemocracivRole.MK13_DEFENCE_MIN,
+            mk.DemocracivRole.MK13_ATTORNEY_GENERAL,
+        ]:
             as_member = self._safe_get_member(mk13_min)
             as_role = self.bot.get_democraciv_role(mk13_min)
 
@@ -276,12 +336,12 @@ class Ministry(
             else:
                 mk13_min_value.append(f"{as_role.name}: -")
 
-        #try:
+        # try:
         #    governors = self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNOR)
         #    governors = [
         #        f"{g.mention} {escape_markdown(str(g))}" for g in governors.members
         #    ] or ["-"]
-        #except exceptions.RoleNotFoundError:
+        # except exceptions.RoleNotFoundError:
         #    governors = ["-"]
 
         embed.add_field(
@@ -290,11 +350,11 @@ class Ministry(
             inline=False,
         )
 
-        #embed.add_field(
+        # embed.add_field(
         #    name=f"{self.bot.mk.governor_term}s ({len(governors) if governors[0] != "-" else 0})",
         #    value="\n".join(governors),
         #    inline=False,
-        #)
+        # )
 
         embed.add_field(
             name="Links",
@@ -303,7 +363,9 @@ class Ministry(
             inline=False,
         )
 
-        embed.add_field(name="Vetoable Bills", value=pretty_bills, inline=False)
+        embed.add_field(
+            name="Bills Awaiting Executive Action", value=pretty_bills, inline=False
+        )
         await ctx.send(embed=embed)
 
     @ministry.command(name="bills", aliases=["b"])
@@ -314,8 +376,8 @@ class Ministry(
         pages = paginator.SimplePages(
             entries=pretty_bills,
             icon=self.bot.mk.NATION_ICON_URL,
-            author=f"Open Bills to Vote On",
-            empty_message="There are no new bills to vote on.",
+            author="Bills Awaiting Executive Action",
+            empty_message="There are no bills awaiting Executive action.",
         )
         await pages.start(ctx)
 
@@ -360,11 +422,9 @@ class Ministry(
         await consumer.consume(scheduler=self.veto_scheduler)
         await ctx.send(
             f"{config.YES} All bills were vetoed.\n{config.HINT} In case the "
-            f"{self.bot.mk.LEGISLATURE_NAME} wants to give these bills a second chance, a veto can be "
-            f"overridden with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} override`, or, if the "
-            f"votes to override are not enough, the bill can be "
-            f"resubmitted to the next legislative session with "
-            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`."
+            f"Senate wants to give these bills a second chance, a veto can be "
+            f"overridden with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} override`, or the bill can be "
+            f"resubmitted to its origin house with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`."
         )
 
     @ministry.command(name="pass", aliases=["p"])

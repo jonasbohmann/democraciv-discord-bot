@@ -44,7 +44,6 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
             for judge in _judges.members
         ]
 
-
     @commands.command(
         name="legislature",
         aliases=["leg", "l"],
@@ -57,15 +56,25 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
             name=f"The Commons and the Senate",
             icon_url=self.bot.mk.NATION_ICON_URL,
         )
-        
+
         com_active_leg_session = await self.get_active_leg_session(house="commons")
         sen_active_leg_session = await self.get_active_leg_session(house="senate")
-        
-        embed.description = f"In MK13, the Legislature consists of two chambers, with the Commons as the Lower House and the Senate as the Upper House. " \
-                            f"As such, each house gets their own commands for managing their respective legislative sessions."
-        
-        embed.add_field(name="Commons", value=f"{"No active session." if com_active_leg_session is None else f"Session #{com_active_leg_session.mk13_house_id} - {com_active_leg_session.status.value}"}\n\n- `-commons`\n- `-commons session`\n- `-commons submit`\n\nSee `-help commons` for all available commands.", inline=True)
-        embed.add_field(name="Senate", value=f"{"No active session." if sen_active_leg_session is None else f"Session #{sen_active_leg_session.mk13_house_id} - {sen_active_leg_session.status.value}"}\n\n- `-senate`\n- `-senate session`\n- `-senate submit`\n\nSee `-help senate` for all available commands.", inline=True)
+
+        embed.description = (
+            f"In MK13, the Legislature consists of two chambers, with the Commons as the Lower House and the Senate as the Upper House. "
+            f"As such, each house gets their own commands for managing their respective legislative sessions."
+        )
+
+        embed.add_field(
+            name="Commons",
+            value=f"{"No active session." if com_active_leg_session is None else f"Session #{com_active_leg_session.mk13_house_id} - {com_active_leg_session.status.value}"}\n\n- `-commons`\n- `-commons session`\n- `-commons submit`\n\nSee `-help commons` for all available commands.",
+            inline=True,
+        )
+        embed.add_field(
+            name="Senate",
+            value=f"{"No active session." if sen_active_leg_session is None else f"Session #{sen_active_leg_session.mk13_house_id} - {sen_active_leg_session.status.value}"}\n\n- `-senate`\n- `-senate session`\n- `-senate submit`\n\nSee `-help senate` for all available commands.",
+            inline=True,
+        )
         await ctx.send(embed=embed)
 
     # todo oct-24: lots of duplicate code
@@ -129,7 +138,12 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
 
         mk13_min_value = []
 
-        for mk13_min in [mk.DemocracivRole.MK13_FINANCE_MIN, mk.DemocracivRole.MK13_FOREIGN_MIN, mk.DemocracivRole.MK13_DEFENCE_MIN, mk.DemocracivRole.MK13_ATTORNEY_GENERAL]:
+        for mk13_min in [
+            mk.DemocracivRole.MK13_FINANCE_MIN,
+            mk.DemocracivRole.MK13_FOREIGN_MIN,
+            mk.DemocracivRole.MK13_DEFENCE_MIN,
+            mk.DemocracivRole.MK13_ATTORNEY_GENERAL,
+        ]:
             as_member = self._safe_get_member(mk13_min)
             as_role = self.bot.get_democraciv_role(mk13_min)
 
@@ -148,12 +162,12 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
         except exceptions.RoleNotFoundError:
             ministers = ["-"] """
 
-        #try:
+        # try:
         #    governors = self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNOR)
         #    governors = [
         #        f"{g.mention} {escape_markdown(str(g))}" for g in governors.members
         #    ] or ["-"]
-        #except exceptions.RoleNotFoundError:
+        # except exceptions.RoleNotFoundError:
         #    governors = ["-"]
 
         """ embed.add_field(
@@ -168,11 +182,11 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
             inline=False,
         )
 
-        #embed.add_field(
+        # embed.add_field(
         #    name=f"{self.bot.mk.governor_term}s ({len(governors) if governors[0] != "-" else 0})",
         #    value="\n".join(governors),
         #    inline=False,
-        #)
+        # )
 
         embed.add_field(
             name=f"{self.bot.mk.COURT_NAME} {self.bot.mk.COURT_JUSTICE_NAME}s ({len(justices) if justices[0] != "-" else 0})",
@@ -240,9 +254,7 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
         #    inline=False,
         # )
 
-        embed.description = (
-            f"There are {len(members_of_gov) if members_of_gov[0] != "-" else "0"} members of government in total."
-        )
+        embed.description = f"There are {len(members_of_gov) if members_of_gov[0] != "-" else "0"} members of government in total."
 
         # embed.add_field(
         #    name="Links",
