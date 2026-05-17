@@ -1,3 +1,4 @@
+import datetime
 import typing
 import discord
 
@@ -123,7 +124,7 @@ class LawVetoScheduler(text.RedditAnnouncementScheduler):
 class Ministry(
     context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.MINISTRY_NAME
 ):
-    """Allows the {MINISTRY_NAME} to pass and veto bills from the {LEGISLATURE_NAME}"""
+    """Allows the {MINISTRY_NAME} to pass and veto bills"""
 
     def __init__(self, bot):
         super().__init__(bot)
@@ -164,7 +165,7 @@ class Ministry(
             )
             deadline = record["executive_deadline_at"]
             deadline_fmt = (
-                deadline.strftime("%B %d, %Y at %H:%M UTC")
+                f"<t:{int(deadline.replace(tzinfo=datetime.timezone.utc).timestamp())}:F>"
                 if deadline is not None
                 else "No deadline set"
             )
@@ -197,7 +198,7 @@ class Ministry(
 
         return pretty_bills
 
-    @tasks.loop(minutes=20)
+    @tasks.loop(minutes=10)
     async def auto_pass_bills(self):
         expired_bills = await self.bot.db.fetch(
             "SELECT id FROM bill WHERE status = $1 AND executive_deadline_at IS NOT NULL "
@@ -261,7 +262,6 @@ class Ministry(
         )
 
         pretty_bills = await self.get_pretty_vetoes()
-
         if not pretty_bills:
             pretty_bills = "There are no bills awaiting Executive action."
         else:
@@ -285,7 +285,6 @@ class Ministry(
             )
         else:
             minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
-
         # attorney_general = self._safe_get_member(mk.DemocracivRole.ATTORNEY_GENERAL)
 
         # if isinstance(attorney_general, discord.Member):
@@ -309,7 +308,6 @@ class Ministry(
             value="\n".join(minister_value),
             inline=False,
         )
-
         """ try:
             ministers = self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER)
             ministers = [
@@ -328,14 +326,12 @@ class Ministry(
         ]:
             as_member = self._safe_get_member(mk13_min)
             as_role = self.bot.get_democraciv_role(mk13_min)
-
             if isinstance(as_member, discord.Member):
                 mk13_min_value.append(
                     f"{as_role.name}: {as_member.mention} {escape_markdown(str(as_member))}"
                 )
             else:
                 mk13_min_value.append(f"{as_role.name}: -")
-
         # try:
         #    governors = self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNOR)
         #    governors = [
@@ -370,7 +366,7 @@ class Ministry(
 
     @ministry.command(name="bills", aliases=["b"])
     async def bills(self, ctx):
-        """See all open bills from the {LEGISLATURE_NAME} to vote on"""
+        """See all open bills from the Legislature to vote on"""
 
         pretty_bills = await self.get_pretty_vetoes()
         pages = paginator.SimplePages(

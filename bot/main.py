@@ -61,8 +61,10 @@ all_extensions = {
     "bot.module.roles",
     "bot.module.parties",
     "bot.module.legislature",
+    "bot.module.bills",
     "bot.module.laws",
     "bot.module.ministry",
+    "bot.module.motions",
     # "bot.module.supremecourt",
     "bot.module.nation",
     "bot.module.mk_13_commons",
@@ -83,6 +85,8 @@ if mk.MarkConfig.IS_MULTICIV:
         }
     else:
         initial_extensions = initial_extensions - {
+            "bot.module.bills",
+            "bot.module.motions",
             "bot.module.parties",
             "bot.module.legislature",
             "bot.module.laws",
@@ -397,7 +401,9 @@ class DemocracivBot(commands.Bot):
             await ctx.send(f"{config.NO} You gave me too many arguments.")
             return await ctx.send_help(ctx.command)
 
-        elif isinstance(error, commands.BadArgument):
+        elif isinstance(error, commands.BadArgument) and not isinstance(
+            error, exceptions.DemocracivBotException
+        ):  # todo? siehe ministry.py
             if error.args and str(error).startswith(
                 config.NO
             ):  # catching default BadArgument message

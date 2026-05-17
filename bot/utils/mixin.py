@@ -1,3 +1,4 @@
+import datetime
 import typing
 import discord
 
@@ -67,7 +68,7 @@ class GovernmentMixin:
 
         for record in all_objects:
             obj = await model.convert(ctx, record["id"])
-            formatted.append(obj.formatted)
+            formatted.append(f"* {obj.formatted}")
 
         if model is models.Law:
             title = f"All Laws in {self.bot.mk.NATION_NAME}"
@@ -125,7 +126,7 @@ class GovernmentMixin:
             if obj.executive_deadline_at is not None:
                 embed.add_field(
                     name="Executive Deadline",
-                    value=f"<t:{int(obj.executive_deadline_at.timestamp())}:F>",
+                    value=f"<t:{int(obj.executive_deadline_at.replace(tzinfo=datetime.timezone.utc).timestamp())}:F>",
                     inline=True,
                 )
 
@@ -137,7 +138,7 @@ class GovernmentMixin:
 
         if not isinstance(obj, models.Motion):
             history = [
-                f"<t:{int(entry.date.timestamp())}:D> - {entry.note if entry.note else entry.after}"
+                f"* <t:{int(entry.date.timestamp())}:D> - {entry.note if entry.note else entry.after}"
                 for entry in obj.history[:10]
             ]
 
@@ -171,13 +172,15 @@ class GovernmentMixin:
             await ctx.send(embed=embed)
 
     async def _show_bill_text(self, ctx, bill: models.Bill, *, ephemeral_webhook=None):
+        leader_term = self.get_primary_leader_term_for_house(
+            getattr(getattr(bill, "session", None), "house", None)
+        )
         entries = bill.content.splitlines()
         entries.insert(
             0,
             f"[Link to the Google Docs document of this Bill]({bill.link})\n"
-            f"*Am I showing you outdated or wrong text? Tell the {self.bot.mk.speaker_term} to "
-            f"synchronize this text with the Google Docs text of this bill with "
-            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill synchronize {bill.id}`.*\n\n",
+            f"*Am I showing you outdated or wrong text? Tell the {leader_term} to synchronize this text "
+            f"with the Google Docs text of this bill with `{config.BOT_PREFIX}bill synchronize {bill.id}`.*\n\n",
         )
         pages = paginator.SimplePages(
             entries=entries,
@@ -233,7 +236,7 @@ class GovernmentMixin:
                 if return_model:
                     formatted.append(obj)
                 else:
-                    formatted.append(obj.formatted)
+                    formatted.append(f"* {obj.formatted}")
         else:
             is_law = model is models.Law
             # First, search by name similarity
@@ -391,7 +394,7 @@ class GovernmentMixin:
 
         for record in objs_from_thing:
             obj = await model.convert(ctx, record["id"])
-            formatted.append(obj.formatted)
+            formatted.append(f"* {obj.formatted}")
 
         if not paginate:
             return formatted
@@ -435,7 +438,7 @@ class GovernmentMixin:
             if return_model:
                 found[obj] = None
             else:
-                found[obj.formatted] = None
+                found[f"* {obj.formatted}"] = None
 
         return found
 
@@ -475,7 +478,7 @@ class GovernmentMixin:
             if return_model:
                 formatted[obj] = None
             else:
-                formatted[obj.formatted] = None
+                formatted[f"* {obj.formatted}"] = None
 
         return formatted
 
@@ -632,6 +635,69 @@ class GovernmentMixin:
         return (
             self.speaker_role in member.roles or self.vice_speaker_role in member.roles
         )
+
+    def get_house_for_object(self, obj) -> typing.Optional[str]:
+        session = getattr(obj, "session", None)
+        return getattr(session, "house", None)
+
+    def get_primary_leader_term_for_house(self, house: typing.Optional[str]) -> str:
+        if house == "senate":
+            return self.bot.mk.senator_presiding_term
+
+        if house == "commons":
+            return self.bot.mk.speaker_term
+
+        return self.bot.mk.LEGISLATURE_CABINET_NAME
+
+    def get_cabinet_members_for_house(
+        self, house: typing.Optional[str]
+    ) -> typing.List[discord.Member]:
+        if house == "senate":
+            return [member for member in [self.senator_presiding] if member is not None]
+
+        if house == "commons":
+            return [member for member in [self.speaker, self.vice_speaker] if member]
+
+        seen = set()
+        members = []
+
+        for member in [self.senator_presiding, self.speaker, self.vice_speaker]:
+            if member is None or member.id in seen:
+                continue
+
+            seen.add(member.id)
+            members.append(member)
+
+        return members
+
+    def is_cabinet_for_house(
+        self, member: discord.Member, house: typing.Optional[str]
+    ) -> bool:
+        if house == "senate":
+            return self.senator_presiding_role in member.roles
+
+        if house == "commons":
+            return (
+                self.speaker_role in member.roles
+                or self.vice_speaker_role in member.roles
+            )
+
+        return (
+            self.senator_presiding_role in member.roles
+            or self.speaker_role in member.roles
+            or self.vice_speaker_role in member.roles
+        )
+
+    def can_member_sponsor_in_house(
+        self, member: discord.Member, house: typing.Optional[str]
+    ) -> bool:
+        if house == "commons":
+            return True
+
+        if self.legislator_role is None:
+            return False
+
+        return self.legislator_role in member.roles
 
     @property
     def justice_role(self) -> typing.Optional[discord.Role]:

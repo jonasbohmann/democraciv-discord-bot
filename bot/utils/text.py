@@ -68,7 +68,7 @@ class AnnouncementScheduler:
         self._objects.sort(key=lambda obj: obj.id)
         await self.send_messages()
 
-        await self.bot.get_cog("Law").generate_google_docs_legal_code()
+        await self.bot.get_cog("Law").generate_google_docs_legal_code() # TODO
 
         self._objects.clear()
 

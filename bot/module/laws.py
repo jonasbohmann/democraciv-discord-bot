@@ -17,11 +17,11 @@ from bot.utils.converter import (
 
 class RepealScheduler(text.RedditAnnouncementScheduler):
     def get_reddit_post_title(self) -> str:
-        return f"Laws repealed by the {self.bot.mk.LEGISLATURE_NAME} - {discord.utils.utcnow().strftime('%d %B %Y')}"
+        return f"Laws repealed by the Legislature - {discord.utils.utcnow().strftime('%d %B %Y')}"
 
     def get_reddit_post_content(self) -> str:
         content = [
-            f"The following laws were repealed by the {self.bot.mk.LEGISLATURE_NAME}."
+            f"The following laws were repealed by the Legislature."
             f"\n\n###Relevant Links\n\n"
             f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
             f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `{config.BOT_PREFIX}laws` in #bot on our "
@@ -118,11 +118,13 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         #        f"{config.NO} That doesn't look like a Google Docs URL."
         #    )
 
-        doc_url = self.bot.mk.LEGAL_CODE
+        return await ctx.send(f"{config.NO} This command will be enabled shortly after MK13 has started.")
+    
+        doc_url = ""#self.bot.mk.LEGAL_CODE
 
         if not doc_url or not self.is_google_doc_link(doc_url):
             return await ctx.send(
-                f"{config.NO} This command cannot be used right now. Please DM @ Jonas for further information."
+                f"{config.NO} This command cannot be used right now due to security concerns. Sorry! Please DM @ Jonas for further information."
             )
 
         await ctx.send(

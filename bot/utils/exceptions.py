@@ -26,7 +26,7 @@ class TagError(DemocracivBotException):
     pass
 
 
-class NotFoundError(DemocracivBotException, commands.BadArgument):
+class NotFoundError(DemocracivBotException, commands.BadArgument):  # todo ?
     pass
 
 

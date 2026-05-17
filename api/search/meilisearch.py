@@ -48,7 +48,7 @@ class SearchClient:
                 "default": {
                     "source": "openAi",
                     "apiKey": self.OPENAI_KEY,
-                    "model": "text-embedding-3-small",
+                    "model": "text-embedding-3-large",
                     "documentTemplate": "a fictional legal document of a fictional, democratic government for a role-playing gaming community. the name of the document is '{{doc.title}}' and the content is as follows: {{doc.content}}",
                 }
             }
@@ -109,8 +109,8 @@ class SearchClient:
 
         return self.meilisearch_client.index(document_type).add_documents(as_json)
 
-    def delete_document(self, document):
-        return self.meilisearch_client.index(document.type).delete_document(document.id)
+    def delete_document(self, document_type, document_id):
+        return self.meilisearch_client.index(document_type).delete_document(document_id)
 
     def drop_index(self):
         self.meilisearch_client.delete_index("bill")

@@ -872,7 +872,7 @@ class Tags(context.CustomCog):
             inline=False,
         )
 
-        cog = self.bot.get_cog(self.bot.mk.LEGISLATURE_NAME)
+        cog = self.bot.get_cog("Senate")
 
         if cog:
             top_tag_creators = await self.bot.db.fetch(

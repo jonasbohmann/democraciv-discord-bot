@@ -66,11 +66,11 @@ class ModelChooseView(text.PromptView):
 
 class SuperPassScheduler(text.RedditAnnouncementScheduler):
     def get_reddit_post_title(self) -> str:
-        return f"New Bills passed into law with a super-majority by the {self.bot.mk.LEGISLATURE_NAME} - {discord.utils.utcnow().strftime('%d %B %Y')}"
+        return f"New Bills passed into law with a super-majority by the Senate - {discord.utils.utcnow().strftime('%d %B %Y')}"
 
     def get_reddit_post_content(self) -> str:
         content = [
-            f"The following bills were passed into law with a super-majority by the {self.bot.mk.LEGISLATURE_NAME}."
+            f"The following bills were passed into law with a super-majority by the Senate."
             f"\n\n###Relevant Links\n\n"
             f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
             f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `{config.BOT_PREFIX}laws` in #bot on our "
@@ -102,7 +102,7 @@ class SuperPassScheduler(text.RedditAnnouncementScheduler):
         )
 
         message = [
-            f"The following bills were **passed into law** with a supermajority by the {self.bot.mk.LEGISLATURE_NAME}.\n"
+            f"The following bills were **passed into law** with a supermajority by the Senate.\n"
         ]
 
         for obj in self._objects:
@@ -144,8 +144,7 @@ class PassScheduler(text.RedditAnnouncementScheduler):
 
             message.append(
                 f"__Bill #{obj.id} - **[{obj.name}]({obj.link})**__"
-                f"\n*Submitted by {submitter.mention}*\n{obj.description}"
-                f"\n*{self._destination_text(obj)}*\n"
+                f"\n*Submitted by {submitter.mention}*\n{obj.description} — {self._destination_text(obj)}\n"
             )
 
         embed.description = "\n".join(message)
@@ -211,7 +210,7 @@ class OverrideScheduler(text.AnnouncementScheduler):
 
 
 class SubmitBillModal(
-    discord.ui.Modal, title=f"Submit a Bill to the {mk.MarkConfig.LEGISLATURE_NAME}"
+    discord.ui.Modal, title=f"Submit a Bill to the Senate"
 ):
 
     google_docs_url = discord.ui.Label(
@@ -234,13 +233,42 @@ class SubmitBillModal(
     )
 
     is_procedure = discord.ui.Label(
-        text="Senate Procedure",
+        text="Bill or Senate-only Procedure",
         description=(
-            "Check this if the proposal only establishes rules or procedures for the Senate. "
-            "If checked, only the Senate votes on it."
+            "Are you submitting a bill, or procedure that only pertains to the Senate?"
         ),
-        component=discord.ui.Checkbox(),
+        component=discord.ui.Select(
+            options=[
+                discord.SelectOption(
+                    emoji="\U0001f4dd",
+                    label=f"Bill. The Commons and the Executive will be able vote on this too.",
+                    value="false",
+                    default=True,
+                ),
+                discord.SelectOption(
+                    emoji="\U0001f512",
+                    label="Procedure. Only the Senate will be able to vote on this.",
+                    value="true",
+                ),
+            ],
+        ),
     )
+
+    """ is_vetoable = discord.ui.Label(
+        text="Veto",
+        description=f"Is the {mk.MarkConfig.MINISTRY_NAME} legally allowed to vote on and veto this bill?",
+        component=discord.ui.Select(
+            options=[
+                discord.SelectOption(
+                    emoji="\U00002705",
+                    label=f"Yes, the {mk.MarkConfig.MINISTRY_NAME} should be able vote on this bill",
+                    value="true",
+                    default=True,
+                ),
+                discord.SelectOption(emoji="\U0000274c", label="No", value="false"),
+            ],
+        ),
+    ) """
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -256,7 +284,7 @@ class SubmitBillModal(
 
 
 class SubmitMotionModal(
-    discord.ui.Modal, title=f"Submit a Motion to the {mk.MarkConfig.LEGISLATURE_NAME}"
+    discord.ui.Modal, title=f"Submit a Motion to the Senate"
 ):
 
     intro = discord.ui.TextDisplay(
@@ -312,8 +340,9 @@ except ValueError:
     pass
 
 
+# Allows the Government to organize legislative sessions and bill & motion submissions
 class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
-    """Allows the Government to organize legislative sessions and bill & motion submissions"""
+    """The Senate of the Celtic Nation."""
 
     def __init__(self, bot):
         super().__init__(bot)
@@ -345,31 +374,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
     def is_cabinet(self, member: discord.Member) -> bool:
         return self.senator_presiding_role in member.roles
 
-    @commands.command(name="bill", aliases=["bills", "b"], hidden=True)
-    async def _bill(self, ctx: context.CustomContext):
-        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} bill`
-
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} bill` for the help page of the actual command.
-        """
-
-        ctx.message.content = ctx.message.content.replace(
-            f"{ctx.prefix}{ctx.invoked_with}",
-            f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
-            f"{ctx.invoked_with}",
-        )
-        new_ctx = await self.bot.get_context(ctx.message)
-        return await self.bot.invoke(new_ctx)
-
-    @commands.command(name="motion", aliases=["motions", "mo"], hidden=True)
-    async def _motion(self, ctx: context.CustomContext):
-        """This only exists to serve as an alias to `{PREFIX}{LEGISLATURE_COMMAND} motion`
-
-        Use `{PREFIX}help {LEGISLATURE_COMMAND} motion` for the help page of the actual command.
-        """
-        ctx.message.content = ctx.message.content.replace(
-            f"{ctx.prefix}{ctx.invoked_with}",
-            f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
-            f"{ctx.invoked_with}",
+    async def _redirect_to_root_command(
+        self, ctx: context.CustomContext, command_name: str, rest: str = ""
+    ):
+        ctx.message.content = (
+            f"{ctx.prefix}{command_name}"
+            if not rest
+            else f"{ctx.prefix}{command_name} {rest}"
         )
         new_ctx = await self.bot.get_context(ctx.message)
         return await self.bot.invoke(new_ctx)
@@ -455,7 +466,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         """Search for both bills & motions at once
 
         If you want to limit your search to either just bills or just motions, consider
-        the `{PREFIX}{LEGISLATURE_COMMAND} bill search` and `{PREFIX}{LEGISLATURE_COMMAND} motion search` commands.
+        the `{PREFIX}bill search` and `{PREFIX}motion search` commands.
         """
 
         matches = await self._search_model(
@@ -471,15 +482,14 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             key=lambda elm: difflib.SequenceMatcher(None, elm.name, query).ratio(),
             reverse=True,
         )
-        matches = list(map(lambda elm: elm.formatted, matches))
+        matches = list(map(lambda elm: f"* {elm.formatted}", matches))
 
         if matches:
             matches.insert(
                 0,
                 f"This searches for both bills and motions. You can search for just bills with "
-                f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill search`, "
-                f"and for just motions with "
-                f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion search`.\n",
+                f"`{config.BOT_PREFIX}bill search`, and for just motions with "
+                f"`{config.BOT_PREFIX}motion search`.\n",
             )
 
         pages = paginator.SimplePages(
@@ -548,9 +558,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             things.insert(
                 0,
                 f"This lists both bills and motions. You can limit this to just bills by using "
-                f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bills from`, "
-                f"and to just motions by using "
-                f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motions from`.\n",
+                f"`{config.BOT_PREFIX}bill from`, and to just motions by using "
+                f"`{config.BOT_PREFIX}motion from`.\n",
             )
 
         pages = paginator.SimplePages(
@@ -558,647 +567,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         )
         await pages.start(ctx)
 
-    @legislature.group(
-        name="bill",
-        aliases=["b", "bills"],
-        case_insensitive=True,
-        invoke_without_command=True,
-    )
-    async def bill(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill] = None):
-        """List all bills or get details about a single bill"""
-
-        if bill_id is None:
-            return await self._paginate_all_(ctx, model=models.Bill)
-
-        return await self._detail_view(ctx, obj=bill_id)
-
-    @bill.command(name="synchronize", aliases=["sync", "refresh", "synchronise"])
-    @checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
-    async def b_refresh(self, ctx, bill_ids: commands.Greedy[models.Bill]):
-        """Synchronize the name & content of one or multiple bills with Google Docs
-
-        This gets the current title and the current content of the Google Docs document of a bill,
-         and saves that to my database. In case my search commands show outdated text of a bill,
-         or I show the wrong name of a bill, use this command to fix that.
-
-        **Example**
-            `{PREFIX}{COMMAND} 12`
-            `{PREFIX}{COMMAND} 45 46 49 51 52`"""
-
-        bills = bill_ids
-
-        if not bills:
-            return await ctx.send_help(ctx.command)
-
-        errs = []
-
-        async with ctx.typing():
-            async with self.bot.db.acquire() as connection:
-                async with connection.transaction():
-                    for bill in bills:
-                        name, keywords, content = await bill.fetch_name_and_keywords()
-
-                        if not name:
-                            errs.append(
-                                f"Error synchronizing Bill #{bill.id} - {bill.name}. Skipping update.."
-                            )
-                            continue
-
-                        await connection.execute(
-                            "UPDATE bill SET name = $1, content = $3 WHERE id = $2",
-                            name,
-                            bill.id,
-                            content,
-                        )
-                        await connection.execute(
-                            "DELETE FROM bill_lookup_tag WHERE bill_id = $1", bill.id
-                        )
-
-                        id_with_kws = [(bill.id, keyword) for keyword in keywords]
-                        self.bot.loop.create_task(
-                            connection.executemany(
-                                "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING ",
-                                id_with_kws,
-                            )
-                        )
-
-                        await self.bot.api_request(
-                            "POST",
-                            "document/update",
-                            json={"id": bill.id, "type": "bill"},
-                        )
-
-        msg = f"{config.YES} Synchronized {len(bills) - len(errs)}/{len(bills)} bills with Google Docs."
-
-        if errs:
-            fmt = "\n".join(errs)
-            msg = f"{fmt}\n\n{msg}"
-
-        await ctx.send(msg)
-
-    @bill.command(name="bulkedit", aliases=["bulkupdate", "bulkchange", "be"])
-    @checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
-    async def b_bulkedit(self, ctx: context.CustomContext):
-        """Bulk edit the Google Docs links of multiple bills at once"""
-
-        await ctx.send(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with a list of bills and their "
-            f"respective new links. First, type the bill's id (like `12`), then type a space, "
-            f"and then the new link for that bill.\n"
-            f"{config.HINT} For each bill/link pair, use a new line like in the image below.\n\nhttps://cdn.discordapp.com/attachments/759894147628269588/843804262777225226/bulkbill.PNG",
-        )
-
-        bulks = await ctx.input()
-
-        skipped = []
-        split = bulks.splitlines()
-
-        async with ctx.typing():
-            for i, bill_link in enumerate(split, start=1):
-                bill_link = bill_link.strip()
-
-                try:
-                    bill_id, link = bill_link.split(" ")
-                except ValueError:
-                    skipped.append(
-                        f"  - Incorrect input formatting on line {i}. See the image I sent for the "
-                        f"correct formatting."
-                    )
-                    continue
-
-                try:
-                    bill = await Bill.convert(ctx, bill_id)
-
-                    if not self.is_google_doc_link(link):
-                        skipped.append(
-                            f"  - The new link for Bill #{bill_id} you gave me is not a valid Google Docs link."
-                        )
-                        continue
-
-                    await bill.update_link(link)
-                except exceptions.NotFoundError:
-                    skipped.append(f"  - There is no Bill #{bill_id}.")
-                    continue
-                except exceptions.DemocracivBotException as e:
-                    skipped.append(f"  - {e.message}")
-                    continue
-
-        msg = f"{config.YES} Changed the link of {len(split) - len(skipped)}/{len(split)} bills."
-
-        if skipped:
-            fmt = "\n".join(skipped)
-            msg = f":warning: I skipped changing the link of some bills, see the errors below:\n\n{fmt}\n\n{msg}"
-
-        await ctx.send(msg)
-
-    @bill.command(name="edit", aliases=["update", "e", "change"])
-    @checks.is_democraciv_guild()
-    async def b_edit(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill]):
-        """Edit the Google Docs link or summary of a bill
-
-        **Example**
-            `{PREFIX}{COMMAND} 16`
-        """
-        bill = bill_id
-
-        if not self.is_cabinet(ctx.author) and bill.submitter_id != ctx.author.id:
-            return await ctx.send(
-                f"{config.NO} Only the {self.bot.mk.senator_presiding_term} and the original "
-                f"submitter of a bill can edit it."
-            )
-
-        menu = text.EditModelMenu(
-            ctx,
-            choices_with_formatted_explanation={
-                "link": "Google Docs Link",
-                "description": "Short Summary",
-            },
-            title=f"{config.USER_INTERACTION_REQUIRED}  What about {bill.name} (#{bill.id}) do "
-            f"you want to change?",
-        )
-
-        result = await menu.prompt()
-        to_change = result.choices
-
-        if not result.confirmed or True not in to_change.values():
-            return
-
-        link = None
-        description = None
-
-        if to_change["link"]:
-            if (
-                not self.is_cabinet(ctx.author)
-                and bill.session.status is not SessionStatus.SUBMISSION_PERIOD
-            ):
-                return await ctx.send(
-                    f"{config.NO} You can only change the link to your bill if the "
-                    f"session it was submitted in is still in Submission Period.\n{config.HINT} "
-                    f"However, the {self.bot.mk.senator_presiding_term} can change the link of any bill at "
-                    f"any given time."
-                )
-
-            link = await ctx.input(
-                f"{config.USER_INTERACTION_REQUIRED} Reply with the new Google Docs link to the bill."
-                f"\n{config.HINT} Did you know? You can change the link of multiple bills at once with my "
-                f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill bulkedit` command."
-            )
-
-            if not self.is_google_doc_link(link):
-                link = None
-                await ctx.send(
-                    f"{config.NO} That doesn't look like a Google Docs URL. "
-                    f"The link to the bill will not be changed."
-                )
-
-        if to_change["description"]:
-            description = await ctx.input(
-                f"{config.USER_INTERACTION_REQUIRED} Reply with a new **short** summary of what the bill does.",
-                timeout=400,
-                return_cleaned=True,
-            )
-            if not description:
-                description = "*No summary provided by submitter.*"
-
-        are_you_sure = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit `{bill.name}` (#{bill.id})?"
-        )
-
-        if not are_you_sure:
-            return await ctx.send("Cancelled.")
-
-        if link:
-            changed_bill = models.Bill(
-                id=bill.id,
-                bot=self.bot,
-                link=link,
-                submitter_description=description or bill.description,
-            )
-            await changed_bill.update_link(link)
-
-        if description:
-            await self.bot.db.execute(
-                "UPDATE bill SET submitter_description = $1 WHERE id = $2",
-                description,
-                bill.id,
-            )
-
-        await ctx.send(f"{config.YES} Bill #{bill.id} `{bill.name}` was updated.")
-
-    @bill.command(name="history", aliases=["h"])
-    async def b_history(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill]):
-        """See when a bill was first introduced, passed into Law, repealed, etc."""
-        fmt_history = [
-            f"<t:{int(entry.date.timestamp())}:D> - {entry.note if entry.note else entry.after}   "
-            f"({entry.after.emojified_status(verbose=False)})"
-            for entry in bill_id.history
-        ]
-        fmt_history.insert(
-            0,
-            f"[Link to the Google Docs document of this Bill]({bill_id.link}).\n",
-        )
-
-        pages = paginator.SimplePages(
-            entries=fmt_history,
-            author=f"{bill_id.name} (#{bill_id.id})",
-            per_page=12,
-            icon=self.bot.mk.NATION_ICON_URL,
-        )
-        await pages.start(ctx)
-
-    @bill.command(name="read", aliases=["text", "txt", "content"])
-    async def b_read(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill]):
-        """Read the content of a bill"""
-        await self._show_bill_text(ctx, bill_id)
-
-    @bill.command(name="search", aliases=["s"])
-    async def b_search(self, ctx: context.CustomContext, *, query: str):
-        """Search for a bill"""
-        results = await self._search_model(ctx, model=models.Bill, query=query)
-
-        pages = paginator.SimplePages(
-            entries=results,
-            icon=self.bot.mk.NATION_ICON_URL,
-            author=f"Bills matching '{query}'",
-            empty_message="Nothing found.",
-        )
-
-        await pages.start(ctx)
-        fts_pages = None
-
-        try:
-            fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
-        except Exception:
-            pass
-
-        if fts_pages:
-            view = mixin.FullTextSearchView(ctx)
-            delete_after = await ctx.send(
-                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per bill, even if there were more occurrences found.",
-                view=view,
-            )
-            yes = await view.prompt(silent=True)
-
-            if yes:
-                await fts_pages.start(ctx)
-                await delete_after.delete()
-
-    @bill.command(name="ai-search", aliases=["ai", "semantic-search"])
-    async def aisearch(self, ctx, *, query):
-        """This is an experimental command and still a work-in-progress."""
-
-        if self.bot.mk.IS_MULTICIV:
-            return await ctx.send(
-                f"{config.NO} This command is disabled during Multiciv MKs."
-            )
-
-        async with ctx.typing():
-            response = await self.bot.api_request(
-                "POST",
-                "document/search",
-                json={
-                    "question": query,
-                    "index": "bill",
-                    "is_law": False,
-                    "semantic_ratio": 1.0,
-                },
-            )
-
-        if not response or not response["result"]["hits"]:
-            return await ctx.send(
-                f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
-            )
-
-        fmt = [
-            "This feature is a work-in-progress.\nKnown issue: This only shows 1 search result per bill, even if there were more occurrences found.\n"
-        ]
-
-        for hit in response["result"]["hits"]:
-            try:
-                bill = await models.Bill.convert(ctx, hit["id"])
-            except Exception:
-                continue
-
-            trimmed = hit["_formatted"]["content"].strip()
-            txt = discord.utils.escape_markdown(trimmed)
-            txt = txt.replace("<DBS>", "[**")
-            txt = txt.replace(
-                "<DBE>", "**](https://this-is-not-a-real-url.democraciv.com)"
-            )
-            fmt.append(f"**__{bill.formatted}__**")
-            fmt.append(f"{txt}\n")
-
-        pages = paginator.SimplePages(
-            entries=fmt,
-            icon=self.bot.mk.NATION_ICON_URL,
-            author=f"[BETA] AI-powered search results for '{query}'",
-        )
-
-        await pages.start(ctx)
-
-    @bill.command(name="from", aliases=["f", "by"])
-    async def b_from(
-        self,
-        ctx: context.CustomContext,
-        *,
-        person_or_party: Fuzzy[
-            converter.CaseInsensitiveMember,
-            converter.CaseInsensitiveUser,
-            converter.PoliticalParty,
-            FuzzySettings(weights=(5, 0, 2)),
-        ] = None,
-    ):
-        """List all bills that a specific person or Political Party submitted"""
-        return await self._from_person_model(
-            ctx, member_or_party=person_or_party, model=models.Bill
-        )
-
-    @legislature.group(
-        name="motion",
-        aliases=["m", "motions", "mo"],
-        case_insensitive=True,
-        invoke_without_command=True,
-    )
-    async def motion(
-        self, ctx: context.CustomContext, *, motion_id: Fuzzy[Motion] = None
-    ):
-        """List all motions or get details about a single motion"""
-
-        if motion_id is None:
-            return await self._paginate_all_(ctx, model=models.Motion)
-
-        return await self._detail_view(ctx, obj=motion_id)
-
-    @motion.command(name="edit", aliases=["update", "e"])
-    @checks.is_democraciv_guild()
-    async def m_edit(self, ctx, *, motion_id: Fuzzy[Motion]):
-        """Edit the title or content of a motion
-
-        **Example**
-            `{PREFIX}{COMMAND} 16`
-        """
-        motion = motion_id
-
-        if not self.is_cabinet(ctx.author):
-            if motion.submitter_id != ctx.author.id:
-                return await ctx.send(
-                    f"{config.NO} Only the {self.bot.mk.senator_presiding_term} and the original "
-                    f"submitter of a motion can edit it."
-                )
-
-            if motion.session.status is not SessionStatus.SUBMISSION_PERIOD:
-                return await ctx.send(
-                    f"{config.NO} You can only edit your motion if the "
-                    f"session it was submitted in is still in Submission Period.\n{config.HINT} "
-                    f"However, the {self.bot.mk.senator_presiding_term} can edit your motion at "
-                    f"any given time."
-                )
-
-        menu = text.EditModelMenu(
-            ctx,
-            choices_with_formatted_explanation={"title": "Title", "content": "Content"},
-            title=f"{config.USER_INTERACTION_REQUIRED}  What about {motion.name} (#{motion.id}) "
-            f"do you want to change?",
-        )
-
-        result = await menu.prompt()
-        to_change = result.choices
-
-        if not result.confirmed or True not in to_change.values():
-            return
-
-        if to_change["title"]:
-            title = await ctx.input(
-                f"{config.USER_INTERACTION_REQUIRED} Reply with the new short **title** for the motion."
-            )
-
-        else:
-            title = motion.title
-
-        if to_change["content"]:
-            content = await ctx.input(
-                f"{config.USER_INTERACTION_REQUIRED} Reply with the new **content** of the motion. If the motion is"
-                " inside a Google Docs document, just use a link to that for this."
-            )
-
-            paste = await self.bot.make_paste(content)
-
-            if not paste:
-                return await ctx.send(
-                    f"{config.NO} The motion will not be updated, there was a problem with <https://mystb.in>. "
-                    "Sorry, try again in a few minutes."
-                )
-        else:
-            content = motion.description
-            paste = motion._link
-
-        are_you_sure = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit `{motion.name}` (#{motion.id})?"
-        )
-
-        if not are_you_sure:
-            return await ctx.send("Cancelled.")
-
-        await self.bot.db.execute(
-            "UPDATE motion SET title = $1, description = $2, paste_link = $3 WHERE id = $4",
-            title,
-            content,
-            paste,
-            motion.id,
-        )
-
-        await self.bot.api_request(
-            "POST", "document/update", json={"id": motion.id, "type": "motion"}
-        )
-
-        await ctx.send(f"{config.YES} Motion #{motion.id} `{motion.name}` was updated.")
-
-    @motion.command(name="sponsor", aliases=["cosponsor", "second"])
-    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
-    @checks.is_citizen_if_multiciv()
-    async def m_sponsor(self, ctx, motion_ids: Greedy[Motion]):
-        """Show your support for one or multiple motions by sponsoring them
-
-        **Example**
-           `{PREFIX}{COMMAND} 56`
-           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
-
-        if not motion_ids:
-            return await ctx.send_help(ctx.command)
-
-        failed = {}
-        passed = []
-
-        last_session = await self.get_active_leg_session(house="senate")
-
-        for motion in motion_ids:
-            if ctx.author.id == motion.submitter_id:
-                failed[motion] = "The motion's author cannot sponsor their own motion."
-                continue
-
-            if ctx.author in motion.sponsors:
-                failed[motion] = "You already sponsored this motion."
-                continue
-
-            if not last_session or motion.session.id != last_session.id:
-                failed[motion] = (
-                    "You can only sponsor motions if the session they were submitted in is still open."
-                )
-                continue
-
-            passed.append(motion)
-
-        if failed:
-            fmt = "\n".join(
-                [
-                    f"-  **{m.name}** (#{m.id}): _{reason}_"
-                    for m, reason in failed.items()
-                ]
-            )
-
-            await ctx.send(
-                f":warning: The following motions cannot be sponsored.\n{fmt}"
-            )
-
-        if not passed:
-            return
-
-        fmt_passed = "\n".join(f"-  **{m.name}** (#{m.id})" for m in passed)
-
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to sponsor the following motions?\n{fmt_passed}"
-        )
-
-        if not reaction:
-            return await ctx.send("Cancelled.")
-
-        for passed_motion in passed:
-            await self.bot.db.execute(
-                "INSERT INTO motion_sponsor (motion_id, sponsor) VALUES ($1, $2) "
-                "ON CONFLICT DO NOTHING ",
-                passed_motion.id,
-                ctx.author.id,
-            )
-
-        await ctx.send(f"{config.YES} All motions were sponsored by you.")
-
-    @motion.command(name="unsponsor", aliases=["usp"])
-    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
-    async def m_unsponsor(self, ctx: context.CustomContext, motion_ids: Greedy[Motion]):
-        """Remove yourself from the list of sponsors of one or multiple motions
-
-        **Example**
-           `{PREFIX}{COMMAND} 56`
-           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
-
-        if not motion_ids:
-            return await ctx.send_help(ctx.command)
-
-        failed = {}
-        passed = []
-
-        last_session = await self.get_active_leg_session(house="senate")
-
-        for motion in motion_ids:
-            if ctx.author not in motion.sponsors:
-                failed[motion] = "You are not a sponsor of this motion."
-                continue
-
-            if not last_session or motion.session.id != last_session.id:
-                failed[motion] = (
-                    "You can only unsponsor motions if the session they were submitted in is still open."
-                )
-                continue
-
-            passed.append(motion)
-
-        if failed:
-            fmt = "\n".join(
-                [
-                    f"-  **{m.name}** (#{m.id}): _{reason}_"
-                    for m, reason in failed.items()
-                ]
-            )
-
-            await ctx.send(
-                f":warning: The following motions cannot be unsponsored.\n{fmt}"
-            )
-
-        if not passed:
-            return
-
-        fmt_passed = "\n".join(f"-  **{m.name}** (#{m.id})" for m in passed)
-
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to unsponsor the following motions?\n{fmt_passed}"
-        )
-
-        if not reaction:
-            return await ctx.send("Cancelled.")
-
-        for passed_motion in passed:
-            await self.bot.db.execute(
-                "DELETE FROM motion_sponsor WHERE motion_id = $1 and sponsor = $2",
-                passed_motion.id,
-                ctx.author.id,
-            )
-
-        await ctx.send(
-            f"{config.YES} You were removed from the list of sponsors from all motions."
-        )
-
-    @motion.command(name="from", aliases=["f", "by"])
-    async def m_from(
-        self,
-        ctx: context.CustomContext,
-        *,
-        person_or_party: Fuzzy[
-            converter.CaseInsensitiveMember,
-            converter.CaseInsensitiveUser,
-            converter.PoliticalParty,
-            FuzzySettings(weights=(5, 0, 2)),
-        ] = None,
-    ):
-        """List all motions that a specific person or Political Party submitted"""
-        return await self._from_person_model(
-            ctx, model=models.Motion, member_or_party=person_or_party
-        )
-
-    @motion.command(name="search", aliases=["s"])
-    async def m_search(self, ctx: context.CustomContext, *, query: str):
-        """Search for a motion"""
-        results = await self._search_model(ctx, model=models.Motion, query=query)
-
-        pages = paginator.SimplePages(
-            entries=results,
-            icon=self.bot.mk.NATION_ICON_URL,
-            author=f"Motions matching '{query}'",
-            empty_message="Nothing found.",
-        )
-        await pages.start(ctx)
-        fts_pages = None
-
-        try:
-            fts_pages = await self.prepare_full_text_search_paginator(
-                ctx, query, index="motion"
-            )
-        except Exception:
-            pass
-
-        if fts_pages:
-            view = mixin.FullTextSearchView(ctx)
-            delete_after = await ctx.send(
-                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all motions too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per motion, even if there were more occurrences found.",
-                view=view,
-            )
-
-            yes = await view.prompt(silent=True)
-
-            if yes:
-                await fts_pages.start(ctx)
-                await delete_after.delete()
+    @legislature.command(name="bill", aliases=["b", "bills"], hidden=True)
+    async def bill_redirect(self, ctx: context.CustomContext, *, rest: str = ""):
+        return await self._redirect_to_root_command(ctx, "bill", rest)
+
+    @legislature.command(name="motion", aliases=["m", "motions", "mo"], hidden=True)
+    async def motion_redirect(self, ctx: context.CustomContext, *, rest: str = ""):
+        return await self._redirect_to_root_command(ctx, "motion", rest)
 
     def _mk12_bill_from_citizen_has_enough_sponsors(self, bill: Bill) -> bool:
         if not bill.submitter:
@@ -1267,7 +642,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             bills = list(filter(filter_func, bills))
 
         pretty_bills = [
-            f"{b.formatted} ({len(b.sponsors)} sponsor{'s' if len(b.sponsors) != 1 else ''}) {':warning:' if not self._mk12_bill_from_citizen_has_enough_sponsors(b) else ''}"
+            f"* {b.formatted} ({len(b.sponsors)} sponsor{'s' if len(b.sponsors) != 1 else ''}) {':warning:' if not self._mk12_bill_from_citizen_has_enough_sponsors(b) else ''}"
             for b in bills
         ] or ["-"]
 
@@ -1292,8 +667,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
                 f"{description[:-1]}\n\nBills & Motions can be submitted to this session with "
                 f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit`. Any old bills from "
                 f"previous sessions that failed can be resubmitted to the current submission-period session "
-                f"in their origin house with "
-                f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} resubmit`.\n"
+                f"in their origin house with `{config.BOT_PREFIX}bill resubmit`.\n"
             )
 
         entries.append(description)
@@ -1311,7 +685,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
                 motions = list(filter(filter_func, motions))
 
             pretty_motions = [
-                f"{m.formatted} ({len(m.sponsors)} sponsor{'s' if len(m.sponsors) != 1 else ''})"
+                f"* {m.formatted} ({len(m.sponsors)} sponsor{'s' if len(m.sponsors) != 1 else ''})"
                 for m in motions
             ] or ["-"]
             m_amount = (
@@ -1427,7 +801,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             name="Failed Bills from previous Sessions",
             value="Are there any bills from last session that "
             f"failed, that you want to give a second chance in this session? Don't bother "
-            f"doing `{p}{l} submit` all over again, instead use `{p}{l} resubmit <bill_ids>` to "
+            f"doing `{p}{l} submit` all over again, instead use `{p}bill resubmit <bill_ids>` to "
             f"move any old, failed bills back into the current submission-period session in their "
             f"origin house.",
             inline=False,
@@ -1444,13 +818,12 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             f"{config.YES} The **submission period** for Senate Session #{new_session_display_id} was opened, and bills & "
             f"motions can now be submitted."
         )
+        self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
         if queued_bill_count:
             await ctx.send(
-                f"{config.HINT} I also attached {queued_bill_count} bill{'s' if queued_bill_count != 1 else ''} "
+                f"{config.HINT} I also attached {queued_bill_count} bill{'s' if queued_bill_count != 1 else ''} from the Commons "
                 f"that were waiting on the Senate to this new session."
             )
-
-        self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
 
         announcement = text.SafeEmbed()
         announcement.description = (
@@ -1470,7 +843,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         announcement.add_field(
             name="Sponsors",
             value="Bills and motions can be "
-            f"sponsored with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill sponsor` and `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion sponsor`.\n\nThe list of submissions can be filtered by the amount of sponsors they have. For example, `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session >=1` will only show bills & motions with 1 or more sponsors.",
+            f"sponsored with `{config.BOT_PREFIX}bill sponsor` and `{config.BOT_PREFIX}motion sponsor`.\n\nThe list of submissions can be filtered by the amount of sponsors they have. For example, `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session >=1` will only show bills & motions with 1 or more sponsors.",
             inline=False,
         )
 
@@ -1512,13 +885,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         )
 
         await self.gov_announcements_channel.send(
-            f"The {self.bot.mk.senator_presiding_term} has locked submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
+            f"The {self.bot.mk.senator_presiding_term} has locked submissions for Senate "
             f"Session #{active_leg_session.mk13_house_id}. Nothing can be submitted until the {self.bot.mk.senator_presiding_term} decides "
             f"to unlock the session again."
         )
 
         await ctx.send(
-            f"{config.YES} Submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
+            f"{config.YES} Submissions for Senate "
             f"Session #{active_leg_session.mk13_house_id} have been locked.\n{config.HINT} Want to allow "
             f"submissions again? Unlock the session with `{p}{l} session unlock`.\n"
             f"{config.HINT} In case you intend to leave submissions locked until voting starts "
@@ -1554,13 +927,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         )
 
         await self.gov_announcements_channel.send(
-            f"The {self.bot.mk.senator_presiding_term} has unlocked submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
+            f"The {self.bot.mk.senator_presiding_term} has unlocked submissions for Senate "
             f"Session #{active_leg_session.mk13_house_id}, meaning you can now submit bills & motions with "
             f"`{p}{l} submit` again."
         )
 
         await ctx.send(
-            f"{config.YES} Submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
+            f"{config.YES} Submissions for Senate "
             f"Session #{active_leg_session.mk13_house_id} have been unlocked."
         )
 
@@ -1616,7 +989,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         announcement = text.SafeEmbed()
         announcement.description = f"{self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} can vote here:\n{voting_form}"
         announcement.set_author(
-            name=f"Voting has started for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{active_leg_session.mk13_house_id}",
+            name=f"Voting has started for Senate Session #{active_leg_session.mk13_house_id}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
 
@@ -1625,7 +998,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         if should_dm_legislators:
             await self.dm_legislators(
                 reason="leg_session_update",
-                message=f":ballot_box: The **voting period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
+                message=f":ballot_box: The **voting period** for Senate Session "
                 f"#{active_leg_session.mk13_house_id} has started!\nVote here: {voting_form}",
             )
 
@@ -1725,7 +1098,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
 
         announcement = text.SafeEmbed()
         announcement.set_author(
-            name=f"{self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{active_leg_session.mk13_house_id} has been closed",
+            name=f"Senate Session #{active_leg_session.mk13_house_id} has been closed",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
 
@@ -1773,7 +1146,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             ]
 
             exported = [
-                f"Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session {session.mk13_house_id} -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
+                f"Export of Senate Session {session.mk13_house_id} -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
                 f"Xth Session - {session.opened_on.strftime('%B %d %Y')} (Bot Session {session.mk13_house_id})\n\n"
                 "----- Submitted Bills -----\n",
             ]
@@ -1789,7 +1162,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             spreadsheet_formatting_link = await self.bot.make_paste("\n".join(exported))
 
         await ctx.send(
-            f"__**Spreadsheet Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.mk13_house_id}**__\n"
+            f"__**Spreadsheet Export of Senate Session #{session.mk13_house_id}**__\n"
             f"This session's bills and motions were exported into a format that "
             f"you can easily copy & paste into Google Spreadsheets, for example for a "
             f"Legislative Docket: **<{spreadsheet_formatting_link}>**\n\nSee the video below to see how to "
@@ -1803,7 +1176,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         """Generate the Google Forms voting form with all the submitted bills & motions for a session"""
 
         return await ctx.send(
-            f"{config.NO} This command has been disabled. Please DM @ Jonas for further information."
+            f"{config.NO} This command has been disabled due to security concerns. Sorry! Please DM @ Jonas for further information."
         )
 
         session = session or await self.get_last_leg_session(house="senate")
@@ -1859,7 +1232,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             return await ctx.send(f"{config.NO} You didn't reply with a number.")
 
         generating = await ctx.send(
-            f"{config.YES} I will generate the voting form for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
+            f"{config.YES} I will generate the voting form for Senate "
             f"Session #{session.mk13_house_id}. \n:arrows_counterclockwise: This may take a few minutes..."
         )
 
@@ -1898,7 +1271,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             )
 
         embed = text.SafeEmbed(
-            title=f"Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.mk13_house_id}",
+            title=f"Export of Senate Session #{session.mk13_house_id}",
             description="Make sure to double check the form to make sure it's "
             "correct.\n\nNote that you may have to adjust "
             "the form to comply with this nation's laws as this comes with no guarantees of a form's valid "
@@ -1993,7 +1366,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
 
         js = {
             "subreddit": config.DEMOCRACIV_SUBREDDIT,
-            "title": f"{self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.mk13_house_id} - Docket & Submissions",
+            "title": f"Senate Session #{session.mk13_house_id} - Docket & Submissions",
             "content": content,
         }
 
@@ -2009,7 +1382,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
 
     async def paginate_all_sessions(self, ctx):
         all_sessions = await self.bot.db.fetch(
-            "SELECT id, opened_on, closed_on FROM legislature_session WHERE house = 'senate' ORDER BY id"
+            "SELECT id, mk13_house_id, opened_on, closed_on FROM legislature_session WHERE house = 'senate' ORDER BY id"
         )
         pretty_sessions = []
 
@@ -2019,15 +1392,15 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             if record["closed_on"]:
                 closed_on = f"<t:{int(record["closed_on"].timestamp())}:D>"
                 pretty_sessions.append(
-                    f"**Session #{record['id']}**  - {opened_on} to {closed_on}"
+                    f"* **Session #{record['mk13_house_id']}**  - {opened_on} to {closed_on}"
                 )
             else:
-                pretty_sessions.append(f"**Session #{record['id']}**  - {opened_on}")
+                pretty_sessions.append(f"* **Session #{record['mk13_house_id']}**  - {opened_on}")
 
         pages = paginator.SimplePages(
             entries=pretty_sessions,
             icon=self.bot.mk.NATION_ICON_URL,
-            author=f"All Sessions of the {self.bot.mk.NATION_ADJECTIVE} {self.bot.mk.LEGISLATURE_NAME}",
+            author=f"All Sessions of the Senate",
             empty_message="There hasn't been a session yet.",
             per_page=12,
         )
@@ -2165,7 +1538,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             await ctx.send(f"{config.NO} Something went wrong.")
             return
 
-        is_procedure = bool(bill_modal.is_procedure.component.value)
+        is_procedure = True if bill_modal.is_procedure.component.values[0] == "true" else False
         is_vetoable = not is_procedure
         bill_description = (
             bill_modal.bill_description.component.value
@@ -2262,8 +1635,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             name="Sponsors",
             value="Depending on current legislative procedures or laws, your bill might need a specific "
             f"amount of sponsors before the {self.bot.mk.senator_presiding_term} allows a vote on it. "
-            f"Tell your supporters to sponsor your bill with `{p}{l} bill sponsor {bill_id}`. The list "
-            f"of sponsors will be displayed on your bill's detail page, `{p}{l} bill {bill_id}`.",
+            f"Tell your supporters to sponsor your bill with `{p}bill sponsor {bill_id}`. The list "
+            f"of sponsors will be displayed on your bill's detail page, `{p}bill {bill_id}`.",
             inline=False,
         )
 
@@ -2282,7 +1655,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         info.add_field(
             name="Withdrawing a Bill",
             value=f"If, for whatever reason, you want to withdraw your bill from this "
-            f"session, use the `{p}{l} withdraw bill {bill_id}` command.\n\n"
+            f"session, use the `{p}{l} withdraw {bill_id}` or `{p}bill withdraw {bill_id}` command.\n\n"
             f"You can only withdraw your bills during the Submission Period of a legislative session, "
             f"while the {self.bot.mk.senator_presiding_term} can withdraw _every_ bill, at any time.",
             inline=False,
@@ -2295,7 +1668,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             f"`{p}{l} bills from {ctx.author.name}` and "
             f"`{p}{l} bills from <your_party>` if you belong to a political party, and "
             f"everyone can search for it based on matching keywords "
-            f"with `{p}{l} bill search <keyword>`.",
+            f"with `{p}bill search <keyword>`.",
         )
         await ctx.send(
             f"{config.YES} Your bill `{name}` (#{bill_id}) was submitted for session #{current_leg_session_display_id}.",
@@ -2363,7 +1736,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         await ctx.send(
             f"{config.YES} Your motion `{title}` (#{motion_id}) was submitted for session #{current_leg_session_display_id}.\n"
             f"{config.HINT} Tell your supporters to sponsor your motion with "
-            f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion sponsor {motion_id}`."
+            f"`{config.BOT_PREFIX}motion sponsor {motion_id}`."
         )
         await self.bot.api_request(
             "POST",
@@ -2578,17 +1951,16 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             f"{config.NO} `superpass` is a legacy-only admin path and is not part of the MK13 bicameral process."
         )
 
-    @legislature.group(name="withdraw", aliases=["w"], hidden=True)
+    @legislature.command(name="withdraw", aliases=["w"], hidden=True)
     @checks.is_democraciv_guild()
     async def withdraw(self, ctx, *, bill_or_motion_ids):
-        """Withdraw one or multiple bills or motions from the current session"""
+        """Withdraw one or multiple bills or motions."""
 
         view = ModelChooseView(ctx)
 
         await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Do you want to withdraw bills or motions? "
-            f"You can use the `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} "
-            f"bill withdraw` and `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion withdraw` commands "
+            f"You can use the `{config.BOT_PREFIX}bill withdraw` and `{config.BOT_PREFIX}motion withdraw` commands "
             f"to skip this step.",
             view=view,
         )
@@ -2599,199 +1971,12 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             return
 
         if result == "bill":
-            ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill withdraw {bill_or_motion_ids}"
-
-        elif result == "motion":
-            ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion withdraw {bill_or_motion_ids}"
-
-        new_ctx = await self.bot.get_context(ctx.message)
-        await self.bot.invoke(new_ctx)
-
-    async def withdraw_objects(
-        self,
-        ctx: context.CustomContext,
-        objects: typing.List[typing.Union[Bill, Motion]],
-    ):
-        if isinstance(objects[0], Bill):
-            obj_name = "bill"
-        else:
-            obj_name = "motion"
-
-        last_leg_session = await self.get_last_leg_session(house="senate")
-
-        def verify_object(_ctx, to_verify) -> str:
-            if to_verify.session.closed_on:
-                return f"The session during which this {obj_name} was submitted is not open anymore."
-
-            if not self.is_cabinet(_ctx.author):
-                if _ctx.author.id == to_verify.submitter_id:
-                    if last_leg_session.status is SessionStatus.SUBMISSION_PERIOD:
-                        allowed = True
-                    else:
-                        return f"The original submitter can only withdraw {obj_name}s during the Submission Period."
-                else:
-                    allowed = False
-            else:
-                allowed = True
-
-            if not allowed:
-                return (
-                    f"Only the {_ctx.bot.mk.LEGISLATURE_CABINET_NAME} and the original submitter "
-                    f"of this {obj_name} can withdraw it."
-                )
-
-        if obj_name == "bill":
-            consumer = models.LegalConsumer(
-                ctx=ctx, objects=objects, action=models.BillStatus.withdraw
-            )
-            await consumer.filter(filter_func=verify_object)
-
-            if consumer.failed:
-                await ctx.send(
-                    f":warning: The following {obj_name}s can not be withdrawn by you.\n{consumer.failed_formatted}"
-                )
-
-            if not consumer.passed:
-                return
-
-            reaction = await ctx.confirm(
-                f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want"
-                f" to withdraw the following {obj_name}s from Session #{last_leg_session.mk13_house_id}?"
-                f"\n{consumer.passed_formatted}"
+            return await self._redirect_to_root_command(
+                ctx, "bill", f"withdraw {bill_or_motion_ids}"
             )
 
-            if not reaction:
-                return await ctx.send("Cancelled.")
-
-            await consumer.consume()
-            message = f"The following {obj_name}s were withdrawn by {ctx.author}.\n{consumer.passed_formatted}"
-
-        elif obj_name == "motion":
-            # doing it the old (ugly) way for motions since LegalConsumer is only for bills
-            unverified_objects = []
-            passed = []
-
-            for obj in objects:
-                error = verify_object(ctx, obj)
-
-                if error:
-                    unverified_objects.append((obj, error))
-                else:
-                    passed.append(obj)
-
-            if unverified_objects:
-                error_messages = "\n".join(
-                    [
-                        f"-  **{_object.name}** (#{_object.id}): _{reason}_"
-                        for _object, reason in unverified_objects
-                    ]
-                )
-                await ctx.send(
-                    f":warning: The following {obj_name}s can not be withdrawn by you.\n{error_messages}"
-                )
-
-            if not passed:
-                return
-
-            pretty_objects = "\n".join(
-                [f"-  **{_object.name}** (#{_object.id})" for _object in passed]
-            )
-            are_you_sure = await ctx.confirm(
-                f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want"
-                f" to withdraw the following {obj_name}s from Session #{last_leg_session.mk13_house_id}?"
-                f"\n{pretty_objects}"
-            )
-
-            if not are_you_sure:
-                return await ctx.send("Cancelled.")
-
-            for obj in passed:
-                await obj.withdraw()
-
-            message = f"The following {obj_name}s were withdrawn by {ctx.author}.\n{pretty_objects}"
-
-        await ctx.send(f"{config.YES} All {obj_name}s were withdrawn.")
-
-        if not self.is_cabinet(ctx.author):
-            if self.senator_presiding is not None:
-                await self.bot.safe_send_dm(
-                    target=self.senator_presiding,
-                    reason="leg_session_withdraw",
-                    message=message,
-                )
-
-    @bill.command(name="withdraw", aliases=["w"])
-    @checks.is_democraciv_guild()
-    async def withdrawbill(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Withdraw one or multiple bills from the current session
-
-        The {senator_presiding_term} can withdraw every submitted bill during both the Submission Period and the Voting Period.
-           The original submitter of the bill can only withdraw their own bill during the Submission Period.
-
-        **Example**
-            `{PREFIX}{COMMAND} 56` will withdraw bill #56
-            `{PREFIX}{COMMAND} 12 13 14 15 16` will withdraw all those bills"""
-
-        if not bill_ids:
-            return await ctx.send_help(ctx.command)
-
-        await self.withdraw_objects(ctx, bill_ids)
-
-    @withdraw.command(name="bill", aliases=["b"], hidden=True)
-    @checks.is_democraciv_guild()
-    async def _withdraw_bill_alias(
-        self, ctx: context.CustomContext, bill_ids: Greedy[Bill]
-    ):
-        """Withdraw one or multiple bills from the current session
-
-        The {senator_presiding_term} can withdraw every submitted bill during both the Submission Period and the Voting Period.
-           The original submitter of the bill can only withdraw their own bill during the Submission Period.
-
-        **Example**
-            `{PREFIX}{COMMAND} 56` will withdraw bill #56
-            `{PREFIX}{COMMAND} 12 13 14 15 16` will withdraw all those bills"""
-
-        await ctx.invoke(
-            self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw bill"),
-            bill_ids=bill_ids,
-        )
-
-    @motion.command(name="withdraw", aliases=["w"])
-    @checks.is_democraciv_guild()
-    async def withdrawmotion(
-        self, ctx: context.CustomContext, motion_ids: Greedy[Motion]
-    ):
-        """Withdraw one or multiple motions from the current session
-
-        The {senator_presiding_term} can withdraw every submitted motion during both the Submission Period and the Voting Period.
-           The original submitter of the motion can only withdraw their own motion during the Submission Period.
-
-        **Example**
-            `{PREFIX}{COMMAND} 56` will withdraw motion #56
-            `{PREFIX}{COMMAND} 12 13 14 15 16` will withdraw all those motions"""
-
-        if not motion_ids:
-            return await ctx.send_help(ctx.command)
-
-        await self.withdraw_objects(ctx, motion_ids)
-
-    @withdraw.command(name="motion", aliases=["m"], hidden=True)
-    @checks.is_democraciv_guild()
-    async def _withdraw_motion_alias(
-        self, ctx: context.CustomContext, motion_ids: Greedy[Motion]
-    ):
-        """Withdraw one or multiple motions from the current session
-
-        The {senator_presiding_term} can withdraw every submitted motion during both the Submission Period and the Voting Period.
-           The original submitter of the motion can only withdraw their own motion during the Submission Period.
-
-        **Example**
-            `{PREFIX}{COMMAND} 56` will withdraw motion #56
-            `{PREFIX}{COMMAND} 12 13 14 15 16` will withdraw all those motions"""
-
-        await ctx.invoke(
-            self.bot.get_command(f"{self.bot.mk.LEGISLATURE_COMMAND} withdraw motion"),
-            motion_ids=motion_ids,
+        return await self._redirect_to_root_command(
+            ctx, "motion", f"withdraw {bill_or_motion_ids}"
         )
 
     @legislature.command(name="override", aliases=["ov"], hidden=True)
@@ -2832,133 +2017,6 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         await ctx.send(
             f"{config.YES} The vetoes of all bills were overridden, and all bills are active laws and in "
             f"`{config.BOT_PREFIX}laws` now."
-        )
-
-    @bill.command(name="sponsor", aliases=["cosponsor", "second"])
-    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
-    @checks.is_citizen_if_multiciv()
-    async def b_sponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Show your support for one or multiple bills by sponsoring them
-
-        **Example**
-           `{PREFIX}{COMMAND} 56`
-           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
-
-        if not bill_ids:
-            return await ctx.send_help(ctx.command)
-
-        consumer = models.LegalConsumer(
-            ctx=ctx, objects=bill_ids, action=models.BillStatus.sponsor
-        )
-
-        def filter_sponsor(_ctx, _bill, **kwargs):
-            if _ctx.author.id == _bill.submitter_id:
-                return "The bill's author cannot sponsor their own bill."
-
-            if _ctx.author in _bill.sponsors:
-                return "You already sponsored this bill."
-
-        await consumer.filter(filter_func=filter_sponsor, sponsor=ctx.author)
-
-        if consumer.failed:
-            await ctx.send(
-                f":warning: The following bills cannot be sponsored.\n{consumer.failed_formatted}"
-            )
-
-        if not consumer.passed:
-            return
-
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to sponsor the following bills?\n{consumer.passed_formatted}"
-        )
-
-        if not reaction:
-            return await ctx.send("Cancelled.")
-
-        await consumer.consume(sponsor=ctx.author)
-        await ctx.send(f"{config.YES} All bills were sponsored by you.")
-
-    @bill.command(name="unsponsor", aliases=["usp"])
-    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
-    async def b_unsponsor(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Remove yourself from the list of sponsors of one or multiple bills
-
-        **Example**
-           `{PREFIX}{COMMAND} 56`
-           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
-
-        if not bill_ids:
-            return await ctx.send_help(ctx.command)
-
-        consumer = models.LegalConsumer(
-            ctx=ctx, objects=bill_ids, action=models.BillStatus.unsponsor
-        )
-
-        def filter_sponsor(_ctx, _bill, **kwargs):
-            if _ctx.author not in _bill.sponsors:
-                return "You are not a sponsor of this bill."
-
-        await consumer.filter(filter_func=filter_sponsor, sponsor=ctx.author)
-
-        if consumer.failed:
-            await ctx.send(
-                f":warning: The following bills cannot be unsponsored.\n{consumer.failed_formatted}"
-            )
-
-        if not consumer.passed:
-            return
-
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to remove yourself from the list of sponsors of the following bills?\n{consumer.passed_formatted}"
-        )
-
-        if not reaction:
-            return await ctx.send("Cancelled.")
-
-        await consumer.consume(sponsor=ctx.author)
-        await ctx.send(
-            f"{config.YES} You were removed from the list of sponsors from all bills."
-        )
-
-    @legislature.command(name="resubmit", aliases=["rs"])
-    @checks.is_citizen_if_multiciv()
-    async def resubmit(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        """Resubmit failed bills to the current submission-period session in their origin house
-
-        **Example**
-           `{PREFIX}{COMMAND} 56`
-           `{PREFIX}{COMMAND} 12 13 14 15 16`"""
-
-        if not bill_ids:
-            return await ctx.send_help(ctx.command)
-
-        consumer = models.LegalConsumer(
-            ctx=ctx, objects=bill_ids, action=models.BillStatus.resubmit
-        )
-        await consumer.filter(resubmitter=ctx.author)
-
-        if consumer.failed:
-            await ctx.send(
-                f":warning: The following bills cannot be resubmitted.\n{consumer.failed_formatted}"
-            )
-
-        if not consumer.passed:
-            return
-
-        reaction = await ctx.confirm(
-            f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
-            f"to resubmit the following bills to the current submission-period session in their origin house?\n"
-            f"{consumer.passed_formatted}"
-        )
-
-        if not reaction:
-            return await ctx.send("Cancelled.")
-
-        await consumer.consume(resubmitter=ctx.author)
-        await ctx.send(
-            f"{config.YES} All bills were resubmitted to their origin-house submission session."
         )
 
     def format_stats(
@@ -3025,7 +2083,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             icon_url=self.bot.mk.NATION_ICON_URL,
             name=f"Statistics for the "
             f"{self.bot.mk.NATION_ADJECTIVE} "
-            f"{self.bot.mk.LEGISLATURE_NAME}",
+            f"Senate",
         )
 
         general_value = (
@@ -3046,7 +2104,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         await ctx.send(embed=embed)
 
     @legislature.command(name="sponsor", aliases=["second", "cosponsor"], hidden=True)
-    @checks.has_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+    @checks.is_democraciv_guild()
     @checks.is_citizen_if_multiciv()
     async def sponsor(self, ctx, *, bill_or_motion_ids):
         """Show your support for one or multiple bills or motions by sponsoring them
@@ -3059,8 +2117,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
 
         await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Do you want to sponsor bills or motions?\n"
-            f"{config.HINT} You can use the `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} "
-            f"bill sponsor` and `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion sponsor` commands "
+            f"{config.HINT} You can use the `{config.BOT_PREFIX}bill sponsor` and `{config.BOT_PREFIX}motion sponsor` commands "
             f"to skip this step.",
             view=view,
         )
@@ -3071,15 +2128,16 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             return
 
         if result == "bill":
-            ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill sponsor {bill_or_motion_ids}"
+            return await self._redirect_to_root_command(
+                ctx, "bill", f"sponsor {bill_or_motion_ids}"
+            )
 
-        elif result == "motion":
-            ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion sponsor {bill_or_motion_ids}"
-
-        new_ctx = await self.bot.get_context(ctx.message)
-        await self.bot.invoke(new_ctx)
+        return await self._redirect_to_root_command(
+            ctx, "motion", f"sponsor {bill_or_motion_ids}"
+        )
 
     @legislature.command(name="unsponsor", aliases=["usp"], hidden=True)
+    @checks.is_democraciv_guild()
     async def unsponsor(self, ctx, *, bill_or_motion_ids):
         """Remove yourself from the list of sponsors of one or multiple bills or motions
 
@@ -3091,8 +2149,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
 
         await ctx.send(
             f"{config.USER_INTERACTION_REQUIRED} Do you want to unsponsor bills or motions?\n"
-            f"{config.HINT} You can use the `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} "
-            f"bill unsponsor` and `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion unsponsor` commands "
+            f"{config.HINT} You can use the `{config.BOT_PREFIX}bill unsponsor` and `{config.BOT_PREFIX}motion unsponsor` commands "
             f"to skip this step.",
             view=view,
         )
@@ -3103,13 +2160,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             return
 
         if result == "bill":
-            ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} bill unsponsor {bill_or_motion_ids}"
+            return await self._redirect_to_root_command(
+                ctx, "bill", f"unsponsor {bill_or_motion_ids}"
+            )
 
-        elif result == "motion":
-            ctx.message.content = f"{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion unsponsor {bill_or_motion_ids}"
-
-        new_ctx = await self.bot.get_context(ctx.message)
-        await self.bot.invoke(new_ctx)
+        return await self._redirect_to_root_command(
+            ctx, "motion", f"unsponsor {bill_or_motion_ids}"
+        )
 
     @legislature.command(name="statistics", aliases=["stat", "stats", "statistic"])
     async def stats(

@@ -178,11 +178,7 @@ class Bill(commands.Converter, FuzzyableMixin):
     """
 
     model = "Bill"
-    fuzzy_description = (
-        f"Maybe you were looking for the "
-        f"`{config.BOT_PREFIX}{mk.MarkConfig.LEGISLATURE_COMMAND} bill search` "
-        f"command instead?\n"
-    )
+    fuzzy_description = f"Maybe you were looking for the `{config.BOT_PREFIX}bill search` command instead?\n"
 
     def __init__(self, **kwargs):
         self.id: int = kwargs.get("id")
@@ -474,11 +470,7 @@ class Motion(commands.Converter, FuzzyableMixin):
     """
 
     model = "Motion"
-    fuzzy_description = (
-        f"Maybe you were looking for the "
-        f"`{config.BOT_PREFIX}{mk.MarkConfig.LEGISLATURE_COMMAND} motion search` "
-        f"command instead?\n"
-    )
+    fuzzy_description = f"Maybe you were looking for the `{config.BOT_PREFIX}motion search` command instead?\n"
 
     def __init__(self, **kwargs):
         self.id: int = kwargs.get("id")
@@ -1026,8 +1018,7 @@ class BillStatus:
             _BillStatusFlag.LAW,
             note=(
                 f"Passed into law as a {self.house_name(acting_house)} procedure during "
-                f"{self._format_session_name()}. Chamber procedures do not require approval "
-                f"by the other house or the Executive."
+                f"{self._format_session_name()}."
             ),
             executive_deadline_at=None,
         )
@@ -1070,7 +1061,7 @@ class BillStatus:
     ):
         self._require_current_house(acting_house)
         deadline = datetime.datetime.utcnow() + datetime.timedelta(hours=48)
-        deadline_fmt = deadline.strftime("%B %d, %Y at %H:%M UTC")
+        deadline_fmt = f"<t:{int(deadline.replace(tzinfo=datetime.timezone.utc).timestamp())}:F>"
 
         await self._apply_status(
             old_status,

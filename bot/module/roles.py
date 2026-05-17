@@ -18,13 +18,13 @@ class Selfroles(context.CustomCog):
         )
 
         embed_message = [
-            f"Looking for political parties? Try `{config.BOT_PREFIX}party` and `{config.BOT_PREFIX}join <party>`.\nIn order to add or remove a role from you, use `{config.BOT_PREFIX}role <role>`.\n\n"
+            f"Looking for political parties? Try `{config.BOT_PREFIX}party` and `{config.BOT_PREFIX}join <party>`.\nIn order to add or remove a role from you, use `{config.BOT_PREFIX}role <role>`.\n"
         ]
 
         for role in role_list:
             role_object = ctx.guild.get_role(role["role_id"])
             if role_object is not None:
-                embed_message.append(role_object.name)
+                embed_message.append(f"* {role_object.name}")
 
         if not embed_message:
             embed_message = ["This server has no selfroles yet."]

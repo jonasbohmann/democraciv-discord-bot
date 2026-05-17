@@ -48,7 +48,7 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
         name="legislature",
         aliases=["leg", "l"],
     )
-    async def legislature(self, ctx):
+    async def legislature(self, ctx: commands.Context):
         """MK13-specific information about the Commons and the Senate. See `-help commons` and `-help senate` for actual commands."""
 
         embed = text.SafeEmbed()
@@ -75,7 +75,31 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
             value=f"{"No active session." if sen_active_leg_session is None else f"Session #{sen_active_leg_session.mk13_house_id} - {sen_active_leg_session.status.value}"}\n\n- `-senate`\n- `-senate session`\n- `-senate submit`\n\nSee `-help senate` for all available commands.",
             inline=True,
         )
+
+        embed2 = text.SafeEmbed()
+        embed2.set_author(
+            name=f"Additional Commands",
+            icon_url=self.bot.mk.NATION_ICON_URL,
+        )
+        embed2.add_field(
+            name="Laws",
+            value=f"- `-laws`\n- `-laws search`\n- `-laws repeal`\n- ...\n- `-help laws`",
+            inline=True,
+        )
+
+        embed2.add_field(
+            name="Bills",
+            value=f"- `-bills`\n- `-bills search`\n- `-bills advanced-search`\n- `-bills sponsor`\n- ...\n- `-help bills`",
+            inline=True,
+        )
+        embed2.add_field(
+            name="Motions",
+            value=f"- `-motions`\n- `-motions search`\n- `-motions from <person_or_party>`\n- ...\n- `-help motions`",
+            inline=True,
+        )
+
         await ctx.send(embed=embed)
+        await ctx.send(embed=embed2)
 
     # todo oct-24: lots of duplicate code
     @commands.group(

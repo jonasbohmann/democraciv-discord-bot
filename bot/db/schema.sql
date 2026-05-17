@@ -106,26 +106,12 @@ CREATE TABLE IF NOT EXISTS bill(
     submitter bigint NOT NULL,
     submitter_description text NOT NULL,
     is_vetoable bool NOT NULL,
-    status int DEFAULT 0 NOT NULL
+    status int DEFAULT 0 NOT NULL,
+    origin_house text DEFAULT 'senate' NOT NULL,
+    executive_deadline_at timestamp WITHOUT TIME ZONE,
+    is_procedure bool DEFAULT FALSE NOT NULL
 );
 
-ALTER TABLE bill ADD COLUMN IF NOT EXISTS origin_house text;
-ALTER TABLE bill ADD COLUMN IF NOT EXISTS executive_deadline_at timestamp WITHOUT TIME ZONE;
-ALTER TABLE bill ADD COLUMN IF NOT EXISTS is_procedure bool;
-
-UPDATE bill AS b
-SET origin_house = COALESCE(ls.house, 'senate')
-FROM legislature_session AS ls
-WHERE b.leg_session = ls.id
-  AND b.origin_house IS NULL;
-
-UPDATE bill SET origin_house = 'senate' WHERE origin_house IS NULL;
-UPDATE bill SET is_procedure = FALSE WHERE is_procedure IS NULL;
-
-ALTER TABLE bill ALTER COLUMN origin_house SET DEFAULT 'senate';
-ALTER TABLE bill ALTER COLUMN origin_house SET NOT NULL;
-ALTER TABLE bill ALTER COLUMN is_procedure SET DEFAULT FALSE;
-ALTER TABLE bill ALTER COLUMN is_procedure SET NOT NULL;
 
 CREATE TABLE IF NOT EXISTS bill_session(
     id serial UNIQUE PRIMARY KEY,
@@ -179,10 +165,6 @@ CREATE INDEX IF NOT EXISTS bill_lookup_tag_tag_trgm_idx ON bill_lookup_tag USING
 CREATE INDEX IF NOT EXISTS bill_name_lower_idx ON bill (LOWER(name));
 CREATE INDEX IF NOT EXISTS bill_session_leg_session_idx ON bill_session (leg_session);
 CREATE INDEX IF NOT EXISTS bill_session_bill_id_idx ON bill_session (bill_id);
-
-INSERT INTO bill_session (bill_id, leg_session)
-SELECT id, leg_session FROM bill
-ON CONFLICT DO NOTHING;
 
 
 CREATE TABLE IF NOT EXISTS tag(
