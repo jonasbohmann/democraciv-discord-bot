@@ -117,10 +117,8 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         #    return await ctx.send(
         #        f"{config.NO} That doesn't look like a Google Docs URL."
         #    )
-
-        return await ctx.send(f"{config.NO} This command will be enabled shortly after MK13 has started.")
     
-        doc_url = ""#self.bot.mk.LEGAL_CODE
+        doc_url = "https://docs.google.com/document/d/1ywV_F70odxHh5fLcqcghpFOToPao85CjfT5Y_mYcml0/edit?usp=sharing"
 
         if not doc_url or not self.is_google_doc_link(doc_url):
             return await ctx.send(

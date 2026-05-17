@@ -2180,7 +2180,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             FuzzySettings(weights=(5, 0, 2)),
         ] = None,
     ):
-        """Legislative statistics about the overall {LEGISLATURE_NAME}, a specific person or a political party
+        """Legislative statistics about the overall Legislature, a specific person or a political party
 
         **Example**
         `{PREFIX}{COMMAND}` to get the overall statistics about the {LEGISLATURE_NAME}

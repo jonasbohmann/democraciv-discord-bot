@@ -192,7 +192,7 @@ class GovernmentMixin:
         await pages.start(ctx)
 
     async def generate_google_docs_legal_code(self):
-        doc_url = self.bot.mk.LEGAL_CODE
+        doc_url = "https://docs.google.com/document/d/1ywV_F70odxHh5fLcqcghpFOToPao85CjfT5Y_mYcml0/edit?usp=sharing"
 
         if not doc_url:
             return
