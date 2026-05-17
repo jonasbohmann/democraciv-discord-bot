@@ -41,6 +41,8 @@ class Session(commands.Converter):
         self.closed_on: datetime = kwargs.get("closed_on")
         self.bills: typing.List[int] = kwargs.get("bills", [])
         self.motions: typing.List[int] = kwargs.get("motions", [])
+        self.house: typing.Optional[str] = kwargs.get("house")
+        self.mk13_house_id: typing.Optional[int] = kwargs.get("mk13_house_id")
         self._speaker: int = kwargs.get("speaker")
         self._bot = kwargs.get("bot")
 

@@ -296,6 +296,12 @@ class SubmitMotionModal(
         ),
     )
 
+    understand_description = discord.ui.Label(
+        description="I understand that motions are intended for short-term, temporary actions.",
+        text="Motions won't show up in -laws",
+        component=discord.ui.Checkbox(),
+    )
+
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
         self.stop()
@@ -309,7 +315,7 @@ class SubmitMotionModal(
         traceback.print_exception(type(error), error, error.__traceback__)
 
 
-LEG_COMMAND_ALIASES = ["leg", "legislature", "s", "sen"]
+LEG_COMMAND_ALIASES = ["s", "sen", "senate"]
 
 try:
     LEG_COMMAND_ALIASES.remove(mk.MarkConfig.LEGISLATURE_COMMAND.lower())
@@ -318,7 +324,7 @@ except ValueError:
 
 
 class Legislature(
-    context.CustomCog, mixin.GovernmentMixin, name=mk.MarkConfig.LEGISLATURE_NAME
+    context.CustomCog, mixin.GovernmentMixin, name="Senate"
 ):
     """Allows the Government to organize legislative sessions and bill & motion submissions"""
 
@@ -401,13 +407,13 @@ class Legislature(
     async def legislature(self, ctx):
         """Dashboard for {LEGISLATURE_LEGISLATOR_NAME_PLURAL} with important links and the status of the current session"""
 
-        active_leg_session = await self.get_active_leg_session()
+        active_leg_session = await self.get_active_leg_session(house="senate")
 
         if active_leg_session is None:
             current_session_value = "There currently is no open session."
         else:
             current_session_value = (
-                f"Session #{active_leg_session.id} - {active_leg_session.status.value}"
+                f"Session #{active_leg_session.mk13_house_id} - {active_leg_session.status.value}"
             )
 
         embed = text.SafeEmbed()
@@ -1054,7 +1060,7 @@ class Legislature(
         failed = {}
         passed = []
 
-        last_session = await self.get_active_leg_session()
+        last_session = await self.get_active_leg_session(house="senate")
 
         for motion in motion_ids:
             if ctx.author.id == motion.submitter_id:
@@ -1123,7 +1129,7 @@ class Legislature(
         failed = {}
         passed = []
 
-        last_session = await self.get_active_leg_session()
+        last_session = await self.get_active_leg_session(house="senate")
 
         for motion in motion_ids:
             if ctx.author not in motion.sponsors:
@@ -1273,7 +1279,7 @@ class Legislature(
 
         """
 
-        session = session or await self.get_last_leg_session()
+        session = session or await self.get_last_leg_session(house="senate")
 
         if session is None:
             return await ctx.send(
@@ -1376,7 +1382,7 @@ class Legislature(
         pages = paginator.SimplePages(
             entries=entries,
             icon=self.bot.mk.NATION_ICON_URL,
-            author=f"Senate Session #{session.id}",
+            author=f"Senate Session #{session.mk13_house_id}",
         )
         await pages.start(ctx)
 
@@ -1387,18 +1393,19 @@ class Legislature(
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
 
-        active_leg_session = await self.get_active_leg_session()
+        active_leg_session = await self.get_active_leg_session(house="senate")
 
         if active_leg_session is not None:
             return await ctx.send(
-                f"{config.NO} There is still an open session, close session #{active_leg_session.id} "
+                f"{config.NO} There is still an open session, close session #{active_leg_session.mk13_house_id} "
                 f"first with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session close`."
             )
 
         new_session = await self.bot.db.fetchval(
-            "INSERT INTO legislature_session (speaker, opened_on) VALUES ($1, $2) RETURNING id",
+            "INSERT INTO legislature_session (speaker, opened_on, house, mk13_house_id) VALUES ($1, $2, $3, nextval('mk13_senate_session_seq')) RETURNING id",
             ctx.author.id,
             datetime.datetime.utcnow(),
+            "senate"
         )
 
         p = config.BOT_PREFIX
@@ -1501,7 +1508,7 @@ class Legislature(
     async def locksession(self, ctx):
         """Lock (deny) submissions for the currently active session"""
 
-        active_leg_session = await self.get_active_leg_session()
+        active_leg_session = await self.get_active_leg_session(house="senate")
         p = config.BOT_PREFIX
         l = self.bot.mk.LEGISLATURE_COMMAND
 
@@ -1524,13 +1531,13 @@ class Legislature(
 
         await self.gov_announcements_channel.send(
             f"The Speaker has locked submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
-            f"Session #{active_leg_session.id}. Nothing can be submitted until the Speaker decides "
+            f"Session #{active_leg_session.mk13_house_id}. Nothing can be submitted until the Speaker decides "
             f"to unlock the session again."
         )
 
         await ctx.send(
             f"{config.YES} Submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
-            f"Session #{active_leg_session.id} have been locked.\n{config.HINT} Want to allow "
+            f"Session #{active_leg_session.mk13_house_id} have been locked.\n{config.HINT} Want to allow "
             f"submissions again? Unlock the session with `{p}{l} session unlock`.\n"
             f"{config.HINT} In case you intend to leave submissions locked until voting starts "
             f"in order to use this time as a **debate period**, you can make me post the current list "
@@ -1545,7 +1552,7 @@ class Legislature(
     async def unlocksession(self, ctx):
         """Unlock (allow) submissions for the currently active session again"""
 
-        active_leg_session = await self.get_active_leg_session()
+        active_leg_session = await self.get_active_leg_session(house="senate")
         p = config.BOT_PREFIX
         l = self.bot.mk.LEGISLATURE_COMMAND
 
@@ -1568,13 +1575,13 @@ class Legislature(
 
         await self.gov_announcements_channel.send(
             f"The Speaker has unlocked submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
-            f"Session #{active_leg_session.id}, meaning you can now submit bills & motions with "
+            f"Session #{active_leg_session.mk13_house_id}, meaning you can now submit bills & motions with "
             f"`{p}{l} submit` again."
         )
 
         await ctx.send(
             f"{config.YES} Submissions for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
-            f"Session #{active_leg_session.id} have been unlocked."
+            f"Session #{active_leg_session.mk13_house_id} have been unlocked."
         )
 
     @session.command(name="vote", aliases=["u", "v", "update"])
@@ -1584,7 +1591,7 @@ class Legislature(
     async def updatesession(self, ctx: context.CustomContext):
         """Changes the current session's status to be open for voting"""
 
-        active_leg_session = await self.get_active_leg_session()
+        active_leg_session = await self.get_active_leg_session(house="senate")
         p = config.BOT_PREFIX
         l = self.bot.mk.LEGISLATURE_COMMAND
 
@@ -1621,7 +1628,7 @@ class Legislature(
         await active_leg_session.start_voting(voting_form)
 
         await ctx.send(
-            f"{config.YES} Session #{active_leg_session.id} is now in **voting period**.\n{config.HINT} You can make "
+            f"{config.YES} Session #{active_leg_session.mk13_house_id} is now in **voting period**.\n{config.HINT} You can make "
             f"me post the list of bill & motion submissions to **r/{config.DEMOCRACIV_SUBREDDIT}** with "
             f"`{p}{l} session export reddit`.\n{config.HINT} Once you feel "
             f"like enough time has passed for people to vote, close this session with `{p}{l} session close`. "
@@ -1631,7 +1638,7 @@ class Legislature(
         announcement = text.SafeEmbed()
         announcement.description = f"{self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} can vote here:\n{voting_form}"
         announcement.set_author(
-            name=f"Voting has started for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{active_leg_session.id}",
+            name=f"Voting has started for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{active_leg_session.mk13_house_id}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
 
@@ -1641,7 +1648,7 @@ class Legislature(
             await self.dm_legislators(
                 reason="leg_session_update",
                 message=f":ballot_box: The **voting period** for {self.bot.mk.LEGISLATURE_ADJECTIVE} Session "
-                f"#{active_leg_session.id} has started!\nVote here: {voting_form}",
+                f"#{active_leg_session.mk13_house_id} has started!\nVote here: {voting_form}",
             )
 
     @session.command(name="close", aliases=["c"])
@@ -1651,7 +1658,7 @@ class Legislature(
     async def closesession(self, ctx):
         """Closes the current session"""
 
-        active_leg_session = await self.get_active_leg_session()
+        active_leg_session = await self.get_active_leg_session(house="senate")
 
         p = config.BOT_PREFIX
         l = self.bot.mk.LEGISLATURE_COMMAND
@@ -1738,13 +1745,13 @@ class Legislature(
             f"collective brainstorming once the session really 'starts'.",
         )
 
-        await ctx.send(f"{config.YES} Session #{active_leg_session.id} was closed.")
+        await ctx.send(f"{config.YES} Session #{active_leg_session.mk13_house_id} was closed.")
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
 
         announcement = text.SafeEmbed()
         announcement.set_author(
-            name=f"{self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{active_leg_session.id} has been closed",
+            name=f"{self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{active_leg_session.mk13_house_id} has been closed",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
 
@@ -1769,7 +1776,7 @@ class Legislature(
     async def export_spreadsheet(self, ctx, session: Session = None):
         """Export a session's submissions into copy & paste-able formatting for Google Spreadsheets"""
 
-        session = session or await self.get_last_leg_session()
+        session = session or await self.get_last_leg_session(house="senate")
 
         if session is None:
             return await ctx.send(f"{config.NO} There hasn't been a session yet.")
@@ -1792,8 +1799,8 @@ class Legislature(
             ]
 
             exported = [
-                f"Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session {session.id} -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
-                f"Xth Session - {session.opened_on.strftime('%B %d %Y')} (Bot Session {session.id})\n\n"
+                f"Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session {session.mk13_house_id} -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
+                f"Xth Session - {session.opened_on.strftime('%B %d %Y')} (Bot Session {session.mk13_house_id})\n\n"
                 "----- Submitted Bills -----\n",
             ]
 
@@ -1808,7 +1815,7 @@ class Legislature(
             spreadsheet_formatting_link = await self.bot.make_paste("\n".join(exported))
 
         await ctx.send(
-            f"__**Spreadsheet Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}**__\n"
+            f"__**Spreadsheet Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.mk13_house_id}**__\n"
             f"This session's bills and motions were exported into a format that "
             f"you can easily copy & paste into Google Spreadsheets, for example for a "
             f"Legislative Docket: **<{spreadsheet_formatting_link}>**\n\nSee the video below to see how to "
@@ -1825,7 +1832,7 @@ class Legislature(
             f"{config.NO} This command has been disabled. Please DM @ Jonas for further information."
         )
 
-        session = session or await self.get_last_leg_session()
+        session = session or await self.get_last_leg_session(house="senate")
 
         if session is None:
             return await ctx.send(f"{config.NO} There hasn't been a session yet.")
@@ -1879,7 +1886,7 @@ class Legislature(
 
         generating = await ctx.send(
             f"{config.YES} I will generate the voting form for {self.bot.mk.LEGISLATURE_ADJECTIVE} "
-            f"Session #{session.id}. \n:arrows_counterclockwise: This may take a few minutes..."
+            f"Session #{session.mk13_house_id}. \n:arrows_counterclockwise: This may take a few minutes..."
         )
 
         def safe_get_submitter(thing) -> str:
@@ -1917,7 +1924,7 @@ class Legislature(
             )
 
         embed = text.SafeEmbed(
-            title=f"Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id}",
+            title=f"Export of {self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.mk13_house_id}",
             description="Make sure to double check the form to make sure it's "
             "correct.\n\nNote that you may have to adjust "
             "the form to comply with this nation's laws as this comes with no guarantees of a form's valid "
@@ -1946,7 +1953,7 @@ class Legislature(
     async def export_reddit(self, ctx):
         """Make me post an overview of the current session and its submissions to our subreddit"""
 
-        session = await self.get_active_leg_session()
+        session = await self.get_active_leg_session(house="senate")
 
         if session is None:
             return await ctx.send(
@@ -2014,7 +2021,7 @@ class Legislature(
 
         js = {
             "subreddit": config.DEMOCRACIV_SUBREDDIT,
-            "title": f"{self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.id} - Docket & Submissions",
+            "title": f"{self.bot.mk.LEGISLATURE_ADJECTIVE} Session #{session.mk13_house_id} - Docket & Submissions",
             "content": content,
         }
 
@@ -2024,13 +2031,13 @@ class Legislature(
             raise exceptions.DemocracivBotAPIError()
 
         await ctx.send(
-            f"{config.YES} A summary of session #{session.id} was posted "
+            f"{config.YES} A summary of session #{session.mk13_house_id} was posted "
             f"to r/{config.DEMOCRACIV_SUBREDDIT}."
         )
 
     async def paginate_all_sessions(self, ctx):
         all_sessions = await self.bot.db.fetch(
-            "SELECT id, opened_on, closed_on FROM legislature_session ORDER BY id"
+            "SELECT id, opened_on, closed_on FROM legislature_session WHERE house = 'senate' ORDER BY id"
         )
         pretty_sessions = []
 
@@ -2176,6 +2183,7 @@ class Legislature(
         self,
         ctx: context.CustomContext,
         current_leg_session_id: int,
+        current_leg_session_display_id: int,
         bill_modal: SubmitBillModal,
     ) -> typing.Optional[discord.Embed]:
 
@@ -2223,7 +2231,7 @@ class Legislature(
             await bill.status.log_history(
                 old_status=models.BillSubmitted.flag,
                 new_status=models.BillSubmitted.flag,
-                note=f"Submitted to Session #{current_leg_session_id}",
+                note=f"Submitted to Session #{current_leg_session_display_id}",
             )
 
             id_with_tags = [(bill_id, tag) for tag in tags]
@@ -2238,7 +2246,7 @@ class Legislature(
         embed = text.SafeEmbed(
             title=f"{name} (#{bill_id})",
             url=google_docs_url,
-            description=f"Hey! A new **bill** was just submitted to session #{current_leg_session_id}.",
+            description=f"Hey! A new **bill** was just submitted to session #{current_leg_session_display_id}.",
         )
         embed.add_field(name="Description", value=bill_description, inline=False)
         embed.add_field(
@@ -2310,7 +2318,7 @@ class Legislature(
             f"with `{p}{l} bill search <keyword>`.",
         )
         await ctx.send(
-            f"{config.YES} Your bill `{name}` (#{bill_id}) was submitted for session #{current_leg_session_id}.",
+            f"{config.YES} Your bill `{name}` (#{bill_id}) was submitted for session #{current_leg_session_display_id}.",
         )
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
@@ -2323,6 +2331,7 @@ class Legislature(
         self,
         ctx: context.CustomContext,
         current_leg_session_id: int,
+        current_leg_session_display_id: int,
         motion_modal: SubmitMotionModal,
     ) -> typing.Optional[discord.Embed]:
 
@@ -2356,7 +2365,7 @@ class Legislature(
 
         embed = text.SafeEmbed(
             title=f"{title} (#{motion_id})",
-            description=f"Hey! A new **motion** was just submitted to session #{current_leg_session_id}.",
+            description=f"Hey! A new **motion** was just submitted to session #{current_leg_session_display_id}.",
             url=haste_bin_url,
         )
 
@@ -2372,7 +2381,7 @@ class Legislature(
         )
 
         await ctx.send(
-            f"{config.YES} Your motion `{title}` (#{motion_id}) was submitted for session #{current_leg_session_id}.\n"
+            f"{config.YES} Your motion `{title}` (#{motion_id}) was submitted for session #{current_leg_session_display_id}.\n"
             f"{config.HINT} Tell your supporters to sponsor your motion with "
             f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} motion sponsor {motion_id}`."
         )
@@ -2398,7 +2407,7 @@ class Legislature(
         except exceptions.RoleNotFoundError:
             pass
 
-        current_leg_session = await self.get_active_leg_session()
+        current_leg_session = await self.get_active_leg_session(house="senate")
 
         if current_leg_session is None:
             ctx.command.reset_cooldown(ctx)
@@ -2415,7 +2424,7 @@ class Legislature(
                 if not self.is_cabinet(ctx.author):
                     return await ctx.send(
                         f"{config.NO} The {self.bot.mk.speaker_term} has locked submissions for Session "
-                        f"#{current_leg_session.id}. You "
+                        f"#{current_leg_session.mk13_house_id}. You "
                         f"are not allowed to submit anything."
                         f"\n{config.HINT} This session can be unlocked by the "
                         f"{self.bot.mk.speaker_term} in order "
@@ -2427,7 +2436,7 @@ class Legislature(
 
             if current_leg_session.status is SessionStatus.VOTING_PERIOD:
                 return await ctx.send(
-                    f"{config.NO} Voting for session #{current_leg_session.id} has already started, so you "
+                    f"{config.NO} Voting for session #{current_leg_session.mk13_house_id} has already started, so you "
                     f"cannot submit anything anymore."
                 )
 
@@ -2464,7 +2473,7 @@ class Legislature(
                             f"bills."
                         )
 
-                embed = await self.submit_bill(ctx, current_leg_session.id, bill_modal)
+                embed = await self.submit_bill(ctx, current_leg_session.id, current_leg_session.mk13_house_id, bill_modal)
 
             elif result == "motion":
                 ctx.command.reset_cooldown(ctx)
@@ -2477,7 +2486,7 @@ class Legislature(
                         )
 
                 embed = await self.submit_motion(
-                    ctx, current_leg_session.id, motion_modal
+                    ctx, current_leg_session.id, current_leg_session.mk13_house_id, motion_modal
                 )
         else:
             if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
@@ -2487,7 +2496,7 @@ class Legislature(
                         f"bills."
                     )
 
-            embed = await self.submit_bill(ctx, current_leg_session.id, bill_modal)
+            embed = await self.submit_bill(ctx, current_leg_session.id, current_leg_session.mk13_house_id, bill_modal)
 
         if embed is None:
             return
@@ -2527,7 +2536,7 @@ class Legislature(
             ctx=ctx, objects=bill_ids, action=models.BillStatus.pass_from_legislature
         )
 
-        # await consumer.filter(filter_func=verify_bill, last_session=await self.get_last_leg_session())
+        # await consumer.filter(filter_func=verify_bill, last_session=await self.get_last_leg_session(house="senate"))
         await consumer.filter()
 
         if consumer.failed:
@@ -2650,7 +2659,7 @@ class Legislature(
         else:
             obj_name = "motion"
 
-        last_leg_session = await self.get_last_leg_session()
+        last_leg_session = await self.get_last_leg_session(house="senate")
 
         def verify_object(_ctx, to_verify) -> str:
             if to_verify.session.closed_on:
@@ -2689,7 +2698,7 @@ class Legislature(
 
             reaction = await ctx.confirm(
                 f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want"
-                f" to withdraw the following {obj_name}s from Session #{last_leg_session.id}?"
+                f" to withdraw the following {obj_name}s from Session #{last_leg_session.mk13_house_id}?"
                 f"\n{consumer.passed_formatted}"
             )
 
@@ -2731,7 +2740,7 @@ class Legislature(
             )
             are_you_sure = await ctx.confirm(
                 f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want"
-                f" to withdraw the following {obj_name}s from Session #{last_leg_session.id}?"
+                f" to withdraw the following {obj_name}s from Session #{last_leg_session.mk13_house_id}?"
                 f"\n{pretty_objects}"
             )
 
@@ -3029,7 +3038,7 @@ class Legislature(
         return "\n".join(fmt) or "None"
 
     async def _get_leg_stats(self, ctx):
-        query = """SELECT COUNT(id) FROM legislature_session
+        query = """SELECT COUNT(id) FROM legislature_session WHERE house = 'senate'
                    UNION ALL
                    SELECT COUNT(id) FROM bill
                    UNION ALL
@@ -3044,7 +3053,7 @@ class Legislature(
             record=submitter, record_key="submitter", stats_name="bills"
         )
 
-        speaker = await self.bot.db.fetch("SELECT speaker from legislature_session")
+        speaker = await self.bot.db.fetch("SELECT speaker from legislature_session WHERE house = 'senate'")
         pretty_top_speaker = self.format_stats(
             record=speaker, record_key="speaker", stats_name="sessions"
         )

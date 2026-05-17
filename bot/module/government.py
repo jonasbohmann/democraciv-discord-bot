@@ -44,6 +44,30 @@ class Government(context.CustomCog, mixin.GovernmentMixin, name="Government"):
             for judge in _judges.members
         ]
 
+
+    @commands.command(
+        name="legislature",
+        aliases=["leg", "l"],
+    )
+    async def legislature(self, ctx):
+        """MK13-specific information about the Commons and the Senate. See `-help commons` and `-help senate` for actual commands."""
+
+        embed = text.SafeEmbed()
+        embed.set_author(
+            name=f"The Commons and the Senate",
+            icon_url=self.bot.mk.NATION_ICON_URL,
+        )
+        
+        com_active_leg_session = await self.get_active_leg_session(house="commons")
+        sen_active_leg_session = await self.get_active_leg_session(house="senate")
+        
+        embed.description = f"In MK13, the Legislature consists of two chambers, with the Commons as the Lower House and the Senate as the Upper House. " \
+                            f"As such, each house gets their own commands for managing their respective legislative sessions."
+        
+        embed.add_field(name="Commons", value=f"{"No active session." if com_active_leg_session is None else f"Session #{com_active_leg_session.mk13_house_id} - {com_active_leg_session.status.value}"}\n\n- `-commons`\n- `-commons session`\n- `-commons submit`\n\nSee `-help commons` for all available commands.", inline=True)
+        embed.add_field(name="Senate", value=f"{"No active session." if sen_active_leg_session is None else f"Session #{sen_active_leg_session.mk13_house_id} - {sen_active_leg_session.status.value}"}\n\n- `-senate`\n- `-senate session`\n- `-senate submit`\n\nSee `-help senate` for all available commands.", inline=True)
+        await ctx.send(embed=embed)
+
     # todo oct-24: lots of duplicate code
     @commands.group(
         name="government",

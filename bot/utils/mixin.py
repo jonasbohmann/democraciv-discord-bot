@@ -73,7 +73,7 @@ class GovernmentMixin:
             title = f"All Laws in {self.bot.mk.NATION_NAME}"
             empty_message = f"There are no laws yet."
         else:
-            title = f"All Submitted {model.__name__}s"
+            title = f"All Submitted {model.__name__}s — Senate & Commons"
             empty_message = f"No one has submitted any {model.__name__.lower()}s yet."
 
         pages = paginator.SimplePages(
@@ -488,20 +488,30 @@ class GovernmentMixin:
 
         return len(link) >= 15 and link.startswith(valid_google_docs_url_strings)
 
-    async def get_active_leg_session(self) -> typing.Optional[models.Session]:
-        session_id = await self.bot.db.fetchval(
-            "SELECT id FROM legislature_session WHERE status != 'Closed'"
-        )
+    async def get_active_leg_session(self, house=None) -> typing.Optional[models.Session]:
+        if house is not None:
+            session_id = await self.bot.db.fetchval(
+                "SELECT id FROM legislature_session WHERE status != 'Closed' AND house = $1", house
+            )
+        else:
+            session_id = await self.bot.db.fetchval(
+                "SELECT id FROM legislature_session WHERE status != 'Closed'"
+            )
 
         if session_id is not None:
             return await models.Session.convert(
                 context.MockContext(self.bot), session_id
             )
 
-    async def get_last_leg_session(self) -> typing.Optional[models.Session]:
-        session_id = await self.bot.db.fetchval(
-            "SELECT MAX(id) FROM legislature_session"
-        )
+    async def get_last_leg_session(self, house=None) -> typing.Optional[models.Session]:
+        if house is not None:
+            session_id = await self.bot.db.fetchval(
+                "SELECT MAX(id) FROM legislature_session WHERE house = $1", house
+            )
+        else:
+            session_id = await self.bot.db.fetchval(
+                "SELECT MAX(id) FROM legislature_session"
+            )
 
         if session_id is not None:
             return await models.Session.convert(

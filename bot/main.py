@@ -65,6 +65,7 @@ all_extensions = {
     "bot.module.ministry",
     # "bot.module.supremecourt",
     "bot.module.nation",
+    "bot.module.mk_13_commons",
     "bot.module.government",
 }
 

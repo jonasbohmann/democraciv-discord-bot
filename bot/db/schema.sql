@@ -91,8 +91,11 @@ CREATE TABLE IF NOT EXISTS legislature_session(
     voting_started_on timestamp WITHOUT TIME ZONE,
     closed_on timestamp WITHOUT TIME ZONE,
     house text,
-    display_id integer,
+    mk13_house_id integer
 );
+
+CREATE SEQUENCE IF NOT EXISTS mk13_senate_session_seq;
+CREATE SEQUENCE IF NOT EXISTS mk13_commons_session_seq;
 
 CREATE TABLE IF NOT EXISTS bill(
     id serial UNIQUE PRIMARY KEY,
