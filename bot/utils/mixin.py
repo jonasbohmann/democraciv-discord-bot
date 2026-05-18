@@ -114,7 +114,7 @@ class GovernmentMixin:
         if isinstance(obj, models.Bill) and not isinstance(obj, models.Law):
             if obj.session.house in models.HOUSE_NAMES:
                 embed.add_field(
-                    name="Origin House", value=obj.origin_house_name, inline=True
+                    name="Orig. in Chamber", value=obj.origin_house_name, inline=True
                 )
                 embed.add_field(name="Type", value=obj.type_name, inline=True)
                 # embed.add_field(name="laws.democraciv.com", value=f"[Link](https://laws.democraciv.com/bill/{obj.id})", inline=True)
