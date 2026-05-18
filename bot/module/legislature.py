@@ -73,6 +73,7 @@ class SuperPassScheduler(text.RedditAnnouncementScheduler):
             f"The following bills were passed into law with a super-majority by the Senate."
             f"\n\n###Relevant Links\n\n"
             f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
+            f"* [laws.democraciv.com](https://laws.democraciv.com)\n"
             f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `{config.BOT_PREFIX}laws` in #bot on our "
             f"[Discord Server](https://discord.gg/tVmHVcZPVs)\n"
             f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n---\n  &nbsp; \n\n"
@@ -158,6 +159,7 @@ class PassScheduler(text.RedditAnnouncementScheduler):
             f"The following bills were passed by the {self.bot.mk.LEGISLATURE_NAME}."
             f"\n\n###Relevant Links\n\n"
             f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
+            f"* [laws.democraciv.com](https://laws.democraciv.com)\n"
             f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `{config.BOT_PREFIX}laws` in #bot on our "
             f"[Discord Server](https://discord.gg/tVmHVcZPVs)\n"
             f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n---\n  &nbsp; \n\n"
@@ -654,12 +656,12 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         )
 
         if session.voting_started_on:
-            description = f"{description[:-1]}\n### Voting started\n<t:{int(session.voting_started_on.timestamp())}:F>\n"
+            description = f"{description[:-1]}\n### Voting started\n<t:{int(session.voting_started_on.timestamp())}:F> "
 
         if session.closed_on:
             description = (
                 f"{description[:-1]}\n### Closed\n"
-                f"<t:{int(session.closed_on.timestamp())}:F>\n"
+                f"<t:{int(session.closed_on.timestamp())}:F> "
             )
 
         if session.status is SessionStatus.SUBMISSION_PERIOD:
@@ -1327,6 +1329,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             f"\n\nFeel free to use this thread to debate and propose feedback on bills & motions, "
             f"in case voting has not started yet.\n\n###Relevant Links\n\n* "
             f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
+            f"* [laws.democraciv.com](https://laws.democraciv.com)\n"
             f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `-laws` in #bot on our "
             f"[Discord Server](https://discord.gg/tVmHVcZPVs)\n"
             f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n  &nbsp; \n\n"

@@ -43,6 +43,7 @@ class LawPassScheduler(text.RedditAnnouncementScheduler):
             f"The following bills were passed into law by the {self.bot.mk.MINISTRY_NAME}."
             f"\n\n###Relevant Links\n\n"
             f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
+            f"* [laws.democraciv.com](https://laws.democraciv.com)\n"
             f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `{config.BOT_PREFIX}laws` in #bot on our "
             f"[Discord Server](https://discord.gg/tVmHVcZPVs)\n"
             f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n---\n  &nbsp; \n\n"
@@ -78,6 +79,7 @@ class LawVetoScheduler(text.RedditAnnouncementScheduler):
             f"The following bills were vetoed by the {self.bot.mk.MINISTRY_NAME}."
             f"\n\n###Relevant Links\n\n"
             f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
+            f"* [laws.democraciv.com](https://laws.democraciv.com)\n"
             f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `{config.BOT_PREFIX}laws` in #bot on our "
             f"[Discord Server](https://discord.gg/tVmHVcZPVs)\n"
             f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n---\n  &nbsp; \n\n"
@@ -143,7 +145,7 @@ class Ministry(
     def cog_unload(self):
         self.auto_pass_bills.cancel()
 
-    async def get_pretty_vetoes(self) -> typing.List[str]:
+    async def get_pretty_vetoes(self, do_paste=False) -> typing.List[str]:
         """Gets all bills awaiting Executive action."""
 
         open_bills = await self.bot.db.fetch(
@@ -165,13 +167,13 @@ class Ministry(
             )
             deadline = record["executive_deadline_at"]
             deadline_fmt = (
-                f"<t:{int(deadline.replace(tzinfo=datetime.timezone.utc).timestamp())}:F>"
+                f"<t:{int(deadline.replace(tzinfo=datetime.timezone.utc).timestamp())}:R>"
                 if deadline is not None
                 else "No deadline set"
             )
             pretty_bills.append(
-                f"Bill #{record['id']} - [{record['name']}]({record['link']}) "
-                f"*(Deadline: {deadline_fmt})*"
+                f"* Bill #{record['id']} - [{record['name']}]({record['link']})\n"
+                f"-# Deadline: {deadline_fmt}\n"
             )
 
         exported = [
@@ -185,16 +187,17 @@ class Ministry(
 
         link = None
 
-        try:
-            link = await self.bot.make_paste("\n".join(exported))
-        except Exception:
-            pass
+        if do_paste:
+            try:
+                link = await self.bot.make_paste("\n".join(exported))
+            except Exception:
+                pass
 
-        if link:
-            pretty_bills.insert(
-                0,
-                f"[*View this list in Google Spreadsheets formatting for easy copy & pasting*]({link})\n",
-            )
+            if link:
+                pretty_bills.insert(
+                    0,
+                    f"-# View this list in Google Spreadsheets formatting for easy copy & pasting: [Link]({link})\n",
+                )
 
         return pretty_bills
 
@@ -236,9 +239,13 @@ class Ministry(
         "exec",
         "cabinet",
         "minister",
+        "ministry",
         "executive",
         "ministers",
         "m",
+        "presidency",
+        "president",
+        "pres",
     ]
 
     try:
@@ -266,7 +273,7 @@ class Ministry(
             pretty_bills = "There are no bills awaiting Executive action."
         else:
             pretty_bills = (
-                f"{config.HINT}    You can review pending bills with "
+                f":warning:    There are bills awaiting action. Review with "
                 f"`{config.BOT_PREFIX}{mk.MarkConfig.MINISTRY_COMMAND} bills`."
             )
 
@@ -368,7 +375,7 @@ class Ministry(
     async def bills(self, ctx):
         """See all open bills from the Legislature to vote on"""
 
-        pretty_bills = await self.get_pretty_vetoes()
+        pretty_bills = await self.get_pretty_vetoes(do_paste=True)
         pages = paginator.SimplePages(
             entries=pretty_bills,
             icon=self.bot.mk.NATION_ICON_URL,

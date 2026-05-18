@@ -18,7 +18,7 @@ class Selfroles(context.CustomCog):
         )
 
         embed_message = [
-            f"Looking for political parties? Try `{config.BOT_PREFIX}party` and `{config.BOT_PREFIX}join <party>`.\nIn order to add or remove a role from you, use `{config.BOT_PREFIX}role <role>`.\n"
+            f"-# Looking for political parties? Try `{config.BOT_PREFIX}party` and `{config.BOT_PREFIX}join <party>`.\n-# In order to add or remove a role from you, use `{config.BOT_PREFIX}role <role>`.\n"
         ]
 
         for role in role_list:

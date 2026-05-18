@@ -87,13 +87,13 @@ class Tags(context.CustomCog):
 
         if global_tags:
             pretty_tags = [
-                f"**__Global Tags__**\n*Tags can only be made global by {self.bot.dciv.name} "
-                f"Moderation and Nation Admins. Global tags work in every server I am in, as well as in DMs with me.*\n"
+                f"### Global Tags\n-# Tags can only be made global by {self.bot.dciv.name} "
+                f"Moderation and Nation Admins. Global tags work in every server I am in, as well as in DMs with me.\n"
             ]
 
         for record in global_tags:
             pretty_tags.append(
-                f"`{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
+                f"* `{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
             )
 
         if ctx.guild:
@@ -104,14 +104,14 @@ class Tags(context.CustomCog):
             )
             if all_tags:
                 pretty_tags.append(
-                    f"\n\n**__Local Tags__**\n*Every Tag that was not explicitly made global by "
+                    f"\n\n### Local Tags\n-# Every Tag that was not explicitly made global by "
                     f"{self.bot.dciv.name} Moderation or a Nation Admin is a local tag, "
-                    f"and only works in the server it was made in.*\n"
+                    f"and only works in the server it was made in.\n"
                 )
 
             for record in all_tags:
                 pretty_tags.append(
-                    f"`{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
+                    f"* `{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
                 )
 
             author = f"All Tags in {ctx.guild.name}"
@@ -148,7 +148,7 @@ class Tags(context.CustomCog):
 
         for record in all_tags:
             pretty_tags.append(
-                f"`{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
+                f"* `{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
             )
 
         pages = paginator.SimplePages(

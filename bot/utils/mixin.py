@@ -131,7 +131,7 @@ class GovernmentMixin:
             if obj.executive_deadline_at is not None:
                 embed.add_field(
                     name="Executive Deadline",
-                    value=f"<t:{int(obj.executive_deadline_at.replace(tzinfo=datetime.timezone.utc).timestamp())}:F>",
+                    value=f"<t:{int(obj.executive_deadline_at.replace(tzinfo=datetime.timezone.utc).timestamp())}:R> ",
                     inline=True,
                 )
 

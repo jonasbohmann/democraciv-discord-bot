@@ -24,7 +24,8 @@ class RepealScheduler(text.RedditAnnouncementScheduler):
             f"The following laws were repealed by the Legislature."
             f"\n\n###Relevant Links\n\n"
             f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
-            f"* [Legal Code]({self.bot.mk.LEGAL_CODE}), [laws.democraciv.com](https://laws.democraciv.com), or write `{config.BOT_PREFIX}laws` in #bot on our "
+            f"* [laws.democraciv.com](https://laws.democraciv.com)\n"
+            f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `{config.BOT_PREFIX}laws` in #bot on our "
             f"[Discord Server](https://discord.gg/tVmHVcZPVs)\n"
             f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n---\n  &nbsp; \n\n"
         ]

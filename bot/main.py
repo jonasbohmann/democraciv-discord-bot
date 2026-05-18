@@ -1028,27 +1028,31 @@ class DemocracivBot(commands.Bot):
             channel.id in excluded_channels or channel.category_id in excluded_channels
         )
 
-    async def make_paste(self, txt: str) -> typing.Optional[str]:
-        """Post text to mystb.in"""
+    async def make_paste(self, txt: str):
+        """Post text to paste.centos.org"""
 
         payload = {
-            "expires": None,
-            "files": [{"content": txt, "filename": f"dciv-discord-bot.txt"}],
-            "password": None,
+            "name": "dciv-paste",
+            "title": "dciv-paste.txt",
+            "lang": "text",
+            "code": txt,
+            "expire": "1440",
+            "submit": "submit",
         }
 
         async with self.session.post(
-            "https://mystb.in/api/paste", json=payload
+            "https://paste.centos.org/",
+            data=payload,
+            allow_redirects=False,
         ) as response:
-            if response.status == 200:
-                data = await response.json()
+            if response.status != 303:
+                return None
 
-                try:
-                    key = data["id"]
-                except KeyError:
-                    return None
+            location = response.headers.get("Location")
+            if not location:
+                return None
 
-                return f"https://mystb.in/{key}"
+            return location
 
 
 if __name__ == "__main__":

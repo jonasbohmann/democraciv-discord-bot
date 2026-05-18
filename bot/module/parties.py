@@ -511,9 +511,9 @@ class Party(context.CustomCog, name="Political Parties"):
             party_list_embed_content = ["There are no political parties yet."]
 
         base_description = (
-            f"Check out the [party platforms & descriptions on our Wiki]"
-            f"({self.bot.mk.POLITICAL_PARTIES}).\nFor more information about a single "
-            f"party, use `{config.BOT_PREFIX}party <party>`.\nJoin a party with `{config.BOT_PREFIX}join <party>`.\n"
+            f"-# Check out the [party platforms & descriptions on our Wiki]"
+            f"({self.bot.mk.POLITICAL_PARTIES}).\n-# For more information about a single "
+            f"party, use `{config.BOT_PREFIX}party <party>`.\n-# Join a party with `{config.BOT_PREFIX}join <party>`.\n"
         )
 
         if len(party_list_embed_content) > 5:
