@@ -1,0 +1,35 @@
+{% extends "base" %}
+
+{% block title %}
+Democraciv MK13
+{% endblock title %}
+
+{% block content %}
+<section class="stack">
+    <article class="page-header-card" style="padding: 2rem;">
+        <h1>Legislative Records</h1>
+        <p style="margin-bottom: 2rem;">
+            Browse motions, bills, laws, and the current legal code.
+        </p>
+
+        <div class="surface-panel"  style="margin: 1rem; background-color: #202530;">
+            <h2><a href="/law">Laws</a></h2>
+            <p class="field-note">Browse, search and filter the list of currently active laws.</p>
+        </div>
+
+        <div class="surface-panel"  style="margin: 1rem; background-color: #202530;">
+            <h2><a href="/bill">Bills</a></h2>
+            <p class="field-note">All submitted Bills from both the Senate & the Commons.</p>
+        </div>
+
+        <div class="surface-panel"  style="margin: 1rem; background-color: #202530;">
+            <h2><a href="/legal-code">Legal Code</a></h2>
+            <p class="field-note">All current active laws on one page.</p>
+        </div>
+
+        <div class="surface-panel"  style="margin: 1rem; background-color: #202530;">
+            <h2><a href="/motion">Motions</a></h2>
+            <p class="field-note">All submitted Motions from both the Senate & the Commons.</p>
+        </div>
+</section>
+{% endblock content %}

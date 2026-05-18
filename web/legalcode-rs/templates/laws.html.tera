@@ -1,0 +1,124 @@
+{% extends "base" %}
+
+{% block title %}
+Laws · Democraciv MK13
+{% endblock title %}
+
+{% block content %}
+<section class="page-header">
+    <article class="page-header-card">
+        <h1>Laws</h1>
+        <p>Active Senate & Commons Procedures are also shown here.</p>
+    </article>
+</section>
+
+    {% if laws | length == 0 %}
+    <article class="empty-state">
+        <div class="eyebrow">Nothing Here Yet</div>
+        <h2>No laws have been recorded yet.</h2>
+        <p>The list will populate automatically once a bill reaches active law status.</p>
+    </article>
+    {% else %}
+    <section class="table-panel" data-search-root data-search-label="laws">
+        <div class="search-toolbar">
+            <div class="search-controls">
+                <div class="search-form">
+                    <label for="law-search"></label>
+                    <input
+                        id="law-search"
+                        type="search"
+                        placeholder="Search by name and content..."
+                        autocomplete="off"
+                        data-search-input
+                    >
+                </div>
+
+                <div class="search-filter">
+                    <label for="law-type-filter">Type</label>
+                    <select id="law-type-filter" data-search-filter="type">
+                        <option value="">All</option>
+                        <option value="Bill">Bill</option>
+                        <option value="Commons Procedure">Commons Procedure</option>
+                        <option value="Senate Procedure">Senate Procedure</option>
+                    </select>
+                </div>
+
+                <div class="search-filter">
+                    <label for="law-origin-house-filter">Originated in</label>
+                    <select id="law-origin-house-filter" data-search-filter="house">
+                        <option value="">Both chambers</option>
+                        <option value="Senate">Senate</option>
+                        <option value="Commons">Commons</option>
+                    </select>
+                </div>
+            </div>
+
+            <fieldset class="search-toggle">
+                <legend class="sr-only">Search mode</legend>
+                <label>
+                    <input type="radio" name="law-search-mode" value="fuzzy" checked data-search-mode>
+                    Fast Search
+                </label>
+                <label>
+                    <input type="radio" name="law-search-mode" value="token" data-search-mode>
+                    Slow Search (might be more accurate, might also be totally wrong)
+                </label>
+            </fieldset>
+
+            <p class="search-count mono" data-search-count>
+                {{ total_count }} of {{ total_count }} shown
+            </p>
+        </div>
+
+    <script type="text/plain" data-search-items>{{ search_items_b64 | safe }}</script>
+    <script type="text/plain" data-search-keys>{{ search_keys_b64 | safe }}</script>
+
+    <div class="table-scroll" style="margin-top: 3rem;">
+        <table class="record-table" aria-label="Law list">
+            <thead>
+                <tr>
+                    <th scope="col">Law</th>
+                    <th scope="col">Type</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody data-search-body>
+                {% for law in laws %}
+                <tr
+                    data-search-row="{{ law.row_id }}"
+                    data-search-type="{{ law.type_label }}"
+                    data-search-house="{{ law.origin_house_label }}"
+                >
+                    <td class="record-main">
+                        <a href="/law/{{ law.id }}" class="record-title">
+                            Law #{{ law.id }} · {{ law.name }}
+                        </a>
+                        <p class="record-subtle">{{ law.excerpt }}</p>
+                    </td>
+                    <td>
+                        <div class="record-meta">
+                            <span>{{ law.type_label }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <a href="/law/{{ law.id }}" role="button" class="primary table-button">
+                            Open
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <article class="empty-state is-hidden" data-search-empty>
+        <div class="eyebrow">No Matches</div>
+        <h3>No laws match this search or filter.</h3>
+    </article>
+</section>
+{% endif %}
+{% endblock content %}
+
+{% block extra_scripts %}
+<script type="module" src="/static/search.js"></script>
+{% endblock extra_scripts %}

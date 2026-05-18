@@ -988,6 +988,9 @@ class DemocracivBot(commands.Bot):
         """This task makes a backup of the bot's PostgreSQL database every 24hours and uploads
         that backup to the #backup channel to the Democraciv Discord guild."""
 
+        # first startup: let bot get ready
+        await asyncio.sleep(30)
+
         await self.do_db_backup(token.POSTGRESQL_DATABASE)
 
     async def get_logging_channel(

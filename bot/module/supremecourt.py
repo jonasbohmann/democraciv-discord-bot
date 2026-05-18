@@ -79,7 +79,7 @@ class SupremeCourt(
 
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE}) *(try [laws.democraciv.com](https://laws.democraciv.com) too!)*"
             f"\n[Submit a Case](https://forms.gle/uhb9MP785J15f9vYA)\n"
             f"[All Case Filings of the Supreme Court](https://bot-placeholder.democraciv.com/)\n[Judicial Procedure](https://docs.google.com/document/d/14kqyDHeY5aAqw38Mr-d-b-Lu2RRVEHSBoLeFg9xy-1g/edit?usp=sharing)",
             inline=False,

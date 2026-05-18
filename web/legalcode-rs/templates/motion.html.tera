@@ -1,0 +1,24 @@
+{% extends "base" %}
+
+{% block title %}
+Motion #{{ motion.id }} · Democraciv MK13
+{% endblock title %}
+
+{% block content %}
+<a href="/motion" class="back-link">&larr; Back to motions</a>
+
+<section class="stack">
+    <article class="detail-card">
+        <header>
+            <small class="detail-meta">Motion #{{ motion.id }}</small>
+            <h1>{{ motion.title }}</h1>
+        </header>
+
+        <div class="keyline" aria-hidden="true"></div>
+
+        <section class="stack">
+            <div class="content-block">{{ motion.body }}</div>
+        </section>
+    </article>
+</section>
+{% endblock content %}

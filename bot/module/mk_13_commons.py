@@ -174,9 +174,7 @@ class OverrideScheduler(text.AnnouncementScheduler):
         return embed
 
 
-class SubmitBillModal(
-    discord.ui.Modal, title=f"Submit a Bill to the Commons"
-):
+class SubmitBillModal(discord.ui.Modal, title=f"Submit a Bill to the Commons"):
 
     google_docs_url = discord.ui.Label(
         text="Link to Google Docs",
@@ -206,7 +204,7 @@ class SubmitBillModal(
             options=[
                 discord.SelectOption(
                     emoji="\U0001f4dd",
-                    label=f"Bill. The Senate and the Executive will be able vote on this too.",
+                    label=f"Bill. The Senate & Executive will be able vote on this too.",
                     value="false",
                     default=True,
                 ),
@@ -232,9 +230,7 @@ class SubmitBillModal(
         traceback.print_exception(type(error), error, error.__traceback__)
 
 
-class SubmitMotionModal(
-    discord.ui.Modal, title=f"Submit a Motion to the Commons"
-):
+class SubmitMotionModal(discord.ui.Modal, title=f"Submit a Motion to the Commons"):
 
     intro = discord.ui.TextDisplay(
         content=f"Motions lack a lot of features that bills have, "
@@ -372,7 +368,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
 
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE}) *(try [laws.democraciv.com](https://laws.democraciv.com) too!)*"
             f"\n[Commons Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n[Commons Procedures]({self.bot.mk.LEGISLATURE_PROCEDURES})",
             inline=False,
         )
@@ -382,6 +378,116 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         )
 
         await ctx.send(embed=embed)
+
+    @commons.command(name="search")
+    async def search(self, ctx: context.CustomContext, *, query: str):
+        """Search for both bills & motions at once
+
+        If you want to limit your search to either just bills or just motions, consider
+        the `{PREFIX}bill search` and `{PREFIX}motion search` commands.
+        """
+
+        matches = await self._search_model(
+            ctx, model=models.Bill, query=query, return_model=True
+        )
+        matches.extend(
+            await self._search_model(
+                ctx, model=models.Motion, query=query, return_model=True
+            )
+        )
+
+        matches.sort(
+            key=lambda elm: difflib.SequenceMatcher(None, elm.name, query).ratio(),
+            reverse=True,
+        )
+        matches = list(map(lambda elm: f"* {elm.formatted}", matches))
+
+        if matches:
+            matches.insert(
+                0,
+                f"This searches for both bills and motions. You can search for just bills with "
+                f"`{config.BOT_PREFIX}bill search`, and for just motions with "
+                f"`{config.BOT_PREFIX}motion search`.\n",
+            )
+
+        pages = paginator.SimplePages(
+            entries=matches,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Bills & Motions matching '{query}'",
+            empty_message="Nothing found.",
+        )
+
+        await ctx.send(
+            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com) as well!"
+        )
+        await pages.start(ctx)
+        fts_pages = None
+
+        try:
+            fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
+        except Exception:
+            pass
+
+        if fts_pages:
+            view = mixin.FullTextSearchView(ctx)
+            delete_after = await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per bill, even if there were more occurrences found.",
+                view=view,
+            )
+            yes = await view.prompt(silent=True)
+
+            if yes:
+                await fts_pages.start(ctx)
+                await delete_after.delete()
+
+    @commons.command(name="from", aliases=["f", "by"])
+    async def _from(
+        self,
+        ctx: context.CustomContext,
+        *,
+        person_or_party: Fuzzy[
+            converter.CaseInsensitiveMember,
+            converter.CaseInsensitiveUser,
+            converter.PoliticalParty,
+            FuzzySettings(weights=(5, 0, 2)),
+        ] = None,
+    ):
+        """List all bills and motions that a specific person or Political Party submitted"""
+        member_or_party = person_or_party or ctx.author
+
+        bills = await self._from_person_model(
+            ctx, member_or_party=member_or_party, model=Bill, paginate=False
+        )
+        motions = await self._from_person_model(
+            ctx, member_or_party=member_or_party, model=Motion, paginate=False
+        )
+        things = bills + motions
+
+        if isinstance(member_or_party, converter.PoliticalParty):
+            name = member_or_party.role.name
+            empty = f"No member of {name} has submitted something yet."
+            title = f"Bills & Motions from members of {name}"
+            icon = (
+                await member_or_party.get_logo() or self.bot.mk.NATION_ICON_URL or None
+            )
+        else:
+            name = member_or_party.display_name
+            empty = f"{name} hasn't submitted anything yet."
+            title = f"Bills & Motions from {name}"
+            icon = member_or_party.display_avatar.url
+
+        if things:
+            things.insert(
+                0,
+                f"This lists both bills and motions. You can limit this to just bills by using "
+                f"`{config.BOT_PREFIX}bill from`, and to just motions by using "
+                f"`{config.BOT_PREFIX}motion from`.\n",
+            )
+
+        pages = paginator.SimplePages(
+            entries=things, author=title, icon=icon, empty_message=empty
+        )
+        await pages.start(ctx)
 
     @commons.command(name="bill", aliases=["b", "bills"], hidden=True)
     async def bill_redirect(self, ctx: context.CustomContext, *, rest: str = ""):
@@ -464,30 +570,51 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
 
         speaker = session.speaker or context.MockUser()
 
-        description = f"**__Presiding Speaker__**\n{speaker.mention}\n\n**__Opened__**\n<t:{int(session.opened_on.timestamp())}:F>\n"
+        description = f"### Presiding Speaker\n{speaker.mention}\n### Opened\n<t:{int(session.opened_on.timestamp())}:F>\n"
 
         if session.voting_started_on:
-            description = f"{description[:-1]}\n\n**__Voting started__**\n<t:{int(session.voting_started_on.timestamp())}:F>\n"
+            description = f"{description[:-1]}\n### Voting started\n<t:{int(session.voting_started_on.timestamp())}:F>\n"
 
         if session.closed_on:
             description = (
-                f"{description[:-1]}\n\n**__Closed__**\n"
+                f"{description[:-1]}\n### Closed\n"
                 f"<t:{int(session.closed_on.timestamp())}:F>\n"
             )
 
         if session.status is SessionStatus.SUBMISSION_PERIOD:
             description = (
-                f"{description[:-1]}\n\nBills & Motions can be submitted to this session with "
+                f"{description[:-1]}\n\n-# Bills & Motions can be submitted to this session with "
                 f"`{config.BOT_PREFIX}commons submit`. Any failed bills from "
                 f"previous sessions can be resubmitted to the current submission-period session in their "
-                f"origin house with `{config.BOT_PREFIX}bill resubmit`.\n"
+                f"origin house with `{config.BOT_PREFIX}bill resubmit`."
             )
 
         entries.append(description)
-        entries.append(f"**__Status__**\n{session.status.value}\n")
+        entries.append(f"### Status\n{session.status.value}")
 
         if session.vote_form:
-            entries.append(f"**__Voting Form__**\n{session.vote_form}\n")
+            entries.append(f"### Voting Form\n{session.vote_form}")
+
+        amount = (
+            f"{len(bills)}/{amount_of_all_bills}"
+            if sponsor_filter
+            else amount_of_all_bills
+        )
+
+        entries.append(
+            f"### Submitted Bills{'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'}"
+            f" ({amount})"
+        )
+
+        if not sponsor_filter:
+            entries.append(
+                f"-# You can filter the list of submitted bills & motions of a session by their amount of sponsors. "
+                f"For example, using `{config.BOT_PREFIX}commons session >=2` "
+                f"would only show bills & motions that have 2 or more sponsors. See the help page of this command "
+                f"for more information.\n"
+            )
+
+        entries.extend(pretty_bills)
 
         if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
             motions = [(await Motion.convert(ctx, m)) for m in session.motions]
@@ -507,34 +634,13 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
                 else amount_of_all_motions
             )
             entries.append(
-                f"**__Submitted Motions {'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'} ({m_amount})__**"
+                f"### Submitted Motions {'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'} ({m_amount})"
             )
 
             last_motion = pretty_motions.pop()
             last_motion += "\n"
             pretty_motions.append(last_motion)
             entries.extend(pretty_motions)
-
-        amount = (
-            f"{len(bills)}/{amount_of_all_bills}"
-            if sponsor_filter
-            else amount_of_all_bills
-        )
-
-        entries.append(
-            f"**__Submitted Bills{'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'}"
-            f" ({amount})__**"
-        )
-
-        if not sponsor_filter:
-            entries.append(
-                f"*You can filter the list of submitted bills & motions of a session by their amount of sponsors. "
-                f"For example, using `{config.BOT_PREFIX}commons session >=2` "
-                f"would only show bills & motions that have 2 or more sponsors. See the help page of this command "
-                f"for more information.*\n"
-            )
-
-        entries.extend(pretty_bills)
 
         if session.status is SessionStatus.CLOSED:
             await ctx.send(f":warning: This session is already closed.")
@@ -1192,7 +1298,9 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
                     f"* **Session #{record['mk13_house_id']}**  - {opened_on} to {closed_on}"
                 )
             else:
-                pretty_sessions.append(f"* **Session #{record['mk13_house_id']}**  - {opened_on}")
+                pretty_sessions.append(
+                    f"* **Session #{record['mk13_house_id']}**  - {opened_on}"
+                )
 
         pages = paginator.SimplePages(
             entries=pretty_sessions,
@@ -1335,7 +1443,9 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             await ctx.send(f"{config.NO} Something went wrong.")
             return
 
-        is_procedure = True if bill_modal.is_procedure.component.values[0] == "true" else False
+        is_procedure = (
+            True if bill_modal.is_procedure.component.values[0] == "true" else False
+        )
         is_vetoable = not is_procedure
         bill_description = (
             bill_modal.bill_description.component.value
@@ -1493,25 +1603,24 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
 
         description = motion_modal.motion_description.component.value
 
-        async with ctx.typing():
-            haste_bin_url = await self.bot.make_paste(description)  # todo mystbin down
+        haste_bin_url = "https://laws.democraciv.com/motion/<id>"
 
-            if not haste_bin_url:
-                await ctx.send(
-                    f"{config.NO} Your motion was not submitted, there was a problem with <https://mystb.in>. "
-                    "Sorry, try again in a few minutes."
-                )
-                return
+        motion_id = await self.bot.db.fetchval(
+            "INSERT INTO motion (leg_session, title, description, submitter, paste_link) "
+            "VALUES ($1, $2, $3, $4, $5) RETURNING id",
+            current_leg_session_id,
+            title,
+            description,
+            ctx.author.id,
+            haste_bin_url,
+        )
 
-            motion_id = await self.bot.db.fetchval(
-                "INSERT INTO motion (leg_session, title, description, submitter, paste_link) "
-                "VALUES ($1, $2, $3, $4, $5) RETURNING id",
-                current_leg_session_id,
-                title,
-                description,
-                ctx.author.id,
-                haste_bin_url,
-            )
+        haste_bin_url = f"https://laws.democraciv.com/motion/{motion_id}"
+
+        # this is not a good way of doing it. should just edit schema but oh well
+        await self.bot.db.execute(
+            "UPDATE motion SET paste_link = $1 WHERE id = $2", haste_bin_url, motion_id
+        )
 
         embed = text.SafeEmbed(
             title=f"{title} (#{motion_id})",
@@ -1939,7 +2048,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             ctx, "motion", f"unsponsor {bill_or_motion_ids}"
         )
 
-    @commons.command(name="statistics", aliases=["stat", "stats", "statistic"]) # todo
+    @commons.command(name="statistics", aliases=["stat", "stats", "statistic"])  # todo
     async def stats(
         self,
         ctx,

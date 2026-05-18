@@ -354,7 +354,7 @@ class Ministry(
 
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})\n"
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE}) *(try [laws.democraciv.com](https://laws.democraciv.com) too!)*\n"
             f"[Ministry Worksheet]({self.bot.mk.MINISTRY_WORKSHEET})\n[Ministry Procedures]({self.bot.mk.MINISTRY_PROCEDURES})",
             inline=False,
         )

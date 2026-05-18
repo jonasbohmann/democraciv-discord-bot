@@ -419,9 +419,10 @@ class Moderation(context.CustomCog):
             try:
                 muted_role = await channel.guild.create_role(name="Muted")
             except discord.Forbidden:
-                raise exceptions.ForbiddenError(
-                    exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted"
-                )
+                # raise exceptions.ForbiddenError(
+                #    exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted"
+                # )
+                pass
 
         await channel.set_permissions(
             muted_role, send_messages=False, add_reactions=False

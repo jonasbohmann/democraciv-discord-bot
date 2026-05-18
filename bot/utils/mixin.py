@@ -84,6 +84,9 @@ class GovernmentMixin:
             empty_message=empty_message,
             per_page=per_page,
         )
+        await ctx.send(
+            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com) as well!"
+        )
         await pages.start(ctx)
 
     async def _detail_view(
@@ -106,6 +109,7 @@ class GovernmentMixin:
             submitted_by_value = f"*Unknown Person*"
 
         embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
+        # embed.add_field(name="laws.democraciv.com", value=f"[Link](https://laws.democraciv.com/{obj.model.lower()}/{obj.id})", inline=True)
 
         if isinstance(obj, models.Bill) and not isinstance(obj, models.Law):
             if obj.session.house in models.HOUSE_NAMES:
@@ -113,6 +117,7 @@ class GovernmentMixin:
                     name="Origin House", value=obj.origin_house_name, inline=True
                 )
                 embed.add_field(name="Type", value=obj.type_name, inline=True)
+                # embed.add_field(name="laws.democraciv.com", value=f"[Link](https://laws.democraciv.com/bill/{obj.id})", inline=True)
             else:
                 is_vetoable = "Yes" if obj.is_vetoable else "No"
                 embed.add_field(name="Vetoable", value=is_vetoable, inline=True)
@@ -137,6 +142,8 @@ class GovernmentMixin:
                 embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
 
         if not isinstance(obj, models.Motion):
+            # embed.add_field(name="laws.democraciv.com", value=f"[Link](https://laws.democraciv.com/motion/{obj.id})", inline=True)
+
             history = [
                 f"* <t:{int(entry.date.timestamp())}:D> - {entry.note if entry.note else entry.after}"
                 for entry in obj.history[:10]
@@ -149,6 +156,9 @@ class GovernmentMixin:
                 embed.set_footer(text="This is an active law.")
 
             view = ReadDocumentView(ctx=ctx)
+            await ctx.send(
+                f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/{obj.model.lower()}/{obj.id}) as well!"
+            )
             await ctx.send(embed=embed, view=view)
             do_continue = await view.prompt(silent=True)
             # followup = None
@@ -169,6 +179,9 @@ class GovernmentMixin:
                 )
                 embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
 
+            await ctx.send(
+                f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/{obj.model.lower()}/{obj.id}) as well!"
+            )
             await ctx.send(embed=embed)
 
     async def _show_bill_text(self, ctx, bill: models.Bill, *, ephemeral_webhook=None):
@@ -188,7 +201,9 @@ class GovernmentMixin:
             author=f"{bill.name} (#{bill.id})",
             ephemeral_webhook=ephemeral_webhook,
         )
-
+        await ctx.send(
+            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/bill/{bill.id}) as well!"
+        )
         await pages.start(ctx)
 
     async def generate_google_docs_legal_code(self):

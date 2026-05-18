@@ -1061,7 +1061,9 @@ class BillStatus:
     ):
         self._require_current_house(acting_house)
         deadline = datetime.datetime.utcnow() + datetime.timedelta(hours=48)
-        deadline_fmt = f"<t:{int(deadline.replace(tzinfo=datetime.timezone.utc).timestamp())}:F>"
+        deadline_fmt = (
+            f"<t:{int(deadline.replace(tzinfo=datetime.timezone.utc).timestamp())}:F>"
+        )
 
         await self._apply_status(
             old_status,

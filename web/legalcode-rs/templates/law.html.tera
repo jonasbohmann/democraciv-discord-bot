@@ -1,0 +1,51 @@
+{% extends "base" %}
+
+{% block title %}
+Law #{{ law.id }} · Democraciv MK13
+{% endblock title %}
+
+{% block content %}
+<a href="/law" class="back-link">&larr; Back to laws</a>
+
+<section class="stack">
+    <article class="detail-card">
+        <header>
+            <small class="detail-meta">Law #{{ law.id }}</small>
+            <h1>{{ law.name }}</h1>
+        </header>
+
+        <div class="badge-row">
+            <span class="badge">⚖ Active law</span>
+        </div>
+
+        <dl class="detail-fields">
+            <div class="field">
+                <dt>Originated in Chamber</dt>
+                <dd>{{ law.origin_house_label }}</dd>
+            </div>
+            <div class="field">
+                <dt>Type</dt>
+                <dd>{{ law.type_label }}</dd>
+            </div>
+            <div class="field">
+                <dt>Link</dt>
+                <dd><a href="{{ law.link }}" target="_blank" rel="noopener noreferrer">Google Docs</a></dd>
+            </div>
+            <div class="field">
+                <dt>Submitter Description</dt>
+                <dd>{{ law.submitter_description }}</dd>
+            </div>
+        </dl>
+
+        <div class="keyline" aria-hidden="true"></div>
+
+        <section class="stack">
+            <div>
+                <h2>Content</h2>
+                <p class="record-subtle">Formatting or layout may be off. See Google Docs for proper formatting.</p>
+            </div>
+            <div class="content-block" style="margin-top: 2rem;">{{ law.content }}</div>
+        </section>
+    </article>
+</section>
+{% endblock content %}

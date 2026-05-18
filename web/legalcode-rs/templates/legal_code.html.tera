@@ -1,0 +1,57 @@
+{% extends "base" %}
+
+{% block title %}
+Legal Code · Democraciv MK13
+{% endblock title %}
+
+{% block page_class %}page-wide{% endblock page_class %}
+
+{% block content %}
+<section class="page-header">
+    <article class="page-header-card">
+        <h1>Current Legal Code</h1>
+        <p>
+            {{ total_count }} active law{% if total_count != 1 %}s{% endif %}.
+        </p>
+    </article>
+</section>
+
+{% if laws | length == 0 %}
+<article class="empty-state">
+    <div class="eyebrow">Nothing Here Yet</div>
+    <h2>No active laws are available.</h2>
+    <p>This page will populate automatically once bills become active laws.</p>
+</article>
+{% else %}
+<section class="stack">
+    <article class="surface-panel toc-card">
+        <div class="eyebrow">Index</div>
+        <ul class="toc-list">
+            {% for law in laws %}
+            <li>
+                <a href="#law-{{ law.id }}" style="color: #00A66E; text-decoration-color: #00A66E;">Law #{{ law.id }} · {{ law.name }}</a>
+            </li>
+            {% endfor %}
+        </ul>
+    </article>
+
+    <section class="code-list" aria-label="Legal code">
+    {% for law in laws %}
+    <article class="code-entry" id="law-{{ law.id }}">
+        <header>
+            <small class="detail-meta">Law #{{ law.id }}</small>
+            <h2>{{ law.name }}</h2>
+            <p class="record-subtle">
+                <a href="{{ law.link }}"  style="color: #00A66E; text-decoration-color: #00A66E;" target="_blank" rel="noopener noreferrer">Google Docs</a>
+            </p>
+        </header>
+
+        <div class="keyline" aria-hidden="true"></div>
+
+        <div class="content-block">{{ law.content }}</div>
+    </article>
+    {% endfor %}
+    </section>
+</section>
+{% endif %}
+{% endblock content %}

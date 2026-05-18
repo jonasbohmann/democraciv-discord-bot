@@ -209,9 +209,7 @@ class OverrideScheduler(text.AnnouncementScheduler):
         return embed
 
 
-class SubmitBillModal(
-    discord.ui.Modal, title=f"Submit a Bill to the Senate"
-):
+class SubmitBillModal(discord.ui.Modal, title=f"Submit a Bill to the Senate"):
 
     google_docs_url = discord.ui.Label(
         text="Link to Google Docs",
@@ -241,7 +239,7 @@ class SubmitBillModal(
             options=[
                 discord.SelectOption(
                     emoji="\U0001f4dd",
-                    label=f"Bill. The Commons and the Executive will be able vote on this too.",
+                    label=f"Bill. The Commons & Executive will be able vote on this too.",
                     value="false",
                     default=True,
                 ),
@@ -283,9 +281,7 @@ class SubmitBillModal(
         traceback.print_exception(type(error), error, error.__traceback__)
 
 
-class SubmitMotionModal(
-    discord.ui.Modal, title=f"Submit a Motion to the Senate"
-):
+class SubmitMotionModal(discord.ui.Modal, title=f"Submit a Motion to the Senate"):
 
     intro = discord.ui.TextDisplay(
         content=f"Motions lack a lot of features that bills have, "
@@ -450,7 +446,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
 
         embed.add_field(
             name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE})"
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE}) *(try [laws.democraciv.com](https://laws.democraciv.com) too!)*"
             f"\n[Legislative Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n[Legislative Procedures]({self.bot.mk.LEGISLATURE_PROCEDURES})",
             inline=False,
         )
@@ -497,6 +493,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             icon=self.bot.mk.NATION_ICON_URL,
             author=f"Bills & Motions matching '{query}'",
             empty_message="Nothing found.",
+        )
+
+        await ctx.send(
+            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com) as well!"
         )
         await pages.start(ctx)
         fts_pages = None
@@ -649,32 +649,53 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         speaker = session.speaker or context.MockUser()
 
         description = (
-            f"**__{self.bot.mk.senator_presiding_term}__**\n{speaker.mention}\n\n"
-            f"**__Opened__**\n<t:{int(session.opened_on.timestamp())}:F>\n"
+            f"### {self.bot.mk.senator_presiding_term}\n{speaker.mention}\n"
+            f"### Opened\n<t:{int(session.opened_on.timestamp())}:F>\n"
         )
 
         if session.voting_started_on:
-            description = f"{description[:-1]}\n\n**__Voting started__**\n<t:{int(session.voting_started_on.timestamp())}:F>\n"
+            description = f"{description[:-1]}\n### Voting started\n<t:{int(session.voting_started_on.timestamp())}:F>\n"
 
         if session.closed_on:
             description = (
-                f"{description[:-1]}\n\n**__Closed__**\n"
+                f"{description[:-1]}\n### Closed\n"
                 f"<t:{int(session.closed_on.timestamp())}:F>\n"
             )
 
         if session.status is SessionStatus.SUBMISSION_PERIOD:
             description = (
-                f"{description[:-1]}\n\nBills & Motions can be submitted to this session with "
+                f"{description[:-1]}\n\n-# Bills & Motions can be submitted to this session with "
                 f"`{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit`. Any old bills from "
                 f"previous sessions that failed can be resubmitted to the current submission-period session "
-                f"in their origin house with `{config.BOT_PREFIX}bill resubmit`.\n"
+                f"in their origin house with `{config.BOT_PREFIX}bill resubmit`."
             )
 
         entries.append(description)
-        entries.append(f"**__Status__**\n{session.status.value}\n")
+        entries.append(f"### Status\n{session.status.value}")
 
         if session.vote_form:
-            entries.append(f"**__Voting Form__**\n{session.vote_form}\n")
+            entries.append(f"### Voting Form\n{session.vote_form}")
+
+        amount = (
+            f"{len(bills)}/{amount_of_all_bills}"
+            if sponsor_filter
+            else amount_of_all_bills
+        )
+
+        entries.append(
+            f"### Submitted Bills{'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'}"
+            f" ({amount})"
+        )
+
+        if not sponsor_filter:
+            entries.append(
+                f"-# You can filter the list of submitted bills & motions of a session by their amount of sponsors. "
+                f"For example, using `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session >=2` "
+                f"would only show bills & motions that have 2 or more sponsors. See the help page of this command "
+                f"for more information.\n"
+            )
+
+        entries.extend(pretty_bills)
 
         if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
             motions = [(await Motion.convert(ctx, m)) for m in session.motions]
@@ -694,34 +715,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
                 else amount_of_all_motions
             )
             entries.append(
-                f"**__Submitted Motions {'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'} ({m_amount})__**"
+                f"### Submitted Motions {'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'} ({m_amount})"
             )
 
             last_motion = pretty_motions.pop()
             last_motion += "\n"
             pretty_motions.append(last_motion)
             entries.extend(pretty_motions)
-
-        amount = (
-            f"{len(bills)}/{amount_of_all_bills}"
-            if sponsor_filter
-            else amount_of_all_bills
-        )
-
-        entries.append(
-            f"**__Submitted Bills{'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'}"
-            f" ({amount})__**"
-        )
-
-        if not sponsor_filter:
-            entries.append(
-                f"*You can filter the list of submitted bills & motions of a session by their amount of sponsors. "
-                f"For example, using `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session >=2` "
-                f"would only show bills & motions that have 2 or more sponsors. See the help page of this command "
-                f"for more information.*\n"
-            )
-
-        entries.extend(pretty_bills)
 
         if session.status is SessionStatus.CLOSED:
             await ctx.send(f":warning: This session is already closed.")
@@ -1395,7 +1395,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
                     f"* **Session #{record['mk13_house_id']}**  - {opened_on} to {closed_on}"
                 )
             else:
-                pretty_sessions.append(f"* **Session #{record['mk13_house_id']}**  - {opened_on}")
+                pretty_sessions.append(
+                    f"* **Session #{record['mk13_house_id']}**  - {opened_on}"
+                )
 
         pages = paginator.SimplePages(
             entries=pretty_sessions,
@@ -1538,7 +1540,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             await ctx.send(f"{config.NO} Something went wrong.")
             return
 
-        is_procedure = True if bill_modal.is_procedure.component.values[0] == "true" else False
+        is_procedure = (
+            True if bill_modal.is_procedure.component.values[0] == "true" else False
+        )
         is_vetoable = not is_procedure
         bill_description = (
             bill_modal.bill_description.component.value
@@ -1696,25 +1700,24 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
 
         description = motion_modal.motion_description.component.value
 
-        async with ctx.typing():
-            haste_bin_url = await self.bot.make_paste(description)
+        haste_bin_url = f"https://laws.democraciv.com/motion/<id>"
 
-            if not haste_bin_url:
-                await ctx.send(
-                    f"{config.NO} Your motion was not submitted, there was a problem with <https://mystb.in>. "
-                    "Sorry, try again in a few minutes."
-                )
-                return
+        motion_id = await self.bot.db.fetchval(
+            "INSERT INTO motion (leg_session, title, description, submitter, paste_link) "
+            "VALUES ($1, $2, $3, $4, $5) RETURNING id",
+            current_leg_session_id,
+            title,
+            description,
+            ctx.author.id,
+            haste_bin_url,
+        )
 
-            motion_id = await self.bot.db.fetchval(
-                "INSERT INTO motion (leg_session, title, description, submitter, paste_link) "
-                "VALUES ($1, $2, $3, $4, $5) RETURNING id",
-                current_leg_session_id,
-                title,
-                description,
-                ctx.author.id,
-                haste_bin_url,
-            )
+        haste_bin_url = f"https://laws.democraciv.com/motion/{motion_id}"
+
+        # this is not a good way of doing it. should just edit schema but oh well
+        await self.bot.db.execute(
+            "UPDATE motion SET paste_link = $1 WHERE id = $2", haste_bin_url, motion_id
+        )
 
         embed = text.SafeEmbed(
             title=f"{title} (#{motion_id})",
@@ -2081,9 +2084,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         embed = text.SafeEmbed()
         embed.set_author(
             icon_url=self.bot.mk.NATION_ICON_URL,
-            name=f"Statistics for the "
-            f"{self.bot.mk.NATION_ADJECTIVE} "
-            f"Senate",
+            name=f"Statistics for the " f"{self.bot.mk.NATION_ADJECTIVE} " f"Senate",
         )
 
         general_value = (

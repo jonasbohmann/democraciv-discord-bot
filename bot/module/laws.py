@@ -24,7 +24,7 @@ class RepealScheduler(text.RedditAnnouncementScheduler):
             f"The following laws were repealed by the Legislature."
             f"\n\n###Relevant Links\n\n"
             f"* [Constitution]({self.bot.mk.CONSTITUTION})\n"
-            f"* [Legal Code]({self.bot.mk.LEGAL_CODE}) or write `{config.BOT_PREFIX}laws` in #bot on our "
+            f"* [Legal Code]({self.bot.mk.LEGAL_CODE}), [laws.democraciv.com](https://laws.democraciv.com), or write `{config.BOT_PREFIX}laws` in #bot on our "
             f"[Discord Server](https://discord.gg/tVmHVcZPVs)\n"
             f"* [Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n\n---\n  &nbsp; \n\n"
         ]
@@ -117,7 +117,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         #    return await ctx.send(
         #        f"{config.NO} That doesn't look like a Google Docs URL."
         #    )
-    
+
         doc_url = "https://docs.google.com/document/d/1ywV_F70odxHh5fLcqcghpFOToPao85CjfT5Y_mYcml0/edit?usp=sharing"
 
         if not doc_url or not self.is_google_doc_link(doc_url):
@@ -205,6 +205,9 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             empty_message="Nothing found.",
         )
 
+        await ctx.send(
+            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/law/) as well!"
+        )
         await pages.start(ctx)
 
         fts_pages = None

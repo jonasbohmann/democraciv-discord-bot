@@ -262,6 +262,9 @@ class Motions(context.CustomCog, mixin.GovernmentMixin, name="Motion"):
             author=f"Motions matching '{query}'",
             empty_message="Nothing found.",
         )
+        await ctx.send(
+            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/motion) as well!"
+        )
         await pages.start(ctx)
 
         try:

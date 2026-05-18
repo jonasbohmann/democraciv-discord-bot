@@ -1,0 +1,104 @@
+{% extends "base" %}
+
+{% block title %}
+Motions · Democraciv MK13
+{% endblock title %}
+
+{% block content %}
+<section class="page-header">
+    <article class="page-header-card">
+        <h1>Motions</h1>
+        <p>{{ total_count }} motion{% if total_count != 1 %}s{% endif %}.</p>
+    </article>
+</section>
+
+{% if motions | length == 0 %}
+<article class="empty-state">
+    <div class="eyebrow">Nothing Here Yet</div>
+    <h2>No motions have been submitted yet.</h2>
+    <p>The list will populate automatically once the database contains motion entries.</p>
+</article>
+{% else %}
+<section
+    class="table-panel"
+    data-search-root
+    data-search-label="motions"
+>
+    <div class="search-toolbar">
+        <div class="search-form">
+            <label for="motion-search"></label>
+            <input
+                id="motion-search"
+                type="search"
+                placeholder="Search by name and content..."
+                autocomplete="off"
+                data-search-input
+            >
+        </div>
+
+        <fieldset class="search-toggle">
+            <legend class="sr-only">Search mode</legend>
+            <label>
+                <input type="radio" name="motion-search-mode" value="fuzzy" checked data-search-mode>
+                Fast Search
+            </label>
+            <label>
+                <input type="radio" name="motion-search-mode" value="token" data-search-mode>
+                Slow Search (might be more accurate, might also be totally wrong)
+            </label>
+        </fieldset>
+
+        <p class="search-count mono" data-search-count>
+            {{ total_count }} of {{ total_count }} shown
+        </p>
+    </div>
+
+    <script type="text/plain" data-search-items>{{ search_items_b64 | safe }}</script>
+    <script type="text/plain" data-search-keys>{{ search_keys_b64 | safe }}</script>
+
+    <div class="table-scroll" style="margin-top: 3rem;">
+        <table class="record-table" aria-label="Motion list">
+            <thead>
+                <tr>
+                    <th scope="col">Motion</th>
+                    <th scope="col">Summary</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody data-search-body>
+                {% for motion in motions %}
+                <tr data-search-row="{{ motion.row_id }}">
+                    <td class="record-main">
+                        <a href="/motion/{{ motion.id }}" class="record-title">
+                            Motion #{{ motion.id }} · {{ motion.title }}
+                        </a>
+                    </td>
+                    <td>
+                        <p class="record-subtle">{{ motion.excerpt }}</p>
+                    </td>
+                    <td>
+                        <a
+                            href="/motion/{{ motion.id }}"
+                            role="button"
+                            class="primary table-button"
+                        >
+                            Open
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <article class="empty-state is-hidden" data-search-empty>
+        <div class="eyebrow">No Matches</div>
+        <h2>No motions match this search.</h2>
+    </article>
+</section>
+{% endif %}
+{% endblock content %}
+
+{% block extra_scripts %}
+<script type="module" src="/static/search.js"></script>
+{% endblock extra_scripts %}

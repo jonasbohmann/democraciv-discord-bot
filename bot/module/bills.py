@@ -284,6 +284,9 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
             per_page=12,
             icon=self.bot.mk.NATION_ICON_URL,
         )
+        await ctx.send(
+            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/bill/{bill_id.id}) as well!"
+        )
         await pages.start(ctx)
 
     @bill.command(name="read", aliases=["text", "txt", "content"])
@@ -302,6 +305,9 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
             icon=self.bot.mk.NATION_ICON_URL,
             author=f"Bills matching '{query}'",
             empty_message="Nothing found.",
+        )
+        await ctx.send(
+            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/bill) as well!"
         )
         await pages.start(ctx)
 
@@ -373,6 +379,10 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
             entries=formatted,
             icon=self.bot.mk.NATION_ICON_URL,
             author=f"[BETA] Advanced search results for '{query}'",
+        )
+
+        await ctx.send(
+            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/bill) as well!"
         )
         await ctx.send(
             ":warning: This only shows 1 search result per bill, even if there were more occurrences found in that bill."
