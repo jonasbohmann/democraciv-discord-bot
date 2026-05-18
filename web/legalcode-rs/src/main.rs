@@ -227,7 +227,7 @@ async fn load_motion_list(db: &PgPool) -> Result<Vec<MotionListItem>, String> {
                 row_id: format!("motion-{id}"),
                 id,
                 title,
-                excerpt: make_excerpt(&body, 140),
+                excerpt: make_excerpt(&body, 50),
                 body,
             }
         })
@@ -305,7 +305,7 @@ async fn load_bill_list(db: &PgPool, laws_only: bool) -> Result<Vec<BillListItem
                 row_id: format!("bill-{id}"),
                 id,
                 name,
-                excerpt: make_excerpt(&content, 180),
+                excerpt: make_excerpt(&content, 50),
                 content,
                 link,
                 submitter_description,
