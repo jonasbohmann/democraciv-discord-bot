@@ -338,6 +338,8 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
             return await ctx.send(
                 f"{config.NO} This command is disabled during Multiciv MKs."
             )
+        
+        await ctx.send(f":warning: This is a work in progress. The search on [laws.democraciv.com](https://laws.democraciv.com/bill) will probably work a lot better.")
 
         async with ctx.typing():
             response = await self.bot.api_request(

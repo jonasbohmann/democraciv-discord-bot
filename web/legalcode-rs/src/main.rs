@@ -234,18 +234,22 @@ async fn load_motion_list(db: &PgPool) -> Result<Vec<MotionListItem>, String> {
         .collect())
 }
 
-async fn load_motion_detail(db: &PgPool, id: i32) -> Result<MotionDetail, String> {
+async fn load_motion_detail(db: &PgPool, id: i32) -> Result<Option<MotionDetail>, String> {
     let row = sqlx::query("SELECT id, title, description FROM motion WHERE id = $1")
         .bind(id)
-        .fetch_one(db)
+        .fetch_optional(db)
         .await
-        .map_err(|_| "Motion not found".to_string())?;
+        .map_err(|error| error.to_string())?;
 
-    Ok(MotionDetail {
+    let Some(row) = row else {
+        return Ok(None);
+    };
+
+    Ok(Some(MotionDetail {
         id: row.try_get("id").unwrap_or_default(),
         title: row.try_get("title").unwrap_or_default(),
         body: row.try_get("description").unwrap_or_default(),
-    })
+    }))
 }
 
 async fn load_bill_list(db: &PgPool, laws_only: bool) -> Result<Vec<BillListItem>, String> {
@@ -357,7 +361,7 @@ async fn load_bill_detail(
     id: i32,
     laws_only: bool,
     include_history: bool,
-) -> Result<BillDetail, String> {
+) -> Result<Option<BillDetail>, String> {
     let query = if laws_only {
         "SELECT
             bill.id,
@@ -390,17 +394,15 @@ async fn load_bill_detail(
         GROUP BY bill.id"
     };
 
-    let not_found = if laws_only {
-        "Law not found"
-    } else {
-        "Bill not found"
-    };
-
     let row = sqlx::query(query)
         .bind(id)
-        .fetch_one(db)
+        .fetch_optional(db)
         .await
-        .map_err(|_| not_found.to_string())?;
+        .map_err(|error| error.to_string())?;
+
+    let Some(row) = row else {
+        return Ok(None);
+    };
 
     let origin_house: String = row.try_get("origin_house").unwrap_or_default();
     let origin_house_label = display_house_name(&origin_house);
@@ -413,7 +415,7 @@ async fn load_bill_detail(
         Vec::new()
     };
 
-    Ok(BillDetail {
+    Ok(Some(BillDetail {
         id: row.try_get("id").unwrap_or_default(),
         name: row.try_get("name").unwrap_or_default(),
         content: row.try_get("content").unwrap_or_default(),
@@ -429,7 +431,7 @@ async fn load_bill_detail(
         is_law: status == LAW_STATUS,
         sponsor_count: row.try_get("sponsor_count").unwrap_or_default(),
         history,
-    })
+    }))
 }
 
 async fn load_legal_code(db: &PgPool) -> Result<Vec<LegalCodeItem>, String> {
@@ -474,15 +476,17 @@ async fn motion_index(state: &State<AppState>) -> Result<Template, String> {
 }
 
 #[get("/motion/<id>")]
-async fn motion(id: i32, state: &State<AppState>) -> Result<Template, String> {
-    let motion = load_motion_detail(&state.db, id).await?;
+async fn motion(id: i32, state: &State<AppState>) -> Result<Option<Template>, String> {
+    let Some(motion) = load_motion_detail(&state.db, id).await? else {
+        return Ok(None);
+    };
 
-    Ok(Template::render(
+    Ok(Some(Template::render(
         "motion",
         context! {
             motion,
         },
-    ))
+    )))
 }
 
 #[get("/bill")]
@@ -506,15 +510,17 @@ async fn bill_index(state: &State<AppState>) -> Result<Template, String> {
 }
 
 #[get("/bill/<id>")]
-async fn bill(id: i32, state: &State<AppState>) -> Result<Template, String> {
-    let bill = load_bill_detail(&state.db, id, false, true).await?;
+async fn bill(id: i32, state: &State<AppState>) -> Result<Option<Template>, String> {
+    let Some(bill) = load_bill_detail(&state.db, id, false, true).await? else {
+        return Ok(None);
+    };
 
-    Ok(Template::render(
+    Ok(Some(Template::render(
         "bill",
         context! {
             bill,
         },
-    ))
+    )))
 }
 
 #[get("/law")]
@@ -536,15 +542,17 @@ async fn law_index(state: &State<AppState>) -> Result<Template, String> {
 }
 
 #[get("/law/<id>")]
-async fn law(id: i32, state: &State<AppState>) -> Result<Template, String> {
-    let law = load_bill_detail(&state.db, id, true, false).await?;
+async fn law(id: i32, state: &State<AppState>) -> Result<Option<Template>, String> {
+    let Some(law) = load_bill_detail(&state.db, id, true, false).await? else {
+        return Ok(None);
+    };
 
-    Ok(Template::render(
+    Ok(Some(Template::render(
         "law",
         context! {
             law,
         },
-    ))
+    )))
 }
 
 #[get("/legal-code")]
@@ -559,6 +567,11 @@ async fn legal_code(state: &State<AppState>) -> Result<Template, String> {
             total_count,
         },
     ))
+}
+
+#[catch(404)]
+fn not_found() -> Template {
+    Template::render("404", context! {})
 }
 
 #[launch]
@@ -586,4 +599,5 @@ async fn rocket() -> _ {
         )
         .attach(Template::fairing())
         .mount("/static", FileServer::from("static"))
+        .register("/", catchers![not_found])
 }

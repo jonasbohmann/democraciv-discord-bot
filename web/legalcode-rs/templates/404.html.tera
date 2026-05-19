@@ -1,0 +1,16 @@
+{% extends "base" %}
+
+{% block title %}
+Democraciv MK13
+{% endblock title %}
+
+{% block content %}
+<section class="stack">
+    <article class="page-header-card" style="padding: 2rem;">
+        <h1>Not Found</h1>
+        <p style="margin-bottom: 2rem;">
+            There is nothing here.
+        </p>
+    </article>
+</section>
+{% endblock content %}

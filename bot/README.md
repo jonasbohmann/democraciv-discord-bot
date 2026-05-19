@@ -5,8 +5,8 @@ General-purpose Discord Bot with lots of unique features designed for the r/Demo
 
 ##  Requirements
 
-*  [Python](https://www.python.org/downloads/) 3.8 or newer
-*  [discord.py](https://github.com/Rapptz/discord.py) 2.0.0a or newer (install master branch)
+*  [Python](https://www.python.org/downloads/) 3.10 or newer
+*  [discord.py](https://github.com/Rapptz/discord.py) 2.7 or newer
 *  [PostgreSQL](https://www.postgresql.org/) 9.6 or newer 
 
 Run `pip install -r requirements.txt` to install all required dependencies.
