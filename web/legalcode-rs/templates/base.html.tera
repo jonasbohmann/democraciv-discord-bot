@@ -8,7 +8,8 @@
     <meta content="Browse through the interactive legislative records of Democraciv MK13." property="og:description" />
     <meta content="website" property="og:type" />
     <meta content="https://laws.democraciv.com" property="og:url" />
-    <meta content="#59896b" data-react-helmet="true" name="theme-color" />
+    <meta content="#74c887" data-react-helmet="true" name="theme-color" />  <!-- 59896b -->
+    <meta property="og:image" content="https://cdn.democraciv.com/static/mk13/nation-logo.png" />
 
     <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
     <title>{% block title %}Democraciv MK13{% endblock title %}</title>
