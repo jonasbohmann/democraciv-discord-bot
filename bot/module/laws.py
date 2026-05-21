@@ -207,7 +207,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         )
 
         await ctx.send(
-            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/law/) as well!"
+            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/law>) as well!"
         )
         await pages.start(ctx)
 

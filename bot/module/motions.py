@@ -263,7 +263,7 @@ class Motions(context.CustomCog, mixin.GovernmentMixin, name="Motion"):
             empty_message="Nothing found.",
         )
         await ctx.send(
-            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/motion) as well!"
+            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/motion>) as well!"
         )
         await pages.start(ctx)
 

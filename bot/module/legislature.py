@@ -498,7 +498,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         )
 
         await ctx.send(
-            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com) as well!"
+            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com>) as well!"
         )
         await pages.start(ctx)
         fts_pages = None

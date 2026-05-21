@@ -285,7 +285,7 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
             icon=self.bot.mk.NATION_ICON_URL,
         )
         await ctx.send(
-            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/bill/{bill_id.id}) as well!"
+            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/bill/{bill_id.id}>) as well!"
         )
         await pages.start(ctx)
 
@@ -307,7 +307,7 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
             empty_message="Nothing found.",
         )
         await ctx.send(
-            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/bill) as well!"
+            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/bill>) as well!"
         )
         await pages.start(ctx)
 
@@ -340,7 +340,7 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
             )
 
         await ctx.send(
-            f":warning: This is a work in progress. The search on [laws.democraciv.com](https://laws.democraciv.com/bill) will probably work a lot better."
+            f":warning: This is a work in progress. The search on [laws.democraciv.com](<https://laws.democraciv.com/bill>) will probably work a lot better."
         )
 
         async with ctx.typing():
@@ -386,7 +386,7 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
         )
 
         await ctx.send(
-            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/bill) as well!"
+            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/bill>) as well!"
         )
         await ctx.send(
             ":warning: This only shows 1 search result per bill, even if there were more occurrences found in that bill."

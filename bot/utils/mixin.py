@@ -85,7 +85,7 @@ class GovernmentMixin:
             per_page=per_page,
         )
         await ctx.send(
-            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com) as well!"
+            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com>) as well!"
         )
         await pages.start(ctx)
 
@@ -157,7 +157,7 @@ class GovernmentMixin:
 
             view = ReadDocumentView(ctx=ctx)
             await ctx.send(
-                f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/{obj.model.lower()}/{obj.id}) as well!"
+                f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/{obj.model.lower()}/{obj.id}>) as well!"
             )
             await ctx.send(embed=embed, view=view)
             do_continue = await view.prompt(silent=True)
@@ -180,7 +180,7 @@ class GovernmentMixin:
                 embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
 
             await ctx.send(
-                f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/{obj.model.lower()}/{obj.id}) as well!"
+                f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/{obj.model.lower()}/{obj.id}>) as well!"
             )
             await ctx.send(embed=embed)
 
@@ -202,7 +202,7 @@ class GovernmentMixin:
             ephemeral_webhook=ephemeral_webhook,
         )
         await ctx.send(
-            f"-# {config.HINT} Check out [laws.democraciv.com](https://laws.democraciv.com/bill/{bill.id}) as well!"
+            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/bill/{bill.id}>) as well!"
         )
         await pages.start(ctx)
 
