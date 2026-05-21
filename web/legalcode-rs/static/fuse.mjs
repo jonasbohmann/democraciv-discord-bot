@@ -62,6 +62,7 @@ const LOGICAL_SEARCH_INVALID_QUERY_FOR_KEY = key => `Invalid value for key ${key
 const PATTERN_LENGTH_TOO_LARGE = max => `Pattern length exceeds max of ${max}.`;
 const MISSING_KEY_PROPERTY = name => `Missing ${name} property in key`;
 const INVALID_KEY_WEIGHT_VALUE = key => `Property 'weight' in key '${key}' must be a positive integer`;
+const FUSE_MATCH_TOKEN_SEARCH_UNSUPPORTED = `Fuse.match does not support useTokenSearch: token search requires ` + `corpus-level statistics (df, fieldCount) that a one-off string ` + `comparison does not have. Use new Fuse(...).search(...) instead.`;
 
 const hasOwn = Object.prototype.hasOwnProperty;
 class KeyStore {
@@ -466,6 +467,22 @@ function createIndex(keys, docs, {
   myIndex.setKeys(keys.map(createKey));
   myIndex.setSources(docs);
   myIndex.create();
+  return myIndex;
+}
+function parseIndex(data, {
+  getFn = Config.getFn,
+  fieldNormWeight = Config.fieldNormWeight
+} = {}) {
+  const {
+    keys,
+    records
+  } = data;
+  const myIndex = new FuseIndex({
+    getFn,
+    fieldNormWeight
+  });
+  myIndex.setKeys(keys);
+  myIndex.setIndexRecords(records);
   return myIndex;
 }
 
@@ -1459,15 +1476,29 @@ function format(results, docs, {
 // letter — without it, scripts like Devanagari and NFD-normalized Latin
 // shatter (e.g. 'हिन्दी' → ['ह','न','द'], 'café'.normalize('NFD') → ['cafe']).
 const DEFAULT_TOKEN = /[\p{L}\p{M}\p{N}_]+/gu;
+const warned = new WeakSet();
+function warnNonGlobal(regex) {
+  if (!warned.has(regex)) {
+    warned.add(regex);
+    console.warn(`[Fuse] tokenize regex ${regex} lacks the global flag; only the ` + `first match per text will be returned. Add the 'g' flag.`);
+  }
+}
 function resolveTokenize(tokenize) {
   if (typeof tokenize === 'function') {
+    let validated = false;
     return text => {
       const result = tokenize(text);
+      if (!validated) {
+        validated = true;
+        if (!Array.isArray(result) || result.some(t => typeof t !== 'string')) {
+          throw new Error(`[Fuse] tokenize function must return string[]; received ${Array.isArray(result) ? 'array containing non-strings' : typeof result}.`);
+        }
+      }
       return result;
     };
   }
   if (tokenize instanceof RegExp) {
-    if (!tokenize.global) ;
+    if (!tokenize.global) warnNonGlobal(tokenize);
     return text => text.match(tokenize) || [];
   }
   return text => text.match(DEFAULT_TOKEN) || [];
@@ -2125,61 +2156,38 @@ class TokenSearch {
   }
 }
 
-/// <reference lib="webworker" />
-
-
-// Register all search plugins so the worker supports full features
+Fuse.version = '7.4.0-beta.6';
+Fuse.createIndex = createIndex;
+Fuse.parseIndex = parseIndex;
+Fuse.config = Config;
+Fuse.match = function (pattern, text, options) {
+  // Token search needs corpus statistics (df, fieldCount) that a one-off
+  // string comparison can't provide. Reject it here so the contract is the
+  // same in the full and basic builds — without this guard, the full build
+  // crashes with an opaque TypeError and the basic build silently falls back
+  // to fuzzy matching.
+  if (options && options.useTokenSearch) {
+    throw new Error(FUSE_MATCH_TOKEN_SEARCH_UNSUPPORTED);
+  }
+  const searcher = createSearcher(pattern, {
+    ...Config,
+    ...options
+  });
+  return searcher.searchIn(text);
+};
+{
+  Fuse.parseQuery = parse;
+}
 {
   register(ExtendedSearch);
 }
 {
   register(TokenSearch);
 }
-Fuse.createIndex = createIndex;
-Fuse.config = Config;
-let fuse = null;
-self.onmessage = e => {
-  const {
-    id,
-    method,
-    args
-  } = e.data;
-  try {
-    let result;
-    switch (method) {
-      case 'init':
-        {
-          const [docs, options] = args;
-          fuse = new Fuse(docs, options);
-          result = true;
-          break;
-        }
-      case 'search':
-        {
-          result = fuse.search(args[0], args[1]);
-          break;
-        }
-      case 'add':
-        {
-          fuse.add(args[0]);
-          result = true;
-          break;
-        }
-      case 'setCollection':
-        {
-          fuse.setCollection(args[0]);
-          result = true;
-          break;
-        }
-    }
-    self.postMessage({
-      id,
-      result
-    });
-  } catch (err) {
-    self.postMessage({
-      id,
-      error: err.message
-    });
-  }
+Fuse.use = function (...plugins) {
+  plugins.forEach(plugin => register(plugin));
 };
+
+// Re-export public types
+
+export { Fuse as default };

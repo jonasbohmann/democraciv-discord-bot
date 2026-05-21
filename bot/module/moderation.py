@@ -423,7 +423,7 @@ class Moderation(context.CustomCog):
                 #    exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted"
                 # )
                 pass
-        
+
         if muted_role:
             await channel.set_permissions(
                 muted_role, send_messages=False, add_reactions=False
