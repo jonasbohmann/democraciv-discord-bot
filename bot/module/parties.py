@@ -105,7 +105,7 @@ class Party(context.CustomCog, name="Political Parties"):
 
         if not party.is_independent:
             embed.description = (
-                f"[Platform and Description]({self.bot.mk.POLITICAL_PARTIES})\nJoin this party with "
+                f"-# [Platform and Description]({self.bot.mk.POLITICAL_PARTIES})\n-# Join this party with "
                 f"`{config.BOT_PREFIX}join {min(party.aliases, key=len)}`."
             )
             members_name = "Members"
