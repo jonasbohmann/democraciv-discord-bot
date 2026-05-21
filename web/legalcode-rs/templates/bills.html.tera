@@ -23,7 +23,6 @@ Bills · Democraciv MK13
     <div class="search-toolbar">
         <div class="search-controls">
             <div class="search-form">
-                <label for="bill-search"></label>
                 <input
                     id="bill-search"
                     type="search"
@@ -75,15 +74,17 @@ Bills · Democraciv MK13
             </label>
         </fieldset>
 
-        <p class="search-count mono" data-search-count>
-            {{ total_count }} of {{ total_count }} shown
-        </p>
+        <div class="table-meta">
+            <p class="search-count mono" data-search-count>
+                {{ total_count }} of {{ total_count }} shown
+            </p>
+        </div>
     </div>
 
     <script type="text/plain" data-search-items>{{ search_items_b64 | safe }}</script>
     <script type="text/plain" data-search-keys>{{ search_keys_b64 | safe }}</script>
 
-    <div class="table-scroll" style="margin-top: 3rem;">
+    <div class="table-scroll">
         <table class="record-table" aria-label="Bill list">
             <thead>
                 <tr>
@@ -101,24 +102,24 @@ Bills · Democraciv MK13
                     data-search-type="{{ bill.type_label }}"
                     data-search-house="{{ bill.origin_house_label }}"
                 >
-                    <td class="record-main">
+                    <td class="record-main" data-label="Bill">
                         <a href="/bill/{{ bill.id }}" class="record-title">
                             Bill #{{ bill.id }} · {{ bill.name }}
                         </a>
-                        <p class="record-subtle">{{ bill.excerpt }}</p>
+                        <p class="mobile-hide record-subtle">{{ bill.excerpt }}</p>
                     </td>
-                    <td>
+                    <td data-label="Status">
                         <div class="record-meta">
                             <span>{{ bill.status_label }}</span>
                         </div>
                     </td>
-                    <td>
+                    <td data-label="Type">
                         <div class="record-meta">
                             <span>{{ bill.type_label }}</span>
                             <span class="record-subtle">{{ bill.origin_house_label }}</span>
                         </div>
                     </td>
-                    <td>
+                    <td class="action-cell" data-label="Action">
                         <a href="/bill/{{ bill.id }}" role="button" class="primary table-button">
                             Open
                         </a>

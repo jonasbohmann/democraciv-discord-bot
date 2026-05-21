@@ -8,28 +8,52 @@ Democraciv MK13
 <section class="stack">
     <article class="page-header-card" style="padding: 2rem;">
         <h1>Legislative Records</h1>
-        <p style="margin-bottom: 2rem;">
-            Browse motions, bills, laws, and the current legal code.
+        <p>
+            Bills & motions are submitted through the Democraciv Discord Bot on our Discord server. Voting takes place outside the bot.
+            The Speaker, Vice Speaker and Senator Presiding mark bills as passed to turn them into laws with special bot commands exclusive to them.
         </p>
 
-        <div class="surface-panel"  style="margin: 1rem; background-color: #202530;">
-            <h2><a href="/law">Laws</a></h2>
-            <p class="field-note">Browse, search and filter the list of currently active laws.</p>
-        </div>
+        <p style="margin-bottom: 2rem;">
+            The records on this site are the same records as found in the -law, -bill & -motion commands from the Democraciv Discord Bot.
+        </p>
 
-        <div class="surface-panel"  style="margin: 1rem; background-color: #202530;">
-            <h2><a href="/bill">Bills</a></h2>
-            <p class="field-note">All submitted Bills from both the Senate & the Commons.</p>
-        </div>
+        <div class="feature-grid">
+            <a href="/law" class="surface-panel feature-card">
+                <h2>Laws</h2>
+                <p class="field-note">Browse, search and filter the list of currently active laws.</p>
+            </a>
 
-        <div class="surface-panel"  style="margin: 1rem; background-color: #202530;">
-            <h2><a href="/legal-code">Legal Code</a></h2>
-            <p class="field-note">All current active laws on one page.</p>
-        </div>
+            <a href="/legal-code" class="surface-panel feature-card">
+                <h2>Legal Code</h2>
+                <p class="field-note">All current active laws on one page.</p>
+            </a>
 
-        <div class="surface-panel"  style="margin: 1rem; background-color: #202530;">
-            <h2><a href="/motion">Motions</a></h2>
-            <p class="field-note">All submitted Motions from both the Senate & the Commons.</p>
+            <a href="/bill" class="surface-panel feature-card">
+                <h2>Bills</h2>
+                <p class="field-note">All submitted Bills from both the Senate & the Commons.</p>
+            </a>
+
+            <a href="/motion" class="surface-panel feature-card">
+                <h2>Motions</h2>
+                <p class="field-note">All submitted Motions from both the Senate & the Commons.</p>
+            </a>
+
         </div>
+    </article>
+
+
+    <article class="page-header-card" style="padding: 2rem; margin-top: 1rem;">
+        <h1>Additional Links</h1>
+        <div class="feature-grid">
+            <a href="https://discord.democraciv.com" target="_blank" rel="noopener noreferrer" class="surface-panel feature-card">
+                <h2>Discord</h2>
+                <p class="field-note">Everything happens here.</p>
+            </a>
+
+            <a href="https://wiki.democraciv.com" target="_blank" rel="noopener noreferrer" class="surface-panel feature-card">
+                <h2>Wiki</h2>
+            </a>
+        </div>
+    </article>
 </section>
 {% endblock content %}

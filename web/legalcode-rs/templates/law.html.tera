@@ -32,7 +32,7 @@ Law #{{ law.id }} · Democraciv MK13
                 <dd><a href="{{ law.link }}" target="_blank" rel="noopener noreferrer">Google Docs</a></dd>
             </div>
             <div class="field">
-                <dt>Submitter Description</dt>
+                <dt>Summary</dt>
                 <dd>{{ law.submitter_description }}</dd>
             </div>
         </dl>
@@ -41,7 +41,7 @@ Law #{{ law.id }} · Democraciv MK13
 
         <section class="stack">
             <div>
-                <h2>Content</h2>
+                <h2 style="margin-top: 1.5rem;">Content</h2>
                 <p class="record-subtle">Formatting or layout may be off. See Google Docs for proper formatting.</p>
             </div>
             <div class="content-block" style="margin-top: 2rem;">{{ law.content }}</div>

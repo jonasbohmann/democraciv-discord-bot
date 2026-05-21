@@ -35,14 +35,18 @@ Bill #{{ bill.id }} · Democraciv MK13
             </div>
             <div class="field">
                 <dt>Sponsors</dt>
+                {% if bill.sponsor_count == 0 %}
+                <dd>None</dd>
+                {% else %}
                 <dd class="mono">{{ bill.sponsor_count }}</dd>
+                {% endif %}
             </div>
             <div class="field">
                 <dt>Link</dt>
                 <dd><a href="{{ bill.link }}" target="_blank" rel="noopener noreferrer">Google Docs</a></dd>
             </div>
             <div class="field">
-                <dt>Submitter Description</dt>
+                <dt>Summary</dt>
                 <dd>{{ bill.submitter_description }}</dd>
             </div>
         </dl>
@@ -77,7 +81,7 @@ Bill #{{ bill.id }} · Democraciv MK13
 
         <section class="stack">
             <div>
-                <h2>Content</h2>
+                <h2 style="margin-top: 1.5rem;">Content</h2>
                 <p class="record-subtle">Formatting or layout may be off. See Google Docs for proper formatting.</p>
             </div>
             <div class="content-block">{{ bill.content }}</div>
