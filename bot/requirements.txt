@@ -1,4 +1,4 @@
-discord.py[speed]
+discord.py[speed]>=2.7.0
 aiodns
 discord-ext-menus
 git+https://github.com/oliver-ni/discord-ext-menus-views

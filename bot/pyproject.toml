@@ -11,7 +11,7 @@ dependencies = [
     "certifi>=2024.8.30",
     "discord-ext-menus-views",
     "discord-ext-menus>=1.1",
-    "discord-py>=2.4.0",
+    "discord-py>=2.7.0",
     "fuzzywuzzy>=0.18.0",
     "google-api-python-client>=2.147.0",
     "google-auth-httplib2>=0.2.0",

@@ -2,6 +2,7 @@ import time
 import discord
 
 from bot.config import config
+from discord import app_commands
 from discord.ext import commands
 from bot.utils import context, help, text, exceptions
 
@@ -27,6 +28,74 @@ class Meta(context.CustomCog):
             return await ctx.send(f"{config.NO} Admin module not loaded.")
 
         await ctx.invoke(self.bot.get_command("jsk reload"), list(self.bot.extensions))
+
+    @commands.command(name="syncslash", aliases=["syncappcommands"], hidden=True)
+    @commands.is_owner()
+    async def sync_slash(self, ctx, guild_id: int = None):
+        """Sync slash commands to one guild for staging."""
+
+        target_id = guild_id or (ctx.guild.id if ctx.guild else None)
+
+        if target_id is None:
+            return await ctx.send(f"{config.NO} Keine Guild.")
+
+        target = discord.Object(id=target_id)
+
+        self.bot.tree.clear_commands(guild=target)
+        self.bot.tree.copy_global_to(guild=target)
+        synced = await self.bot.tree.sync(guild=target)
+
+        await ctx.send(
+            f"{config.YES} Synced {len(synced)} slash command(s) to guild `{target_id}`."
+        )
+
+    @commands.command(
+        name="slashcommands",
+        aliases=["appcommands", "slashpreview"],
+        hidden=True,
+    )
+    @commands.is_owner()
+    async def slash_commands(self, ctx):
+        """Show the current in-memory app command tree before syncing."""
+
+        def signature(command: app_commands.Command) -> str:
+            value = f"/{command.qualified_name}"
+            params = getattr(command, "parameters", ())
+            if params:
+                bits = [
+                    f"<{param.name}>" if param.required else f"[{param.name}]"
+                    for param in params
+                ]
+                value = f"{value} {' '.join(bits)}"
+
+            if isinstance(command, app_commands.Group):
+                value = f"{value} (group)"
+
+            return value
+
+        commands_ = sorted(
+            self.bot.tree.walk_commands(),
+            key=lambda command: command.qualified_name,
+        )
+        rows = [
+            f"`{signature(command)}` - {command.description or 'No description'}"
+            for command in commands_
+        ]
+
+        if not rows:
+            return await ctx.send(f"{config.NO} No slash commands are loaded.")
+
+        header = f"Current app command tree ({len(rows)} entries):\n"
+        current = header
+        for row in rows:
+            if len(current) + len(row) + 1 > 1900:
+                await ctx.send(current)
+                current = ""
+
+            current = f"{current}\n{row}" if current else row
+
+        if current:
+            await ctx.send(current)
 
     async def ensure_dm_settings(self, user: int):
         settings = await self.bot.db.fetchrow(

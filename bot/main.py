@@ -27,6 +27,7 @@ import traceback
 
 from typing import Optional, Union
 from discord.ext import commands, tasks
+from discord import app_commands
 from googleapiclient import errors
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -71,6 +72,90 @@ all_extensions = {
     "bot.module.government",
 }
 
+
+slash_extensions = {
+    "bot.slash.government",
+    "bot.slash.guild",
+    "bot.slash.meta",
+    "bot.slash.moderation",
+    "bot.slash.npcs",
+    "bot.slash.parties",
+    "bot.slash.roles",
+    "bot.slash.starboard",
+    "bot.slash.tags",
+    "bot.slash.utility",
+}
+
+slash_extension_requirements = {
+    "bot.slash.guild": {
+        "bot.module.guild",
+    },
+    "bot.slash.meta": {
+        "bot.module.meta",
+    },
+    "bot.slash.moderation": {
+        "bot.module.moderation",
+    },
+    "bot.slash.npcs": {
+        "bot.module.npcs",
+    },
+    "bot.slash.parties": {
+        "bot.module.parties",
+    },
+    "bot.slash.roles": {
+        "bot.module.roles",
+    },
+    "bot.slash.starboard": {
+        "bot.module.starboard",
+    },
+    "bot.slash.tags": {
+        "bot.module.tags",
+    },
+    "bot.slash.utility": {
+        "bot.module.utility",
+    },
+    "bot.slash.legal": {
+        "bot.module.bills",
+        "bot.module.laws",
+        "bot.module.motions",
+    },
+    "bot.slash.legislature": {
+        "bot.module.bills",
+        "bot.module.legislature",
+        "bot.module.mk_13_commons",
+        "bot.module.motions",
+    },
+    "bot.slash.ministry": {
+        "bot.module.bills",
+        "bot.module.laws",
+        "bot.module.ministry",
+    },
+}
+
+if all(
+    extension in all_extensions
+    for extension in ("bot.module.bills", "bot.module.laws", "bot.module.motions")
+):
+    slash_extensions.add("bot.slash.legal")
+
+if all(
+    extension in all_extensions
+    for extension in (
+        "bot.module.bills",
+        "bot.module.legislature",
+        "bot.module.mk_13_commons",
+        "bot.module.motions",
+    )
+):
+    slash_extensions.add("bot.slash.legislature")
+
+if all(
+    extension in all_extensions
+    for extension in ("bot.module.bills", "bot.module.laws", "bot.module.ministry")
+):
+    slash_extensions.add("bot.slash.ministry")
+
+
 if mk.MarkConfig.IS_MULTICIV:
     initial_extensions = all_extensions
 
@@ -97,6 +182,12 @@ if mk.MarkConfig.IS_MULTICIV:
 
 else:
     initial_extensions = all_extensions - {"bot.module.nation"}
+
+initial_slash_extensions = {
+    extension
+    for extension in slash_extensions
+    if slash_extension_requirements.get(extension, set()).issubset(initial_extensions)
+}
 
 # monkey patch dpy's send
 _old_send = discord.abc.Messageable.send
@@ -145,6 +236,13 @@ def get_prefix(bot, msg):
     return commands.when_mentioned_or(config.BOT_PREFIX)(bot, msg)
 
 
+class DemocracivCommandTree(app_commands.CommandTree):
+    async def on_error(
+        self, interaction: discord.Interaction, error: app_commands.AppCommandError
+    ):
+        await interaction.client.on_app_command_error(interaction, error)
+
+
 class DemocracivBot(commands.Bot):
     BASE_API = config.API_URL
 
@@ -164,6 +262,7 @@ class DemocracivBot(commands.Bot):
             max_messages=100 if mk.MarkConfig.IS_NATION_BOT else 1000,
             command_prefix=get_prefix,
             case_insensitive=True,
+            tree_cls=DemocracivCommandTree,
             intents=intents,
             allowed_mentions=discord.AllowedMentions.none(),
             activity=discord.Game(
@@ -205,6 +304,14 @@ class DemocracivBot(commands.Bot):
                 logging.info(f"Successfully loaded {extension}")
             except Exception:
                 logging.error(f"Failed to load module {extension}.")
+                traceback.print_exc()
+
+        for extension in initial_slash_extensions:
+            try:
+                await self.load_extension(extension)
+                logging.info(f"Successfully loaded {extension}")
+            except Exception:
+                logging.error(f"Failed to load slash module {extension}.")
                 traceback.print_exc()
 
     async def check_api_running(self, first_time=False):
@@ -517,6 +624,96 @@ class DemocracivBot(commands.Bot):
             await self.log_error(
                 ctx, error, to_log_channel=False, to_owner=True, to_context=True
             )
+
+    async def on_app_command_error(
+        self, interaction: discord.Interaction, error: app_commands.AppCommandError
+    ):
+        original = getattr(error, "original", None) or getattr(error, "__cause__", None)
+        error = original or error
+        dciv = getattr(self, "dciv", None)
+
+        async def respond(message: str):
+            if interaction.response.is_done():
+                return await interaction.followup.send(message, ephemeral=True)
+
+            return await interaction.response.send_message(message, ephemeral=True)
+
+        if isinstance(error, app_commands.CommandOnCooldown):
+            return await respond(
+                f"{config.NO} You are on cooldown! Try again in {error.retry_after:.2f} seconds."
+            )
+
+        if isinstance(error, app_commands.MissingPermissions):
+            return await respond(
+                f"{config.NO} You need {self.format_permissions(error.missing_permissions)} permission(s) to use this command."
+            )
+
+        if isinstance(error, app_commands.BotMissingPermissions):
+            return await respond(
+                f"{config.NO} I don't have {self.format_permissions(error.missing_permissions)} permission(s)"
+                f" to perform this action for you."
+            )
+
+        if isinstance(error, app_commands.MissingRole):
+            role = (
+                interaction.guild.get_role(error.missing_role)
+                if interaction.guild
+                else None
+            )
+            if (
+                role is None
+                and dciv is not None
+                and isinstance(error.missing_role, int)
+            ):
+                role = dciv.get_role(error.missing_role)
+            role_name = role.name if role else str(error.missing_role)
+            return await respond(
+                f"{config.NO} You need the `{role_name}` role in order to use this command."
+            )
+
+        if isinstance(error, app_commands.MissingAnyRole):
+            missing_roles = []
+            for role_id in error.missing_roles:
+                role = None
+                if interaction.guild and isinstance(role_id, int):
+                    role = interaction.guild.get_role(role_id)
+                    if role is None and dciv is not None:
+                        role = dciv.get_role(role_id)
+
+                missing_roles.append(f"`{role.name if role else role_id}`")
+
+            missing = " or ".join(missing_roles)
+            return await respond(
+                f"{config.NO} You need at least one of these roles in order to use this command: {missing}"
+            )
+
+        if isinstance(error, app_commands.NoPrivateMessage):
+            return await respond(f"{config.NO} This command cannot be used in DMs.")
+
+        if isinstance(error, exceptions.DemocracivBotException):
+            return await respond(error.message)
+
+        if isinstance(error, commands.BadArgument):
+            return await respond(str(error) or f"{config.NO} Invalid argument.")
+
+        if isinstance(error, app_commands.CheckFailure):
+            return await respond(f"{config.NO} You cannot use this command.")
+
+        logging.error(f"Ignoring exception in app command {interaction.command}:")
+        traceback.print_exception(type(error), error, error.__traceback__)
+
+        if getattr(self, "owner", None):
+            try:
+                await self.owner.send(
+                    f"Unexpected app command error in `{interaction.command}`:\n"
+                    f"```py\n{error.__class__.__name__}: {error}\n```"
+                )
+            except discord.HTTPException:
+                pass
+
+        return await respond(
+            f"{config.NO} An unexpected error occurred while performing this command."
+        )
 
     def get_democraciv_channel(
         self, channel: mk.DemocracivChannel
