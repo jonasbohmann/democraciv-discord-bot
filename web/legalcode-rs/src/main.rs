@@ -4,13 +4,17 @@ extern crate rocket;
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use rocket::{State, fs::FileServer};
 use rocket_dyn_templates::{Template, context};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
+use std::{collections::HashMap, sync::Mutex};
 
 const LAW_STATUS: i32 = 10; // siehe bot/utils/modules.py BillIsLaw
+const DEFAULT_AUTHOR_LOOKUP_URL: &str = "http://127.0.0.1:8081/discord-user";
+const DEFAULT_AUTHOR_LOOKUP_TOKEN: &str = "";
 
 struct AppState {
     db: PgPool,
+    author_lookup: DiscordAuthorLookupClient,
 }
 
 #[derive(Serialize, Clone)]
@@ -24,6 +28,8 @@ struct MotionDetail {
     id: i32,
     title: String,
     body: String,
+    submitter: i64,
+    author: DiscordAuthor,
 }
 
 #[derive(Serialize, Clone)]
@@ -76,8 +82,102 @@ struct BillDetail {
     status: i32,
     status_label: String,
     is_law: bool,
+    submitter: i64,
+    author: DiscordAuthor,
     sponsor_count: i64,
     history: Vec<BillHistoryItem>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+struct DiscordAuthor {
+    user_id: i64,
+    username: String,
+    display_name: String,
+    avatar_url: String,
+}
+
+#[derive(Serialize)]
+struct DiscordAuthorLookupRequest {
+    user_id: i64,
+}
+
+struct DiscordAuthorLookupClient {
+    client: reqwest::Client,
+    base_url: String,
+    bearer_token: String,
+    cache: Mutex<HashMap<i64, DiscordAuthor>>,
+}
+
+impl DiscordAuthorLookupClient {
+    fn from_env() -> Self {
+        Self {
+            client: reqwest::Client::new(),
+            base_url: std::env::var("LEGALCODE_AUTHOR_LOOKUP_URL")
+                .unwrap_or_else(|_| DEFAULT_AUTHOR_LOOKUP_URL.to_string()),
+            bearer_token: std::env::var("LEGALCODE_AUTHOR_LOOKUP_TOKEN")
+                .unwrap_or_else(|_| DEFAULT_AUTHOR_LOOKUP_TOKEN.to_string()),
+            cache: Mutex::new(HashMap::new()),
+        }
+    }
+
+    fn cached(&self, user_id: i64) -> Option<DiscordAuthor> {
+        self.cache
+            .lock()
+            .ok()
+            .and_then(|cache| cache.get(&user_id).cloned())
+    }
+
+    fn store_cached(&self, author: &DiscordAuthor) {
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.insert(author.user_id, author.clone());
+        }
+    }
+
+    async fn lookup(&self, user_id: i64) -> Result<DiscordAuthor, String> {
+        if let Some(author) = self.cached(user_id) {
+            return Ok(author);
+        }
+
+        let response = self
+            .client
+            .post(&self.base_url)
+            .bearer_auth(&self.bearer_token)
+            .json(&DiscordAuthorLookupRequest { user_id })
+            .send()
+            .await
+            .map_err(|error| error.to_string())?;
+
+        if !response.status().is_success() {
+            return Err(format!(
+                "author lookup failed with status {}",
+                response.status()
+            ));
+        }
+
+        let author = response
+            .json::<DiscordAuthor>()
+            .await
+            .map_err(|error| error.to_string())?;
+
+        self.store_cached(&author);
+        Ok(author)
+    }
+}
+
+fn fallback_author(user_id: i64) -> DiscordAuthor {
+    DiscordAuthor {
+        user_id,
+        username: "Unknown User".to_string(),
+        display_name: "Unknown User".to_string(),
+        avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png".to_string(),
+    }
+}
+
+async fn resolve_author(lookup: &DiscordAuthorLookupClient, user_id: i64) -> DiscordAuthor {
+    lookup
+        .lookup(user_id)
+        .await
+        .unwrap_or_else(|_| fallback_author(user_id))
 }
 
 #[derive(Serialize, Clone)]
@@ -235,7 +335,7 @@ async fn load_motion_list(db: &PgPool) -> Result<Vec<MotionListItem>, String> {
 }
 
 async fn load_motion_detail(db: &PgPool, id: i32) -> Result<Option<MotionDetail>, String> {
-    let row = sqlx::query("SELECT id, title, description FROM motion WHERE id = $1")
+    let row = sqlx::query("SELECT id, title, description, submitter FROM motion WHERE id = $1")
         .bind(id)
         .fetch_optional(db)
         .await
@@ -245,10 +345,14 @@ async fn load_motion_detail(db: &PgPool, id: i32) -> Result<Option<MotionDetail>
         return Ok(None);
     };
 
+    let submitter: i64 = row.try_get("submitter").unwrap_or_default();
+
     Ok(Some(MotionDetail {
         id: row.try_get("id").unwrap_or_default(),
         title: row.try_get("title").unwrap_or_default(),
         body: row.try_get("description").unwrap_or_default(),
+        submitter,
+        author: fallback_author(submitter),
     }))
 }
 
@@ -358,6 +462,7 @@ async fn load_bill_history(db: &PgPool, bill_id: i32) -> Result<Vec<BillHistoryI
 
 async fn load_bill_detail(
     db: &PgPool,
+    author_lookup: &DiscordAuthorLookupClient,
     id: i32,
     laws_only: bool,
     include_history: bool,
@@ -369,6 +474,7 @@ async fn load_bill_detail(
             bill.content,
             bill.link,
             bill.submitter_description,
+            bill.submitter,
             bill.origin_house,
             bill.is_procedure,
             bill.status,
@@ -384,6 +490,7 @@ async fn load_bill_detail(
             bill.content,
             bill.link,
             bill.submitter_description,
+            bill.submitter,
             bill.origin_house,
             bill.is_procedure,
             bill.status,
@@ -408,12 +515,15 @@ async fn load_bill_detail(
     let origin_house_label = display_house_name(&origin_house);
     let is_procedure: bool = row.try_get("is_procedure").unwrap_or_default();
     let status: i32 = row.try_get("status").unwrap_or_default();
+    let submitter: i64 = row.try_get("submitter").unwrap_or_default();
 
     let history = if include_history {
         load_bill_history(db, id).await?
     } else {
         Vec::new()
     };
+
+    let author = resolve_author(author_lookup, submitter).await;
 
     Ok(Some(BillDetail {
         id: row.try_get("id").unwrap_or_default(),
@@ -429,6 +539,8 @@ async fn load_bill_detail(
         status,
         status_label: display_bill_status(status).to_string(),
         is_law: status == LAW_STATUS,
+        submitter,
+        author,
         sponsor_count: row.try_get("sponsor_count").unwrap_or_default(),
         history,
     }))
@@ -477,9 +589,11 @@ async fn motion_index(state: &State<AppState>) -> Result<Template, String> {
 
 #[get("/motion/<id>")]
 async fn motion(id: i32, state: &State<AppState>) -> Result<Option<Template>, String> {
-    let Some(motion) = load_motion_detail(&state.db, id).await? else {
+    let Some(mut motion) = load_motion_detail(&state.db, id).await? else {
         return Ok(None);
     };
+
+    motion.author = resolve_author(&state.author_lookup, motion.submitter).await;
 
     Ok(Some(Template::render(
         "motion",
@@ -511,7 +625,8 @@ async fn bill_index(state: &State<AppState>) -> Result<Template, String> {
 
 #[get("/bill/<id>")]
 async fn bill(id: i32, state: &State<AppState>) -> Result<Option<Template>, String> {
-    let Some(bill) = load_bill_detail(&state.db, id, false, true).await? else {
+    let Some(bill) = load_bill_detail(&state.db, &state.author_lookup, id, false, true).await?
+    else {
         return Ok(None);
     };
 
@@ -543,7 +658,8 @@ async fn law_index(state: &State<AppState>) -> Result<Template, String> {
 
 #[get("/law/<id>")]
 async fn law(id: i32, state: &State<AppState>) -> Result<Option<Template>, String> {
-    let Some(law) = load_bill_detail(&state.db, id, true, false).await? else {
+    let Some(law) = load_bill_detail(&state.db, &state.author_lookup, id, true, false).await?
+    else {
         return Ok(None);
     };
 
@@ -577,13 +693,17 @@ fn not_found() -> Template {
 #[launch]
 async fn rocket() -> _ {
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let author_lookup = DiscordAuthorLookupClient::from_env();
 
     let pool = PgPool::connect(&database_url)
         .await
         .expect("failed to connect to PostgreSQL");
 
     rocket::build()
-        .manage(AppState { db: pool })
+        .manage(AppState {
+            db: pool,
+            author_lookup,
+        })
         .mount(
             "/",
             routes![

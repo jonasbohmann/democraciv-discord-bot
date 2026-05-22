@@ -33,6 +33,7 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport import requests
 from async_lru import alru_cache
+from aiohttp import web
 
 sys.path.append(str(pathlib.Path(__file__).parent.parent))
 
@@ -243,6 +244,53 @@ class DemocracivCommandTree(app_commands.CommandTree):
         await interaction.client.on_app_command_error(interaction, error)
 
 
+class DiscordUserLookupListener:
+    def __init__(self, bot):
+        self.bot = bot
+        self.app = web.Application()
+        self.app.add_routes([web.post("/discord-user", self.lookup_user)])
+        self.runner = web.AppRunner(self.app)
+
+    async def shutdown(self):
+        try:
+            await self.runner.cleanup()
+        except RuntimeError:
+            pass
+
+    async def setup(self):
+        await self.runner.setup()
+        site = web.TCPSite(self.runner, "127.0.0.1", 8081)
+        await site.start()
+
+    def _is_authorized(self, request: aiohttp.web.Request) -> bool:
+        return (
+            request.headers.get("Authorization")
+            == f"Bearer {token.LEGALCODE_AUTHOR_LOOKUP_TOKEN}"
+        )
+
+    async def lookup_user(self, request: aiohttp.web.Request):
+        if not self._is_authorized(request):
+            return aiohttp.web.json_response({"error": "unauthorized"}, status=401)
+
+        try:
+            payload = await request.json()
+        except Exception:
+            return aiohttp.web.json_response({"error": "invalid json"}, status=400)
+
+        user_id = payload.get("user_id")
+
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            return aiohttp.web.json_response({"error": "invalid user_id"}, status=400)
+
+        if not self.bot.is_ready() or self.bot.dciv is None:
+            return aiohttp.web.json_response({"error": "bot not ready"}, status=503)
+
+        user = await self.bot.resolve_discord_user(user_id)
+        return aiohttp.web.json_response(user)
+
+
 class DemocracivBot(commands.Bot):
     BASE_API = config.API_URL
 
@@ -278,6 +326,7 @@ class DemocracivBot(commands.Bot):
         self.mk = mk.MarkConfig(self)
         self.is_api_running = False
         self.democraciv_guild_id = 0
+        self.discord_user_listener = DiscordUserLookupListener(self)
 
         # for Google Apps Script
         socket.setdefaulttimeout(600)
@@ -313,6 +362,8 @@ class DemocracivBot(commands.Bot):
             except Exception:
                 logging.error(f"Failed to load slash module {extension}.")
                 traceback.print_exc()
+
+        self.loop.create_task(self.discord_user_listener.setup())
 
     async def check_api_running(self, first_time=False):
         if first_time:
@@ -362,6 +413,51 @@ class DemocracivBot(commands.Bot):
 
     async def get_context(self, message, *, cls=None):
         return await super().get_context(message, cls=cls or context.CustomContext)
+
+    async def resolve_discord_user(self, user_id: int) -> dict:
+        def fallback() -> dict:
+            return {
+                "user_id": user_id,
+                "username": "Unknown User",
+                "display_name": "Unknown User",
+                "avatar_url": "https://cdn.discordapp.com/embed/avatars/0.png",
+            }
+
+        guild = self.dciv
+
+        if guild is not None:
+            member = guild.get_member(user_id)
+
+            if member is None:
+                try:
+                    member = await guild.fetch_member(user_id)
+                except (discord.Forbidden, discord.HTTPException, discord.NotFound):
+                    member = None
+
+            if member is not None:
+                return {
+                    "user_id": user_id,
+                    "username": member.name,
+                    "display_name": member.display_name,
+                    "avatar_url": member.display_avatar.url,
+                }
+
+        user = self.get_user(user_id)
+
+        if user is None:
+            try:
+                user = await self.fetch_user(user_id)
+            except discord.HTTPException:
+                return fallback()
+
+        return {
+            "user_id": user_id,
+            "username": user.name,
+            "display_name": getattr(user, "global_name", None)
+            or getattr(user, "display_name", None)
+            or user.name,
+            "avatar_url": user.display_avatar.url,
+        }
 
     async def avatar_bytes(self):
         try:
@@ -1027,6 +1123,8 @@ class DemocracivBot(commands.Bot):
         if channel:
             embed = text.SafeEmbed(title=f"{config.YES}  Bot is shutting down...")
             await channel.send(embed=embed)
+
+        await self.discord_user_listener.shutdown()
 
         await super().close()
         await self.session.close()

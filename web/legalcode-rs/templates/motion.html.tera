@@ -14,6 +14,19 @@ Motion #{{ motion.id }} · Democraciv MK13
             <h1>{{ motion.title }}</h1>
         </header>
 
+        <div style="display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0;">
+            <img
+                src="{{ motion.author.avatar_url }}"
+                alt="{{ motion.author.display_name }} avatar"
+                style="width: 56px; height: 56px; border-radius: 999px; object-fit: cover;"
+            >
+            <div>
+                <div class="detail-meta">Written by</div>
+                <div>{{ motion.author.display_name }}</div>
+                <div class="record-subtle">@{{ motion.author.username }}</div>
+            </div>
+        </div>
+
         <div class="keyline" aria-hidden="true"></div>
 
         <section class="stack">

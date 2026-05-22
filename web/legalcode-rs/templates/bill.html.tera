@@ -14,6 +14,19 @@ Bill #{{ bill.id }} · Democraciv MK13
             <h1>{{ bill.name }}</h1>
         </header>
 
+        <div style="display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0;">
+            <img
+                src="{{ bill.author.avatar_url }}"
+                alt="{{ bill.author.display_name }} avatar"
+                style="width: 56px; height: 56px; border-radius: 999px; object-fit: cover;"
+            >
+            <div>
+                <div class="detail-meta">Written by</div>
+                <div>{{ bill.author.display_name }}</div>
+                <div class="record-subtle">@{{ bill.author.username }}</div>
+            </div>
+        </div>
+
         <div class="badge-row">
             {% if bill.is_law %}
             <span class="badge">⚖ Active law</span>
