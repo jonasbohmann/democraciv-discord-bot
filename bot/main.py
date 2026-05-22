@@ -47,7 +47,7 @@ logging.basicConfig(
 )
 
 
-BOT_VERSION = "3.0.1"
+BOT_VERSION = "4.0.0"
 
 all_extensions = {
     "bot.module.logs",
