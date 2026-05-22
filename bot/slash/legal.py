@@ -265,6 +265,13 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
                 ids,
             )
             site_path = "bill"
+        elif model is models.Law:
+            records = await self.bot.db.fetch(
+                "SELECT id FROM bill WHERE submitter = ANY($1::bigint[]) AND status = $2 ORDER BY id",
+                ids,
+                models.BillIsLaw.flag.value,
+            )
+            site_path = "law"
         else:
             records = await self.bot.db.fetch(
                 "SELECT id FROM motion WHERE submitter = ANY($1::bigint[]) ORDER BY id",
@@ -902,6 +909,21 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             title=f"All Laws in {self.bot.mk.NATION_NAME}",
             empty_message="There are no laws yet.",
         )
+
+    @law.command(name="from", description="List laws submitted by a member or party.")
+    @app_commands.describe(
+        member="Member or user to list laws from.",
+        party="Political party to list laws from.",
+    )
+    async def law_from(
+        self,
+        interaction: discord.Interaction,
+        member: discord.User = None,
+        party: PartyOption = None,
+    ):
+        ctx = slash_context.from_interaction(interaction, command_name="law")
+        await ctx.defer()
+        await self._from_model(ctx, model=models.Law, member=member, party=party)
 
     @law.command(name="show", description="Show details about one law.")
     @app_commands.describe(law="Law ID or title")
