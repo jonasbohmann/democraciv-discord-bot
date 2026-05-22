@@ -138,34 +138,6 @@ class Moderation(context.CustomCog):
             )
             await mod_channel.send(embed=embed)
 
-    # todo nov 24
-    # @commands.Cog.listener(name="on_member_join")
-    async def possible_alt_listener(self, member):
-        if member.bot:
-            return
-
-        if member.guild != self.bot.dciv:
-            return
-
-        chance, details = await self.calculate_alt_chance(member)
-
-        if chance >= 0.2:
-            embed = text.SafeEmbed(title="Possible Alt Account Joined", description="")
-            embed.add_field(
-                name="Person", value=f"{member.mention} ({member.id})", inline=False
-            )
-            embed.add_field(
-                name="Chance",
-                value=f"There is a **{(chance * 100):.0f}%** chance that {member} is an alt.",
-                inline=False,
-            )
-            if details:
-                embed.add_field(name="Factors", value=details, inline=False)
-
-            await self.bot.get_democraciv_channel(
-                mk.DemocracivChannel.MODERATION_NOTIFICATIONS_CHANNEL
-            ).send(embed=embed)
-
     @commands.command(name="report")
     @commands.dm_only()
     async def report(self, ctx: context.CustomContext):
@@ -247,29 +219,6 @@ class Moderation(context.CustomCog):
             )
 
         await ctx.send(content)
-
-    @commands.command(name="alt", hidden=True)
-    @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
-    async def alt(self, ctx, *, person: Fuzzy[CaseInsensitiveMember]):
-        """Check if someone is an alt"""
-        chance, details = await self.calculate_alt_chance(person)
-
-        embed = text.SafeEmbed(
-            title="Possible Alt Detection",
-            description="This is in no way perfect and should always be taken with a grain of salt.",
-        )
-        embed.add_field(
-            name="Target", value=f"{person.mention} ({person.id})", inline=False
-        )
-        embed.add_field(
-            name="Result",
-            value=f"There is a **{(chance * 100):.0f}%** chance that {person} is an alt.",
-        )
-
-        if details:
-            embed.add_field(name="Factors", value=details, inline=False)
-
-        await ctx.send(embed=embed)
 
     @commands.command(name="hub", aliases=["modhub", "moderationhub", "mhub"])
     @checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
@@ -392,124 +341,6 @@ class Moderation(context.CustomCog):
         await ctx.send(
             f"{config.YES} Deleted **{len(deleted)}** messages.", delete_after=5
         )
-
-    @commands.Cog.listener()
-    async def on_guild_join(self, guild: discord.Guild):
-        muted_role = discord.utils.get(guild.roles, name="Muted")
-
-        if muted_role is None:
-            try:
-                muted_role = await guild.create_role(name="Muted")
-            except discord.Forbidden:
-                return
-
-        if guild.id != self.bot.dciv.id:
-            for channel in guild.text_channels:
-                self.bot.loop.create_task(
-                    channel.set_permissions(
-                        muted_role, send_messages=False, add_reactions=False
-                    )
-                )
-
-    @commands.Cog.listener()
-    async def on_guild_channel_create(self, channel):
-        muted_role = discord.utils.get(channel.guild.roles, name="Muted")
-
-        if muted_role is None:
-            try:
-                muted_role = await channel.guild.create_role(name="Muted")
-            except discord.Forbidden:
-                # raise exceptions.ForbiddenError(
-                #    exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted"
-                # )
-                pass
-
-        if muted_role:
-            await channel.set_permissions(
-                muted_role, send_messages=False, add_reactions=False
-            )
-
-    @commands.command(name="mute")
-    @commands.guild_only()
-    @commands.has_guild_permissions(manage_roles=True)
-    async def mute(self, ctx, *, person: Fuzzy[CaseInsensitiveMember]):
-        """Mute someone"""
-
-        muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
-
-        if muted_role is None:
-            try:
-                muted_role = await ctx.guild.create_role(name="Muted")
-                for channel in ctx.guild.text_channels:
-                    self.bot.loop.create_task(
-                        channel.set_permissions(
-                            muted_role, send_messages=False, add_reactions=False
-                        )
-                    )
-            except discord.Forbidden:
-                raise exceptions.ForbiddenError(
-                    exceptions.ForbiddenTask.CREATE_ROLE, detail="Muted"
-                )
-
-        if muted_role is None:
-            raise exceptions.RoleNotFoundError("Muted")
-
-        if muted_role in person.roles:
-            return await ctx.send(f"{config.NO} {person} is already muted.")
-
-        formatted_reason = f"Action requested by {ctx.author} ({ctx.author.id})"
-
-        if person == ctx.author:
-            return await ctx.send(f"{config.NO} You can't mute yourself.")
-
-        if person == ctx.guild.me:
-            return await ctx.send(f"{config.NO} You can't mute me.")
-
-        try:
-            await person.add_roles(muted_role, reason=formatted_reason)
-        except discord.Forbidden:
-            raise exceptions.ForbiddenError(
-                exceptions.ForbiddenTask.ADD_ROLE, detail="Muted"
-            )
-
-        await self.bot.safe_send_dm(
-            target=person,
-            reason="ban_kick_mute",
-            message=f":zipper_mouth: You were **muted** in {ctx.guild.name}.",
-        )
-
-        await ctx.send(f"{config.YES} {person} was muted.")
-
-    @commands.command(name="unmute")
-    @commands.guild_only()
-    @commands.has_guild_permissions(manage_roles=True)
-    async def unmute(self, ctx, *, person: Fuzzy[CaseInsensitiveMember]):
-        """Unmute someone"""
-
-        muted_role = discord.utils.get(ctx.guild.roles, name="Muted")
-
-        if muted_role is None:
-            raise exceptions.RoleNotFoundError("Muted")
-
-        if muted_role not in person.roles:
-            return await ctx.send(f"{config.NO} {person} is not muted.")
-
-        try:
-            await person.remove_roles(
-                muted_role, reason=f"Action requested by {ctx.author}."
-            )
-        except discord.Forbidden:
-            raise exceptions.ForbiddenError(
-                exceptions.ForbiddenTask.REMOVE_ROLE, detail="Muted"
-            )
-
-        await self.bot.safe_send_dm(
-            target=person,
-            reason="ban_kick_mute",
-            message=f":innocent: You were **unmuted** in {ctx.guild.name}.",
-        )
-
-        await ctx.send(f"{config.YES} {person} was unmuted.")
 
     @commands.command(name="ban")
     @commands.guild_only()
