@@ -12,7 +12,7 @@ import textwrap
 import discord
 
 from bot.config import config, mk
-from bot.utils import text
+from bot.utils import context, text
 from bot.utils.paginator import Pages
 from discord.ext import commands, menus
 
@@ -227,7 +227,7 @@ class HelpMenu(Pages, inherit_buttons=False):
                     value=name,
                 )
                 for name, cog in sorted(self.bot.cogs.items(), key=lambda x: x[0])
-                if not cog.hidden
+                if isinstance(cog, context.CustomCog) and not cog.hidden
             ]
             view.add_item(
                 HelpSelect(

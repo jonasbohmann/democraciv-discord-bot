@@ -47,7 +47,7 @@ logging.basicConfig(
 )
 
 
-BOT_VERSION = "4.0.0"
+BOT_VERSION = "4.0.0-alpha1"
 
 all_extensions = {
     "bot.module.logs",
@@ -67,7 +67,6 @@ all_extensions = {
     "bot.module.laws",
     "bot.module.ministry",
     "bot.module.motions",
-    # "bot.module.supremecourt",
     "bot.module.nation",
     "bot.module.mk_13_commons",
     "bot.module.government",
@@ -177,7 +176,6 @@ if mk.MarkConfig.IS_MULTICIV:
             "bot.module.legislature",
             "bot.module.laws",
             "bot.module.ministry",
-            "bot.module.supremecourt",
             "bot.module.nation",
         }
 
@@ -189,6 +187,10 @@ initial_slash_extensions = {
     for extension in slash_extensions
     if slash_extension_requirements.get(extension, set()).issubset(initial_extensions)
 }
+
+if not config.IS_DEBUG:
+    slash_extensions = []
+    initial_slash_extensions = []
 
 # monkey patch dpy's send
 _old_send = discord.abc.Messageable.send
@@ -297,7 +299,7 @@ class DemocracivBot(commands.Bot):
     def __init__(self):
         self.start_time = time.time()
         self.BOT_VERSION = BOT_VERSION
-        self.IS_DEBUG = platform.system() in ("Windows", "Darwin")
+        self.IS_DEBUG = config.IS_DEBUG
         logging.info(f"Starting bot for {'debug' if self.IS_DEBUG else 'production'}")
 
         intents = discord.Intents.default()
