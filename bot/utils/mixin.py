@@ -721,3 +721,112 @@ class GovernmentMixin:
     @property
     def judge_role(self) -> typing.Optional[discord.Role]:
         return self.bot.get_democraciv_role(mk.DemocracivRole.JUDGE)
+
+    async def _build_legislature_overview_embed(
+        self, house: str
+    ) -> text.SafeEmbed:
+        is_senate = house == "senate"
+
+        active_session = await self.get_active_leg_session(house=house)
+        if active_session is None:
+            if is_senate:
+                session_value = "There currently is no open session."
+            else:
+                session_value = "There currently is no open session at the Commons."
+        else:
+            house_label = (
+                "Senate" if is_senate else "Commons"
+            )
+            session_value = (
+                f"{house_label} Session #{active_session.mk13_house_id}"
+                f" - {active_session.status.value}"
+            )
+
+        embed = text.SafeEmbed()
+
+        if is_senate:
+            author_name = (
+                f"The {self.bot.mk.LEGISLATURE_NAME} of "
+                f"{self.bot.mk.NATION_FULL_NAME}"
+            )
+            cabinet_title = self.bot.mk.LEGISLATURE_CABINET_NAME
+            speaker_lines = []
+            sp = self.senator_presiding
+            if isinstance(sp, discord.Member):
+                speaker_lines.append(
+                    f"{self.bot.mk.senator_presiding_term}: "
+                    f"{sp.mention} {discord.utils.escape_markdown(str(sp))}"
+                )
+            else:
+                speaker_lines.append(
+                    f"{self.bot.mk.senator_presiding_term}: -"
+                )
+        else:
+            author_name = f"The Commons of {self.bot.mk.NATION_FULL_NAME}"
+            cabinet_title = self.bot.mk.LEGISLATURE_CABINET_NAME
+            speaker_lines = []
+            speaker = self.speaker
+            if isinstance(speaker, discord.Member):
+                speaker_lines.append(
+                    f"{self.bot.mk.speaker_term}: "
+                    f"{speaker.mention} {discord.utils.escape_markdown(str(speaker))}"
+                )
+            else:
+                speaker_lines.append(f"{self.bot.mk.speaker_term}: -")
+            vice_speaker = self.vice_speaker
+            if isinstance(vice_speaker, discord.Member):
+                speaker_lines.append(
+                    f"{self.bot.mk.vice_speaker_term}: "
+                    f"{vice_speaker.mention} {discord.utils.escape_markdown(str(vice_speaker))}"
+                )
+            else:
+                speaker_lines.append(f"{self.bot.mk.vice_speaker_term}: -")
+
+        embed.set_author(
+            icon_url=self.bot.mk.NATION_ICON_URL,
+            name=author_name,
+        )
+
+        embed.add_field(
+            name=cabinet_title, value="\n".join(speaker_lines)
+        )
+
+        try:
+            legislators = self.bot.get_democraciv_role(
+                mk.DemocracivRole.LEGISLATOR
+            )
+            legislator_lines = [
+                f"{l.mention} {discord.utils.escape_markdown(str(l))}"
+                for l in legislators.members
+            ] or ["-"]
+            count = len(legislators.members)
+        except exceptions.RoleNotFoundError:
+            legislator_lines = ["-"]
+            count = 0
+
+        embed.add_field(
+            name=f"{self.bot.mk.legislator_term}s ({count})",
+            value="\n".join(legislator_lines),
+            inline=False,
+        )
+
+        embed.add_field(
+            name="Links",
+            value=(
+                f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
+                f"[Legal Code]({self.bot.mk.LEGAL_CODE}) "
+                "*(try [laws.democraciv.com](https://laws.democraciv.com) too!)*\n"
+                f"[Legislative Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n"
+                f"[Legislative Procedures]({self.bot.mk.LEGISLATURE_PROCEDURES})"
+            ),
+            inline=False,
+        )
+
+        session_label = (
+            "Current Commons Session" if not is_senate else "Current Session"
+        )
+        embed.add_field(
+            name=session_label, value=session_value, inline=False
+        )
+
+        return embed

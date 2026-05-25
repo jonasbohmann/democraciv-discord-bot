@@ -132,11 +132,11 @@ class StarboardSlash(commands.Cog):
         )
 
     @starboard.command(
-        name="member", description="Show Starboard stats for one member."
+        name="person", description="Show Starboard stats for one person."
     )
     async def member(self, interaction: discord.Interaction, member: discord.Member):
         ctx = slash_context.from_interaction(
-            interaction, command_name="starboard member"
+            interaction, command_name="starboard person"
         )
         await ctx.defer()
 

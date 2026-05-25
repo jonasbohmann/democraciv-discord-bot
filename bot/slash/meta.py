@@ -8,7 +8,7 @@ from bot.config import config
 from bot.slash import checks as slash_checks
 from bot.slash import context as slash_context
 from bot.slash import ui
-from bot.utils import exceptions
+from bot.utils import context, exceptions
 
 DM_SETTING_LABELS = {
     "ban_kick_mute": "You get muted, kicked, or banned",
@@ -120,42 +120,43 @@ class MetaSlash(commands.Cog):
         )
 
     @app_commands.command(
-        name="commands", description="List currently loaded slash commands."
+        name="commands", description="List all text commands."
     )
     async def commands_command(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="commands")
         await ctx.defer()
 
-        def signature(command: app_commands.Command) -> str:
-            value = f"/{command.qualified_name}"
-            params = getattr(command, "parameters", ())
-            if params:
-                bits = [
-                    f"<{param.name}>" if param.required else f"[{param.name}]"
-                    for param in params
-                ]
-                value = f"{value} {' '.join(bits)}"
+        p = config.BOT_PREFIX
+        entries = []
+        total_cmds = 0
 
-            return value
+        for name, cog in sorted(self.bot.cogs.items()):
+            if not isinstance(cog, context.CustomCog):
+                continue
 
-        commands_ = sorted(
-            [
-                command
-                for command in self.bot.tree.walk_commands()
-                if not isinstance(command, app_commands.Group)
-            ],
-            key=lambda command: command.qualified_name,
-        )
-        entries = [
-            f"`{signature(command)}` - {command.description or 'No description'}"
-            for command in commands_
-        ]
+            if cog.hidden and cog.qualified_name != "Bank":
+                continue
+
+            cog_cmds = sorted(
+                [command for command in cog.walk_commands() if not command.hidden],
+                key=lambda c: c.qualified_name,
+            )
+
+            if not cog_cmds:
+                continue
+
+            total_cmds += len(cog_cmds)
+            lines = [f"### {cog.qualified_name}"]
+            for command in cog_cmds:
+                lines.append(f"`{p}{command.qualified_name}`")
+            entries.append("\n".join(lines))
+
         await ui.send_pages(
             ctx,
             entries=entries,
-            title=f"Slash Commands ({len(entries)})",
-            per_page=12,
-            empty_message="No slash commands are loaded.",
+            title=f"Text Commands ({total_cmds})",
+            per_page=4,
+            empty_message="No text commands are loaded.",
         )
 
     @app_commands.command(

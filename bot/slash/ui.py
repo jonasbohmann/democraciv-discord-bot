@@ -4,6 +4,7 @@ import typing
 import discord
 
 from bot.config import config
+from bot.slash import forms
 
 
 def _clean(value: str) -> str:
@@ -161,6 +162,43 @@ class _PageButton(discord.ui.Button):
         await view.change_page(interaction, self.target)
 
 
+class _PageJumpModal(forms.ErrorHandledModal, title="Jump to page"):
+    def __init__(self, paginator: "SlashPaginator"):
+        super().__init__()
+        self.paginator = paginator
+        total = len(paginator.pages)
+        self.page_field = forms.text_label(
+            label="Page number",
+            description=f"Enter a page number (1-{total}).",
+            default=str(paginator.index + 1),
+            placeholder=f"1-{total}",
+            required=True,
+            max_length=len(str(total)) + 1,
+        )
+        self.add_item(self.page_field)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            page = int(self.page_field.component.value.strip())
+        except (ValueError, AttributeError):
+            await interaction.response.defer()
+            return
+
+        page = max(1, min(page, len(self.paginator.pages)))
+        self.paginator.index = page - 1
+        self.paginator._render()
+        await interaction.response.edit_message(view=self.paginator)
+
+
+class _PageJumpButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label="#", style=discord.ButtonStyle.secondary)
+
+    async def callback(self, interaction: discord.Interaction):
+        view = typing.cast("SlashPaginator", self.view)
+        await interaction.response.send_modal(_PageJumpModal(view))
+
+
 class SlashPaginator(discord.ui.LayoutView):
     def __init__(
         self,
@@ -191,6 +229,7 @@ class SlashPaginator(discord.ui.LayoutView):
         self.previous_button = None
         self.next_button = None
         self.last_button = None
+        self.jump_button = None
 
         if len(self.pages) > 1:
             self.first_button = _PageButton("first", "First")
@@ -198,12 +237,22 @@ class SlashPaginator(discord.ui.LayoutView):
             self.next_button = _PageButton("next", "Next")
             self.last_button = _PageButton("last", "Last")
 
-            row = discord.ui.ActionRow(
-                self.first_button,
-                self.previous_button,
-                self.next_button,
-                self.last_button,
-            )
+            if len(self.pages) > 2:
+                self.jump_button = _PageJumpButton()
+                row = discord.ui.ActionRow(
+                    self.first_button,
+                    self.previous_button,
+                    self.next_button,
+                    self.last_button,
+                    self.jump_button,
+                )
+            else:
+                row = discord.ui.ActionRow(
+                    self.first_button,
+                    self.previous_button,
+                    self.next_button,
+                    self.last_button,
+                )
             self.add_item(row)
 
         link_row = _link_row(links)

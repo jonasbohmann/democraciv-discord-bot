@@ -912,18 +912,18 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
 
     @law.command(name="from", description="List laws submitted by a member or party.")
     @app_commands.describe(
-        member="Member or user to list laws from.",
+        person="Person to list laws from.",
         party="Political party to list laws from.",
     )
     async def law_from(
         self,
         interaction: discord.Interaction,
-        member: discord.User = None,
+        person: discord.User = None,
         party: PartyOption = None,
     ):
         ctx = slash_context.from_interaction(interaction, command_name="law")
         await ctx.defer()
-        await self._from_model(ctx, model=models.Law, member=member, party=party)
+        await self._from_model(ctx, model=models.Law, member=person, party=party)
 
     @law.command(name="show", description="Show details about one law.")
     @app_commands.describe(law="Law ID or title")
@@ -945,7 +945,7 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             site_path="law",
         )
 
-    @law.command(name="read", description="Read the cached text of a law.")
+    @law.command(name="read", description="Read the text of a law.")
     @app_commands.describe(law="Law ID or title")
     async def law_read(self, interaction: discord.Interaction, law: LawOption):
         ctx = slash_context.from_interaction(interaction, command_name="law")
@@ -1205,6 +1205,58 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         ctx = slash_context.from_interaction(interaction, command_name="law")
         await ctx.defer()
         await self._repeal_law(ctx, law)
+
+    @law.command(
+        name="export",
+        description="Generate a Legal Code as a Google Docs document from active laws.",
+    )
+    @slash_checks.has_any_democraciv_role(
+        mk.DemocracivRole.SPEAKER,
+        mk.DemocracivRole.VICE_SPEAKER,
+        mk.DemocracivRole.MK13_SENATOR_PRESIDING,
+        mk.DemocracivRole.PRIME_MINISTER
+    )
+    @app_commands.checks.cooldown(rate=1, per=300.0)
+    async def law_export(self, interaction: discord.Interaction):
+        ctx = slash_context.from_interaction(interaction, command_name="law")
+        await ctx.defer()
+
+        doc_url = self.bot.mk.LEGAL_CODE
+
+        if not doc_url or not self.is_google_doc_link(doc_url):
+            await ctx.send(
+                f"{config.NO} This command cannot be used right now due to security concerns.",
+                ephemeral=True,
+            )
+            return
+
+        all_laws = await self.bot.db.fetch(
+            "SELECT id, name, link FROM bill WHERE status = $1 ORDER BY id",
+            models.BillIsLaw.flag.value,
+        )
+        ugly_laws = [dict(r) for r in all_laws]
+        date = discord.utils.utcnow().strftime("%B %d, %Y at %H:%M")
+
+        result = await self.bot.run_apps_script(
+            script_id="MMV-pGVACMhaf_DjTn8jfEGqnXKElby-M",
+            function="generate_legal_code",
+            parameters=[
+                doc_url,
+                {"name": self.bot.mk.NATION_FULL_NAME, "date": date},
+                ugly_laws,
+            ],
+        )
+
+        view_url = result["response"]["result"]["view"]
+        await ui.send_static(
+            ctx,
+            title="Generated Legal Code",
+            body=(
+                "This Legal Code is not guaranteed to be correct. Its content "
+                "is based entirely on the list of Laws in the database."
+            ),
+            links=[ui.LayoutLink("Open Legal Code", view_url, "\U0001f4c4")],
+        )
 
 
 async def setup(bot):

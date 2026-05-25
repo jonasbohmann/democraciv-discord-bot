@@ -335,50 +335,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
     )
     async def commons(self, ctx):
         """Dashboard for the Commons with important links and the status of the current session"""
-
-        active_leg_session = await self.get_active_leg_session(house="commons")
-
-        if active_leg_session is None:
-            current_session_value = "There currently is no open session at the Commons."
-        else:
-            current_session_value = f"Commons Session #{active_leg_session.mk13_house_id} - {active_leg_session.status.value}"
-
-        embed = text.SafeEmbed()
-        embed.set_author(
-            icon_url=self.bot.mk.NATION_ICON_URL,
-            name=f"The Commons of {self.bot.mk.NATION_FULL_NAME}",
-        )
-        speaker_value = []
-
-        if isinstance(self.speaker, discord.Member):
-            speaker_value.append(
-                f"{self.bot.mk.speaker_term}: {self.speaker.mention} {escape_markdown(str(self.speaker))}"
-            )
-        else:
-            speaker_value.append(f"{self.bot.mk.speaker_term}: -")
-
-        if isinstance(self.vice_speaker, discord.Member):
-            speaker_value.append(
-                f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention} {escape_markdown(str(self.vice_speaker))}"
-            )
-        else:
-            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
-
-        embed.add_field(
-            name=self.bot.mk.LEGISLATURE_CABINET_NAME, value="\n".join(speaker_value)
-        )
-
-        embed.add_field(
-            name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE}) *(try [laws.democraciv.com](https://laws.democraciv.com) too!)*"
-            f"\n[Commons Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n[Commons Procedures]({self.bot.mk.LEGISLATURE_PROCEDURES})",
-            inline=False,
-        )
-
-        embed.add_field(
-            name="Current Commons Session", value=current_session_value, inline=False
-        )
-
+        embed = await self._build_legislature_overview_embed("commons")
         await ctx.send(embed=embed)
 
     @commons.command(name="search")

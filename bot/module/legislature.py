@@ -405,58 +405,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
     )
     async def legislature(self, ctx):
         """Dashboard for {LEGISLATURE_LEGISLATOR_NAME_PLURAL} with important links and the status of the current session"""
-
-        active_leg_session = await self.get_active_leg_session(house="senate")
-
-        if active_leg_session is None:
-            current_session_value = "There currently is no open session."
-        else:
-            current_session_value = f"Session #{active_leg_session.mk13_house_id} - {active_leg_session.status.value}"
-
-        embed = text.SafeEmbed()
-        embed.set_author(
-            icon_url=self.bot.mk.NATION_ICON_URL,
-            name=f"The {self.bot.mk.LEGISLATURE_NAME} of {self.bot.mk.NATION_FULL_NAME}",
-        )
-        speaker_value = []
-
-        if isinstance(self.senator_presiding, discord.Member):
-            speaker_value.append(
-                f"{self.bot.mk.senator_presiding_term}: {self.senator_presiding.mention} "
-                f"{escape_markdown(str(self.senator_presiding))}"
-            )
-        else:
-            speaker_value.append(f"{self.bot.mk.senator_presiding_term}: -")
-
-        embed.add_field(
-            name=self.bot.mk.LEGISLATURE_CABINET_NAME, value="\n".join(speaker_value)
-        )
-
-        try:
-            legislators = self.bot.get_democraciv_role(mk.DemocracivRole.LEGISLATOR)
-            legislators = [
-                f"{l.mention} {escape_markdown(str(l))}" for l in legislators.members
-            ] or ["-"]
-        except exceptions.RoleNotFoundError:
-            legislators = ["-"]
-
-        embed.add_field(
-            name=f"{self.bot.mk.legislator_term}s ({len(legislators) if legislators[0] != "-" else 0})",
-            value="\n".join(legislators),
-            inline=False,
-        )
-
-        embed.add_field(
-            name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE}) *(try [laws.democraciv.com](https://laws.democraciv.com) too!)*"
-            f"\n[Legislative Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n[Legislative Procedures]({self.bot.mk.LEGISLATURE_PROCEDURES})",
-            inline=False,
-        )
-
-        embed.add_field(
-            name="Current Session", value=current_session_value, inline=False
-        )
-
+        embed = await self._build_legislature_overview_embed("senate")
         await ctx.send(embed=embed)
 
     @legislature.command(name="search")

@@ -1780,6 +1780,80 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             links=self.house_links(house, session=session),
         )
 
+    @senate.command(
+        name="overview",
+        description="Show the Senate dashboard with links, legislators, and session status.",
+    )
+    async def senate_overview(self, interaction: discord.Interaction):
+        ctx = slash_context.from_interaction(interaction, command_name="senate overview")
+        await ctx.defer()
+        embed = await self._build_legislature_overview_embed("senate")
+        await ctx.send(embed=embed)
+
+    @commons.command(
+        name="overview",
+        description="Show the Commons dashboard with links, legislators, and session status.",
+    )
+    async def commons_overview(self, interaction: discord.Interaction):
+        ctx = slash_context.from_interaction(
+            interaction, command_name="commons overview"
+        )
+        await ctx.defer()
+        embed = await self._build_legislature_overview_embed("commons")
+        await ctx.send(embed=embed)
+
+    @senate_session.command(
+        name="all",
+        description="View a history of all previous Senate sessions.",
+    )
+    async def senate_session_all(self, interaction: discord.Interaction):
+        ctx = slash_context.from_interaction(
+            interaction, command_name="senate session all"
+        )
+        await ctx.defer()
+        await self._all_sessions(ctx, house="senate")
+
+    @commons_session.command(
+        name="all",
+        description="View a history of all previous Commons sessions.",
+    )
+    async def commons_session_all(self, interaction: discord.Interaction):
+        ctx = slash_context.from_interaction(
+            interaction, command_name="commons session all"
+        )
+        await ctx.defer()
+        await self._all_sessions(ctx, house="commons")
+
+    async def _all_sessions(
+        self, ctx: slash_context.InteractionContext, *, house: str
+    ):
+        house_name = models.display_house_name(house)
+        records = await self.bot.db.fetch(
+            "SELECT id, mk13_house_id, opened_on, closed_on "
+            "FROM legislature_session WHERE house = $1 ORDER BY id",
+            house,
+        )
+        entries = []
+        for record in records:
+            opened_on = f"<t:{int(record['opened_on'].timestamp())}:D>"
+            if record["closed_on"]:
+                closed_on = f"<t:{int(record['closed_on'].timestamp())}:D>"
+                entries.append(
+                    f"* **Session #{record['mk13_house_id']}**  - {opened_on} to {closed_on}"
+                )
+            else:
+                entries.append(
+                    f"* **Session #{record['mk13_house_id']}**  - {opened_on}"
+                )
+
+        await ui.send_pages(
+            ctx,
+            entries=entries,
+            title=f"All Sessions of the {house_name}",
+            per_page=12,
+            empty_message="There hasn't been a session yet.",
+        )
+
     @senate.command(name="submit", description="Submit a bill or motion to the Senate.")
     @slash_checks.is_democraciv_guild()
     @slash_checks.is_citizen_if_multiciv()
