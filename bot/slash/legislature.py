@@ -448,24 +448,6 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             ephemeral=True,
         )
 
-    async def _send_channel_layout(
-        self,
-        channel: discord.abc.Messageable,
-        *,
-        title: str,
-        body: str = None,
-        sections: typing.Sequence[ui.LayoutSection] = (),
-        links: typing.Sequence[ui.LayoutLink] = (),
-    ):
-        await channel.send(
-            view=ui.RichLayout(
-                title=title,
-                body=body,
-                sections=sections,
-                links=links,
-            )
-        )
-
     async def _get_session_by_display_id(
         self,
         ctx: slash_context.InteractionContext,
@@ -582,26 +564,24 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             links=self.house_links(house),
         )
 
-        await self._send_channel_layout(
-            self.gov_announcements_channel,
-            title=f"Submission Period Open for {house_name} Session #{display_id}",
-            body=(
-                f"The cabinet has opened the submission period for {house_name} "
-                f"Session #{display_id}."
-            ),
-            sections=[
-                ui.LayoutSection(
-                    "Submissions",
-                    f"Bills and motions can be submitted with `/{command_name} submit`.",
-                ),
-                ui.LayoutSection(
-                    "Sponsors",
-                    "Bills and motions can be sponsored with `/bill sponsor` and "
-                    "`/motion sponsor`.",
-                ),
-            ],
-            links=self.house_links(house),
+        announcement = text.SafeEmbed(
+            description=f"The cabinet has opened the Submission Period for {house_name} Session #{display_id}."
         )
+        announcement.set_author(
+            name=f"Submission Period open for {house_name} Session #{display_id}",
+            icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
+        )
+        announcement.add_field(
+            name="Submissions",
+            value=f"Bills and motions can be submitted with `/{command_name} submit`.\nYou can see all submissions with `/{command_name} session show`.",
+            inline=False,
+        )
+        announcement.add_field(
+            name="Sponsors",
+            value=f"Bills and motions can be sponsored with `/bill sponsor` and `/motion sponsor`.\n\nThe list of submissions can be filtered by the amount of sponsors they have. For example, `/{command_name} session show >=1` will only show bills & motions with 1 or more sponsors.",
+            inline=False,
+        )
+        await self.gov_announcements_channel.send(embed=announcement)
 
         if notify_legislators:
             await self.dm_legislators(
@@ -641,14 +621,8 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             active_session.id,
         )
 
-        await self._send_channel_layout(
-            self.gov_announcements_channel,
-            title=f"{house_name} Session #{active_session.mk13_house_id} Locked",
-            body=(
-                f"{self.leader_term(house)} has locked submissions. Nothing can be "
-                "submitted until the session is unlocked again."
-            ),
-            links=self.house_links(house, session=active_session),
+        await self.gov_announcements_channel.send(
+            f"The {self.leader_term(house)} has locked submissions for {house_name} Session #{active_session.mk13_house_id}. Nothing can be submitted until the {self.leader_term(house)} decides to unlock the session again."
         )
         await ui.send_static(
             ctx,
@@ -668,6 +642,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     ):
         active_session = await self.get_active_leg_session(house=house)
         house_name = models.display_house_name(house)
+        command_name = self.house_command(house)
 
         if active_session is None:
             return await ctx.send(
@@ -687,11 +662,8 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             active_session.id,
         )
 
-        await self._send_channel_layout(
-            self.gov_announcements_channel,
-            title=f"{house_name} Session #{active_session.mk13_house_id} Unlocked",
-            body="Submissions are open again.",
-            links=self.house_links(house, session=active_session),
+        await self.gov_announcements_channel.send(
+            f"The {self.leader_term(house)} has unlocked submissions for {house_name} Session #{active_session.mk13_house_id}, meaning you can now submit bills & motions with `/{command_name} submit` again."
         )
         await ui.send_static(
             ctx,
@@ -733,16 +705,14 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         await active_session.start_voting(voting_form)
 
-        await self._send_channel_layout(
-            self.gov_announcements_channel,
-            title=f"Voting Started for {house_name} Session #{active_session.mk13_house_id}",
-            body=f"Voting is open here:\n{voting_form}",
-            links=self.house_links(
-                house,
-                session=active_session,
-                extra=[ui.LayoutLink("Voting Form", voting_form, "\U0001f5f3")],
-            ),
+        announcement = text.SafeEmbed(
+            description=f"Everyone can vote here:\n{voting_form}"
         )
+        announcement.set_author(
+            name=f"Voting has started for {house_name} Session #{active_session.mk13_house_id}",
+            icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
+        )
+        await self.gov_announcements_channel.send(embed=announcement)
         await ui.send_static(
             ctx,
             title=f"{house_name} Session #{active_session.mk13_house_id} Voting Period",
@@ -806,11 +776,12 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         await consumer.filter(acting_house=house)
         await consumer.consume(acting_house=house)
 
-        await self._send_channel_layout(
-            self.gov_announcements_channel,
-            title=f"{house_name} Session #{active_session.mk13_house_id} Closed",
-            links=self.house_links(house, session=active_session),
+        announcement = text.SafeEmbed()
+        announcement.set_author(
+            name=f"{house_name} Session #{active_session.mk13_house_id} has been closed",
+            icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
+        await self.gov_announcements_channel.send(embed=announcement)
         await ui.send_static(
             ctx,
             title=f"{house_name} Session #{active_session.mk13_house_id} Closed",
