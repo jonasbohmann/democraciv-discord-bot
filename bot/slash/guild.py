@@ -159,24 +159,25 @@ class GuildSlash(commands.Cog):
 
         if enabled is None and channel is None and message is None:
             current_channel = await self.bot.get_welcome_channel(ctx.guild)
-            return await ui.send_static(
-                ctx,
-                title=f"Welcome Messages on {ctx.guild.name}",
-                sections=[
-                    ui.LayoutSection(
-                        "Status",
-                        self.bot.emojify_boolean(settings["welcome_enabled"]),
-                    ),
-                    ui.LayoutSection(
-                        "Welcome Channel",
-                        current_channel.mention if current_channel else "-",
-                    ),
-                    ui.LayoutSection(
-                        "Welcome Message",
-                        settings["welcome_message"] or "-",
-                    ),
-                ],
+            embed = text.SafeEmbed()
+            embed.set_author(
+                name=f"Welcome Messages on {ctx.guild.name}", icon_url=ctx.guild_icon
             )
+            embed.add_field(
+                name="Enabled",
+                value=self.bot.emojify_boolean(settings["welcome_enabled"]),
+            )
+            embed.add_field(
+                name="Welcome Channel",
+                value=current_channel.mention if current_channel else "-",
+            )
+            existing_message = settings["welcome_message"]
+            if not existing_message:
+                existing_message = "-"
+            embed.add_field(
+                name="Welcome Message", value=existing_message, inline=False
+            )
+            return await ctx.send(embed=embed)
 
         await self.bot.db.execute(
             "UPDATE guild SET welcome_enabled = $1, welcome_channel = $2, "
@@ -268,19 +269,16 @@ class GuildSlash(commands.Cog):
         }
 
         if all(value is None for value in provided.values()):
-            return await ui.send_static(
-                ctx,
-                title=f"Events to Log on {ctx.guild.name}",
-                sections=[
-                    ui.LayoutSection(
-                        "Events",
-                        "\n".join(
-                            f"{self.bot.emojify_boolean(settings[column])} {name.replace('_', ' ').title()}"
-                            for name, column in LOG_EVENT_COLUMNS.items()
-                        ),
-                    )
-                ],
+            embed = text.SafeEmbed()
+            embed.set_author(
+                name=f"Events to Log on {ctx.guild.name}", icon_url=ctx.guild_icon
             )
+            for event_name, column in LOG_EVENT_COLUMNS.items():
+                embed.add_field(
+                    name=event_name.replace("_", " ").title(),
+                    value=self.bot.emojify_boolean(settings[column]),
+                )
+            return await ctx.send(embed=embed)
 
         values = {
             column: settings[column] if provided[name] is None else provided[name]
@@ -329,21 +327,34 @@ class GuildSlash(commands.Cog):
             )
 
         if channel is None:
-            entries = []
+            help_description = (
+                f"When you hide a channel, it (and all its threads) will no longer show up in "
+                f"{current_logging_channel.mention}.\n\nAdditionally, :star: reactions for the "
+                f"starboard will no longer count in that channel (and in all its threads).\n\n"
+                f"You can hide a channel, or even an entire category at once, with "
+                f"`/server hide-channel <channel_name>`\n\n"
+                "**Hidden Channels**"
+            )
+            entries = [help_description]
             for channel_id in private_channels:
                 found = self.bot.get_channel(channel_id)
                 if found:
                     entries.append(
                         found.mention if hasattr(found, "mention") else found.name
                     )
-
-            return await ui.send_pages(
-                ctx,
+            if len(entries) == 1:
+                # No hidden channels
+                return await ctx.send(
+                    f"{config.NO} There are no hidden channels on this server yet.",
+                    ephemeral=True,
+                )
+            pages = paginator.SimplePages(
                 entries=entries,
-                title=f"Hidden Channels on {ctx.guild.name}",
+                author=f"Hidden Channels on {ctx.guild.name}",
+                icon=ctx.guild_icon,
                 empty_message="There are no hidden channels on this server.",
-                per_page=20,
             )
+            return await pages.start(ctx)
 
         if channel.id in private_channels:
             await self.bot.db.execute(
@@ -384,19 +395,18 @@ class GuildSlash(commands.Cog):
 
         if enabled is None and role is None:
             current_role = ctx.guild.get_role(settings["default_role_role"])
-            return await ui.send_static(
-                ctx,
-                title=f"Role on Join on {ctx.guild.name}",
-                sections=[
-                    ui.LayoutSection(
-                        "Status",
-                        self.bot.emojify_boolean(settings["default_role_enabled"]),
-                    ),
-                    ui.LayoutSection(
-                        "Role", current_role.mention if current_role else "-"
-                    ),
-                ],
+            embed = text.SafeEmbed()
+            embed.set_author(
+                name=f"Role on Join on {ctx.guild.name}", icon_url=ctx.guild_icon
             )
+            embed.add_field(
+                name="Enabled",
+                value=self.bot.emojify_boolean(settings["default_role_enabled"]),
+            )
+            embed.add_field(
+                name="Role", value=current_role.mention if current_role else "-"
+            )
+            return await ctx.send(embed=embed)
 
         await self.bot.db.execute(
             "UPDATE guild SET default_role_enabled = $1, default_role_role = $2 WHERE id = $3",
@@ -422,16 +432,19 @@ class GuildSlash(commands.Cog):
         settings = await self.ensure_guild_settings(ctx.guild.id)
 
         if everyone is None:
-            pretty = (
-                "Everyone"
-                if settings["tag_creation_allowed"]
-                else "Only Administrators"
+            embed = text.SafeEmbed()
+            embed.set_author(
+                name=f"Tag Creation on {ctx.guild.name}", icon_url=ctx.guild_icon
             )
-            return await ui.send_static(
-                ctx,
-                title=f"Tag Creation on {ctx.guild.name}",
-                sections=[ui.LayoutSection("Allowed Tag Creators", pretty)],
+            embed.add_field(
+                name="Allowed Tag Creators",
+                value=(
+                    "Everyone"
+                    if settings["tag_creation_allowed"]
+                    else "Only Administrators"
+                ),
             )
+            return await ctx.send(embed=embed)
 
         await self.bot.db.execute(
             "UPDATE guild SET tag_creation_allowed = $1 WHERE id = $2",
@@ -459,16 +472,15 @@ class GuildSlash(commands.Cog):
         settings = await self.ensure_guild_settings(ctx.guild.id)
 
         if allowed is None:
-            return await ui.send_static(
-                ctx,
-                title=f"NPC Usage on {ctx.guild.name}",
-                sections=[
-                    ui.LayoutSection(
-                        "Allowed",
-                        self.bot.emojify_boolean(settings["npc_usage_allowed"]),
-                    )
-                ],
+            embed = text.SafeEmbed()
+            embed.set_author(
+                name=f"NPC Usage on {ctx.guild.name}", icon_url=ctx.guild_icon
             )
+            embed.add_field(
+                name="Allowed",
+                value=self.bot.emojify_boolean(settings["npc_usage_allowed"]),
+            )
+            return await ctx.send(embed=embed)
 
         await self.bot.db.execute(
             "UPDATE guild SET npc_usage_allowed = $1 WHERE id = $2",

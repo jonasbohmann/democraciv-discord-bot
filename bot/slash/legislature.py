@@ -1,4 +1,5 @@
 import datetime
+import difflib
 import traceback
 import typing
 
@@ -424,55 +425,60 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         leader_term = self.leader_term(house)
 
         if item_type == "bill":
-            sections = [
-                ui.LayoutSection(
-                    "Sponsors",
-                    f"Supporters can sponsor this bill with `/bill sponsor`. "
-                    f"The sponsor list appears on `/bill show`.",
-                ),
-                ui.LayoutSection(
-                    "Editing",
-                    "During the Submission Period, keep working in the Google Docs "
-                    "document. Use `/bill edit` if the document link or summary needs "
-                    "to change.",
-                ),
-                ui.LayoutSection(
-                    "Withdrawing",
-                    f"You can withdraw your own bill during Submission Period with "
-                    f"`/bill withdraw`. The {leader_term} can withdraw chamber bills "
-                    "while the session is open.",
-                ),
-                ui.LayoutSection(
-                    "More Commands",
-                    f"Use `/{command_name} session show`, `/bill show`, `/bill search`, "
-                    "and `/bill history` to track this bill.",
-                ),
-            ]
+            embed = text.SafeEmbed(
+                title=f"Help for Bill #{item_id}",
+                description=f"**{config.HINT} Help | Government System: Bill Submissions**",
+            )
+            embed.add_field(
+                name="Sponsors",
+                value=f"Supporters can sponsor this bill with `/bill sponsor`. "
+                f"The sponsor list appears on `/bill show`.",
+                inline=False,
+            )
+            embed.add_field(
+                name="Editing",
+                value="During the Submission Period, keep working in the Google Docs "
+                "document. Use `/bill edit` if the document link or summary needs "
+                "to change.",
+                inline=False,
+            )
+            embed.add_field(
+                name="Withdrawing",
+                value=f"You can withdraw your own bill during Submission Period with "
+                f"`/bill withdraw`. The {leader_term} can withdraw chamber bills "
+                "while the session is open.",
+                inline=False,
+            )
+            embed.add_field(
+                name="More Commands",
+                value=f"Use `/{command_name} session show`, `/bill show`, `/bill search`, "
+                "and `/bill history` to track this bill.",
+                inline=False,
+            )
         else:
-            sections = [
-                ui.LayoutSection(
-                    "Sponsors",
-                    "Supporters can sponsor this motion with `/motion sponsor`.",
-                ),
-                ui.LayoutSection(
-                    "Editing and Withdrawing",
-                    "Use `/motion edit` or `/motion withdraw` while the motion is still "
-                    "eligible to be changed.",
-                ),
-                ui.LayoutSection(
-                    "More Commands",
-                    f"Use `/{command_name} session show`, `/motion show`, and "
-                    "`/motion search` to track this motion.",
-                ),
-            ]
+            embed = text.SafeEmbed(
+                title=f"Help for Motion #{item_id}",
+                description=f"**{config.HINT} Help | Government System: Motion Submissions**",
+            )
+            embed.add_field(
+                name="Sponsors",
+                value="Supporters can sponsor this motion with `/motion sponsor`.",
+                inline=False,
+            )
+            embed.add_field(
+                name="Editing and Withdrawing",
+                value="Use `/motion edit` or `/motion withdraw` while the motion is still "
+                "eligible to be changed.",
+                inline=False,
+            )
+            embed.add_field(
+                name="More Commands",
+                value=f"Use `/{command_name} session show`, `/motion show`, and "
+                "`/motion search` to track this motion.",
+                inline=False,
+            )
 
-        await ui.send_static(
-            ctx,
-            title=f"Help for {item_type.title()} #{item_id}",
-            sections=sections,
-            links=self.house_links(house),
-            ephemeral=True,
-        )
+        await ctx.send(embed=embed, ephemeral=True)
 
     async def _get_session_by_display_id(
         self,
@@ -634,35 +640,42 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         )
         display_name = new_session_obj.display_name
 
-        sections = [
-            ui.LayoutSection(
-                "Submission Period",
-                f"Bills and motions can now be submitted with `/{command_name} submit`.",
-            ),
-            ui.LayoutSection(
-                "Next Controls",
-                f"Lock submissions with `/{command_name} session lock`, start voting with "
-                f"`/{command_name} session vote`, or close the session with "
-                f"`/{command_name} session close`.",
-            ),
-        ]
+        new_session_name = f"{house_name} Session #{new_session['mk13_house_id']}"
 
-        if queued_bill_count:
-            sections.append(
-                ui.LayoutSection(
-                    "Attached Pending Bills",
-                    f"{queued_bill_count} bill{'s' if queued_bill_count != 1 else ''} "
-                    "from the other chamber were attached to this session.",
-                )
-            )
-
-        await ui.send_static(
-            ctx,
-            title=f"{display_name} Opened",
-            body="The submission period is now open.",
-            sections=sections,
-            links=self.house_links(house),
+        await ctx.send(
+            f"{config.YES} The **submission period** for {new_session_name} was opened, "
+            f"and bills & motions can now be submitted."
         )
+
+        info = text.SafeEmbed()
+        info.set_author(
+            name=f"{config.HINT}  Help | Government System:  Legislative Sessions"
+        )
+        info.description = (
+            f"You have several options on how to proceed with this {house_name} session.\n"
+            f"- `/{command_name} session lock` — Lock submissions to start a debate period.\n"
+            f"- `/{command_name} session unlock` — Unlock if you previously locked.\n"
+            f"- `/{command_name} session vote` — Start the voting period (requires a voting form link).\n"
+            f"- `/{command_name} session close` — Close the session."
+        )
+        info.add_field(
+            name="Optional Voting Form",
+            value=f"The `/{command_name} export form` can generate a voting form for you, but this has been disabled for security reasons.",
+            inline=False,
+        )
+        info.add_field(
+            name="Failed Bills from previous Sessions",
+            value=f"Previous bills that failed can be resubmitted to the current submission period session with `/bill resubmit`.",
+            inline=False,
+        )
+        await ctx.send(embed=info)
+
+        if queued_bill_count > 0:
+            await ctx.send(
+                f"{config.HINT} I also attached {queued_bill_count} bill{'s' if queued_bill_count != 1 else ''} from the "
+                f"{'Commons' if house == 'senate' else 'Senate'} that were waiting on the "
+                f"{'Senate' if house == 'senate' else 'Commons'} to this new session."
+            )
 
         announcement = text.SafeEmbed(
             description=f"The cabinet has opened the Submission Period for {display_name}."
@@ -711,7 +724,9 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         if active_session is None:
             return await ctx.send(
-                f"{config.NO} There is no open {house_name} session.",
+                f"{config.NO} There is no open {house_name} session.\n"
+                f"{config.HINT} You can open a new session "
+                f"at any time with `/{command_name} session open`.",
                 ephemeral=True,
             )
 
@@ -730,14 +745,16 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         await self.gov_announcements_channel.send(
             f"The {self.leader_term(house)} has locked submissions for {active_session.display_name}. Nothing can be submitted until the {self.leader_term(house)} decides to unlock the session again."
         )
-        await ui.send_static(
-            ctx,
-            title=f"{active_session.display_name} Locked",
-            body=(
-                f"Submissions have been locked. Unlock them again with "
-                f"`/{command_name} session unlock`."
-            ),
-            links=self.house_links(house, session=active_session),
+        l = self.house_command(house)
+        p = config.BOT_PREFIX
+        await ctx.send(
+            f"{config.YES} Submissions for {active_session.display_name} have been locked.\n"
+            f"{config.HINT} Want to allow submissions again? Unlock the session with "
+            f"`/{l} session unlock`.\n"
+            f"{config.HINT} In case you intend to leave submissions locked until voting starts "
+            f"in order to use this time as a **debate period**, you can make me post the current list "
+            f"of submissions to **r/{config.DEMOCRACIV_SUBREDDIT}** with "
+            f"`/{l} session export reddit`."
         )
 
     async def unlock_session(
@@ -758,7 +775,9 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         if active_session is None:
             return await ctx.send(
-                f"{config.NO} There is no open {house_name} session.",
+                f"{config.NO} There is no open {house_name} session.\n"
+                f"{config.HINT} You can open a new session "
+                f"at any time with `/{command_name} session open`.",
                 ephemeral=True,
             )
 
@@ -777,11 +796,8 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         await self.gov_announcements_channel.send(
             f"The {self.leader_term(house)} has unlocked submissions for {active_session.display_name}, meaning you can now submit bills & motions with `/{command_name} submit` again."
         )
-        await ui.send_static(
-            ctx,
-            title=f"{active_session.display_name} Unlocked",
-            body="Submissions are open again.",
-            links=self.house_links(house, session=active_session),
+        await ctx.send(
+            f"{config.YES} Submissions for {active_session.display_name} have been unlocked."
         )
 
     async def vote_session(
@@ -823,26 +839,22 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         await active_session.start_voting(voting_form)
 
+        voters = f"{self.bot.mk.legislator_term}s" if house == "senate" else "Everyone"
         announcement = text.SafeEmbed(
-            description=f"Everyone can vote here:\n{voting_form}"
+            description=f"{voters} can vote here:\n{voting_form}"
         )
         announcement.set_author(
             name=f"Voting has started for {active_session.display_name}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         await self.gov_announcements_channel.send(embed=announcement)
-        await ui.send_static(
-            ctx,
-            title=f"{active_session.display_name} Voting Period",
-            body=(
-                "The session is now in voting period. Once voting is complete, close "
-                f"the session with `/{command_name} session close`."
-            ),
-            links=self.house_links(
-                house,
-                session=active_session,
-                extra=[ui.LayoutLink("Voting Form", voting_form, "\U0001f5f3")],
-            ),
+        l = self.house_command(house)
+        await ctx.send(
+            f"{config.YES} {active_session.display_name} is now in **voting period**.\n"
+            f"{config.HINT} You can post the list of submissions to "
+            f"**r/{config.DEMOCRACIV_SUBREDDIT}** with `/{l} session export reddit`.\n"
+            f"{config.HINT} Once enough time has passed for people to vote, close this session "
+            f"with `/{l} session close`. I'll go over what happens after that once you close the session."
         )
 
         if notify_legislators:
@@ -872,7 +884,9 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         if active_session is None:
             return await ctx.send(
-                f"{config.NO} There is no open {house_name} session.",
+                f"{config.NO} There is no open {house_name} session.\n"
+                f"{config.HINT} You can open a new session "
+                f"at any time with `/{command_name} session open`.",
                 ephemeral=True,
             )
 
@@ -906,26 +920,50 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         await self.gov_announcements_channel.send(embed=announcement)
-        await ui.send_static(
-            ctx,
-            title=f"{active_session.display_name} Closed",
-            body=(
-                "Now tally the results and mark each passing bill with "
-                f"`/{command_name} pass`."
-            ),
-            sections=[
-                ui.LayoutSection(
-                    "Bills",
-                    "Bills not marked as passed from this chamber have been failed "
-                    "for this session.",
-                ),
-                ui.LayoutSection(
-                    "Motions",
-                    "Motions are temporary chamber actions and are not passed into law.",
-                ),
-            ],
-            links=self.house_links(house, session=active_session),
+        l = self.house_command(house)
+        await ctx.send(
+            f"{config.YES} {active_session.display_name} was closed.\n"
+            f"{config.HINT} Now tally the results and mark each passing bill with "
+            f"`/{l} pass`."
         )
+
+        info = text.SafeEmbed()
+        info.set_author(
+            name=f"{config.HINT}  Help | Government System:  Legislative Sessions"
+        )
+        info.description = (
+            f"Now tally the results and use `/{l} pass <bill id>` to mark each bill as passed. "
+            f"You will be prompted to confirm. You can mark multiple bills in "
+            f"separate pass commands."
+        )
+        if house == "senate":
+            info.add_field(
+                name="What happens after a pass?",
+                value="Bills passed by the Senate move to the Commons, unless they are Senate procedures which skip the Commons and the Ministry and become law once the Senate passes them.",
+                inline=False,
+            )
+        else:
+            info.add_field(
+                name="What happens after a pass?",
+                value="Bills passed by the Commons move to the Senate, unless they are Commons procedures which skip the Senate and the Ministry and become law once the Commons passes them.",
+                inline=False,
+            )
+        info.add_field(
+            name="Why can't I pass motions?",
+            value="Motions are temporary chamber actions and cannot be passed into law.",
+            inline=False,
+        )
+        info.add_field(
+            name="Updating the Legal Code",
+            value=f"The {self.bot.mk.speaker_term} can use `/law export` to generate a Google Docs Legal Code.",
+            inline=False,
+        )
+        info.add_field(
+            name="Keep it rolling",
+            value=f"You can open the next {'Senate' if house == 'senate' else 'Commons'} session at any time with `/{l} session open`.",
+            inline=False,
+        )
+        await ctx.send(embed=info)
 
     async def submit_entrypoint(
         self,
@@ -988,38 +1026,44 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             title = f"Submit to {eligible_sessions[0].display_name}"
             links_session = eligible_sessions[0]
 
-        await ui.send_static(
-            ctx,
+        embed = text.SafeEmbed(
             title=title,
-            body="Choose the kind of proposal you want to submit.",
-            sections=[
-                ui.LayoutSection(
-                    "Bills",
-                    "Use bills for permanent law, procedures, and anything that belongs "
-                    "in the legal record.",
-                ),
-                ui.LayoutSection(
-                    "Motions",
-                    "Use motions for temporary decisions or short-term chamber actions.",
-                ),
-            ],
-            links=self.house_links(house, session=links_session),
-            action_items=[
+            description="Choose the kind of proposal you want to submit.",
+        )
+        embed.add_field(
+            name="Bills",
+            value="Use bills for permanent law, procedures, and anything that belongs in the legal record.",
+            inline=False,
+        )
+        embed.add_field(
+            name="Motions",
+            value="Use motions for temporary decisions or short-term chamber actions.",
+            inline=False,
+        )
+        embed.set_footer(
+            text=f"{config.HINT} In 80% of cases, you should use bills instead of motions!"
+        )
+
+        view = discord.ui.View()
+        if can_submit_bill:
+            view.add_item(
                 SubmitBillButton(
                     self,
                     house=house,
                     sessions=eligible_sessions,
                     disabled=not can_submit_bill,
-                ),
+                )
+            )
+        if can_submit_motion:
+            view.add_item(
                 SubmitMotionButton(
                     self,
                     house=house,
                     sessions=eligible_sessions,
                     disabled=not can_submit_motion,
-                ),
-            ],
-            ephemeral=True,
-        )
+                )
+            )
+        await ctx.send(embed=embed, view=view, ephemeral=True)
 
     def _can_submit_kind(
         self,
@@ -1121,35 +1165,9 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             is_procedure=is_procedure,
         )
 
-        await ui.send_static(
-            ctx,
-            title=f"{name} (#{bill_id})",
-            body=f"Your bill was submitted to {session.display_name}.",
-            sections=[
-                ui.LayoutSection(
-                    "Type",
-                    f"{house_name} Procedure" if is_procedure else "Bill",
-                ),
-                ui.LayoutSection("Summary", bill_description),
-                ui.LayoutSection("Author", f"{ctx.author.mention} {ctx.author}"),
-                ui.LayoutSection(
-                    "Next Steps",
-                    f"Supporters can sponsor this bill with `/bill sponsor`. "
-                    f"The submission appears on `/{self.house_command(house)} session show`.",
-                ),
-            ],
-            links=self.house_links(
-                house,
-                session=session,
-                extra=[
-                    ui.LayoutLink("Read Document", google_docs_url, "\U0001f4c3"),
-                    ui.LayoutLink(
-                        "laws.democraciv.com",
-                        f"https://laws.democraciv.com/bill/{bill_id}",
-                        "\U0001f517",
-                    ),
-                ],
-            ),
+        await ctx.send(
+            f"{config.YES} Your bill `{name}` (#{bill_id}) was submitted for "
+            f"{session.display_name}."
         )
         await self._send_submission_help(
             ctx,
@@ -1219,26 +1237,11 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             motion_url=motion_url,
         )
 
-        await ui.send_static(
-            ctx,
-            title=f"{title} (#{motion_id})",
-            body=f"Your motion was submitted to {session.display_name}.",
-            sections=[
-                ui.LayoutSection("Content", description or "*No content provided.*"),
-                ui.LayoutSection("Author", f"{ctx.author.mention} {ctx.author}"),
-                ui.LayoutSection(
-                    "Next Steps",
-                    f"Supporters can sponsor this motion with `/motion sponsor`. "
-                    f"The motion appears on `/{self.house_command(house)} session show`.",
-                ),
-            ],
-            links=self.house_links(
-                house,
-                session=session,
-                extra=[
-                    ui.LayoutLink("Motion Page", motion_url, "\U0001f517"),
-                ],
-            ),
+        await ctx.send(
+            f"{config.YES} Your motion `{title}` (#{motion_id}) was submitted for "
+            f"{session.display_name}.\n"
+            f"{config.HINT} Tell your supporters to sponsor your motion with "
+            f"`/motion sponsor {motion_id}`."
         )
         await self._send_submission_help(
             ctx,
@@ -1315,28 +1318,12 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             target_session=target_session,
         )
 
-        await ui.send_static(
-            ctx,
-            title=f"Bill #{bill.id} Passed from {house_name}",
-            body="The bill's next legal destination has been recorded.",
-            sections=[
-                ui.LayoutSection("Bill", f"[{bill.name}]({bill.link})"),
-                ui.LayoutSection(
-                    "Status",
-                    bill.status.emojified_status(verbose=True),
-                ),
-            ],
-            links=self.house_links(
-                house,
-                extra=[
-                    ui.LayoutLink("Read Document", bill.link, "\U0001f4c3"),
-                    ui.LayoutLink(
-                        "laws.democraciv.com",
-                        f"https://laws.democraciv.com/bill/{bill.id}",
-                        "\U0001f517",
-                    ),
-                ],
-            ),
+        await ctx.send(
+            f"{config.YES} This bill was marked as passed from the {house_name}.\n"
+            f"{config.HINT} Depending on the bill's path, it is now either waiting on the "
+            f"{'Commons' if house == 'senate' else 'Senate'} or on the "
+            f"{self.bot.mk.MINISTRY_NAME}, or it is already law if it was a "
+            f"{house_name.lower()} procedure."
         )
 
         if bill.status.is_law and bill.content and "repeal" in bill.content.lower():
@@ -1381,31 +1368,9 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         scheduler = getattr(self.bot.get_cog("Senate"), "override_scheduler", None)
         await consumer.consume(scheduler=scheduler, acting_house="senate")
 
-        await ui.send_static(
-            ctx,
-            title=f"Veto Overridden for Bill #{bill.id}",
-            body=(
-                f"The veto was overridden. This bill is now an active law and appears "
-                "in `/law list`."
-            ),
-            sections=[
-                ui.LayoutSection("Bill", f"[{bill.name}]({bill.link})"),
-                ui.LayoutSection(
-                    "Status",
-                    bill.status.emojified_status(verbose=True),
-                ),
-            ],
-            links=self.house_links(
-                "senate",
-                extra=[
-                    ui.LayoutLink("Read Document", bill.link, "\U0001f4c3"),
-                    ui.LayoutLink(
-                        "laws.democraciv.com",
-                        f"https://laws.democraciv.com/bill/{bill.id}",
-                        "\U0001f517",
-                    ),
-                ],
-            ),
+        await ctx.send(
+            f"{config.YES} The veto was overridden. This bill is now an active law and appears "
+            f"in `/law list`."
         )
 
     async def export_spreadsheet(
@@ -1451,25 +1416,15 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         )
 
         paste_link = await self.bot.make_paste("\n".join(exported))
-        await ui.send_static(
-            ctx,
-            title=f"Spreadsheet Export of {session.display_name}",
-            body=(
-                "This session's bills and motions were exported into copy-and-paste "
-                "formatting for Google Sheets."
-            ),
-            links=self.house_links(
-                house,
-                session=session,
-                extra=[
-                    ui.LayoutLink("Spreadsheet Export", paste_link, "\U0001f4cb"),
-                    ui.LayoutLink(
-                        "How-To Video",
-                        "https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662/howtoexport.mp4",
-                        "\U000025b6",
-                    ),
-                ],
-            ),
+        leader_term = self.leader_term(house)
+        await ctx.send(
+            f"__**Spreadsheet Export of {session.display_name}**__\n"
+            f"This session's bills and motions were exported into a format that "
+            f"you can easily copy & paste into Google Spreadsheets, for example for a "
+            f"Legislative Docket: **<{paste_link}>**\n\n"
+            f"See the video below to see how to speed up your "
+            f"{leader_term} duties with this.\n"
+            f"https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662/howtoexport.mp4"
         )
 
     async def export_form(
@@ -1478,13 +1433,8 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         *,
         house: str,
     ):
-        await ui.send_static(
-            ctx,
-            title=f"{models.display_house_name(house)} Voting Form Export",
-            body=(
-                f"{config.NO} This command is still disabled due to security concerns."
-            ),
-            links=self.house_links(house),
+        await ctx.send(
+            f"{config.NO} This command is still disabled due to security concerns.",
             ephemeral=True,
         )
 
@@ -1585,12 +1535,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         if "error" in result:
             raise exceptions.DemocracivBotAPIError()
 
-        await ui.send_static(
-            ctx,
-            title=f"{session.display_name} Posted",
-            body=f"A summary was posted to r/{config.DEMOCRACIV_SUBREDDIT}.",
-            links=self.house_links(house, session=session),
-        )
+        await ctx.send(f"A summary was posted to r/{config.DEMOCRACIV_SUBREDDIT}.")
 
     @senate.command(
         name="overview",
@@ -1615,6 +1560,142 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         await ctx.defer()
         embed = await self._build_legislature_overview_embed("commons")
         await ctx.send(embed=embed)
+
+    @senate.command(name="search", description="Search bills and motions together.")
+    async def senate_search(self, interaction: discord.Interaction, query: str):
+        ctx = slash_context.from_interaction(interaction, command_name="senate search")
+        await ctx.defer()
+        results = await self._search_model(ctx, model=models.Bill, query=query)
+        results += await self._search_model(ctx, model=models.Motion, query=query)
+        if not results:
+            return await ctx.send(f"Nothing found matching '{query}'.", ephemeral=True)
+        unique = list(dict.fromkeys(results))
+        unique.sort(
+            key=lambda e: difflib.SequenceMatcher(
+                None, query.lower(), e.lower()
+            ).ratio(),
+            reverse=True,
+        )
+        pages = paginator.SimplePages(
+            entries=unique,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Bills & Motions matching '{query}'",
+            empty_message="Nothing found.",
+        )
+        await pages.start(ctx)
+
+    @commons.command(name="search", description="Search bills and motions together.")
+    async def commons_search(self, interaction: discord.Interaction, query: str):
+        ctx = slash_context.from_interaction(interaction, command_name="commons search")
+        await ctx.defer()
+        results = await self._search_model(ctx, model=models.Bill, query=query)
+        results += await self._search_model(ctx, model=models.Motion, query=query)
+        if not results:
+            return await ctx.send(f"Nothing found matching '{query}'.", ephemeral=True)
+        unique = list(dict.fromkeys(results))
+        unique.sort(
+            key=lambda e: difflib.SequenceMatcher(
+                None, query.lower(), e.lower()
+            ).ratio(),
+            reverse=True,
+        )
+        pages = paginator.SimplePages(
+            entries=unique,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Bills & Motions matching '{query}'",
+            empty_message="Nothing found.",
+        )
+        await pages.start(ctx)
+
+    @senate.command(
+        name="from",
+        description="List bills and motions submitted by a member or party.",
+    )
+    @app_commands.describe(
+        member="Member or user to list submissions for.",
+        party="Political party to list submissions for.",
+    )
+    async def senate_from(
+        self,
+        interaction: discord.Interaction,
+        member: discord.Member = None,
+        party: PartyOption = None,
+    ):
+        ctx = slash_context.from_interaction(interaction, command_name="senate from")
+        await ctx.defer()
+
+        member_or_party = member or party or ctx.author
+
+        bills = await self._from_person_model(
+            ctx, member_or_party=member_or_party, model=models.Bill, paginate=False
+        )
+        motions = await self._from_person_model(
+            ctx, member_or_party=member_or_party, model=models.Motion, paginate=False
+        )
+        things = bills + motions
+
+        if isinstance(member_or_party, converter.PoliticalParty):
+            name = member_or_party.role.name
+            empty = f"No member of {name} has submitted something yet."
+            title = f"Bills & Motions from members of {name}"
+            icon = (
+                await member_or_party.get_logo() or self.bot.mk.NATION_ICON_URL or None
+            )
+        else:
+            name = member_or_party.display_name
+            empty = f"{name} hasn't submitted anything yet."
+            title = f"Bills & Motions from {name}"
+            icon = member_or_party.display_avatar.url
+
+        pages = paginator.SimplePages(
+            entries=things, author=title, icon=icon, empty_message=empty
+        )
+        await pages.start(ctx)
+
+    @commons.command(
+        name="from",
+        description="List bills and motions submitted by a member or party.",
+    )
+    @app_commands.describe(
+        member="Member or user to list submissions for.",
+        party="Political party to list submissions for.",
+    )
+    async def commons_from(
+        self,
+        interaction: discord.Interaction,
+        member: discord.Member = None,
+        party: PartyOption = None,
+    ):
+        ctx = slash_context.from_interaction(interaction, command_name="commons from")
+        await ctx.defer()
+
+        member_or_party = member or party or ctx.author
+
+        bills = await self._from_person_model(
+            ctx, member_or_party=member_or_party, model=models.Bill, paginate=False
+        )
+        motions = await self._from_person_model(
+            ctx, member_or_party=member_or_party, model=models.Motion, paginate=False
+        )
+        things = bills + motions
+
+        if isinstance(member_or_party, converter.PoliticalParty):
+            name = member_or_party.role.name
+            empty = f"No member of {name} has submitted something yet."
+            title = f"Bills & Motions from members of {name}"
+            icon = (
+                await member_or_party.get_logo() or self.bot.mk.NATION_ICON_URL or None
+            )
+        else:
+            name = member_or_party.display_name
+            empty = f"{name} hasn't submitted anything yet."
+            title = f"Bills & Motions from {name}"
+            icon = member_or_party.display_avatar.url
+
+        pages = paginator.SimplePages(
+            entries=things, author=title, icon=icon, empty_message=empty
+        )
+        await pages.start(ctx)
 
     @senate_session.command(
         name="all",
@@ -1944,14 +2025,12 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     )
     @app_commands.describe(
         session_type="Kind of session to open.",
-        notify_legislators="DM legislators about the new session.",
     )
     @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
     async def commons_session_open(
         self,
         interaction: discord.Interaction,
         session_type: str = models.SessionKind.REGULAR.value,
-        notify_legislators: bool = False,
     ):
         ctx = slash_context.from_interaction(
             interaction, command_name="commons session"
@@ -1961,7 +2040,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             ctx,
             house="commons",
             session_kind=_session_kind_from_choice(session_type),
-            notify_legislators=notify_legislators,
+            notify_legislators=False,
         )
 
     @senate_session.command(name="lock", description="Lock Senate submissions.")
@@ -2064,7 +2143,6 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     @app_commands.describe(
         voting_form="Google Forms, Sheets, or Docs voting link.",
         session_type="Session type to start voting for if multiple sessions are open.",
-        notify_legislators="DM legislators the voting link.",
     )
     @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
     async def commons_session_vote(
@@ -2072,7 +2150,6 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         interaction: discord.Interaction,
         voting_form: str,
         session_type: str = None,
-        notify_legislators: bool = False,
     ):
         ctx = slash_context.from_interaction(
             interaction, command_name="commons session"
@@ -2083,7 +2160,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             house="commons",
             voting_form=voting_form,
             session_kind=_session_kind_from_choice(session_type),
-            notify_legislators=notify_legislators,
+            notify_legislators=False,
         )
 
     @senate_session.command(

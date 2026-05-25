@@ -380,7 +380,13 @@ class NPCSlash(commands.Cog):
                 "This can elevate the role-playing experience by making it clear "
                 "when someone talks in character, or out-of-character (OOC). "
                 "Political parties, newspapers, government departments or other groups can "
-                "use this to release official looking announcements."
+                "use this to release official looking announcements.\n\n"
+                "To get started, you can create a new NPC with `/npc create`. NPCs are "
+                "not bound to any server, every NPC that you make on this server can "
+                "also be used in every other server I am in.\n\nServer administrators "
+                "can disable NPC usage on their server for any reason with "
+                "the `/server npc-usage` command.\n\n\nSee `/help` or `/commands` to see "
+                "every NPC-related command and learn more about them."
             )
         )
         embed.set_author(name="What are NPCs?", icon_url=self.bot.dciv.icon.url)

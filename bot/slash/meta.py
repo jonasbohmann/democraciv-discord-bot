@@ -52,33 +52,36 @@ class MetaSlash(commands.Cog):
         )
         owner = getattr(self.bot, "owner", None)
         owner_name = str(owner) if owner else "DerJonas"
-
-        await ui.send_static(
-            ctx,
-            title=f"Made by {owner_name}",
-            body=f"[Invite this bot to your Discord Server.]({invite_url})",
-            sections=[
-                ui.LayoutSection("Developer", "DerJonas (u/Jovanos)"),
-                ui.LayoutSection(
-                    "Bot",
-                    f"Version: {self.bot.BOT_VERSION}\n"
-                    f"Servers: {len(self.bot.guilds)}\n"
-                    f"Text Prefix: `{config.BOT_PREFIX}`",
-                ),
-                ui.LayoutSection(
-                    "Commands",
-                    "Use `/commands` for slash commands or the text help command for legacy commands.",
-                ),
-            ],
-            links=[
-                ui.LayoutLink(
-                    "Source Code",
-                    "https://github.com/jonasbohmann/democraciv-discord-bot",
-                    "\U0001f5c3",
-                ),
-                ui.LayoutLink("Invite", invite_url, "\U0001f517"),
-            ],
+        owner_avatar = (
+            owner.display_avatar.url
+            if owner and hasattr(owner, "display_avatar")
+            else None
         )
+
+        embed = text.SafeEmbed(
+            description=f"[Invite this bot to your Discord Server.]({invite_url})",
+        )
+        embed.add_field(name="Developer", value="DerJonas (u/Jovanos)", inline=False)
+        embed.add_field(name="Version", value=self.bot.BOT_VERSION, inline=True)
+        embed.add_field(name="Servers", value=len(self.bot.guilds), inline=True)
+        embed.add_field(name="Prefix", value=f"`{config.BOT_PREFIX}`", inline=True)
+        embed.add_field(
+            name="Source Code",
+            value="[Link](https://github.com/jonasbohmann/democraciv-discord-bot)",
+            inline=False,
+        )
+        embed.add_field(
+            name="List of Commands",
+            value="Use `/commands` for slash commands or the legacy text help command.",
+            inline=False,
+        )
+        embed.set_author(
+            icon_url=owner_avatar,
+            name=f"Made by {owner_name}",
+        )
+        embed.set_footer(text=f"Assisting {self.bot.dciv.name} since")
+        embed.timestamp = self.bot.user.created_at
+        await ctx.send(embed=embed)
 
     @app_commands.command(name="ping", description="Show bot latency.")
     async def ping(self, interaction: discord.Interaction):
@@ -98,26 +101,37 @@ class MetaSlash(commands.Cog):
         except exceptions.DemocracivBotAPIError:
             api_http = None
 
-        await message.edit(
-            content=None,
-            view=ui.RichLayout(
-                title="Pong!",
-                title_emoji="\U0001f3d3",
-                body="**[status.discord.com](https://status.discord.com/)**",
-                sections=[
-                    ui.LayoutSection(
-                        "Discord",
-                        f"HTTP API: {discord_http:.0f}ms\n"
-                        f"Gateway Websocket: {self.bot.ping * 1000:.0f}ms",
-                    ),
-                    ui.LayoutSection(
-                        "Internal API",
-                        f"{api_http:.0f}ms" if api_http else "*not running*",
-                    ),
-                ],
-                author_id=ctx.author.id,
-            ),
+        try:
+            start2 = time.perf_counter()
+            async with self.bot.session.get(self.bot.mk.NATION_ICON_URL) as resp:
+                await resp.read()
+            end2 = time.perf_counter()
+            cdn_http = (end2 - start2) * 1000
+        except Exception:
+            cdn_http = None
+
+        embed = text.SafeEmbed(
+            title="Pong!",
+            description="**[status.discord.com](https://status.discord.com/)**",
         )
+        embed.add_field(
+            name="Discord",
+            value=f"HTTP API: {discord_http:.0f}ms\n"
+            f"Gateway Websocket: {self.bot.ping * 1000:.0f}ms",
+            inline=False,
+        )
+        embed.add_field(
+            name="Internal API",
+            value=f"{api_http:.0f}ms" if api_http else "*not running*",
+            inline=False,
+        )
+        embed.add_field(
+            name="Democraciv CDN",
+            value=f"{cdn_http:.0f}ms" if cdn_http else "*unreachable*",
+            inline=False,
+        )
+
+        await message.edit(content=None, embed=embed)
 
     @app_commands.command(name="commands", description="List all text commands.")
     async def commands_command(self, interaction: discord.Interaction):
@@ -125,37 +139,48 @@ class MetaSlash(commands.Cog):
         await ctx.defer()
 
         p = config.BOT_PREFIX
-        entries = []
-        total_cmds = 0
+        description_text = []
+        field_text = []
+        amounts = 0
+        i = 0
 
         for name, cog in sorted(self.bot.cogs.items()):
             if not isinstance(cog, context.CustomCog):
                 continue
-
             if cog.hidden and cog.qualified_name != "Bank":
                 continue
-
             cog_cmds = sorted(
                 [command for command in cog.walk_commands() if not command.hidden],
                 key=lambda c: c.qualified_name,
             )
+            amounts += len(cog_cmds)
+            commands_list = [f"`{p}{command.qualified_name}`" for command in cog_cmds]
+            if i == 0:
+                description_text.append(f"**__{cog.qualified_name}__**\n")
+                description_text.append("\n".join(commands_list))
+                description_text.append("\n")
+            elif i < 8:
+                description_text.append(f"\n**__{cog.qualified_name}__**\n")
+                description_text.append("\n".join(commands_list))
+                description_text.append("\n")
+            else:
+                field_text.append(f"\n**__{cog.qualified_name}__**\n")
+                field_text.append("\n".join(commands_list))
+                field_text.append("\n")
+            i += 1
 
-            if not cog_cmds:
-                continue
-
-            total_cmds += len(cog_cmds)
-            lines = [f"### {cog.qualified_name}"]
-            for command in cog_cmds:
-                lines.append(f"`{p}{command.qualified_name}`")
-            entries.append("\n".join(lines))
-
-        await ui.send_pages(
-            ctx,
-            entries=entries,
-            title=f"Text Commands ({total_cmds})",
-            per_page=4,
-            empty_message="No text commands are loaded.",
+        embed = text.SafeEmbed(
+            title=f"All Commands ({amounts})",
+            description=(
+                f"For more detailed explanations and example usage of commands, "
+                f"use `{p}help`, `{p}help <Category>`, "
+                f"or `{p}help <command>`."
+                f"\n\n{' '.join(description_text)}"
+            ),
         )
+        if field_text:
+            embed.add_field(name="\u200b", value=" ".join(field_text))
+        await ctx.send(embed=embed)
 
     @app_commands.command(
         name="invite", description="Invite this bot to another server."
@@ -167,10 +192,9 @@ class MetaSlash(commands.Cog):
             permissions=discord.Permissions(8),
         )
         await ctx.send(
-            view=ui.RichLayout(
+            embed=text.SafeEmbed(
                 title="Add this bot to your own Discord server",
-                links=[ui.LayoutLink("Invite", invite_url, "\U0001f517")],
-                author_id=ctx.author.id,
+                description=invite_url,
             )
         )
 

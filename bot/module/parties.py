@@ -931,18 +931,20 @@ class Party(context.CustomCog, name="Political Parties"):
     async def clearalias(self, ctx, *, party: Fuzzy[PoliticalParty]):
         """Delete all aliases of a party"""
 
-        for alias in party.aliases:
-            if alias == party.role.name.lower():
-                continue
-
-            await self.bot.db.execute("DELETE FROM party_alias WHERE alias = $1", alias)
-
         sure = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to "
             f"delete all aliases of `{party.role.name}`?"
         )
 
         if sure:
+            for alias in party.aliases:
+                if alias == party.role.name.lower():
+                    continue
+
+                await self.bot.db.execute(
+                    "DELETE FROM party_alias WHERE alias = $1", alias
+                )
+
             await ctx.send(
                 f"{config.YES} All aliases of `{party.role.name}` were deleted."
             )

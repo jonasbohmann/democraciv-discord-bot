@@ -1,3 +1,4 @@
+import asyncio
 import collections
 import datetime
 
@@ -723,6 +724,30 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             empty_message="Nothing found.",
         )
         await pages.start(ctx)
+        fts_view = mixin.FullTextSearchView(ctx)
+        index_map = {"law": "bill", "bill": "bill", "motion": "motion"}
+        index = index_map.get(models.Law.model.lower(), "bill")
+        await ctx.send(
+            "Do you want to perform a full-text search via Meilisearch?",
+            view=fts_view,
+        )
+        result = await fts_view.prompt(silent=True)
+        if result:
+            api_result = await self.bot.api_request(
+                "POST",
+                "document/search",
+                json={"question": query, "index": index, "semantic_ratio": 0.0},
+            )
+            if api_result and "result" in api_result and api_result["result"]:
+                fts_entries = api_result["result"]
+                fts_pages = paginator.SimplePages(
+                    entries=fts_entries,
+                    icon=self.bot.mk.NATION_ICON_URL,
+                    author=f"Full-text search results for '{query}'",
+                    empty_message="Nothing found.",
+                    per_page=12,
+                )
+                await fts_pages.start(ctx)
 
     @law.command(name="read", description="Read the text of a law.")
     @app_commands.describe(law="Law ID or title")
@@ -824,6 +849,30 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             empty_message="Nothing found.",
         )
         await pages.start(ctx)
+        fts_view = mixin.FullTextSearchView(ctx)
+        index_map = {"law": "bill", "bill": "bill", "motion": "motion"}
+        index = index_map.get(models.Bill.model.lower(), "bill")
+        await ctx.send(
+            "Do you want to perform a full-text search via Meilisearch?",
+            view=fts_view,
+        )
+        result = await fts_view.prompt(silent=True)
+        if result:
+            api_result = await self.bot.api_request(
+                "POST",
+                "document/search",
+                json={"question": query, "index": index, "semantic_ratio": 0.0},
+            )
+            if api_result and "result" in api_result and api_result["result"]:
+                fts_entries = api_result["result"]
+                fts_pages = paginator.SimplePages(
+                    entries=fts_entries,
+                    icon=self.bot.mk.NATION_ICON_URL,
+                    author=f"Full-text search results for '{query}'",
+                    empty_message="Nothing found.",
+                    per_page=12,
+                )
+                await fts_pages.start(ctx)
 
     @bill.command(name="from", description="List bills submitted by a member or party.")
     @app_commands.describe(
@@ -931,6 +980,30 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             empty_message="Nothing found.",
         )
         await pages.start(ctx)
+        fts_view = mixin.FullTextSearchView(ctx)
+        index_map = {"law": "bill", "bill": "bill", "motion": "motion"}
+        index = index_map.get(models.Motion.model.lower(), "bill")
+        await ctx.send(
+            "Do you want to perform a full-text search via Meilisearch?",
+            view=fts_view,
+        )
+        result = await fts_view.prompt(silent=True)
+        if result:
+            api_result = await self.bot.api_request(
+                "POST",
+                "document/search",
+                json={"question": query, "index": index, "semantic_ratio": 0.0},
+            )
+            if api_result and "result" in api_result and api_result["result"]:
+                fts_entries = api_result["result"]
+                fts_pages = paginator.SimplePages(
+                    entries=fts_entries,
+                    icon=self.bot.mk.NATION_ICON_URL,
+                    author=f"Full-text search results for '{query}'",
+                    empty_message="Nothing found.",
+                    per_page=12,
+                )
+                await fts_pages.start(ctx)
 
     @motion.command(
         name="from", description="List motions submitted by a member or party."
@@ -1022,6 +1095,16 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             )
             return
 
+        await ctx.send(
+            f"{config.HINT} You can no longer choose the Google Document that will be used for this yourself. Instead, I will always use this document: {self.bot.mk.LEGAL_CODE}\n\n{config.HINT} You can DM @ Jonas for further information."
+        )
+        await asyncio.sleep(3)
+        await ctx.send(
+            f"{config.YES} I will generate an up-to-date Legal Code."
+            f"\n:arrows_counterclockwise: This may take a few minutes..."
+        )
+        await asyncio.sleep(2)
+
         all_laws = await self.bot.db.fetch(
             "SELECT id, name, link FROM bill WHERE status = $1 ORDER BY id",
             models.BillIsLaw.flag.value,
@@ -1040,15 +1123,16 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         )
 
         view_url = result["response"]["result"]["view"]
-        await ui.send_static(
-            ctx,
+        embed = text.SafeEmbed(
             title="Generated Legal Code",
-            body=(
+            description=(
                 "This Legal Code is not guaranteed to be correct. Its content "
-                "is based entirely on the list of Laws in the database."
+                f"is based entirely on the list of Laws in `/law list`."
+                "\n\nRemember to change the edit link you gave me earlier to not be public."
             ),
-            links=[ui.LayoutLink("Open Legal Code", view_url, "\U0001f4c4")],
         )
+        embed.add_field(name="Link to the Legal Code", value=view_url, inline=False)
+        await ctx.send(embed=embed)
 
     async def _show_detail(
         self,

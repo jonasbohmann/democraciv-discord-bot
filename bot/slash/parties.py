@@ -87,6 +87,7 @@ class PartyCreateModal(forms.ErrorHandledModal):
         await ctx.send(
             f"{config.YES} `{party.role.name}` was added as a new Political Party.\n"
             f"{config.HINT} Add abbreviations and alternative spellings with `/party alias add`."
+            f"\n{config.HINT} Remember to update https://reddit.com/r/democraciv/wiki accordingly."
         )
 
 
@@ -400,7 +401,10 @@ class PartiesSlash(commands.Cog):
                         leader_id,
                     )
 
-        await ctx.send(f"{config.YES} `{new_name}` was edited.")
+        await ctx.send(
+            f"{config.YES} `{new_name}` was edited."
+            f"\n{config.HINT} Remember to update https://reddit.com/r/democraciv/wiki accordingly."
+        )
 
     async def finish_merge(
         self,
@@ -546,9 +550,14 @@ class PartiesSlash(commands.Cog):
         )
 
         if not party.is_independent:
+            shortest = (
+                min(party.aliases, key=len)
+                if party.aliases
+                else party.role.name.lower()
+            )
             embed.description = (
                 f"-# [Platform and Description]({self.bot.mk.POLITICAL_PARTIES})\n-# Join this party with "
-                f"`/party join`."
+                f"`/party join` (shortcut: `{shortest}`)."
             )
             members_name = "Members"
 
@@ -834,7 +843,10 @@ class PartiesSlash(commands.Cog):
                     detail=party.role.name,
                 )
 
-        await ctx.send(f"{config.YES} `{name}` and all its aliases were deleted.")
+        await ctx.send(
+            f"{config.YES} `{name}` and all its aliases were deleted."
+            f"\n{config.HINT} Remember to update https://reddit.com/r/democraciv/wiki accordingly."
+        )
 
     @party.command(name="merge", description="Merge multiple parties into one.")
     @slash_checks.moderation_or_nation_leader()

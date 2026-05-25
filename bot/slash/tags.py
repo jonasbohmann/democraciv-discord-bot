@@ -419,7 +419,9 @@ class TagsSlash(commands.Cog):
         )
         if global_tags:
             entries.append(
-                f"### Global Tags\n-# Tags can only be made global by {self.bot.dciv.name} Moderation and Nation Admins."
+                f"### Global Tags\n-# Tags can only be made global by {self.bot.dciv.name} "
+                f"Moderation and Nation Admins. Global tags work in every server I am in, "
+                f"as well as in DMs with me.\n"
             )
             entries.extend(
                 f"* `{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
@@ -432,7 +434,11 @@ class TagsSlash(commands.Cog):
                 ctx.guild.id,
             )
             if local_tags:
-                entries.append("\n### Local Tags")
+                entries.append(
+                    f"\n\n### Local Tags\n-# Every Tag that was not explicitly made global by "
+                    f"{self.bot.dciv.name} Moderation or a Nation Admin is a local tag, "
+                    f"and only works in the server it was made in.\n"
+                )
                 entries.extend(
                     f"* `{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
                     for record in local_tags
@@ -635,11 +641,10 @@ class TagsSlash(commands.Cog):
         ctx = slash_context.from_interaction(
             interaction,
             command_name="tag raw",
-            ephemeral=True,
         )
-        await ctx.defer(ephemeral=True)
+        await ctx.defer()
         safe_content = tag.clean_content.replace("```", "'")
-        await ctx.send(f"```{safe_content[:1900]}```", ephemeral=True)
+        await ctx.send(f"```{safe_content[:1900]}```")
 
     @tag.command(name="stats", description="Show tag statistics.")
     @app_commands.guild_only()

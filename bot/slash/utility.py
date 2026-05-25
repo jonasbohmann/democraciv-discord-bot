@@ -396,7 +396,10 @@ class UtilitySlash(commands.Cog):
                 fp = io.BytesIO(await other.read())
                 return await ctx.send(file=discord.File(fp, filename=filename))
 
-        await ui.send_static(ctx, title="Random Dog", media_urls=[url])
+        embed = text.SafeEmbed(title="Random Dog")
+        embed.set_image(url=url)
+        embed.set_footer(text="Just for Taylor.")
+        await ctx.send(embed=embed)
 
     @app_commands.command(name="cat", description="Show a random cat.")
     async def cat(self, interaction: discord.Interaction):

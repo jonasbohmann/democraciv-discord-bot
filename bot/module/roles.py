@@ -147,9 +147,10 @@ class Selfroles(context.CustomCog):
         )
 
         await self.bot.db.execute(
-            "UPDATE selfrole SET join_message = $1 WHERE role_id = $2",
+            "UPDATE selfrole SET join_message = $1 WHERE role_id = $2 AND guild_id = $3",
             new_join_message,
             role.role.id,
+            ctx.guild.id,
         )
 
         await ctx.send(

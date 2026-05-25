@@ -143,18 +143,7 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
         scheduler = getattr(self._ministry_cog(), scheduler_name, None)
         await consumer.consume(scheduler=scheduler)
 
-        await ui.send_static(
-            ctx,
-            title=f"{bill.name} (#{bill.id})",
-            body=success_body,
-            sections=[
-                ui.LayoutSection("Status", bill.status.emojified_status(verbose=True)),
-                ui.LayoutSection(
-                    "Summary", bill.description or "*No summary provided.*"
-                ),
-            ],
-            links=self._links(bill=bill),
-        )
+        await ctx.send(success_body)
 
     @ministry.command(
         name="overview", description="Show the current Executive overview."
@@ -223,7 +212,36 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
         await ctx.defer()
 
         bills = await self._awaiting_bills(ctx)
-        entries = [self._bill_entry(bill) for bill in bills]
+
+        export_lines = [
+            f"Export of Bills Awaiting Executive Action -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
+            "----- Bills Awaiting Executive Action -----\n",
+        ]
+
+        entries = []
+
+        if bills:
+            for bill in bills:
+                export_lines.append(f"Bill #{bill.id}")
+
+            export_lines.append("\n")
+
+            for bill in bills:
+                export_lines.append(f'=HYPERLINK("{bill.link}"; "{bill.name}")')
+
+            try:
+                paste_link = await self.bot.make_paste("\n".join(export_lines))
+            except Exception:
+                paste_link = None
+
+            if paste_link:
+                entries.append(
+                    f"-# View this list in Google Spreadsheets formatting for easy copy & pasting: [Link]({paste_link})\n"
+                )
+
+
+            entries.extend([self._bill_entry(bill) for bill in bills])
+
         pages = paginator.SimplePages(
             entries=entries,
             icon=self.bot.mk.NATION_ICON_URL,
@@ -254,6 +272,9 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
             success_body=(
                 f"{config.YES} This bill was passed into law and can now be found "
                 "in `/law list` and on laws.democraciv.com."
+                f"\n{config.HINT} If the Legal Code needs to be updated, the "
+                f"{self.bot.mk.speaker_term} can use `/law export` to generate "
+                "a Google Docs Legal Code."
             ),
         )
 
@@ -276,7 +297,12 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
             scheduler_name="veto_scheduler",
             title="Veto Bill",
             confirm_label="Veto",
-            success_body=f"{config.YES} This bill was vetoed by the Executive.",
+            success_body=(
+                f"{config.YES} This bill was vetoed by the Executive."
+                f"\n{config.HINT} In case the Senate wants to give this bill a second "
+                "chance, a veto can be overridden with `/senate override`, or the bill "
+                "can be resubmitted to its origin house with `/bill resubmit`."
+            ),
         )
 
 
