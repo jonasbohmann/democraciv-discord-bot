@@ -948,6 +948,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         await consumer.filter(acting_house="senate")
         await consumer.consume(acting_house="senate")
 
+        for bill_id in active_leg_session.bills:
+            try:
+                bill = await Bill.convert(ctx, bill_id)
+                self.bot.loop.create_task(self._synchronize_bill(bill))
+            except Exception:
+                pass
+
         #  Update all bills that did not pass
         # await self.bot.db.execute(
         #    "UPDATE bill SET status = $1 WHERE leg_session = $2",

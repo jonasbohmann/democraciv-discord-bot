@@ -914,6 +914,13 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         await consumer.filter(acting_house=house)
         await consumer.consume(acting_house=house)
 
+        for bill_id in active_session.bills:
+            try:
+                bill = await models.Bill.convert(ctx, bill_id)
+                self.bot.loop.create_task(self._synchronize_bill(bill))
+            except Exception:
+                pass
+
         announcement = text.SafeEmbed()
         announcement.set_author(
             name=f"{active_session.display_name} has been closed",
@@ -1425,17 +1432,6 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             f"See the video below to see how to speed up your "
             f"{leader_term} duties with this.\n"
             f"https://cdn.discordapp.com/attachments/709411002482950184/709412385034862662/howtoexport.mp4"
-        )
-
-    async def export_form(
-        self,
-        ctx: slash_context.InteractionContext,
-        *,
-        house: str,
-    ):
-        await ctx.send(
-            f"{config.NO} This command is still disabled due to security concerns.",
-            ephemeral=True,
         )
 
     async def export_reddit(
@@ -2226,22 +2222,6 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         ctx = slash_context.from_interaction(interaction, command_name="commons export")
         await ctx.defer(ephemeral=True)
         await self.export_spreadsheet(ctx, house="commons", session_id=session_id)
-
-    @senate_export.command(
-        name="form", description="Explain Senate form export status."
-    )
-    async def senate_export_form(self, interaction: discord.Interaction):
-        ctx = slash_context.from_interaction(interaction, command_name="senate export")
-        await ctx.defer(ephemeral=True)
-        await self.export_form(ctx, house="senate")
-
-    @commons_export.command(
-        name="form", description="Explain Commons form export status."
-    )
-    async def commons_export_form(self, interaction: discord.Interaction):
-        ctx = slash_context.from_interaction(interaction, command_name="commons export")
-        await ctx.defer(ephemeral=True)
-        await self.export_form(ctx, house="commons")
 
     @senate_export.command(
         name="reddit", description="Post the active Senate docket to Reddit."

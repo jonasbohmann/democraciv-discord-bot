@@ -284,6 +284,37 @@ class GovernmentMixin:
         )
         await pages.start(ctx)
 
+    async def _synchronize_bill(self, bill: models.Bill) -> bool:
+        try:
+            name, keywords, content = await bill.fetch_name_and_keywords()
+            if not name:
+                return False
+
+            await self.bot.db.execute(
+                "UPDATE bill SET name = $1, content = $2 WHERE id = $3",
+                name,
+                content,
+                bill.id,
+            )
+            await self.bot.db.execute(
+                "DELETE FROM bill_lookup_tag WHERE bill_id = $1", bill.id
+            )
+            if keywords:
+                await self.bot.db.executemany(
+                    "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) "
+                    "ON CONFLICT DO NOTHING",
+                    [(bill.id, tag) for tag in keywords],
+                )
+            await self.bot.api_request(
+                "POST",
+                "document/update",
+                silent=True,
+                json={"id": bill.id, "type": "bill"},
+            )
+            return True
+        except Exception:
+            return False
+
     async def generate_google_docs_legal_code(self):
         doc_url = "https://docs.google.com/document/d/1ywV_F70odxHh5fLcqcghpFOToPao85CjfT5Y_mYcml0/edit?usp=sharing"
 

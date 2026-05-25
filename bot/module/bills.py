@@ -72,40 +72,12 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
         sync_errors = []
 
         async with ctx.typing():
-            async with self.bot.db.acquire() as connection:
-                async with connection.transaction():
-                    for bill in passed:
-                        name, keywords, content = await bill.fetch_name_and_keywords()
-
-                        if not name:
-                            sync_errors.append(
-                                f"Error synchronizing Bill #{bill.id} - {bill.name}. Skipping update."
-                            )
-                            continue
-
-                        await connection.execute(
-                            "UPDATE bill SET name = $1, content = $3 WHERE id = $2",
-                            name,
-                            bill.id,
-                            content,
-                        )
-                        await connection.execute(
-                            "DELETE FROM bill_lookup_tag WHERE bill_id = $1", bill.id
-                        )
-
-                        id_with_kws = [(bill.id, keyword) for keyword in keywords]
-                        self.bot.loop.create_task(
-                            connection.executemany(
-                                "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING ",
-                                id_with_kws,
-                            )
-                        )
-
-                        await self.bot.api_request(
-                            "POST",
-                            "document/update",
-                            json={"id": bill.id, "type": "bill"},
-                        )
+            for bill in passed:
+                success = await self._synchronize_bill(bill)
+                if not success:
+                    sync_errors.append(
+                        f"Error synchronizing Bill #{bill.id} - {bill.name}. Skipping update."
+                    )
 
         message = f"{config.YES} Synchronized {len(passed) - len(sync_errors)}/{len(passed)} bills with Google Docs."
 

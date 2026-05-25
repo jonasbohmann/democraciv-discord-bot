@@ -474,37 +474,17 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
                 ephemeral=True,
             )
 
-        name, keywords, content = await bill.fetch_name_and_keywords()
-        if not name:
-            return await ctx.send(
+        success = await super()._synchronize_bill(bill)
+        if success:
+            await ctx.send(
+                f"{config.YES} Synchronized Bill #{bill.id} with Google Docs."
+            )
+        else:
+            await ctx.send(
                 f"{config.NO} Error synchronizing Bill #{bill.id} - {bill.name}. "
                 "Are you sure the Google Docs document is public?",
                 ephemeral=True,
             )
-
-        async with self.bot.db.acquire() as connection:
-            async with connection.transaction():
-                await connection.execute(
-                    "UPDATE bill SET name = $1, content = $2 WHERE id = $3",
-                    name,
-                    content,
-                    bill.id,
-                )
-                await connection.execute(
-                    "DELETE FROM bill_lookup_tag WHERE bill_id = $1",
-                    bill.id,
-                )
-                if keywords:
-                    await connection.executemany(
-                        "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) "
-                        "ON CONFLICT DO NOTHING",
-                        [(bill.id, keyword) for keyword in keywords],
-                    )
-
-        await self.bot.api_request(
-            "POST", "document/update", json={"id": bill.id, "type": "bill"}
-        )
-        await ctx.send(f"{config.YES} Synchronized Bill #{bill.id} with Google Docs.")
 
     async def _bulkedit_bills(
         self,
@@ -775,6 +755,11 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
     )
     @slash_checks.is_democraciv_guild()
     @app_commands.describe(bill="Bill ID or title")
+    @slash_checks.has_any_democraciv_role(
+        mk.DemocracivRole.SPEAKER,
+        mk.DemocracivRole.VICE_SPEAKER,
+        mk.DemocracivRole.MK13_SENATOR_PRESIDING,
+    )
     async def bill_synchronize(
         self,
         interaction: discord.Interaction,

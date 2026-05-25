@@ -335,6 +335,30 @@ class Bill(commands.Converter, FuzzyableMixin):
         keywords.append(name_abbreviation)
         return name, list(set(keywords)), content
 
+    async def _auto_sync(self):
+        try:
+            name, keywords, content = await self.fetch_name_and_keywords()
+            if not name:
+                return
+
+            await self._bot.db.execute(
+                "UPDATE bill SET name = $1, content = $2 WHERE id = $3",
+                name,
+                content,
+                self.id,
+            )
+            await self._bot.db.execute(
+                "DELETE FROM bill_lookup_tag WHERE bill_id = $1", self.id
+            )
+            if keywords:
+                await self._bot.db.executemany(
+                    "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) "
+                    "ON CONFLICT DO NOTHING",
+                    [(self.id, tag) for tag in keywords],
+                )
+        except Exception:
+            pass
+
     @property
     def submitter(self) -> typing.Union[discord.Member, discord.User, None]:
         user = self._bot.dciv.get_member(self.submitter_id) or self._bot.get_user(
@@ -781,6 +805,9 @@ class BillStatus:
                 silent=True,
                 json={"id": self._bill.id, "type": "bill"},
             )
+
+        if new_status is _BillStatusFlag.LAW and self._bot.is_ready():
+            self._bot.loop.create_task(self._bill._auto_sync())
 
     async def veto(self, dry=False, **kwargs):
         raise IllegalBillOperation()
