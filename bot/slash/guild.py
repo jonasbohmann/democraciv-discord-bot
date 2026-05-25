@@ -7,6 +7,8 @@ from bot.slash import checks as slash_checks
 from bot.slash import context as slash_context
 from bot.slash import ui
 from bot.utils import exceptions
+from bot.utils import paginator
+from bot.utils import text
 
 LOG_EVENT_COLUMNS = {
     "message_edits": "logging_message_edit",
@@ -98,13 +100,14 @@ class GuildSlash(commands.Cog):
                 f"to {discord_webhook.channel.mention}"
             )
 
-        await ui.send_pages(
-            ctx,
+        pages = paginator.SimplePages(
             entries=entries,
-            title=f"Subreddit Feeds on {ctx.guild.name}",
-            empty_message="This server does not have any subreddit feeds yet.",
+            author=f"Subreddit Feeds on {ctx.guild.name}",
+            icon="https://cdn.discordapp.com/attachments/730898526040752291/781547428087201792/Reddit_Mark_OnWhite.png",
             per_page=12,
+            empty_message="This server does not have any subreddit feeds yet.",
         )
+        await pages.start(ctx)
 
     @server.command(name="overview", description="Show server settings and statistics.")
     async def overview(self, interaction: discord.Interaction):
@@ -115,32 +118,31 @@ class GuildSlash(commands.Cog):
         settings = await self.ensure_guild_settings(ctx.guild.id)
         excluded_channels = len(settings["private_channels"])
 
-        await ui.send_static(
-            ctx,
-            title=ctx.guild.name,
-            sections=[
-                ui.LayoutSection(
-                    "Settings",
-                    f"{self.bot.emojify_boolean(settings['welcome_enabled'])} Welcome Messages\n"
-                    f"{self.bot.emojify_boolean(settings['logging_enabled'])} Logging ({excluded_channels} hidden channels)\n"
-                    f"{self.bot.emojify_boolean(settings['default_role_enabled'])} Role on Join\n"
-                    f"{self.bot.emojify_boolean(settings['tag_creation_allowed'])} Tag Creation by Everyone\n"
-                    f"{self.bot.emojify_boolean(settings['npc_usage_allowed'])} NPC Usage Allowed",
-                ),
-                ui.LayoutSection(
-                    "Statistics",
-                    f"{ctx.guild.member_count} members\n"
-                    f"{len(ctx.guild.text_channels)} text channels\n"
-                    f"{len(ctx.guild.voice_channels)} voice channels\n"
-                    f"{len(ctx.guild.roles)} roles\n"
-                    f"{len(ctx.guild.emojis)} custom emojis",
-                ),
-                ui.LayoutSection(
-                    "Created",
-                    ctx.guild.created_at.strftime("%A, %B %d %Y"),
-                ),
-            ],
+        embed = text.SafeEmbed(
+            description=f"Check **`{config.BOT_PREFIX}help server`** to see how you can configure me for this server.",
         )
+        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild_icon)
+        embed.add_field(
+            name="Settings",
+            value=f"{self.bot.emojify_boolean(settings['welcome_enabled'])} Welcome Messages\n"
+            f"{self.bot.emojify_boolean(settings['logging_enabled'])} Logging ({excluded_channels} hidden channels)\n"
+            f"{self.bot.emojify_boolean(settings['default_role_enabled'])} Role on Join\n"
+            f"{self.bot.emojify_boolean(settings['tag_creation_allowed'])} Tag Creation by Everyone\n"
+            f"{self.bot.emojify_boolean(settings['npc_usage_allowed'])} NPC Usage Allowed",
+        )
+        embed.add_field(
+            name="Statistics",
+            value=f"{ctx.guild.member_count} members\n"
+            f"{len(ctx.guild.text_channels)} text channels\n"
+            f"{len(ctx.guild.voice_channels)} voice channels\n"
+            f"{len(ctx.guild.roles)} roles\n"
+            f"{len(ctx.guild.emojis)} custom emojis",
+        )
+        embed.set_footer(
+            text=f"Server was created on {ctx.guild.created_at.strftime('%A, %B %d %Y')}"
+        )
+        embed.set_thumbnail(url=ctx.guild_icon)
+        await ctx.send(embed=embed)
 
     @server.command(name="welcome", description="Configure welcome messages.")
     @slash_checks.has_guild_permissions(manage_guild=True)
@@ -195,20 +197,20 @@ class GuildSlash(commands.Cog):
         settings = await self.ensure_guild_settings(ctx.guild.id)
         current_channel = await self.bot.get_logging_channel(ctx.guild)
 
-        await ui.send_static(
-            ctx,
-            title=f"Event Logging on {ctx.guild.name}",
-            sections=[
-                ui.LayoutSection(
-                    "Status",
-                    self.bot.emojify_boolean(settings["logging_enabled"]),
-                ),
-                ui.LayoutSection(
-                    "Log Channel",
-                    current_channel.mention if current_channel else "-",
-                ),
-            ],
+        embed = text.SafeEmbed(
+            description=f"If you want to change what specific events I should log, use my `{config.BOT_PREFIX}server logs events` command."
         )
+        embed.set_author(
+            name=f"Event Logging on {ctx.guild.name}", icon_url=ctx.guild_icon
+        )
+        embed.add_field(
+            name="Enabled", value=self.bot.emojify_boolean(settings["logging_enabled"])
+        )
+        embed.add_field(
+            name="Log Channel",
+            value=current_channel.mention if current_channel else "-",
+        )
+        await ctx.send(embed=embed)
 
     @logs.command(name="configure", description="Configure logging status and channel.")
     @slash_checks.has_guild_permissions(manage_guild=True)

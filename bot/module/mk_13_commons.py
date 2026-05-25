@@ -513,93 +513,9 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
                 f"`{config.BOT_PREFIX}commons session open`."
             )
 
-        entries = []
-        sponsors_needed = ""
-        bills = [await Bill.convert(ctx, b_id) for b_id in session.bills]
-        amount_of_all_bills = len(bills)
-
-        if sponsor_filter:
-            filter_func, sponsors_needed = sponsor_filter
-            bills = list(filter(filter_func, bills))
-
-        pretty_bills = [
-            f"* {b.formatted} ({len(b.sponsors)} sponsor{'s' if len(b.sponsors) != 1 else ''})"
-            for b in bills
-        ] or ["-"]
-
-        speaker = session.speaker or context.MockUser()
-
-        description = f"### Presiding Speaker\n{speaker.mention}\n### Opened\n<t:{int(session.opened_on.timestamp())}:F>\n"
-
-        if session.voting_started_on:
-            description = f"{description[:-1]}\n### Voting started\n<t:{int(session.voting_started_on.timestamp())}:F> "
-
-        if session.closed_on:
-            description = (
-                f"{description[:-1]}\n### Closed\n"
-                f"<t:{int(session.closed_on.timestamp())}:F> "
-            )
-
-        if session.status is SessionStatus.SUBMISSION_PERIOD:
-            description = (
-                f"{description[:-1]}\n\n-# Bills & Motions can be submitted to this session with "
-                f"`{config.BOT_PREFIX}commons submit`. Any failed bills from "
-                f"previous sessions can be resubmitted to the current submission-period session in their "
-                f"origin house with `{config.BOT_PREFIX}bill resubmit`."
-            )
-
-        entries.append(description)
-        entries.append(f"### Status\n{session.status.value}")
-
-        if session.vote_form:
-            entries.append(f"### Voting Form\n{session.vote_form}")
-
-        amount = (
-            f"{len(bills)}/{amount_of_all_bills}"
-            if sponsor_filter
-            else amount_of_all_bills
+        entries = await self._build_session_entries(
+            ctx=ctx, house="commons", session=session, sponsor_filter=sponsor_filter
         )
-
-        entries.append(
-            f"### Submitted Bills{'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'}"
-            f" ({amount})"
-        )
-
-        if not sponsor_filter:
-            entries.append(
-                f"-# You can filter the list of submitted bills & motions of a session by their amount of sponsors. "
-                f"For example, using `{config.BOT_PREFIX}commons session >=2` "
-                f"would only show bills & motions that have 2 or more sponsors. See the help page of this command "
-                f"for more information.\n"
-            )
-
-        entries.extend(pretty_bills)
-
-        if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
-            motions = [(await Motion.convert(ctx, m)) for m in session.motions]
-
-            amount_of_all_motions = len(motions)
-
-            if sponsor_filter:
-                motions = list(filter(filter_func, motions))
-
-            pretty_motions = [
-                f"* {m.formatted} ({len(m.sponsors)} sponsor{'s' if len(m.sponsors) != 1 else ''})"
-                for m in motions
-            ] or ["-"]
-            m_amount = (
-                f"{len(motions)}/{amount_of_all_motions}"
-                if sponsor_filter
-                else amount_of_all_motions
-            )
-            entries.append(
-                f"### Submitted Motions {'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'} ({m_amount})"
-            )
-
-            last_motion = pretty_motions.pop()
-            last_motion += "\n"
-            pretty_motions.append(last_motion)
-            entries.extend(pretty_motions)
 
         if session.status is SessionStatus.CLOSED:
             await ctx.send(f":warning: This session is already closed.")
@@ -1861,88 +1777,6 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             f"{config.NO} Only the Senate can override an Executive veto."
         )
 
-    def format_stats(
-        self, *, record: typing.List[asyncpg.Record], record_key: str, stats_name: str
-    ) -> str:
-        """Prettifies the dicts used in generate_leg_statistics() to strings"""
-
-        record_as_list = [r[record_key] for r in record]
-        counter = dict(collections.Counter(record_as_list))
-        sorted_dict = {
-            k: v
-            for k, v in sorted(counter.items(), key=lambda item: item[1], reverse=True)
-        }
-        fmt = []
-
-        for i, (key, value) in enumerate(sorted_dict.items(), start=1):
-            if self.bot.get_user(key) is not None:
-                if i > 5:
-                    break
-
-                if value == 1:
-                    sts_name = stats_name[:-1]
-                else:
-                    sts_name = stats_name
-
-                fmt.append(
-                    f"{i}. {self.bot.get_user(key).mention} with {value} {sts_name}"
-                )
-
-        return "\n".join(fmt) or "None"
-
-    async def _get_leg_stats(self, ctx):
-        query = """SELECT COUNT(id) FROM legislature_session WHERE house = 'commons'
-                   UNION ALL
-                   SELECT COUNT(id) FROM bill
-                   UNION ALL
-                   SELECT COUNT(id) FROM bill WHERE status = $1
-                   UNION ALL
-                   SELECT COUNT(id) FROM motion"""
-
-        amounts = await self.bot.db.fetch(query, models.BillIsLaw.flag.value)
-
-        submitter = await self.bot.db.fetch("SELECT submitter from bill")
-        pretty_top_submitter = self.format_stats(
-            record=submitter, record_key="submitter", stats_name="bills"
-        )
-
-        speaker = await self.bot.db.fetch(
-            "SELECT speaker from legislature_session WHERE house = 'commons'"
-        )
-        pretty_top_speaker = self.format_stats(
-            record=speaker, record_key="speaker", stats_name="sessions"
-        )
-
-        lawmaker = await self.bot.db.fetch(
-            "SELECT submitter from bill WHERE status = $1", models.BillIsLaw.flag.value
-        )
-        pretty_top_lawmaker = self.format_stats(
-            record=lawmaker, record_key="submitter", stats_name="laws"
-        )
-
-        embed = text.SafeEmbed()
-        embed.set_author(
-            icon_url=self.bot.mk.NATION_ICON_URL,
-            name=f"Statistics for the Commons",
-        )
-
-        general_value = (
-            f"Sessions: {amounts[0]['count']}\nSubmitted Bills: {amounts[1]['count']}\n"
-            f"Submitted Motions: {amounts[3]['count']}\nActive Laws: {amounts[2]['count']}"
-        )
-
-        embed.add_field(name="General Statistics", value=general_value)
-        embed.add_field(
-            name=f"Top {self.bot.mk.speaker_term}s of the Commons",
-            value=pretty_top_speaker,
-            inline=False,
-        )
-        embed.add_field(
-            name="Top Bill Submitters", value=pretty_top_submitter, inline=False
-        )
-        embed.add_field(name="Top Lawmakers", value=pretty_top_lawmaker, inline=False)
-        await ctx.send(embed=embed)
-
     @commons.command(name="sponsor", aliases=["second", "cosponsor"], hidden=True)
     @checks.is_democraciv_guild()
     @checks.is_citizen_if_multiciv()
@@ -2028,52 +1862,8 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         `{PREFIX}{COMMAND} Ecological Democratic Union` to get statistics for a political party
         """
 
-        if not person_or_political_party:
-            return await self._get_leg_stats(ctx)
-
-        query = """SELECT COUNT(*) FROM bill WHERE submitter = ANY($1::bigint[])
-                               UNION ALL
-                               SELECT COUNT(*) FROM bill WHERE submitter = ANY($1::bigint[]) AND status = $2
-                               UNION ALL
-                               SELECT COUNT(*) FROM motion WHERE submitter = ANY($1::bigint[])
-                               UNION ALL
-                               SELECT COUNT(id) FROM bill_sponsor WHERE sponsor = ANY($1::bigint[])
-                               UNION ALL
-                               SELECT COUNT(bill_sponsor.sponsor) FROM bill_sponsor JOIN bill
-                               ON bill_sponsor.bill_id = bill.id WHERE bill.submitter = ANY($1::bigint[])"""
-
-        if isinstance(person_or_political_party, converter.PoliticalParty):
-            ids = [person.id for person in person_or_political_party.role.members]
-            icon_url = (
-                await person_or_political_party.get_logo()
-                or self.bot.mk.NATION_ICON_URL
-                or None
-            )
-            name = f"Members of {person_or_political_party.role.name} in the Commons"
-
-        else:
-            ids = [person_or_political_party.id]
-            icon_url = person_or_political_party.display_avatar.url
-            name = f"{person_or_political_party.display_name} in the Commons"
-
-        _stats = await self.bot.db.fetch(query, ids, models.BillIsLaw.flag.value)
-
-        embed = text.SafeEmbed()
-        embed.set_author(icon_url=icon_url, name=name)
-        embed.add_field(name="Bill Submissions", value=_stats[0]["count"], inline=True)
-        embed.add_field(
-            name="Motion Submissions", value=_stats[2]["count"], inline=True
-        )
-        embed.add_field(
-            name="Amount of Laws written", value=_stats[1]["count"], inline=False
-        )
-        embed.add_field(
-            name="Amount of Bills sponsored", value=_stats[3]["count"], inline=False
-        )
-        embed.add_field(
-            name="Amount of Sponsors for own Bills",
-            value=_stats[4]["count"],
-            inline=False,
+        embed = await self._build_statistics_embed(
+            ctx=ctx, house="commons", target=person_or_political_party
         )
         await ctx.send(embed=embed)
 

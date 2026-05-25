@@ -5,6 +5,7 @@ import asyncpg
 import discord
 from discord import app_commands
 from discord.ext import commands
+from discord.utils import escape_markdown
 
 from bot.config import config
 from bot.slash import checks as slash_checks
@@ -468,34 +469,67 @@ class PartiesSlash(commands.Cog):
         ctx = slash_context.from_interaction(interaction, command_name="party list")
         await ctx.defer()
 
-        entries = []
-        independent_role = discord.utils.get(self.bot.dciv.roles, name="Independent")
+        party_list_embed_content = []
+        sorted_parties_and_members = await self.party_entries()
 
-        for party_name, member_count in await self.party_entries():
+        for party_name, member_count in sorted_parties_and_members:
             if party_name == "Independent":
                 continue
+            if member_count == 1:
+                party_list_embed_content.append(
+                    f"**{party_name}**\n{member_count} member"
+                )
+            else:
+                party_list_embed_content.append(
+                    f"**{party_name}**\n{member_count} members"
+                )
 
-            entries.append(
-                f"**{party_name}**\n{member_count} member{'s' if member_count != 1 else ''}"
-            )
+        independent_role = discord.utils.get(self.bot.dciv.roles, name="Independent")
+        embed = text.SafeEmbed()
 
-        if independent_role:
-            entries.append(
-                f"**Independent**\n{len(independent_role.members)} citizen"
-                f"{'s' if len(independent_role.members) != 1 else ''}"
-            )
+        if not party_list_embed_content:
+            party_list_embed_content = ["There are no political parties yet."]
 
-        await ui.send_pages(
-            ctx,
-            entries=entries,
-            title=f"Political Parties in {self.bot.mk.NATION_NAME}",
-            subtitle=f"-# Check out [party platforms and descriptions]({self.bot.mk.POLITICAL_PARTIES}).",
-            empty_message="There are no political parties yet.",
-            per_page=12,
-            links=[
-                ui.LayoutLink("Platforms", self.bot.mk.POLITICAL_PARTIES, "\U0001f4dc")
-            ],
+        base_description = (
+            f"-# Check out the [party platforms & descriptions on our Wiki]"
+            f"({self.bot.mk.POLITICAL_PARTIES}).\n-# For more information about a single "
+            f"party, use `/party show`.\n-# Join a party with `/party join`.\n"
         )
+
+        if len(party_list_embed_content) > 5:
+            first_half = party_list_embed_content[: len(party_list_embed_content) // 2]
+            second_half = party_list_embed_content[len(party_list_embed_content) // 2 :]
+
+            if len(second_half) > len(first_half):
+                elem = second_half.pop(0)
+                first_half.append(elem)
+
+            if independent_role:
+                inds = len(independent_role.members)
+                embed.description = (
+                    f"{base_description}\nThere {'is' if inds == 1 else 'are'} {inds} "
+                    f"Independent{'s' if inds != 1 else ''}."
+                )
+            else:
+                embed.description = base_description
+
+            embed.add_field(name="\u200b", value="\n\n".join(first_half))
+            embed.add_field(name="\u200b", value="\n\n".join(second_half))
+        else:
+            if sorted_parties_and_members and independent_role:
+                party_list_embed_content.append(
+                    f"⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n\n**Independent**\n{len(independent_role.members)}"
+                    f" citizen{'s' if len(independent_role.members) != 1 else ''}"
+                )
+            fmt = "\n\n".join(party_list_embed_content)
+            embed.description = f"{base_description}\n\n{fmt}"
+
+        embed.set_author(
+            name=f"Ranking of Political Parties in {self.bot.mk.NATION_NAME}",
+            icon_url=self.bot.mk.NATION_ICON_URL,
+        )
+
+        await ctx.send(embed=embed)
 
     @party.command(name="show", description="Show details about one political party.")
     async def show_party(self, interaction: discord.Interaction, party: PartyOption):
@@ -505,71 +539,64 @@ class PartiesSlash(commands.Cog):
         if not party.role:
             return await ctx.send(f"{config.NO} That party's role no longer exists.")
 
-        sections = []
+        embed = text.SafeEmbed()
+        logo = await party.get_logo()
+        embed.set_author(
+            name=party.role.name, icon_url=logo or self.bot.mk.NATION_ICON_URL
+        )
 
         if not party.is_independent:
-            sections.extend(
-                [
-                    ui.LayoutSection(
-                        "Overview",
-                        f"[Platform and Description]({self.bot.mk.POLITICAL_PARTIES})\n"
-                        f"Join this party with `/party join`.",
-                    ),
-                    ui.LayoutSection(
-                        "Join Setting",
-                        party.join_mode.value,
-                    ),
-                    ui.LayoutSection(
-                        "Discord Server",
-                        party.discord_invite or "*N/A*",
-                    ),
-                    ui.LayoutSection(
-                        "Aliases",
-                        "\n".join(
-                            f"`{alias}`"
-                            for alias in party.aliases
-                            if alias != party.role.name.lower()
-                        )
-                        or "-",
-                    ),
-                ]
+            embed.description = (
+                f"-# [Platform and Description]({self.bot.mk.POLITICAL_PARTIES})\n-# Join this party with "
+                f"`/party join`."
+            )
+            members_name = "Members"
+
+            if logo:
+                embed.set_thumbnail(url=logo)
+
+            invite_value = party.discord_invite if party.discord_invite else "*N/A*"
+            embed.add_field(name="Server", value=invite_value)
+            embed.add_field(name="Join Setting", value=party.join_mode.value)
+
+            aliases = [
+                alias for alias in party.aliases if alias != party.role.name.lower()
+            ]
+
+            embed.add_field(
+                name="Aliases",
+                value=", ".join([f"`{alias}`" for alias in aliases]) or "-",
+                inline=False,
             )
         else:
-            sections.append(
-                ui.LayoutSection(
-                    "Overview",
-                    "Independents are citizens who are not part of a political party.",
-                )
+            embed.description = (
+                f"These people have decided to remain Independent and to not join any "
+                f"political party. Become an Independent with "
+                f"`/party join`."
+                f"\n\n[Overview of existing Political Parties]({self.bot.mk.POLITICAL_PARTIES})"
             )
 
-        members = []
+            members_name = "Independents"
+
         party_members = [
-            member.display_name
+            f"{member.mention} {escape_markdown(str(member))}"
             for member in party.role.members
             if member.id not in party.leader_ids
         ]
-        for index, leader in enumerate(party.leaders):
+
+        for i, leader in enumerate(party.leaders):
             if leader in party.role.members:
-                party_members.insert(index, f"**{leader.display_name}**")
+                party_members.insert(
+                    i, f"{leader.mention} **{escape_markdown(str(leader))} (Leader)**"
+                )
 
-        for member in party_members:
-            members.append(f"* {member}")
-
-        sections.append(
-            ui.LayoutSection(
-                f"Members ({len(party.role.members)})",
-                "\n".join(members) or "-",
-            )
+        embed.add_field(
+            name=f"{members_name} ({len(party.role.members)})",
+            value="\n".join(party_members or ["-"]),
+            inline=False,
         )
 
-        await ui.send_static(
-            ctx,
-            title=party.role.name,
-            sections=sections,
-            links=[
-                ui.LayoutLink("Platforms", self.bot.mk.POLITICAL_PARTIES, "\U0001f4dc")
-            ],
-        )
+        await ctx.send(embed=embed)
 
     @party.command(name="join", description="Join a political party.")
     @slash_checks.is_citizen_if_multiciv()
@@ -896,6 +923,13 @@ class PartiesSlash(commands.Cog):
             f"{config.YES} All aliases of `{party.role.name}` were deleted.",
             ephemeral=True,
         )
+
+    @app_commands.command(
+        name="parties", description="List political parties by member count."
+    )
+    @app_commands.guild_only()
+    async def parties_alias(self, interaction: discord.Interaction):
+        await self.list_parties.callback(self, interaction)
 
 
 async def setup(bot):

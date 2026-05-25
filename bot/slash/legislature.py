@@ -1,4 +1,3 @@
-import collections
 import datetime
 import traceback
 import typing
@@ -12,7 +11,7 @@ from bot.slash import checks as slash_checks
 from bot.slash import context as slash_context
 from bot.slash import transformers, ui
 from bot.utils import context as legacy_context
-from bot.utils import converter, exceptions, mixin, models, text
+from bot.utils import converter, exceptions, mixin, models, paginator, text
 
 BillOption = app_commands.Transform[models.Bill, transformers.BillTransformer]
 PartyOption = app_commands.Transform[
@@ -310,171 +309,6 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         return list(extra) + links
 
-    def _format_stats(self, *, record, record_key: str, stats_name: str) -> str:
-        counter = collections.Counter(r[record_key] for r in record if r[record_key])
-        lines = []
-
-        for user_id, amount in counter.most_common():
-            user = self.bot.get_user(user_id)
-            if user is None:
-                continue
-
-            label = stats_name[:-1] if amount == 1 else stats_name
-            lines.append(f"{len(lines) + 1}. {user.mention} with {amount} {label}")
-
-            if len(lines) >= 5:
-                break
-
-        return "\n".join(lines) or "None"
-
-    async def _send_general_statistics(
-        self,
-        ctx: slash_context.InteractionContext,
-        *,
-        house: str,
-    ):
-        amounts = await self.bot.db.fetch(
-            """SELECT COUNT(id) FROM legislature_session WHERE house = $2
-               UNION ALL
-               SELECT COUNT(id) FROM bill
-               UNION ALL
-               SELECT COUNT(id) FROM bill WHERE status = $1
-               UNION ALL
-               SELECT COUNT(id) FROM motion""",
-            models.BillIsLaw.flag.value,
-            house,
-        )
-
-        submitter = await self.bot.db.fetch("SELECT submitter FROM bill")
-        speaker = await self.bot.db.fetch(
-            "SELECT speaker FROM legislature_session WHERE house = $1",
-            house,
-        )
-        lawmaker = await self.bot.db.fetch(
-            "SELECT submitter FROM bill WHERE status = $1",
-            models.BillIsLaw.flag.value,
-        )
-
-        if house == "senate":
-            title = (
-                f"Statistics for the {self.bot.mk.NATION_ADJECTIVE} "
-                f"{self.bot.mk.LEGISLATURE_NAME}"
-            )
-            leader_title = (
-                f"Top {self.bot.mk.senator_presiding_term}s of "
-                f"the {self.bot.mk.LEGISLATURE_NAME}"
-            )
-        else:
-            title = "Statistics for the Commons"
-            leader_title = f"Top {self.bot.mk.speaker_term}s of the Commons"
-
-        await ui.send_static(
-            ctx,
-            title=title,
-            sections=[
-                ui.LayoutSection(
-                    "General Statistics",
-                    f"Sessions: {amounts[0]['count']}\n"
-                    f"Submitted Bills: {amounts[1]['count']}\n"
-                    f"Submitted Motions: {amounts[3]['count']}\n"
-                    f"Active Laws: {amounts[2]['count']}",
-                ),
-                ui.LayoutSection(
-                    leader_title,
-                    self._format_stats(
-                        record=speaker,
-                        record_key="speaker",
-                        stats_name="sessions",
-                    ),
-                ),
-                ui.LayoutSection(
-                    "Top Bill Submitters",
-                    self._format_stats(
-                        record=submitter,
-                        record_key="submitter",
-                        stats_name="bills",
-                    ),
-                ),
-                ui.LayoutSection(
-                    "Top Lawmakers",
-                    self._format_stats(
-                        record=lawmaker,
-                        record_key="submitter",
-                        stats_name="laws",
-                    ),
-                ),
-            ],
-            links=self.house_links(house),
-        )
-
-    async def _send_target_statistics(
-        self,
-        ctx: slash_context.InteractionContext,
-        *,
-        house: str,
-        member: discord.User = None,
-        party: converter.PoliticalParty = None,
-    ):
-        if member is not None and party is not None:
-            return await ctx.send(
-                f"{config.NO} Choose either a member or a party, not both.",
-                ephemeral=True,
-            )
-
-        if member is None and party is None:
-            return await self._send_general_statistics(ctx, house=house)
-
-        if party is not None:
-            ids = [person.id for person in party.role.members]
-            if house == "senate":
-                title = (
-                    f"Members of {party.role.name} in the "
-                    f"{self.bot.mk.NATION_ADJECTIVE} {self.bot.mk.LEGISLATURE_NAME}"
-                )
-            else:
-                title = f"Members of {party.role.name} in the Commons"
-        else:
-            ids = [member.id]
-            member_name = getattr(member, "display_name", member.name)
-            if house == "senate":
-                title = (
-                    f"{member_name} in the {self.bot.mk.NATION_ADJECTIVE} "
-                    f"{self.bot.mk.LEGISLATURE_NAME}"
-                )
-            else:
-                title = f"{member_name} in the Commons"
-
-        stats = await self.bot.db.fetch(
-            """SELECT COUNT(*) FROM bill WHERE submitter = ANY($1::bigint[])
-               UNION ALL
-               SELECT COUNT(*) FROM bill WHERE submitter = ANY($1::bigint[]) AND status = $2
-               UNION ALL
-               SELECT COUNT(*) FROM motion WHERE submitter = ANY($1::bigint[])
-               UNION ALL
-               SELECT COUNT(id) FROM bill_sponsor WHERE sponsor = ANY($1::bigint[])
-               UNION ALL
-               SELECT COUNT(bill_sponsor.sponsor) FROM bill_sponsor JOIN bill
-               ON bill_sponsor.bill_id = bill.id WHERE bill.submitter = ANY($1::bigint[])""",
-            ids,
-            models.BillIsLaw.flag.value,
-        )
-
-        await ui.send_static(
-            ctx,
-            title=title,
-            sections=[
-                ui.LayoutSection(
-                    "Submissions",
-                    f"Bill Submissions: {stats[0]['count']}\n"
-                    f"Motion Submissions: {stats[2]['count']}",
-                ),
-                ui.LayoutSection("Laws Written", str(stats[1]["count"])),
-                ui.LayoutSection("Bills Sponsored", str(stats[3]["count"])),
-                ui.LayoutSection("Sponsors for Own Bills", str(stats[4]["count"])),
-            ],
-            links=self.house_links(house),
-        )
-
     def _bill_submission_embed(
         self,
         ctx: slash_context.InteractionContext,
@@ -682,155 +516,6 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             return True
 
         return bool(bill.sponsors)
-
-    async def _session_entries(
-        self,
-        ctx: slash_context.InteractionContext,
-        *,
-        house: str,
-        session: models.Session,
-        sponsor_filter: str = None,
-    ) -> typing.Optional[list[str]]:
-        filter_info = None
-        sponsors_needed = ""
-        if sponsor_filter:
-            filter_info = await models.SessionSponsorFilter().convert(
-                ctx, sponsor_filter
-            )
-
-            if filter_info is None:
-                await ctx.send(
-                    f"{config.NO} `{sponsor_filter}` is not a valid sponsor filter.",
-                    ephemeral=True,
-                )
-                return None
-
-        bills = [await models.Bill.convert(ctx, bill_id) for bill_id in session.bills]
-        amount_of_all_bills = len(bills)
-
-        if filter_info:
-            filter_func, sponsors_needed = filter_info
-            bills = list(filter(filter_func, bills))
-
-        pretty_bills = []
-        for bill in bills:
-            warning = ""
-            if house == "senate" and not self._bill_has_minimum_senate_support(bill):
-                warning = " :warning:"
-
-            sponsor_label = "sponsor" if len(bill.sponsors) == 1 else "sponsors"
-            pretty_bills.append(
-                f"* {bill.formatted} ({len(bill.sponsors)} {sponsor_label}){warning}"
-            )
-        pretty_bills = pretty_bills or ["-"]
-
-        presider = session.speaker or legacy_context.MockUser()
-        leader_label = (
-            self.bot.mk.senator_presiding_term
-            if house == "senate"
-            else "Presiding Speaker"
-        )
-
-        entries = [
-            f"### {leader_label}\n{presider.mention}\n"
-            f"### Opened\n{_utc_timestamp(session.opened_on)}"
-        ]
-
-        if session.voting_started_on:
-            entries.append(
-                f"### Voting Started\n{_utc_timestamp(session.voting_started_on)}"
-            )
-
-        if session.closed_on:
-            entries.append(f"### Closed\n{_utc_timestamp(session.closed_on)}")
-
-        if session.status is models.SessionStatus.SUBMISSION_PERIOD:
-            entries.append(
-                "### Submissions\n"
-                f"Bills and motions can be submitted with `/{self.house_command(house)} submit`."
-            )
-
-        entries.append(f"### Status\n{session.status.value}")
-
-        if session.vote_form:
-            entries.append(f"### Voting Form\n{session.vote_form}")
-
-        amount = (
-            f"{len(bills)}/{amount_of_all_bills}"
-            if filter_info
-            else str(amount_of_all_bills)
-        )
-        sponsor_title = (
-            ""
-            if not filter_info
-            else f" ({sponsors_needed} sponsor{'s' if sponsors_needed != '=1' else ''})"
-        )
-        entries.append(f"### Submitted Bills{sponsor_title} ({amount})")
-
-        if not filter_info:
-            entries.append(
-                "Use the sponsor filter option to show only submissions matching "
-                "`>=2`, `=1`, `<3`, and similar filters."
-            )
-
-        entries.extend(pretty_bills)
-
-        if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
-            motions = [
-                await models.Motion.convert(ctx, motion_id)
-                for motion_id in session.motions
-            ]
-            amount_of_all_motions = len(motions)
-
-            if filter_info:
-                motions = list(filter(filter_func, motions))
-
-            pretty_motions = [
-                f"* {motion.formatted} ({len(motion.sponsors)} sponsor"
-                f"{'s' if len(motion.sponsors) != 1 else ''})"
-                for motion in motions
-            ] or ["-"]
-            motion_amount = (
-                f"{len(motions)}/{amount_of_all_motions}"
-                if filter_info
-                else str(amount_of_all_motions)
-            )
-            entries.append(f"### Submitted Motions{sponsor_title} ({motion_amount})")
-            entries.extend(pretty_motions)
-
-        return entries
-
-    async def show_session(
-        self,
-        ctx: slash_context.InteractionContext,
-        *,
-        house: str,
-        session_id: int = None,
-        sponsor_filter: str = None,
-    ):
-        session = await self._get_session(ctx, house=house, session_id=session_id)
-        if session is None:
-            return await ctx.send(
-                f"{config.NO} There hasn't been a {models.display_house_name(house)} session yet.",
-                ephemeral=True,
-            )
-
-        entries = await self._session_entries(
-            ctx, house=house, session=session, sponsor_filter=sponsor_filter
-        )
-        if entries is None:
-            return
-
-        if session.status is models.SessionStatus.CLOSED:
-            entries.insert(0, ":warning: This session is already closed.")
-
-        await ui.send_pages(
-            ctx,
-            entries=entries,
-            title=f"{models.display_house_name(house)} Session #{session.mk13_house_id}",
-            links=self.house_links(house, session=session),
-            empty_message="There are no session details.",
-        )
 
     async def open_session(
         self,
@@ -1785,7 +1470,9 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         description="Show the Senate dashboard with links, legislators, and session status.",
     )
     async def senate_overview(self, interaction: discord.Interaction):
-        ctx = slash_context.from_interaction(interaction, command_name="senate overview")
+        ctx = slash_context.from_interaction(
+            interaction, command_name="senate overview"
+        )
         await ctx.defer()
         embed = await self._build_legislature_overview_embed("senate")
         await ctx.send(embed=embed)
@@ -1824,9 +1511,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         await ctx.defer()
         await self._all_sessions(ctx, house="commons")
 
-    async def _all_sessions(
-        self, ctx: slash_context.InteractionContext, *, house: str
-    ):
+    async def _all_sessions(self, ctx: slash_context.InteractionContext, *, house: str):
         house_name = models.display_house_name(house)
         records = await self.bot.db.fetch(
             "SELECT id, mk13_house_id, opened_on, closed_on "
@@ -1846,13 +1531,13 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
                     f"* **Session #{record['mk13_house_id']}**  - {opened_on}"
                 )
 
-        await ui.send_pages(
-            ctx,
+        pages = paginator.SimplePages(
             entries=entries,
             title=f"All Sessions of the {house_name}",
             per_page=12,
             empty_message="There hasn't been a session yet.",
         )
+        await pages.start(ctx)
 
     @senate.command(name="submit", description="Submit a bill or motion to the Senate.")
     @slash_checks.is_democraciv_guild()
@@ -1908,12 +1593,10 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             interaction, command_name="senate statistics"
         )
         await ctx.defer()
-        await self._send_target_statistics(
-            ctx,
-            house="senate",
-            member=member,
-            party=party,
+        embed = await self._build_statistics_embed(
+            ctx=ctx, house="senate", target=member or party
         )
+        await ctx.send(embed=embed)
 
     @commons.command(name="pass", description="Mark one Commons bill as passed.")
     @slash_checks.has_any_democraciv_role(
@@ -1944,12 +1627,10 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             command_name="commons statistics",
         )
         await ctx.defer()
-        await self._send_target_statistics(
-            ctx,
-            house="commons",
-            member=member,
-            party=party,
+        embed = await self._build_statistics_embed(
+            ctx=ctx, house="commons", target=member or party
         )
+        await ctx.send(embed=embed)
 
     @senate_session.command(name="show", description="Show a Senate session.")
     @app_commands.describe(
@@ -1964,9 +1645,40 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     ):
         ctx = slash_context.from_interaction(interaction, command_name="senate session")
         await ctx.defer()
-        await self.show_session(
-            ctx, house="senate", session_id=session_id, sponsor_filter=sponsor_filter
+        session = await self._get_session(ctx, house="senate", session_id=session_id)
+        if session is None:
+            return await ctx.send(
+                f"{config.NO} There hasn't been a Senate session yet.",
+                ephemeral=True,
+            )
+        if session.status is models.SessionStatus.CLOSED:
+            entries = [":warning: This session is already closed."]
+        else:
+            entries = []
+        if sponsor_filter:
+            converted = await models.SessionSponsorFilter().convert(ctx, sponsor_filter)
+            if converted is None:
+                return await ctx.send(
+                    f"{config.NO} `{sponsor_filter}` is not a valid sponsor filter.",
+                    ephemeral=True,
+                )
+            sponsor_filter = converted
+        else:
+            sponsor_filter = None
+        entries.extend(
+            await self._build_session_entries(
+                ctx=ctx,
+                house="senate",
+                session=session,
+                sponsor_filter=sponsor_filter,
+            )
         )
+        pages = paginator.SimplePages(
+            entries=entries,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Senate Session #{session.mk13_house_id}",
+        )
+        await pages.start(ctx)
 
     @commons_session.command(name="show", description="Show a Commons session.")
     @app_commands.describe(
@@ -1983,9 +1695,40 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             interaction, command_name="commons session"
         )
         await ctx.defer()
-        await self.show_session(
-            ctx, house="commons", session_id=session_id, sponsor_filter=sponsor_filter
+        session = await self._get_session(ctx, house="commons", session_id=session_id)
+        if session is None:
+            return await ctx.send(
+                f"{config.NO} There hasn't been a Commons session yet.",
+                ephemeral=True,
+            )
+        if session.status is models.SessionStatus.CLOSED:
+            entries = [":warning: This session is already closed."]
+        else:
+            entries = []
+        if sponsor_filter:
+            converted = await models.SessionSponsorFilter().convert(ctx, sponsor_filter)
+            if converted is None:
+                return await ctx.send(
+                    f"{config.NO} `{sponsor_filter}` is not a valid sponsor filter.",
+                    ephemeral=True,
+                )
+            sponsor_filter = converted
+        else:
+            sponsor_filter = None
+        entries.extend(
+            await self._build_session_entries(
+                ctx=ctx,
+                house="commons",
+                session=session,
+                sponsor_filter=sponsor_filter,
+            )
         )
+        pages = paginator.SimplePages(
+            entries=entries,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Commons Session #{session.mk13_house_id}",
+        )
+        await pages.start(ctx)
 
     @senate_session.command(name="open", description="Open a Senate submission period.")
     @slash_checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)

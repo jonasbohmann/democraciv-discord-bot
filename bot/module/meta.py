@@ -286,7 +286,7 @@ class Meta(context.CustomCog):
         for name, cog in sorted(self.bot.cogs.items()):
             if not isinstance(cog, context.CustomCog):
                 continue
-            
+
             if cog.hidden and cog.qualified_name != "Bank":
                 continue
 

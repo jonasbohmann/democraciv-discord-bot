@@ -7,7 +7,7 @@ from bot.config import config
 from bot.slash import checks as slash_checks
 from bot.slash import context as slash_context
 from bot.slash import forms, transformers, ui
-from bot.utils import converter, exceptions
+from bot.utils import converter, exceptions, text
 
 SelfroleOption = app_commands.Transform[
     converter.Selfrole,
@@ -143,28 +143,30 @@ class SelfrolesSlash(commands.Cog):
         ctx = slash_context.from_interaction(interaction, command_name="role list")
         await ctx.defer()
 
-        records = await self.bot.db.fetch(
+        role_list = await self.bot.db.fetch(
             "SELECT role_id FROM selfrole WHERE guild_id = $1",
             ctx.guild.id,
         )
-        entries = []
 
-        for record in records:
-            role = ctx.guild.get_role(record["role_id"])
-            if role is not None:
-                entries.append(f"* {role.name}")
+        embed_message = [
+            f"-# Looking for political parties? Try `/party list` and `/party join`.\n-# In order to add or remove a role from you, use `/role toggle`.\n"
+        ]
 
-        await ui.send_pages(
-            ctx,
-            entries=entries,
-            title=f"Selfroles in {ctx.guild.name}",
-            subtitle=(
-                f"-# Looking for political parties? Try `/party list` and `/party join`.\n"
-                f"-# Use `/role toggle` to add or remove a role from yourself."
-            ),
-            empty_message="This server has no selfroles yet.",
-            per_page=20,
+        for role in role_list:
+            role_object = ctx.guild.get_role(role["role_id"])
+            if role_object is not None:
+                embed_message.append(f"* {role_object.name}")
+
+        if not embed_message:
+            embed_message = ["This server has no selfroles yet."]
+
+        embed = text.SafeEmbed(description="\n".join(embed_message))
+        embed.set_author(
+            name=f"Selfroles in {ctx.guild.name}",
+            icon_url=ctx.guild.icon.url if ctx.guild.icon else None,
         )
+
+        await ctx.send(embed=embed)
 
     @role.command(name="toggle", description="Join or leave one selfrole.")
     async def toggle_role(
@@ -268,6 +270,13 @@ class SelfrolesSlash(commands.Cog):
         await ctx.send(
             f"{config.YES} The `{role.role.name}` selfrole was removed.",
         )
+
+    @app_commands.command(
+        name="roles", description="List all selfroles on this server."
+    )
+    @app_commands.guild_only()
+    async def roles_alias(self, interaction: discord.Interaction):
+        await self.list_roles.callback(self, interaction)
 
 
 async def setup(bot):

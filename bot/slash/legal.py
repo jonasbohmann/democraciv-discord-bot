@@ -1,5 +1,5 @@
-import datetime
 import collections
+import datetime
 
 import discord
 from discord import app_commands
@@ -10,7 +10,7 @@ from bot.slash import forms
 from bot.slash import context as slash_context
 from bot.slash import checks as slash_checks
 from bot.slash import transformers, ui
-from bot.utils import converter, exceptions, mixin, models
+from bot.utils import converter, exceptions, mixin, models, paginator, text
 
 LawOption = app_commands.Transform[models.Law, transformers.LawTransformer]
 BillOption = app_commands.Transform[models.Bill, transformers.BillTransformer]
@@ -18,30 +18,6 @@ MotionOption = app_commands.Transform[models.Motion, transformers.MotionTransfor
 PartyOption = app_commands.Transform[
     converter.PoliticalParty, transformers.PoliticalPartyTransformer
 ]
-
-
-class ReadDocumentButton(discord.ui.Button):
-    def __init__(self, cog: "LegalSlash", bill: models.Bill):
-        super().__init__(
-            label="Read Document",
-            style=discord.ButtonStyle.primary,
-            emoji="\U0001f4c3",
-        )
-        self.cog = cog
-        self.bill = bill
-
-    async def callback(self, interaction: discord.Interaction):
-        ctx = slash_context.from_interaction(
-            interaction,
-            command_name=self.bill.model.lower(),
-            ephemeral=True,
-        )
-        await ctx.defer(ephemeral=True)
-        await self.cog._read_document(
-            ctx,
-            bill=self.bill,
-            title=f"{self.bill.name} (#{self.bill.id})",
-        )
 
 
 class BillBulkEditModal(forms.ErrorHandledModal):
@@ -149,228 +125,6 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
 
     def __init__(self, bot):
         self.bot = bot
-
-    async def _list_model(
-        self,
-        ctx: slash_context.InteractionContext,
-        *,
-        model,
-        title: str,
-        empty_message: str,
-        per_page: int = None,
-    ):
-        if model is models.Bill:
-            records = await self.bot.db.fetch("SELECT id FROM bill ORDER BY id;")
-        elif model is models.Law:
-            records = await self.bot.db.fetch(
-                "SELECT id FROM bill WHERE status = $1 ORDER BY id;",
-                models.BillIsLaw.flag.value,
-            )
-        else:
-            records = await self.bot.db.fetch("SELECT id FROM motion ORDER BY id;")
-
-        entries = []
-        for record in records:
-            obj = await model.convert(ctx, record["id"])
-            entries.append(f"* {obj.formatted}")
-
-        await ui.send_pages(
-            ctx,
-            entries=entries,
-            title=title,
-            subtitle=f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com>) as well.",
-            links=self._general_links(),
-            empty_message=empty_message,
-            per_page=per_page,
-        )
-
-    async def _search(
-        self,
-        ctx: slash_context.InteractionContext,
-        *,
-        model,
-        query: str,
-        title: str,
-        site_path: str,
-    ):
-        results = await self._search_model(ctx, model=model, query=query)
-        await ui.send_pages(
-            ctx,
-            entries=results,
-            title=title,
-            subtitle=f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/{site_path}>) as well.",
-            links=self._general_links(site_path),
-            empty_message="Nothing found.",
-        )
-
-    def _general_links(self, site_path: str = None):
-        laws_url = "https://laws.democraciv.com"
-        if site_path:
-            laws_url = f"{laws_url}/{site_path}"
-
-        return [
-            ui.LayoutLink("Legal Code", self.bot.mk.LEGAL_CODE, "\U00002696"),
-            ui.LayoutLink("Laws Site", laws_url, "\U0001f517"),
-        ]
-
-    def _object_links(self, obj: models.Bill | models.Motion | models.Law):
-        return [
-            ui.LayoutLink("Document", obj.link, "\U0001f4c3"),
-            ui.LayoutLink(
-                "laws.democraciv.com",
-                f"https://laws.democraciv.com/{obj.model.lower()}/{obj.id}",
-                "\U0001f517",
-            ),
-            ui.LayoutLink("Legal Code", self.bot.mk.LEGAL_CODE, "\U00002696"),
-        ]
-
-    async def _from_model(
-        self,
-        ctx: slash_context.InteractionContext,
-        *,
-        model,
-        member: discord.User = None,
-        party: converter.PoliticalParty = None,
-    ):
-        if member is not None and party is not None:
-            return await ctx.send(
-                f"{config.NO} Choose either a member or a party, not both.",
-                ephemeral=True,
-            )
-
-        target = party or member or ctx.author
-        submit_term = "written" if model is models.Law else "submitted"
-        per_page = 12 if model is models.Motion else None
-
-        if isinstance(target, converter.PoliticalParty):
-            ids = [person.id for person in target.role.members]
-            target_name = target.role.name
-            title = f"{model.__name__}s from members of {target_name}"
-            empty_message = (
-                f"No member of {target_name} has {submit_term} a "
-                f"{model.__name__.lower()} yet."
-            )
-        else:
-            ids = [target.id]
-            target_name = getattr(target, "display_name", str(target))
-            title = f"{model.__name__}s from {target_name}"
-            empty_message = (
-                f"{target_name} hasn't {submit_term} any "
-                f"{model.__name__.lower()}s yet."
-            )
-
-        if model is models.Bill:
-            records = await self.bot.db.fetch(
-                "SELECT id FROM bill WHERE submitter = ANY($1::bigint[]) ORDER BY id",
-                ids,
-            )
-            site_path = "bill"
-        elif model is models.Law:
-            records = await self.bot.db.fetch(
-                "SELECT id FROM bill WHERE submitter = ANY($1::bigint[]) AND status = $2 ORDER BY id",
-                ids,
-                models.BillIsLaw.flag.value,
-            )
-            site_path = "law"
-        else:
-            records = await self.bot.db.fetch(
-                "SELECT id FROM motion WHERE submitter = ANY($1::bigint[]) ORDER BY id",
-                ids,
-            )
-            site_path = "motion"
-
-        entries = []
-        for record in records:
-            obj = await model.convert(ctx, record["id"])
-            entries.append(f"* {obj.formatted}")
-
-        await ui.send_pages(
-            ctx,
-            entries=entries,
-            title=title,
-            subtitle=f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/{site_path}>) as well.",
-            links=self._general_links(site_path),
-            empty_message=empty_message,
-            per_page=per_page,
-        )
-
-    def _detail_sections(
-        self, obj: models.Bill | models.Motion | models.Law
-    ) -> list[ui.LayoutSection]:
-        sections = [
-            ui.LayoutSection("Summary", obj.description or "*No summary provided.*")
-        ]
-
-        submitter = obj.submitter
-        submitted_by = (
-            f"{submitter.mention} {submitter}"
-            if submitter is not None
-            else "*Unknown Person*"
-        )
-        sections.append(ui.LayoutSection("Submitter", submitted_by))
-
-        if isinstance(obj, models.Bill) and not isinstance(obj, models.Law):
-            bill_lines = []
-
-            if obj.session.house in models.HOUSE_NAMES:
-                bill_lines.append(f"Orig. in Chamber: {obj.origin_house_name}")
-                bill_lines.append(f"Type: {obj.type_name}")
-            else:
-                bill_lines.append(f"Vetoable: {'Yes' if obj.is_vetoable else 'No'}")
-
-            bill_lines.append(f"Status: {obj.status.emojified_status(verbose=True)}")
-
-            if obj.executive_deadline_at is not None:
-                timestamp = int(
-                    obj.executive_deadline_at.replace(
-                        tzinfo=datetime.timezone.utc
-                    ).timestamp()
-                )
-                bill_lines.append(f"Executive Deadline: <t:{timestamp}:R>")
-
-            sections.append(ui.LayoutSection("Bill Details", "\n".join(bill_lines)))
-
-        if getattr(obj, "sponsors", None):
-            sponsors = "\n".join(
-                f"{sponsor.mention} {sponsor}" for sponsor in obj.sponsors
-            )
-            sections.append(ui.LayoutSection("Sponsors", sponsors))
-
-        if not isinstance(obj, models.Motion):
-            history = [
-                f"* <t:{int(entry.date.timestamp())}:D> - {entry.note if entry.note else entry.after}"
-                for entry in obj.history[:10]
-            ]
-
-            if history:
-                sections.append(ui.LayoutSection("History", "\n".join(history)))
-
-        sections.append(
-            ui.LayoutSection(
-                "Links",
-                f"[{obj.name}]({obj.link})\n"
-                f"[laws.democraciv.com](https://laws.democraciv.com/{obj.model.lower()}/{obj.id})",
-            )
-        )
-        return sections
-
-    async def _show_detail(
-        self,
-        ctx: slash_context.InteractionContext,
-        *,
-        obj: models.Bill | models.Motion | models.Law,
-    ):
-        actions = []
-        if not isinstance(obj, models.Motion):
-            actions.append(ReadDocumentButton(self, obj))
-
-        await ui.send_static(
-            ctx,
-            title=f"{obj.name} (#{obj.id})",
-            sections=self._detail_sections(obj),
-            links=self._object_links(obj),
-            action_items=actions,
-        )
 
     async def _confirm_consumer(
         self,
@@ -871,44 +625,11 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         )
         await ctx.send(f"{config.YES} Motion #{motion.id} `{motion.name}` was updated.")
 
-    async def _read_document(
-        self,
-        ctx: slash_context.InteractionContext,
-        *,
-        bill: models.Bill,
-        title: str,
-    ):
-        leader_term = self.get_primary_leader_term_for_house(
-            getattr(getattr(bill, "session", None), "house", None)
-        )
-        entries = (
-            bill.content or "*No cached document content available.*"
-        ).splitlines()
-        entries.insert(
-            0,
-            f"[Link to the Google Docs document]({bill.link})\n"
-            f"*Am I showing you outdated or wrong text? Tell the {leader_term} to synchronize this text "
-            f"with `/bill synchronize`.*\n",
-        )
-        await ui.send_pages(
-            ctx,
-            entries=entries,
-            title=title,
-            subtitle=f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/bill/{bill.id}>) as well.",
-            links=self._object_links(bill),
-            empty_message="*No cached document content available.*",
-        )
-
     @law.command(name="list", description="List all active laws.")
     async def law_list(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="law")
         await ctx.defer()
-        await self._list_model(
-            ctx,
-            model=models.Law,
-            title=f"All Laws in {self.bot.mk.NATION_NAME}",
-            empty_message="There are no laws yet.",
-        )
+        await self._paginate_all_(ctx, model=models.Law)
 
     @law.command(name="from", description="List laws submitted by a member or party.")
     @app_commands.describe(
@@ -923,7 +644,8 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
     ):
         ctx = slash_context.from_interaction(interaction, command_name="law")
         await ctx.defer()
-        await self._from_model(ctx, model=models.Law, member=person, party=party)
+        target = party or person or ctx.author
+        await self._from_person_model(ctx, model=models.Law, member_or_party=target)
 
     @law.command(name="show", description="Show details about one law.")
     @app_commands.describe(law="Law ID or title")
@@ -937,31 +659,30 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
     async def law_search(self, interaction: discord.Interaction, query: str):
         ctx = slash_context.from_interaction(interaction, command_name="law")
         await ctx.defer()
-        await self._search(
-            ctx,
-            model=models.Law,
-            query=query,
-            title=f"Laws matching '{query}'",
-            site_path="law",
+        results = await self._search_model(ctx, model=models.Law, query=query)
+        await ctx.send(
+            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/law>) as well!"
         )
+        pages = paginator.SimplePages(
+            entries=results,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Laws matching '{query}'",
+            empty_message="Nothing found.",
+        )
+        await pages.start(ctx)
 
     @law.command(name="read", description="Read the text of a law.")
     @app_commands.describe(law="Law ID or title")
     async def law_read(self, interaction: discord.Interaction, law: LawOption):
         ctx = slash_context.from_interaction(interaction, command_name="law")
         await ctx.defer(ephemeral=True)
-        await self._read_document(ctx, bill=law, title=f"{law.name} (#{law.id})")
+        await self._show_bill_text(ctx, law)
 
     @bill.command(name="list", description="List all submitted bills.")
     async def bill_list(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="bill")
         await ctx.defer()
-        await self._list_model(
-            ctx,
-            model=models.Bill,
-            title="All Submitted Bills - Senate & Commons",
-            empty_message="No one has submitted any bills yet.",
-        )
+        await self._paginate_all_(ctx, model=models.Bill)
 
     @bill.command(name="show", description="Show details about one bill.")
     @app_commands.describe(bill="Bill ID or title")
@@ -1007,42 +728,49 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         ctx = slash_context.from_interaction(interaction, command_name="bill")
         await ctx.defer()
 
-        entries = [
-            f"* <t:{int(entry.date.timestamp())}:D> - "
-            f"{entry.note if entry.note else entry.after} "
+        fmt_history = [
+            f"* <t:{int(entry.date.timestamp())}:D> - {entry.note if entry.note else entry.after}   "
             f"({entry.after.emojified_status(verbose=False)})"
             for entry in bill.history
         ]
-        entries.insert(0, f"[Link to the Google Docs document]({bill.link}).\n")
-        await ui.send_pages(
-            ctx,
-            entries=entries,
-            title=f"{bill.name} (#{bill.id})",
-            subtitle=f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/bill/{bill.id}>) as well.",
-            links=self._object_links(bill),
-            empty_message="No history entries found.",
-            per_page=12,
+        fmt_history.insert(
+            0, f"[Link to the Google Docs document of this Bill]({bill.link}).\n"
         )
+
+        pages = paginator.SimplePages(
+            entries=fmt_history,
+            author=f"{bill.name} (#{bill.id})",
+            per_page=12,
+            icon=self.bot.mk.NATION_ICON_URL,
+        )
+        await ctx.send(
+            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/bill/{bill.id}>) as well!"
+        )
+        await pages.start(ctx)
 
     @bill.command(name="read", description="Read the cached text of a bill.")
     @app_commands.describe(bill="Bill ID or title")
     async def bill_read(self, interaction: discord.Interaction, bill: BillOption):
         ctx = slash_context.from_interaction(interaction, command_name="bill")
         await ctx.defer(ephemeral=True)
-        await self._read_document(ctx, bill=bill, title=f"{bill.name} (#{bill.id})")
+        await self._show_bill_text(ctx, bill)
 
     @bill.command(name="search", description="Search bills.")
     @app_commands.describe(query="At least 3 characters to search for")
     async def bill_search(self, interaction: discord.Interaction, query: str):
         ctx = slash_context.from_interaction(interaction, command_name="bill")
         await ctx.defer()
-        await self._search(
-            ctx,
-            model=models.Bill,
-            query=query,
-            title=f"Bills matching '{query}'",
-            site_path="bill",
+        results = await self._search_model(ctx, model=models.Bill, query=query)
+        await ctx.send(
+            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/bill>) as well!"
         )
+        pages = paginator.SimplePages(
+            entries=results,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Bills matching '{query}'",
+            empty_message="Nothing found.",
+        )
+        await pages.start(ctx)
 
     @bill.command(name="from", description="List bills submitted by a member or party.")
     @app_commands.describe(
@@ -1057,7 +785,8 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
     ):
         ctx = slash_context.from_interaction(interaction, command_name="bill")
         await ctx.defer()
-        await self._from_model(ctx, model=models.Bill, member=member, party=party)
+        target = party or member or ctx.author
+        await self._from_person_model(ctx, model=models.Bill, member_or_party=target)
 
     @bill.command(name="sponsor", description="Sponsor one submitted bill.")
     @slash_checks.is_democraciv_guild()
@@ -1103,13 +832,7 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
     async def motion_list(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="motion")
         await ctx.defer()
-        await self._list_model(
-            ctx,
-            model=models.Motion,
-            title="All Submitted Motions - Senate & Commons",
-            empty_message="No one has submitted any motions yet.",
-            per_page=12,
-        )
+        await self._paginate_all_(ctx, model=models.Motion)
 
     @motion.command(name="show", description="Show details about one motion.")
     @app_commands.describe(motion="Motion ID or title")
@@ -1133,13 +856,17 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
     async def motion_search(self, interaction: discord.Interaction, query: str):
         ctx = slash_context.from_interaction(interaction, command_name="motion")
         await ctx.defer()
-        await self._search(
-            ctx,
-            model=models.Motion,
-            query=query,
-            title=f"Motions matching '{query}'",
-            site_path="motion",
+        results = await self._search_model(ctx, model=models.Motion, query=query)
+        await ctx.send(
+            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/motion>) as well!"
         )
+        pages = paginator.SimplePages(
+            entries=results,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Motions matching '{query}'",
+            empty_message="Nothing found.",
+        )
+        await pages.start(ctx)
 
     @motion.command(
         name="from", description="List motions submitted by a member or party."
@@ -1156,7 +883,8 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
     ):
         ctx = slash_context.from_interaction(interaction, command_name="motion")
         await ctx.defer()
-        await self._from_model(ctx, model=models.Motion, member=member, party=party)
+        target = party or member or ctx.author
+        await self._from_person_model(ctx, model=models.Motion, member_or_party=target)
 
     @motion.command(name="sponsor", description="Sponsor one submitted motion.")
     @slash_checks.is_democraciv_guild()
@@ -1214,7 +942,7 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         mk.DemocracivRole.SPEAKER,
         mk.DemocracivRole.VICE_SPEAKER,
         mk.DemocracivRole.MK13_SENATOR_PRESIDING,
-        mk.DemocracivRole.PRIME_MINISTER
+        mk.DemocracivRole.PRIME_MINISTER,
     )
     @app_commands.checks.cooldown(rate=1, per=300.0)
     async def law_export(self, interaction: discord.Interaction):
@@ -1257,6 +985,110 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             ),
             links=[ui.LayoutLink("Open Legal Code", view_url, "\U0001f4c4")],
         )
+
+    async def _show_detail(
+        self,
+        ctx: slash_context.InteractionContext,
+        *,
+        obj: models.Bill | models.Motion | models.Law,
+    ):
+        embed = text.SafeEmbed(
+            title=f"{obj.name} (#{obj.id})",
+            description=obj.description or "*No summary provided.*",
+            url=obj.link,
+        )
+
+        if obj.submitter is not None:
+            embed.set_author(
+                name=f"Submitted by {obj.submitter.name}",
+                icon_url=obj.submitter.display_avatar.url,
+            )
+            submitted_by_value = f"{obj.submitter.mention} {obj.submitter}"
+        else:
+            submitted_by_value = "*Unknown Person*"
+
+        embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
+
+        if isinstance(obj, models.Bill) and not isinstance(obj, models.Law):
+            if obj.session.house in models.HOUSE_NAMES:
+                embed.add_field(
+                    name="Orig. in Chamber", value=obj.origin_house_name, inline=True
+                )
+                embed.add_field(name="Type", value=obj.type_name, inline=True)
+            else:
+                is_vetoable = "Yes" if obj.is_vetoable else "No"
+                embed.add_field(name="Vetoable", value=is_vetoable, inline=True)
+
+            embed.add_field(
+                name="Status",
+                value=obj.status.emojified_status(verbose=True),
+                inline=False,
+            )
+
+            if obj.executive_deadline_at is not None:
+                embed.add_field(
+                    name="Executive Deadline",
+                    value=f"<t:{int(obj.executive_deadline_at.replace(tzinfo=datetime.timezone.utc).timestamp())}:R> ",
+                    inline=True,
+                )
+
+            if obj.sponsors:
+                fmt_sponsors = "\n".join(
+                    f"{sponsor.mention} {sponsor}" for sponsor in obj.sponsors
+                )
+                embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
+
+        if not isinstance(obj, models.Motion):
+            history = [
+                f"* <t:{int(entry.date.timestamp())}:D> - {entry.note if entry.note else entry.after}"
+                for entry in obj.history[:10]
+            ]
+
+            if history:
+                embed.add_field(name="History", value="\n".join(history), inline=False)
+
+            if not isinstance(obj, models.Law) and obj.status.is_law:
+                embed.set_footer(text="This is an active law.")
+
+            context_hint = (
+                f"-# {config.HINT} Check out [laws.democraciv.com]"
+                f"(<https://laws.democraciv.com/{obj.model.lower()}/{obj.id}>) as well!"
+            )
+            await ctx.send(context_hint)
+            view = mixin.ReadDocumentView(ctx=ctx)
+            await ctx.send(embed=embed, view=view)
+            do_continue = await view.prompt(silent=True)
+            if do_continue:
+                await self._show_bill_text(ctx, obj)
+                return
+        else:
+            if obj.sponsors:
+                fmt_sponsors = "\n".join(
+                    f"{sponsor.mention} {sponsor}" for sponsor in obj.sponsors
+                )
+                embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
+
+            context_hint = (
+                f"-# {config.HINT} Check out [laws.democraciv.com]"
+                f"(<https://laws.democraciv.com/{obj.model.lower()}/{obj.id}>) as well!"
+            )
+            await ctx.send(context_hint)
+            await ctx.send(embed=embed)
+
+    @app_commands.command(name="laws", description="List all active laws.")
+    @app_commands.guild_only()
+    async def laws_alias(self, interaction: discord.Interaction):
+        await self.law_list.callback(self, interaction)
+
+    @app_commands.command(name="bills", description="List all submitted bills.")
+    @app_commands.guild_only()
+    async def bills_alias(self, interaction: discord.Interaction):
+        await self.bill_list.callback(self, interaction)
+
+    @app_commands.command(name="motions", description="List all submitted motions.")
+    @app_commands.guild_only()
+    async def motions_alias(self, interaction: discord.Interaction):
+        await self.motion_list.callback(self, interaction)
 
 
 async def setup(bot):

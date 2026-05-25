@@ -8,7 +8,7 @@ from bot.config import config
 from bot.slash import checks as slash_checks
 from bot.slash import context as slash_context
 from bot.slash import ui
-from bot.utils import context, exceptions
+from bot.utils import context, exceptions, text
 
 DM_SETTING_LABELS = {
     "ban_kick_mute": "You get muted, kicked, or banned",
@@ -119,9 +119,7 @@ class MetaSlash(commands.Cog):
             ),
         )
 
-    @app_commands.command(
-        name="commands", description="List all text commands."
-    )
+    @app_commands.command(name="commands", description="List all text commands.")
     async def commands_command(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="commands")
         await ctx.defer()
@@ -206,20 +204,17 @@ class MetaSlash(commands.Cog):
         }
 
         if all(value is None for value in provided.values()):
-            return await ui.send_static(
-                ctx,
-                title=f"DM Notifications for {ctx.author}",
-                sections=[
-                    ui.LayoutSection(
-                        "Settings",
-                        "\n".join(
-                            f"{self.bot.emojify_boolean(settings[key])} {label}"
-                            for key, label in DM_SETTING_LABELS.items()
-                        ),
-                    )
-                ],
-                ephemeral=True,
+            embed = text.SafeEmbed(
+                description="\n".join(
+                    f"{self.bot.emojify_boolean(settings[key])} {label}"
+                    for key, label in DM_SETTING_LABELS.items()
+                )
             )
+            embed.set_author(
+                name=f"DM Notifications for {ctx.author}",
+                icon_url=ctx.author_icon,
+            )
+            return await ctx.send(embed=embed, ephemeral=True)
 
         values = {
             key: settings[key] if value is None else value

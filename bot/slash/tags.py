@@ -9,6 +9,8 @@ from bot.slash import checks as slash_checks
 from bot.slash import context as slash_context
 from bot.slash import forms, transformers, ui
 from bot.utils import converter, exceptions
+from bot.utils import text
+from bot.utils import paginator
 
 TagOption = app_commands.Transform[converter.Tag, transformers.TagTransformer]
 OwnedTagOption = app_commands.Transform[
@@ -385,31 +387,26 @@ class TagsSlash(commands.Cog):
         self,
         ctx: slash_context.InteractionContext,
         tag: converter.Tag,
-        *,
-        hint: str = None,
     ):
         tag_content_type = self.content_type(tag)
-        prefix = f"{hint}\n" if hint else None
 
         if tag.is_embedded:
             if tag_content_type is TagContentType.IMAGE:
-                return await ui.send_static(
-                    ctx,
-                    title=tag.title,
-                    body=hint,
-                    media_urls=[tag.content],
-                )
+                embed = text.SafeEmbed(title=tag.title)
+                embed.set_image(url=tag.content)
+
+                try:
+                    return await ctx.send(embed=embed)
+                except discord.HTTPException:
+                    return await ctx.send(tag.clean_content)
 
             if tag_content_type is TagContentType.VIDEO:
-                return await ctx.send(f"{prefix or ''}{tag.clean_content}")
+                return await ctx.send(tag.clean_content)
 
-            return await ui.send_static(
-                ctx,
-                title=tag.title,
-                body=f"{prefix or ''}{tag.clean_content}",
-            )
+            embed = text.SafeEmbed(title=tag.title, description=tag.clean_content)
+            return await ctx.send(embed=embed)
 
-        await ctx.send(f"{prefix or ''}{tag.clean_content}")
+        await ctx.send(tag.clean_content)
 
     @tag.command(name="list", description="List global and local tags.")
     async def list_tags(self, interaction: discord.Interaction):
@@ -441,13 +438,26 @@ class TagsSlash(commands.Cog):
                     for record in local_tags
                 )
 
-        await ui.send_pages(
-            ctx,
+        if len(entries) < 2:
+            entries = []
+
+        if ctx.guild:
+            author = f"All Tags in {ctx.guild.name}"
+            icon = ctx.guild_icon
+            empty_message = "There are no tags on this server."
+        else:
+            author = "All Global Tags"
+            icon = self.bot.user.display_avatar.url
+            empty_message = "There are no global tags yet."
+
+        pages = paginator.SimplePages(
             entries=entries,
-            title=f"All Tags in {ctx.guild.name}" if ctx.guild else "All Global Tags",
-            empty_message="There are no tags here.",
+            author=author,
+            icon=icon,
             per_page=12,
+            empty_message=empty_message,
         )
+        await pages.start(ctx)
 
     @tag.command(name="show", description="Show one tag.")
     async def show(self, interaction: discord.Interaction, tag: TagOption):
@@ -464,16 +474,19 @@ class TagsSlash(commands.Cog):
             "SELECT * FROM tag WHERE guild_id = $1 AND global = false ORDER BY uses desc",
             ctx.guild.id,
         )
-        await ui.send_pages(
-            ctx,
-            entries=[
-                f"* `{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
-                for record in records
-            ],
-            title=f"Local Tags in {ctx.guild.name}",
-            empty_message="There are no local tags on this server.",
+        entries = [
+            f"* `{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
+            for record in records
+        ]
+
+        pages = paginator.SimplePages(
+            entries=entries,
+            author=f"Local Tags in {ctx.guild.name}",
+            icon=ctx.guild_icon,
             per_page=12,
+            empty_message="There are no local tags on this server.",
         )
+        await pages.start(ctx)
 
     @tag.command(name="from", description="List tags created by one member.")
     @app_commands.guild_only()
@@ -490,16 +503,19 @@ class TagsSlash(commands.Cog):
             member.id,
             ctx.guild.id,
         )
-        await ui.send_pages(
-            ctx,
-            entries=[
-                f"`{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
-                for record in records
-            ],
-            title=f"Tags from {member.display_name}",
-            empty_message=f"{member} hasn't made any tags on this server yet.",
+        entries = [
+            f"`{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
+            for record in records
+        ]
+
+        pages = paginator.SimplePages(
+            entries=entries,
+            author=f"Tags from {member.display_name}",
+            icon=member.display_avatar.url,
             per_page=12,
+            empty_message=f"{member} hasn't made any tags on this server yet.",
         )
+        await pages.start(ctx)
 
     @tag.command(name="search", description="Search for a tag.")
     async def search(self, interaction: discord.Interaction, query: str):
@@ -522,13 +538,16 @@ class TagsSlash(commands.Cog):
                 f"`{config.BOT_PREFIX}{record['name']}`  {escape_markdown(record['title'])}"
             ] = None
 
-        await ui.send_pages(
-            ctx,
+        icon = self.bot.user.display_avatar.url if not ctx.guild else ctx.guild_icon
+
+        pages = paginator.SimplePages(
             entries=list(pretty_names),
-            title=f"Tags matching '{query}'",
-            empty_message="Nothing found.",
+            author=f"Tags matching '{query}'",
+            icon=icon,
             per_page=12,
+            empty_message="Nothing found.",
         )
+        await pages.start(ctx)
 
     @tag.command(name="random", description="Show a random available tag.")
     async def random(self, interaction: discord.Interaction):
@@ -542,49 +561,73 @@ class TagsSlash(commands.Cog):
             return await ctx.send(f"{config.NO} There are no tags here.")
 
         tag = await converter.Tag.convert(ctx, tag_name)
-        await self.send_tag_content(
-            ctx,
-            tag,
-            hint=f"{config.HINT} Showing random tag `{config.BOT_PREFIX}{tag_name}`",
+        await ctx.send(
+            f"{config.HINT} Showing random tag `{config.BOT_PREFIX}{tag_name}`"
         )
+        await self.send_tag_content(ctx, tag)
 
     @tag.command(name="info", description="Show metadata about one tag.")
     @app_commands.guild_only()
     async def info(self, interaction: discord.Interaction, tag: TagOption):
         ctx = slash_context.from_interaction(interaction, command_name="tag info")
         await ctx.defer()
-        author = tag.author
-        author_value = (
-            f"{author.mention} {author}"
-            if author is not None
-            else "*The author of this tag left this server.*"
-        )
-        collaborators = (
-            "\n".join(
-                f"{collaborator.mention} {collaborator}"
-                for collaborator in tag.collaborators
-            )
-            or "-"
-        )
-        aliases = (
-            ", ".join(f"`{config.BOT_PREFIX}{alias}`" for alias in tag.aliases) or "-"
-        )
 
-        await ui.send_static(
-            ctx,
-            title=tag.title,
-            sections=[
-                ui.LayoutSection("Author", author_value),
-                ui.LayoutSection(
-                    "Format",
-                    f"Global Tag: {'Yes' if tag.is_global else 'No'}\n"
-                    f"Tag Format: {'Embed' if tag.is_embedded else 'Plain Text'}\n"
-                    f"Uses: {tag.uses}",
-                ),
-                ui.LayoutSection("Collaborators", collaborators),
-                ui.LayoutSection("Aliases", aliases),
-            ],
+        pretty_aliases = (
+            ", ".join(f"`{config.BOT_PREFIX}{alias}`" for alias in tag.aliases)
+        ) or "-"
+
+        embed = text.SafeEmbed(title=tag.title)
+
+        is_global = "Yes" if tag.is_global else "No"
+        is_embedded = "Embed" if tag.is_embedded else "Plain Text"
+
+        if isinstance(tag.author, discord.Member):
+            embed.add_field(name="Author", value=tag.author.mention, inline=False)
+            embed.set_author(
+                name=tag.author.name,
+                icon_url=tag.author.display_avatar.url,
+            )
+
+        elif isinstance(tag.author, discord.User):
+            embed.add_field(
+                name="Author",
+                value=f"*The author of this tag left this server.*\n"
+                f"*You can claim this tag to make it yours with*\n"
+                f"`{config.BOT_PREFIX}tag claim {tag.name}`",
+                inline=False,
+            )
+            embed.set_author(
+                name=tag.author.name,
+                icon_url=tag.author.display_avatar.url,
+            )
+
+        elif tag.author is None:
+            embed.add_field(
+                name="Author",
+                value=f"*The author of this tag left this server.*\n"
+                f"*You can claim this tag to make it yours with*\n"
+                f"`{config.BOT_PREFIX}tag claim {tag.name}`",
+                inline=False,
+            )
+
+        embed.add_field(name="Global Tag", value=is_global, inline=True)
+        embed.add_field(name="Tag Format", value=is_embedded, inline=True)
+        embed.add_field(name="Uses", value=tag.uses, inline=False)
+        embed.add_field(
+            name="Collaborators",
+            value="\n".join(
+                [f"{c.mention} {c}" for c in tag.collaborators]
+                or [
+                    f"*The owner of this tag can add other people as "
+                    f"collaborators for this tag, so that they can "
+                    f"edit and add & "
+                    f"remove aliases, with "
+                    f"`{config.BOT_PREFIX}tag share {tag.name}`.*\n\n-"
+                ]
+            ),
         )
+        embed.add_field(name="Aliases", value=pretty_aliases, inline=False)
+        await ctx.send(embed=embed)
 
     @tag.command(name="raw", description="Show the raw markdown of one tag.")
     @app_commands.guild_only()
@@ -627,24 +670,37 @@ class TagsSlash(commands.Cog):
                 "SELECT name, uses FROM tag WHERE author = $1 AND global = true ORDER BY uses DESC LIMIT 5",
                 member.id,
             )
-            return await ui.send_static(
-                ctx,
-                title=f"Tags from {member.display_name}",
-                sections=[
-                    ui.LayoutSection(
-                        "Counts",
-                        f"Any Server: {amount[0]['count']}\n"
-                        f"Global: {amount[2]['count']}\n"
-                        f"This Server: {amount[1]['count']}",
-                    ),
-                    ui.LayoutSection(
-                        "Top Tags from this Server", self.format_stats(top_tags)
-                    ),
-                    ui.LayoutSection(
-                        "Top Global Tags", self.format_stats(top_global_tags)
-                    ),
-                ],
+
+            embed = text.SafeEmbed()
+            embed.set_author(
+                name=member.display_name, icon_url=member.display_avatar.url
             )
+
+            embed.add_field(
+                name="Amount of Tags from any Server", value=amount[0]["count"]
+            )
+            embed.add_field(
+                name="Amount of Global Tags from any Server",
+                value=amount[2]["count"],
+            )
+            embed.add_field(
+                name="Amount of Tags from this Server",
+                value=amount[1]["count"],
+                inline=False,
+            )
+
+            embed.add_field(
+                name="Top Tags from this Server (Global and Local)",
+                value=self.format_stats(top_tags),
+                inline=False,
+            )
+            embed.add_field(
+                name="Top Global Tags from any Server",
+                value=self.format_stats(top_global_tags),
+                inline=False,
+            )
+
+            return await ctx.send(embed=embed)
 
         total = await self.bot.db.fetch(
             "SELECT COUNT(name) FROM tag "
@@ -654,6 +710,11 @@ class TagsSlash(commands.Cog):
             "SELECT COUNT(name) FROM tag WHERE global = true",
             ctx.guild.id,
         )
+
+        total_total = total[0]["count"]
+        total_local = total[1]["count"]
+        total_global = total[2]["count"]
+
         top_global_tags = await self.bot.db.fetch(
             "SELECT name, uses FROM tag WHERE global = true ORDER BY uses DESC LIMIT 5"
         )
@@ -665,23 +726,60 @@ class TagsSlash(commands.Cog):
             "SELECT name, uses FROM tag WHERE global = false AND guild_id = $1 ORDER BY uses DESC LIMIT 5",
             ctx.guild.id,
         )
-        await ui.send_static(
-            ctx,
-            title=f"Tags on {ctx.guild.name}",
-            body=(
-                f"There are {total[0]['count']} tags in total, of which "
-                f"{total[2]['count']} are global. {total[1]['count']} are from this server."
-            ),
-            sections=[
-                ui.LayoutSection("Top Global Tags", self.format_stats(top_global_tags)),
-                ui.LayoutSection(
-                    "Top Tags from this Server", self.format_stats(top_server_tags)
-                ),
-                ui.LayoutSection(
-                    "Top Local Tags from this Server", self.format_stats(top_local_tags)
-                ),
-            ],
+
+        embed = text.SafeEmbed(
+            description=f"There are {total_total} tags in total, of which "
+            f"{total_global} are global. {total_local} are from this server."
         )
+        embed.set_author(name=f"Tags on {ctx.guild.name}", icon_url=ctx.guild_icon)
+
+        embed.add_field(
+            name="Top Global Tags",
+            value=self.format_stats(top_global_tags),
+            inline=False,
+        )
+        embed.add_field(
+            name="Top Tags from this Server (Global and Local)",
+            value=self.format_stats(top_server_tags),
+            inline=False,
+        )
+        embed.add_field(
+            name="Top Local Tags from this Server",
+            value=self.format_stats(top_local_tags),
+            inline=False,
+        )
+
+        cog = self.bot.get_cog("LegislatureSlash")
+
+        if cog:
+            top_tag_creators = await self.bot.db.fetch(
+                "SELECT author FROM tag WHERE guild_id = $1", ctx.guild.id
+            )
+            value = cog.format_stats(
+                record=top_tag_creators, record_key="author", stats_name="tags"
+            )
+
+            top_global_tag_creators = await self.bot.db.fetch(
+                "SELECT author FROM tag WHERE global = true"
+            )
+            global_value = cog.format_stats(
+                record=top_global_tag_creators,
+                record_key="author",
+                stats_name="global tags",
+            )
+
+            embed.add_field(
+                name="People with the most Global Tags from any Server",
+                value=global_value,
+                inline=False,
+            )
+            embed.add_field(
+                name="People with the most Tags from this Server",
+                value=value,
+                inline=False,
+            )
+
+        await ctx.send(embed=embed)
 
     @staticmethod
     def format_stats(records):
@@ -930,6 +1028,10 @@ class TagsSlash(commands.Cog):
         await ctx.send(
             f"{config.YES} `{config.BOT_PREFIX}{tag.name}` is no longer a global tag.",
         )
+
+    @app_commands.command(name="tags", description="List global and local tags.")
+    async def tags_alias(self, interaction: discord.Interaction):
+        await self.list_tags.callback(self, interaction)
 
 
 async def setup(bot):

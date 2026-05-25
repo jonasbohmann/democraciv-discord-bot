@@ -74,6 +74,9 @@ class InteractionContext:
         if isinstance(embed, text.SafeEmbed):
             embed.clean()
 
+        if view is None:
+            view = MISSING
+
         ephemeral = self.ephemeral if ephemeral is None else ephemeral
 
         if self.interaction.response.is_done():

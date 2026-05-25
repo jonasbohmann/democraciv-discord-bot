@@ -9,7 +9,7 @@ from bot.config import config, mk
 from bot.slash import checks as slash_checks
 from bot.slash import context as slash_context
 from bot.slash import transformers, ui
-from bot.utils import exceptions, mixin, models
+from bot.utils import exceptions, mixin, models, paginator, text
 
 AwaitingBillOption = app_commands.Transform[
     models.Bill, transformers.AwaitingExecutiveBillTransformer
@@ -165,34 +165,56 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
         await ctx.defer()
 
         awaiting = await self._awaiting_bills(ctx)
-        awaiting_text = (
-            "There are no bills awaiting Executive action."
-            if not awaiting
-            else f"{len(awaiting)} bill{'s' if len(awaiting) != 1 else ''} awaiting action. Use `/{MINISTRY_COMMAND_NAME} bills`."
+        if not awaiting:
+            awaiting_text = "There are no bills awaiting Executive action."
+        else:
+            awaiting_text = (
+                f":warning:    There are bills awaiting action. Review with "
+                f"`/{MINISTRY_COMMAND_NAME} bills`."
+            )
+
+        embed = text.SafeEmbed()
+        embed.set_author(
+            icon_url=self.bot.mk.NATION_ICON_URL,
+            name=f"The {self.bot.mk.MINISTRY_NAME} of {self.bot.mk.NATION_FULL_NAME}",
         )
 
-        await ui.send_static(
-            ctx,
-            title=f"The {self.bot.mk.MINISTRY_NAME} of {self.bot.mk.NATION_FULL_NAME}",
-            sections=[
-                ui.LayoutSection(
-                    self.bot.mk.MINISTRY_LEADERSHIP_NAME,
-                    "\n".join(
-                        [
-                            _member_or_dash(self.prime_minister, self.bot.mk.pm_term),
-                            _member_or_dash(
-                                self.lt_prime_minister, self.bot.mk.lt_pm_term
-                            ),
-                        ]
-                    ),
-                ),
-                ui.LayoutSection(
-                    "Cabinet of Advisors", "\n".join(self._advisor_lines())
-                ),
-                ui.LayoutSection("Bills Awaiting Executive Action", awaiting_text),
-            ],
-            links=self._links(),
+        embed.add_field(
+            name=self.bot.mk.MINISTRY_LEADERSHIP_NAME,
+            value="\n".join(
+                [
+                    _member_or_dash(self.prime_minister, self.bot.mk.pm_term),
+                    _member_or_dash(self.lt_prime_minister, self.bot.mk.lt_pm_term),
+                ]
+            ),
+            inline=False,
         )
+
+        embed.add_field(
+            name="Cabinet of Advisors",
+            value="\n".join(self._advisor_lines()),
+            inline=False,
+        )
+
+        embed.add_field(
+            name="Links",
+            value=(
+                f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
+                f"[Legal Code]({self.bot.mk.LEGAL_CODE}) "
+                "*(try [laws.democraciv.com](https://laws.democraciv.com) too!)*\n"
+                f"[Ministry Worksheet]({self.bot.mk.MINISTRY_WORKSHEET})\n"
+                f"[Ministry Procedures]({self.bot.mk.MINISTRY_PROCEDURES})"
+            ),
+            inline=False,
+        )
+
+        embed.add_field(
+            name="Bills Awaiting Executive Action",
+            value=awaiting_text,
+            inline=False,
+        )
+
+        await ctx.send(embed=embed)
 
     @ministry.command(name="bills", description="List bills awaiting Executive action.")
     @slash_checks.is_democraciv_guild()
@@ -201,13 +223,14 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
         await ctx.defer()
 
         bills = await self._awaiting_bills(ctx)
-        await ui.send_pages(
-            ctx,
-            entries=[self._bill_entry(bill) for bill in bills],
-            title="Bills Awaiting Executive Action",
-            links=self._links(),
+        entries = [self._bill_entry(bill) for bill in bills]
+        pages = paginator.SimplePages(
+            entries=entries,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author="Bills Awaiting Executive Action",
             empty_message="There are no bills awaiting Executive action.",
         )
+        await pages.start(ctx)
 
     @ministry.command(name="pass", description="Pass one bill into law.")
     @slash_checks.has_any_democraciv_role(

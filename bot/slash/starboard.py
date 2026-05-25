@@ -1,10 +1,12 @@
+import typing
+
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from bot.config import config
 from bot.slash import context as slash_context
-from bot.slash import ui
+from bot.utils import text
 
 
 class StarboardSlash(commands.Cog):
@@ -16,6 +18,10 @@ class StarboardSlash(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    @property
+    def starboard_channel(self) -> typing.Optional[discord.TextChannel]:
+        return self.bot.dciv.get_channel(config.STARBOARD_CHANNEL)
 
     @staticmethod
     def records_to_value(records, fmt=None, default="-"):
@@ -83,53 +89,51 @@ class StarboardSlash(commands.Cog):
                    );"""
 
         records = await self.bot.db.fetch(query)
-        starred_posts = [record for record in records if record["Type"] == 3]
+
+        embed = text.SafeEmbed(
+            title="Starboard Stats",
+            description=f"So far, there are {total_starred_messages} messages starred"
+            f" with a total of {total_stars} stars.",
+            colour=0xFFAC33,
+        )
+
+        starred_posts = [r for r in records if r["Type"] == 3]
         starred_posts_with_link = []
 
         for post in starred_posts:
-            jump_url = await self.bot.db.fetchval(
+            record = await self.bot.db.fetchval(
                 "SELECT message_jump_url FROM starboard_entry "
                 "WHERE starboard_message_id = $1",
                 post["ID"],
             )
             starred_posts_with_link.append(
-                {"ID": f"[Jump to Message]({jump_url})", "Stars": post["Stars"]}
+                {"ID": f"[Jump to Message]({record})", "Stars": post["Stars"]}
             )
 
-        mention = lambda user_id: f"<@{user_id}>"
-        sections = [
-            ui.LayoutSection(
-                "Summary",
-                f"So far, there are {total_starred_messages} messages starred with a total of {total_stars} stars.",
-            ),
-            ui.LayoutSection(
-                "Top Starred Messages",
-                self.records_to_value(starred_posts_with_link),
-            ),
-            ui.LayoutSection(
-                "Top Star Receivers",
-                self.records_to_value(
-                    [record for record in records if record["Type"] == 1],
-                    mention,
-                    default="No one!",
-                ),
-            ),
-            ui.LayoutSection(
-                "Top Star Givers",
-                self.records_to_value(
-                    [record for record in records if record["Type"] == 2],
-                    mention,
-                    default="No one!",
-                ),
-            ),
-        ]
-
-        await ui.send_static(
-            ctx,
-            title="Starboard Stats",
-            sections=sections,
-            title_emoji="\U00002b50",
+        embed.add_field(
+            name="Top Starred Messages",
+            value=self.records_to_value(starred_posts_with_link),
+            inline=False,
         )
+
+        to_mention = lambda o: f"<@{o}>"
+
+        star_receivers = [r for r in records if r["Type"] == 1]
+        value = self.records_to_value(star_receivers, to_mention, default="No one!")
+        embed.add_field(name="Top Star Receivers", value=value, inline=False)
+
+        star_givers = [r for r in records if r["Type"] == 2]
+        value = self.records_to_value(star_givers, to_mention, default="No one!")
+        embed.add_field(name="Top Star Givers", value=value, inline=False)
+
+        if self.starboard_channel is not None:
+            embed.set_footer(
+                text="Collecting stars since",
+                icon_url="https://cdn.discordapp.com/attachments/"
+                "639549494693724170/679824104190115911/star.png",
+            )
+            embed.timestamp = self.starboard_channel.created_at
+        await ctx.send(embed=embed)
 
     @starboard.command(
         name="person", description="Show Starboard stats for one person."
@@ -139,6 +143,9 @@ class StarboardSlash(commands.Cog):
             interaction, command_name="starboard person"
         )
         await ctx.defer()
+
+        embed = text.SafeEmbed(colour=0xFFAC33)
+        embed.set_author(name=member.display_name, icon_url=member.display_avatar.url)
 
         stars_received = await self.bot.db.fetchval(
             """SELECT COUNT(*)
@@ -167,35 +174,33 @@ class StarboardSlash(commands.Cog):
                LIMIT 3;""",
             member.id,
         )
+
+        top_three_starred_fmt = []
+
+        for record in top_three_starred:
+            top_three_starred_fmt.append(
+                {
+                    "ID": f"[Jump to Message]({record['message_jump_url']})",
+                    "Stars": record["stars"],
+                }
+            )
+
         messages_starred = await self.bot.db.fetchval(
             "SELECT COUNT(*) FROM starboard_entry WHERE starboard_message_id IS NOT NULL AND author_id = $1;",
             member.id,
         )
 
-        top_three_starred_fmt = [
-            {
-                "ID": f"[Jump to Message]({record['message_jump_url']})",
-                "Stars": record["stars"],
-            }
-            for record in top_three_starred
-        ]
-
-        await ui.send_static(
-            ctx,
-            title=member.display_name,
-            title_emoji="\U00002b50",
-            sections=[
-                ui.LayoutSection("Messages on the Starboard", str(messages_starred)),
-                ui.LayoutSection(
-                    "Stars",
-                    f"Received: {stars_received}\nGiven: {stars_given}",
-                ),
-                ui.LayoutSection(
-                    "Top Starred Messages",
-                    self.records_to_value(top_three_starred_fmt),
-                ),
-            ],
+        embed.add_field(
+            name="Messages on the Starboard", value=messages_starred, inline=False
         )
+        embed.add_field(name="Stars Received", value=stars_received, inline=True)
+        embed.add_field(name="Stars Given", value=stars_given, inline=True)
+        embed.add_field(
+            name="Top Starred Messages",
+            value=self.records_to_value(top_three_starred_fmt),
+            inline=False,
+        )
+        await ctx.send(embed=embed)
 
 
 async def setup(bot):

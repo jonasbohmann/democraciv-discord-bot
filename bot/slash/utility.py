@@ -10,6 +10,7 @@ from discord.ext import commands
 from bot.config import config
 from bot.slash import context as slash_context
 from bot.slash import ui
+from bot.utils import text
 
 
 class UtilitySlash(commands.Cog):
@@ -66,38 +67,40 @@ class UtilitySlash(commands.Cog):
         ctx: slash_context.InteractionContext,
         role: discord.Role,
     ):
+        if role is None:
+            return await ctx.send(
+                f"{config.NO} `role` is neither a role on this server, nor on the Democraciv server."
+            )
+
         if role.guild.id != ctx.guild.id:
+            description = f":warning:  This role is from the {self.bot.dciv.name} server, not from this server!"
             role_name = role.name
-            description = f":warning: This role is from the {self.bot.dciv.name} server, not from this server."
         else:
+            description = ""
             role_name = f"{role.name} {role.mention}"
-            description = None
 
         if role != role.guild.default_role:
-            members = (
-                "\n".join(f"{member.mention} {member}" for member in role.members)
+            role_members = (
+                "\n".join([f"{member.mention} {member}" for member in role.members])
                 or "-"
             )
         else:
-            members = "*Too long to display.*"
+            role_members = "*Too long to display.*"
 
-        await ctx.send(
-            view=ui.RichLayout(
-                title="Role Information",
-                body=description,
-                sections=[
-                    ui.LayoutSection("Role", role_name),
-                    ui.LayoutSection("ID", str(role.id)),
-                    ui.LayoutSection(
-                        "Created on", role.created_at.strftime("%B %d, %Y")
-                    ),
-                    ui.LayoutSection("Colour", str(role.colour)),
-                    ui.LayoutSection(f"Members ({len(role.members)})", members),
-                ],
-                accent_colour=role.colour.value if role.colour.value else None,
-                author_id=ctx.author.id,
-            )
+        embed = text.SafeEmbed(
+            title="Role Information", description=description, colour=role.colour
         )
+
+        embed.add_field(name="Role", value=role_name, inline=False)
+        embed.add_field(name="ID", value=role.id, inline=False)
+        embed.add_field(
+            name="Created on", value=role.created_at.strftime("%B %d, %Y"), inline=True
+        )
+        embed.add_field(name="Colour", value=role.colour, inline=True)
+        embed.add_field(
+            name=f"Members ({len(role.members)})", value=role_members, inline=False
+        )
+        await ctx.send(embed=embed)
 
     @app_commands.command(
         name="delete-press-post",
@@ -172,41 +175,48 @@ class UtilitySlash(commands.Cog):
         await ctx.defer()
         member = member or ctx.author
 
-        roles = [role.mention for role in member.roles[::-1] if not role.is_default()]
-        join_pos, max_members = await self.get_member_join_position(
-            member,
-            ctx.guild.members,
-        )
-        join_pos = join_pos or "Unknown"
-        join_date = await self.get_member_join_date(member)
+        embed = text.SafeEmbed()
 
-        await ui.send_static(
-            ctx,
-            title=str(member),
-            sections=[
-                ui.LayoutSection("Person", f"{member.mention} {member}"),
-                ui.LayoutSection("ID", str(member.id)),
-                ui.LayoutSection(
-                    "Discord Registration",
-                    member.created_at.strftime("%B %d, %Y"),
-                ),
-                ui.LayoutSection(
-                    "Joined",
-                    join_date.strftime("%B %d, %Y") if join_date else "Unknown",
-                ),
-                ui.LayoutSection("Join Position", f"{join_pos}/{max_members}"),
-                ui.LayoutSection(
-                    f"Roles ({len(member.roles) - 1})", ", ".join(roles) or "-"
-                ),
-            ],
-            links=[
-                ui.LayoutLink(
-                    "Avatar",
-                    member.display_avatar.with_size(4096).url,
-                    "\U0001f5bc",
-                )
-            ],
+        if isinstance(member, discord.User) and not isinstance(member, discord.Member):
+            embed.description = ":warning: This person is not here in this server."
+
+        embed.add_field(name="Person", value=f"{member} {member.mention}", inline=False)
+        embed.add_field(name="ID", value=member.id, inline=False)
+        embed.add_field(
+            name="Discord Registration",
+            value=member.created_at.strftime("%B %d, %Y"),
+            inline=True,
         )
+
+        if isinstance(member, discord.Member):
+            join_pos, max_members = await self.get_member_join_position(
+                member, ctx.guild.members
+            )
+
+            if not join_pos:
+                join_pos = "Unknown"
+
+            join_date = await self.get_member_join_date(member)
+            embed.add_field(
+                name="Joined",
+                value=join_date.strftime("%B %d, %Y") if join_date else "Unknown",
+                inline=True,
+            )
+            embed.add_field(
+                name="Join Position", value=f"{join_pos}/{max_members}", inline=True
+            )
+
+            roles = [
+                role.mention for role in member.roles[::-1] if not role.is_default()
+            ]
+            embed.add_field(
+                name=f"Roles ({len(member.roles) - 1})",
+                value=", ".join(roles) or "-",
+                inline=False,
+            )
+
+        embed.set_thumbnail(url=member.display_avatar.url)
+        await ctx.send(embed=embed)
 
     @app_commands.command(name="avatar", description="View someone's avatar.")
     @app_commands.guild_only()
@@ -230,35 +240,36 @@ class UtilitySlash(commands.Cog):
         ctx = slash_context.from_interaction(interaction, command_name="veterans")
         await ctx.defer()
 
+        sorted_first_15_members = []
+
         if ctx.guild.id == self.bot.dciv.id:
             if self.cached_sorted_veterans_on_democraciv:
-                veterans = self.cached_sorted_veterans_on_democraciv
+                sorted_first_15_members = self.cached_sorted_veterans_on_democraciv
             else:
-                records = await self.bot.db.fetch(
+                vets = await self.bot.db.fetch(
                     "SELECT member FROM original_join_date ORDER BY join_date LIMIT 15"
                 )
-                veterans = self.cached_sorted_veterans_on_democraciv = [
-                    self.bot.get_user(record["member"]) for record in records
+                self.cached_sorted_veterans_on_democraciv = sorted_first_15_members = [
+                    self.bot.get_user(r["member"]) for r in vets
                 ]
         else:
-            veterans = [member for member in ctx.guild.members if not member.bot]
-            veterans.sort(key=lambda member: member.joined_at)
-            veterans = veterans[:15]
+            guild_members_without_bots = [
+                member for member in ctx.guild.members if not member.bot
+            ]
+            guild_members_without_bots.sort(key=lambda m: m.joined_at)
+            sorted_first_15_members = guild_members_without_bots[:15]
 
-        entries = [
-            (
-                f"{position}. {veteran.mention} {veteran}"
-                if veteran
-                else f"{position}. *Unknown User*"
-            )
-            for position, veteran in enumerate(veterans, start=1)
+        message = [
+            "These are the first 15 people who joined this server.\nBot accounts are not counted.\n"
         ]
-        await ui.send_static(
-            ctx,
-            title=f"Veterans of {ctx.guild.name}",
-            body="These are the first 15 people who joined this server. Bot accounts are not counted.",
-            sections=[ui.LayoutSection("Members", "\n".join(entries) or "-")],
-        )
+
+        for position, veteran in enumerate(sorted_first_15_members, start=1):
+            fmt = f"{veteran.mention} {veteran}" if veteran else "*Unknown User*"
+            message.append(f"{position}. {fmt}")
+
+        embed = text.SafeEmbed(description="\n".join(message))
+        embed.set_author(name=f"Veterans of {ctx.guild.name}", icon_url=ctx.guild_icon)
+        await ctx.send(embed=embed)
 
     @app_commands.command(
         name="whohas", description="Show detailed information about a role."
@@ -266,17 +277,6 @@ class UtilitySlash(commands.Cog):
     @app_commands.guild_only()
     async def whohas(self, interaction: discord.Interaction, role: discord.Role):
         ctx = slash_context.from_interaction(interaction, command_name="whohas")
-        await ctx.defer()
-        await self.send_role_info(ctx, role)
-
-    @app_commands.command(
-        name="role-info", description="Show detailed information about a role."
-    )
-    @app_commands.guild_only()
-    async def role_info_command(
-        self, interaction: discord.Interaction, role: discord.Role
-    ):
-        ctx = slash_context.from_interaction(interaction, command_name="role-info")
         await ctx.defer()
         await self.send_role_info(ctx, role)
 
@@ -333,24 +333,42 @@ class UtilitySlash(commands.Cog):
         ctx = slash_context.from_interaction(interaction, command_name="vibecheck")
         await ctx.defer()
         user = user or ctx.author
+
+        not_vibing = [
+            "https://i.kym-cdn.com/entries/icons/mobile/000/031/163/Screen_Shot_2019-09-16_at_10.22.26_AM.jpg",
+            "https://s3.amazonaws.com/media.thecrimson.com/photos/2019/11/18/194724_1341037.png",
+            "https://i.kym-cdn.com/photos/images/newsfeed/001/574/493/3ab.jpg",
+            "https://i.imgflip.com/3ebtvt.jpg",
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT814jrNuqJsaVVHGqWw_0snlcysLN5fLpocEYrx6hzkgXYx7RV5w&s",
+            "https://img.buzzfeed.com/buzzfeed-static/static/2019-10/7/15/asset/c5dd65974640/sub-buzz-521-1570462442-1.png?downsize=700:*&output-format=auto&output-quality=auto",
+            "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/12132fe4-1709-4287-9dcc-4ee9fc252a01/ddk55pz-bf72cab3-2b9e-474e-94a8-00e5f53d2baf.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7InBhdGgiOiJcL2ZcLzEyMTMyZmU0LTE3MDktNDI4Ny05ZGNjLTRlZTlmYzI1MmEwMVwvZGRrNTVwei1iZjcyY2FiMy0yYjllLTQ3NGUtOTRhOC0wMGU1ZjUzZDJiYWYuanBnIn1dXSwiYXVkIjpbInVybjpzZXJ2aWNlOmZpbGUuZG93bmxvYWQiXX0.Sb6Axu0O6iZ3YmZJHg5wRe-r41iLnWVqa_ddWrtbQlo",
+            "https://pbs.twimg.com/media/EHgYHjOX4AAuv6s.jpg",
+            "https://pbs.twimg.com/media/EGTsxzaUwAAuBLG?format=jpg&name=900x900",
+            "https://66.media.tumblr.com/c2fc65d9f8614dbd9bb7378983e0598e/tumblr_pxw332rEmZ1yom1s3o1_1280.png",
+        ]
+
+        vibing = [
+            "https://preview.redd.it/i-will-give-your-ocs-a-vibe-check-v0-0y5skb0tx9sb1.jpeg?width=750&format=pjpg&auto=webp&s=b1d8598547a600f7c589a069ee92be6a08bb1589",
+            "https://images.squarespace-cdn.com/content/63c88a61bbbb6e3e419189da/1687420314895-70N8D0I60O36DB4PCRX0/You-Passed-The-Vibe-Check-Cats-y2k-png-design.jpg?format=1500w&content-type=image%2Fjpeg",
+            "https://i.kym-cdn.com/photos/images/original/001/599/028/bf3.jpg",
+            "https://i.redd.it/p4e6a65i3bw31.jpg",
+            "https://media.makeameme.org/created/congratulations-you-have-61e05e0d4b.jpg",
+        ]
+
         passed = random.randrange(1, stop=100) >= 65
-        images = (
-            [
-                "https://preview.redd.it/i-will-give-your-ocs-a-vibe-check-v0-0y5skb0tx9sb1.jpeg?width=750&format=pjpg&auto=webp&s=b1d8598547a600f7c589a069ee92be6a08bb1589",
-                "https://i.kym-cdn.com/photos/images/original/001/599/028/bf3.jpg",
-            ]
-            if passed
-            else [
-                "https://i.kym-cdn.com/entries/icons/mobile/000/031/163/Screen_Shot_2019-09-16_at_10.22.26_AM.jpg",
-                "https://i.imgflip.com/3ebtvt.jpg",
-            ]
+
+        if passed:
+            image = random.choice(vibing)
+            pretty = "passed"
+        else:
+            image = random.choice(not_vibing)
+            pretty = "not passed"
+
+        embed = text.SafeEmbed(
+            title=f"{user} has __{pretty}__ the vibe check",
         )
-        pretty = "passed" if passed else "not passed"
-        await ui.send_static(
-            ctx,
-            title=f"{user} has {pretty} the vibe check",
-            media_urls=[random.choice(images)],
-        )
+        embed.set_image(url=image)
+        await ctx.send(embed=embed)
 
     @app_commands.command(name="dog", description="Show a random dog image or video.")
     async def dog(self, interaction: discord.Interaction):

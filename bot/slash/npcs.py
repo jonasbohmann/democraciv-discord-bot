@@ -11,7 +11,7 @@ from bot.config import config
 from bot.module.npcs import AccessToNPCConverter, AnyNPCConverter, NPCConverter
 from bot.slash import context as slash_context
 from bot.slash import forms, transformers, ui
-from bot.utils import exceptions
+from bot.utils import exceptions, paginator, text
 
 OwnedNPCOption = app_commands.Transform[NPCConverter, transformers.NPCTransformer]
 AnyNPCOption = app_commands.Transform[AnyNPCConverter, transformers.AnyNPCTransformer]
@@ -373,16 +373,21 @@ class NPCSlash(commands.Cog):
     async def about(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="npc about")
         await ctx.defer()
-        await ui.send_static(
-            ctx,
-            title="What are NPCs?",
-            body=(
+        embed = text.SafeEmbed(
+            description=(
                 "NPCs allow you to make it look like you speak as a different character, "
                 "or on behalf of someone else, like an organization or group.\n\n"
-                "Political parties, newspapers, government departments, and other groups "
-                "can use this to release official looking announcements."
-            ),
+                "This can elevate the role-playing experience by making it clear "
+                "when someone talks in character, or out-of-character (OOC). "
+                "Political parties, newspapers, government departments or other groups can "
+                "use this to release official looking announcements."
+            )
         )
+        embed.set_author(name="What are NPCs?", icon_url=self.bot.dciv.icon.url)
+        embed.set_image(
+            url="https://cdn.discordapp.com/attachments/818226072805179392/818230819835215882/npc.gif"
+        )
+        await ctx.send(embed=embed)
 
     @npc.command(name="list", description="List NPCs someone has access to.")
     async def list_npcs(
@@ -399,28 +404,41 @@ class NPCSlash(commands.Cog):
 
         entries = []
         for record in records:
+            avatar = (
+                f"[Avatar]({record['avatar_url']})\n" if record["avatar_url"] else ""
+            )
+
             owner = self.bot.get_user(record["owner_id"])
             owner_value = (
                 "\n"
                 if not owner
                 else f"Owner: {owner.mention} {escape_markdown(str(owner))}\n"
             )
-            avatar = (
-                f"[Avatar]({record['avatar_url']})\n" if record["avatar_url"] else ""
+
+            entries.append(
+                f"**__NPC #{record['id']} - {escape_markdown(record['name'])}__**"
             )
             entries.append(
-                f"**__NPC #{record['id']} - {escape_markdown(record['name'])}__**\n"
-                f"{avatar}Trigger Phrase: `{escape_markdown(record['trigger_phrase'])}`\n"
-                f"{owner_value}"
+                f"{avatar}Trigger Phrase: `{escape_markdown(record['trigger_phrase'])}`"
+            )
+            entries.append(owner_value)
+
+        if entries:
+            entries.insert(
+                0,
+                f"You can create a new NPC with `/npc create`, "
+                f"or edit the name, avatar and/or trigger phrase of an existing one with "
+                f"`/npc edit <npc>`.\n",
             )
 
-        await ui.send_pages(
-            ctx,
+        pages = paginator.SimplePages(
             entries=entries,
-            title=f"{member.display_name}'s NPCs",
+            author=f"{member.display_name}'s NPCs",
+            icon=member.display_avatar.url,
+            per_page=20,
             empty_message="This person hasn't made any NPCs yet.",
-            per_page=10,
         )
+        await pages.start(ctx)
 
     @npc.command(name="show", description="Show details about one NPC.")
     async def show(self, interaction: discord.Interaction, npc: AnyNPCOption):
@@ -429,11 +447,47 @@ class NPCSlash(commands.Cog):
         has_access = npc.id in self.legacy_cog._npc_access_cache[ctx.author.id]
         is_owner = npc.owner_id == ctx.author.id
 
+        embed = text.SafeEmbed()
+
+        if is_owner:
+            embed.description = (
+                f"You, the owner of this NPC, can edit the name, avatar and/or the trigger "
+                f"phrase of this NPC with `/npc edit {npc.id}`."
+            )
+
+        embed.set_author(
+            name=f"NPC #{npc.id} - {npc.name}",
+            icon_url=npc.avatar_url
+            or "https://cdn.discordapp.com/avatars/487345900239323147/79c38314283392c7e21bab76f77e09e9.png",
+        )
+
+        if npc.avatar_url:
+            embed.set_thumbnail(url=npc.avatar_url)
+
+        embed.add_field(name="Owner", value=f"{npc.owner.mention} {npc.owner}")
+
+        embed.add_field(
+            name="Trigger Phrase",
+            value=f"`{npc.trigger_phrase}`\n\nPeople with access to this NPC can send messages like this: "
+            f"`{npc.trigger_phrase.replace('text', 'Hello!')}`",
+            inline=False,
+        )
+
         allowed_people = await self.bot.db.fetch(
             "SELECT user_id FROM npc_allowed_user WHERE npc_id = $1",
             npc.id,
         )
-        pretty_people = [f"{npc.owner.mention} ({escape_markdown(str(npc.owner))})"]
+        pretty_people = []
+
+        if is_owner:
+            pretty_people.append(
+                f"You, the owner of this NPC, can allow other people to speak as this NPC with "
+                f"`/npc share {npc.id}`, or deny someone that you previously "
+                f"allowed with `/npc unshare {npc.id}`.\n"
+            )
+
+        pretty_people.append(f"{npc.owner.mention} ({escape_markdown(str(npc.owner))})")
+
         for record in allowed_people:
             user = self.bot.dciv.get_member(record["user_id"]) or self.bot.get_user(
                 record["user_id"]
@@ -441,27 +495,11 @@ class NPCSlash(commands.Cog):
             if user:
                 pretty_people.append(f"{user.mention} ({escape_markdown(str(user))})")
 
-        sections = [
-            ui.LayoutSection("Owner", f"{npc.owner.mention} {npc.owner}"),
-            ui.LayoutSection(
-                "Trigger Phrase",
-                f"`{npc.trigger_phrase}`\nPeople with access can send messages like: "
-                f"`{npc.trigger_phrase.replace('text', 'Hello!')}`",
-            ),
-            ui.LayoutSection(
-                "People with access",
-                "\n".join(pretty_people),
-            ),
-        ]
-
-        if is_owner:
-            sections.insert(
-                0,
-                ui.LayoutSection(
-                    "Owner Actions",
-                    "Use `/npc edit`, `/npc share`, and `/npc unshare` to manage this NPC.",
-                ),
-            )
+        embed.add_field(
+            name="People with access to this NPC",
+            value="\n".join(pretty_people),
+            inline=False,
+        )
 
         if ctx.guild and has_access:
             automatic_channels = await self.bot.db.fetch(
@@ -470,33 +508,24 @@ class NPCSlash(commands.Cog):
                 ctx.guild.id,
                 npc.id,
             )
-            pretty_channels = []
-            for record in automatic_channels:
-                channel = ctx.guild.get_channel(record["channel_id"])
-                if channel:
-                    pretty_channels.append(
-                        channel.mention
-                        if isinstance(channel, discord.TextChannel)
-                        else f"{channel.name} Category"
+
+            pretty_chan = []
+            for chan in automatic_channels:
+                c = ctx.guild.get_channel(chan["channel_id"])
+                if c:
+                    pretty_chan.append(
+                        f"{c.mention if type(c) is discord.TextChannel else f'{c.name} Category'}"
                     )
-            sections.append(
-                ui.LayoutSection(
-                    "Automatic Mode",
-                    "\n".join(pretty_channels)
-                    or "You don't have automatic mode enabled for this NPC in any channel or category on this server.",
-                )
+
+            embed.add_field(
+                name="Automatic Mode",
+                value="\n".join(pretty_chan)
+                or "__You__ don't have automatic mode enabled for this "
+                "NPC in any channel or channel category on __this__ "
+                "server.",
             )
 
-        await ui.send_static(
-            ctx,
-            title=f"NPC #{npc.id} - {npc.name}",
-            sections=sections,
-            links=(
-                [ui.LayoutLink("Avatar", npc.avatar_url, "\U0001f5bc")]
-                if npc.avatar_url
-                else []
-            ),
-        )
+        await ctx.send(embed=embed)
 
     @npc.command(name="create", description="Create a new NPC.")
     async def create(self, interaction: discord.Interaction):
@@ -578,12 +607,21 @@ class NPCSlash(commands.Cog):
             ctx.guild.id,
         )
         grouped_by_npc = collections.defaultdict(list)
+        entries = [
+            f"If you want to automatically speak as an NPC in a certain channel or channel category "
+            f"without having to use the trigger phrase, use `/npc automatic enable <npc>`, "
+            f"or disable it with `/npc automatic disable <npc>`.\n\nYou can only have one "
+            f"automatic NPC per channel.\n\nIf you have one NPC as automatic in an entire category, "
+            f"but a different NPC in a single channel that is in that same category, and you write "
+            f"something in that channel, you will only speak as the NPC for that "
+            f"specific channel, and not as both NPCs.\n\n"
+        ]
+
         for record in automatic_channels:
             grouped_by_npc[record["npc_id"]].append(
                 ctx.guild.get_channel(record["channel_id"])
             )
 
-        entries = []
         for npc_id, channels in grouped_by_npc.items():
             npc = self.legacy_cog._npc_cache[npc_id]
             pretty_channels = [
@@ -591,16 +629,25 @@ class NPCSlash(commands.Cog):
                 for channel in channels
                 if channel is not None
             ]
-            entries.append(f"**__{npc['name']}__**\n" + "\n".join(pretty_channels))
+            entries.append(
+                f"**__{escape_markdown(npc['name'])}__**\n" + "\n".join(pretty_channels)
+            )
 
-        await ui.send_pages(
-            ctx,
-            entries=entries,
-            title=f"{ctx.author.display_name}'s Automatic NPCs",
-            empty_message="You do not have automatic mode enabled for any NPCs on this server.",
-            per_page=8,
-            ephemeral=True,
-        )
+        if len(entries) > 1:
+            pages = paginator.SimplePages(
+                entries=entries,
+                icon=ctx.guild_icon,
+                per_page=15,
+                author=f"{ctx.author.display_name}'s Automatic NPCs",
+            )
+            await pages.start(ctx)
+        else:
+            embed = text.SafeEmbed(description=entries[0])
+            embed.set_author(
+                name=f"{ctx.author.display_name}'s Automatic NPCs",
+                icon_url=ctx.guild_icon,
+            )
+            await ctx.send(embed=embed)
 
     @npc_automatic.command(
         name="enable", description="Enable automatic mode in one channel."

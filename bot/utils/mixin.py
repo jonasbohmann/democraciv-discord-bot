@@ -1,5 +1,7 @@
+import collections
 import datetime
 import typing
+import asyncpg
 import discord
 
 from bot.config import mk, config
@@ -722,9 +724,7 @@ class GovernmentMixin:
     def judge_role(self) -> typing.Optional[discord.Role]:
         return self.bot.get_democraciv_role(mk.DemocracivRole.JUDGE)
 
-    async def _build_legislature_overview_embed(
-        self, house: str
-    ) -> text.SafeEmbed:
+    async def _build_legislature_overview_embed(self, house: str) -> text.SafeEmbed:
         is_senate = house == "senate"
 
         active_session = await self.get_active_leg_session(house=house)
@@ -734,9 +734,7 @@ class GovernmentMixin:
             else:
                 session_value = "There currently is no open session at the Commons."
         else:
-            house_label = (
-                "Senate" if is_senate else "Commons"
-            )
+            house_label = "Senate" if is_senate else "Commons"
             session_value = (
                 f"{house_label} Session #{active_session.mk13_house_id}"
                 f" - {active_session.status.value}"
@@ -758,9 +756,7 @@ class GovernmentMixin:
                     f"{sp.mention} {discord.utils.escape_markdown(str(sp))}"
                 )
             else:
-                speaker_lines.append(
-                    f"{self.bot.mk.senator_presiding_term}: -"
-                )
+                speaker_lines.append(f"{self.bot.mk.senator_presiding_term}: -")
         else:
             author_name = f"The Commons of {self.bot.mk.NATION_FULL_NAME}"
             cabinet_title = self.bot.mk.LEGISLATURE_CABINET_NAME
@@ -787,14 +783,10 @@ class GovernmentMixin:
             name=author_name,
         )
 
-        embed.add_field(
-            name=cabinet_title, value="\n".join(speaker_lines)
-        )
+        embed.add_field(name=cabinet_title, value="\n".join(speaker_lines))
 
         try:
-            legislators = self.bot.get_democraciv_role(
-                mk.DemocracivRole.LEGISLATOR
-            )
+            legislators = self.bot.get_democraciv_role(mk.DemocracivRole.LEGISLATOR)
             legislator_lines = [
                 f"{l.mention} {discord.utils.escape_markdown(str(l))}"
                 for l in legislators.members
@@ -825,8 +817,549 @@ class GovernmentMixin:
         session_label = (
             "Current Commons Session" if not is_senate else "Current Session"
         )
-        embed.add_field(
-            name=session_label, value=session_value, inline=False
+        embed.add_field(name=session_label, value=session_value, inline=False)
+
+        return embed
+
+    def get_justices(self) -> list:
+        try:
+            _justices = self.justice_role
+        except exceptions.RoleNotFoundError:
+            return None
+
+        if isinstance(self.chief_justice, discord.Member):
+            justices = [
+                f"{justice.mention} {discord.utils.escape_markdown(str(justice))}"
+                for justice in _justices.members
+                if justice.id != self.chief_justice.id
+            ]
+            justices.insert(
+                0,
+                f"{self.chief_justice.mention} {discord.utils.escape_markdown(str(self.chief_justice))} **({self.bot.mk.COURT_CHIEF_JUSTICE_NAME})**",
+            )
+            return justices
+        else:
+            return [
+                f"{justice.mention} {discord.utils.escape_markdown(str(justice))}"
+                for justice in _justices.members
+            ]
+
+    def get_judges(self) -> list:
+        try:
+            _judges = self.judge_role
+        except exceptions.RoleNotFoundError:
+            return None
+
+        return [
+            f"{judge.mention} {discord.utils.escape_markdown(str(judge))}"
+            for judge in _judges.members
+        ]
+
+    def format_stats(
+        self, *, record: typing.List[asyncpg.Record], record_key: str, stats_name: str
+    ) -> str:
+        record_as_list = [r[record_key] for r in record]
+        counter = dict(collections.Counter(record_as_list))
+        sorted_dict = {
+            k: v
+            for k, v in sorted(counter.items(), key=lambda item: item[1], reverse=True)
+        }
+        fmt = []
+
+        for i, (key, value) in enumerate(sorted_dict.items(), start=1):
+            if self.bot.get_user(key) is not None:
+                if i > 5:
+                    break
+
+                if value == 1:
+                    sts_name = stats_name[:-1]
+                else:
+                    sts_name = stats_name
+
+                fmt.append(
+                    f"{i}. {self.bot.get_user(key).mention} with {value} {sts_name}"
+                )
+
+        return "\n".join(fmt) or "None"
+
+    async def _build_government_overview_embed(self) -> text.SafeEmbed:
+        embed = text.SafeEmbed()
+        embed.set_author(
+            name=f"Government of {self.bot.mk.NATION_FULL_NAME}",
+            icon_url=self.bot.mk.NATION_ICON_URL,
         )
 
+        justices = self.get_justices() or ["-"]
+
+        minister_value = []
+
+        if isinstance(self.prime_minister, discord.Member):
+            minister_value.append(
+                f"{self.bot.mk.pm_term}: {self.prime_minister.mention} {discord.utils.escape_markdown(str(self.prime_minister))}"
+            )
+        else:
+            minister_value.append(f"{self.bot.mk.pm_term}: -")
+
+        if isinstance(self.lt_prime_minister, discord.Member):
+            minister_value.append(
+                f"{self.bot.mk.lt_pm_term}: {self.lt_prime_minister.mention}"
+            )
+        else:
+            minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
+
+        embed.add_field(
+            name=self.bot.mk.MINISTRY_LEADERSHIP_NAME,
+            value="\n".join(minister_value),
+            inline=True,
+        )
+
+        mk13_min_value = []
+
+        for mk13_min in [
+            mk.DemocracivRole.MK13_FINANCE_MIN,
+            mk.DemocracivRole.MK13_FOREIGN_MIN,
+            mk.DemocracivRole.MK13_DEFENCE_MIN,
+            mk.DemocracivRole.MK13_ATTORNEY_GENERAL,
+        ]:
+            as_member = self._safe_get_member(mk13_min)
+            as_role = self.bot.get_democraciv_role(mk13_min)
+
+            if isinstance(as_member, discord.Member):
+                mk13_min_value.append(
+                    f"{as_role.name}: {as_member.mention} {discord.utils.escape_markdown(str(as_member))}"
+                )
+            else:
+                mk13_min_value.append(f"{as_role.name}: -")
+
+        embed.add_field(
+            name="Cabinet of Advisors",
+            value="\n".join(mk13_min_value),
+            inline=False,
+        )
+
+        embed.add_field(
+            name=f"{self.bot.mk.COURT_NAME} {self.bot.mk.COURT_JUSTICE_NAME}s ({len(justices) if justices[0] != "-" else 0})",
+            value="\n".join(justices),
+            inline=False,
+        )
+
+        speaker_value = []
+
+        if isinstance(self.speaker, discord.Member):
+            speaker_value.append(
+                f"{self.bot.mk.speaker_term}: {self.speaker.mention} {discord.utils.escape_markdown(str(self.speaker))}"
+            )
+        else:
+            speaker_value.append(f"{self.bot.mk.speaker_term}: -")
+
+        if isinstance(self.vice_speaker, discord.Member):
+            speaker_value.append(
+                f"{self.bot.mk.vice_speaker_term}: {self.vice_speaker.mention} {discord.utils.escape_markdown(str(self.vice_speaker))}"
+            )
+        else:
+            speaker_value.append(f"{self.bot.mk.vice_speaker_term}: -")
+
+        mk13_sen_pres = self._safe_get_member(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
+
+        if isinstance(mk13_sen_pres, discord.Member):
+            speaker_value.append(
+                f"Senator Presiding: {mk13_sen_pres.mention} {discord.utils.escape_markdown(str(mk13_sen_pres))}"
+            )
+        else:
+            speaker_value.append("Senator Presiding: -")
+
+        embed.add_field(
+            name=f"{self.bot.mk.LEGISLATURE_CABINET_NAME}",
+            value="\n".join(speaker_value),
+            inline=False,
+        )
+
+        try:
+            legislators = self.bot.get_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+            legislators = [
+                f"{l.mention} {discord.utils.escape_markdown(str(l))}"
+                for l in legislators.members
+            ] or ["-"]
+        except exceptions.RoleNotFoundError:
+            legislators = ["-"]
+
+        embed.add_field(
+            name=f"Senators ({len(legislators) if legislators[0] != "-" else 0})",
+            value="\n".join(legislators),
+            inline=False,
+        )
+
+        try:
+            members_of_gov = self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT)
+            members_of_gov = [
+                f"{mg.mention} {discord.utils.escape_markdown(str(mg))}"
+                for mg in members_of_gov.members
+            ] or ["-"]
+        except exceptions.RoleNotFoundError:
+            members_of_gov = ["-"]
+
+        embed.description = f"There are {len(members_of_gov) if members_of_gov[0] != "-" else "0"} members of government in total."
+
+        return embed
+
+    async def _build_court_overview_embed(self) -> text.SafeEmbed:
+        embed = text.SafeEmbed()
+        embed.set_author(
+            name=f"{self.bot.mk.courts_term} of {self.bot.mk.NATION_FULL_NAME}",
+            icon_url=self.bot.mk.NATION_ICON_URL,
+        )
+
+        justices = self.get_justices() or ["-"]
+        judges = self.get_judges() or ["-"]
+
+        embed.add_field(
+            name=f"{self.bot.mk.COURT_NAME} {self.bot.mk.COURT_JUSTICE_NAME}s ({len(justices) if justices[0] != "-" else 0})",
+            value="\n".join(justices),
+            inline=False,
+        )
+
+        if self.bot.mk.COURT_HAS_INFERIOR_COURT:
+            embed.add_field(
+                name=f"{self.bot.mk.COURT_INFERIOR_NAME} {self.bot.mk.COURT_JUDGE_NAME}s ({len(judges) if judges[0] != "-" else 0})",
+                value="\n".join(judges),
+                inline=False,
+            )
+
+        embed.add_field(
+            name="Links",
+            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE}) *(try [laws.democraciv.com](https://laws.democraciv.com) too!)*",
+            inline=False,
+        )
+
+        return embed
+
+    async def _build_legislature_info_embeds(
+        self, *, slash: bool = False
+    ) -> list[text.SafeEmbed]:
+        cmd_prefix = "/" if slash else "-"
+        help_ref = f"See `/{'senate' if slash else '-help senate'}` for all available commands."
+
+        embed = text.SafeEmbed()
+        embed.set_author(
+            name="The Commons and the Senate",
+            icon_url=self.bot.mk.NATION_ICON_URL,
+        )
+
+        com_active_leg_session = await self.get_active_leg_session(house="commons")
+        sen_active_leg_session = await self.get_active_leg_session(house="senate")
+
+        embed.description = (
+            "In MK13, the Legislature consists of two chambers, with the Commons as the Lower House and the Senate as the Upper House. "
+            "As such, each house gets their own commands for managing their respective legislative sessions."
+        )
+
+        com_session = (
+            "No active session."
+            if com_active_leg_session is None
+            else f"Session #{com_active_leg_session.mk13_house_id} - {com_active_leg_session.status.value}"
+        )
+        sen_session = (
+            "No active session."
+            if sen_active_leg_session is None
+            else f"Session #{sen_active_leg_session.mk13_house_id} - {sen_active_leg_session.status.value}"
+        )
+
+        com_cmds = (
+            f"- `{cmd_prefix}commons`\n"
+            f"- `{cmd_prefix}commons session`\n"
+            f"- `{cmd_prefix}commons submit`"
+        )
+        sen_cmds = (
+            f"- `{cmd_prefix}senate`\n"
+            f"- `{cmd_prefix}senate session`\n"
+            f"- `{cmd_prefix}senate submit`"
+        )
+
+        if not slash:
+            com_cmds += f"\n\nSee `-help commons` for all available commands."
+            sen_cmds += f"\n\nSee `-help senate` for all available commands."
+
+        embed.add_field(
+            name="Commons",
+            value=f"{com_session}\n\n{com_cmds}",
+            inline=True,
+        )
+        embed.add_field(
+            name="Senate",
+            value=f"{sen_session}\n\n{sen_cmds}",
+            inline=True,
+        )
+
+        if slash:
+            return [embed]
+
+        embed2 = text.SafeEmbed()
+        embed2.set_author(
+            name="Additional Commands",
+            icon_url=self.bot.mk.NATION_ICON_URL,
+        )
+        embed2.add_field(
+            name="Laws",
+            value="- `-laws`\n- `-laws search`\n- `-laws repeal`\n- ...\n- `-help laws`",
+            inline=True,
+        )
+        embed2.add_field(
+            name="Bills",
+            value="- `-bills`\n- `-bills search`\n- `-bills advanced-search`\n- `-bills sponsor`\n- ...\n- `-help bills`",
+            inline=True,
+        )
+        embed2.add_field(
+            name="Motions",
+            value="- `-motions`\n- `-motions search`\n- `-motions from <person_or_party>`\n- ...\n- `-help motions`",
+            inline=True,
+        )
+
+        return [embed, embed2]
+
+    @staticmethod
+    def _mk12_bill_from_citizen_has_enough_sponsors(bill) -> bool:
+        if bill.sponsors:
+            return True
+        return False
+
+    async def _build_session_entries(
+        self,
+        *,
+        ctx,
+        house: str = "senate",
+        session: models.Session,
+        sponsor_filter: models.SessionSponsorFilter = None,
+    ) -> list[str]:
+        entries = []
+        sponsors_needed = ""
+        bills = [await models.Bill.convert(ctx, b_id) for b_id in session.bills]
+        amount_of_all_bills = len(bills)
+
+        if sponsor_filter:
+            filter_func, sponsors_needed = sponsor_filter
+            bills = list(filter(filter_func, bills))
+
+        if house == "senate":
+            pretty_bills = [
+                f"* {b.formatted} ({len(b.sponsors)} sponsor{'s' if len(b.sponsors) != 1 else ''}) {':warning:' if not self._mk12_bill_from_citizen_has_enough_sponsors(b) else ''}"
+                for b in bills
+            ] or ["-"]
+        else:
+            pretty_bills = [
+                f"* {b.formatted} ({len(b.sponsors)} sponsor{'s' if len(b.sponsors) != 1 else ''})"
+                for b in bills
+            ] or ["-"]
+
+        speaker = session.speaker or context.MockUser()
+
+        if house == "senate":
+            presider_label = self.bot.mk.senator_presiding_term
+            cmd = self.bot.mk.LEGISLATURE_COMMAND
+        else:
+            presider_label = "Presiding Speaker"
+            cmd = "commons"
+
+        description = (
+            f"### {presider_label}\n{speaker.mention}\n"
+            f"### Opened\n<t:{int(session.opened_on.timestamp())}:F>\n"
+        )
+
+        if session.voting_started_on:
+            description = f"{description[:-1]}\n### Voting started\n<t:{int(session.voting_started_on.timestamp())}:F> "
+
+        if session.closed_on:
+            description = (
+                f"{description[:-1]}\n### Closed\n"
+                f"<t:{int(session.closed_on.timestamp())}:F> "
+            )
+
+        if session.status is models.SessionStatus.SUBMISSION_PERIOD:
+            description = (
+                f"{description[:-1]}\n\n-# Bills & Motions can be submitted to this session with "
+                f"`{config.BOT_PREFIX}{cmd} submit`. Any old bills from "
+                f"previous sessions that failed can be resubmitted to the current submission-period session "
+                f"in their origin house with `{config.BOT_PREFIX}bill resubmit`."
+            )
+
+        entries.append(description)
+        entries.append(f"### Status\n{session.status.value}")
+
+        if session.vote_form:
+            entries.append(f"### Voting Form\n{session.vote_form}")
+
+        amount = (
+            f"{len(bills)}/{amount_of_all_bills}"
+            if sponsor_filter
+            else amount_of_all_bills
+        )
+
+        entries.append(
+            f"### Submitted Bills{'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'}"
+            f" ({amount})"
+        )
+
+        if not sponsor_filter:
+            entries.append(
+                f"-# You can filter the list of submitted bills & motions of a session by their amount of sponsors. "
+                f"For example, using `{config.BOT_PREFIX}{cmd} session >=2` "
+                f"would only show bills & motions that have 2 or more sponsors. See the help page of this command "
+                f"for more information.\n"
+            )
+
+        entries.extend(pretty_bills)
+
+        if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
+            motions = [(await models.Motion.convert(ctx, m)) for m in session.motions]
+
+            amount_of_all_motions = len(motions)
+
+            if sponsor_filter:
+                motions = list(filter(filter_func, motions))
+
+            pretty_motions = [
+                f"* {m.formatted} ({len(m.sponsors)} sponsor{'s' if len(m.sponsors) != 1 else ''})"
+                for m in motions
+            ] or ["-"]
+            m_amount = (
+                f"{len(motions)}/{amount_of_all_motions}"
+                if sponsor_filter
+                else amount_of_all_motions
+            )
+            entries.append(
+                f"### Submitted Motions {'' if not sponsor_filter else f' ({sponsors_needed} sponsors)'} ({m_amount})"
+            )
+
+            last_motion = pretty_motions.pop()
+            last_motion += "\n"
+            pretty_motions.append(last_motion)
+            entries.extend(pretty_motions)
+
+        return entries
+
+    async def _build_statistics_embed(
+        self,
+        *,
+        ctx=None,
+        house: str = "senate",
+        target=None,
+    ) -> text.SafeEmbed:
+        if target is None:
+            query = f"""SELECT COUNT(id) FROM legislature_session WHERE house = '{house}'
+                       UNION ALL
+                       SELECT COUNT(id) FROM bill
+                       UNION ALL
+                       SELECT COUNT(id) FROM bill WHERE status = $1
+                       UNION ALL
+                       SELECT COUNT(id) FROM motion"""
+
+            amounts = await self.bot.db.fetch(query, models.BillIsLaw.flag.value)
+
+            submitter = await self.bot.db.fetch("SELECT submitter from bill")
+            pretty_top_submitter = self.format_stats(
+                record=submitter, record_key="submitter", stats_name="bills"
+            )
+
+            speaker = await self.bot.db.fetch(
+                f"SELECT speaker from legislature_session WHERE house = '{house}'"
+            )
+            pretty_top_speaker = self.format_stats(
+                record=speaker, record_key="speaker", stats_name="sessions"
+            )
+
+            lawmaker = await self.bot.db.fetch(
+                "SELECT submitter from bill WHERE status = $1",
+                models.BillIsLaw.flag.value,
+            )
+            pretty_top_lawmaker = self.format_stats(
+                record=lawmaker, record_key="submitter", stats_name="laws"
+            )
+
+            embed = text.SafeEmbed()
+
+            if house == "senate":
+                author_name = (
+                    f"Statistics for the {self.bot.mk.NATION_ADJECTIVE} Senate"
+                )
+                top_speaker_field_name = f"Top {self.bot.mk.senator_presiding_term}s of the {self.bot.mk.LEGISLATURE_NAME}"
+            else:
+                author_name = "Statistics for the Commons"
+                top_speaker_field_name = (
+                    f"Top {self.bot.mk.speaker_term}s of the Commons"
+                )
+
+            embed.set_author(
+                icon_url=self.bot.mk.NATION_ICON_URL,
+                name=author_name,
+            )
+
+            general_value = (
+                f"Sessions: {amounts[0]['count']}\nSubmitted Bills: {amounts[1]['count']}\n"
+                f"Submitted Motions: {amounts[3]['count']}\nActive Laws: {amounts[2]['count']}"
+            )
+
+            embed.add_field(name="General Statistics", value=general_value)
+            embed.add_field(
+                name=top_speaker_field_name,
+                value=pretty_top_speaker,
+                inline=False,
+            )
+            embed.add_field(
+                name="Top Bill Submitters", value=pretty_top_submitter, inline=False
+            )
+            embed.add_field(
+                name="Top Lawmakers", value=pretty_top_lawmaker, inline=False
+            )
+            return embed
+
+        query = """SELECT COUNT(*) FROM bill WHERE submitter = ANY($1::bigint[])
+                               UNION ALL
+                               SELECT COUNT(*) FROM bill WHERE submitter = ANY($1::bigint[]) AND status = $2
+                               UNION ALL
+                               SELECT COUNT(*) FROM motion WHERE submitter = ANY($1::bigint[])
+                               UNION ALL
+                               SELECT COUNT(id) FROM bill_sponsor WHERE sponsor = ANY($1::bigint[])
+                               UNION ALL
+                               SELECT COUNT(bill_sponsor.sponsor) FROM bill_sponsor JOIN bill
+                               ON bill_sponsor.bill_id = bill.id WHERE bill.submitter = ANY($1::bigint[])"""
+
+        if isinstance(target, converter.PoliticalParty):
+            ids = [person.id for person in target.role.members]
+            icon_url = await target.get_logo() or self.bot.mk.NATION_ICON_URL or None
+            if house == "senate":
+                name = (
+                    f"Members of {target.role.name} in the "
+                    f"{self.bot.mk.NATION_ADJECTIVE} {self.bot.mk.LEGISLATURE_NAME}"
+                )
+            else:
+                name = f"Members of {target.role.name} in the Commons"
+        else:
+            ids = [target.id]
+            icon_url = target.display_avatar.url
+            if house == "senate":
+                name = (
+                    f"{target.display_name} in the {self.bot.mk.NATION_ADJECTIVE} "
+                    f"{self.bot.mk.LEGISLATURE_NAME}"
+                )
+            else:
+                name = f"{target.display_name} in the Commons"
+
+        _stats = await self.bot.db.fetch(query, ids, models.BillIsLaw.flag.value)
+
+        embed = text.SafeEmbed()
+        embed.set_author(icon_url=icon_url, name=name)
+        embed.add_field(name="Bill Submissions", value=_stats[0]["count"], inline=True)
+        embed.add_field(
+            name="Motion Submissions", value=_stats[2]["count"], inline=True
+        )
+        embed.add_field(
+            name="Amount of Laws written", value=_stats[1]["count"], inline=False
+        )
+        embed.add_field(
+            name="Amount of Bills sponsored", value=_stats[3]["count"], inline=False
+        )
+        embed.add_field(
+            name="Amount of Sponsors for own Bills",
+            value=_stats[4]["count"],
+            inline=False,
+        )
         return embed
