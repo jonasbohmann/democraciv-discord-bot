@@ -21,11 +21,6 @@ DM_SETTING_LABELS = {
 
 
 class MetaSlash(commands.Cog):
-    slash = app_commands.Group(
-        name="slash",
-        description="Owner-only slash command staging tools.",
-    )
-
     def __init__(self, bot):
         self.bot = bot
 
@@ -34,6 +29,7 @@ class MetaSlash(commands.Cog):
             "SELECT * FROM dm_setting WHERE user_id = $1",
             user,
         )
+
         if not settings:
             settings = await self.bot.db.fetchrow(
                 "INSERT INTO dm_setting (user_id) VALUES ($1) RETURNING *",
@@ -46,10 +42,12 @@ class MetaSlash(commands.Cog):
     async def about(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="about")
         await ctx.defer()
+
         invite_url = discord.utils.oauth_url(
             self.bot.user.id,
             permissions=discord.Permissions(8),
         )
+
         owner = getattr(self.bot, "owner", None)
         owner_name = str(owner) if owner else "DerJonas"
         owner_avatar = (
@@ -72,13 +70,14 @@ class MetaSlash(commands.Cog):
         )
         embed.add_field(
             name="List of Commands",
-            value="Use `/commands` for slash commands or the legacy text help command.",
+            value=f"Check `{config.BOT_PREFIX}commands` and `{config.BOT_PREFIX}help`",
             inline=False,
         )
         embed.set_author(
             icon_url=owner_avatar,
             name=f"Made by {owner_name}",
         )
+
         embed.set_footer(text=f"Assisting {self.bot.dciv.name} since")
         embed.timestamp = self.bot.user.created_at
         await ctx.send(embed=embed)
@@ -153,8 +152,10 @@ class MetaSlash(commands.Cog):
                 [command for command in cog.walk_commands() if not command.hidden],
                 key=lambda c: c.qualified_name,
             )
+
             amounts += len(cog_cmds)
             commands_list = [f"`{p}{command.qualified_name}`" for command in cog_cmds]
+
             if i == 0:
                 description_text.append(f"**__{cog.qualified_name}__**\n")
                 description_text.append("\n".join(commands_list))
@@ -178,8 +179,10 @@ class MetaSlash(commands.Cog):
                 f"\n\n{' '.join(description_text)}"
             ),
         )
+
         if field_text:
             embed.add_field(name="\u200b", value=" ".join(field_text))
+
         await ctx.send(embed=embed)
 
     @app_commands.command(
@@ -211,12 +214,15 @@ class MetaSlash(commands.Cog):
         leg_session_withdraw: bool = None,
         party_join_leave: bool = None,
     ):
+
         ctx = slash_context.from_interaction(
             interaction,
             command_name="dm-settings",
             ephemeral=True,
         )
+
         await ctx.defer(ephemeral=True)
+
         settings = await self.ensure_dm_settings(ctx.author.id)
         provided = {
             "ban_kick_mute": ban_kick_mute,
@@ -244,6 +250,7 @@ class MetaSlash(commands.Cog):
             key: settings[key] if value is None else value
             for key, value in provided.items()
         }
+
         await self.bot.db.execute(
             "UPDATE dm_setting SET ban_kick_mute = $1, leg_session_open = $2, "
             "leg_session_update = $3, leg_session_submit = $4, "
@@ -251,63 +258,8 @@ class MetaSlash(commands.Cog):
             *values.values(),
             ctx.author.id,
         )
+
         await ctx.send(f"{config.YES} Your DM settings were updated.", ephemeral=True)
-
-    @slash.command(
-        name="tree", description="Show the current in-memory app command tree."
-    )
-    @slash_checks.is_owner()
-    async def slash_tree(self, interaction: discord.Interaction):
-        ctx = slash_context.from_interaction(
-            interaction,
-            command_name="slash tree",
-            ephemeral=True,
-        )
-        await ctx.defer(ephemeral=True)
-        commands_ = sorted(
-            self.bot.tree.walk_commands(),
-            key=lambda command: command.qualified_name,
-        )
-        entries = [
-            f"`/{command.qualified_name}` - {command.description or 'No description'}"
-            for command in commands_
-        ]
-        await ui.send_pages(
-            ctx,
-            entries=entries,
-            title=f"Current app command tree ({len(entries)} entries)",
-            per_page=15,
-            empty_message="No slash commands are loaded.",
-            ephemeral=True,
-        )
-
-    @slash.command(
-        name="sync", description="Sync slash commands to one guild for staging."
-    )
-    @slash_checks.is_owner()
-    async def slash_sync(
-        self,
-        interaction: discord.Interaction,
-        guild_id: str = None,
-    ):
-        ctx = slash_context.from_interaction(
-            interaction,
-            command_name="slash sync",
-            ephemeral=True,
-        )
-        await ctx.defer(ephemeral=True)
-        target_id = int(guild_id) if guild_id else (ctx.guild.id if ctx.guild else None)
-        if target_id is None:
-            return await ctx.send(f"{config.NO} No guild.", ephemeral=True)
-
-        target = discord.Object(id=target_id)
-        self.bot.tree.clear_commands(guild=target)
-        self.bot.tree.copy_global_to(guild=target)
-        synced = await self.bot.tree.sync(guild=target)
-        await ctx.send(
-            f"{config.YES} Synced {len(synced)} slash command(s) to guild `{target_id}`.",
-            ephemeral=True,
-        )
 
 
 async def setup(bot):

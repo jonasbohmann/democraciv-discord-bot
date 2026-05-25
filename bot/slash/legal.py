@@ -685,7 +685,7 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         await ctx.defer()
         await self._paginate_all_(ctx, model=models.Law)
 
-    @law.command(name="from", description="List laws submitted by a member or party.")
+    @law.command(name="from", description="List laws submitted by a person or party.")
     @app_commands.describe(
         person="Person to list laws from.",
         party="Political party to list laws from.",
@@ -874,20 +874,20 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
                 )
                 await fts_pages.start(ctx)
 
-    @bill.command(name="from", description="List bills submitted by a member or party.")
+    @bill.command(name="from", description="List bills submitted by a person or party.")
     @app_commands.describe(
-        member="Member or user to list bills from.",
+        person="Person to list bills from.",
         party="Political party to list bills from.",
     )
     async def bill_from(
         self,
         interaction: discord.Interaction,
-        member: discord.User = None,
+        person: discord.User = None,
         party: PartyOption = None,
     ):
         ctx = slash_context.from_interaction(interaction, command_name="bill")
         await ctx.defer()
-        target = party or member or ctx.author
+        target = party or person or ctx.author
         await self._from_person_model(ctx, model=models.Bill, member_or_party=target)
 
     @bill.command(name="sponsor", description="Sponsor one submitted bill.")
@@ -1006,21 +1006,21 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
                 await fts_pages.start(ctx)
 
     @motion.command(
-        name="from", description="List motions submitted by a member or party."
+        name="from", description="List motions submitted by a person or party."
     )
     @app_commands.describe(
-        member="Member or user to list motions from.",
+        person="Person to list motions from.",
         party="Political party to list motions from.",
     )
     async def motion_from(
         self,
         interaction: discord.Interaction,
-        member: discord.User = None,
+        person: discord.User = None,
         party: PartyOption = None,
     ):
         ctx = slash_context.from_interaction(interaction, command_name="motion")
         await ctx.defer()
-        target = party or member or ctx.author
+        target = party or person or ctx.author
         await self._from_person_model(ctx, model=models.Motion, member_or_party=target)
 
     @motion.command(name="sponsor", description="Sponsor one submitted motion.")

@@ -1,16 +1,15 @@
 import collections
 import typing
-
 import asyncpg
 import discord
+
 from discord import app_commands
 from discord.ext import commands
 from discord.utils import escape_markdown
 
 from bot.config import config
 from bot.module.npcs import AccessToNPCConverter, AnyNPCConverter, NPCConverter
-from bot.slash import context as slash_context
-from bot.slash import forms, transformers, ui
+from bot.slash import context as slash_context, forms, transformers, ui
 from bot.utils import exceptions, paginator, text
 
 OwnedNPCOption = app_commands.Transform[NPCConverter, transformers.NPCTransformer]
@@ -19,6 +18,7 @@ AccessNPCOption = app_commands.Transform[
     AccessToNPCConverter,
     transformers.AccessToNPCTransformer,
 ]
+
 ChannelOption = typing.Union[discord.TextChannel, discord.CategoryChannel]
 
 
@@ -30,6 +30,7 @@ class NPCFormModal(forms.ErrorHandledModal):
         npc: NPCConverter = None,
     ):
         super().__init__(title="Edit NPC" if npc else "Create NPC")
+
         self.cog = cog
         self.npc = npc
         self.name = forms.text_label(
@@ -37,6 +38,7 @@ class NPCFormModal(forms.ErrorHandledModal):
             default=npc.name if npc else None,
             max_length=80,
         )
+
         self.avatar_url = forms.text_label(
             label="Avatar URL",
             description="Optional permanent image URL.",
@@ -44,12 +46,14 @@ class NPCFormModal(forms.ErrorHandledModal):
             required=False,
             max_length=512,
         )
+
         self.trigger_phrase = forms.text_label(
             label="Trigger Phrase",
             description="Use `text` where the message content should go, e.g. <<text",
             default=npc.trigger_phrase if npc else None,
             max_length=100,
         )
+
         self.add_item(self.name)
         self.add_item(self.avatar_url)
         self.add_item(self.trigger_phrase)
@@ -87,6 +91,7 @@ class NPCPeopleModal(forms.ErrorHandledModal):
         add: bool,
     ):
         super().__init__(title=f"{'Share' if add else 'Unshare'} NPC")
+
         self.cog = cog
         self.npc = npc
         self.add = add
@@ -152,8 +157,9 @@ class NPCAutomaticChannelsModal(forms.ErrorHandledModal):
 class NPCSlash(commands.Cog):
     npc = app_commands.Group(
         name="npc",
-        description="Create and manage roleplay NPCs.",
+        description="Create and manage NPCs.",
     )
+
     npc_automatic = app_commands.Group(
         name="automatic",
         description="Manage automatic NPC mode.",
@@ -221,6 +227,7 @@ class NPCSlash(commands.Cog):
         avatar_url: str,
         trigger_phrase: str,
     ):
+
         name = self.validate_name(name)
         avatar_url = (avatar_url or "").strip() or None
         trigger_phrase = self.validate_trigger_phrase(trigger_phrase)
@@ -385,7 +392,7 @@ class NPCSlash(commands.Cog):
                 "not bound to any server, every NPC that you make on this server can "
                 "also be used in every other server I am in.\n\nServer administrators "
                 "can disable NPC usage on their server for any reason with "
-                "the `/server npc-usage` command.\n\n\nSee `/help` or `/commands` to see "
+                f"the `/server npc-usage` command.\n\n\nSee `{config.BOT_PREFIX}help` or ``{config.BOT_PREFIX}commands` to see "
                 "every NPC-related command and learn more about them."
             )
         )
@@ -395,15 +402,16 @@ class NPCSlash(commands.Cog):
         )
         await ctx.send(embed=embed)
 
-    @npc.command(name="list", description="List NPCs someone has access to.")
+    @npc.command(name="list", description="List all NPCs someone has access to.")
     async def list_npcs(
         self,
         interaction: discord.Interaction,
-        member: discord.Member = None,
+        person: discord.Member = None,
     ):
+
         ctx = slash_context.from_interaction(interaction, command_name="npc list")
         await ctx.defer()
-        member = member or ctx.author
+        member = person or ctx.author
         npc_ids = self.legacy_cog._npc_access_cache[member.id]
         records = [self.legacy_cog._npc_cache[npc_id] for npc_id in npc_ids]
         records.sort(key=lambda record: record["id"])
@@ -569,11 +577,11 @@ class NPCSlash(commands.Cog):
         self,
         interaction: discord.Interaction,
         npc: OwnedNPCOption,
-        member: discord.Member,
-    ):
+        person: discord.Member,
+    ) -> None:
         ctx = slash_context.from_interaction(interaction, command_name="npc share")
         await ctx.defer()
-        await self.update_access(ctx, npc=npc, people=[member], add=True)
+        await self.update_access(ctx, npc=npc, people=[person], add=True)
 
     @npc.command(name="unshare", description="Remove one person's access to your NPC.")
     @app_commands.guild_only()
@@ -581,11 +589,11 @@ class NPCSlash(commands.Cog):
         self,
         interaction: discord.Interaction,
         npc: OwnedNPCOption,
-        member: discord.Member,
+        person: discord.Member,
     ):
         ctx = slash_context.from_interaction(interaction, command_name="npc unshare")
         await ctx.defer()
-        await self.update_access(ctx, npc=npc, people=[member], add=False)
+        await self.update_access(ctx, npc=npc, people=[person], add=False)
 
     @npc.command(
         name="share-bulk", description="Allow multiple people to use your NPC."

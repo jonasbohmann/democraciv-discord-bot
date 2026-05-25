@@ -104,7 +104,7 @@ class UtilitySlash(commands.Cog):
 
     @app_commands.command(
         name="delete-press-post",
-        description="Delete one Reddit press post created by the bot.",
+        description="Delete a Reddit press post created by the bot.",
     )
     async def delete_press_post(self, interaction: discord.Interaction, url: str):
         ctx = slash_context.from_interaction(

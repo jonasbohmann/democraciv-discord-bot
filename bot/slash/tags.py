@@ -465,10 +465,11 @@ class TagsSlash(commands.Cog):
         )
         await pages.start(ctx)
 
-    @tag.command(name="show", description="Show one tag.")
+    @tag.command(name="show", description="Show a tag.")
     async def show(self, interaction: discord.Interaction, tag: TagOption):
         ctx = slash_context.from_interaction(interaction, command_name="tag show")
         await ctx.defer()
+
         await self.send_tag_content(ctx, tag)
 
     @tag.command(name="local", description="List local tags on this server.")
@@ -494,16 +495,16 @@ class TagsSlash(commands.Cog):
         )
         await pages.start(ctx)
 
-    @tag.command(name="from", description="List tags created by one member.")
+    @tag.command(name="from", description="List tags created by someone.")
     @app_commands.guild_only()
     async def from_member(
         self,
         interaction: discord.Interaction,
-        member: discord.Member = None,
+        person: discord.Member = None,
     ):
         ctx = slash_context.from_interaction(interaction, command_name="tag from")
         await ctx.defer()
-        member = member or ctx.author
+        member = person or ctx.author
         records = await self.bot.db.fetch(
             "SELECT * FROM tag WHERE author = $1 AND guild_id = $2 ORDER BY uses desc",
             member.id,
@@ -572,7 +573,7 @@ class TagsSlash(commands.Cog):
         )
         await self.send_tag_content(ctx, tag)
 
-    @tag.command(name="info", description="Show metadata about one tag.")
+    @tag.command(name="info", description="Show metadata about a tag.")
     @app_commands.guild_only()
     async def info(self, interaction: discord.Interaction, tag: TagOption):
         ctx = slash_context.from_interaction(interaction, command_name="tag info")
@@ -651,10 +652,11 @@ class TagsSlash(commands.Cog):
     async def stats(
         self,
         interaction: discord.Interaction,
-        member: discord.Member = None,
+        person: discord.Member = None,
     ):
         ctx = slash_context.from_interaction(interaction, command_name="tag stats")
         await ctx.defer()
+        member = person
 
         if member:
             amount = await self.bot.db.fetch(
@@ -964,13 +966,13 @@ class TagsSlash(commands.Cog):
         self,
         interaction: discord.Interaction,
         tag: OwnedTagOption,
-        member: discord.Member,
+        person: discord.Member,
     ):
         ctx = slash_context.from_interaction(
             interaction, command_name="tag collaborator add"
         )
         await ctx.defer()
-        await self.update_collaborators(ctx, tag=tag, people=[member], add=True)
+        await self.update_collaborators(ctx, tag=tag, people=[person], add=True)
 
     @tag_collaborator.command(
         name="remove", description="Remove one collaborator from a tag."
@@ -980,13 +982,13 @@ class TagsSlash(commands.Cog):
         self,
         interaction: discord.Interaction,
         tag: OwnedTagOption,
-        member: discord.Member,
+        person: discord.Member,
     ):
         ctx = slash_context.from_interaction(
             interaction, command_name="tag collaborator remove"
         )
         await ctx.defer()
-        await self.update_collaborators(ctx, tag=tag, people=[member], add=False)
+        await self.update_collaborators(ctx, tag=tag, people=[person], add=False)
 
     @tag_collaborator.command(
         name="bulk-add", description="Add multiple collaborators."

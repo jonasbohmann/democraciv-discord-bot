@@ -1609,22 +1609,22 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
     @senate.command(
         name="from",
-        description="List bills and motions submitted by a member or party.",
+        description="List bills and motions submitted by a person or party.",
     )
     @app_commands.describe(
-        member="Member or user to list submissions for.",
+        person="Person to list submissions for.",
         party="Political party to list submissions for.",
     )
     async def senate_from(
         self,
         interaction: discord.Interaction,
-        member: discord.Member = None,
+        person: discord.Member = None,
         party: PartyOption = None,
     ):
         ctx = slash_context.from_interaction(interaction, command_name="senate from")
         await ctx.defer()
 
-        member_or_party = member or party or ctx.author
+        member_or_party = person or party or ctx.author
 
         bills = await self._from_person_model(
             ctx, member_or_party=member_or_party, model=models.Bill, paginate=False
@@ -1654,22 +1654,22 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
     @commons.command(
         name="from",
-        description="List bills and motions submitted by a member or party.",
+        description="List bills and motions submitted by a person or party.",
     )
     @app_commands.describe(
-        member="Member or user to list submissions for.",
+        person="Person to list submissions for.",
         party="Political party to list submissions for.",
     )
     async def commons_from(
         self,
         interaction: discord.Interaction,
-        member: discord.Member = None,
+        person: discord.Member = None,
         party: PartyOption = None,
     ):
         ctx = slash_context.from_interaction(interaction, command_name="commons from")
         await ctx.defer()
 
-        member_or_party = member or party or ctx.author
+        member_or_party = person or party or ctx.author
 
         bills = await self._from_person_model(
             ctx, member_or_party=member_or_party, model=models.Bill, paginate=False
@@ -1822,16 +1822,16 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
     @senate.command(
         name="statistics",
-        description="Show Senate statistics, optionally for one member or party.",
+        description="Show Senate statistics, optionally for one person or party.",
     )
     @app_commands.describe(
-        member="Member or user to show statistics for.",
+        person="Person to show statistics for.",
         party="Political party to show statistics for.",
     )
     async def senate_statistics(
         self,
         interaction: discord.Interaction,
-        member: discord.User = None,
+        person: discord.User = None,
         party: PartyOption = None,
     ):
         ctx = slash_context.from_interaction(
@@ -1839,7 +1839,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         )
         await ctx.defer()
         embed = await self._build_statistics_embed(
-            ctx=ctx, house="senate", target=member or party
+            ctx=ctx, house="senate", target=person or party
         )
         await ctx.send(embed=embed)
 
@@ -1871,16 +1871,16 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
     @commons.command(
         name="statistics",
-        description="Show Commons statistics, optionally for one member or party.",
+        description="Show Commons statistics, optionally for one person or party.",
     )
     @app_commands.describe(
-        member="Member or user to show statistics for.",
+        person="Person to show statistics for.",
         party="Political party to show statistics for.",
     )
     async def commons_statistics(
         self,
         interaction: discord.Interaction,
-        member: discord.User = None,
+        person: discord.User = None,
         party: PartyOption = None,
     ):
         ctx = slash_context.from_interaction(
@@ -1889,7 +1889,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         )
         await ctx.defer()
         embed = await self._build_statistics_embed(
-            ctx=ctx, house="commons", target=member or party
+            ctx=ctx, house="commons", target=person or party
         )
         await ctx.send(embed=embed)
 

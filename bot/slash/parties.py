@@ -1,16 +1,20 @@
 import re
 import typing
-
 import asyncpg
 import discord
+
 from discord import app_commands
 from discord.ext import commands
 from discord.utils import escape_markdown
 
 from bot.config import config
-from bot.slash import checks as slash_checks
-from bot.slash import context as slash_context
-from bot.slash import forms, transformers, ui
+from bot.slash import (
+    checks as slash_checks,
+    context as slash_context,
+    forms,
+    transformers,
+    ui,
+)
 from bot.utils import converter, exceptions, text
 from bot.utils.exceptions import ForbiddenTask
 

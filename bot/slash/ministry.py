@@ -32,41 +32,12 @@ def _member_or_dash(member: discord.Member, term: str) -> str:
 class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
     ministry = app_commands.Group(
         name=MINISTRY_COMMAND_NAME,
-        description="Executive overview and bill action commands.",
+        description="Executive Branch overview and bill action commands.",
         guild_only=True,
     )
 
     def __init__(self, bot):
         self.bot = bot
-
-    def _links(self, *, bill: models.Bill = None):
-        links = []
-
-        if bill is not None:
-            links.extend(
-                [
-                    ui.LayoutLink("Document", bill.link, "\U0001f4c3"),
-                    ui.LayoutLink(
-                        "laws.democraciv.com",
-                        f"https://laws.democraciv.com/bill/{bill.id}",
-                        "\U0001f517",
-                    ),
-                ]
-            )
-
-        links.extend(
-            [
-                ui.LayoutLink("Legal Code", self.bot.mk.LEGAL_CODE, "\U00002696"),
-                ui.LayoutLink(
-                    "Worksheet", self.bot.mk.MINISTRY_WORKSHEET, "\U0001f4ca"
-                ),
-                ui.LayoutLink(
-                    "Procedures", self.bot.mk.MINISTRY_PROCEDURES, "\U0001f4d6"
-                ),
-                ui.LayoutLink("Laws Site", "https://laws.democraciv.com", "\U0001f517"),
-            ]
-        )
-        return links
 
     def _advisor_lines(self):
         lines = []
@@ -93,10 +64,12 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
             "SELECT id FROM bill WHERE status = $1 ORDER BY id",
             models.BillAwaitingExecutive.flag.value,
         )
+
         return [await models.Bill.convert(ctx, record["id"]) for record in records]
 
     def _bill_entry(self, bill: models.Bill):
         deadline = bill.executive_deadline_at
+
         if deadline is not None:
             deadline = deadline.replace(tzinfo=datetime.timezone.utc)
             deadline_text = f"<t:{int(deadline.timestamp())}:R>"
@@ -137,6 +110,7 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
             body=consumer.passed_formatted,
             confirm_label=confirm_label,
         )
+
         if not confirmed:
             return await ctx.send("Cancelled.", ephemeral=True)
 
@@ -148,12 +122,12 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
     @ministry.command(
         name="overview", description="Show the current Executive overview."
     )
-    @slash_checks.is_democraciv_guild()
     async def overview(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="executive")
         await ctx.defer()
 
         awaiting = await self._awaiting_bills(ctx)
+
         if not awaiting:
             awaiting_text = "There are no bills awaiting Executive action."
         else:
@@ -206,7 +180,6 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
         await ctx.send(embed=embed)
 
     @ministry.command(name="bills", description="List bills awaiting Executive action.")
-    @slash_checks.is_democraciv_guild()
     async def bills(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="executive")
         await ctx.defer()
@@ -239,7 +212,6 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
                     f"-# View this list in Google Spreadsheets formatting for easy copy & pasting: [Link]({paste_link})\n"
                 )
 
-
             entries.extend([self._bill_entry(bill) for bill in bills])
 
         pages = paginator.SimplePages(
@@ -248,9 +220,10 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
             author="Bills Awaiting Executive Action",
             empty_message="There are no bills awaiting Executive action.",
         )
+
         await pages.start(ctx)
 
-    @ministry.command(name="pass", description="Pass one bill into law.")
+    @ministry.command(name="pass", description="Pass a bill into law.")
     @slash_checks.has_any_democraciv_role(
         mk.DemocracivRole.PRIME_MINISTER,
         mk.DemocracivRole.LT_PRIME_MINISTER,
@@ -272,13 +245,10 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
             success_body=(
                 f"{config.YES} This bill was passed into law and can now be found "
                 "in `/law list` and on laws.democraciv.com."
-                f"\n{config.HINT} If the Legal Code needs to be updated, the "
-                f"{self.bot.mk.speaker_term} can use `/law export` to generate "
-                "a Google Docs Legal Code."
             ),
         )
 
-    @ministry.command(name="veto", description="Veto one bill.")
+    @ministry.command(name="veto", description="Veto a bill.")
     @slash_checks.has_any_democraciv_role(
         mk.DemocracivRole.PRIME_MINISTER,
         mk.DemocracivRole.LT_PRIME_MINISTER,

@@ -139,6 +139,7 @@ class SelfrolesSlash(commands.Cog):
         )
 
     @role.command(name="list", description="List all selfroles on this server.")
+    @app_commands.guild_only()
     async def list_roles(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="role list")
         await ctx.defer()
@@ -169,6 +170,7 @@ class SelfrolesSlash(commands.Cog):
         await ctx.send(embed=embed)
 
     @role.command(name="toggle", description="Join or leave one selfrole.")
+    @app_commands.guild_only()
     async def toggle_role(
         self,
         interaction: discord.Interaction,
@@ -204,12 +206,14 @@ class SelfrolesSlash(commands.Cog):
         )
 
     @role.command(name="create", description="Add a selfrole to this server.")
+    @app_commands.guild_only()
     @slash_checks.has_guild_permissions(manage_roles=True)
     @slash_checks.bot_has_guild_permissions(manage_roles=True)
     async def create_role(self, interaction: discord.Interaction):
         await interaction.response.send_modal(RoleCreateModal(self))
 
     @role.command(name="edit", description="Edit a selfrole join message.")
+    @app_commands.guild_only()
     @slash_checks.has_guild_permissions(manage_roles=True)
     async def edit_role(
         self,
@@ -219,6 +223,7 @@ class SelfrolesSlash(commands.Cog):
         await interaction.response.send_modal(RoleEditModal(self, selfrole=role))
 
     @role.command(name="delete", description="Remove a selfrole from this server.")
+    @app_commands.guild_only()
     @slash_checks.has_guild_permissions(manage_roles=True)
     @slash_checks.bot_has_guild_permissions(manage_roles=True)
     async def delete_role(

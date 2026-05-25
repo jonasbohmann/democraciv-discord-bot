@@ -11,19 +11,17 @@ class GovernmentSlash(commands.Cog, mixin.GovernmentMixin):
         self.bot = bot
 
     @app_commands.command(name="government", description="Show the current government.")
-    @app_commands.guild_only()  # todo
     async def government_overview(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="government")
-        embed = await self._build_government_overview_embed()
+        embed = self._build_government_overview_embed()
         await ctx.send(embed=embed)
 
     @app_commands.command(
-        name="court", description="Show current court members and links."
+        name="court", description="Show current Supreme Court Justices."
     )
-    @app_commands.guild_only()  # todo
     async def court(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="court")
-        embed = await self._build_court_overview_embed()
+        embed = self._build_court_overview_embed()
         await ctx.send(embed=embed)
 
     @app_commands.command(

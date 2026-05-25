@@ -1196,7 +1196,7 @@ class GovernmentMixin:
 
         return "\n".join(fmt) or "None"
 
-    async def _build_government_overview_embed(self) -> text.SafeEmbed:
+    def _build_government_overview_embed(self) -> text.SafeEmbed:
         embed = text.SafeEmbed()
         embed.set_author(
             name=f"Government of {self.bot.mk.NATION_FULL_NAME}",
@@ -1316,7 +1316,7 @@ class GovernmentMixin:
 
         return embed
 
-    async def _build_court_overview_embed(self) -> text.SafeEmbed:
+    def _build_court_overview_embed(self) -> text.SafeEmbed:
         embed = text.SafeEmbed()
         embed.set_author(
             name=f"{self.bot.mk.courts_term} of {self.bot.mk.NATION_FULL_NAME}",
@@ -1350,6 +1350,7 @@ class GovernmentMixin:
     async def _build_legislature_info_embeds(
         self, *, slash: bool = False
     ) -> list[text.SafeEmbed]:
+
         cmd_prefix = "/" if slash else "-"
         help_ref = f"See `/{'senate' if slash else '-help senate'}` for all available commands."
 

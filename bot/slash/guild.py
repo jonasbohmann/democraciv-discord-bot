@@ -1,14 +1,11 @@
 import discord
+
 from discord import app_commands
 from discord.ext import commands
 
 from bot.config import config
-from bot.slash import checks as slash_checks
-from bot.slash import context as slash_context
-from bot.slash import ui
-from bot.utils import exceptions
-from bot.utils import paginator
-from bot.utils import text
+from bot.slash import ui, checks as slash_checks, context as slash_context
+from bot.utils import exceptions, paginator, text
 
 LOG_EVENT_COLUMNS = {
     "message_edits": "logging_message_edit",
@@ -28,14 +25,16 @@ class GuildSlash(commands.Cog):
         description="Show and configure server settings.",
         guild_only=True,
     )
+
     logs = app_commands.Group(
         name="logs",
-        description="Configure event logging.",
+        description="Configure event logging on this server.",
         parent=server,
     )
+
     reddit = app_commands.Group(
         name="reddit",
-        description="Manage subreddit feeds.",
+        description="Manage subreddit feeds on this server.",
         parent=server,
     )
 
@@ -45,6 +44,7 @@ class GuildSlash(commands.Cog):
     async def ensure_guild_settings(self, guild_id: int):
         try:
             settings = self.bot.guild_config[guild_id]
+
             if settings:
                 return settings
         except (AttributeError, TypeError, KeyError):
@@ -79,6 +79,7 @@ class GuildSlash(commands.Cog):
                 name=self.bot.user.name,
                 avatar=await self.bot.avatar_bytes(),
             )
+
         except discord.Forbidden:
             await ctx.send(
                 f"{config.NO} You need to give me the `Manage Webhooks` permission in {channel.mention}.",
@@ -110,10 +111,12 @@ class GuildSlash(commands.Cog):
         await pages.start(ctx)
 
     @server.command(name="overview", description="Show server settings and statistics.")
+    @app_commands.guild_only()
     async def overview(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(
             interaction, command_name="server overview"
         )
+
         await ctx.defer()
         settings = await self.ensure_guild_settings(ctx.guild.id)
         excluded_channels = len(settings["private_channels"])
@@ -130,6 +133,7 @@ class GuildSlash(commands.Cog):
             f"{self.bot.emojify_boolean(settings['tag_creation_allowed'])} Tag Creation by Everyone\n"
             f"{self.bot.emojify_boolean(settings['npc_usage_allowed'])} NPC Usage Allowed",
         )
+
         embed.add_field(
             name="Statistics",
             value=f"{ctx.guild.member_count} members\n"
@@ -138,14 +142,17 @@ class GuildSlash(commands.Cog):
             f"{len(ctx.guild.roles)} roles\n"
             f"{len(ctx.guild.emojis)} custom emojis",
         )
+
         embed.set_footer(
             text=f"Server was created on {ctx.guild.created_at.strftime('%A, %B %d %Y')}"
         )
+
         embed.set_thumbnail(url=ctx.guild_icon)
         await ctx.send(embed=embed)
 
-    @server.command(name="welcome", description="Configure welcome messages.")
+    @server.command(name="welcome", description="Configure welcome message.")
     @slash_checks.has_guild_permissions(manage_guild=True)
+    @app_commands.guild_only()
     async def welcome(
         self,
         interaction: discord.Interaction,
@@ -155,11 +162,14 @@ class GuildSlash(commands.Cog):
     ):
         ctx = slash_context.from_interaction(interaction, command_name="server welcome")
         await ctx.defer()
+
         settings = await self.ensure_guild_settings(ctx.guild.id)
 
         if enabled is None and channel is None and message is None:
             current_channel = await self.bot.get_welcome_channel(ctx.guild)
+
             embed = text.SafeEmbed()
+
             embed.set_author(
                 name=f"Welcome Messages on {ctx.guild.name}", icon_url=ctx.guild_icon
             )
@@ -167,16 +177,20 @@ class GuildSlash(commands.Cog):
                 name="Enabled",
                 value=self.bot.emojify_boolean(settings["welcome_enabled"]),
             )
+
             embed.add_field(
                 name="Welcome Channel",
                 value=current_channel.mention if current_channel else "-",
             )
+
             existing_message = settings["welcome_message"]
             if not existing_message:
                 existing_message = "-"
+
             embed.add_field(
                 name="Welcome Message", value=existing_message, inline=False
             )
+
             return await ctx.send(embed=embed)
 
         await self.bot.db.execute(
@@ -187,6 +201,7 @@ class GuildSlash(commands.Cog):
             settings["welcome_message"] if message is None else message,
             ctx.guild.id,
         )
+
         await self.refresh_settings()
         await ctx.send(f"{config.YES} Welcome Message settings were updated.")
 
@@ -225,6 +240,7 @@ class GuildSlash(commands.Cog):
             interaction,
             command_name="server logs configure",
         )
+
         await ctx.defer()
         settings = await self.ensure_guild_settings(ctx.guild.id)
 

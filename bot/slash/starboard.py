@@ -138,11 +138,12 @@ class StarboardSlash(commands.Cog):
     @starboard.command(
         name="person", description="Show Starboard stats for one person."
     )
-    async def member(self, interaction: discord.Interaction, member: discord.Member):
+    async def member(self, interaction: discord.Interaction, person: discord.Member):
         ctx = slash_context.from_interaction(
             interaction, command_name="starboard person"
         )
         await ctx.defer()
+        member = person
 
         embed = text.SafeEmbed(colour=0xFFAC33)
         embed.set_author(name=member.display_name, icon_url=member.display_avatar.url)
