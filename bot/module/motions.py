@@ -113,8 +113,6 @@ class Motions(context.CustomCog, mixin.GovernmentMixin, name="Motion"):
 
         failed = {}
         passed = []
-        active_sessions = {}
-
         for motion in motion_ids:
             house = self.get_house_for_object(motion)
 
@@ -133,11 +131,7 @@ class Motions(context.CustomCog, mixin.GovernmentMixin, name="Motion"):
                     failed[motion] = "Only Senators can sponsor this motion."
                 continue
 
-            if house not in active_sessions:
-                active_sessions[house] = await self.get_active_leg_session(house=house)
-
-            active_session = active_sessions[house]
-            if not active_session or motion.session.id != active_session.id:
+            if motion.session.closed_on:
                 failed[motion] = (
                     "You can only sponsor motions if the session they were submitted in is still open."
                 )
@@ -183,8 +177,6 @@ class Motions(context.CustomCog, mixin.GovernmentMixin, name="Motion"):
 
         failed = {}
         passed = []
-        active_sessions = {}
-
         for motion in motion_ids:
             house = self.get_house_for_object(motion)
 
@@ -192,11 +184,7 @@ class Motions(context.CustomCog, mixin.GovernmentMixin, name="Motion"):
                 failed[motion] = "You are not a sponsor of this motion."
                 continue
 
-            if house not in active_sessions:
-                active_sessions[house] = await self.get_active_leg_session(house=house)
-
-            active_session = active_sessions[house]
-            if not active_session or motion.session.id != active_session.id:
+            if motion.session.closed_on:
                 failed[motion] = (
                     "You can only unsponsor motions if the session they were submitted in is still open."
                 )

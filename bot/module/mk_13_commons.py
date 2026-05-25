@@ -14,7 +14,11 @@ from discord.ext.commands import Greedy
 from discord.utils import escape_markdown
 
 from bot.config import config, mk
-from bot.module.legislature import ModelChooseView, SubmitChooserView
+from bot.module.legislature import (
+    ModelChooseView,
+    SubmitBillOnlyView,
+    SubmitChooserView,
+)
 from bot.utils import (
     models,
     text,
@@ -178,6 +182,10 @@ class OverrideScheduler(text.AnnouncementScheduler):
 
 class SubmitBillModal(discord.ui.Modal, title=f"Submit a Bill to the Commons"):
 
+    def __init__(self, sessions: typing.Sequence[Session]):
+        super().__init__()
+        mixin.add_submit_session_choice(self, sessions)
+
     google_docs_url = discord.ui.Label(
         text="Link to Google Docs",
         description="Bills are submitted as Google Docs documents. Make sure to copy the public link.",
@@ -233,6 +241,10 @@ class SubmitBillModal(discord.ui.Modal, title=f"Submit a Bill to the Commons"):
 
 
 class SubmitMotionModal(discord.ui.Modal, title=f"Submit a Motion to the Commons"):
+
+    def __init__(self, sessions: typing.Sequence[Session]):
+        super().__init__()
+        mixin.add_submit_session_choice(self, sessions)
 
     intro = discord.ui.TextDisplay(
         content=f"Motions lack a lot of features that bills have, "
@@ -504,7 +516,18 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
 
         """
 
-        session = session or await self.get_last_leg_session(house="commons")
+        if session is None:
+            open_sessions = await self.get_open_leg_sessions(house="commons")
+            if len(open_sessions) == 1:
+                session = open_sessions[0]
+            elif len(open_sessions) > 1:
+                session = await self.prompt_for_leg_session(
+                    ctx, sessions=open_sessions, action="view"
+                )
+                if session is None:
+                    return
+            else:
+                session = await self.get_last_leg_session(house="commons")
 
         if session is None:
             return await ctx.send(
@@ -523,7 +546,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         pages = paginator.SimplePages(
             entries=entries,
             icon=self.bot.mk.NATION_ICON_URL,
-            author=f"Commons Session #{session.mk13_house_id}",
+            author=session.display_name,
         )
         await pages.start(ctx)
 
@@ -534,24 +557,33 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
     async def opensession(self, ctx):
         """Opens a session for the submission period to begin"""
 
-        active_leg_session = await self.get_active_leg_session(house="commons")
+        session_kind = await self.prompt_for_session_kind(
+            ctx, house="commons", action="open"
+        )
+        if session_kind is None:
+            return
 
+        active_leg_session = await self.get_active_leg_session(
+            house="commons", session_kind=session_kind
+        )
         if active_leg_session is not None:
             return await ctx.send(
-                f"{config.NO} There is still an open session, close session #{active_leg_session.mk13_house_id} "
+                f"{config.NO} There is still an open {active_leg_session.display_name}, close it "
                 f"first with `{config.BOT_PREFIX}commons session close`."
             )
 
         new_session = await self.bot.db.fetchrow(
-            "INSERT INTO legislature_session (speaker, opened_on, house, mk13_house_id) VALUES ($1, $2, $3, nextval('mk13_commons_session_seq')) RETURNING id, mk13_house_id",
+            "INSERT INTO legislature_session (speaker, opened_on, house, mk13_house_id, session_kind) VALUES ($1, $2, $3, nextval('mk13_commons_session_seq'), $4) RETURNING id, mk13_house_id",
             ctx.author.id,
             datetime.datetime.utcnow(),
             "commons",
+            session_kind.value,
         )
+        new_session_obj = await Session.convert(ctx, new_session["id"])
         queued_bill_count = await self.attach_pending_bills_to_session(
             house="commons", session_id=new_session["id"]
         )
-        new_session_display_id = new_session["mk13_house_id"]
+        new_session_name = new_session_obj.display_name
 
         p = config.BOT_PREFIX
         l = "commons"
@@ -604,7 +636,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         )
 
         await ctx.send(
-            f"{config.YES} The **submission period** for Commons Session #{new_session_display_id} was opened, and bills & "
+            f"{config.YES} The **submission period** for {new_session_name} was opened, and bills & "
             f"motions can now be submitted."
         )
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
@@ -617,11 +649,10 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
 
         announcement = text.SafeEmbed()
         announcement.description = (
-            f"The cabinet has opened the Submission Period for Commons Session "
-            f"#{new_session_display_id}."
+            f"The cabinet has opened the Submission Period for {new_session_name}."
         )
         announcement.set_author(
-            name=f"Submission Period open for Commons Session #{new_session_display_id}",
+            name=f"Submission Period open for {new_session_name}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         announcement.add_field(
@@ -646,7 +677,9 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
     async def locksession(self, ctx):
         """Lock (deny) submissions for the currently active session"""
 
-        active_leg_session = await self.get_active_leg_session(house="commons")
+        active_leg_session = await self.resolve_active_leg_session_for_text_command(
+            ctx, house="commons", action="lock"
+        )
         p = config.BOT_PREFIX
         l = "commons"
 
@@ -668,14 +701,14 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         )
 
         await self.gov_announcements_channel.send(
-            f"The Speaker has locked submissions for Commons "
-            f"Session #{active_leg_session.mk13_house_id}. Nothing can be submitted until the Speaker decides "
+            f"The Speaker has locked submissions for "
+            f"{active_leg_session.display_name}. Nothing can be submitted until the Speaker decides "
             f"to unlock the session again."
         )
 
         await ctx.send(
-            f"{config.YES} Submissions for Commons "
-            f"Session #{active_leg_session.mk13_house_id} have been locked.\n{config.HINT} Want to allow "
+            f"{config.YES} Submissions for "
+            f"{active_leg_session.display_name} have been locked.\n{config.HINT} Want to allow "
             f"submissions again? Unlock the session with `{p}{l} session unlock`.\n"
             f"{config.HINT} In case you intend to leave submissions locked until voting starts "
             f"in order to use this time as a **debate period**, you can make me post the current list "
@@ -690,7 +723,9 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
     async def unlocksession(self, ctx):
         """Unlock (allow) submissions for the currently active session again"""
 
-        active_leg_session = await self.get_active_leg_session(house="commons")
+        active_leg_session = await self.resolve_active_leg_session_for_text_command(
+            ctx, house="commons", action="unlock"
+        )
         p = config.BOT_PREFIX
         l = "commons"
 
@@ -712,14 +747,14 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         )
 
         await self.gov_announcements_channel.send(
-            f"The Speaker has unlocked submissions for Commons "
-            f"Session #{active_leg_session.mk13_house_id}, meaning you can now submit bills & motions with "
+            f"The Speaker has unlocked submissions for "
+            f"{active_leg_session.display_name}, meaning you can now submit bills & motions with "
             f"`{p}{l} submit` again."
         )
 
         await ctx.send(
-            f"{config.YES} Submissions for Commons "
-            f"Session #{active_leg_session.mk13_house_id} have been unlocked."
+            f"{config.YES} Submissions for "
+            f"{active_leg_session.display_name} have been unlocked."
         )
 
     @session.command(name="vote", aliases=["u", "v", "update"])
@@ -729,7 +764,9 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
     async def updatesession(self, ctx: context.CustomContext):
         """Changes the current session's status to be open for voting"""
 
-        active_leg_session = await self.get_active_leg_session(house="commons")
+        active_leg_session = await self.resolve_active_leg_session_for_text_command(
+            ctx, house="commons", action="start voting for"
+        )
         p = config.BOT_PREFIX
         l = "commons"
 
@@ -760,7 +797,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         await active_leg_session.start_voting(voting_form)
 
         await ctx.send(
-            f"{config.YES} Session #{active_leg_session.mk13_house_id} is now in **voting period**.\n{config.HINT} You can make "
+            f"{config.YES} {active_leg_session.display_name} is now in **voting period**.\n{config.HINT} You can make "
             f"me post the list of bill & motion submissions to **r/{config.DEMOCRACIV_SUBREDDIT}** with "
             f"`{p}{l} session export reddit`.\n{config.HINT} Once you feel "
             f"like enough time has passed for people to vote, close this session with `{p}{l} session close`. "
@@ -770,7 +807,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         announcement = text.SafeEmbed()
         announcement.description = f"Everyone can vote here:\n{voting_form}"
         announcement.set_author(
-            name=f"Voting has started for Commons Session #{active_leg_session.mk13_house_id}",
+            name=f"Voting has started for {active_leg_session.display_name}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
 
@@ -783,7 +820,9 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
     async def closesession(self, ctx):
         """Closes the current session"""
 
-        active_leg_session = await self.get_active_leg_session(house="commons")
+        active_leg_session = await self.resolve_active_leg_session_for_text_command(
+            ctx, house="commons", action="close"
+        )
 
         p = config.BOT_PREFIX
         l = "commons"
@@ -866,15 +905,13 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             f"collective brainstorming once the session really 'starts'.",
         )
 
-        await ctx.send(
-            f"{config.YES} Session #{active_leg_session.mk13_house_id} was closed."
-        )
+        await ctx.send(f"{config.YES} {active_leg_session.display_name} was closed.")
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
 
         announcement = text.SafeEmbed()
         announcement.set_author(
-            name=f"Commons Session #{active_leg_session.mk13_house_id} has been closed",
+            name=f"{active_leg_session.display_name} has been closed",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
 
@@ -899,7 +936,18 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
     async def export_spreadsheet(self, ctx, session: Session = None):
         """Export a session's submissions into copy & paste-able formatting for Google Spreadsheets"""
 
-        session = session or await self.get_last_leg_session(house="commons")
+        if session is None:
+            open_sessions = await self.get_open_leg_sessions(house="commons")
+            if len(open_sessions) == 1:
+                session = open_sessions[0]
+            elif len(open_sessions) > 1:
+                session = await self.prompt_for_leg_session(
+                    ctx, sessions=open_sessions, action="export"
+                )
+                if session is None:
+                    return
+            else:
+                session = await self.get_last_leg_session(house="commons")
 
         if session is None:
             return await ctx.send(f"{config.NO} There hasn't been a session yet.")
@@ -922,7 +970,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             ]
 
             exported = [
-                f"Export of Commons Session {session.mk13_house_id} -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
+                f"Export of {session.display_name} -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
                 f"Xth Session - {session.opened_on.strftime('%B %d %Y')} (Bot Session {session.mk13_house_id})\n\n"
                 "----- Submitted Bills -----\n",
             ]
@@ -938,7 +986,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             spreadsheet_formatting_link = await self.bot.make_paste("\n".join(exported))
 
         await ctx.send(
-            f"__**Spreadsheet Export of Commons Session #{session.mk13_house_id}**__\n"
+            f"__**Spreadsheet Export of {session.display_name}**__\n"
             f"This session's bills and motions were exported into a format that "
             f"you can easily copy & paste into Google Spreadsheets, for example for a "
             f"Legislative Docket: **<{spreadsheet_formatting_link}>**\n\nSee the video below to see how to "
@@ -1076,7 +1124,9 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
     async def export_reddit(self, ctx):
         """Make me post an overview of the current session and its submissions to our subreddit"""
 
-        session = await self.get_active_leg_session(house="commons")
+        session = await self.resolve_active_leg_session_for_text_command(
+            ctx, house="commons", action="post to Reddit"
+        )
 
         if session is None:
             return await ctx.send(
@@ -1145,7 +1195,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
 
         js = {
             "subreddit": config.DEMOCRACIV_SUBREDDIT,
-            "title": f"Commons Session #{session.mk13_house_id} - Docket & Submissions",
+            "title": f"{session.display_name} - Docket & Submissions",
             "content": content,
         }
 
@@ -1155,13 +1205,13 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             raise exceptions.DemocracivBotAPIError()
 
         await ctx.send(
-            f"{config.YES} A summary of session #{session.mk13_house_id} was posted "
+            f"{config.YES} A summary of {session.display_name} was posted "
             f"to r/{config.DEMOCRACIV_SUBREDDIT}."
         )
 
     async def paginate_all_sessions(self, ctx):
         all_sessions = await self.bot.db.fetch(
-            "SELECT id, mk13_house_id, opened_on, closed_on FROM legislature_session WHERE house = 'commons' ORDER BY id"
+            "SELECT id, mk13_house_id, opened_on, closed_on, session_kind FROM legislature_session WHERE house = 'commons' ORDER BY id"
         )
         pretty_sessions = []
 
@@ -1170,13 +1220,19 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
 
             if record["closed_on"]:
                 closed_on = f"<t:{int(record["closed_on"].timestamp())}:D>"
-                pretty_sessions.append(
-                    f"* **Session #{record['mk13_house_id']}**  - {opened_on} to {closed_on}"
+                label = (
+                    f"Emergency Session #{record['mk13_house_id']}"
+                    if record["session_kind"] == models.SessionKind.EMERGENCY.value
+                    else f"Session #{record['mk13_house_id']}"
                 )
+                pretty_sessions.append(f"* **{label}**  - {opened_on} to {closed_on}")
             else:
-                pretty_sessions.append(
-                    f"* **Session #{record['mk13_house_id']}**  - {opened_on}"
+                label = (
+                    f"Emergency Session #{record['mk13_house_id']}"
+                    if record["session_kind"] == models.SessionKind.EMERGENCY.value
+                    else f"Session #{record['mk13_house_id']}"
                 )
+                pretty_sessions.append(f"* **{label}**  - {opened_on}")
 
         pages = paginator.SimplePages(
             entries=pretty_sessions,
@@ -1311,7 +1367,12 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         current_leg_session_id: int,
         current_leg_session_display_id: int,
         bill_modal: SubmitBillModal,
+        current_leg_session_name: str = None,
     ) -> typing.Optional[discord.Embed]:
+        current_leg_session_name = (
+            current_leg_session_name
+            or f"Commons Session #{current_leg_session_display_id}"
+        )
 
         google_docs_url = bill_modal.google_docs_url.component.value
 
@@ -1367,7 +1428,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             await bill.status.log_history(
                 old_status=models.BillSubmitted.flag,
                 new_status=models.BillSubmitted.flag,
-                note=f"Submitted to Commons Session #{current_leg_session_display_id}",
+                note=f"Submitted to {current_leg_session_name}",
             )
 
             id_with_tags = [(bill_id, tag) for tag in tags]
@@ -1382,7 +1443,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         embed = text.SafeEmbed(
             title=f"{name} (#{bill_id})",
             url=google_docs_url,
-            description=f"Hey! A new **bill** was just submitted to Commons Session #{current_leg_session_display_id}.",
+            description=f"Hey! A new **bill** was just submitted to {current_leg_session_name}.",
         )
         embed.add_field(
             name="Type",
@@ -1454,7 +1515,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             f"with `{p}bill search <keyword>`.",
         )
         await ctx.send(
-            f"{config.YES} Your bill `{name}` (#{bill_id}) was submitted for session #{current_leg_session_display_id}.",
+            f"{config.YES} Your bill `{name}` (#{bill_id}) was submitted for {current_leg_session_name}.",
         )
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
@@ -1469,7 +1530,12 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         current_leg_session_id: int,
         current_leg_session_display_id: int,
         motion_modal: SubmitMotionModal,
+        current_leg_session_name: str = None,
     ) -> typing.Optional[discord.Embed]:
+        current_leg_session_name = (
+            current_leg_session_name
+            or f"Commons Session #{current_leg_session_display_id}"
+        )
 
         title = motion_modal.motion_title.component.value
 
@@ -1500,7 +1566,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
 
         embed = text.SafeEmbed(
             title=f"{title} (#{motion_id})",
-            description=f"Hey! A new **motion** was just submitted to session #{current_leg_session_display_id}.",
+            description=f"Hey! A new **motion** was just submitted to {current_leg_session_name}.",
             url=haste_bin_url,
         )
 
@@ -1516,7 +1582,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         )
 
         await ctx.send(
-            f"{config.YES} Your motion `{title}` (#{motion_id}) was submitted for session #{current_leg_session_display_id}.\n"
+            f"{config.YES} Your motion `{title}` (#{motion_id}) was submitted for {current_leg_session_name}.\n"
             f"{config.HINT} Tell your supporters to sponsor your motion with "
             f"`{config.BOT_PREFIX}motion sponsor {motion_id}`."
         )
@@ -1542,44 +1608,54 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         except exceptions.RoleNotFoundError:
             pass
 
-        current_leg_session = await self.get_active_leg_session(house="commons")
+        open_sessions = await self.get_open_leg_sessions(house="commons")
+        eligible_sessions = [
+            session
+            for session in open_sessions
+            if self.submission_session_rejection(
+                ctx.author, house="commons", session=session
+            )
+            is None
+        ]
 
-        if current_leg_session is None:
+        if not eligible_sessions:
             ctx.command.reset_cooldown(ctx)
             return await ctx.send(
-                f"{config.NO} There is no open session.\n{config.HINT} The "
-                f"{self.bot.mk.speaker_term} can open the next session with "
-                f"`{config.BOT_PREFIX}commons session open` at any time."
+                self.submission_session_unavailable_message(
+                    house="commons",
+                    member=ctx.author,
+                    sessions=open_sessions,
+                )
             )
 
-        if current_leg_session.status is not SessionStatus.SUBMISSION_PERIOD:
+        can_submit_bill = self.can_member_submit_kind(ctx.author, kind="bill")
+        can_submit_motion = self.can_member_submit_kind(ctx.author, kind="motion")
+
+        if not self.bot.mk.LEGISLATURE_MOTIONS_EXIST and not can_submit_bill:
             ctx.command.reset_cooldown(ctx)
+            return await ctx.send(
+                f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} "
+                "are allowed to submit bills."
+            )
 
-            if current_leg_session.status is SessionStatus.LOCKED:
-                if not self.is_cabinet(ctx.author):
-                    return await ctx.send(
-                        f"{config.NO} The {self.bot.mk.speaker_term} has locked submissions for Session "
-                        f"#{current_leg_session.mk13_house_id}. You "
-                        f"are not allowed to submit anything."
-                        f"\n{config.HINT} This session can be unlocked by the "
-                        f"{self.bot.mk.speaker_term} in order "
-                        f"to allow submissions again with "
-                        f"`{config.BOT_PREFIX}commons session "
-                        f"unlock`.\n{config.HINT} The {self.bot.mk.speaker_term} can bypass this "
-                        f"and is allowed to submit even if submissions are locked."
-                    )
-
-            if current_leg_session.status is SessionStatus.VOTING_PERIOD:
-                return await ctx.send(
-                    f"{config.NO} Voting for session #{current_leg_session.mk13_house_id} has already started, so you "
-                    f"cannot submit anything anymore."
-                )
+        if self.bot.mk.LEGISLATURE_MOTIONS_EXIST and not (
+            can_submit_bill or can_submit_motion
+        ):
+            ctx.command.reset_cooldown(ctx)
+            return await ctx.send(
+                f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} "
+                "are allowed to submit bills or motions."
+            )
 
         if self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
-            bill_modal = SubmitBillModal()
-            motion_modal = SubmitMotionModal()
+            bill_modal = SubmitBillModal(eligible_sessions)
+            motion_modal = SubmitMotionModal(eligible_sessions)
             view = SubmitChooserView(
-                ctx, bill_modal=bill_modal, motion_modal=motion_modal
+                ctx,
+                bill_modal=bill_modal,
+                motion_modal=motion_modal,
+                can_submit_bill=can_submit_bill,
+                can_submit_motion=can_submit_motion,
             )
 
             await ctx.send(
@@ -1601,49 +1677,75 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
                 return
 
             if result == "bill":
-                if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
-                    if self.legislator_role not in ctx.author.roles:
-                        return await ctx.send(
-                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} are allowed to submit "
-                            f"bills."
-                        )
+                current_leg_session, error = (
+                    await self.resolve_submit_session_from_modal(
+                        ctx,
+                        house="commons",
+                        session_id=mixin.get_submit_session_choice_id(bill_modal),
+                    )
+                )
+                if error:
+                    ctx.command.reset_cooldown(ctx)
+                    return await ctx.send(error)
 
                 embed = await self.submit_bill(
                     ctx,
                     current_leg_session.id,
-                    current_leg_session.mk13_house_id,
+                    current_leg_session.display_id,
                     bill_modal,
+                    current_leg_session.display_name,
                 )
 
             elif result == "motion":
                 ctx.command.reset_cooldown(ctx)
 
-                if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS:
-                    if self.legislator_role not in ctx.author.roles:
-                        return await ctx.send(
-                            f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} are allowed to submit "
-                            f"motions."
-                        )
+                current_leg_session, error = (
+                    await self.resolve_submit_session_from_modal(
+                        ctx,
+                        house="commons",
+                        session_id=mixin.get_submit_session_choice_id(motion_modal),
+                    )
+                )
+                if error:
+                    return await ctx.send(error)
 
                 embed = await self.submit_motion(
                     ctx,
                     current_leg_session.id,
-                    current_leg_session.mk13_house_id,
+                    current_leg_session.display_id,
                     motion_modal,
+                    current_leg_session.display_name,
                 )
         else:
-            if not self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
-                if self.legislator_role not in ctx.author.roles:
-                    return await ctx.send(
-                        f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} are allowed to submit "
-                        f"bills."
-                    )
+            bill_modal = SubmitBillModal(eligible_sessions)
+            view = SubmitBillOnlyView(ctx, bill_modal=bill_modal)
+
+            await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Submit a bill to the Commons.",
+                view=view,
+            )
+
+            result = await view.prompt()
+            embed = None
+
+            if not result:
+                return
+
+            current_leg_session, error = await self.resolve_submit_session_from_modal(
+                ctx,
+                house="commons",
+                session_id=mixin.get_submit_session_choice_id(bill_modal),
+            )
+            if error:
+                ctx.command.reset_cooldown(ctx)
+                return await ctx.send(error)
 
             embed = await self.submit_bill(
                 ctx,
                 current_leg_session.id,
-                current_leg_session.mk13_house_id,
+                current_leg_session.display_id,
                 bill_modal,
+                current_leg_session.display_name,
             )
 
         if embed is None:
@@ -1673,11 +1775,11 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         if not bill_ids:
             return await ctx.send_help(ctx.command)
 
-        def verify_bill(_ctx, b: Bill, last_session: Session, **_kwargs):
-            if last_session.id != b.session.id:
-                return "You can only mark bills from the most recent session as passed."
+        def verify_bill(_ctx, b: Bill, **_kwargs):
+            if b.session is None or b.session.house != "commons":
+                return "You can only mark bills from a Commons session as passed here."
 
-            if last_session.status is not SessionStatus.CLOSED:
+            if b.session.status is not SessionStatus.CLOSED:
                 return "You can only mark bills as passed if their session is closed."
 
         consumer = models.LegalConsumer(
@@ -1686,7 +1788,6 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
 
         await consumer.filter(
             filter_func=verify_bill,
-            last_session=await self.get_last_leg_session(house="commons"),
             acting_house="commons",
         )
 
@@ -1698,6 +1799,23 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         if not consumer.passed:
             return
 
+        target_session = None
+        if any(
+            self.bill_needs_cross_house_destination(bill, acting_house="commons")
+            for bill in consumer.passed
+        ):
+            open_senate_sessions = await self.get_open_leg_sessions(house="senate")
+            if len(open_senate_sessions) == 1:
+                target_session = open_senate_sessions[0]
+            elif len(open_senate_sessions) > 1:
+                target_session = await self.prompt_for_leg_session(
+                    ctx,
+                    sessions=open_senate_sessions,
+                    action="send these bills to",
+                )
+                if target_session is None:
+                    return
+
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
             f"to mark the following bills as passed from the Commons?"
@@ -1707,7 +1825,11 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         if not reaction:
             return await ctx.send("Cancelled.")
 
-        await consumer.consume(scheduler=self.pass_scheduler, acting_house="commons")
+        await consumer.consume(
+            scheduler=self.pass_scheduler,
+            acting_house="commons",
+            target_session=target_session,
+        )
         await ctx.send(
             f"{config.YES} All bills were marked as passed from the Commons.\n"
             f"{config.HINT} Depending on each bill's path, it is now either waiting on the Senate "

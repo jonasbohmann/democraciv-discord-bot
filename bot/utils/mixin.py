@@ -42,6 +42,82 @@ class ReadDocumentView(text.PromptView):
         self.stop()
 
 
+class SessionKindChooseView(text.PromptView):
+    @discord.ui.button(label="Regular", style=discord.ButtonStyle.primary)
+    async def regular(self, interaction, button):
+        await interaction.response.defer()
+        self.result = models.SessionKind.REGULAR
+        self.stop()
+
+    @discord.ui.button(label="Emergency", style=discord.ButtonStyle.danger)
+    async def emergency(self, interaction, button):
+        await interaction.response.defer()
+        self.result = models.SessionKind.EMERGENCY
+        self.stop()
+
+
+class SessionChoiceButton(discord.ui.Button):
+    def __init__(self, session: models.Session):
+        super().__init__(
+            label=session.display_name,
+            style=(
+                discord.ButtonStyle.danger
+                if session.is_emergency
+                else discord.ButtonStyle.primary
+            ),
+        )
+        self.session = session
+
+    async def callback(self, interaction):
+        await interaction.response.defer()
+        self.view.result = self.session
+        self.view.stop()
+
+
+class SessionChooseView(text.PromptView):
+    def __init__(self, ctx, *, sessions: typing.Sequence[models.Session]):
+        super().__init__(ctx)
+        for session in sessions:
+            self.add_item(SessionChoiceButton(session))
+
+
+def add_submit_session_choice(
+    modal: discord.ui.Modal, sessions: typing.Sequence[models.Session]
+):
+    sessions = list(sessions)
+    modal.submit_sessions = sessions
+    modal.default_session_id = sessions[0].id if len(sessions) == 1 else None
+    modal.session_choice = None
+
+    if len(sessions) <= 1:
+        return
+
+    modal.session_choice = discord.ui.Label(
+        text="Session",
+        description="Choose which open session this submission belongs to.",
+        component=discord.ui.Select(
+            placeholder="Choose a session",
+            options=[
+                discord.SelectOption(label=session.display_name, value=str(session.id))
+                for session in sessions
+            ],
+        ),
+    )
+    modal.add_item(modal.session_choice)
+
+
+def get_submit_session_choice_id(modal: discord.ui.Modal) -> typing.Optional[int]:
+    session_choice = getattr(modal, "session_choice", None)
+    if session_choice is None:
+        return getattr(modal, "default_session_id", None)
+
+    values = session_choice.component.values
+    if not values:
+        return None
+
+    return int(values[0])
+
+
 class GovernmentMixin:
     def __init__(self, b):
         self.bot = b
@@ -521,38 +597,277 @@ class GovernmentMixin:
 
         return len(link) >= 15 and link.startswith(valid_google_docs_url_strings)
 
+    async def get_open_leg_sessions(
+        self,
+        house=None,
+        *,
+        session_kind: typing.Optional[models.SessionKind] = None,
+        status: typing.Optional[models.SessionStatus] = None,
+    ) -> typing.List[models.Session]:
+        if isinstance(session_kind, str):
+            session_kind = models.SessionKind(session_kind)
+
+        query = ["SELECT id FROM legislature_session WHERE status != 'Closed'"]
+        args = []
+
+        if house is not None:
+            args.append(house)
+            query.append(f"AND house = ${len(args)}")
+
+        if session_kind is not None:
+            args.append(session_kind.value)
+            query.append(f"AND session_kind = ${len(args)}")
+
+        if status is not None:
+            args.append(status.value)
+            query.append(f"AND status = ${len(args)}")
+
+        query.append("ORDER BY CASE session_kind WHEN 'Regular' THEN 0 ELSE 1 END, id")
+        records = await self.bot.db.fetch(" ".join(query), *args)
+        return [
+            await models.Session.convert(context.MockContext(self.bot), record["id"])
+            for record in records
+        ]
+
     async def get_active_leg_session(
-        self, house=None
+        self,
+        house=None,
+        *,
+        session_kind: typing.Optional[models.SessionKind] = None,
     ) -> typing.Optional[models.Session]:
+        sessions = await self.get_open_leg_sessions(
+            house=house, session_kind=session_kind
+        )
+        if len(sessions) == 1:
+            return sessions[0]
+
+    async def get_last_leg_session(
+        self,
+        house=None,
+        *,
+        session_kind: typing.Optional[models.SessionKind] = None,
+    ) -> typing.Optional[models.Session]:
+        if isinstance(session_kind, str):
+            session_kind = models.SessionKind(session_kind)
+
+        query = ["SELECT MAX(id) FROM legislature_session"]
+        args = []
+
         if house is not None:
-            session_id = await self.bot.db.fetchval(
-                "SELECT id FROM legislature_session WHERE status != 'Closed' AND house = $1",
-                house,
+            args.append(house)
+            query.append(f"WHERE house = ${len(args)}")
+
+        if session_kind is not None:
+            args.append(session_kind.value)
+            query.append(
+                f"{'AND' if house is not None else 'WHERE'} session_kind = ${len(args)}"
             )
-        else:
-            session_id = await self.bot.db.fetchval(
-                "SELECT id FROM legislature_session WHERE status != 'Closed'"
-            )
+
+        session_id = await self.bot.db.fetchval(" ".join(query), *args)
 
         if session_id is not None:
             return await models.Session.convert(
                 context.MockContext(self.bot), session_id
             )
 
-    async def get_last_leg_session(self, house=None) -> typing.Optional[models.Session]:
-        if house is not None:
-            session_id = await self.bot.db.fetchval(
-                "SELECT MAX(id) FROM legislature_session WHERE house = $1", house
-            )
-        else:
-            session_id = await self.bot.db.fetchval(
-                "SELECT MAX(id) FROM legislature_session"
+    async def prompt_for_session_kind(
+        self,
+        ctx: context.CustomContext,
+        *,
+        house: str,
+        action: str,
+    ) -> typing.Optional[models.SessionKind]:
+        view = SessionKindChooseView(ctx)
+        await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} Which kind of "
+            f"{models.display_house_name(house)} session do you want to {action}?",
+            view=view,
+        )
+        return await view.prompt()
+
+    async def prompt_for_leg_session(
+        self,
+        ctx: context.CustomContext,
+        *,
+        sessions: typing.Sequence[models.Session],
+        action: str,
+        ephemeral: typing.Optional[bool] = None,
+        silent: bool = False,
+    ) -> typing.Optional[models.Session]:
+        view = SessionChooseView(ctx, sessions=sessions)
+        kwargs = {"view": view}
+        if ephemeral is not None:
+            kwargs["ephemeral"] = ephemeral
+
+        await ctx.send(
+            f"{config.USER_INTERACTION_REQUIRED} Which session do you want to {action}?",
+            **kwargs,
+        )
+        return await view.prompt(silent=silent)
+
+    async def resolve_active_leg_session_for_text_command(
+        self,
+        ctx: context.CustomContext,
+        *,
+        house: str,
+        action: str,
+        status: typing.Optional[models.SessionStatus] = None,
+    ) -> typing.Optional[models.Session]:
+        sessions = await self.get_open_leg_sessions(house=house, status=status)
+
+        if len(sessions) == 1:
+            return sessions[0]
+
+        if len(sessions) > 1:
+            return await self.prompt_for_leg_session(
+                ctx, sessions=sessions, action=action
             )
 
-        if session_id is not None:
-            return await models.Session.convert(
-                context.MockContext(self.bot), session_id
+        return None
+
+    def can_member_submit_kind(self, member: discord.Member, *, kind: str) -> bool:
+        if kind == "bill" and self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
+            return True
+
+        if (
+            kind == "motion"
+            and self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS
+        ):
+            return True
+
+        return bool(
+            isinstance(member, discord.Member)
+            and self.legislator_role
+            and self.legislator_role in member.roles
+        )
+
+    def submission_session_rejection(
+        self,
+        member: discord.Member,
+        *,
+        house: str,
+        session: models.Session,
+    ) -> typing.Optional[str]:
+        if session.house != house:
+            return (
+                f"{config.NO} That session does not belong to "
+                f"the {models.display_house_name(house)}."
             )
+
+        if session.status is models.SessionStatus.SUBMISSION_PERIOD:
+            return None
+
+        if session.status is models.SessionStatus.LOCKED:
+            if isinstance(member, discord.Member) and self.is_cabinet_for_house(
+                member, house
+            ):
+                return None
+
+            return (
+                f"{config.NO} The {self.get_primary_leader_term_for_house(house)} "
+                f"has locked submissions for {session.display_name}."
+            )
+
+        if session.status is models.SessionStatus.VOTING_PERIOD:
+            return f"{config.NO} Voting for {session.display_name} has already started."
+
+        if session.status is models.SessionStatus.CLOSED:
+            return f"{config.NO} {session.display_name} is already closed."
+
+        return f"{config.NO} {session.display_name} is not accepting submissions right now."
+
+    async def get_submission_eligible_leg_sessions(
+        self,
+        *,
+        house: str,
+        member: discord.Member,
+        session_kind: typing.Optional[models.SessionKind] = None,
+    ) -> typing.List[models.Session]:
+        sessions = await self.get_open_leg_sessions(
+            house=house, session_kind=session_kind
+        )
+        return [
+            session
+            for session in sessions
+            if self.submission_session_rejection(member, house=house, session=session)
+            is None
+        ]
+
+    def submission_session_unavailable_message(
+        self,
+        *,
+        house: str,
+        member: discord.Member,
+        sessions: typing.Sequence[models.Session],
+        session_kind: typing.Optional[models.SessionKind] = None,
+    ) -> str:
+        house_name = models.display_house_name(house)
+
+        if not sessions:
+            suffix = (
+                f" {session_kind.value.lower()}" if session_kind is not None else ""
+            )
+            return (
+                f"{config.NO} There is no open{suffix} {house_name} session.\n"
+                f"{config.HINT} The {self.get_primary_leader_term_for_house(house)} "
+                f"can open the next session at any time."
+            )
+
+        if len(sessions) == 1:
+            rejection = self.submission_session_rejection(
+                member, house=house, session=sessions[0]
+            )
+            if rejection:
+                return rejection
+
+        statuses = ", ".join(
+            f"{session.display_name}: {session.status.value}" for session in sessions
+        )
+        return (
+            f"{config.NO} There is no {house_name} session accepting submissions "
+            f"right now.\n{config.HINT} {statuses}"
+        )
+
+    async def resolve_submit_session_from_modal(
+        self,
+        ctx,
+        *,
+        house: str,
+        session_id: typing.Optional[int],
+    ) -> typing.Tuple[typing.Optional[models.Session], typing.Optional[str]]:
+        if session_id is None:
+            return None, f"{config.NO} You need to choose a session."
+
+        try:
+            session = await models.Session.convert(ctx, session_id)
+        except exceptions.NotFoundError as exc:
+            return None, exc.message
+
+        rejection = self.submission_session_rejection(
+            ctx.author, house=house, session=session
+        )
+        if rejection:
+            return None, rejection
+
+        return session, None
+
+    @staticmethod
+    def bill_needs_cross_house_destination(
+        bill: models.Bill, *, acting_house: str
+    ) -> bool:
+        if bill.is_procedure:
+            return False
+
+        if isinstance(bill.status, models.BillSubmitted):
+            return True
+
+        if isinstance(bill.status, models.BillFailedSenate):
+            return acting_house == "senate" and bill.origin_house != "commons"
+
+        if isinstance(bill.status, models.BillFailedCommons):
+            return acting_house == "commons" and bill.origin_house != "senate"
+
+        return False
 
     async def attach_pending_bills_to_session(
         self, *, house: str, session_id: int
@@ -727,17 +1042,16 @@ class GovernmentMixin:
     async def _build_legislature_overview_embed(self, house: str) -> text.SafeEmbed:
         is_senate = house == "senate"
 
-        active_session = await self.get_active_leg_session(house=house)
-        if active_session is None:
+        open_sessions = await self.get_open_leg_sessions(house=house)
+        if not open_sessions:
             if is_senate:
                 session_value = "There currently is no open session."
             else:
                 session_value = "There currently is no open session at the Commons."
         else:
-            house_label = "Senate" if is_senate else "Commons"
-            session_value = (
-                f"{house_label} Session #{active_session.mk13_house_id}"
-                f" - {active_session.status.value}"
+            session_value = "\n".join(
+                f"{session.display_name} - {session.status.value}"
+                for session in open_sessions
             )
 
         embed = text.SafeEmbed()
@@ -1045,8 +1359,8 @@ class GovernmentMixin:
             icon_url=self.bot.mk.NATION_ICON_URL,
         )
 
-        com_active_leg_session = await self.get_active_leg_session(house="commons")
-        sen_active_leg_session = await self.get_active_leg_session(house="senate")
+        com_active_leg_sessions = await self.get_open_leg_sessions(house="commons")
+        sen_active_leg_sessions = await self.get_open_leg_sessions(house="senate")
 
         embed.description = (
             "In MK13, the Legislature consists of two chambers, with the Commons as the Lower House and the Senate as the Upper House. "
@@ -1055,13 +1369,19 @@ class GovernmentMixin:
 
         com_session = (
             "No active session."
-            if com_active_leg_session is None
-            else f"Session #{com_active_leg_session.mk13_house_id} - {com_active_leg_session.status.value}"
+            if not com_active_leg_sessions
+            else "\n".join(
+                f"{session.display_name} - {session.status.value}"
+                for session in com_active_leg_sessions
+            )
         )
         sen_session = (
             "No active session."
-            if sen_active_leg_session is None
-            else f"Session #{sen_active_leg_session.mk13_house_id} - {sen_active_leg_session.status.value}"
+            if not sen_active_leg_sessions
+            else "\n".join(
+                f"{session.display_name} - {session.status.value}"
+                for session in sen_active_leg_sessions
+            )
         )
 
         com_cmds = (

@@ -82,6 +82,12 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
+DO $$ BEGIN
+    CREATE TYPE session_kind AS ENUM ('Regular', 'Emergency');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 CREATE TABLE IF NOT EXISTS legislature_session(
     id serial UNIQUE PRIMARY KEY,
     speaker bigint NOT NULL,
@@ -91,8 +97,12 @@ CREATE TABLE IF NOT EXISTS legislature_session(
     voting_started_on timestamp WITHOUT TIME ZONE,
     closed_on timestamp WITHOUT TIME ZONE,
     house text,
-    mk13_house_id integer
+    mk13_house_id integer,
+    session_kind session_kind DEFAULT 'Regular'::session_kind NOT NULL
 );
+
+ALTER TABLE legislature_session
+    ADD COLUMN IF NOT EXISTS session_kind session_kind DEFAULT 'Regular'::session_kind NOT NULL;
 
 CREATE SEQUENCE IF NOT EXISTS mk13_senate_session_seq;
 CREATE SEQUENCE IF NOT EXISTS mk13_commons_session_seq;
@@ -165,6 +175,9 @@ CREATE INDEX IF NOT EXISTS bill_lookup_tag_tag_trgm_idx ON bill_lookup_tag USING
 CREATE INDEX IF NOT EXISTS bill_name_lower_idx ON bill (LOWER(name));
 CREATE INDEX IF NOT EXISTS bill_session_leg_session_idx ON bill_session (leg_session);
 CREATE INDEX IF NOT EXISTS bill_session_bill_id_idx ON bill_session (bill_id);
+CREATE UNIQUE INDEX IF NOT EXISTS legislature_session_open_kind_idx
+    ON legislature_session (house, session_kind)
+    WHERE status != 'Closed'::session_status AND house IS NOT NULL;
 
 
 CREATE TABLE IF NOT EXISTS tag(

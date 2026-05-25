@@ -19,6 +19,18 @@ PartyOption = app_commands.Transform[
     converter.PoliticalParty, transformers.PoliticalPartyTransformer
 ]
 
+SESSION_TYPE_CHOICES = [
+    app_commands.Choice(name="Regular", value=models.SessionKind.REGULAR.value),
+    app_commands.Choice(name="Emergency", value=models.SessionKind.EMERGENCY.value),
+]
+
+
+def _session_kind_from_choice(value: str = None) -> models.SessionKind | None:
+    if value is None:
+        return None
+
+    return models.SessionKind(value)
+
 
 class BillBulkEditModal(forms.ErrorHandledModal):
     def __init__(self, cog: "LegalSlash"):
@@ -275,11 +287,55 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
                     message=message,
                 )
 
-    async def _resubmit_bill(self, ctx, bill: models.Bill):
+    async def _resubmit_bill(
+        self,
+        ctx,
+        bill: models.Bill,
+        *,
+        session_kind: models.SessionKind = None,
+    ):
         consumer = models.LegalConsumer(
             ctx=ctx, objects=[bill], action=models.BillStatus.resubmit
         )
         await consumer.filter(resubmitter=ctx.author)
+
+        if not consumer.passed:
+            await self._confirm_consumer(
+                ctx,
+                consumer=consumer,
+                title="Resubmit Bill",
+                body="Resubmit this bill to the current submission-period session in its origin house?",
+                confirm_label="Resubmit",
+            )
+            return
+
+        sessions = await self.get_open_leg_sessions(
+            house=bill.origin_house,
+            session_kind=session_kind,
+            status=models.SessionStatus.SUBMISSION_PERIOD,
+        )
+
+        if len(sessions) == 0:
+            suffix = (
+                f" {session_kind.value.lower()}" if session_kind is not None else ""
+            )
+            return await ctx.send(
+                f"{config.NO} There is no open{suffix} {bill.origin_house_name} session in Submission Period.",
+                ephemeral=True,
+            )
+
+        if len(sessions) > 1:
+            target_session = await self.prompt_for_leg_session(
+                ctx,
+                sessions=sessions,
+                action="resubmit this bill to",
+                ephemeral=True,
+                silent=True,
+            )
+            if target_session is None:
+                return
+        else:
+            target_session = sessions[0]
 
         confirmed = await self._confirm_consumer(
             ctx,
@@ -293,14 +349,13 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         if not confirmed:
             return await ctx.send("Cancelled.", ephemeral=True)
 
-        await consumer.consume(resubmitter=ctx.author)
+        await consumer.consume(resubmitter=ctx.author, target_session=target_session)
         await ctx.send(
             f"{config.YES} Bill #{bill.id} was resubmitted to its origin-house submission session."
         )
 
     async def _sponsor_motion(self, ctx, motion: models.Motion):
         house = self.get_house_for_object(motion)
-        active_session = await self.get_active_leg_session(house=house)
         failed = None
 
         if ctx.author.id == motion.submitter_id:
@@ -309,7 +364,7 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             failed = "You already sponsored this motion."
         elif not self.can_member_sponsor_in_house(ctx.author, house):
             failed = "Only Senators can sponsor Senate motions."
-        elif not active_session or motion.session.id != active_session.id:
+        elif motion.session.closed_on:
             failed = "You can only sponsor motions if the session they were submitted in is still open."
 
         if failed:
@@ -331,13 +386,11 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         await ctx.send(f"{config.YES} Motion #{motion.id} was sponsored by you.")
 
     async def _unsponsor_motion(self, ctx, motion: models.Motion):
-        house = self.get_house_for_object(motion)
-        active_session = await self.get_active_leg_session(house=house)
         failed = None
 
         if ctx.author not in motion.sponsors:
             failed = "You are not a sponsor of this motion."
-        elif not active_session or motion.session.id != active_session.id:
+        elif motion.session.closed_on:
             failed = "You can only unsponsor motions if the session they were submitted in is still open."
 
         if failed:
@@ -822,11 +875,22 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
     )
     @slash_checks.is_democraciv_guild()
     @slash_checks.is_citizen_if_multiciv()
-    @app_commands.describe(bill="Bill ID or title")
-    async def bill_resubmit(self, interaction: discord.Interaction, bill: BillOption):
+    @app_commands.describe(
+        bill="Bill ID or title",
+        session_type="Target session type if multiple origin-house sessions are open.",
+    )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
+    async def bill_resubmit(
+        self,
+        interaction: discord.Interaction,
+        bill: BillOption,
+        session_type: str = None,
+    ):
         ctx = slash_context.from_interaction(interaction, command_name="bill")
         await ctx.defer()
-        await self._resubmit_bill(ctx, bill)
+        await self._resubmit_bill(
+            ctx, bill, session_kind=_session_kind_from_choice(session_type)
+        )
 
     @motion.command(name="list", description="List all submitted motions.")
     async def motion_list(self, interaction: discord.Interaction):

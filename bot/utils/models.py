@@ -24,6 +24,11 @@ class SessionStatus(enum.Enum):
     CLOSED = "Closed"
 
 
+class SessionKind(enum.Enum):
+    REGULAR = "Regular"
+    EMERGENCY = "Emergency"
+
+
 HOUSE_NAMES = {"senate": "Senate", "commons": "Commons"}
 
 
@@ -45,6 +50,11 @@ class Session(commands.Converter):
     def __init__(self, **kwargs):
         self.id: int = kwargs.get("id")
         self.status: SessionStatus = kwargs.get("session_status")
+        self.session_kind: SessionKind = (
+            kwargs.get("session_kind") or SessionKind.REGULAR
+        )
+        if isinstance(self.session_kind, str):
+            self.session_kind = SessionKind(self.session_kind)
         self.vote_form: str = kwargs.get("vote_form")
         self.opened_on: datetime = kwargs.get("opened_on")
         self.voting_started_on: datetime = kwargs.get("voting_started_on")
@@ -69,7 +79,15 @@ class Session(commands.Converter):
 
     @property
     def display_name(self) -> str:
-        return f"{display_house_name(self.house)} Session #{self.display_id}"
+        kind = " Emergency" if self.session_kind is SessionKind.EMERGENCY else ""
+        return f"{display_house_name(self.house)}{kind} Session #{self.display_id}"
+
+    @property
+    def is_emergency(self) -> bool:
+        return self.session_kind is SessionKind.EMERGENCY
+
+    def __str__(self):
+        return self.display_name
 
     async def start_voting(self, voting_form):
         await self._bot.db.execute(
@@ -906,33 +924,33 @@ class BillStatus:
         return await Session.convert(context.MockContext(self._bot), session_id)
 
     async def _get_open_session(self, house: str) -> typing.Optional[Session]:
-        session_id = await self._bot.db.fetchval(
-            "SELECT id FROM legislature_session WHERE status != 'Closed' AND house = $1 ORDER BY id DESC LIMIT 1",
+        records = await self._bot.db.fetch(
+            "SELECT id FROM legislature_session WHERE status != 'Closed' AND house = $1 ORDER BY id",
             house,
         )
 
-        if session_id is None:
+        if len(records) != 1:
             return None
 
-        return await self._fetch_session(session_id)
+        return await self._fetch_session(records[0]["id"])
 
     async def _get_submission_session(
         self, house: typing.Optional[str]
     ) -> typing.Optional[Session]:
         if house in HOUSE_NAMES:
-            session_id = await self._bot.db.fetchval(
-                "SELECT id FROM legislature_session WHERE status = 'Submission Period' AND house = $1 ORDER BY id DESC LIMIT 1",
+            records = await self._bot.db.fetch(
+                "SELECT id FROM legislature_session WHERE status = 'Submission Period' AND house = $1 ORDER BY id",
                 house,
             )
         else:
-            session_id = await self._bot.db.fetchval(
-                "SELECT id FROM legislature_session WHERE status = 'Submission Period' ORDER BY id DESC LIMIT 1"
+            records = await self._bot.db.fetch(
+                "SELECT id FROM legislature_session WHERE status = 'Submission Period' ORDER BY id"
             )
 
-        if session_id is None:
+        if len(records) != 1:
             return None
 
-        return await self._fetch_session(session_id)
+        return await self._fetch_session(records[0]["id"])
 
     async def _apply_status(
         self,
@@ -1024,7 +1042,11 @@ class BillStatus:
         )
 
     async def _forward_after_house_pass(
-        self, *, acting_house: str, old_status: _BillStatusFlag
+        self,
+        *,
+        acting_house: str,
+        old_status: _BillStatusFlag,
+        target_session: typing.Optional[Session] = None,
     ):
         self._require_current_house(acting_house)
         other_house = self.other_house(acting_house)
@@ -1033,15 +1055,22 @@ class BillStatus:
             if acting_house == "senate"
             else _BillStatusFlag.PASSED_COMMONS_PENDING_SENATE
         )
-        other_session = await self._get_open_session(other_house)
         note = f"Passed the {self.house_name(acting_house)} during {self._format_session_name()}"
 
-        if other_session is not None:
+        if target_session is not None:
+            if (
+                target_session.house != other_house
+                or target_session.status is SessionStatus.CLOSED
+            ):
+                raise IllegalBillOperation(
+                    f"This bill cannot be sent to {target_session.display_name}."
+                )
+
             await self._apply_status(
                 old_status,
                 new_status,
-                note=f"{note} and sent to {other_session.display_name}",
-                leg_session=other_session.id,
+                note=f"{note} and sent to {target_session.display_name}",
+                leg_session=target_session.id,
                 executive_deadline_at=None,
             )
             return
@@ -1078,13 +1107,27 @@ class BillStatus:
         )
 
     async def _resubmit_to_origin_house(
-        self, *, old_status: _BillStatusFlag, resubmitter: discord.Member
+        self,
+        *,
+        old_status: _BillStatusFlag,
+        resubmitter: discord.Member,
+        target_session: typing.Optional[Session] = None,
     ):
-        target_session = await self._get_submission_session(self._bill.origin_house)
+        target_session = target_session or await self._get_submission_session(
+            self._bill.origin_house
+        )
 
         if target_session is None:
             raise IllegalBillOperation(
                 f"There is no {self._bill.origin_house_name} session in Submission Period right now, so the bill cannot be resubmitted."
+            )
+
+        if (
+            target_session.house != self._bill.origin_house
+            or target_session.status is not SessionStatus.SUBMISSION_PERIOD
+        ):
+            raise IllegalBillOperation(
+                f"This bill cannot be resubmitted to {target_session.display_name}."
             )
 
         await self._apply_status(
@@ -1152,7 +1195,9 @@ class BillSubmitted(BillStatus):
                 return
 
             await self._forward_after_house_pass(
-                acting_house=acting_house, old_status=self.flag
+                acting_house=acting_house,
+                old_status=self.flag,
+                target_session=kwargs.get("target_session"),
             )
             return
 
@@ -1293,7 +1338,9 @@ class BillFailedSenate(BillStatus):
             return
 
         await self._forward_after_house_pass(
-            acting_house=acting_house, old_status=self.flag
+            acting_house=acting_house,
+            old_status=self.flag,
+            target_session=kwargs.get("target_session"),
         )
 
     async def resubmit(self, dry=False, *, resubmitter, **kwargs):
@@ -1301,7 +1348,9 @@ class BillFailedSenate(BillStatus):
             return
 
         await self._resubmit_to_origin_house(
-            old_status=self.flag, resubmitter=resubmitter
+            old_status=self.flag,
+            resubmitter=resubmitter,
+            target_session=kwargs.get("target_session"),
         )
 
     def emojified_status(self, verbose=True):
@@ -1359,7 +1408,9 @@ class BillFailedCommons(BillStatus):
             return
 
         await self._forward_after_house_pass(
-            acting_house=acting_house, old_status=self.flag
+            acting_house=acting_house,
+            old_status=self.flag,
+            target_session=kwargs.get("target_session"),
         )
 
     async def resubmit(self, dry=False, *, resubmitter, **kwargs):
@@ -1367,7 +1418,9 @@ class BillFailedCommons(BillStatus):
             return
 
         await self._resubmit_to_origin_house(
-            old_status=self.flag, resubmitter=resubmitter
+            old_status=self.flag,
+            resubmitter=resubmitter,
+            target_session=kwargs.get("target_session"),
         )
 
     def emojified_status(self, verbose=True):
@@ -1540,7 +1593,9 @@ class BillFailedLegislature(BillStatus):
             return
 
         await self._resubmit_to_origin_house(
-            old_status=self.flag, resubmitter=resubmitter
+            old_status=self.flag,
+            resubmitter=resubmitter,
+            target_session=kwargs.get("target_session"),
         )
 
     def emojified_status(self, verbose=True):
@@ -1602,7 +1657,9 @@ class BillVetoed(BillStatus):
             return
 
         await self._resubmit_to_origin_house(
-            old_status=self.flag, resubmitter=resubmitter
+            old_status=self.flag,
+            resubmitter=resubmitter,
+            target_session=kwargs.get("target_session"),
         )
 
     async def override_veto(self, dry=False, **kwargs):
@@ -1706,7 +1763,9 @@ class BillExecutiveVetoed(BillStatus):
             return
 
         await self._resubmit_to_origin_house(
-            old_status=self.flag, resubmitter=resubmitter
+            old_status=self.flag,
+            resubmitter=resubmitter,
+            target_session=kwargs.get("target_session"),
         )
 
     def emojified_status(self, verbose=True):
@@ -1807,7 +1866,9 @@ class BillRepealed(BillStatus):
             return
 
         await self._resubmit_to_origin_house(
-            old_status=self.flag, resubmitter=resubmitter
+            old_status=self.flag,
+            resubmitter=resubmitter,
+            target_session=kwargs.get("target_session"),
         )
 
     def emojified_status(self, verbose=True):

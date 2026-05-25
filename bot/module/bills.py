@@ -580,16 +580,63 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
                 f":warning: The following bills cannot be resubmitted.\n{consumer.failed_formatted}"
             )
 
-        if not consumer.passed:
+        passed = set(consumer.passed)
+        target_sessions = {}
+        failed = {}
+
+        for house in {bill.origin_house for bill in passed}:
+            sessions = await self.get_open_leg_sessions(
+                house=house, status=models.SessionStatus.SUBMISSION_PERIOD
+            )
+
+            if len(sessions) == 0:
+                for bill in list(passed):
+                    if bill.origin_house == house:
+                        failed[bill] = (
+                            f"There is no {bill.origin_house_name} session in "
+                            "Submission Period right now."
+                        )
+                        passed.remove(bill)
+                continue
+
+            if len(sessions) == 1:
+                target_sessions[house] = sessions[0]
+                continue
+
+            target_session = await self.prompt_for_leg_session(
+                ctx,
+                sessions=sessions,
+                action=f"resubmit {models.display_house_name(house)} bills to",
+            )
+            if target_session is None:
+                return
+            target_sessions[house] = target_session
+
+        if failed:
+            await ctx.send(
+                f":warning: The following bills cannot be resubmitted.\n"
+                + "\n".join(
+                    f"-  **{bill.name}** (#{bill.id}): _{reason}_"
+                    for bill, reason in failed.items()
+                )
+            )
+
+        if not passed:
             return
 
         if not await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to resubmit the following bills to the "
-            f"current submission-period session in their origin house?\n{consumer.passed_formatted}"
+            f"current submission-period session in their origin house?\n"
+            + "\n".join(f"-  **{bill.name}** (#{bill.id})" for bill in passed)
         ):
             return await ctx.send("Cancelled.")
 
-        await consumer.consume(resubmitter=ctx.author)
+        for bill in passed:
+            await bill.status.resubmit(
+                resubmitter=ctx.author,
+                target_session=target_sessions[bill.origin_house],
+            )
+
         await ctx.send(
             f"{config.YES} All bills were resubmitted to their origin-house submission session."
         )

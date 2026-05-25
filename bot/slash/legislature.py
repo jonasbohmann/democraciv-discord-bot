@@ -39,18 +39,31 @@ def _utc_timestamp(value: datetime.datetime) -> str:
     return f"<t:{int(value.timestamp())}:F>"
 
 
+SESSION_TYPE_CHOICES = [
+    app_commands.Choice(name="Regular", value=models.SessionKind.REGULAR.value),
+    app_commands.Choice(name="Emergency", value=models.SessionKind.EMERGENCY.value),
+]
+
+
+def _session_kind_from_choice(value: str = None) -> typing.Optional[models.SessionKind]:
+    if value is None:
+        return None
+
+    return models.SessionKind(value)
+
+
 class SubmitBillModal(discord.ui.Modal):
     def __init__(
         self,
         cog: "LegislatureSlash",
         *,
         house: str,
-        session: models.Session,
+        sessions: typing.Sequence[models.Session],
     ):
         super().__init__(title=f"Submit a Bill to {models.display_house_name(house)}")
         self.cog = cog
         self.house = house
-        self.session = session
+        mixin.add_submit_session_choice(self, sessions)
 
         self.google_docs_url = discord.ui.Label(
             text="Link to Google Docs",
@@ -102,10 +115,18 @@ class SubmitBillModal(discord.ui.Modal):
             command_name=f"{self.house} submit",
         )
         await ctx.defer()
+        session, error = await self.cog.resolve_submit_session_from_modal(
+            ctx,
+            house=self.house,
+            session_id=mixin.get_submit_session_choice_id(self),
+        )
+        if error:
+            return await ctx.send(error, ephemeral=True)
+
         await self.cog.submit_bill(
             ctx,
             house=self.house,
-            session=self.session,
+            session=session,
             google_docs_url=self.google_docs_url.component.value,
             bill_description=self.bill_description.component.value,
             is_procedure=self.is_procedure.component.values[0] == "true",
@@ -127,12 +148,12 @@ class SubmitMotionModal(discord.ui.Modal):
         cog: "LegislatureSlash",
         *,
         house: str,
-        session: models.Session,
+        sessions: typing.Sequence[models.Session],
     ):
         super().__init__(title=f"Submit a Motion to {models.display_house_name(house)}")
         self.cog = cog
         self.house = house
-        self.session = session
+        mixin.add_submit_session_choice(self, sessions)
 
         self.intro = discord.ui.TextDisplay(
             content=(
@@ -177,10 +198,18 @@ class SubmitMotionModal(discord.ui.Modal):
                 ephemeral=True,
             )
 
+        session, error = await self.cog.resolve_submit_session_from_modal(
+            ctx,
+            house=self.house,
+            session_id=mixin.get_submit_session_choice_id(self),
+        )
+        if error:
+            return await ctx.send(error, ephemeral=True)
+
         await self.cog.submit_motion(
             ctx,
             house=self.house,
-            session=self.session,
+            session=session,
             title=self.motion_title.component.value,
             description=self.motion_description.component.value,
         )
@@ -201,20 +230,22 @@ class SubmitBillButton(discord.ui.Button):
         cog: "LegislatureSlash",
         *,
         house: str,
-        session: models.Session,
+        sessions: typing.Sequence[models.Session],
+        disabled: bool = False,
     ):
         super().__init__(
             label="Submit Bill",
             style=discord.ButtonStyle.primary,
             emoji="\U0001f4dd",
+            disabled=disabled,
         )
         self.cog = cog
         self.house = house
-        self.session = session
+        self.sessions = list(sessions)
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.send_modal(
-            SubmitBillModal(self.cog, house=self.house, session=self.session)
+            SubmitBillModal(self.cog, house=self.house, sessions=self.sessions)
         )
 
 
@@ -224,20 +255,22 @@ class SubmitMotionButton(discord.ui.Button):
         cog: "LegislatureSlash",
         *,
         house: str,
-        session: models.Session,
+        sessions: typing.Sequence[models.Session],
+        disabled: bool = False,
     ):
         super().__init__(
             label="Submit Motion",
             style=discord.ButtonStyle.secondary,
             emoji="\U0001f5f3",
+            disabled=disabled,
         )
         self.cog = cog
         self.house = house
-        self.session = session
+        self.sessions = list(sessions)
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.send_modal(
-            SubmitMotionModal(self.cog, house=self.house, session=self.session)
+            SubmitMotionModal(self.cog, house=self.house, sessions=self.sessions)
         )
 
 
@@ -325,10 +358,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         embed = text.SafeEmbed(
             title=f"{name} (#{bill_id})",
             url=google_docs_url,
-            description=(
-                f"Hey! A new **bill** was just submitted to {house_name} "
-                f"Session #{session.mk13_house_id}."
-            ),
+            description=f"Hey! A new **bill** was just submitted to {session.display_name}.",
         )
         embed.add_field(
             name="Type",
@@ -364,14 +394,10 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         description: str,
         motion_url: str,
     ):
-        house_name = models.display_house_name(house)
         embed = text.SafeEmbed(
             title=f"{title} (#{motion_id})",
             url=motion_url,
-            description=(
-                f"Hey! A new **motion** was just submitted to {house_name} "
-                f"Session #{session.mk13_house_id}."
-            ),
+            description=f"Hey! A new **motion** was just submitted to {session.display_name}.",
         )
         embed.add_field(name="Content", value=description or "-", inline=False)
         embed.add_field(name="Author", value=f"{ctx.author.mention} {ctx.author}")
@@ -479,8 +505,24 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         *,
         house: str,
         session_id: int = None,
+        action: str = "view",
     ) -> typing.Optional[models.Session]:
         if session_id is None:
+            ctx.session_prompt_cancelled = False
+            open_sessions = await self.get_open_leg_sessions(house=house)
+            if len(open_sessions) == 1:
+                return open_sessions[0]
+            if len(open_sessions) > 1:
+                session = await self.prompt_for_leg_session(
+                    ctx,
+                    sessions=open_sessions,
+                    action=action,
+                    ephemeral=True,
+                    silent=True,
+                )
+                if session is None:
+                    ctx.session_prompt_cancelled = True
+                return session
             return await self.get_last_leg_session(house=house)
 
         return await self._get_session_by_display_id(
@@ -499,21 +541,77 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         return bool(bill.sponsors)
 
+    async def _resolve_active_session_for_slash(
+        self,
+        ctx: slash_context.InteractionContext,
+        *,
+        house: str,
+        session_kind: typing.Optional[models.SessionKind] = None,
+        status: typing.Optional[models.SessionStatus] = None,
+        option_name: str = "session_type",
+        action: str = "use",
+    ) -> typing.Tuple[bool, typing.Optional[models.Session]]:
+        sessions = await self.get_open_leg_sessions(
+            house=house, session_kind=session_kind, status=status
+        )
+        house_name = models.display_house_name(house)
+
+        if len(sessions) == 1:
+            return True, sessions[0]
+
+        if session_kind is not None:
+            await ctx.send(
+                f"{config.NO} There is no open {session_kind.value.lower()} {house_name} session.",
+                ephemeral=True,
+            )
+            return False, None
+
+        if len(sessions) > 1:
+            session = await self.prompt_for_leg_session(
+                ctx,
+                sessions=sessions,
+                action=action,
+                ephemeral=True,
+                silent=True,
+            )
+            return session is not None, session
+
+        return True, None
+
+    async def _resolve_cross_house_target_for_slash(
+        self,
+        ctx: slash_context.InteractionContext,
+        *,
+        acting_house: str,
+        session_kind: typing.Optional[models.SessionKind] = None,
+    ) -> typing.Tuple[bool, typing.Optional[models.Session]]:
+        other_house = models.BillStatus.other_house(acting_house)
+        return await self._resolve_active_session_for_slash(
+            ctx,
+            house=other_house,
+            session_kind=session_kind,
+            option_name="destination_session_type",
+            action="send this bill to",
+        )
+
     async def open_session(
         self,
         ctx: slash_context.InteractionContext,
         *,
         house: str,
+        session_kind: models.SessionKind,
         notify_legislators: bool = False,
     ):
-        active_session = await self.get_active_leg_session(house=house)
+        active_session = await self.get_active_leg_session(
+            house=house, session_kind=session_kind
+        )
         house_name = models.display_house_name(house)
         command_name = self.house_command(house)
 
         if active_session is not None:
             return await ctx.send(
-                f"{config.NO} There is still an open {house_name} session. "
-                f"Close session #{active_session.mk13_house_id} first.",
+                f"{config.NO} There is still an open {active_session.display_name}. "
+                "Close it first.",
                 ephemeral=True,
             )
 
@@ -523,16 +621,18 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             else "mk13_commons_session_seq"
         )
         new_session = await self.bot.db.fetchrow(
-            f"INSERT INTO legislature_session (speaker, opened_on, house, mk13_house_id) "
-            f"VALUES ($1, $2, $3, nextval('{sequence}')) RETURNING id, mk13_house_id",
+            f"INSERT INTO legislature_session (speaker, opened_on, house, mk13_house_id, session_kind) "
+            f"VALUES ($1, $2, $3, nextval('{sequence}'), $4) RETURNING id, mk13_house_id",
             ctx.author.id,
             datetime.datetime.utcnow(),
             house,
+            session_kind.value,
         )
+        new_session_obj = await models.Session.convert(ctx, new_session["id"])
         queued_bill_count = await self.attach_pending_bills_to_session(
             house=house, session_id=new_session["id"]
         )
-        display_id = new_session["mk13_house_id"]
+        display_name = new_session_obj.display_name
 
         sections = [
             ui.LayoutSection(
@@ -558,17 +658,17 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         await ui.send_static(
             ctx,
-            title=f"{house_name} Session #{display_id} Opened",
+            title=f"{display_name} Opened",
             body="The submission period is now open.",
             sections=sections,
             links=self.house_links(house),
         )
 
         announcement = text.SafeEmbed(
-            description=f"The cabinet has opened the Submission Period for {house_name} Session #{display_id}."
+            description=f"The cabinet has opened the Submission Period for {display_name}."
         )
         announcement.set_author(
-            name=f"Submission Period open for {house_name} Session #{display_id}",
+            name=f"Submission Period open for {display_name}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         announcement.add_field(
@@ -588,7 +688,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
                 reason="leg_session_open",
                 message=(
                     f":envelope_with_arrow: The submission period for {house_name} "
-                    f"Session #{display_id} has started. Submit bills and motions "
+                    f"{display_name} has started. Submit bills and motions "
                     f"with `/{command_name} submit` on the {self.bot.dciv.name} server."
                 ),
             )
@@ -598,8 +698,14 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         ctx: slash_context.InteractionContext,
         *,
         house: str,
+        session_kind: typing.Optional[models.SessionKind] = None,
     ):
-        active_session = await self.get_active_leg_session(house=house)
+        ok, active_session = await self._resolve_active_session_for_slash(
+            ctx, house=house, session_kind=session_kind, action="lock"
+        )
+        if not ok:
+            return
+
         house_name = models.display_house_name(house)
         command_name = self.house_command(house)
 
@@ -622,11 +728,11 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         )
 
         await self.gov_announcements_channel.send(
-            f"The {self.leader_term(house)} has locked submissions for {house_name} Session #{active_session.mk13_house_id}. Nothing can be submitted until the {self.leader_term(house)} decides to unlock the session again."
+            f"The {self.leader_term(house)} has locked submissions for {active_session.display_name}. Nothing can be submitted until the {self.leader_term(house)} decides to unlock the session again."
         )
         await ui.send_static(
             ctx,
-            title=f"{house_name} Session #{active_session.mk13_house_id} Locked",
+            title=f"{active_session.display_name} Locked",
             body=(
                 f"Submissions have been locked. Unlock them again with "
                 f"`/{command_name} session unlock`."
@@ -639,8 +745,14 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         ctx: slash_context.InteractionContext,
         *,
         house: str,
+        session_kind: typing.Optional[models.SessionKind] = None,
     ):
-        active_session = await self.get_active_leg_session(house=house)
+        ok, active_session = await self._resolve_active_session_for_slash(
+            ctx, house=house, session_kind=session_kind, action="unlock"
+        )
+        if not ok:
+            return
+
         house_name = models.display_house_name(house)
         command_name = self.house_command(house)
 
@@ -663,11 +775,11 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         )
 
         await self.gov_announcements_channel.send(
-            f"The {self.leader_term(house)} has unlocked submissions for {house_name} Session #{active_session.mk13_house_id}, meaning you can now submit bills & motions with `/{command_name} submit` again."
+            f"The {self.leader_term(house)} has unlocked submissions for {active_session.display_name}, meaning you can now submit bills & motions with `/{command_name} submit` again."
         )
         await ui.send_static(
             ctx,
-            title=f"{house_name} Session #{active_session.mk13_house_id} Unlocked",
+            title=f"{active_session.display_name} Unlocked",
             body="Submissions are open again.",
             links=self.house_links(house, session=active_session),
         )
@@ -678,9 +790,15 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         *,
         house: str,
         voting_form: str,
+        session_kind: typing.Optional[models.SessionKind] = None,
         notify_legislators: bool = False,
     ):
-        active_session = await self.get_active_leg_session(house=house)
+        ok, active_session = await self._resolve_active_session_for_slash(
+            ctx, house=house, session_kind=session_kind, action="start voting for"
+        )
+        if not ok:
+            return
+
         house_name = models.display_house_name(house)
         command_name = self.house_command(house)
 
@@ -709,13 +827,13 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             description=f"Everyone can vote here:\n{voting_form}"
         )
         announcement.set_author(
-            name=f"Voting has started for {house_name} Session #{active_session.mk13_house_id}",
+            name=f"Voting has started for {active_session.display_name}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         await self.gov_announcements_channel.send(embed=announcement)
         await ui.send_static(
             ctx,
-            title=f"{house_name} Session #{active_session.mk13_house_id} Voting Period",
+            title=f"{active_session.display_name} Voting Period",
             body=(
                 "The session is now in voting period. Once voting is complete, close "
                 f"the session with `/{command_name} session close`."
@@ -731,8 +849,8 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             await self.dm_legislators(
                 reason="leg_session_update",
                 message=(
-                    f":ballot_box: Voting for {house_name} Session "
-                    f"#{active_session.mk13_house_id} has started.\nVote here: {voting_form}"
+                    f":ballot_box: Voting for "
+                    f"{active_session.display_name} has started.\nVote here: {voting_form}"
                 ),
             )
 
@@ -741,8 +859,14 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         ctx: slash_context.InteractionContext,
         *,
         house: str,
+        session_kind: typing.Optional[models.SessionKind] = None,
     ):
-        active_session = await self.get_active_leg_session(house=house)
+        ok, active_session = await self._resolve_active_session_for_slash(
+            ctx, house=house, session_kind=session_kind, action="close"
+        )
+        if not ok:
+            return
+
         house_name = models.display_house_name(house)
         command_name = self.house_command(house)
 
@@ -754,7 +878,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         confirmed = await ui.confirm(
             ctx,
-            title=f"Close {house_name} Session #{active_session.mk13_house_id}",
+            title=f"Close {active_session.display_name}",
             body=(
                 "This closes the session and marks every bill from this chamber that "
                 "is not explicitly passed afterwards as failed."
@@ -778,13 +902,13 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         announcement = text.SafeEmbed()
         announcement.set_author(
-            name=f"{house_name} Session #{active_session.mk13_house_id} has been closed",
+            name=f"{active_session.display_name} has been closed",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         await self.gov_announcements_channel.send(embed=announcement)
         await ui.send_static(
             ctx,
-            title=f"{house_name} Session #{active_session.mk13_house_id} Closed",
+            title=f"{active_session.display_name} Closed",
             body=(
                 "Now tally the results and mark each passing bill with "
                 f"`/{command_name} pass`."
@@ -808,47 +932,65 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         interaction: discord.Interaction,
         *,
         house: str,
+        session_kind: typing.Optional[models.SessionKind] = None,
     ):
         ctx = slash_context.from_interaction(
             interaction, command_name=f"{house} submit"
         )
-        session = await self.get_active_leg_session(house=house)
         house_name = models.display_house_name(house)
+        open_sessions = await self.get_open_leg_sessions(
+            house=house, session_kind=session_kind
+        )
+        eligible_sessions = [
+            session
+            for session in open_sessions
+            if self.submission_session_rejection(
+                ctx.author, house=house, session=session
+            )
+            is None
+        ]
 
-        if session is None:
+        if not eligible_sessions:
             return await ctx.send(
-                f"{config.NO} There is no open {house_name} session.\n"
-                f"{config.HINT} The {self.leader_term(house)} can open the next "
-                f"session with `/{self.house_command(house)} session open`.",
+                self.submission_session_unavailable_message(
+                    house=house,
+                    member=ctx.author,
+                    sessions=open_sessions,
+                    session_kind=session_kind,
+                ),
                 ephemeral=True,
             )
 
-        if session.status is not models.SessionStatus.SUBMISSION_PERIOD:
-            if (
-                session.status is models.SessionStatus.LOCKED
-                and self.is_cabinet_for_house(ctx.author, house)
-            ):
-                pass
-            elif session.status is models.SessionStatus.LOCKED:
-                return await ctx.send(
-                    f"{config.NO} The {self.leader_term(house)} has locked "
-                    f"submissions for Session #{session.mk13_house_id}.",
-                    ephemeral=True,
-                )
-            elif session.status is models.SessionStatus.VOTING_PERIOD:
-                return await ctx.send(
-                    f"{config.NO} Voting for Session #{session.mk13_house_id} has already started.",
-                    ephemeral=True,
-                )
+        can_submit_bill = self._can_submit_kind(ctx, kind="bill")
+        can_submit_motion = self._can_submit_kind(ctx, kind="motion")
 
         if not self.bot.mk.LEGISLATURE_MOTIONS_EXIST:
+            if not can_submit_bill:
+                return await ctx.send(
+                    f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} "
+                    "are allowed to submit bills.",
+                    ephemeral=True,
+                )
             return await interaction.response.send_modal(
-                SubmitBillModal(self, house=house, session=session)
+                SubmitBillModal(self, house=house, sessions=eligible_sessions)
             )
+
+        if not (can_submit_bill or can_submit_motion):
+            return await ctx.send(
+                f"{config.NO} Only {self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} "
+                "are allowed to submit bills or motions.",
+                ephemeral=True,
+            )
+
+        title = f"Submit to {house_name}"
+        links_session = None
+        if len(eligible_sessions) == 1:
+            title = f"Submit to {eligible_sessions[0].display_name}"
+            links_session = eligible_sessions[0]
 
         await ui.send_static(
             ctx,
-            title=f"Submit to {house_name} Session #{session.mk13_house_id}",
+            title=title,
             body="Choose the kind of proposal you want to submit.",
             sections=[
                 ui.LayoutSection(
@@ -861,10 +1003,20 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
                     "Use motions for temporary decisions or short-term chamber actions.",
                 ),
             ],
-            links=self.house_links(house, session=session),
+            links=self.house_links(house, session=links_session),
             action_items=[
-                SubmitBillButton(self, house=house, session=session),
-                SubmitMotionButton(self, house=house, session=session),
+                SubmitBillButton(
+                    self,
+                    house=house,
+                    sessions=eligible_sessions,
+                    disabled=not can_submit_bill,
+                ),
+                SubmitMotionButton(
+                    self,
+                    house=house,
+                    sessions=eligible_sessions,
+                    disabled=not can_submit_motion,
+                ),
             ],
             ephemeral=True,
         )
@@ -875,20 +1027,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         *,
         kind: str,
     ) -> bool:
-        if kind == "bill" and self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_BILLS:
-            return True
-
-        if (
-            kind == "motion"
-            and self.bot.mk.LEGISLATURE_EVERYONE_ALLOWED_TO_SUBMIT_MOTIONS
-        ):
-            return True
-
-        return bool(
-            isinstance(ctx.author, discord.Member)
-            and self.legislator_role
-            and self.legislator_role in ctx.author.roles
-        )
+        return self.can_member_submit_kind(ctx.author, kind=kind)
 
     async def submit_bill(
         self,
@@ -955,7 +1094,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         await bill.status.log_history(
             old_status=models.BillSubmitted.flag,
             new_status=models.BillSubmitted.flag,
-            note=f"Submitted to {house_name} Session #{session.mk13_house_id}",
+            note=f"Submitted to {session.display_name}",
         )
 
         if tags:
@@ -985,7 +1124,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         await ui.send_static(
             ctx,
             title=f"{name} (#{bill_id})",
-            body=f"Your bill was submitted to {house_name} Session #{session.mk13_house_id}.",
+            body=f"Your bill was submitted to {session.display_name}.",
             sections=[
                 ui.LayoutSection(
                     "Type",
@@ -1083,7 +1222,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         await ui.send_static(
             ctx,
             title=f"{title} (#{motion_id})",
-            body=f"Your motion was submitted to {house_name} Session #{session.mk13_house_id}.",
+            body=f"Your motion was submitted to {session.display_name}.",
             sections=[
                 ui.LayoutSection("Content", description or "*No content provided.*"),
                 ui.LayoutSection("Author", f"{ctx.author.mention} {ctx.author}"),
@@ -1122,21 +1261,15 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         *,
         house: str,
         bill: models.Bill,
+        destination_session_kind: typing.Optional[models.SessionKind] = None,
     ):
-        last_session = await self.get_last_leg_session(house=house)
         house_name = models.display_house_name(house)
 
-        if last_session is None:
-            return await ctx.send(
-                f"{config.NO} There has not been a {house_name} session yet.",
-                ephemeral=True,
-            )
+        def verify_bill(_ctx, target_bill, **_kwargs):
+            if target_bill.session is None or target_bill.session.house != house:
+                return f"You can only mark bills from a {house_name} session as passed here."
 
-        def verify_bill(_ctx, target_bill, *, last_session, **_kwargs):
-            if last_session.id != target_bill.session.id:
-                return "You can only mark bills from the most recent session as passed."
-
-            if last_session.status is not models.SessionStatus.CLOSED:
+            if target_bill.session.status is not models.SessionStatus.CLOSED:
                 return "You can only mark bills as passed if their session is closed."
 
         consumer = models.LegalConsumer(
@@ -1144,7 +1277,6 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         )
         await consumer.filter(
             filter_func=verify_bill,
-            last_session=last_session,
             acting_house=house,
         )
 
@@ -1157,6 +1289,16 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         if not consumer.passed:
             return
 
+        target_session = None
+        if self.bill_needs_cross_house_destination(bill, acting_house=house):
+            ok, target_session = await self._resolve_cross_house_target_for_slash(
+                ctx,
+                acting_house=house,
+                session_kind=destination_session_kind,
+            )
+            if not ok:
+                return
+
         confirmed = await ui.confirm(
             ctx,
             title=f"Pass Bill from {house_name}",
@@ -1167,7 +1309,11 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             return await ctx.send("Cancelled.", ephemeral=True)
 
         scheduler = getattr(self.bot.get_cog(house_name), "pass_scheduler", None)
-        await consumer.consume(scheduler=scheduler, acting_house=house)
+        await consumer.consume(
+            scheduler=scheduler,
+            acting_house=house,
+            target_session=target_session,
+        )
 
         await ui.send_static(
             ctx,
@@ -1269,9 +1415,13 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         house: str,
         session_id: int = None,
     ):
-        session = await self._get_session(ctx, house=house, session_id=session_id)
+        session = await self._get_session(
+            ctx, house=house, session_id=session_id, action="export"
+        )
         house_name = models.display_house_name(house)
         if session is None:
+            if getattr(ctx, "session_prompt_cancelled", False):
+                return
             return await ctx.send(
                 f"{config.NO} There has not been a {house_name} session yet.",
                 ephemeral=True,
@@ -1282,9 +1432,9 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             await models.Motion.convert(ctx, motion_id) for motion_id in session.motions
         ]
         exported = [
-            f"Export of {house_name} Session {session.mk13_house_id} -- "
+            f"Export of {session.display_name} -- "
             f"{discord.utils.utcnow().strftime('%c')}\n\n",
-            f"{house_name} Session #{session.mk13_house_id} - "
+            f"{session.display_name} - "
             f"{session.opened_on.strftime('%B %d %Y')}\n\n"
             "----- Submitted Bills -----\n",
         ]
@@ -1303,7 +1453,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         paste_link = await self.bot.make_paste("\n".join(exported))
         await ui.send_static(
             ctx,
-            title=f"Spreadsheet Export of {house_name} Session #{session.mk13_house_id}",
+            title=f"Spreadsheet Export of {session.display_name}",
             body=(
                 "This session's bills and motions were exported into copy-and-paste "
                 "formatting for Google Sheets."
@@ -1343,8 +1493,14 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         ctx: slash_context.InteractionContext,
         *,
         house: str,
+        session_kind: typing.Optional[models.SessionKind] = None,
     ):
-        session = await self.get_active_leg_session(house=house)
+        ok, session = await self._resolve_active_session_for_slash(
+            ctx, house=house, session_kind=session_kind, action="post to Reddit"
+        )
+        if not ok:
+            return
+
         house_name = models.display_house_name(house)
 
         if session is None:
@@ -1355,7 +1511,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         confirmed = await ui.confirm(
             ctx,
-            title=f"Post {house_name} Session #{session.mk13_house_id} to Reddit",
+            title=f"Post {session.display_name} to Reddit",
             body=f"This will post the current docket to r/{config.DEMOCRACIV_SUBREDDIT}.",
             confirm_label="Post to Reddit",
         )
@@ -1421,7 +1577,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             "reddit/post",
             json={
                 "subreddit": config.DEMOCRACIV_SUBREDDIT,
-                "title": f"{house_name} Session #{session.mk13_house_id} - Docket & Submissions",
+                "title": f"{session.display_name} - Docket & Submissions",
                 "content": "\n\n".join(content),
             },
         )
@@ -1431,7 +1587,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         await ui.send_static(
             ctx,
-            title=f"{house_name} Session #{session.mk13_house_id} Posted",
+            title=f"{session.display_name} Posted",
             body=f"A summary was posted to r/{config.DEMOCRACIV_SUBREDDIT}.",
             links=self.house_links(house, session=session),
         )
@@ -1485,22 +1641,23 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     async def _all_sessions(self, ctx: slash_context.InteractionContext, *, house: str):
         house_name = models.display_house_name(house)
         records = await self.bot.db.fetch(
-            "SELECT id, mk13_house_id, opened_on, closed_on "
+            "SELECT id, mk13_house_id, opened_on, closed_on, session_kind "
             "FROM legislature_session WHERE house = $1 ORDER BY id",
             house,
         )
         entries = []
         for record in records:
             opened_on = f"<t:{int(record['opened_on'].timestamp())}:D>"
+            label = (
+                f"Emergency Session #{record['mk13_house_id']}"
+                if record["session_kind"] == models.SessionKind.EMERGENCY.value
+                else f"Session #{record['mk13_house_id']}"
+            )
             if record["closed_on"]:
                 closed_on = f"<t:{int(record['closed_on'].timestamp())}:D>"
-                entries.append(
-                    f"* **Session #{record['mk13_house_id']}**  - {opened_on} to {closed_on}"
-                )
+                entries.append(f"* **{label}**  - {opened_on} to {closed_on}")
             else:
-                entries.append(
-                    f"* **Session #{record['mk13_house_id']}**  - {opened_on}"
-                )
+                entries.append(f"* **{label}**  - {opened_on}")
 
         pages = paginator.SimplePages(
             entries=entries,
@@ -1514,8 +1671,18 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     @slash_checks.is_democraciv_guild()
     @slash_checks.is_citizen_if_multiciv()
     @app_commands.checks.dynamic_cooldown(_submit_cooldown)
-    async def senate_submit(self, interaction: discord.Interaction):
-        await self.submit_entrypoint(interaction, house="senate")
+    @app_commands.describe(
+        session_type="Preselect a regular or emergency target session."
+    )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
+    async def senate_submit(
+        self, interaction: discord.Interaction, session_type: str = None
+    ):
+        await self.submit_entrypoint(
+            interaction,
+            house="senate",
+            session_kind=_session_kind_from_choice(session_type),
+        )
 
     @commons.command(
         name="submit", description="Submit a bill or motion to the Commons."
@@ -1523,16 +1690,42 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     @slash_checks.is_democraciv_guild()
     @slash_checks.is_citizen_if_multiciv()
     @app_commands.checks.dynamic_cooldown(_submit_cooldown)
-    async def commons_submit(self, interaction: discord.Interaction):
-        await self.submit_entrypoint(interaction, house="commons")
+    @app_commands.describe(
+        session_type="Preselect a regular or emergency target session."
+    )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
+    async def commons_submit(
+        self, interaction: discord.Interaction, session_type: str = None
+    ):
+        await self.submit_entrypoint(
+            interaction,
+            house="commons",
+            session_kind=_session_kind_from_choice(session_type),
+        )
 
     @senate.command(name="pass", description="Mark one Senate bill as passed.")
     @slash_checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
-    @app_commands.describe(bill="Bill ID or title")
-    async def senate_pass(self, interaction: discord.Interaction, bill: BillOption):
+    @app_commands.describe(
+        bill="Bill ID or title",
+        destination_session_type="Other-house target if both destination sessions are open.",
+    )
+    @app_commands.choices(destination_session_type=SESSION_TYPE_CHOICES)
+    async def senate_pass(
+        self,
+        interaction: discord.Interaction,
+        bill: BillOption,
+        destination_session_type: str = None,
+    ):
         ctx = slash_context.from_interaction(interaction, command_name="senate pass")
         await ctx.defer()
-        await self.pass_bill(ctx, house="senate", bill=bill)
+        await self.pass_bill(
+            ctx,
+            house="senate",
+            bill=bill,
+            destination_session_kind=_session_kind_from_choice(
+                destination_session_type
+            ),
+        )
 
     @senate.command(
         name="override", description="Override the Executive veto of one bill."
@@ -1573,11 +1766,27 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     @slash_checks.has_any_democraciv_role(
         mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
     )
-    @app_commands.describe(bill="Bill ID or title")
-    async def commons_pass(self, interaction: discord.Interaction, bill: BillOption):
+    @app_commands.describe(
+        bill="Bill ID or title",
+        destination_session_type="Other-house target if both destination sessions are open.",
+    )
+    @app_commands.choices(destination_session_type=SESSION_TYPE_CHOICES)
+    async def commons_pass(
+        self,
+        interaction: discord.Interaction,
+        bill: BillOption,
+        destination_session_type: str = None,
+    ):
         ctx = slash_context.from_interaction(interaction, command_name="commons pass")
         await ctx.defer()
-        await self.pass_bill(ctx, house="commons", bill=bill)
+        await self.pass_bill(
+            ctx,
+            house="commons",
+            bill=bill,
+            destination_session_kind=_session_kind_from_choice(
+                destination_session_type
+            ),
+        )
 
     @commons.command(
         name="statistics",
@@ -1605,7 +1814,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
     @senate_session.command(name="show", description="Show a Senate session.")
     @app_commands.describe(
-        session_id="Senate session number. Defaults to the latest session.",
+        session_id="Senate session number. Uses open session, prompts if needed, otherwise latest.",
         sponsor_filter="Optional sponsor filter such as >=2, =1, or <3.",
     )
     async def senate_session_show(
@@ -1618,6 +1827,8 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         await ctx.defer()
         session = await self._get_session(ctx, house="senate", session_id=session_id)
         if session is None:
+            if getattr(ctx, "session_prompt_cancelled", False):
+                return
             return await ctx.send(
                 f"{config.NO} There hasn't been a Senate session yet.",
                 ephemeral=True,
@@ -1647,13 +1858,13 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         pages = paginator.SimplePages(
             entries=entries,
             icon=self.bot.mk.NATION_ICON_URL,
-            author=f"Senate Session #{session.mk13_house_id}",
+            author=session.display_name,
         )
         await pages.start(ctx)
 
     @commons_session.command(name="show", description="Show a Commons session.")
     @app_commands.describe(
-        session_id="Commons session number. Defaults to the latest session.",
+        session_id="Commons session number. Uses open session, prompts if needed, otherwise latest.",
         sponsor_filter="Optional sponsor filter such as >=2, =1, or <3.",
     )
     async def commons_session_show(
@@ -1668,6 +1879,8 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         await ctx.defer()
         session = await self._get_session(ctx, house="commons", session_id=session_id)
         if session is None:
+            if getattr(ctx, "session_prompt_cancelled", False):
+                return
             return await ctx.send(
                 f"{config.NO} There hasn't been a Commons session yet.",
                 ephemeral=True,
@@ -1697,20 +1910,30 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         pages = paginator.SimplePages(
             entries=entries,
             icon=self.bot.mk.NATION_ICON_URL,
-            author=f"Commons Session #{session.mk13_house_id}",
+            author=session.display_name,
         )
         await pages.start(ctx)
 
     @senate_session.command(name="open", description="Open a Senate submission period.")
     @slash_checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
-    @app_commands.describe(notify_legislators="DM legislators about the new session.")
+    @app_commands.describe(
+        session_type="Kind of session to open.",
+        notify_legislators="DM legislators about the new session.",
+    )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
     async def senate_session_open(
-        self, interaction: discord.Interaction, notify_legislators: bool = False
+        self,
+        interaction: discord.Interaction,
+        session_type: str = models.SessionKind.REGULAR.value,
+        notify_legislators: bool = False,
     ):
         ctx = slash_context.from_interaction(interaction, command_name="senate session")
         await ctx.defer()
         await self.open_session(
-            ctx, house="senate", notify_legislators=notify_legislators
+            ctx,
+            house="senate",
+            session_kind=_session_kind_from_choice(session_type),
+            notify_legislators=notify_legislators,
         )
 
     @commons_session.command(
@@ -1719,64 +1942,109 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     @slash_checks.has_any_democraciv_role(
         mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
     )
-    @app_commands.describe(notify_legislators="DM legislators about the new session.")
+    @app_commands.describe(
+        session_type="Kind of session to open.",
+        notify_legislators="DM legislators about the new session.",
+    )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
     async def commons_session_open(
-        self, interaction: discord.Interaction, notify_legislators: bool = False
+        self,
+        interaction: discord.Interaction,
+        session_type: str = models.SessionKind.REGULAR.value,
+        notify_legislators: bool = False,
     ):
         ctx = slash_context.from_interaction(
             interaction, command_name="commons session"
         )
         await ctx.defer()
         await self.open_session(
-            ctx, house="commons", notify_legislators=notify_legislators
+            ctx,
+            house="commons",
+            session_kind=_session_kind_from_choice(session_type),
+            notify_legislators=notify_legislators,
         )
 
     @senate_session.command(name="lock", description="Lock Senate submissions.")
     @slash_checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
-    async def senate_session_lock(self, interaction: discord.Interaction):
+    @app_commands.describe(
+        session_type="Session type to lock if multiple sessions are open."
+    )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
+    async def senate_session_lock(
+        self, interaction: discord.Interaction, session_type: str = None
+    ):
         ctx = slash_context.from_interaction(interaction, command_name="senate session")
         await ctx.defer()
-        await self.lock_session(ctx, house="senate")
+        await self.lock_session(
+            ctx, house="senate", session_kind=_session_kind_from_choice(session_type)
+        )
 
     @commons_session.command(name="lock", description="Lock Commons submissions.")
     @slash_checks.has_any_democraciv_role(
         mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
     )
-    async def commons_session_lock(self, interaction: discord.Interaction):
+    @app_commands.describe(
+        session_type="Session type to lock if multiple sessions are open."
+    )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
+    async def commons_session_lock(
+        self, interaction: discord.Interaction, session_type: str = None
+    ):
         ctx = slash_context.from_interaction(
             interaction, command_name="commons session"
         )
         await ctx.defer()
-        await self.lock_session(ctx, house="commons")
+        await self.lock_session(
+            ctx, house="commons", session_kind=_session_kind_from_choice(session_type)
+        )
 
     @senate_session.command(name="unlock", description="Unlock Senate submissions.")
     @slash_checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
-    async def senate_session_unlock(self, interaction: discord.Interaction):
+    @app_commands.describe(
+        session_type="Session type to unlock if multiple sessions are open."
+    )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
+    async def senate_session_unlock(
+        self, interaction: discord.Interaction, session_type: str = None
+    ):
         ctx = slash_context.from_interaction(interaction, command_name="senate session")
         await ctx.defer()
-        await self.unlock_session(ctx, house="senate")
+        await self.unlock_session(
+            ctx, house="senate", session_kind=_session_kind_from_choice(session_type)
+        )
 
     @commons_session.command(name="unlock", description="Unlock Commons submissions.")
     @slash_checks.has_any_democraciv_role(
         mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
     )
-    async def commons_session_unlock(self, interaction: discord.Interaction):
+    @app_commands.describe(
+        session_type="Session type to unlock if multiple sessions are open."
+    )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
+    async def commons_session_unlock(
+        self, interaction: discord.Interaction, session_type: str = None
+    ):
         ctx = slash_context.from_interaction(
             interaction, command_name="commons session"
         )
         await ctx.defer()
-        await self.unlock_session(ctx, house="commons")
+        await self.unlock_session(
+            ctx, house="commons", session_kind=_session_kind_from_choice(session_type)
+        )
 
     @senate_session.command(name="vote", description="Start Senate voting period.")
     @slash_checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
     @app_commands.describe(
         voting_form="Google Forms, Sheets, or Docs voting link.",
+        session_type="Session type to start voting for if multiple sessions are open.",
         notify_legislators="DM legislators the voting link.",
     )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
     async def senate_session_vote(
         self,
         interaction: discord.Interaction,
         voting_form: str,
+        session_type: str = None,
         notify_legislators: bool = False,
     ):
         ctx = slash_context.from_interaction(interaction, command_name="senate session")
@@ -1785,6 +2053,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             ctx,
             house="senate",
             voting_form=voting_form,
+            session_kind=_session_kind_from_choice(session_type),
             notify_legislators=notify_legislators,
         )
 
@@ -1794,12 +2063,15 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     )
     @app_commands.describe(
         voting_form="Google Forms, Sheets, or Docs voting link.",
+        session_type="Session type to start voting for if multiple sessions are open.",
         notify_legislators="DM legislators the voting link.",
     )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
     async def commons_session_vote(
         self,
         interaction: discord.Interaction,
         voting_form: str,
+        session_type: str = None,
         notify_legislators: bool = False,
     ):
         ctx = slash_context.from_interaction(
@@ -1810,6 +2082,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             ctx,
             house="commons",
             voting_form=voting_form,
+            session_kind=_session_kind_from_choice(session_type),
             notify_legislators=notify_legislators,
         )
 
@@ -1817,10 +2090,18 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         name="close", description="Close the active Senate session."
     )
     @slash_checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
-    async def senate_session_close(self, interaction: discord.Interaction):
+    @app_commands.describe(
+        session_type="Session type to close if multiple sessions are open."
+    )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
+    async def senate_session_close(
+        self, interaction: discord.Interaction, session_type: str = None
+    ):
         ctx = slash_context.from_interaction(interaction, command_name="senate session")
         await ctx.defer()
-        await self.close_session(ctx, house="senate")
+        await self.close_session(
+            ctx, house="senate", session_kind=_session_kind_from_choice(session_type)
+        )
 
     @commons_session.command(
         name="close", description="Close the active Commons session."
@@ -1828,18 +2109,26 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     @slash_checks.has_any_democraciv_role(
         mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
     )
-    async def commons_session_close(self, interaction: discord.Interaction):
+    @app_commands.describe(
+        session_type="Session type to close if multiple sessions are open."
+    )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
+    async def commons_session_close(
+        self, interaction: discord.Interaction, session_type: str = None
+    ):
         ctx = slash_context.from_interaction(
             interaction, command_name="commons session"
         )
         await ctx.defer()
-        await self.close_session(ctx, house="commons")
+        await self.close_session(
+            ctx, house="commons", session_kind=_session_kind_from_choice(session_type)
+        )
 
     @senate_export.command(
         name="spreadsheet", description="Export a Senate session for Google Sheets."
     )
     @app_commands.describe(
-        session_id="Senate session number. Defaults to the latest session."
+        session_id="Senate session number. Uses open session, prompts if needed, otherwise latest."
     )
     async def senate_export_spreadsheet(
         self, interaction: discord.Interaction, session_id: int = None
@@ -1852,7 +2141,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         name="spreadsheet", description="Export a Commons session for Google Sheets."
     )
     @app_commands.describe(
-        session_id="Commons session number. Defaults to the latest session."
+        session_id="Commons session number. Uses open session, prompts if needed, otherwise latest."
     )
     async def commons_export_spreadsheet(
         self, interaction: discord.Interaction, session_id: int = None
@@ -1881,10 +2170,18 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         name="reddit", description="Post the active Senate docket to Reddit."
     )
     @slash_checks.has_democraciv_role(mk.DemocracivRole.MK13_SENATOR_PRESIDING)
-    async def senate_export_reddit(self, interaction: discord.Interaction):
+    @app_commands.describe(
+        session_type="Session type to post if multiple sessions are open."
+    )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
+    async def senate_export_reddit(
+        self, interaction: discord.Interaction, session_type: str = None
+    ):
         ctx = slash_context.from_interaction(interaction, command_name="senate export")
         await ctx.defer()
-        await self.export_reddit(ctx, house="senate")
+        await self.export_reddit(
+            ctx, house="senate", session_kind=_session_kind_from_choice(session_type)
+        )
 
     @commons_export.command(
         name="reddit", description="Post the active Commons docket to Reddit."
@@ -1892,10 +2189,18 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     @slash_checks.has_any_democraciv_role(
         mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
     )
-    async def commons_export_reddit(self, interaction: discord.Interaction):
+    @app_commands.describe(
+        session_type="Session type to post if multiple sessions are open."
+    )
+    @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
+    async def commons_export_reddit(
+        self, interaction: discord.Interaction, session_type: str = None
+    ):
         ctx = slash_context.from_interaction(interaction, command_name="commons export")
         await ctx.defer()
-        await self.export_reddit(ctx, house="commons")
+        await self.export_reddit(
+            ctx, house="commons", session_kind=_session_kind_from_choice(session_type)
+        )
 
 
 async def setup(bot):
