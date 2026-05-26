@@ -75,7 +75,7 @@ class Session(commands.Converter):
 
     @property
     def display_id(self) -> int:
-        return self.mk13_house_id or self.id
+        return self.mk13_house_id
 
     @property
     def display_name(self) -> str:
