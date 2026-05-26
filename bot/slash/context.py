@@ -48,6 +48,10 @@ class InteractionContext:
     def author_icon(self):
         return self.author.display_avatar.url
 
+    @property
+    def is_slash(self) -> bool:
+        return True
+
     async def defer(self, *, ephemeral: bool = None, thinking: bool = True):
         if self.interaction.response.is_done():
             return

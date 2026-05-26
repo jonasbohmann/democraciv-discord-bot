@@ -1,10 +1,11 @@
-import textwrap
 import discord
 import typing
 
 from bot.config import config
 from discord.ext import commands
 
+from bot.presenters import guild as guild_presenter, guild_forms
+from bot.services.guild import GuildService, LOG_EVENT_COLUMNS
 from bot.utils import text, converter, paginator, exceptions, context
 from bot.utils.converter import Fuzzy
 
@@ -33,19 +34,14 @@ class SelectTagCreationView(text.PromptView):
 class _Guild(context.CustomCog, name="Server"):
     """Configure various features of this bot for this server."""
 
+    def __init__(self, bot):
+        super().__init__(bot)
+        self.service = GuildService(bot)
+
     async def ensure_guild_settings(
         self, guild_id: int
     ) -> typing.Dict[str, typing.Any]:
-        try:
-            settings = self.bot.guild_config[guild_id]
-
-            if not settings:
-                return await self.bot.update_guild_config_cache()
-            else:
-                return settings
-
-        except (TypeError, KeyError):
-            return await self.bot.update_guild_config_cache()
+        return await self.service.ensure_guild_settings(guild_id)
 
     @commands.group(
         name="server",
@@ -58,45 +54,7 @@ class _Guild(context.CustomCog, name="Server"):
         """Statistics and information about this server"""
 
         settings = await self.ensure_guild_settings(ctx.guild.id)
-
-        is_welcome_enabled = self.bot.emojify_boolean(settings["welcome_enabled"])
-        is_logging_enabled = self.bot.emojify_boolean(settings["logging_enabled"])
-        is_default_role_enabled = self.bot.emojify_boolean(
-            settings["default_role_enabled"]
-        )
-        is_tag_creation_allowed = self.bot.emojify_boolean(
-            settings["tag_creation_allowed"]
-        )
-        excluded_channels = len(settings["private_channels"])
-        is_npc_allowed = self.bot.emojify_boolean(settings["npc_usage_allowed"])
-
-        embed = text.SafeEmbed(
-            description=f"Check **`{config.BOT_PREFIX}help server`** to see how you can configure me for this server.",
-        )
-
-        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild_icon)
-
-        embed.add_field(
-            name="Settings",
-            value=f"{is_welcome_enabled} Welcome Messages\n"
-            f"{is_logging_enabled} Logging ({excluded_channels} hidden channels)\n"
-            f"{is_default_role_enabled} Role on Join\n"
-            f"{is_tag_creation_allowed} Tag Creation by Everyone\n"
-            f"{is_npc_allowed} NPC Usage Allowed",
-        )
-        embed.add_field(
-            name="Statistics",
-            value=f"{ctx.guild.member_count} members\n"
-            f"{len(ctx.guild.text_channels)} text channels\n"
-            f"{len(ctx.guild.voice_channels)} voice channels\n"
-            f"{len(ctx.guild.roles)} roles\n"
-            f"{len(ctx.guild.emojis)} custom emojis",
-        )
-        embed.set_footer(
-            text=f"Server was created on {ctx.guild.created_at.strftime('%A, %B %d %Y')}"
-        )
-        embed.set_thumbnail(url=ctx.guild_icon)
-        await ctx.send(embed=embed)
+        await ctx.send(embed=guild_presenter.build_server_overview_embed(ctx, settings))
 
     @commands.Cog.listener(name="on_member_join")
     async def welcome_message_listener(self, member: discord.Member):
@@ -128,27 +86,8 @@ class _Guild(context.CustomCog, name="Server"):
 
         settings = await self.ensure_guild_settings(ctx.guild.id)
         current_welcome_channel = await self.bot.get_welcome_channel(ctx.guild)
-        current_welcome_message = settings["welcome_message"]
-        current_welcome_channel_value = (
-            "-" if not current_welcome_channel else current_welcome_channel.mention
-        )
-
-        if not current_welcome_message:
-            current_welcome_message = "-"
-        elif len(current_welcome_message) > 1024:
-            current_welcome_message = textwrap.shorten(current_welcome_message, 1024)
-
-        embed = text.SafeEmbed()
-
-        embed.set_author(
-            name=f"Welcome Messages on {ctx.guild.name}", icon_url=ctx.guild_icon
-        )
-        embed.add_field(
-            name="Enabled", value=self.bot.emojify_boolean(settings["welcome_enabled"])
-        )
-        embed.add_field(name="Welcome Channel", value=current_welcome_channel_value)
-        embed.add_field(
-            name="Welcome Message", value=current_welcome_message, inline=False
+        embed = guild_presenter.build_welcome_embed(
+            ctx, settings, current_welcome_channel
         )
 
         info_embed = await ctx.send(embed=embed)
@@ -212,39 +151,36 @@ class _Guild(context.CustomCog, name="Server"):
                 welcome_channel = settings["welcome_channel"]
 
             if to_change["message"]:
-
-                translations = (
-                    f"`{{mention}}` - Mention (ping) the person that just joined  (For example: @DerJonas)\n"
-                    f"`{{user}}` - Display Name  (For example: DerJonas)\n"
-                    f"`{{username}}` - Discord Username  (For example: derjonas)\n"
-                    f"`{{server}}` - Name of the server  (For example: Democraciv)\n"
-                    f"`{{channel}}` - The welcome channel  (For example: #welcome)\n"
+                view = text.ModalPromptView(
+                    ctx,
+                    modal_factory=lambda: guild_forms.WelcomeMessageModal(
+                        current_message=settings["welcome_message"] or ""
+                    ),
+                    button_label="Edit Welcome Message",
+                    timeout=300,
+                )
+                form = await view.prompt_message(
+                    f"{config.USER_INTERACTION_REQUIRED} Fill out the welcome message form.\n"
+                    f"{config.HINT} You can use `{{mention}}`, `{{user}}`, `{{username}}`, "
+                    f"`{{server}}`, and `{{channel}}`."
                 )
 
-                welcome_mention = (
-                    current_welcome_channel.mention
-                    if current_welcome_channel
-                    else "your welcome channel"
-                )
+                if form is None:
+                    return
 
-                welcome_message = await ctx.input(
-                    f"{config.USER_INTERACTION_REQUIRED} Reply with the message that should be sent to "
-                    f"{welcome_mention} every time a new person joins.\n{config.HINT} "
-                    f"You can use the following variables in the welcome message.\n\n{translations}"
-                )
+                welcome_message = form.message
             else:
                 welcome_message = settings["welcome_message"]
 
-            await self.bot.db.execute(
-                "UPDATE guild SET welcome_enabled = $1, welcome_channel = $2, "
-                "welcome_message = $3 WHERE id = $4",
-                welcome_enabled,
-                welcome_channel,
-                welcome_message,
-                ctx.guild.id,
+            result = await self.service.update_welcome_settings(
+                ctx,
+                enabled=welcome_enabled,
+                channel=(
+                    ctx.guild.get_channel(welcome_channel) if welcome_channel else None
+                ),
+                message=welcome_message,
             )
-            await self.bot.update_guild_config_cache()
-            await ctx.send(f"{config.YES} Welcome Message settings were updated.")
+            await ctx.send(result.message)
 
     @guild.group(
         name="logs",
@@ -259,23 +195,9 @@ class _Guild(context.CustomCog, name="Server"):
 
         settings = await self.ensure_guild_settings(ctx.guild.id)
         current_logging_channel = await self.bot.get_logging_channel(ctx.guild)
-        current_logging_channel_value = (
-            "-" if not current_logging_channel else current_logging_channel.mention
+        embed = guild_presenter.build_logging_embed(
+            ctx, settings, current_logging_channel
         )
-
-        embed = text.SafeEmbed(
-            description=f"If you want "
-            f"to change what specific events I should log, use my `{config.BOT_PREFIX}server logs events` "
-            f"command."
-        )
-
-        embed.set_author(
-            name=f"Event Logging on {ctx.guild.name}", icon_url=ctx.guild_icon
-        )
-        embed.add_field(
-            name="Enabled", value=self.bot.emojify_boolean(settings["logging_enabled"])
-        )
-        embed.add_field(name="Log Channel", value=current_logging_channel_value)
 
         info_embed = await ctx.send(embed=embed)
 
@@ -337,15 +259,15 @@ class _Guild(context.CustomCog, name="Server"):
             else:
                 logging_channel = settings["logging_channel"]
 
-            await self.bot.db.execute(
-                "UPDATE guild SET logging_enabled = $1, logging_channel = $2 WHERE id = $3",
-                logging_enabled,
-                logging_channel,
-                ctx.guild.id,
+            result = await self.service.update_logging_settings(
+                ctx,
+                enabled=logging_enabled,
+                channel=(
+                    ctx.guild.get_channel(logging_channel) if logging_channel else None
+                ),
             )
-            await self.bot.update_guild_config_cache()
             await ctx.send(
-                f"{config.YES} Logging settings were updated.\n{config.HINT} If you want to "
+                f"{result.message}\n{config.HINT} If you want to "
                 f"change what specific events I should log, use my `{config.BOT_PREFIX}server logs events` "
                 f"command."
             )
@@ -357,16 +279,18 @@ class _Guild(context.CustomCog, name="Server"):
         """Customize what specific events I should log on this server"""
 
         choices = {
-            "logging_message_edit": [("", "Message edits")],
-            "logging_message_delete": [("", "Message deletions")],
-            "logging_member_nickname_change": [("", "Nickname changes")],
-            "logging_member_role_change": [("", "Someone gets or loses a role")],
-            "logging_member_join_leave": [("", "Joins & Leaves")],
-            "logging_ban_unban": [("", "Bans & Unbans")],
-            "logging_guild_channel_create_delete": [
+            LOG_EVENT_COLUMNS["message_edits"]: [("", "Message edits")],
+            LOG_EVENT_COLUMNS["message_deletes"]: [("", "Message deletions")],
+            LOG_EVENT_COLUMNS["nickname_changes"]: [("", "Nickname changes")],
+            LOG_EVENT_COLUMNS["role_changes"]: [("", "Someone gets or loses a role")],
+            LOG_EVENT_COLUMNS["joins_and_leaves"]: [("", "Joins & Leaves")],
+            LOG_EVENT_COLUMNS["bans_and_unbans"]: [("", "Bans & Unbans")],
+            LOG_EVENT_COLUMNS["channel_create_delete"]: [
                 ("", "Channel creations & deletions")
             ],
-            "logging_role_create_delete": [("", "Role creations & deletions")],
+            LOG_EVENT_COLUMNS["role_create_delete"]: [
+                ("", "Role creations & deletions")
+            ],
         }
 
         current_settings = await self.ensure_guild_settings(ctx.guild.id)
@@ -390,23 +314,12 @@ class _Guild(context.CustomCog, name="Server"):
         if not result.confirmed:
             return
 
-        await self.bot.db.execute(
-            "UPDATE guild SET "
-            "logging_message_edit = $1, "
-            "logging_message_delete = $2, "
-            "logging_member_nickname_change = $3, "
-            "logging_member_role_change = $4, "
-            "logging_member_join_leave = $5, "
-            "logging_ban_unban = $6, "
-            "logging_guild_channel_create_delete = $7, "
-            "logging_role_create_delete = $8 "
-            "WHERE id = $9",
-            *result.choices.values(),
-            ctx.guild.id,
-        )
-
-        await self.bot.update_guild_config_cache()
-        await ctx.send(f"{config.YES} The settings for this server were updated.")
+        reverse_columns = {column: name for name, column in LOG_EVENT_COLUMNS.items()}
+        choices_by_event = {
+            reverse_columns[column]: value for column, value in result.choices.items()
+        }
+        service_result = await self.service.update_logging_events(ctx, choices_by_event)
+        await ctx.send(service_result.message)
 
     @guild.command(
         name="hidechannel", aliases=["exclude", "private", "hiddenchannels", "hide"]
@@ -442,107 +355,31 @@ class _Guild(context.CustomCog, name="Server"):
                 f"Please set one with `{config.BOT_PREFIX}server logs`."
             )
 
-        help_description = (
-            f"When you hide a channel, it (and all its threads) will no longer show up in {current_logging_channel.mention}.\n\nAdditionally,"
-            f" :star: reactions for the starboard will no longer count in that channel (and in all its threads).\n\nYou can hide a channel, "
-            f"or even an entire category at once, with "
-            f"`{config.BOT_PREFIX}server hidechannel <channel_name>`\n\n__**Hidden Channels**__"
-        )
-
         private_channels = settings["private_channels"]
 
         if not channel:
-            current_excluded_channels_by_name = [help_description]
-
             if not private_channels:
                 return await ctx.send(
-                    f"{config.NO} There are no hidden channels on this server yet. "
-                    f"You can hide a channel so that it no longer shows up in "
-                    f"{current_logging_channel.mention} with "
-                    f"`{config.BOT_PREFIX}server hidechannel <channel_name>`."
-                    f"\n{config.HINT} You can also hide entire categories! Just hide the category "
-                    f"and every channel in that category will be hidden automatically. "
-                    f"Note that if channel is hidden, :star: reactions for the starboard will no "
-                    f"longer count in it."
+                    guild_presenter.hidden_channels_empty_message(
+                        ctx, current_logging_channel
+                    )
                 )
 
-            for channel_id in private_channels:
-                channel = self.bot.get_channel(channel_id)
-                if channel:
-                    current_excluded_channels_by_name.append(channel.mention)
+            page = guild_presenter.build_hidden_channels_page(
+                ctx, settings, current_logging_channel
+            )
 
             pages = paginator.SimplePages(
-                entries=current_excluded_channels_by_name,
-                author=f"Hidden Channels on {ctx.guild.name}",
-                icon=ctx.guild_icon,
-                empty_message="There are no hidden channels on this server.",
+                entries=list(page.entries),
+                author=page.author,
+                icon=page.icon,
+                empty_message=page.empty_message,
             )
             return await pages.start(ctx)
 
         else:
-            is_category = isinstance(channel, discord.CategoryChannel)
-
-            # Remove channel
-            if channel.id in private_channels:
-                await self.bot.db.execute(
-                    "DELETE FROM guild_private_channel WHERE guild_id = $1 AND channel_id = $2",
-                    ctx.guild.id,
-                    channel.id,
-                )
-                await self.bot.update_guild_config_cache()
-
-                if is_category:
-                    star = (
-                        f"\n{config.HINT} *Note that :star: reactions for the starboard will now count again in every one of these channels and their threads.*"
-                        if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED
-                        else ""
-                    )
-                    await ctx.send(
-                        f"{config.YES} The {channel} category **is no longer hidden**, and all channels in it and their threads "
-                        f"will show up in {current_logging_channel.mention} again.{star}"
-                    )
-                else:
-                    star = (
-                        f"\n{config.HINT} *Note that :star: reactions for the starboard will now count again in this channel and in all its threads.*"
-                        if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED
-                        else ""
-                    )
-                    await ctx.send(
-                        f"{config.YES} {channel.mention} **is no longer hidden**, "
-                        f"and it and all its threads will show up in {current_logging_channel.mention} again.{star}"
-                    )
-
-            # Add channel
-            elif channel.id not in private_channels:
-                await self.bot.db.execute(
-                    "INSERT INTO guild_private_channel (guild_id, channel_id) VALUES ($1, $2)",
-                    ctx.guild.id,
-                    channel.id,
-                )
-
-                if is_category:
-                    star = (
-                        f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in any of these channels and their threads.*"
-                        if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED
-                        else ""
-                    )
-
-                    await ctx.send(
-                        f"{config.YES} The {channel} category **is now hidden**, and all the channels in it and their threads "
-                        f"will no longer show up in {current_logging_channel.mention}.{star}"
-                    )
-                else:
-                    star = (
-                        f"\n{config.HINT} *Note that :star: reactions for the starboard will also no longer count in this channel and its threads.*"
-                        if ctx.guild.id == self.bot.dciv.id and config.STARBOARD_ENABLED
-                        else ""
-                    )
-
-                    await ctx.send(
-                        f"{config.YES} {channel.mention} (and all its threads) **are now hidden** and will no longer show up "
-                        f"in {current_logging_channel.mention}.{star}"
-                    )
-                await self.bot.update_guild_config_cache()
+            result = await self.service.toggle_hidden_channel(ctx, channel)
+            await ctx.send(result.message)
 
     @commands.Cog.listener(name="on_guild_channel_delete")
     async def check_stale_hidden_channel(
@@ -551,14 +388,7 @@ class _Guild(context.CustomCog, name="Server"):
             discord.TextChannel, discord.VoiceChannel, discord.CategoryChannel
         ],
     ):
-        settings = await self.ensure_guild_settings(channel.guild.id)
-
-        if channel.id in settings["private_channels"]:
-            await self.bot.db.execute(
-                "DELETE FROM guild_private_channel WHERE guild_id = $1 AND channel_id = $2",
-                channel.guild.id,
-                channel.id,
-            )
+        await self.service.remove_stale_hidden_channel(channel.guild.id, channel.id)
 
     @commands.Cog.listener(name="on_member_join")
     async def default_role_listener(self, member):
@@ -584,20 +414,7 @@ class _Guild(context.CustomCog, name="Server"):
         """Give every new person that joins a specific role"""
 
         settings = await self.ensure_guild_settings(ctx.guild.id)
-        is_default_role_enabled = self.bot.emojify_boolean(
-            settings["default_role_enabled"]
-        )
-        current_default_role = ctx.guild.get_role(settings["default_role_role"])
-        current_default_role_value = (
-            "-" if not current_default_role else current_default_role.mention
-        )
-
-        embed = text.SafeEmbed()
-        embed.set_author(
-            name=f"Role on Join on {ctx.guild.name}", icon_url=ctx.guild_icon
-        )
-        embed.add_field(name="Enabled", value=is_default_role_enabled)
-        embed.add_field(name="Role", value=current_default_role_value)
+        embed = guild_presenter.build_default_role_embed(ctx, settings)
 
         info_embed = await ctx.send(embed=embed)
 
@@ -659,15 +476,14 @@ class _Guild(context.CustomCog, name="Server"):
             else:
                 default_role_role = settings["default_role_role"]
 
-            await self.bot.db.execute(
-                "UPDATE guild SET default_role_enabled = $1, default_role_role = $2 "
-                "WHERE id = $3",
-                default_role_enabled,
-                default_role_role,
-                ctx.guild.id,
+            result = await self.service.update_default_role_settings(
+                ctx,
+                enabled=default_role_enabled,
+                role=(
+                    ctx.guild.get_role(default_role_role) if default_role_role else None
+                ),
             )
-            await self.bot.update_guild_config_cache()
-            await ctx.send(f"{config.YES} Role on Join settings were updated.")
+            await ctx.send(result.message)
 
     @guild.command(name="tagcreation", aliases=["tag", "tags"])
     @commands.guild_only()
@@ -676,16 +492,7 @@ class _Guild(context.CustomCog, name="Server"):
         """Allow everyone to make tags on this server, or just Administrators"""
 
         settings = await self.ensure_guild_settings(ctx.guild.id)
-        is_allowed = settings["tag_creation_allowed"]
-
-        pretty_is_allowed = "Only Administrators" if not is_allowed else "Everyone"
-
-        embed = text.SafeEmbed()
-
-        embed.set_author(
-            name=f"Tag Creation on {ctx.guild.name}", icon_url=ctx.guild_icon
-        )
-        embed.add_field(name="Allowed Tag Creators", value=pretty_is_allowed)
+        embed = guild_presenter.build_tag_creation_embed(ctx, settings)
 
         info_embed = await ctx.send(embed=embed)
 
@@ -708,25 +515,14 @@ class _Guild(context.CustomCog, name="Server"):
                 return
 
             if result == "Everyone":
-                await self.bot.db.execute(
-                    "UPDATE guild SET tag_creation_allowed = true WHERE id = $1",
-                    ctx.guild.id,
-                )
-                await ctx.send(
-                    f"{config.YES} Everyone can now make tags with `{config.BOT_PREFIX}tag add` on this server."
-                )
+                service_result = await self.service.set_tag_creation(ctx, everyone=True)
+                await ctx.send(service_result.message)
 
             elif result == "Administrators":
-                await self.bot.db.execute(
-                    "UPDATE guild SET tag_creation_allowed = false WHERE id = $1",
-                    ctx.guild.id,
+                service_result = await self.service.set_tag_creation(
+                    ctx, everyone=False
                 )
-                await ctx.send(
-                    f"{config.YES} Only Administrators can now make tags with "
-                    f"`{config.BOT_PREFIX}tag add` on this server."
-                )
-
-            await self.bot.update_guild_config_cache()
+                await ctx.send(service_result.message)
 
     @guild.command(name="npcs", aliases=["npc"])
     @commands.guild_only()
@@ -735,14 +531,7 @@ class _Guild(context.CustomCog, name="Server"):
         """Allow or deny the usage of NPCs on this server"""
 
         settings = await self.ensure_guild_settings(ctx.guild.id)
-        is_allowed = settings["npc_usage_allowed"]
-
-        pretty_is_allowed = self.bot.emojify_boolean(is_allowed)
-
-        embed = text.SafeEmbed()
-
-        embed.set_author(name=f"NPC Usage on {ctx.guild.name}", icon_url=ctx.guild_icon)
-        embed.add_field(name="Allowed", value=pretty_is_allowed)
+        embed = guild_presenter.build_npc_usage_embed(ctx, settings)
 
         info_embed = await ctx.send(embed=embed)
 
@@ -757,23 +546,12 @@ class _Guild(context.CustomCog, name="Server"):
             )
 
             if reaction:
-                await self.bot.db.execute(
-                    "UPDATE guild SET npc_usage_allowed = true WHERE id = $1",
-                    ctx.guild.id,
-                )
-                await ctx.send(f"{config.YES} NPCs can now be used on this server.")
+                result = await self.service.set_npc_usage(ctx, allowed=True)
+                await ctx.send(result.message)
 
             elif not reaction:
-                await self.bot.db.execute(
-                    "UPDATE guild SET npc_usage_allowed = false WHERE id = $1",
-                    ctx.guild.id,
-                )
-
-                await ctx.send(
-                    f"{config.YES} NPCs can __no longer__ be used on this server."
-                )
-
-            await self.bot.update_guild_config_cache()
+                result = await self.service.set_npc_usage(ctx, allowed=False)
+                await ctx.send(result.message)
 
     async def _get_or_make_discord_webhook(self, ctx, channel):
         try:
@@ -920,17 +698,15 @@ class _Guild(context.CustomCog, name="Server"):
     async def reddit(self, ctx: context.CustomContext):
         """List all active subreddit feeds on this server"""
 
-        def fmt(webhook, discord_webhook):
-            return f"**#{webhook['id']}**  -  [r/{webhook['subreddit']}](https://reddit.com/r/{webhook['subreddit']}) to {discord_webhook.channel.mention}"
-
-        await self._list_webhooks(
-            ctx,
-            endpoint="reddit/list/",
-            command_name="reddit",
-            webhook_name="subreddit feeds",
-            fmt=fmt,
-            icon="https://cdn.discordapp.com/attachments/730898526040752291/781547428087201792/Reddit_Mark_OnWhite.png",
+        page = await self.service.list_reddit_feeds(ctx)
+        pages = paginator.SimplePages(
+            entries=list(page.entries),
+            author=page.author,
+            icon=page.icon,
+            per_page=page.per_page,
+            empty_message=page.empty_message,
         )
+        await pages.start(ctx)
 
     @reddit.command(name="add", aliases=["make", "create", "a", "m"])
     @commands.guild_only()
@@ -938,23 +714,21 @@ class _Guild(context.CustomCog, name="Server"):
     async def reddit_add(self, ctx: context.CustomContext):
         """Add a subreddit feeds to this server"""
 
-        subreddit = await ctx.input(
-            f"{config.USER_INTERACTION_REQUIRED} Reply with the name of the subreddit, **without the leading /r/**."
+        view = text.ModalPromptView(
+            ctx,
+            modal_factory=guild_forms.RedditFeedModal,
+            button_label="Add Subreddit Feed",
+            timeout=300,
+        )
+        form = await view.prompt_message(
+            f"{config.USER_INTERACTION_REQUIRED} Fill out the subreddit feed form."
         )
 
-        async with self.bot.session.get(
-            f"https://reddit.com/r/{subreddit}/new.json?limit=1"
-        ) as resp:
-            if (
-                str(resp.url).startswith(
-                    f"https://www.reddit.com/subreddits/search.json?q="
-                )
-                or resp.status == 404
-            ):
-                # subreddit not real
-                return await ctx.send(
-                    f"{config.NO} `r/{subreddit}` is not a subreddit."
-                )
+        if form is None:
+            return
+
+        subreddit = self.service.normalize_subreddit(form.subreddit)
+        await self.service.validate_subreddit(subreddit)
 
         channel = await ctx.converted_input(
             f"{config.USER_INTERACTION_REQUIRED} In which channel should new posts from `r/{subreddit}` be posted?",
@@ -962,23 +736,11 @@ class _Guild(context.CustomCog, name="Server"):
             return_input_on_fail=False,
         )
 
-        webhook = await self._get_or_make_discord_webhook(ctx, channel)
-
-        if not webhook:
-            return
-
-        js = {
-            "target": subreddit,
-            "webhook_url": webhook.url,
-            "webhook_id": webhook.id,
-            "guild_id": ctx.guild.id,
-            "channel_id": channel.id,
-        }
-
-        await self.bot.api_request("POST", f"reddit/add", json=js)
-        await ctx.send(
-            f"{config.YES} New posts from `r/{subreddit}` will now be posted to {channel.mention}."
+        result = await self.service.add_reddit_feed(
+            ctx, subreddit=subreddit, channel=channel
         )
+        if result.message:
+            await ctx.send(result.message)
 
     @reddit.command(name="remove", aliases=["delete", "r", "d"])
     @commands.guild_only()
@@ -990,26 +752,32 @@ class _Guild(context.CustomCog, name="Server"):
     ):
         """Remove a subreddit feeds from this server"""
 
-        def fmt(response, channel_fmt):
-            return f"{config.YES} New posts from `r/{response['subreddit']}` will no longer be posted to {channel_fmt}."
+        if not subreddit_feed_id:
+            await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} What's the ID of the subreddit feed you want to remove? "
+                f"You can get the ID from `{config.BOT_PREFIX}server reddit`. "
+                f"In case you want to remove every feed on this server, use `{config.BOT_PREFIX}server reddit "
+                f"clear` instead.\n\nhttps://cdn.discordapp.com/attachments/499669824847478785/778778261450653706/redditds.PNG",
+            )
 
-        await self._remove_webhook(
-            ctx,
-            hook_id=subreddit_feed_id,
-            endpoint="reddit/remove",
-            command_name="reddit",
-            webhook_name="subreddit feed",
-            success_fmt=fmt,
-        )
+            subreddit_feed_id = await ctx.converted_input(
+                converter=converter.InternalAPIWebhookConverter,
+                return_input_on_fail=False,
+            )
+
+            if not subreddit_feed_id:
+                return
+
+        result = await self.service.remove_reddit_feed(ctx, feed_id=subreddit_feed_id)
+        await ctx.send(result.message)
 
     @reddit.command(name="clear", aliases=["removeall", "deleteall"])
     @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def reddit_clear(self, ctx: context.CustomContext):
         """Remove all subreddit feeds on this server"""
-        await self._clear_webhooks(
-            ctx, endpoint="reddit/clear", webhook_name="subreddit feed(s)"
-        )
+        result = await self.service.clear_reddit_feeds(ctx)
+        await ctx.send(result.message)
 
     @guild.group(
         name="twitch", case_insensitive=True, invoke_without_command=True, aliases=["t"]

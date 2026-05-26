@@ -181,6 +181,56 @@ class PromptView(CustomView):
         return self.result
 
 
+class ModalPromptView(PromptView):
+    def __init__(
+        self,
+        ctx,
+        *,
+        modal_factory: typing.Callable[[], discord.ui.Modal],
+        button_label: str,
+        button_style: discord.ButtonStyle = discord.ButtonStyle.primary,
+        **kwargs,
+    ):
+        self._modal_factory = modal_factory
+        super().__init__(ctx, **kwargs)
+
+        open_button = discord.ui.Button(label=button_label, style=button_style)
+        open_button.callback = self._open_modal
+        self.add_item(open_button)
+
+        cancel_button = discord.ui.Button(
+            label="Cancel", style=discord.ButtonStyle.secondary
+        )
+        cancel_button.callback = self._cancel
+        self.add_item(cancel_button)
+
+    async def _open_modal(self, interaction: discord.Interaction):
+        modal = self._modal_factory()
+        await interaction.response.send_modal(modal)
+        timed_out = await modal.wait()
+
+        if not timed_out:
+            self.result = getattr(modal, "result", None)
+
+        self.stop()
+
+    async def _cancel(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        self.result = None
+        self.stop()
+
+    async def prompt_message(self, content: str):
+        msg = await self.ctx.send(content, view=self)
+
+        try:
+            return await self.prompt()
+        finally:
+            try:
+                await msg.delete()
+            except discord.HTTPException:
+                pass
+
+
 class SafeEmbed(discord.Embed):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

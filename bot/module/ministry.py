@@ -1,12 +1,11 @@
-import datetime
-import typing
 import discord
 
 from discord.ext import commands, tasks
-from discord.utils import escape_markdown
 
 from bot.config import config, mk
-from bot.utils import text, context, mixin, models, exceptions, checks, paginator
+from bot.presenters import ministry as ministry_presenter
+from bot.services.ministry import MinistryService
+from bot.utils import text, context, mixin, models, checks, paginator
 
 
 class LawPassScheduler(text.RedditAnnouncementScheduler):
@@ -130,6 +129,7 @@ class Ministry(
 
     def __init__(self, bot):
         super().__init__(bot)
+        self.service = MinistryService(bot)
         self.pass_scheduler = LawPassScheduler(
             bot,
             mk.DemocracivChannel.GOV_ANNOUNCEMENTS_CHANNEL,
@@ -145,89 +145,16 @@ class Ministry(
     def cog_unload(self):
         self.auto_pass_bills.cancel()
 
-    async def get_pretty_vetoes(self, do_paste=False) -> typing.List[str]:
+    async def get_pretty_vetoes(self, ctx=None, do_paste=False):
         """Gets all bills awaiting Executive action."""
 
-        open_bills = await self.bot.db.fetch(
-            "SELECT id, name, link, executive_deadline_at FROM bill WHERE status = $1 ORDER BY id",
-            models.BillAwaitingExecutive.flag.value,
-        )
-
-        if not open_bills:
-            return []
-
-        pretty_bills = []
-        b_ids = []
-        b_hyperlinks = []
-
-        for record in open_bills:
-            b_ids.append(f"Bill #{record['id']}")
-            b_hyperlinks.append(
-                f"=HYPERLINK(\"{record['link']}\"; \"{record['name']}\")"
-            )
-            deadline = record["executive_deadline_at"]
-            deadline_fmt = (
-                f"<t:{int(deadline.replace(tzinfo=datetime.timezone.utc).timestamp())}:R>"
-                if deadline is not None
-                else "No deadline set"
-            )
-            pretty_bills.append(
-                f"* Bill #{record['id']} - [{record['name']}]({record['link']})\n"
-                f"-# Deadline: {deadline_fmt}\n"
-            )
-
-        exported = [
-            f"Export of Bills Awaiting Executive Action -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
-            "----- Bills Awaiting Executive Action -----\n",
-        ]
-
-        exported.extend(b_ids)
-        exported.append("\n")
-        exported.extend(b_hyperlinks)
-
-        link = None
-
-        if do_paste:
-            try:
-                link = await self.bot.make_paste("\n".join(exported))
-            except Exception:
-                pass
-
-            if link:
-                pretty_bills.insert(
-                    0,
-                    f"-# View this list in Google Spreadsheets formatting for easy copy & pasting: [Link]({link})\n",
-                )
-
-        return pretty_bills
+        result = await self.service.get_awaiting_bills(do_paste=do_paste)
+        page = ministry_presenter.build_awaiting_bills_page(ctx, result)
+        return list(page.entries)
 
     @tasks.loop(minutes=10)
     async def auto_pass_bills(self):
-        expired_bills = await self.bot.db.fetch(
-            "SELECT id FROM bill WHERE status = $1 AND executive_deadline_at IS NOT NULL "
-            "AND executive_deadline_at <= $2 ORDER BY id",
-            models.BillAwaitingExecutive.flag.value,
-            discord.utils.utcnow().replace(tzinfo=None),
-        )
-
-        if not expired_bills:
-            return
-
-        mock_ctx = context.MockContext(self.bot)
-        added_any = False
-
-        for record in expired_bills:
-            try:
-                bill = await models.Bill.convert(mock_ctx, record["id"])
-                await bill.status.pass_into_law(auto_pass=True)
-            except Exception:
-                continue
-
-            bill._auto_passed = True
-            self.pass_scheduler.add(bill)
-            added_any = True
-
-        if added_any:
+        if await self.service.auto_pass_expired_bills(self.pass_scheduler):
             await self.pass_scheduler.trigger_now()
 
     @auto_pass_bills.before_loop
@@ -262,120 +189,15 @@ class Ministry(
     async def ministry(self, ctx):
         """Dashboard for {minister_term} with important links and updates on new bills"""
 
-        embed = text.SafeEmbed()
-        embed.set_author(
-            icon_url=self.bot.mk.NATION_ICON_URL,
-            name=f"The {self.bot.mk.MINISTRY_NAME} of {self.bot.mk.NATION_FULL_NAME}",
-        )
-
-        pretty_bills = await self.get_pretty_vetoes()
-        if not pretty_bills:
-            pretty_bills = "There are no bills awaiting Executive action."
-        else:
-            pretty_bills = (
-                f":warning:    There are bills awaiting action. Review with "
-                f"`{config.BOT_PREFIX}{mk.MarkConfig.MINISTRY_COMMAND} bills`."
-            )
-
-        minister_value = []
-
-        if isinstance(self.prime_minister, discord.Member):
-            minister_value.append(
-                f"{self.bot.mk.pm_term}: {self.prime_minister.mention} {escape_markdown(str(self.prime_minister))}"
-            )
-        else:
-            minister_value.append(f"{self.bot.mk.pm_term}: -")
-
-        if isinstance(self.lt_prime_minister, discord.Member):
-            minister_value.append(
-                f"{self.bot.mk.lt_pm_term}: {self.lt_prime_minister.mention}"
-            )
-        else:
-            minister_value.append(f"{self.bot.mk.lt_pm_term}: -")
-        # attorney_general = self._safe_get_member(mk.DemocracivRole.ATTORNEY_GENERAL)
-
-        # if isinstance(attorney_general, discord.Member):
-        #    minister_value.append(
-        #        f"Attorney General: {attorney_general.mention} {escape_markdown(str(attorney_general))}"
-        #    )
-        # else:
-        #    minister_value.append(f"Attorney General: -")
-
-        # supreme_commander = self._safe_get_member(mk.DemocracivRole.SUPREME_COMMANDER)
-
-        # if isinstance(supreme_commander, discord.Member):
-        #    minister_value.append(
-        #        f"Supreme Commander: {supreme_commander.mention} {escape_markdown(str(supreme_commander))}"
-        #    )
-        # else:
-        #    minister_value.append(f"Supreme Commander: -")
-
-        embed.add_field(
-            name=self.bot.mk.MINISTRY_LEADERSHIP_NAME,
-            value="\n".join(minister_value),
-            inline=False,
-        )
-        """ try:
-            ministers = self.bot.get_democraciv_role(mk.DemocracivRole.MINISTER)
-            ministers = [
-                f"{m.mention} {escape_markdown(str(m))}" for m in ministers.members
-            ] or ["-"]
-        except exceptions.RoleNotFoundError:
-            ministers = ["-"] """
-
-        mk13_min_value = []
-
-        for mk13_min in [
-            mk.DemocracivRole.MK13_FINANCE_MIN,
-            mk.DemocracivRole.MK13_FOREIGN_MIN,
-            mk.DemocracivRole.MK13_DEFENCE_MIN,
-            mk.DemocracivRole.MK13_ATTORNEY_GENERAL,
-        ]:
-            as_member = self._safe_get_member(mk13_min)
-            as_role = self.bot.get_democraciv_role(mk13_min)
-            if isinstance(as_member, discord.Member):
-                mk13_min_value.append(
-                    f"{as_role.name}: {as_member.mention} {escape_markdown(str(as_member))}"
-                )
-            else:
-                mk13_min_value.append(f"{as_role.name}: -")
-        # try:
-        #    governors = self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNOR)
-        #    governors = [
-        #        f"{g.mention} {escape_markdown(str(g))}" for g in governors.members
-        #    ] or ["-"]
-        # except exceptions.RoleNotFoundError:
-        #    governors = ["-"]
-
-        embed.add_field(
-            name=f"Cabinet of Advisors",
-            value="\n".join(mk13_min_value),
-            inline=False,
-        )
-
-        # embed.add_field(
-        #    name=f"{self.bot.mk.governor_term}s ({len(governors) if governors[0] != "-" else 0})",
-        #    value="\n".join(governors),
-        #    inline=False,
-        # )
-
-        embed.add_field(
-            name="Links",
-            value=f"[Constitution]({self.bot.mk.CONSTITUTION})\n[Legal Code]({self.bot.mk.LEGAL_CODE}) *(try [laws.democraciv.com](https://laws.democraciv.com) too!)*\n"
-            f"[Ministry Worksheet]({self.bot.mk.MINISTRY_WORKSHEET})\n[Ministry Procedures]({self.bot.mk.MINISTRY_PROCEDURES})",
-            inline=False,
-        )
-
-        embed.add_field(
-            name="Bills Awaiting Executive Action", value=pretty_bills, inline=False
-        )
+        result = await self.service.get_dashboard()
+        embed = ministry_presenter.build_dashboard_embed(ctx, result)
         await ctx.send(embed=embed)
 
     @ministry.command(name="bills", aliases=["b"])
     async def bills(self, ctx):
         """See all open bills from the Legislature to vote on"""
 
-        pretty_bills = await self.get_pretty_vetoes(do_paste=True)
+        pretty_bills = await self.get_pretty_vetoes(ctx, do_paste=True)
         pages = paginator.SimplePages(
             entries=pretty_bills,
             icon=self.bot.mk.NATION_ICON_URL,
@@ -401,10 +223,11 @@ class Ministry(
             return await ctx.send_help(ctx.command)
 
         bills = bill_ids
-        consumer = models.LegalConsumer(
-            ctx=ctx, objects=bills, action=models.BillStatus.veto
+        consumer = await self.service.prepare_bill_action(
+            ctx,
+            bills=bills,
+            action=models.BillStatus.veto,
         )
-        await consumer.filter()
 
         if consumer.failed:
             await ctx.send(
@@ -422,7 +245,10 @@ class Ministry(
         if not reaction:
             return await ctx.send("Cancelled.")
 
-        await consumer.consume(scheduler=self.veto_scheduler)
+        await self.service.consume_bill_action(
+            consumer,
+            scheduler_name="veto_scheduler",
+        )
         await ctx.send(
             f"{config.YES} All bills were vetoed.\n{config.HINT} In case the "
             f"Senate wants to give these bills a second chance, a veto can be "
@@ -443,10 +269,11 @@ class Ministry(
 
         bills = bill_ids
 
-        consumer = models.LegalConsumer(
-            ctx=ctx, objects=bills, action=models.BillStatus.pass_into_law
+        consumer = await self.service.prepare_bill_action(
+            ctx,
+            bills=bills,
+            action=models.BillStatus.pass_into_law,
         )
-        await consumer.filter()
 
         if consumer.failed:
             await ctx.send(
@@ -465,7 +292,10 @@ class Ministry(
         if not reaction:
             return await ctx.send("Cancelled.")
 
-        await consumer.consume(scheduler=self.pass_scheduler)
+        await self.service.consume_bill_action(
+            consumer,
+            scheduler_name="pass_scheduler",
+        )
         await ctx.send(
             f"{config.YES} All bills were passed into law and can now be found in `{config.BOT_PREFIX}laws`."
             f"\n{config.HINT} If the Legal Code needs to "

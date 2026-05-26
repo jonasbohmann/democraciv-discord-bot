@@ -1,32 +1,20 @@
-import datetime
-
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord.utils import escape_markdown
 
 from bot.config import config, mk
+from bot.presenters import ministry as ministry_presenter
+from bot.services.ministry import MinistryService
 from bot.slash import checks as slash_checks
 from bot.slash import context as slash_context
 from bot.slash import transformers, ui
-from bot.utils import exceptions, mixin, models, paginator, text
+from bot.utils import mixin, models, paginator
 
 AwaitingBillOption = app_commands.Transform[
     models.Bill, transformers.AwaitingExecutiveBillTransformer
 ]
 
 MINISTRY_COMMAND_NAME = mk.MarkConfig.MINISTRY_COMMAND.lower()
-
-
-def _member_line(member: discord.Member) -> str:
-    return f"{member.mention} {escape_markdown(str(member))}"
-
-
-def _member_or_dash(member: discord.Member, term: str) -> str:
-    if isinstance(member, discord.Member):
-        return f"{term}: {_member_line(member)}"
-
-    return f"{term}: -"
 
 
 class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
@@ -38,48 +26,7 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
 
     def __init__(self, bot):
         self.bot = bot
-
-    def _advisor_lines(self):
-        lines = []
-
-        for role in (
-            mk.DemocracivRole.MK13_FINANCE_MIN,
-            mk.DemocracivRole.MK13_FOREIGN_MIN,
-            mk.DemocracivRole.MK13_DEFENCE_MIN,
-            mk.DemocracivRole.MK13_ATTORNEY_GENERAL,
-        ):
-            try:
-                discord_role = self.bot.get_democraciv_role(role)
-            except exceptions.RoleNotFoundError:
-                continue
-
-            lines.append(
-                _member_or_dash(self._safe_get_member(role), discord_role.name)
-            )
-
-        return lines or ["-"]
-
-    async def _awaiting_bills(self, ctx: slash_context.InteractionContext):
-        records = await self.bot.db.fetch(
-            "SELECT id FROM bill WHERE status = $1 ORDER BY id",
-            models.BillAwaitingExecutive.flag.value,
-        )
-
-        return [await models.Bill.convert(ctx, record["id"]) for record in records]
-
-    def _bill_entry(self, bill: models.Bill):
-        deadline = bill.executive_deadline_at
-
-        if deadline is not None:
-            deadline = deadline.replace(tzinfo=datetime.timezone.utc)
-            deadline_text = f"<t:{int(deadline.timestamp())}:R>"
-        else:
-            deadline_text = "No deadline set"
-
-        return f"* {bill.formatted}\n-# Executive deadline: {deadline_text}"
-
-    def _ministry_cog(self):
-        return self.bot.get_cog(self.bot.mk.MINISTRY_NAME)
+        self.service = MinistryService(bot)
 
     async def _consume_bill_action(
         self,
@@ -92,8 +39,11 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
         confirm_label: str,
         success_body: str,
     ):
-        consumer = models.LegalConsumer(ctx=ctx, objects=[bill], action=action)
-        await consumer.filter()
+        consumer = await self.service.prepare_bill_action(
+            ctx,
+            bills=[bill],
+            action=action,
+        )
 
         if consumer.failed:
             await ctx.send(
@@ -114,8 +64,10 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
         if not confirmed:
             return await ctx.send("Cancelled.", ephemeral=True)
 
-        scheduler = getattr(self._ministry_cog(), scheduler_name, None)
-        await consumer.consume(scheduler=scheduler)
+        await self.service.consume_bill_action(
+            consumer,
+            scheduler_name=scheduler_name,
+        )
 
         await ctx.send(success_body)
 
@@ -126,57 +78,8 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
         ctx = slash_context.from_interaction(interaction, command_name="executive")
         await ctx.defer()
 
-        awaiting = await self._awaiting_bills(ctx)
-
-        if not awaiting:
-            awaiting_text = "There are no bills awaiting Executive action."
-        else:
-            awaiting_text = (
-                f":warning:    There are bills awaiting action. Review with "
-                f"`/{MINISTRY_COMMAND_NAME} bills`."
-            )
-
-        embed = text.SafeEmbed()
-        embed.set_author(
-            icon_url=self.bot.mk.NATION_ICON_URL,
-            name=f"The {self.bot.mk.MINISTRY_NAME} of {self.bot.mk.NATION_FULL_NAME}",
-        )
-
-        embed.add_field(
-            name=self.bot.mk.MINISTRY_LEADERSHIP_NAME,
-            value="\n".join(
-                [
-                    _member_or_dash(self.prime_minister, self.bot.mk.pm_term),
-                    _member_or_dash(self.lt_prime_minister, self.bot.mk.lt_pm_term),
-                ]
-            ),
-            inline=False,
-        )
-
-        embed.add_field(
-            name="Cabinet of Advisors",
-            value="\n".join(self._advisor_lines()),
-            inline=False,
-        )
-
-        embed.add_field(
-            name="Links",
-            value=(
-                f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
-                f"[Legal Code]({self.bot.mk.LEGAL_CODE}) "
-                "*(try [laws.democraciv.com](https://laws.democraciv.com) too!)*\n"
-                f"[Ministry Worksheet]({self.bot.mk.MINISTRY_WORKSHEET})\n"
-                f"[Ministry Procedures]({self.bot.mk.MINISTRY_PROCEDURES})"
-            ),
-            inline=False,
-        )
-
-        embed.add_field(
-            name="Bills Awaiting Executive Action",
-            value=awaiting_text,
-            inline=False,
-        )
-
+        result = await self.service.get_dashboard()
+        embed = ministry_presenter.build_dashboard_embed(ctx, result)
         await ctx.send(embed=embed)
 
     @ministry.command(name="bills", description="List bills awaiting Executive action.")
@@ -184,41 +87,13 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
         ctx = slash_context.from_interaction(interaction, command_name="executive")
         await ctx.defer()
 
-        bills = await self._awaiting_bills(ctx)
-
-        export_lines = [
-            f"Export of Bills Awaiting Executive Action -- {discord.utils.utcnow().strftime('%c')}\n\n\n",
-            "----- Bills Awaiting Executive Action -----\n",
-        ]
-
-        entries = []
-
-        if bills:
-            for bill in bills:
-                export_lines.append(f"Bill #{bill.id}")
-
-            export_lines.append("\n")
-
-            for bill in bills:
-                export_lines.append(f'=HYPERLINK("{bill.link}"; "{bill.name}")')
-
-            try:
-                paste_link = await self.bot.make_paste("\n".join(export_lines))
-            except Exception:
-                paste_link = None
-
-            if paste_link:
-                entries.append(
-                    f"-# View this list in Google Spreadsheets formatting for easy copy & pasting: [Link]({paste_link})\n"
-                )
-
-            entries.extend([self._bill_entry(bill) for bill in bills])
-
+        result = await self.service.get_awaiting_bills(do_paste=True)
+        page = ministry_presenter.build_awaiting_bills_page(ctx, result)
         pages = paginator.SimplePages(
-            entries=entries,
-            icon=self.bot.mk.NATION_ICON_URL,
-            author="Bills Awaiting Executive Action",
-            empty_message="There are no bills awaiting Executive action.",
+            entries=list(page.entries),
+            icon=page.icon,
+            author=page.author,
+            empty_message=page.empty_message,
         )
 
         await pages.start(ctx)

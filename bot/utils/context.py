@@ -93,6 +93,10 @@ class CustomContext(commands.Context):
     def author_icon(self):
         return self.author.display_avatar.url
 
+    @property
+    def is_slash(self) -> bool:
+        return False
+
     def _wait_for_message_check(self):
         def check(message):
             return (

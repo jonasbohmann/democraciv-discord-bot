@@ -1,70 +1,19 @@
-import asyncpg
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from bot.config import config
+from bot.presenters import selfroles as selfrole_presenter, selfrole_forms
+from bot.services.selfroles import SelfroleService
 from bot.slash import checks as slash_checks
 from bot.slash import context as slash_context
-from bot.slash import forms, transformers, ui
-from bot.utils import converter, exceptions, text
+from bot.slash import transformers, ui
+from bot.utils import converter
 
 SelfroleOption = app_commands.Transform[
     converter.Selfrole,
     transformers.SelfroleTransformer,
 ]
-
-
-class RoleCreateModal(forms.ErrorHandledModal):
-    def __init__(self, cog: "SelfrolesSlash"):
-        super().__init__(title="Create Selfrole")
-        self.cog = cog
-        self.role_name = forms.text_label(
-            label="Role Name",
-            description="An existing role name will be reused; otherwise I create it.",
-            max_length=100,
-        )
-        self.join_message = forms.text_label(
-            label="Join Message",
-            description="Shown when someone joins this selfrole.",
-            max_length=1000,
-            style=discord.TextStyle.long,
-        )
-        self.add_item(self.role_name)
-        self.add_item(self.join_message)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        ctx = slash_context.from_interaction(interaction, command_name="role create")
-        await ctx.defer()
-        await self.cog.create_selfrole(
-            ctx,
-            role_name=self.role_name.component.value,
-            join_message=self.join_message.component.value,
-        )
-
-
-class RoleEditModal(forms.ErrorHandledModal):
-    def __init__(self, cog: "SelfrolesSlash", *, selfrole: converter.Selfrole):
-        super().__init__(title=f"Edit {ui.shorten(selfrole.role.name, width=35)}")
-        self.cog = cog
-        self.selfrole = selfrole
-        self.join_message = forms.text_label(
-            label="Join Message",
-            description="Shown when someone joins this selfrole.",
-            default=selfrole.join_message,
-            max_length=1000,
-            style=discord.TextStyle.long,
-        )
-        self.add_item(self.join_message)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        ctx = slash_context.from_interaction(interaction, command_name="role edit")
-        await ctx.defer()
-        await self.cog.edit_selfrole(
-            ctx,
-            selfrole=self.selfrole,
-            join_message=self.join_message.component.value,
-        )
 
 
 class SelfrolesSlash(commands.Cog):
@@ -76,6 +25,7 @@ class SelfrolesSlash(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.service = SelfroleService(bot)
 
     async def create_selfrole(
         self,
@@ -84,42 +34,10 @@ class SelfrolesSlash(commands.Cog):
         role_name: str,
         join_message: str,
     ):
-        role_name = (role_name or "").strip()
-        discord_role = discord.utils.find(
-            lambda role: role.name.lower() == role_name.lower(),
-            ctx.guild.roles,
+        result = await self.service.create_role(
+            ctx, role_name=role_name, join_message=join_message
         )
-
-        if discord_role is None:
-            if not role_name:
-                return await ctx.send(
-                    f"{config.NO} Provide an existing or new role name.",
-                    ephemeral=True,
-                )
-
-            try:
-                discord_role = await ctx.guild.create_role(name=role_name)
-            except discord.Forbidden:
-                raise exceptions.ForbiddenError(
-                    exceptions.ForbiddenTask.CREATE_ROLE,
-                    role_name,
-                )
-
-        try:
-            await self.bot.db.execute(
-                "INSERT INTO selfrole (guild_id, role_id, join_message) VALUES ($1, $2, $3) "
-                "ON CONFLICT (guild_id, role_id) DO UPDATE SET join_message = $3",
-                ctx.guild.id,
-                discord_role.id,
-                join_message,
-            )
-        except asyncpg.UniqueViolationError:
-            return await ctx.send(
-                f"{config.NO} `{discord_role.name}` is already a selfrole on this server.",
-                ephemeral=True,
-            )
-
-        await ctx.send(f"{config.YES} `{discord_role.name}` was added as a selfrole.")
+        await ctx.send(result.message)
 
     async def edit_selfrole(
         self,
@@ -128,14 +46,37 @@ class SelfrolesSlash(commands.Cog):
         selfrole: converter.Selfrole,
         join_message: str,
     ):
-        await self.bot.db.execute(
-            "UPDATE selfrole SET join_message = $1 WHERE guild_id = $2 AND role_id = $3",
-            join_message,
-            ctx.guild.id,
-            selfrole.role.id,
+        result = await self.service.edit_role(
+            ctx, selfrole=selfrole, join_message=join_message
         )
-        await ctx.send(
-            f"{config.YES} The join message for `{selfrole.role.name}` was updated."
+        await ctx.send(result.message)
+
+    async def _handle_create_modal(
+        self,
+        interaction: discord.Interaction,
+        form: selfrole_forms.SelfroleFormResult,
+    ):
+        ctx = slash_context.from_interaction(interaction, command_name="role create")
+        await ctx.defer()
+        await self.create_selfrole(
+            ctx,
+            role_name=form.role_name,
+            join_message=form.join_message,
+        )
+
+    async def _handle_edit_modal(
+        self,
+        interaction: discord.Interaction,
+        form: selfrole_forms.SelfroleFormResult,
+        *,
+        selfrole: converter.Selfrole,
+    ):
+        ctx = slash_context.from_interaction(interaction, command_name="role edit")
+        await ctx.defer()
+        await self.edit_selfrole(
+            ctx,
+            selfrole=selfrole,
+            join_message=form.join_message,
         )
 
     @role.command(name="list", description="List all selfroles on this server.")
@@ -144,29 +85,8 @@ class SelfrolesSlash(commands.Cog):
         ctx = slash_context.from_interaction(interaction, command_name="role list")
         await ctx.defer()
 
-        role_list = await self.bot.db.fetch(
-            "SELECT role_id FROM selfrole WHERE guild_id = $1",
-            ctx.guild.id,
-        )
-
-        embed_message = [
-            f"-# Looking for political parties? Try `/party list` and `/party join`.\n-# In order to add or remove a role from you, use `/role toggle`.\n"
-        ]
-
-        for role in role_list:
-            role_object = ctx.guild.get_role(role["role_id"])
-            if role_object is not None:
-                embed_message.append(f"* {role_object.name}")
-
-        if not embed_message:
-            embed_message = ["This server has no selfroles yet."]
-
-        embed = text.SafeEmbed(description="\n".join(embed_message))
-        embed.set_author(
-            name=f"Selfroles in {ctx.guild.name}",
-            icon_url=ctx.guild.icon.url if ctx.guild.icon else None,
-        )
-
+        roles = await self.service.list_roles(ctx)
+        embed = selfrole_presenter.build_selfrole_list_embed(ctx, roles)
         await ctx.send(embed=embed)
 
     @role.command(name="toggle", description="Join or leave one selfrole.")
@@ -182,35 +102,17 @@ class SelfrolesSlash(commands.Cog):
         if not isinstance(ctx.author, discord.Member):
             raise app_commands.NoPrivateMessage()
 
-        if role.role not in ctx.author.roles:
-            try:
-                await ctx.author.add_roles(role.role)
-            except discord.Forbidden:
-                raise exceptions.ForbiddenError(
-                    exceptions.ForbiddenTask.ADD_ROLE,
-                    role.role.name,
-                )
-
-            return await ctx.send(f"{config.YES} {role.join_message}")
-
-        try:
-            await ctx.author.remove_roles(role.role)
-        except discord.Forbidden:
-            raise exceptions.ForbiddenError(
-                exceptions.ForbiddenTask.REMOVE_ROLE,
-                role.role.name,
-            )
-
-        await ctx.send(
-            f"{config.YES} The `{role.role.name}` role was removed from you.",
-        )
+        result = await self.service.toggle_role(ctx, selfrole=role)
+        await ctx.send(result.message)
 
     @role.command(name="create", description="Add a selfrole to this server.")
     @app_commands.guild_only()
     @slash_checks.has_guild_permissions(manage_roles=True)
     @slash_checks.bot_has_guild_permissions(manage_roles=True)
     async def create_role(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(RoleCreateModal(self))
+        await interaction.response.send_modal(
+            selfrole_forms.RoleCreateModal(on_submit_callback=self._handle_create_modal)
+        )
 
     @role.command(name="edit", description="Edit a selfrole join message.")
     @app_commands.guild_only()
@@ -220,7 +122,18 @@ class SelfrolesSlash(commands.Cog):
         interaction: discord.Interaction,
         role: SelfroleOption,
     ):
-        await interaction.response.send_modal(RoleEditModal(self, selfrole=role))
+        async def handle_edit(
+            modal_interaction: discord.Interaction,
+            form: selfrole_forms.SelfroleFormResult,
+        ):
+            await self._handle_edit_modal(modal_interaction, form, selfrole=role)
+
+        await interaction.response.send_modal(
+            selfrole_forms.RoleEditModal(
+                selfrole=role,
+                on_submit_callback=handle_edit,
+            )
+        )
 
     @role.command(name="delete", description="Remove a selfrole from this server.")
     @app_commands.guild_only()
@@ -252,29 +165,12 @@ class SelfrolesSlash(commands.Cog):
         if not confirmed:
             return await ctx.send("Cancelled.", ephemeral=True)
 
-        await self.bot.db.execute(
-            "DELETE FROM selfrole WHERE guild_id = $1 AND role_id = $2",
-            ctx.guild.id,
-            role.role.id,
+        result = await self.service.delete_role(
+            ctx,
+            selfrole=role,
+            hard_delete=also_delete_discord_role,
         )
-
-        if also_delete_discord_role:
-            role_name = role.role.name
-            try:
-                await role.role.delete()
-            except discord.Forbidden:
-                raise exceptions.ForbiddenError(
-                    exceptions.ForbiddenTask.DELETE_ROLE,
-                    detail=role_name,
-                )
-
-            return await ctx.send(
-                f"{config.YES} The `{role_name}` selfrole and its Discord role were deleted.",
-            )
-
-        await ctx.send(
-            f"{config.YES} The `{role.role.name}` selfrole was removed.",
-        )
+        await ctx.send(result.message)
 
     @app_commands.command(
         name="roles", description="List all selfroles on this server."

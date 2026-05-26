@@ -14,7 +14,6 @@ import typing
 import random
 import aiohttp
 import discord
-import operator
 import datetime
 import textwrap
 import pytz
@@ -24,7 +23,9 @@ from discord.ext import commands
 from urllib import parse
 
 from bot.config import config
-from bot.utils import context, paginator, text
+from bot.presenters import utility as utility_presenter
+from bot.services.utility import UtilityService
+from bot.utils import context, text
 from bot.utils.converter import (
     PoliticalParty,
     CaseInsensitiveUser,
@@ -93,7 +94,7 @@ class Utility(context.CustomCog):
 
     def __init__(self, bot):
         super().__init__(bot)
-        self.cached_sorted_veterans_on_democraciv = []
+        self.service = UtilityService(bot)
         self.active_press_flows: typing.Set[int] = set()
 
     @commands.Cog.listener(name="on_message")
@@ -496,46 +497,6 @@ class Utility(context.CustomCog):
             joined_on,
         )
 
-    async def get_member_join_date(self, member: discord.Member) -> datetime.datetime:
-        if member.guild.id == self.bot.dciv.id:
-            original_date = await self.bot.db.fetchval(
-                "SELECT join_date FROM original_join_date WHERE member = $1", member.id
-            )
-            if original_date is not None:
-                return original_date
-
-        return member.joined_at
-
-    async def get_member_join_position(
-        self, member: discord.Member, members: typing.List[discord.Member]
-    ) -> typing.Tuple[typing.Optional[int], int]:
-
-        if member.guild.id == self.bot.dciv.id:
-            sql = """SELECT position.row_number FROM 
-                       (SELECT member, ROW_NUMBER () OVER (ORDER BY join_date) AS row_number
-                             FROM original_join_date
-                       ) AS position
-                      WHERE member = $1"""
-
-            join_position = await self.bot.db.fetchval(sql, member.id)
-            all_members = await self.bot.db.fetchval(
-                "SELECT COUNT(member) FROM original_join_date"
-            )
-
-            if join_position:
-                return join_position, all_members
-
-        all_members = len(members)
-        joins = tuple(sorted(members, key=operator.attrgetter("joined_at")))
-
-        if None in joins:
-            return None, all_members
-
-        try:
-            return joins.index(member) + 1, all_members
-        except ValueError:
-            return None, all_members
-
     @commands.command(name="whois")
     @commands.guild_only()
     async def whois(
@@ -563,18 +524,6 @@ class Utility(context.CustomCog):
          `{PREFIX}{COMMAND} 212972352890339328`
         """
 
-        def _get_roles(roles):
-            fmt = []
-
-            for role in roles[::-1]:
-                if not role.is_default():
-                    fmt.append(role.mention)
-
-            if not fmt:
-                return "-"
-            else:
-                return ", ".join(fmt)
-
         if isinstance(person, discord.Role):
             return await self.role_info(ctx, person)
 
@@ -582,42 +531,8 @@ class Utility(context.CustomCog):
             return await self.role_info(ctx, person.role)
 
         member = person or ctx.author
-        embed = text.SafeEmbed()
-
-        if isinstance(member, discord.User):
-            embed.description = ":warning: This person is not here in this server."
-
-        embed.add_field(name="Person", value=f"{member} {member.mention}", inline=False)
-        embed.add_field(name="ID", value=member.id, inline=False)
-        embed.add_field(
-            name="Discord Registration",
-            value=f'{member.created_at.strftime("%B %d, %Y")}',
-            inline=True,
-        )
-
-        if isinstance(member, discord.Member):
-            join_pos, max_members = await self.get_member_join_position(
-                member, ctx.guild.members
-            )
-
-            if not join_pos:
-                join_pos = "Unknown"
-
-            embed.add_field(
-                name="Joined",
-                value=f'{(await self.get_member_join_date(member)).strftime("%B %d, %Y")}',
-                inline=True,
-            )
-            embed.add_field(
-                name="Join Position", value=f"{join_pos}/{max_members}", inline=True
-            )
-            embed.add_field(
-                name=f"Roles ({len(member.roles) - 1})",
-                value=_get_roles(member.roles),
-                inline=False,
-            )
-
-        embed.set_thumbnail(url=member.display_avatar.url)
+        result = await self.service.get_whois(ctx, member)
+        embed = utility_presenter.build_whois_embed(result)
         await ctx.send(embed=embed)
 
     @commands.command(name="avatar", aliases=["pfp", "avy"])
@@ -651,40 +566,8 @@ class Utility(context.CustomCog):
     async def veterans(self, ctx):
         """List the first 15 members who joined this server"""
 
-        sorted_first_15_members = []
-
-        # As veterans rarely change, use a cached version of sorted list if exists
-        if ctx.guild.id == self.bot.dciv.id:
-            if self.cached_sorted_veterans_on_democraciv:
-                sorted_first_15_members = self.cached_sorted_veterans_on_democraciv
-            else:
-                vets = await self.bot.db.fetch(
-                    "SELECT member FROM original_join_date ORDER BY join_date LIMIT 15"
-                )
-
-                self.cached_sorted_veterans_on_democraciv = sorted_first_15_members = [
-                    self.bot.get_user(r["member"]) for r in vets
-                ]
-
-        # If cache is empty OR ctx not on democraciv guild, calculate & sort again
-        else:
-            guild_members_without_bots = [
-                member for member in ctx.guild.members if not member.bot
-            ]
-            guild_members_without_bots.sort(key=lambda m: m.joined_at)
-            sorted_first_15_members = guild_members_without_bots[:15]
-
-        # Send veterans
-        message = [
-            "These are the first 15 people who joined this server.\nBot accounts are not counted.\n"
-        ]
-
-        for position, veteran in enumerate(sorted_first_15_members, start=1):
-            fmt = f"{veteran.mention} {veteran}" if veteran else "*Unknown User*"
-            message.append(f"{position}. {fmt}")
-
-        embed = text.SafeEmbed(description="\n".join(message))
-        embed.set_author(name=f"Veterans of {ctx.guild.name}", icon_url=ctx.guild_icon)
+        result = await self.service.get_veterans(ctx)
+        embed = utility_presenter.build_veterans_embed(result)
         await ctx.send(embed=embed)
 
     @commands.command(name="whohas", aliases=["roleinfo"])
@@ -717,34 +600,8 @@ class Utility(context.CustomCog):
                 f"{config.NO} `role` is neither a role on this server, nor on the Democraciv server."
             )
 
-        if role.guild.id != ctx.guild.id:
-            description = f":warning:  This role is from the {self.bot.dciv.name} server, not from this server!"
-            role_name = role.name
-        else:
-            description = ""
-            role_name = f"{role.name} {role.mention}"
-
-        if role != role.guild.default_role:
-            role_members = (
-                "\n".join([f"{member.mention} {member}" for member in role.members])
-                or "-"
-            )
-        else:
-            role_members = "*Too long to display.*"
-
-        embed = text.SafeEmbed(
-            title="Role Information", description=description, colour=role.colour
-        )
-
-        embed.add_field(name="Role", value=role_name, inline=False)
-        embed.add_field(name="ID", value=role.id, inline=False)
-        embed.add_field(
-            name="Created on", value=role.created_at.strftime("%B %d, %Y"), inline=True
-        )
-        embed.add_field(name="Colour", value=role.colour, inline=True)
-        embed.add_field(
-            name=f"Members ({len(role.members)})", value=role_members, inline=False
-        )
+        result = self.service.get_role_info(ctx, role)
+        embed = utility_presenter.build_role_info_embed(result)
         await ctx.send(embed=embed)
 
     @commands.group(name="random", case_insensitive=True, invoke_without_command=True)

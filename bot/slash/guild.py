@@ -4,19 +4,10 @@ from discord import app_commands
 from discord.ext import commands
 
 from bot.config import config
+from bot.presenters import guild as guild_presenter
+from bot.services.guild import GuildService
 from bot.slash import ui, checks as slash_checks, context as slash_context
-from bot.utils import exceptions, paginator, text
-
-LOG_EVENT_COLUMNS = {
-    "message_edits": "logging_message_edit",
-    "message_deletes": "logging_message_delete",
-    "nickname_changes": "logging_member_nickname_change",
-    "role_changes": "logging_member_role_change",
-    "joins_and_leaves": "logging_member_join_leave",
-    "bans_and_unbans": "logging_ban_unban",
-    "channel_create_delete": "logging_guild_channel_create_delete",
-    "role_create_delete": "logging_role_create_delete",
-}
+from bot.utils import paginator
 
 
 class GuildSlash(commands.Cog):
@@ -40,75 +31,10 @@ class GuildSlash(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.service = GuildService(bot)
 
     async def ensure_guild_settings(self, guild_id: int):
-        try:
-            settings = self.bot.guild_config[guild_id]
-
-            if settings:
-                return settings
-        except (AttributeError, TypeError, KeyError):
-            pass
-
-        settings = await self.bot.update_guild_config_cache()
-        return settings[guild_id]
-
-    async def refresh_settings(self):
-        await self.bot.update_guild_config_cache()
-
-    async def get_or_make_discord_webhook(
-        self,
-        ctx: slash_context.InteractionContext,
-        channel: discord.TextChannel,
-    ):
-        try:
-            channel_webhooks = await channel.webhooks()
-
-            def pred(webhook):
-                return (
-                    (webhook.user and webhook.user.id == self.bot.user.id)
-                    or webhook.name == self.bot.user.name
-                    or webhook.avatar == self.bot.user.display_avatar
-                )
-
-            webhook = discord.utils.find(pred, channel_webhooks)
-            if webhook:
-                return webhook
-
-            return await channel.create_webhook(
-                name=self.bot.user.name,
-                avatar=await self.bot.avatar_bytes(),
-            )
-
-        except discord.Forbidden:
-            await ctx.send(
-                f"{config.NO} You need to give me the `Manage Webhooks` permission in {channel.mention}.",
-                ephemeral=True,
-            )
-
-    async def list_reddit_feeds(self, ctx: slash_context.InteractionContext):
-        response = await self.bot.api_request("GET", f"reddit/list/{ctx.guild.id}")
-        entries = []
-
-        for webhook in response["webhooks"]:
-            try:
-                discord_webhook = await self.bot.fetch_webhook(webhook["webhook_id"])
-            except discord.HTTPException:
-                continue
-
-            entries.append(
-                f"**#{webhook['id']}** - [r/{webhook['subreddit']}](https://reddit.com/r/{webhook['subreddit']}) "
-                f"to {discord_webhook.channel.mention}"
-            )
-
-        pages = paginator.SimplePages(
-            entries=entries,
-            author=f"Subreddit Feeds on {ctx.guild.name}",
-            icon="https://cdn.discordapp.com/attachments/730898526040752291/781547428087201792/Reddit_Mark_OnWhite.png",
-            per_page=12,
-            empty_message="This server does not have any subreddit feeds yet.",
-        )
-        await pages.start(ctx)
+        return await self.service.ensure_guild_settings(guild_id)
 
     @server.command(name="overview", description="Show server settings and statistics.")
     @app_commands.guild_only()
@@ -119,35 +45,7 @@ class GuildSlash(commands.Cog):
 
         await ctx.defer()
         settings = await self.ensure_guild_settings(ctx.guild.id)
-        excluded_channels = len(settings["private_channels"])
-
-        embed = text.SafeEmbed(
-            description=f"Check **`{config.BOT_PREFIX}help server`** to see how you can configure me for this server.",
-        )
-        embed.set_author(name=ctx.guild.name, icon_url=ctx.guild_icon)
-        embed.add_field(
-            name="Settings",
-            value=f"{self.bot.emojify_boolean(settings['welcome_enabled'])} Welcome Messages\n"
-            f"{self.bot.emojify_boolean(settings['logging_enabled'])} Logging ({excluded_channels} hidden channels)\n"
-            f"{self.bot.emojify_boolean(settings['default_role_enabled'])} Role on Join\n"
-            f"{self.bot.emojify_boolean(settings['tag_creation_allowed'])} Tag Creation by Everyone\n"
-            f"{self.bot.emojify_boolean(settings['npc_usage_allowed'])} NPC Usage Allowed",
-        )
-
-        embed.add_field(
-            name="Statistics",
-            value=f"{ctx.guild.member_count} members\n"
-            f"{len(ctx.guild.text_channels)} text channels\n"
-            f"{len(ctx.guild.voice_channels)} voice channels\n"
-            f"{len(ctx.guild.roles)} roles\n"
-            f"{len(ctx.guild.emojis)} custom emojis",
-        )
-
-        embed.set_footer(
-            text=f"Server was created on {ctx.guild.created_at.strftime('%A, %B %d %Y')}"
-        )
-
-        embed.set_thumbnail(url=ctx.guild_icon)
+        embed = guild_presenter.build_server_overview_embed(ctx, settings)
         await ctx.send(embed=embed)
 
     @server.command(name="welcome", description="Configure welcome message.")
@@ -167,43 +65,17 @@ class GuildSlash(commands.Cog):
 
         if enabled is None and channel is None and message is None:
             current_channel = await self.bot.get_welcome_channel(ctx.guild)
-
-            embed = text.SafeEmbed()
-
-            embed.set_author(
-                name=f"Welcome Messages on {ctx.guild.name}", icon_url=ctx.guild_icon
-            )
-            embed.add_field(
-                name="Enabled",
-                value=self.bot.emojify_boolean(settings["welcome_enabled"]),
-            )
-
-            embed.add_field(
-                name="Welcome Channel",
-                value=current_channel.mention if current_channel else "-",
-            )
-
-            existing_message = settings["welcome_message"]
-            if not existing_message:
-                existing_message = "-"
-
-            embed.add_field(
-                name="Welcome Message", value=existing_message, inline=False
-            )
+            embed = guild_presenter.build_welcome_embed(ctx, settings, current_channel)
 
             return await ctx.send(embed=embed)
 
-        await self.bot.db.execute(
-            "UPDATE guild SET welcome_enabled = $1, welcome_channel = $2, "
-            "welcome_message = $3 WHERE id = $4",
-            settings["welcome_enabled"] if enabled is None else enabled,
-            settings["welcome_channel"] if channel is None else channel.id,
-            settings["welcome_message"] if message is None else message,
-            ctx.guild.id,
+        result = await self.service.update_welcome_settings(
+            ctx,
+            enabled=enabled,
+            channel=channel,
+            message=message,
         )
-
-        await self.refresh_settings()
-        await ctx.send(f"{config.YES} Welcome Message settings were updated.")
+        await ctx.send(result.message)
 
     @logs.command(name="overview", description="Show logging settings.")
     @slash_checks.has_guild_permissions(manage_guild=True)
@@ -213,19 +85,7 @@ class GuildSlash(commands.Cog):
         settings = await self.ensure_guild_settings(ctx.guild.id)
         current_channel = await self.bot.get_logging_channel(ctx.guild)
 
-        embed = text.SafeEmbed(
-            description=f"If you want to change what specific events I should log, use my `{config.BOT_PREFIX}server logs events` command."
-        )
-        embed.set_author(
-            name=f"Event Logging on {ctx.guild.name}", icon_url=ctx.guild_icon
-        )
-        embed.add_field(
-            name="Enabled", value=self.bot.emojify_boolean(settings["logging_enabled"])
-        )
-        embed.add_field(
-            name="Log Channel",
-            value=current_channel.mention if current_channel else "-",
-        )
+        embed = guild_presenter.build_logging_embed(ctx, settings, current_channel)
         await ctx.send(embed=embed)
 
     @logs.command(name="configure", description="Configure logging status and channel.")
@@ -242,16 +102,12 @@ class GuildSlash(commands.Cog):
         )
 
         await ctx.defer()
-        settings = await self.ensure_guild_settings(ctx.guild.id)
-
-        await self.bot.db.execute(
-            "UPDATE guild SET logging_enabled = $1, logging_channel = $2 WHERE id = $3",
-            settings["logging_enabled"] if enabled is None else enabled,
-            settings["logging_channel"] if channel is None else channel.id,
-            ctx.guild.id,
+        result = await self.service.update_logging_settings(
+            ctx,
+            enabled=enabled,
+            channel=channel,
         )
-        await self.refresh_settings()
-        await ctx.send(f"{config.YES} Logging settings were updated.")
+        await ctx.send(result.message)
 
     @logs.command(name="events", description="Configure which events are logged.")
     @slash_checks.has_guild_permissions(manage_guild=True)
@@ -285,37 +141,11 @@ class GuildSlash(commands.Cog):
         }
 
         if all(value is None for value in provided.values()):
-            embed = text.SafeEmbed()
-            embed.set_author(
-                name=f"Events to Log on {ctx.guild.name}", icon_url=ctx.guild_icon
-            )
-            for event_name, column in LOG_EVENT_COLUMNS.items():
-                embed.add_field(
-                    name=event_name.replace("_", " ").title(),
-                    value=self.bot.emojify_boolean(settings[column]),
-                )
+            embed = guild_presenter.build_logging_events_embed(ctx, settings)
             return await ctx.send(embed=embed)
 
-        values = {
-            column: settings[column] if provided[name] is None else provided[name]
-            for name, column in LOG_EVENT_COLUMNS.items()
-        }
-        await self.bot.db.execute(
-            "UPDATE guild SET "
-            "logging_message_edit = $1, "
-            "logging_message_delete = $2, "
-            "logging_member_nickname_change = $3, "
-            "logging_member_role_change = $4, "
-            "logging_member_join_leave = $5, "
-            "logging_ban_unban = $6, "
-            "logging_guild_channel_create_delete = $7, "
-            "logging_role_create_delete = $8 "
-            "WHERE id = $9",
-            *values.values(),
-            ctx.guild.id,
-        )
-        await self.refresh_settings()
-        await ctx.send(f"{config.YES} The logging event settings were updated.")
+        result = await self.service.update_logging_events(ctx, provided)
+        await ctx.send(result.message)
 
     @server.command(
         name="hide-channel",
@@ -333,7 +163,6 @@ class GuildSlash(commands.Cog):
         )
         await ctx.defer()
         settings = await self.ensure_guild_settings(ctx.guild.id)
-        private_channels = settings["private_channels"]
         current_logging_channel = await self.bot.get_logging_channel(ctx.guild)
 
         if current_logging_channel is None:
@@ -343,55 +172,26 @@ class GuildSlash(commands.Cog):
             )
 
         if channel is None:
-            help_description = (
-                f"When you hide a channel, it (and all its threads) will no longer show up in "
-                f"{current_logging_channel.mention}.\n\nAdditionally, :star: reactions for the "
-                f"starboard will no longer count in that channel (and in all its threads).\n\n"
-                f"You can hide a channel, or even an entire category at once, with "
-                f"`/server hide-channel <channel_name>`\n\n"
-                "**Hidden Channels**"
+            page = guild_presenter.build_hidden_channels_page(
+                ctx, settings, current_logging_channel
             )
-            entries = [help_description]
-            for channel_id in private_channels:
-                found = self.bot.get_channel(channel_id)
-                if found:
-                    entries.append(
-                        found.mention if hasattr(found, "mention") else found.name
-                    )
-            if len(entries) == 1:
-                # No hidden channels
+            if len(page.entries) == 1:
                 return await ctx.send(
-                    f"{config.NO} There are no hidden channels on this server yet.",
+                    guild_presenter.hidden_channels_empty_message(
+                        ctx, current_logging_channel
+                    ),
                     ephemeral=True,
                 )
             pages = paginator.SimplePages(
-                entries=entries,
-                author=f"Hidden Channels on {ctx.guild.name}",
-                icon=ctx.guild_icon,
-                empty_message="There are no hidden channels on this server.",
+                entries=list(page.entries),
+                author=page.author,
+                icon=page.icon,
+                empty_message=page.empty_message,
             )
             return await pages.start(ctx)
 
-        if channel.id in private_channels:
-            await self.bot.db.execute(
-                "DELETE FROM guild_private_channel WHERE guild_id = $1 AND channel_id = $2",
-                ctx.guild.id,
-                channel.id,
-            )
-            await self.refresh_settings()
-            return await ctx.send(
-                f"{config.YES} `{channel}` is no longer hidden from {current_logging_channel.mention}."
-            )
-
-        await self.bot.db.execute(
-            "INSERT INTO guild_private_channel (guild_id, channel_id) VALUES ($1, $2)",
-            ctx.guild.id,
-            channel.id,
-        )
-        await self.refresh_settings()
-        await ctx.send(
-            f"{config.YES} `{channel}` is now hidden from {current_logging_channel.mention}."
-        )
+        result = await self.service.toggle_hidden_channel(ctx, channel)
+        await ctx.send(result.message)
 
     @server.command(
         name="join-role", description="Configure the role given to new members."
@@ -410,28 +210,15 @@ class GuildSlash(commands.Cog):
         settings = await self.ensure_guild_settings(ctx.guild.id)
 
         if enabled is None and role is None:
-            current_role = ctx.guild.get_role(settings["default_role_role"])
-            embed = text.SafeEmbed()
-            embed.set_author(
-                name=f"Role on Join on {ctx.guild.name}", icon_url=ctx.guild_icon
-            )
-            embed.add_field(
-                name="Enabled",
-                value=self.bot.emojify_boolean(settings["default_role_enabled"]),
-            )
-            embed.add_field(
-                name="Role", value=current_role.mention if current_role else "-"
-            )
+            embed = guild_presenter.build_default_role_embed(ctx, settings)
             return await ctx.send(embed=embed)
 
-        await self.bot.db.execute(
-            "UPDATE guild SET default_role_enabled = $1, default_role_role = $2 WHERE id = $3",
-            settings["default_role_enabled"] if enabled is None else enabled,
-            settings["default_role_role"] if role is None else role.id,
-            ctx.guild.id,
+        result = await self.service.update_default_role_settings(
+            ctx,
+            enabled=enabled,
+            role=role,
         )
-        await self.refresh_settings()
-        await ctx.send(f"{config.YES} Role on Join settings were updated.")
+        await ctx.send(result.message)
 
     @server.command(name="tag-creation", description="Configure who can create tags.")
     @slash_checks.has_guild_permissions(administrator=True)
@@ -448,29 +235,11 @@ class GuildSlash(commands.Cog):
         settings = await self.ensure_guild_settings(ctx.guild.id)
 
         if everyone is None:
-            embed = text.SafeEmbed()
-            embed.set_author(
-                name=f"Tag Creation on {ctx.guild.name}", icon_url=ctx.guild_icon
-            )
-            embed.add_field(
-                name="Allowed Tag Creators",
-                value=(
-                    "Everyone"
-                    if settings["tag_creation_allowed"]
-                    else "Only Administrators"
-                ),
-            )
+            embed = guild_presenter.build_tag_creation_embed(ctx, settings)
             return await ctx.send(embed=embed)
 
-        await self.bot.db.execute(
-            "UPDATE guild SET tag_creation_allowed = $1 WHERE id = $2",
-            everyone,
-            ctx.guild.id,
-        )
-        await self.refresh_settings()
-        await ctx.send(
-            f"{config.YES} {'Everyone can now make tags' if everyone else 'Only Administrators can now make tags'} on this server."
-        )
+        result = await self.service.set_tag_creation(ctx, everyone=everyone)
+        await ctx.send(result.message)
 
     @server.command(
         name="npc-usage", description="Allow or deny NPC usage on this server."
@@ -488,25 +257,11 @@ class GuildSlash(commands.Cog):
         settings = await self.ensure_guild_settings(ctx.guild.id)
 
         if allowed is None:
-            embed = text.SafeEmbed()
-            embed.set_author(
-                name=f"NPC Usage on {ctx.guild.name}", icon_url=ctx.guild_icon
-            )
-            embed.add_field(
-                name="Allowed",
-                value=self.bot.emojify_boolean(settings["npc_usage_allowed"]),
-            )
+            embed = guild_presenter.build_npc_usage_embed(ctx, settings)
             return await ctx.send(embed=embed)
 
-        await self.bot.db.execute(
-            "UPDATE guild SET npc_usage_allowed = $1 WHERE id = $2",
-            allowed,
-            ctx.guild.id,
-        )
-        await self.refresh_settings()
-        await ctx.send(
-            f"{config.YES} NPCs {'can now' if allowed else 'can no longer'} be used on this server."
-        )
+        result = await self.service.set_npc_usage(ctx, allowed=allowed)
+        await ctx.send(result.message)
 
     @reddit.command(name="list", description="List subreddit feeds on this server.")
     async def reddit_list(self, interaction: discord.Interaction):
@@ -514,7 +269,15 @@ class GuildSlash(commands.Cog):
             interaction, command_name="server reddit list"
         )
         await ctx.defer()
-        await self.list_reddit_feeds(ctx)
+        page = await self.service.list_reddit_feeds(ctx)
+        pages = paginator.SimplePages(
+            entries=list(page.entries),
+            author=page.author,
+            icon=page.icon,
+            per_page=page.per_page,
+            empty_message=page.empty_message,
+        )
+        await pages.start(ctx)
 
     @reddit.command(name="add", description="Add a subreddit feed to this server.")
     @slash_checks.has_guild_permissions(manage_guild=True)
@@ -529,40 +292,13 @@ class GuildSlash(commands.Cog):
             interaction, command_name="server reddit add"
         )
         await ctx.defer()
-        subreddit = subreddit.removeprefix("r/").removeprefix("/r/").strip()
-
-        async with self.bot.session.get(
-            f"https://reddit.com/r/{subreddit}/new.json?limit=1"
-        ) as resp:
-            if (
-                str(resp.url).startswith(
-                    "https://www.reddit.com/subreddits/search.json?q="
-                )
-                or resp.status == 404
-            ):
-                return await ctx.send(
-                    f"{config.NO} `r/{subreddit}` is not a subreddit.",
-                    ephemeral=True,
-                )
-
-        webhook = await self.get_or_make_discord_webhook(ctx, channel)
-        if not webhook:
-            return
-
-        await self.bot.api_request(
-            "POST",
-            "reddit/add",
-            json={
-                "target": subreddit,
-                "webhook_url": webhook.url,
-                "webhook_id": webhook.id,
-                "guild_id": ctx.guild.id,
-                "channel_id": channel.id,
-            },
+        result = await self.service.add_reddit_feed(
+            ctx,
+            subreddit=subreddit,
+            channel=channel,
         )
-        await ctx.send(
-            f"{config.YES} New posts from `r/{subreddit}` will now be posted to {channel.mention}."
-        )
+        if result.message:
+            await ctx.send(result.message)
 
     @reddit.command(name="remove", description="Remove one subreddit feed by ID.")
     @slash_checks.has_guild_permissions(manage_guild=True)
@@ -572,39 +308,8 @@ class GuildSlash(commands.Cog):
             command_name="server reddit remove",
         )
         await ctx.defer()
-        try:
-            response = await self.bot.api_request(
-                "POST",
-                "reddit/remove",
-                json={"id": feed_id, "guild_id": ctx.guild.id},
-            )
-        except exceptions.DemocracivBotAPIError:
-            return await ctx.send(
-                f"{config.NO} Something went wrong. Are you sure `{feed_id}` exists?",
-                ephemeral=True,
-            )
-
-        if "error" in response:
-            return await ctx.send(
-                f"{config.NO} Something went wrong. Are you sure `{feed_id}` exists?",
-                ephemeral=True,
-            )
-
-        if response["safe_to_delete"]:
-            webhook = discord.Webhook.from_url(
-                response["webhook_url"],
-                session=self.bot.session,
-            )
-            try:
-                await webhook.delete()
-            except discord.HTTPException:
-                pass
-
-        channel = ctx.guild.get_channel(response["channel_id"])
-        channel_fmt = channel.mention if channel else "#deleted-channel"
-        await ctx.send(
-            f"{config.YES} New posts from `r/{response['subreddit']}` will no longer be posted to {channel_fmt}."
-        )
+        result = await self.service.remove_reddit_feed(ctx, feed_id=feed_id)
+        await ctx.send(result.message)
 
     @reddit.command(
         name="clear", description="Remove all subreddit feeds on this server."
@@ -625,25 +330,8 @@ class GuildSlash(commands.Cog):
         if not confirmed:
             return await ctx.send("Cancelled.", ephemeral=True)
 
-        response = await self.bot.api_request(
-            "POST",
-            "reddit/clear",
-            json={"guild_id": ctx.guild.id},
-        )
-        for removed_hook in response["removed"]:
-            if removed_hook["safe_to_delete"]:
-                webhook = discord.Webhook.from_url(
-                    removed_hook["webhook_url"],
-                    session=self.bot.session,
-                )
-                try:
-                    await webhook.delete()
-                except discord.HTTPException:
-                    continue
-
-        await ctx.send(
-            f"{config.YES} All {len(response['removed'])} subreddit feed(s) on this server were removed."
-        )
+        result = await self.service.clear_reddit_feeds(ctx)
+        await ctx.send(result.message)
 
 
 async def setup(bot):
