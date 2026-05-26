@@ -146,6 +146,52 @@ class Session(commands.Converter):
         )
 
 
+class SenateSessionConverter(Session):
+    @classmethod
+    async def convert(cls, ctx, argument: typing.Union[int, str]):
+        if isinstance(argument, str):
+            if argument.startswith("#"):
+                argument = argument[1:]
+            try:
+                argument = int(argument)
+            except ValueError:
+                raise commands.BadArgument(f"{config.NO} `{argument}` is not a number.")
+
+        internal_id = await ctx.bot.db.fetchval(
+            "SELECT id FROM legislature_session WHERE mk13_house_id = $1 AND house = 'senate'",
+            argument,
+        )
+        if internal_id is None:
+            raise commands.BadArgument(
+                f"{config.NO} There hasn't been a Senate session #{argument} yet."
+            )
+
+        return await super().convert(ctx, internal_id)
+
+
+class CommonsSessionConverter(Session):
+    @classmethod
+    async def convert(cls, ctx, argument: typing.Union[int, str]):
+        if isinstance(argument, str):
+            if argument.startswith("#"):
+                argument = argument[1:]
+            try:
+                argument = int(argument)
+            except ValueError:
+                raise commands.BadArgument(f"{config.NO} `{argument}` is not a number.")
+
+        internal_id = await ctx.bot.db.fetchval(
+            "SELECT id FROM legislature_session WHERE mk13_house_id = $1 AND house = 'commons'",
+            argument,
+        )
+        if internal_id is None:
+            raise commands.BadArgument(
+                f"{config.NO} There hasn't been a Commons session #{argument} yet."
+            )
+
+        return await super().convert(ctx, internal_id)
+
+
 sponsor_regex = re.compile(r"([<>=!]=?)\s?(\d+)")
 
 

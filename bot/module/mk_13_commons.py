@@ -29,7 +29,13 @@ from bot.utils import (
     converter,
     exceptions,
 )
-from bot.utils.models import Bill, Session, Motion, SessionStatus
+from bot.utils.models import (
+    Bill,
+    Session,
+    Motion,
+    SessionStatus,
+    CommonsSessionConverter,
+)
 from bot.utils.converter import Fuzzy, FuzzySettings
 
 MK13_COMMONS_LEGISLATURE_NAME = "Commons"
@@ -494,7 +500,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
     async def session(
         self,
         ctx: context.CustomContext,
-        session: typing.Optional[Session] = None,
+        session: typing.Optional[CommonsSessionConverter] = None,
         *,
         sponsor_filter: models.SessionSponsorFilter = None,
     ):
@@ -940,7 +946,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             await ctx.send_help(ctx.command)
 
     @export.command(name="spreadsheet", aliases=["sheet", "sheets", "s"])
-    async def export_spreadsheet(self, ctx, session: Session = None):
+    async def export_spreadsheet(self, ctx, session: CommonsSessionConverter = None):
         """Export a session's submissions into copy & paste-able formatting for Google Spreadsheets"""
 
         if session is None:
@@ -1003,7 +1009,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
 
     @export.command(name="form", aliases=["forms", "voting", "f"])
     @commands.cooldown(1, 120, commands.BucketType.user)
-    async def export_form(self, ctx, session: Session = None):
+    async def export_form(self, ctx, session: CommonsSessionConverter = None):
         """Generate the Google Forms voting form with all the submitted bills & motions for a session"""
 
         return await ctx.send(

@@ -494,13 +494,6 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         )
 
         if record is None:
-            record = await self.bot.db.fetchrow(
-                "SELECT id FROM legislature_session WHERE house = $1 AND id = $2",
-                house,
-                session_id,
-            )
-
-        if record is None:
             return None
 
         return await models.Session.convert(ctx, record["id"])

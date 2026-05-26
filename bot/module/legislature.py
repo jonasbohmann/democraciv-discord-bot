@@ -24,7 +24,13 @@ from bot.utils import (
     converter,
     exceptions,
 )
-from bot.utils.models import Bill, Session, Motion, SessionStatus
+from bot.utils.models import (
+    Bill,
+    Session,
+    Motion,
+    SessionStatus,
+    SenateSessionConverter,
+)
 from bot.utils.converter import Fuzzy, FuzzySettings
 
 
@@ -580,7 +586,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
     async def session(
         self,
         ctx: context.CustomContext,
-        session: typing.Optional[Session] = None,
+        session: typing.Optional[SenateSessionConverter] = None,
         *,
         sponsor_filter: models.SessionSponsorFilter = None,
     ):
@@ -1044,7 +1050,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             await ctx.send_help(ctx.command)
 
     @export.command(name="spreadsheet", aliases=["sheet", "sheets", "s"])
-    async def export_spreadsheet(self, ctx, session: Session = None):
+    async def export_spreadsheet(self, ctx, session: SenateSessionConverter = None):
         """Export a session's submissions into copy & paste-able formatting for Google Spreadsheets"""
 
         if session is None:
@@ -1107,7 +1113,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
 
     @export.command(name="form", aliases=["forms", "voting", "f"])
     @commands.cooldown(1, 120, commands.BucketType.user)
-    async def export_form(self, ctx, session: Session = None):
+    async def export_form(self, ctx, session: SenateSessionConverter = None):
         """Generate the Google Forms voting form with all the submitted bills & motions for a session"""
 
         return await ctx.send(
