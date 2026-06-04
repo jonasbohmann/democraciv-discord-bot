@@ -1911,7 +1911,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         ):
             open_commons_sessions = await self.get_open_leg_sessions(house="commons")
             if len(open_commons_sessions) == 1:
-                target_session = open_commons_sessions[0]
+                target_session = open_commons_sessions[0] if open_commons_sessions[0].session_kind is models.SessionKind.REGULAR else None
             elif len(open_commons_sessions) > 1:
                 target_session = await self.prompt_for_leg_session(
                     ctx,

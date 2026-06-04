@@ -1133,7 +1133,7 @@ class BillStatus:
         if target_session is not None:
             if (
                 target_session.house != other_house
-                or target_session.status is SessionStatus.CLOSED
+                or target_session.status is not SessionStatus.SUBMISSION_PERIOD
             ):
                 raise IllegalBillOperation(
                     f"This bill cannot be sent to {target_session.display_name}."

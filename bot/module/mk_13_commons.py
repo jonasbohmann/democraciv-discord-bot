@@ -1819,7 +1819,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         ):
             open_senate_sessions = await self.get_open_leg_sessions(house="senate")
             if len(open_senate_sessions) == 1:
-                target_session = open_senate_sessions[0]
+                target_session = open_senate_sessions[0] if open_senate_sessions[0].session_kind is models.SessionKind.REGULAR else None
             elif len(open_senate_sessions) > 1:
                 target_session = await self.prompt_for_leg_session(
                     ctx,
