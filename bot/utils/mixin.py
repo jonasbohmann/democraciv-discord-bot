@@ -1076,7 +1076,7 @@ class GovernmentMixin:
         open_sessions = await self.get_open_leg_sessions(house=house)
         if not open_sessions:
             if is_senate:
-                session_value = "There currently is no open session."
+                session_value = "There currently is no open session in the Senate."
             else:
                 session_value = "There currently is no open session at the Commons."
         else:
@@ -1130,37 +1130,50 @@ class GovernmentMixin:
 
         embed.add_field(name=cabinet_title, value="\n".join(speaker_lines))
 
-        try:
-            legislators = self.bot.get_democraciv_role(mk.DemocracivRole.LEGISLATOR)
-            legislator_lines = [
-                f"{l.mention} {discord.utils.escape_markdown(str(l))}"
-                for l in legislators.members
-            ] or ["-"]
-            count = len(legislators.members)
-        except exceptions.RoleNotFoundError:
-            legislator_lines = ["-"]
-            count = 0
+        if is_senate:
+            try:
+                legislators = self.bot.get_democraciv_role(mk.DemocracivRole.LEGISLATOR)
+                legislator_lines = [
+                    f"{l.mention} {discord.utils.escape_markdown(str(l))}"
+                    for l in legislators.members
+                ] or ["-"]
+                count = len(legislators.members)
+            except exceptions.RoleNotFoundError:
+                legislator_lines = ["-"]
+                count = 0
 
-        embed.add_field(
-            name=f"{self.bot.mk.legislator_term}s ({count})",
-            value="\n".join(legislator_lines),
-            inline=False,
-        )
+            embed.add_field(
+                name=f"{self.bot.mk.legislator_term}s ({count})",
+                value="\n".join(legislator_lines),
+                inline=False,
+            )
 
-        embed.add_field(
-            name="Links",
-            value=(
-                f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
-                f"[Legal Code]({self.bot.mk.LEGAL_CODE}) "
-                "*(try [laws.democraciv.com](https://laws.democraciv.com) too!)*\n"
-                f"[Legislative Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n"
-                f"[Legislative Procedures]({self.bot.mk.LEGISLATURE_PROCEDURES})"
-            ),
-            inline=False,
-        )
+            embed.add_field(
+                name="Links",
+                value=(
+                    f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
+                    f"[Legal Code]({self.bot.mk.LEGAL_CODE}) "
+                    "*(try [laws.democraciv.com](https://laws.democraciv.com) too!)*\n"
+                    f"[Senate Docket/Worksheet]({self.bot.mk.LEGISLATURE_DOCKET})\n"
+                    f"[Senate Procedures]({self.bot.mk.LEGISLATURE_PROCEDURES})"
+                ),
+                inline=False,
+            )
+        else:
+            embed.add_field(
+                name="Links",
+                value=(
+                    f"[Constitution]({self.bot.mk.CONSTITUTION})\n"
+                    f"[Legal Code]({self.bot.mk.LEGAL_CODE}) "
+                    "*(try [laws.democraciv.com](https://laws.democraciv.com) too!)*\n"
+                    f"[Commons Docket/Worksheet](https://docs.google.com/spreadsheets/d/1tNj-iI23T2eFpV4jbEQQKl-VIrO87etI9xYp5vSG_qA)\n"
+                    f"[Commons Procedures](https://docs.google.com/document/d/1iLwNrdtjnw24kNz2-T_nsiKaKwqZmJKmntTlC4Fiaqk)"
+                ),
+                inline=False,
+            )
 
         session_label = (
-            "Current Commons Session" if not is_senate else "Current Session"
+            "Current Commons Session" if not is_senate else "Current Senate Session"
         )
         embed.add_field(name=session_label, value=session_value, inline=False)
 

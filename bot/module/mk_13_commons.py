@@ -98,14 +98,14 @@ class SuperPassScheduler(text.RedditAnnouncementScheduler):
 class PassScheduler(text.RedditAnnouncementScheduler):
     def _destination_text(self, obj: Bill) -> str:
         if isinstance(obj.status, models.BillPassedCommonsPendingSenate):
-            return "Next stop: Senate"
+            return "Sent to Senate"
         if isinstance(obj.status, models.BillAwaitingExecutive):
-            return f"Next stop: {self.bot.mk.MINISTRY_NAME}"
+            return f"Sent to {self.bot.mk.MINISTRY_NAME}"
         if isinstance(obj.status, models.BillPassedLegislature):
-            return f"Next stop: {self.bot.mk.MINISTRY_NAME}"
+            return f"Sent to {self.bot.mk.MINISTRY_NAME}"
         if obj.status.is_law:
-            return "This bill is now law"
-        return "Next step recorded by the bot"
+            return "Active Law"
+        return ""
 
     def get_embed(self):
         embed = text.SafeEmbed()
@@ -148,7 +148,7 @@ class PassScheduler(text.RedditAnnouncementScheduler):
                 f"\n\n{bill.description}\n\n*{self._destination_text(bill)}*\n\n &nbsp;"
             )
 
-        outro = f"""\n\n &nbsp; \n\n---\n\nThe bot recorded the next legislative destination for each bill above.
+        outro = f"""\n\n &nbsp; \n\n---\n\n
                 \n\n\n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/)
                 and this is an automated service. Contact u/Jovanos (DerJonas on Discord) for further questions
                 or bug reports.*"""
@@ -1679,7 +1679,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
                 f"something small that results in some __temporary__ action and where it's not important to track if it passed, "
                 f"use a motion, otherwise use a bill. __In most cases you should probably use bills.__ "
                 f"Common examples for motions: `Motion to repeal Law #12`, or "
-                f"`Motion to recall {self.bot.mk.legislator_term} XY`.*\n\n### {config.HINT} In 80% of cases, you should use bills instead of motions!",
+                f"`Motion to recall {self.bot.mk.legislator_term} XY`.*\n\n### {config.HINT} In ~80% of cases, you should use bills instead of motions! Commons Procedure should be also be submitted as bills.",
                 view=view,
             )
 

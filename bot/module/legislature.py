@@ -147,14 +147,14 @@ class SuperPassScheduler(text.RedditAnnouncementScheduler):
 class PassScheduler(text.RedditAnnouncementScheduler):
     def _destination_text(self, obj: Bill) -> str:
         if isinstance(obj.status, models.BillPassedSenatePendingCommons):
-            return "Next stop: Commons"
+            return "Sent to Commons"
         if isinstance(obj.status, models.BillAwaitingExecutive):
-            return f"Next stop: {self.bot.mk.MINISTRY_NAME}"
+            return f"Sent to {self.bot.mk.MINISTRY_NAME}"
         if isinstance(obj.status, models.BillPassedLegislature):
-            return f"Next stop: {self.bot.mk.MINISTRY_NAME}"
+            return f"Sent to {self.bot.mk.MINISTRY_NAME}"
         if obj.status.is_law:
-            return "This bill is now law"
-        return "Next step recorded by the bot"
+            return "Active Law"
+        return ""
 
     def get_embed(self):
         embed = text.SafeEmbed()
@@ -199,7 +199,7 @@ class PassScheduler(text.RedditAnnouncementScheduler):
                 f"\n\n{bill.description}\n\n*{self._destination_text(bill)}*\n\n &nbsp;"
             )
 
-        outro = f"""\n\n &nbsp; \n\n---\n\nThe bot recorded the next legislative destination for each bill above.
+        outro = f"""\n\n &nbsp; \n\n---\n\n
                 \n\n\n\n*I am a [bot](https://github.com/jonasbohmann/democraciv-discord-bot/)
                 and this is an automated service. Contact u/Jovanos (DerJonas on Discord) for further questions
                 or bug reports.*"""
@@ -423,13 +423,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
 
         Use `{PREFIX}help {LEGISLATURE_COMMAND} session` for the help page of the actual command.
         """
-        ctx.message.content = ctx.message.content.replace(
-            f"{ctx.prefix}{ctx.invoked_with}",
-            f"{ctx.prefix}{self.bot.mk.LEGISLATURE_COMMAND.lower()} "
-            f"{ctx.invoked_with}",
-        )
-        new_ctx = await self.bot.get_context(ctx.message)
-        return await self.bot.invoke(new_ctx)
+        await ctx.send(f"{config.HINT} You can use either `{config.BOT_PREFIX}commons session` or `{config.BOT_PREFIX}senate session`.")
 
     @commands.group(
         name=mk.MarkConfig.LEGISLATURE_COMMAND.lower(),
@@ -1781,7 +1775,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
                 f"something small that results in some __temporary__ action and where it's not important to track if it passed, "
                 f"use a motion, otherwise use a bill. __In most cases you should probably use bills.__ "
                 f"Common examples for motions: `Motion to repeal Law #12`, or "
-                f"`Motion to recall {self.bot.mk.legislator_term} XY`.*\n\n### {config.HINT} In 80% of cases, you should use bills instead of motions!",
+                f"`Motion to recall {self.bot.mk.legislator_term} XY`.*\n\n### {config.HINT} In ~80% of cases, you should use bills instead of motions! Senate Procedure should be also be submitted as bills.",
                 view=view,
             )
 
