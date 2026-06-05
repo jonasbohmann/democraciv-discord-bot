@@ -52,6 +52,10 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
         for bill in bill_ids:
             house = self.get_house_for_object(bill)
 
+            if ctx.author.id == self.bot.owner_id:
+                passed.append(bill)
+                continue
+
             if not self.is_cabinet_for_house(ctx.author, house):
                 failed[bill] = "Only chamber leadership can synchronize this bill."
                 continue

@@ -743,10 +743,11 @@ textarea {
     min-height: 2.1rem;
     padding: 0.4rem 0.8rem;
     font-size: 0.88rem;
+    touch-action: manipulation;
 }
 
-.gdoc-use-default-font .content-gdoc-host .gdoc-rendered,
-.gdoc-use-default-font .content-gdoc-host .gdoc-rendered * {
+.content-gdoc-host .gdoc-rendered.gdoc-use-default-font,
+.content-gdoc-host .gdoc-rendered.gdoc-use-default-font * {
     font-family: var(--pico-font-family, inherit) !important;
 }
 

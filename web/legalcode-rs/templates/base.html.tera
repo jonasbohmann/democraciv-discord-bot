@@ -133,13 +133,16 @@
         (() => {
             const storageKey = "gdoc-use-default-font";
             const toggleButtons = Array.from(document.querySelectorAll("[data-gdoc-font-toggle]"));
+            const renderedDocs = Array.from(document.querySelectorAll(".gdoc-rendered"));
 
-            if (toggleButtons.length === 0) {
+            if (toggleButtons.length === 0 || renderedDocs.length === 0) {
                 return;
             }
 
             const applyState = (useDefaultFont) => {
-                document.documentElement.classList.toggle("gdoc-use-default-font", useDefaultFont);
+                for (const renderedDoc of renderedDocs) {
+                    renderedDoc.classList.toggle("gdoc-use-default-font", useDefaultFont);
+                }
 
                 for (const button of toggleButtons) {
                     button.setAttribute("aria-pressed", String(useDefaultFont));

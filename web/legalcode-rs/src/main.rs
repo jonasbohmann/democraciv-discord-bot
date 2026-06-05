@@ -485,6 +485,13 @@ fn css_url_re() -> &'static Regex {
     CSS_URL_RE.get_or_init(|| Regex::new(r#"(?is)url\(\s*([^)]*?)\s*\)"#).unwrap())
 }
 
+fn text_color_decl_re() -> &'static Regex {
+    static TEXT_COLOR_DECL_RE: OnceLock<Regex> = OnceLock::new();
+    TEXT_COLOR_DECL_RE.get_or_init(|| {
+        Regex::new(r#"(?i)(^|[;{])\s*(?:color|-webkit-text-fill-color)\s*:\s*[^;{}"]+;?"#).unwrap()
+    })
+}
+
 fn font_size_decl_re() -> &'static Regex {
     static FONT_SIZE_DECL_RE: OnceLock<Regex> = OnceLock::new();
     FONT_SIZE_DECL_RE.get_or_init(|| {
@@ -663,6 +670,17 @@ fn scale_font_sizes(input: &str) -> String {
                 .unwrap_or_else(|_| raw_value.to_string());
 
             format!("font-size:{scaled}{unit}")
+        })
+        .into_owned()
+}
+
+fn strip_text_color_declarations(input: &str) -> String {
+    text_color_decl_re()
+        .replace_all(input, |captures: &Captures| {
+            captures
+                .get(1)
+                .map(|value| value.as_str().to_string())
+                .unwrap_or_default()
         })
         .into_owned()
 }
@@ -873,7 +891,8 @@ fn render_google_doc_html(document_id: i32, document_html: &str) -> Option<Strin
     let body_without_style_tags = style_tag_re().replace_all(&body_html, "").into_owned();
     let rewritten_body = rewrite_html_asset_references(&body_without_style_tags, document_id);
     let scaled_body = scale_font_sizes(&rewritten_body);
-    let sanitized_body = sanitize_google_doc_body_html(&scaled_body);
+    let normalized_body = strip_text_color_declarations(&scaled_body);
+    let sanitized_body = sanitize_google_doc_body_html(&normalized_body);
 
     if sanitized_body.trim().is_empty() {
         return None;
@@ -889,6 +908,7 @@ fn render_google_doc_html(document_id: i32, document_html: &str) -> Option<Strin
         .into_iter()
         .map(|stylesheet| rewrite_css_urls(&stylesheet, document_id))
         .map(|stylesheet| scale_font_sizes(&stylesheet))
+        .map(|stylesheet| strip_text_color_declarations(&stylesheet))
         .map(|stylesheet| css_comment_re().replace_all(&stylesheet, "").into_owned())
         .map(|stylesheet| scope_css_block(&stylesheet, &scope_selector))
         .filter(|stylesheet| !stylesheet.trim().is_empty())
