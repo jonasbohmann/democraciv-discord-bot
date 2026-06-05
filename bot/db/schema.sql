@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS bill(
     leg_session serial references legislature_session(id) NOT NULL,
     name text NOT NULL,
     content text NOT NULL,
+    markdown text,
     link text NOT NULL,
     submitter bigint NOT NULL,
     submitter_description text NOT NULL,
@@ -121,6 +122,9 @@ CREATE TABLE IF NOT EXISTS bill(
     executive_deadline_at timestamp WITHOUT TIME ZONE,
     is_procedure bool DEFAULT FALSE NOT NULL
 );
+
+ALTER TABLE bill
+    ADD COLUMN IF NOT EXISTS markdown text;
 
 
 CREATE TABLE IF NOT EXISTS bill_session(

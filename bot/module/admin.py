@@ -147,9 +147,9 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
                 link=google_docs_url,
                 submitter_description=bill_description,
             )
-            name, tags, content = await bill.fetch_name_and_keywords()
+            document = await bill.fetch_name_and_keywords()
 
-            if not name:
+            if not document.name:
                 await ctx.send(
                     f"{config.NO} Something went wrong. Are you sure you made your "
                     f"Google Docs document public for everyone to view?"
@@ -157,15 +157,16 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
                 return
 
             bill_id = await self.bot.db.fetchval(
-                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, submitter_description, content, origin_house) "
-                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
+                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, submitter_description, content, markdown, origin_house) "
+                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
                 leg_session_id,
-                name,
+                document.name,
                 google_docs_url,
                 submitter.id,
                 is_vetoable,
                 bill_description,
-                content,
+                document.content,
+                document.markdown,
                 session_house or "senate",
             )
 
@@ -181,7 +182,7 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
                 note=f"Submitted to {session_display_name}",
             )
 
-            id_with_tags = [(bill_id, tag) for tag in tags]
+            id_with_tags = [(bill_id, tag) for tag in document.keywords]
             self.bot.loop.create_task(
                 self.bot.db.executemany(
                     "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES "

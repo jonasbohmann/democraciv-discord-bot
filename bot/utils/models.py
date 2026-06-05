@@ -237,6 +237,13 @@ class SessionSponsorFilter(commands.Converter):
 BillHistoryEntry = namedtuple("BillHistoryEntry", "before after date note")
 
 
+class BillDocumentPayload(typing.NamedTuple):
+    name: str
+    keywords: typing.List[str]
+    content: str
+    markdown: str
+
+
 class Bill(commands.Converter, FuzzyableMixin):
     """
     Represents a bill that someone submitted to a session of the Legislature.
@@ -261,6 +268,7 @@ class Bill(commands.Converter, FuzzyableMixin):
         self.is_procedure: bool = bool(kwargs.get("is_procedure"))
         self.status: BillStatus = kwargs.get("status")
         self.content: str = kwargs.get("content")
+        self.markdown: str = kwargs.get("markdown")
         self.submitter_id: int = kwargs.get("submitter")
         self._bot = kwargs.get("bot")
         self.sponsor_ids: typing.List[int] = kwargs.get("sponsors", [])
@@ -315,18 +323,19 @@ class Bill(commands.Converter, FuzzyableMixin):
 
     async def update_link(self, new_link: str):
         self.link = new_link
-        name, keywords, content = await self.fetch_name_and_keywords()
+        document = await self.fetch_name_and_keywords()
 
-        if not name or not content:
+        if not document.name or not document.content:
             raise DemocracivBotException(
                 f"There was an error while fetching the name & content of "
                 f"this bill. Do I have view permissions for this bill's Google Docs document?"
             )
 
         await self._bot.db.execute(
-            "UPDATE bill SET name = $1, content = $2, link = $3 WHERE id = $4",
-            name,
-            content,
+            "UPDATE bill SET name = $1, content = $2, markdown = $3, link = $4 WHERE id = $5",
+            document.name,
+            document.content,
+            document.markdown,
             new_link,
             self.id,
         )
@@ -338,11 +347,10 @@ class Bill(commands.Converter, FuzzyableMixin):
             "POST", "document/update", silent=True, json={"id": self.id, "type": "bill"}
         )
 
-        id_with_kws = [(self.id, keyword) for keyword in keywords]
         self._bot.loop.create_task(
             self._bot.db.executemany(
                 "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) ON CONFLICT DO NOTHING ",
-                id_with_kws,
+                [(self.id, keyword) for keyword in document.keywords],
             )
         )
 
@@ -363,7 +371,7 @@ class Bill(commands.Converter, FuzzyableMixin):
         keywords = kw_extractor.extract_keywords(content)
         return [kw[0] for kw in keywords if kw[0]]
 
-    async def fetch_name_and_keywords(self) -> typing.Tuple[str, typing.List[str], str]:
+    async def fetch_name_and_keywords(self) -> BillDocumentPayload:
 
         try:
             response: typing.Dict = await self._bot.run_apps_script(
@@ -374,6 +382,7 @@ class Bill(commands.Converter, FuzzyableMixin):
 
             self.name = name = response["response"]["result"]["title"]
             self.content = content = response["response"]["result"]["content"]
+            self.markdown = markdown = response["response"]["result"].get("markdown") or ""
             keywords = await self._bot.loop.run_in_executor(
                 None, self.extract_keywords, content
             )
@@ -382,6 +391,7 @@ class Bill(commands.Converter, FuzzyableMixin):
             keywords = []
             self.name = name = ""
             self.content = content = ""
+            self.markdown = markdown = ""
 
         name_abbreviation = "".join([c[0].lower() for c in self.name.split()])
 
@@ -389,28 +399,34 @@ class Bill(commands.Converter, FuzzyableMixin):
             keywords.append(name_abbreviation[1:])
 
         keywords.append(name_abbreviation)
-        return name, list(set(keywords)), content
+        return BillDocumentPayload(
+            name=name,
+            keywords=list(set(keywords)),
+            content=content,
+            markdown=markdown,
+        )
 
     async def _auto_sync(self):
         try:
-            name, keywords, content = await self.fetch_name_and_keywords()
-            if not name:
+            document = await self.fetch_name_and_keywords()
+            if not document.name:
                 return
 
             await self._bot.db.execute(
-                "UPDATE bill SET name = $1, content = $2 WHERE id = $3",
-                name,
-                content,
+                "UPDATE bill SET name = $1, content = $2, markdown = $3 WHERE id = $4",
+                document.name,
+                document.content,
+                document.markdown,
                 self.id,
             )
             await self._bot.db.execute(
                 "DELETE FROM bill_lookup_tag WHERE bill_id = $1", self.id
             )
-            if keywords:
+            if document.keywords:
                 await self._bot.db.executemany(
                     "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) "
                     "ON CONFLICT DO NOTHING",
-                    [(self.id, tag) for tag in keywords],
+                    [(self.id, tag) for tag in document.keywords],
                 )
         except Exception:
             pass

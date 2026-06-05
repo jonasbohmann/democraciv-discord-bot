@@ -87,7 +87,7 @@ Legal Code · Democraciv MK13
             {% endif %}
         </header>
 
-        <div class="content-block">{{ section.law.content }}</div>
+        <div class="content-block content-markdown">{{ section.law.content_html | safe }}</div>
     </article>
     {% endfor %}
     </section>

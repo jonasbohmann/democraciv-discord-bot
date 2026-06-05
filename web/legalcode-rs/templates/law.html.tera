@@ -87,11 +87,7 @@ Law #{{ law.id }} · Democraciv MK13
         <div class="keyline" aria-hidden="true"></div>
 
         <section class="stack">
-            <div>
-                <h2 style="margin-top: 1.5rem;">Content</h2>
-                <p class="record-subtle">Formatting or layout may be off. See Google Docs for proper formatting.</p>
-            </div>
-            <div class="content-block" style="margin-top: 2rem;">{{ law.content }}</div>
+            <div class="content-block content-markdown" style="margin-top: 2rem;">{{ law.content_html | safe }}</div>
         </section>
     </article>
 </section>

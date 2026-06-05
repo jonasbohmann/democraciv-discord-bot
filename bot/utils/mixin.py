@@ -135,6 +135,198 @@ def get_submit_session_choice_id(modal: discord.ui.Modal) -> typing.Optional[int
 
 
 _BILL_AMENDMENT_SPLIT_RE = re.compile(r"[\s,]+")
+_MARKDOWN_HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+_MARKDOWN_HTML_TAG_RE = re.compile(
+    r"</?[A-Za-z][A-Za-z0-9-]*(?:\s[^>\n]*)?\s*/?>"
+)
+_MARKDOWN_IMAGE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
+_MARKDOWN_HEADING_RE = re.compile(r"^\s{0,3}(#{1,6})\s+(.*\S)\s*$")
+_MARKDOWN_RULE_RE = re.compile(r"^\s{0,3}([-*_])(?:\s*\1){2,}\s*$")
+_MARKDOWN_TABLE_SEPARATOR_RE = re.compile(
+    r"^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-{3,}:?\s*\|?\s*$"
+)
+
+
+def _split_markdown_table_row(row: str) -> typing.List[str]:
+    return [cell.strip() for cell in row.strip().strip("|").split("|")]
+
+
+def _format_markdown_table_for_discord(rows: typing.Sequence[str]) -> str:
+    parsed_rows = [_split_markdown_table_row(row) for row in rows]
+    max_columns = max(len(row) for row in parsed_rows)
+
+    for row in parsed_rows:
+        row.extend([""] * (max_columns - len(row)))
+
+    widths = [
+        max(len(row[column]) for row in parsed_rows) for column in range(max_columns)
+    ]
+
+    formatted_rows = [
+        " | ".join(cell.ljust(widths[index]) for index, cell in enumerate(row)).rstrip()
+        for row in parsed_rows
+    ]
+
+    return "```text\n" + "\n".join(formatted_rows) + "\n```"
+
+
+def _chunk_string(value: str, *, size: int) -> typing.List[str]:
+    if not value:
+        return [""]
+
+    return [value[index : index + size] for index in range(0, len(value), size)]
+
+
+def _split_large_markdown_block(block: str, *, max_chars: int) -> typing.List[str]:
+    if block.startswith("```") and block.endswith("```"):
+        lines = block.splitlines()
+        opening = lines[0]
+        closing = lines[-1]
+        body_lines = lines[1:-1]
+        body_limit = max(1, max_chars - len(opening) - len(closing) - 2)
+        pages = []
+        current_lines = []
+        current_size = len(opening) + len(closing) + 2
+
+        for line in body_lines or [""]:
+            for chunk in _chunk_string(line, size=body_limit):
+                chunk_size = len(chunk) + (1 if current_lines else 0)
+                if current_lines and current_size + chunk_size > max_chars:
+                    pages.append(f"{opening}\n" + "\n".join(current_lines) + f"\n{closing}")
+                    current_lines = [chunk]
+                    current_size = len(opening) + len(closing) + 2 + len(chunk)
+                else:
+                    current_lines.append(chunk)
+                    current_size += chunk_size
+
+        if current_lines:
+            pages.append(f"{opening}\n" + "\n".join(current_lines) + f"\n{closing}")
+
+        return pages
+
+    try:
+        return text.split_string_into_multiple(block, max_chars)
+    except RuntimeError:
+        return _chunk_string(block, size=max_chars)
+
+
+def _split_markdown_into_blocks(markdown: str) -> typing.List[str]:
+    blocks = []
+    current = []
+    in_code_fence = False
+
+    for line in markdown.splitlines():
+        if line.lstrip().startswith("```"):
+            current.append(line)
+            in_code_fence = not in_code_fence
+            continue
+
+        if not in_code_fence and not line.strip():
+            if current:
+                blocks.append("\n".join(current).strip())
+                current = []
+            continue
+
+        current.append(line)
+
+    if current:
+        blocks.append("\n".join(current).strip())
+
+    return [block for block in blocks if block]
+
+
+def _paginate_markdown_for_discord(markdown: str, *, max_chars: int = 1800) -> typing.List[str]:
+    blocks = _split_markdown_into_blocks(markdown)
+    pages = []
+    current = ""
+
+    for block in blocks or ["*No stored text available.*"]:
+        candidate = block if not current else f"{current}\n\n{block}"
+
+        if len(candidate) <= max_chars:
+            current = candidate
+            continue
+
+        if current:
+            pages.append(current)
+            current = ""
+
+        if len(block) <= max_chars:
+            current = block
+            continue
+
+        pages.extend(_split_large_markdown_block(block, max_chars=max_chars))
+
+    if current:
+        pages.append(current)
+
+    return pages
+
+
+def _normalize_markdown_for_discord(markdown: str) -> str:
+    value = (markdown or "").replace("\r\n", "\n").replace("\r", "\n")
+    value = _MARKDOWN_HTML_COMMENT_RE.sub("", value)
+    value = _MARKDOWN_IMAGE_RE.sub(
+        lambda match: f"[Image: {(match.group(1).strip() or 'View image')}]({match.group(2).strip()})",
+        value,
+    )
+    value = _MARKDOWN_HTML_TAG_RE.sub("", value)
+
+    lines = value.splitlines()
+    normalized = []
+    index = 0
+    in_code_fence = False
+
+    while index < len(lines):
+        line = lines[index].rstrip()
+        stripped = line.strip()
+
+        if line.lstrip().startswith("```"):
+            normalized.append(line)
+            in_code_fence = not in_code_fence
+            index += 1
+            continue
+
+        if in_code_fence:
+            normalized.append(line)
+            index += 1
+            continue
+
+        if (
+            stripped
+            and "|" in stripped
+            and index + 1 < len(lines)
+            and _MARKDOWN_TABLE_SEPARATOR_RE.match(lines[index + 1].strip())
+        ):
+            table_lines = [line]
+            index += 2
+
+            while index < len(lines):
+                next_line = lines[index].rstrip()
+                if not next_line.strip() or "|" not in next_line:
+                    break
+
+                table_lines.append(next_line)
+                index += 1
+
+            normalized.append(_format_markdown_table_for_discord(table_lines))
+            continue
+
+        heading = _MARKDOWN_HEADING_RE.match(line)
+        if heading:
+            normalized.append(f"**{heading.group(2).strip()}**")
+            index += 1
+            continue
+
+        if _MARKDOWN_RULE_RE.match(stripped):
+            normalized.append("────────")
+            index += 1
+            continue
+
+        normalized.append(line)
+        index += 1
+
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(normalized)).strip()
 
 
 def make_bill_amendments_input(
@@ -353,21 +545,24 @@ class GovernmentMixin:
         leader_term = self.get_primary_leader_term_for_house(
             getattr(getattr(bill, "session", None), "house", None)
         )
-        entries = bill.content.splitlines()
-        entries.insert(
-            0,
-            f"[Link to the Google Docs document of this Bill]({bill.link})\n"
+        document_kind = bill.model.lower()
+        document_label = bill.model
+        document_text = _normalize_markdown_for_discord(bill.markdown) if bill.markdown else bill.content
+        entries = _paginate_markdown_for_discord(
+            f"[Link to the Google Docs document of this {document_label}]({bill.link})\n"
             f"*Am I showing you outdated or wrong text? Tell the {leader_term} to synchronize this text "
-            f"with the Google Docs text of this bill with `{config.BOT_PREFIX}bill synchronize {bill.id}`.*\n\n",
+            f"with the Google Docs text of this document with `{config.BOT_PREFIX}bill synchronize {bill.id}`.*\n\n"
+            f"{document_text or '*No stored text available.*'}"
         )
         pages = paginator.SimplePages(
             entries=entries,
             icon=self.bot.mk.NATION_ICON_URL,
             author=f"{bill.name} (#{bill.id})",
             ephemeral_webhook=ephemeral_webhook,
+            per_page=1,
         )
         await ctx.send(
-            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/bill/{bill.id}>) as well!"
+            f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/{document_kind}/{bill.id}>) as well!"
         )
         await pages.start(ctx)
 
@@ -586,9 +781,9 @@ class GovernmentMixin:
             link=google_docs_url,
             submitter_description=bill_description,
         )
-        name, tags, content = await bill.fetch_name_and_keywords()
+        document = await bill.fetch_name_and_keywords()
 
-        if not name:
+        if not document.name:
             raise exceptions.InvalidUserInputError(
                 f"{config.NO} Something went wrong. Are you sure the Google Docs document is public?\n"
                 f"{config.HINT} Word (.docx) documents on Google Docs are not supported."
@@ -600,21 +795,23 @@ class GovernmentMixin:
             async with con.transaction():
                 bill_id = await con.fetchval(
                     "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, "
-                    "is_procedure, submitter_description, content, origin_house) "
-                    "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
+                    "is_procedure, submitter_description, content, markdown, origin_house) "
+                    "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id",
                     session.id,
-                    name,
+                    document.name,
                     google_docs_url,
                     ctx.author.id,
                     not is_procedure,
                     is_procedure,
                     bill_description,
-                    content,
+                    document.content,
+                    document.markdown,
                     house,
                 )
                 bill.id = bill_id
-                bill.name = name
-                bill.content = content
+                bill.name = document.name
+                bill.content = document.content
+                bill.markdown = document.markdown
                 bill.description = bill_description
                 bill.is_vetoable = not is_procedure
                 bill.is_procedure = is_procedure
@@ -635,11 +832,11 @@ class GovernmentMixin:
                     connection=con,
                 )
 
-                if tags:
+                if document.keywords:
                     await con.executemany(
                         "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) "
                         "ON CONFLICT DO NOTHING",
-                        [(bill_id, tag) for tag in tags],
+                        [(bill_id, tag) for tag in document.keywords],
                     )
 
                 related_bills = await self.replace_bill_amendments(
@@ -662,24 +859,25 @@ class GovernmentMixin:
 
     async def _synchronize_bill(self, bill: models.Bill) -> bool:
         try:
-            name, keywords, content = await bill.fetch_name_and_keywords()
-            if not name:
+            document = await bill.fetch_name_and_keywords()
+            if not document.name:
                 return False
 
             await self.bot.db.execute(
-                "UPDATE bill SET name = $1, content = $2 WHERE id = $3",
-                name,
-                content,
+                "UPDATE bill SET name = $1, content = $2, markdown = $3 WHERE id = $4",
+                document.name,
+                document.content,
+                document.markdown,
                 bill.id,
             )
             await self.bot.db.execute(
                 "DELETE FROM bill_lookup_tag WHERE bill_id = $1", bill.id
             )
-            if keywords:
+            if document.keywords:
                 await self.bot.db.executemany(
                     "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) "
                     "ON CONFLICT DO NOTHING",
-                    [(bill.id, tag) for tag in keywords],
+                    [(bill.id, tag) for tag in document.keywords],
                 )
             await self.bot.api_request(
                 "POST",

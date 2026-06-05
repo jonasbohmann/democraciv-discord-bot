@@ -2,6 +2,7 @@
 extern crate rocket;
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+use comrak::{Options as MarkdownOptions, markdown_to_html};
 use rocket::{State, fs::FileServer};
 use rocket_dyn_templates::{Template, context};
 use serde::{Deserialize, Serialize};
@@ -78,7 +79,7 @@ struct BillHistoryItem {
 struct BillDetail {
     id: i32,
     name: String,
-    content: String,
+    content_html: String,
     link: String,
     submitter_description: String,
     origin_house: String,
@@ -276,7 +277,7 @@ enum RelatedBillDirection {
 struct LegalCodeLaw {
     id: i32,
     name: String,
-    content: String,
+    content_html: String,
     link: String,
 }
 
@@ -403,6 +404,27 @@ fn make_excerpt(text: &str, max_chars: usize) -> String {
         .to_string();
 
     format!("{clipped}…")
+}
+
+fn pick_markdown_source<'a>(markdown: &'a str, content: &'a str) -> &'a str {
+    if markdown.trim().is_empty() {
+        content
+    } else {
+        markdown
+    }
+}
+
+fn render_bill_markdown(markdown: &str, content: &str) -> String {
+    let mut options = MarkdownOptions::default();
+    options.extension.strikethrough = true;
+    options.extension.table = true;
+    options.extension.autolink = true;
+    options.extension.tasklist = true;
+    options.extension.superscript = true;
+    options.parse.smart = true;
+    options.render.r#unsafe = false;
+
+    markdown_to_html(pick_markdown_source(markdown, content), &options)
 }
 
 fn encode_json_base64<T: Serialize>(value: &T) -> Result<String, String> {
@@ -705,6 +727,7 @@ async fn load_bill_detail(
             bill.id,
             bill.name,
             bill.content,
+            bill.markdown,
             bill.link,
             bill.submitter_description,
             bill.submitter,
@@ -721,6 +744,7 @@ async fn load_bill_detail(
             bill.id,
             bill.name,
             bill.content,
+            bill.markdown,
             bill.link,
             bill.submitter_description,
             bill.submitter,
@@ -759,11 +783,13 @@ async fn load_bill_detail(
     let author = resolve_author(author_lookup, submitter).await;
     let amends = load_related_bills(db, id, RelatedBillDirection::Amends).await?;
     let amended_by = load_related_bills(db, id, RelatedBillDirection::AmendedBy).await?;
+    let content: String = row.try_get("content").unwrap_or_default();
+    let markdown: String = row.try_get("markdown").unwrap_or_default();
 
     Ok(Some(BillDetail {
         id: row.try_get("id").unwrap_or_default(),
         name: row.try_get("name").unwrap_or_default(),
-        content: row.try_get("content").unwrap_or_default(),
+        content_html: render_bill_markdown(&markdown, &content),
         link: row.try_get("link").unwrap_or_default(),
         submitter_description: row.try_get("submitter_description").unwrap_or_default(),
         origin_house,
@@ -784,20 +810,26 @@ async fn load_bill_detail(
 }
 
 async fn load_legal_code(db: &PgPool) -> Result<LegalCodePageData, String> {
-    let law_rows =
-        sqlx::query("SELECT id, name, content, link FROM bill WHERE status = $1 ORDER BY id")
-            .bind(LAW_STATUS)
-            .fetch_all(db)
-            .await
-            .map_err(|error| error.to_string())?;
+    let law_rows = sqlx::query(
+        "SELECT id, name, content, markdown, link FROM bill WHERE status = $1 ORDER BY id",
+    )
+    .bind(LAW_STATUS)
+    .fetch_all(db)
+    .await
+    .map_err(|error| error.to_string())?;
 
     let laws = law_rows
         .into_iter()
-        .map(|row| LegalCodeLaw {
-            id: row.try_get("id").unwrap_or_default(),
-            name: row.try_get("name").unwrap_or_default(),
-            content: row.try_get("content").unwrap_or_default(),
-            link: row.try_get("link").unwrap_or_default(),
+        .map(|row| {
+            let content: String = row.try_get("content").unwrap_or_default();
+            let markdown: String = row.try_get("markdown").unwrap_or_default();
+
+            LegalCodeLaw {
+                id: row.try_get("id").unwrap_or_default(),
+                name: row.try_get("name").unwrap_or_default(),
+                content_html: render_bill_markdown(&markdown, &content),
+                link: row.try_get("link").unwrap_or_default(),
+            }
         })
         .collect::<Vec<_>>();
 
@@ -808,6 +840,7 @@ async fn load_legal_code(db: &PgPool) -> Result<LegalCodePageData, String> {
             child.id,
             child.name,
             child.content,
+            child.markdown,
             child.link
         FROM bill_amendment
         JOIN bill AS child ON child.id = bill_amendment.amending_bill_id
@@ -827,6 +860,8 @@ async fn load_legal_code(db: &PgPool) -> Result<LegalCodePageData, String> {
         let parent_id: i32 = row.try_get("parent_id").unwrap_or_default();
         let parent_name: String = row.try_get("parent_name").unwrap_or_default();
         let child_id: i32 = row.try_get("id").unwrap_or_default();
+        let child_content: String = row.try_get("content").unwrap_or_default();
+        let child_markdown: String = row.try_get("markdown").unwrap_or_default();
 
         amendments_by_parent
             .entry(parent_id)
@@ -837,7 +872,7 @@ async fn load_legal_code(db: &PgPool) -> Result<LegalCodePageData, String> {
                 law: LegalCodeLaw {
                     id: child_id,
                     name: row.try_get("name").unwrap_or_default(),
-                    content: row.try_get("content").unwrap_or_default(),
+                    content_html: render_bill_markdown(&child_markdown, &child_content),
                     link: row.try_get("link").unwrap_or_default(),
                 },
             });
