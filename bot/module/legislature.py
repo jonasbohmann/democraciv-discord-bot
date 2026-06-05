@@ -423,7 +423,9 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
 
         Use `{PREFIX}help {LEGISLATURE_COMMAND} session` for the help page of the actual command.
         """
-        await ctx.send(f"{config.HINT} You can use either `{config.BOT_PREFIX}commons session` or `{config.BOT_PREFIX}senate session`.")
+        await ctx.send(
+            f"{config.HINT} You can use either `{config.BOT_PREFIX}commons session` or `{config.BOT_PREFIX}senate session`."
+        )
 
     @commands.group(
         name=mk.MarkConfig.LEGISLATURE_COMMAND.lower(),
@@ -1905,21 +1907,23 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             return
 
         target_session = None
+
         if any(
             self.bill_needs_cross_house_destination(bill, acting_house="senate")
             for bill in consumer.passed
         ):
-            open_commons_sessions = await self.get_open_leg_sessions(house="commons")
-            if len(open_commons_sessions) == 1:
-                target_session = open_commons_sessions[0] if open_commons_sessions[0].session_kind is models.SessionKind.REGULAR else None
-            elif len(open_commons_sessions) > 1:
+            open_commons_sessions = await self.get_open_leg_sessions(
+                house="commons", status=models.SessionStatus.SUBMISSION_PERIOD
+            )
+
+            if open_commons_sessions:
                 target_session = await self.prompt_for_leg_session(
                     ctx,
                     sessions=open_commons_sessions,
                     action="send these bills to",
                 )
                 if target_session is None:
-                    return
+                    return await ctx.send("Cancelled.")
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "

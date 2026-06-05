@@ -1813,21 +1813,23 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             return
 
         target_session = None
+
         if any(
             self.bill_needs_cross_house_destination(bill, acting_house="commons")
             for bill in consumer.passed
         ):
-            open_senate_sessions = await self.get_open_leg_sessions(house="senate")
-            if len(open_senate_sessions) == 1:
-                target_session = open_senate_sessions[0] if open_senate_sessions[0].session_kind is models.SessionKind.REGULAR else None
-            elif len(open_senate_sessions) > 1:
+            open_senate_sessions = await self.get_open_leg_sessions(
+                house="senate", status=models.SessionStatus.SUBMISSION_PERIOD
+            )
+
+            if open_senate_sessions:
                 target_session = await self.prompt_for_leg_session(
                     ctx,
                     sessions=open_senate_sessions,
                     action="send these bills to",
                 )
                 if target_session is None:
-                    return
+                    return await ctx.send("Cancelled.")
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "
@@ -1871,9 +1873,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         mk.DemocracivRole.SPEAKER, mk.DemocracivRole.VICE_SPEAKER
     )
     async def superpass(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
-        return await ctx.send(
-            f"{config.NO} `superpass` is a legacy-only admin path and is not part of the MK13 bicameral process."
-        )
+        return await ctx.send(f"{config.NO} `superpass` is not a thing (yet) in MK13.")
 
     @commons.command(name="withdraw", aliases=["w"], hidden=True)
     @checks.is_democraciv_guild()
