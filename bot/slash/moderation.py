@@ -13,6 +13,7 @@ class ModerationSlash(commands.Cog):
         name="moderation",
         description="Moderation links and tools.",
         guild_only=True,
+        guild_ids=config.DEMOCRACIV_GUILD_ID
     )
 
     def __init__(self, bot):
@@ -30,6 +31,9 @@ class ModerationSlash(commands.Cog):
 
         unsafe = True
 
+        if ctx.guild.id != config.DEMOCRACIV_GUILD_ID:
+            return
+
         if isinstance(ctx.channel, discord.TextChannel):
             unsafe_members = [
                 member
@@ -44,7 +48,7 @@ class ModerationSlash(commands.Cog):
                 links=[ui.LayoutLink("Open", url, "\U0001f517")],
                 author_id=ctx.author.id,
             ),
-            ephemeral=unsafe,
+            ephemeral=True,
         )
 
     @moderation.command(name="hub", description="Link to the Moderation Hub.")

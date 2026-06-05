@@ -13,7 +13,6 @@ class StarboardSlash(commands.Cog):
     starboard = app_commands.Group(
         name="starboard",
         description="Show Starboard statistics.",
-        guild_only=True,
     )
 
     def __init__(self, bot):

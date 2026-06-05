@@ -496,7 +496,6 @@ class TagsSlash(commands.Cog):
         await pages.start(ctx)
 
     @tag.command(name="from", description="List tags created by someone.")
-    @app_commands.guild_only()
     async def from_member(
         self,
         interaction: discord.Interaction,
@@ -574,7 +573,6 @@ class TagsSlash(commands.Cog):
         await self.send_tag_content(ctx, tag)
 
     @tag.command(name="info", description="Show metadata about a tag.")
-    @app_commands.guild_only()
     async def info(self, interaction: discord.Interaction, tag: TagOption):
         ctx = slash_context.from_interaction(interaction, command_name="tag info")
         await ctx.defer()
@@ -637,7 +635,6 @@ class TagsSlash(commands.Cog):
         await ctx.send(embed=embed)
 
     @tag.command(name="raw", description="Show the raw markdown of one tag.")
-    @app_commands.guild_only()
     async def raw(self, interaction: discord.Interaction, tag: TagOption):
         ctx = slash_context.from_interaction(
             interaction,

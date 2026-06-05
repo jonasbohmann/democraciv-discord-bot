@@ -588,7 +588,7 @@ class GovernmentMixin:
 
         ids = ", ".join(f"#{bill.id}" for bill in related_bills)
         noun = "bill" if len(related_bills) == 1 else "bills"
-        return f"Recorded that this bill amends {noun} {ids}."
+        return f"This bill is an amendment to {noun} {ids}."
 
     @staticmethod
     def format_bill_amendment_ids(

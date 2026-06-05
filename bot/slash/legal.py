@@ -131,17 +131,14 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
     law = app_commands.Group(
         name="law",
         description="List, search, show, and read laws.",
-        guild_only=True,
     )
     bill = app_commands.Group(
         name="bill",
         description="List, search, and show bills.",
-        guild_only=True,
     )
     motion = app_commands.Group(
         name="motion",
         description="List, search, and show motions.",
-        guild_only=True,
     )
 
     def __init__(self, bot):
@@ -1186,17 +1183,14 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             await ctx.send(embed=embed)
 
     @app_commands.command(name="laws", description="List all active laws.")
-    @app_commands.guild_only()
     async def laws_alias(self, interaction: discord.Interaction):
         await self.law_list.callback(self, interaction)
 
     @app_commands.command(name="bills", description="List all submitted bills.")
-    @app_commands.guild_only()
     async def bills_alias(self, interaction: discord.Interaction):
         await self.bill_list.callback(self, interaction)
 
     @app_commands.command(name="motions", description="List all submitted motions.")
-    @app_commands.guild_only()
     async def motions_alias(self, interaction: discord.Interaction):
         await self.motion_list.callback(self, interaction)
 

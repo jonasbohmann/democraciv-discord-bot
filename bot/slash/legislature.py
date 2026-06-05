@@ -283,7 +283,6 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     senate = app_commands.Group(
         name=SENATE_COMMAND_NAME,
         description="Senate session, submission, and export commands.",
-        guild_only=True,
     )
     senate_session = app_commands.Group(
         name="session",
@@ -299,7 +298,6 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     commons = app_commands.Group(
         name=COMMONS_COMMAND_NAME,
         description="Commons session, submission, and export commands.",
-        guild_only=True,
     )
     commons_session = app_commands.Group(
         name="session",
@@ -1646,6 +1644,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     @senate.command(name="submit", description="Submit a bill or motion to the Senate.")
     @slash_checks.is_democraciv_guild()
     @slash_checks.is_citizen_if_multiciv()
+    @slash_checks.has_any_democraciv_role(mk.DemocracivRole.LEGISLATOR)
     @app_commands.checks.dynamic_cooldown(_submit_cooldown)
     @app_commands.describe(
         session_type="Preselect a regular or emergency target session."
@@ -2102,6 +2101,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     @app_commands.describe(
         session_id="Senate session number. Uses open session, prompts if needed, otherwise latest."
     )
+    @slash_checks.is_democraciv_guild()
     async def senate_export_spreadsheet(
         self, interaction: discord.Interaction, session_id: int = None
     ):
@@ -2115,6 +2115,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
     @app_commands.describe(
         session_id="Commons session number. Uses open session, prompts if needed, otherwise latest."
     )
+    @slash_checks.is_democraciv_guild()
     async def commons_export_spreadsheet(
         self, interaction: discord.Interaction, session_id: int = None
     ):

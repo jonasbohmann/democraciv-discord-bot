@@ -33,7 +33,6 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
     ministry = app_commands.Group(
         name=MINISTRY_COMMAND_NAME,
         description="Executive Branch overview and veto commands.",
-        guild_only=True,
     )
 
     def __init__(self, bot):

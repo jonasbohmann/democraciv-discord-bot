@@ -231,7 +231,6 @@ class PartiesSlash(commands.Cog):
     party = app_commands.Group(
         name="party",
         description="Show, join, and manage political parties.",
-        guild_only=True,
     )
     party_alias = app_commands.Group(
         name="alias",
@@ -781,12 +780,14 @@ class PartiesSlash(commands.Cog):
 
     @party.command(name="create", description="Create a political party.")
     @slash_checks.moderation_or_nation_leader()
+    @slash_checks.is_democraciv_guild()
     @slash_checks.bot_has_guild_permissions(manage_roles=True)
     async def create_party_command(self, interaction: discord.Interaction):
         await interaction.response.send_modal(PartyCreateModal(self))
 
     @party.command(name="edit", description="Edit a political party.")
     @slash_checks.moderation_or_nation_leader()
+    @slash_checks.is_democraciv_guild()
     @slash_checks.bot_has_guild_permissions(manage_roles=True)
     async def edit_party_command(
         self,
@@ -797,6 +798,7 @@ class PartiesSlash(commands.Cog):
 
     @party.command(name="delete", description="Delete a political party.")
     @slash_checks.moderation_or_nation_leader()
+    @slash_checks.is_democraciv_guild()
     @slash_checks.bot_has_guild_permissions(manage_roles=True)
     async def delete_party(
         self,
@@ -854,11 +856,13 @@ class PartiesSlash(commands.Cog):
 
     @party.command(name="merge", description="Merge multiple parties into one.")
     @slash_checks.moderation_or_nation_leader()
+    @slash_checks.is_democraciv_guild()
     @slash_checks.bot_has_guild_permissions(manage_roles=True)
     async def merge_parties(self, interaction: discord.Interaction):
         await interaction.response.send_modal(PartyMergeModal(self))
 
     @party_alias.command(name="add", description="Add an alias to a political party.")
+    @slash_checks.is_democraciv_guild()
     @slash_checks.moderation_or_nation_leader()
     async def add_alias(
         self,
@@ -890,6 +894,7 @@ class PartiesSlash(commands.Cog):
         )
 
     @party_alias.command(name="remove", description="Remove one political party alias.")
+    @slash_checks.is_democraciv_guild()
     @slash_checks.moderation_or_nation_leader()
     async def remove_alias(self, interaction: discord.Interaction, alias: str):
         ctx = slash_context.from_interaction(
@@ -910,6 +915,7 @@ class PartiesSlash(commands.Cog):
         await ctx.send(f"{config.YES} Alias `{alias}` was deleted.", ephemeral=True)
 
     @party_alias.command(name="clear", description="Remove all aliases from a party.")
+    @slash_checks.is_democraciv_guild()
     @slash_checks.moderation_or_nation_leader()
     async def clear_aliases(
         self,
@@ -943,7 +949,6 @@ class PartiesSlash(commands.Cog):
     @app_commands.command(
         name="parties", description="List political parties by member count."
     )
-    @app_commands.guild_only()
     async def parties_alias(self, interaction: discord.Interaction):
         await self.list_parties.callback(self, interaction)
 

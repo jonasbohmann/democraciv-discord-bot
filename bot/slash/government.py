@@ -28,7 +28,6 @@ class GovernmentSlash(commands.Cog, mixin.GovernmentMixin):
         name="legislature",
         description="Show the current Commons and Senate session status.",
     )
-    @app_commands.guild_only()
     async def legislature_overview(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="legislature")
         embeds = await self._build_legislature_info_embeds(slash=True)
