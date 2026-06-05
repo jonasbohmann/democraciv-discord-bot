@@ -695,25 +695,21 @@ textarea {
 }
 
 .content-gdoc-host .gdoc-rendered {
+    --gdoc-neutral-text-color: var(--text-main);
     white-space: normal;
     overflow-wrap: anywhere;
-    color: var(--text-main) !important;
+    color: var(--text-main);
 }
 
-.content-gdoc-host .gdoc-rendered * {
-    color: inherit !important;
-}
-
-.content-gdoc-host .gdoc-rendered a,
-.content-gdoc-host .gdoc-rendered a * {
-    color: var(--pico-primary) !important;
+.content-gdoc-host .gdoc-rendered a {
+    --gdoc-neutral-text-color: var(--pico-primary);
+    color: var(--pico-primary);
 }
 
 .content-gdoc-host .gdoc-rendered a:hover,
-.content-gdoc-host .gdoc-rendered a:hover *,
-.content-gdoc-host .gdoc-rendered a:focus-visible,
-.content-gdoc-host .gdoc-rendered a:focus-visible * {
-    color: var(--pico-primary-hover) !important;
+.content-gdoc-host .gdoc-rendered a:focus-visible {
+    --gdoc-neutral-text-color: var(--pico-primary-hover);
+    color: var(--pico-primary-hover);
 }
 
 .content-gdoc-host .gdoc-rendered > :first-child {
@@ -746,9 +742,8 @@ textarea {
     touch-action: manipulation;
 }
 
-.content-gdoc-host .gdoc-rendered.gdoc-use-default-font,
-.content-gdoc-host .gdoc-rendered.gdoc-use-default-font * {
-    font-family: var(--pico-font-family, inherit) !important;
+.content-gdoc-host .gdoc-rendered[data-gdoc-font-mode="default"] {
+    --gdoc-font-family-override: var(--pico-font-family);
 }
 
 .detail-fields {

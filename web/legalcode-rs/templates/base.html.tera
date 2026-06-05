@@ -141,7 +141,10 @@
 
             const applyState = (useDefaultFont) => {
                 for (const renderedDoc of renderedDocs) {
-                    renderedDoc.classList.toggle("gdoc-use-default-font", useDefaultFont);
+                    renderedDoc.setAttribute(
+                        "data-gdoc-font-mode",
+                        useDefaultFont ? "default" : "original",
+                    );
                 }
 
                 for (const button of toggleButtons) {

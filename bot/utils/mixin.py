@@ -2078,12 +2078,6 @@ class GovernmentMixin:
 
         return [embed, embed2]
 
-    @staticmethod
-    def _mk12_bill_from_citizen_has_enough_sponsors(bill) -> bool:
-        if bill.sponsors:
-            return True
-        return False
-
     async def _build_session_entries(
         self,
         *,
@@ -2103,7 +2097,7 @@ class GovernmentMixin:
 
         if house == "senate":
             pretty_bills = [
-                f"* {b.formatted} ({len(b.sponsors)} sponsor{'s' if len(b.sponsors) != 1 else ''}) {':warning:' if not self._mk12_bill_from_citizen_has_enough_sponsors(b) else ''}"
+                f"* {b.formatted} ({len(b.sponsors)} sponsor{'s' if len(b.sponsors) != 1 else ''})"
                 for b in bills
             ] or ["-"]
         else:

@@ -470,6 +470,11 @@ fn style_tag_re() -> &'static Regex {
     STYLE_TAG_RE.get_or_init(|| Regex::new(r"(?is)<style[^>]*>(.*?)</style>").unwrap())
 }
 
+fn style_attr_re() -> &'static Regex {
+    static STYLE_ATTR_RE: OnceLock<Regex> = OnceLock::new();
+    STYLE_ATTR_RE.get_or_init(|| Regex::new(r#"(?is)\bstyle\s*=\s*(?:"[^"]*"|'[^']*')"#).unwrap())
+}
+
 fn class_attr_re() -> &'static Regex {
     static CLASS_ATTR_RE: OnceLock<Regex> = OnceLock::new();
     CLASS_ATTR_RE.get_or_init(|| Regex::new(r#"(?i)\bclass\s*=\s*(?:"[^"]*"|'[^']*')"#).unwrap())
@@ -485,18 +490,25 @@ fn css_url_re() -> &'static Regex {
     CSS_URL_RE.get_or_init(|| Regex::new(r#"(?is)url\(\s*([^)]*?)\s*\)"#).unwrap())
 }
 
-fn text_color_decl_re() -> &'static Regex {
-    static TEXT_COLOR_DECL_RE: OnceLock<Regex> = OnceLock::new();
-    TEXT_COLOR_DECL_RE.get_or_init(|| {
-        Regex::new(r#"(?i)(^|[;{])\s*(?:color|-webkit-text-fill-color)\s*:\s*[^;{}"]+;?"#).unwrap()
-    })
+fn font_size_value_re() -> &'static Regex {
+    static FONT_SIZE_VALUE_RE: OnceLock<Regex> = OnceLock::new();
+    FONT_SIZE_VALUE_RE
+        .get_or_init(|| Regex::new(r"(?i)^\s*(-?\d*\.?\d+)\s*(pt|px|em|rem|%)\s*$").unwrap())
 }
 
-fn font_size_decl_re() -> &'static Regex {
-    static FONT_SIZE_DECL_RE: OnceLock<Regex> = OnceLock::new();
-    FONT_SIZE_DECL_RE.get_or_init(|| {
-        Regex::new(r"(?i)\bfont-size\s*:\s*(-?\d*\.?\d+)\s*(pt|px|em|rem|%)\b").unwrap()
-    })
+fn important_suffix_re() -> &'static Regex {
+    static IMPORTANT_SUFFIX_RE: OnceLock<Regex> = OnceLock::new();
+    IMPORTANT_SUFFIX_RE.get_or_init(|| Regex::new(r"(?i)\s*!important\s*$").unwrap())
+}
+
+fn rgb_function_re() -> &'static Regex {
+    static RGB_FUNCTION_RE: OnceLock<Regex> = OnceLock::new();
+    RGB_FUNCTION_RE.get_or_init(|| Regex::new(r"(?i)^rgba?\((.*)\)$").unwrap())
+}
+
+fn hsl_function_re() -> &'static Regex {
+    static HSL_FUNCTION_RE: OnceLock<Regex> = OnceLock::new();
+    HSL_FUNCTION_RE.get_or_init(|| Regex::new(r"(?i)^hsla?\((.*)\)$").unwrap())
 }
 
 fn event_attr_re() -> &'static Regex {
@@ -529,7 +541,7 @@ fn css_comment_re() -> &'static Regex {
     CSS_COMMENT_RE.get_or_init(|| Regex::new(r"(?s)/\*.*?\*/").unwrap())
 }
 
-fn quoted_attr_value(attribute: &str) -> Option<&str> {
+fn quoted_attr_info(attribute: &str) -> Option<(char, &str)> {
     let (_, raw_value) = attribute.split_once('=')?;
     let trimmed = raw_value.trim();
 
@@ -542,7 +554,11 @@ fn quoted_attr_value(attribute: &str) -> Option<&str> {
         return None;
     }
 
-    trimmed.strip_prefix(quote)?.strip_suffix(quote)
+    Some((quote, trimmed.strip_prefix(quote)?.strip_suffix(quote)?))
+}
+
+fn quoted_attr_value(attribute: &str) -> Option<&str> {
+    quoted_attr_info(attribute).map(|(_, value)| value)
 }
 
 fn body_classes(body_attributes: &str) -> Vec<String> {
@@ -652,35 +668,385 @@ fn format_scaled_css_number(value: f32) -> String {
     formatted
 }
 
-fn scale_font_sizes(input: &str) -> String {
-    font_size_decl_re()
-        .replace_all(input, |captures: &Captures| {
-            let raw_value = captures
-                .get(1)
-                .map(|value| value.as_str())
-                .unwrap_or_default();
-            let unit = captures
-                .get(2)
-                .map(|value| value.as_str())
-                .unwrap_or_default();
-
-            let scaled = raw_value
-                .parse::<f32>()
-                .map(|value| format_scaled_css_number(value * GDOC_FONT_SIZE_SCALE))
-                .unwrap_or_else(|_| raw_value.to_string());
-
-            format!("font-size:{scaled}{unit}")
-        })
-        .into_owned()
+fn decode_html_attribute_value(value: &str) -> String {
+    value
+        .replace("&quot;", "\"")
+        .replace("&#34;", "\"")
+        .replace("&apos;", "'")
+        .replace("&#39;", "'")
+        .replace("&amp;", "&")
 }
 
-fn strip_text_color_declarations(input: &str) -> String {
-    text_color_decl_re()
+fn encode_html_attribute_value(value: &str, quote: char) -> String {
+    let mut escaped = value.replace('&', "&amp;");
+
+    match quote {
+        '"' => escaped = escaped.replace('"', "&quot;"),
+        '\'' => escaped = escaped.replace('\'', "&#39;"),
+        _ => {}
+    }
+
+    escaped
+}
+
+fn split_css_declarations(input: &str) -> Vec<String> {
+    let mut declarations = Vec::new();
+    let mut current = String::new();
+    let mut quote: Option<char> = None;
+    let mut escaped = false;
+    let mut paren_depth: usize = 0;
+
+    for character in input.chars() {
+        if let Some(current_quote) = quote {
+            current.push(character);
+
+            if escaped {
+                escaped = false;
+            } else if character == '\\' {
+                escaped = true;
+            } else if character == current_quote {
+                quote = None;
+            }
+
+            continue;
+        }
+
+        match character {
+            '"' | '\'' => {
+                quote = Some(character);
+                current.push(character);
+            }
+            '(' => {
+                paren_depth += 1;
+                current.push(character);
+            }
+            ')' => {
+                paren_depth = paren_depth.saturating_sub(1);
+                current.push(character);
+            }
+            ';' if paren_depth == 0 => {
+                if !current.trim().is_empty() {
+                    declarations.push(current.trim().to_string());
+                }
+                current.clear();
+            }
+            _ => current.push(character),
+        }
+    }
+
+    if !current.trim().is_empty() {
+        declarations.push(current.trim().to_string());
+    }
+
+    declarations
+}
+
+fn split_css_function_args(input: &str) -> Vec<String> {
+    let sanitized = input.replace('/', " / ");
+
+    if sanitized.contains(',') {
+        sanitized
+            .split(',')
+            .map(str::trim)
+            .filter(|part| !part.is_empty() && *part != "/")
+            .map(ToString::to_string)
+            .collect()
+    } else {
+        sanitized
+            .split_whitespace()
+            .filter(|part| !part.is_empty() && *part != "/")
+            .map(ToString::to_string)
+            .collect()
+    }
+}
+
+fn strip_important_suffix(value: &str) -> (String, bool) {
+    let trimmed = value.trim();
+
+    if let Some(match_) = important_suffix_re().find(trimmed) {
+        return (trimmed[..match_.start()].trim_end().to_string(), true);
+    }
+
+    (trimmed.to_string(), false)
+}
+
+fn scale_font_size_value(value: &str) -> String {
+    let (core_value, is_important) = strip_important_suffix(value);
+    let Some(captures) = font_size_value_re().captures(&core_value) else {
+        return value.trim().to_string();
+    };
+
+    let raw_value = captures
+        .get(1)
+        .map(|match_| match_.as_str())
+        .unwrap_or_default();
+    let unit = captures
+        .get(2)
+        .map(|match_| match_.as_str())
+        .unwrap_or_default();
+
+    let scaled = raw_value
+        .parse::<f32>()
+        .map(|parsed| format_scaled_css_number(parsed * GDOC_FONT_SIZE_SCALE))
+        .unwrap_or_else(|_| raw_value.to_string());
+
+    if is_important {
+        format!("{scaled}{unit} !important")
+    } else {
+        format!("{scaled}{unit}")
+    }
+}
+
+fn wrap_font_family_value(value: &str) -> String {
+    let (core_value, is_important) = strip_important_suffix(value);
+    let trimmed = core_value.trim();
+
+    if trimmed.is_empty() || trimmed.contains("--gdoc-font-family-override") {
+        return value.trim().to_string();
+    }
+
+    let wrapped = format!("var(--gdoc-font-family-override, {trimmed})");
+
+    if is_important {
+        format!("{wrapped} !important")
+    } else {
+        wrapped
+    }
+}
+
+fn parse_alpha_component(value: &str) -> Option<f32> {
+    let trimmed = value.trim();
+
+    if let Some(percent) = trimmed.strip_suffix('%') {
+        return percent
+            .trim()
+            .parse::<f32>()
+            .ok()
+            .map(|alpha| alpha / 100.0);
+    }
+
+    trimmed.parse::<f32>().ok()
+}
+
+fn parse_rgb_component(value: &str) -> Option<u8> {
+    let trimmed = value.trim();
+
+    let parsed = if let Some(percent) = trimmed.strip_suffix('%') {
+        percent
+            .trim()
+            .parse::<f32>()
+            .ok()
+            .map(|component| (component * 255.0) / 100.0)?
+    } else {
+        trimmed.parse::<f32>().ok()?
+    };
+
+    Some(parsed.clamp(0.0, 255.0).round() as u8)
+}
+
+fn parse_percentage(value: &str) -> Option<f32> {
+    value.trim().strip_suffix('%')?.trim().parse::<f32>().ok()
+}
+
+fn parse_hex_color(value: &str) -> Option<(u8, u8, u8, Option<f32>)> {
+    let hex = value.strip_prefix('#')?;
+
+    fn parse_pair(value: &str) -> Option<u8> {
+        u8::from_str_radix(value, 16).ok()
+    }
+
+    fn expand_single(value: char) -> Option<u8> {
+        let nibble = value.to_digit(16)? as u8;
+        Some((nibble << 4) | nibble)
+    }
+
+    match hex.len() {
+        3 => Some((
+            expand_single(hex.chars().nth(0)?)?,
+            expand_single(hex.chars().nth(1)?)?,
+            expand_single(hex.chars().nth(2)?)?,
+            None,
+        )),
+        4 => Some((
+            expand_single(hex.chars().nth(0)?)?,
+            expand_single(hex.chars().nth(1)?)?,
+            expand_single(hex.chars().nth(2)?)?,
+            Some(expand_single(hex.chars().nth(3)?)? as f32 / 255.0),
+        )),
+        6 => Some((
+            parse_pair(&hex[0..2])?,
+            parse_pair(&hex[2..4])?,
+            parse_pair(&hex[4..6])?,
+            None,
+        )),
+        8 => Some((
+            parse_pair(&hex[0..2])?,
+            parse_pair(&hex[2..4])?,
+            parse_pair(&hex[4..6])?,
+            Some(parse_pair(&hex[6..8])? as f32 / 255.0),
+        )),
+        _ => None,
+    }
+}
+
+fn parse_rgb_color(value: &str) -> Option<(u8, u8, u8, Option<f32>)> {
+    let captures = rgb_function_re().captures(value.trim())?;
+    let arguments = captures.get(1)?.as_str();
+    let parts = split_css_function_args(arguments);
+
+    if parts.len() < 3 {
+        return None;
+    }
+
+    let red = parse_rgb_component(&parts[0])?;
+    let green = parse_rgb_component(&parts[1])?;
+    let blue = parse_rgb_component(&parts[2])?;
+    let alpha = parts
+        .get(3)
+        .and_then(|component| parse_alpha_component(component));
+
+    Some((red, green, blue, alpha))
+}
+
+fn parse_hsl_color(value: &str) -> Option<(f32, Option<f32>)> {
+    let captures = hsl_function_re().captures(value.trim())?;
+    let arguments = captures.get(1)?.as_str();
+    let parts = split_css_function_args(arguments);
+
+    if parts.len() < 3 {
+        return None;
+    }
+
+    let saturation = parse_percentage(&parts[1])?;
+    let alpha = parts
+        .get(3)
+        .and_then(|component| parse_alpha_component(component));
+
+    Some((saturation, alpha))
+}
+
+fn is_neutral_rgb(red: u8, green: u8, blue: u8) -> bool {
+    let highest = red.max(green).max(blue);
+    let lowest = red.min(green).min(blue);
+
+    highest.saturating_sub(lowest) <= 12
+}
+
+fn is_neutral_named_color(value: &str) -> bool {
+    matches!(
+        value,
+        "black"
+            | "gray"
+            | "grey"
+            | "silver"
+            | "dimgray"
+            | "dimgrey"
+            | "darkgray"
+            | "darkgrey"
+            | "lightgray"
+            | "lightgrey"
+            | "gainsboro"
+            | "whitesmoke"
+            | "white"
+    )
+}
+
+fn is_neutral_text_color(value: &str) -> bool {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+
+    let lowered = trimmed.to_ascii_lowercase();
+    if lowered.starts_with("var(")
+        || lowered == "inherit"
+        || lowered == "currentcolor"
+        || lowered == "transparent"
+        || lowered == "unset"
+        || lowered == "initial"
+        || lowered == "revert"
+    {
+        return false;
+    }
+
+    if is_neutral_named_color(&lowered) {
+        return true;
+    }
+
+    if let Some((red, green, blue, alpha)) = parse_hex_color(trimmed) {
+        return alpha.unwrap_or(1.0) > 0.0 && is_neutral_rgb(red, green, blue);
+    }
+
+    if let Some((red, green, blue, alpha)) = parse_rgb_color(trimmed) {
+        return alpha.unwrap_or(1.0) > 0.0 && is_neutral_rgb(red, green, blue);
+    }
+
+    if let Some((saturation, alpha)) = parse_hsl_color(trimmed) {
+        return alpha.unwrap_or(1.0) > 0.0 && saturation <= 5.0;
+    }
+
+    false
+}
+
+fn normalize_text_color_value(value: &str) -> String {
+    let (core_value, is_important) = strip_important_suffix(value);
+
+    if !is_neutral_text_color(&core_value) {
+        return value.trim().to_string();
+    }
+
+    if is_important {
+        "var(--gdoc-neutral-text-color) !important".to_string()
+    } else {
+        "var(--gdoc-neutral-text-color)".to_string()
+    }
+}
+
+fn normalize_css_declaration_list(input: &str) -> String {
+    split_css_declarations(input)
+        .into_iter()
+        .filter_map(|declaration| {
+            let Some((property, value)) = declaration.split_once(':') else {
+                return Some(declaration.trim().to_string());
+            };
+
+            let property_name = property.trim();
+            let property_key = property_name.to_ascii_lowercase();
+            let value_text = value.trim();
+
+            let normalized_value = match property_key.as_str() {
+                "font-size" => scale_font_size_value(value_text),
+                "font-family" => wrap_font_family_value(value_text),
+                "color" | "-webkit-text-fill-color" => normalize_text_color_value(value_text),
+                _ => value_text.to_string(),
+            };
+
+            Some(format!("{property_name}:{normalized_value}"))
+        })
+        .collect::<Vec<_>>()
+        .join(";")
+}
+
+fn normalize_html_style_attributes(input: &str) -> String {
+    style_attr_re()
         .replace_all(input, |captures: &Captures| {
-            captures
-                .get(1)
-                .map(|value| value.as_str().to_string())
-                .unwrap_or_default()
+            let attribute = captures
+                .get(0)
+                .map(|match_| match_.as_str())
+                .unwrap_or_default();
+            let Some((quote, raw_value)) = quoted_attr_info(attribute) else {
+                return attribute.to_string();
+            };
+
+            let decoded = decode_html_attribute_value(raw_value);
+            let normalized = normalize_css_declaration_list(&decoded);
+
+            if normalized.trim().is_empty() {
+                String::new()
+            } else {
+                let escaped = encode_html_attribute_value(&normalized, quote);
+                format!("style={quote}{escaped}{quote}")
+            }
         })
         .into_owned()
 }
@@ -852,9 +1218,11 @@ fn scope_css_block(css: &str, scope: &str) -> String {
             continue;
         }
 
+        let normalized_block = normalize_css_declaration_list(&block);
+
         output.push_str(&scoped_selectors.join(", "));
         output.push('{');
-        output.push_str(&block);
+        output.push_str(&normalized_block);
         output.push('}');
     }
 
@@ -890,8 +1258,7 @@ fn render_google_doc_html(document_id: i32, document_html: &str) -> Option<Strin
     let (body_attributes, body_html) = extract_google_doc_body(document_html);
     let body_without_style_tags = style_tag_re().replace_all(&body_html, "").into_owned();
     let rewritten_body = rewrite_html_asset_references(&body_without_style_tags, document_id);
-    let scaled_body = scale_font_sizes(&rewritten_body);
-    let normalized_body = strip_text_color_declarations(&scaled_body);
+    let normalized_body = normalize_html_style_attributes(&rewritten_body);
     let sanitized_body = sanitize_google_doc_body_html(&normalized_body);
 
     if sanitized_body.trim().is_empty() {
@@ -907,8 +1274,6 @@ fn render_google_doc_html(document_id: i32, document_html: &str) -> Option<Strin
     let scoped_styles = styles
         .into_iter()
         .map(|stylesheet| rewrite_css_urls(&stylesheet, document_id))
-        .map(|stylesheet| scale_font_sizes(&stylesheet))
-        .map(|stylesheet| strip_text_color_declarations(&stylesheet))
         .map(|stylesheet| css_comment_re().replace_all(&stylesheet, "").into_owned())
         .map(|stylesheet| scope_css_block(&stylesheet, &scope_selector))
         .filter(|stylesheet| !stylesheet.trim().is_empty())
