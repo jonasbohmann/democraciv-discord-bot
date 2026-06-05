@@ -43,6 +43,21 @@ def display_house_name(house: typing.Optional[str]) -> str:
     return HOUSE_NAMES.get(house, house.title())
 
 
+def parse_prefixed_numeric_id(argument: str) -> typing.Optional[int]:
+    candidate = argument.strip()
+
+    if candidate.startswith("#"):
+        candidate = candidate[1:]
+
+    if not candidate:
+        return None
+
+    try:
+        return int(candidate)
+    except ValueError:
+        return None
+
+
 class RelatedBillSummary(typing.NamedTuple):
     id: int
     name: str
@@ -313,8 +328,16 @@ class Bill(commands.Converter, FuzzyableMixin):
         self, ctx: context.CustomContext, argument: str
     ) -> typing.Iterable:
         lowered = argument.lower()
+        matches = {}
 
-        matches = await ctx.bot.db.fetch(
+        exact_id = parse_prefixed_numeric_id(argument)
+        if exact_id is not None:
+            try:
+                matches[await Bill.convert(ctx, exact_id)] = None
+            except NotFoundError:
+                pass
+
+        fuzzy_matches = await ctx.bot.db.fetch(
             "SELECT id FROM bill WHERE lower(name) % $1 OR lower(name) LIKE '%' || $1 || '%'"
             " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;",
             lowered,
@@ -325,9 +348,11 @@ class Bill(commands.Converter, FuzzyableMixin):
             lowered,
         )
 
-        matches.extend(tag_matches)
+        fuzzy_matches.extend(tag_matches)
 
-        matches = {await Bill.convert(ctx, match["id"]): None for match in matches}
+        matches.update(
+            {await Bill.convert(ctx, match["id"]): None for match in fuzzy_matches}
+        )
 
         return list(matches.keys())
 
@@ -385,9 +410,7 @@ class Bill(commands.Converter, FuzzyableMixin):
         keywords = kw_extractor.extract_keywords(content)
         return [kw[0] for kw in keywords if kw[0]]
 
-    def _decode_apps_script_binary(
-        self, data: typing.Any, field_name: str
-    ) -> bytes:
+    def _decode_apps_script_binary(self, data: typing.Any, field_name: str) -> bytes:
         if not data:
             return b""
 
@@ -434,7 +457,9 @@ class Bill(commands.Converter, FuzzyableMixin):
                         len(
                             tuple(
                                 part
-                                for part in pathlib.PurePosixPath(info.filename).parent.parts
+                                for part in pathlib.PurePosixPath(
+                                    info.filename
+                                ).parent.parts
                                 if part not in (".", "")
                             )
                         ),
@@ -461,7 +486,9 @@ class Bill(commands.Converter, FuzzyableMixin):
 
             self.name = name = response["response"]["result"]["title"]
             self.content = content = response["response"]["result"]["content"]
-            self.markdown = markdown = response["response"]["result"].get("markdown") or ""
+            self.markdown = markdown = (
+                response["response"]["result"].get("markdown") or ""
+            )
             self.html_zip = html_zip = self._decode_apps_script_binary(
                 response["response"]["result"].get("html"), "html"
             )
@@ -653,8 +680,15 @@ class Law(Bill, FuzzyableMixin):
         self, ctx: context.CustomContext, argument: str
     ) -> typing.Iterable:
         lowered = argument.lower()
+        matches = {}
 
-        matches = await ctx.bot.db.fetch(
+        exact_id = parse_prefixed_numeric_id(argument)
+        if exact_id is not None:
+            exact_law = await Law.convert(ctx, exact_id, silent=True)
+            if exact_law is not None:
+                matches[exact_law] = None
+
+        fuzzy_matches = await ctx.bot.db.fetch(
             "SELECT id FROM bill WHERE status = $2 AND (lower(name) % $1 OR lower(name) LIKE '%' || $1 || '%')"
             " ORDER BY similarity(lower(name), $1) DESC LIMIT 5;",
             lowered,
@@ -666,11 +700,14 @@ class Law(Bill, FuzzyableMixin):
             lowered,
         )
 
-        matches.extend(tag_matches)
+        fuzzy_matches.extend(tag_matches)
 
-        matches = {
-            await Law.convert(ctx, match["id"], silent=True): None for match in matches
-        }
+        matches.update(
+            {
+                await Law.convert(ctx, match["id"], silent=True): None
+                for match in fuzzy_matches
+            }
+        )
         return list(filter(None, matches))
 
     @classmethod
@@ -780,13 +817,26 @@ class Motion(commands.Converter, FuzzyableMixin):
     async def get_fuzzy_source(
         self, ctx: context.CustomContext, argument: str
     ) -> typing.Iterable:
-        matches = await ctx.bot.db.fetch(
+        matches = {}
+
+        exact_id = parse_prefixed_numeric_id(argument)
+        if exact_id is not None:
+            try:
+                matches[await Motion.convert(ctx, exact_id)] = None
+            except NotFoundError:
+                pass
+
+        fuzzy_matches = await ctx.bot.db.fetch(
             "SELECT id FROM motion WHERE lower(title) % $1 OR lower(title) LIKE '%' || $1 || '%'"
             " ORDER BY similarity(lower(title), $1) DESC LIMIT 6;",
             argument.lower(),
         )
 
-        return [await Motion.convert(ctx, match["id"]) for match in matches]
+        matches.update(
+            {await Motion.convert(ctx, match["id"]): None for match in fuzzy_matches}
+        )
+
+        return list(matches.keys())
 
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[str, int]):

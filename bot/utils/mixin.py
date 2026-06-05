@@ -74,13 +74,12 @@ class SessionChoiceButton(discord.ui.Button):
         self.view.result = self.session
         self.view.stop()
 
+
 class SessionChoiceNoneButton(discord.ui.Button):
     def __init__(self):
         super().__init__(
             label="Skip this for now. Bills will be added to the next new non-emergency session.",
-            style=(
-                discord.ButtonStyle.secondary
-            ),
+            style=(discord.ButtonStyle.secondary),
         )
 
     async def callback(self, interaction):
@@ -88,14 +87,22 @@ class SessionChoiceNoneButton(discord.ui.Button):
         self.view.result = None
         self.view.stop()
 
+
 class SessionChooseView(text.PromptView):
-    def __init__(self, ctx, *, sessions: typing.Sequence[models.Session], allow_none: bool = False):
+    def __init__(
+        self,
+        ctx,
+        *,
+        sessions: typing.Sequence[models.Session],
+        allow_none: bool = False,
+    ):
         super().__init__(ctx)
         for session in sessions:
             self.add_item(SessionChoiceButton(session))
 
         if allow_none:
             self.add_item(SessionChoiceNoneButton())
+
 
 def add_submit_session_choice(
     modal: discord.ui.Modal, sessions: typing.Sequence[models.Session]
@@ -136,9 +143,7 @@ def get_submit_session_choice_id(modal: discord.ui.Modal) -> typing.Optional[int
 
 _BILL_AMENDMENT_SPLIT_RE = re.compile(r"[\s,]+")
 _MARKDOWN_HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
-_MARKDOWN_HTML_TAG_RE = re.compile(
-    r"</?[A-Za-z][A-Za-z0-9-]*(?:\s[^>\n]*)?\s*/?>"
-)
+_MARKDOWN_HTML_TAG_RE = re.compile(r"</?[A-Za-z][A-Za-z0-9-]*(?:\s[^>\n]*)?\s*/?>")
 _MARKDOWN_IMAGE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
 _MARKDOWN_HEADING_RE = re.compile(r"^\s{0,3}(#{1,6})\s+(.*\S)\s*$")
 _MARKDOWN_RULE_RE = re.compile(r"^\s{0,3}([-*_])(?:\s*\1){2,}\s*$")
@@ -192,7 +197,9 @@ def _split_large_markdown_block(block: str, *, max_chars: int) -> typing.List[st
             for chunk in _chunk_string(line, size=body_limit):
                 chunk_size = len(chunk) + (1 if current_lines else 0)
                 if current_lines and current_size + chunk_size > max_chars:
-                    pages.append(f"{opening}\n" + "\n".join(current_lines) + f"\n{closing}")
+                    pages.append(
+                        f"{opening}\n" + "\n".join(current_lines) + f"\n{closing}"
+                    )
                     current_lines = [chunk]
                     current_size = len(opening) + len(closing) + 2 + len(chunk)
                 else:
@@ -235,7 +242,9 @@ def _split_markdown_into_blocks(markdown: str) -> typing.List[str]:
     return [block for block in blocks if block]
 
 
-def _paginate_markdown_for_discord(markdown: str, *, max_chars: int = 1800) -> typing.List[str]:
+def _paginate_markdown_for_discord(
+    markdown: str, *, max_chars: int = 1800
+) -> typing.List[str]:
     blocks = _split_markdown_into_blocks(markdown)
     pages = []
     current = ""
@@ -547,7 +556,11 @@ class GovernmentMixin:
         )
         document_kind = bill.model.lower()
         document_label = bill.model
-        document_text = _normalize_markdown_for_discord(bill.markdown) if bill.markdown else bill.content
+        document_text = (
+            _normalize_markdown_for_discord(bill.markdown)
+            if bill.markdown
+            else bill.content
+        )
         entries = _paginate_markdown_for_discord(
             f"[Link to the Google Docs document of this {document_label}]({bill.link})\n"
             f"*Am I showing you outdated or wrong text? Tell the {leader_term} to synchronize this text "
@@ -651,11 +664,10 @@ class GovernmentMixin:
             "SELECT id, name, link FROM bill WHERE id = ANY($1::int[])",
             amendment_ids,
         )
-        found = {
-            row["id"]: models.RelatedBillSummary(**dict(row))
-            for row in rows
-        }
-        missing_ids = [candidate for candidate in amendment_ids if candidate not in found]
+        found = {row["id"]: models.RelatedBillSummary(**dict(row)) for row in rows}
+        missing_ids = [
+            candidate for candidate in amendment_ids if candidate not in found
+        ]
 
         if missing_ids:
             formatted = ", ".join(f"#{bill_id}" for bill_id in missing_ids)
@@ -739,9 +751,7 @@ class GovernmentMixin:
         embed.add_field(
             name="Author", value=f"{ctx.author.mention} {ctx.author}", inline=False
         )
-        embed.add_field(
-            name="Google Docs Document", value=bill.link, inline=False
-        )
+        embed.add_field(name="Google Docs Document", value=bill.link, inline=False)
         if bill.amends:
             embed.add_field(
                 name="Amends",
@@ -1309,9 +1319,9 @@ class GovernmentMixin:
         action: str,
         ephemeral: typing.Optional[bool] = None,
         silent: bool = False,
-        allow_none: bool = False
+        allow_none: bool = False,
     ) -> typing.Optional[models.Session]:
-        
+
         view = SessionChooseView(ctx, sessions=sessions, allow_none=allow_none)
         kwargs = {"view": view}
         if ephemeral is not None:

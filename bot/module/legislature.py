@@ -1847,7 +1847,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
                     ctx,
                     sessions=open_commons_sessions,
                     action="send these bills to",
-                    allow_none=True
+                    allow_none=True,
                 )
 
         reaction = await ctx.confirm(

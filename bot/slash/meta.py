@@ -4,7 +4,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from bot.config import config
+from bot.config import config, mk
 from bot.slash import checks as slash_checks
 from bot.slash import context as slash_context
 from bot.slash import ui
@@ -203,6 +203,34 @@ class MetaSlash(commands.Cog):
 
     @app_commands.command(
         name="dm-settings", description="Manage your DM notification settings."
+    )
+    @app_commands.rename(
+        ban_kick_mute="muted-kicked-banned",
+        leg_session_open="session-opens",
+        leg_session_update="voting-starts",
+        leg_session_submit="bill-or-motion-submitted",
+        leg_session_withdraw="bill-or-motion-withdrawn",
+        party_join_leave="party-join-leave",
+    )
+    @app_commands.describe(
+        ban_kick_mute="You get muted, kicked or banned",
+        leg_session_open=(
+            f"{mk.MarkConfig.LEGISLATURE_LEGISLATOR_NAME} Only: "
+            f"{mk.MarkConfig.LEGISLATURE_ADJECTIVE} Session opens"
+        ),
+        leg_session_update=(
+            f"{mk.MarkConfig.LEGISLATURE_LEGISLATOR_NAME} Only: "
+            f"Voting starts for a {mk.MarkConfig.LEGISLATURE_ADJECTIVE} Session"
+        ),
+        leg_session_submit=(
+            f"Legislative Leadership Only: " "Someone submits a Bill or Motion"
+        ),
+        leg_session_withdraw=(
+            f"Legislative Leadership Only: " "Someone withdraws a Bill or Motion"
+        ),
+        party_join_leave=(
+            "Party Leaders Only: " "Someone joins or leaves your political party"
+        ),
     )
     async def dm_settings(
         self,

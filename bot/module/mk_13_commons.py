@@ -1753,7 +1753,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
                     ctx,
                     sessions=open_senate_sessions,
                     action="send these bills to",
-                    allow_none=True
+                    allow_none=True,
                 )
 
         reaction = await ctx.confirm(

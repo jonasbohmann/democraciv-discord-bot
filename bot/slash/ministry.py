@@ -32,7 +32,7 @@ def _member_or_dash(member: discord.Member, term: str) -> str:
 class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
     ministry = app_commands.Group(
         name=MINISTRY_COMMAND_NAME,
-        description="Executive Branch overview and bill action commands.",
+        description="Executive Branch overview and veto commands.",
         guild_only=True,
     )
 
@@ -119,9 +119,7 @@ class MinistrySlash(commands.Cog, mixin.GovernmentMixin):
 
         await ctx.send(success_body)
 
-    @ministry.command(
-        name="overview", description="Show the current Executive overview."
-    )
+    @ministry.command(name="overview", description="Show the current Executive branch.")
     async def overview(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="executive")
         await ctx.defer()

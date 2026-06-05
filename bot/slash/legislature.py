@@ -68,7 +68,7 @@ class SubmitBillModal(discord.ui.Modal):
 
         self.google_docs_url = discord.ui.Label(
             text="Link to Google Docs",
-            description="Bills are submitted as public Google Docs documents.",
+            description="Bills are submitted as Google Docs documents. Make sure to copy the public link.",
             component=discord.ui.TextInput(
                 style=discord.TextStyle.short,
                 max_length=512,
@@ -85,28 +85,27 @@ class SubmitBillModal(discord.ui.Modal):
         )
 
         self.is_procedure = discord.ui.Label(
-            text=f"Bill or {models.display_house_name(house)} Procedure",
+            text=f"Bill or {models.display_house_name(house)}-only Procedure",
             description=(
-                "Procedures only apply to this chamber. Bills continue through the "
-                "normal bicameral process."
+                "Are you submitting a bill, or procedure that only pertains to the Commons?"
             ),
             component=discord.ui.Select(
                 options=[
                     discord.SelectOption(
                         emoji="\U0001f4dd",
-                        label="Bill. Other branches may be able to vote on this.",
+                        label="Bill. The other branches will be able to vote on this too.",
                         value="false",
                         default=True,
                     ),
                     discord.SelectOption(
                         emoji="\U0001f512",
-                        label=f"{models.display_house_name(house)} procedure only.",
+                        label=f"{models.display_house_name(house)} procedure.",
                         value="true",
                     ),
                 ],
             ),
         )
-        
+
         self.amendments = mixin.make_bill_amendments_input()
 
         self.add_item(self.google_docs_url)
@@ -169,7 +168,7 @@ class SubmitMotionModal(discord.ui.Modal):
         )
         self.motion_title = discord.ui.Label(
             text="Title",
-            description="What is the title of your motion?",
+            description="What's the title of your motion?",
             component=discord.ui.TextInput(
                 style=discord.TextStyle.short,
                 max_length=200,
@@ -177,7 +176,7 @@ class SubmitMotionModal(discord.ui.Modal):
         )
         self.motion_description = discord.ui.Label(
             text="Content",
-            description="Write the motion text, or paste a Google Docs link.",
+            description="Write your motion here. If your motion is inside a Google Docs document, just paste the link here.",
             component=discord.ui.TextInput(style=discord.TextStyle.long),
         )
         self.understand_description = discord.ui.Label(
@@ -324,29 +323,6 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             return self.bot.mk.senator_presiding_term
 
         return self.bot.mk.speaker_term
-
-    def house_links(
-        self,
-        house: str,
-        *,
-        session: models.Session = None,
-        extra: typing.Sequence[ui.LayoutLink] = (),
-    ) -> list[ui.LayoutLink]:
-        links = [
-            ui.LayoutLink("Docket", self.bot.mk.LEGISLATURE_DOCKET, "\U0001f4ca"),
-            ui.LayoutLink(
-                "Procedures", self.bot.mk.LEGISLATURE_PROCEDURES, "\U0001f4d6"
-            ),
-            ui.LayoutLink("Legal Code", self.bot.mk.LEGAL_CODE, "\U00002696"),
-            ui.LayoutLink("Laws Site", "https://laws.democraciv.com", "\U0001f517"),
-        ]
-
-        if session and session.vote_form:
-            links.insert(
-                0, ui.LayoutLink("Voting Form", session.vote_form, "\U0001f5f3")
-            )
-
-        return list(extra) + links
 
     def _bill_submission_embed(
         self,
@@ -629,12 +605,12 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             f"You have several options on how to proceed with this {house_name} session.\n"
             f"- `/{command_name} session lock` — Lock submissions to start a debate period.\n"
             f"- `/{command_name} session unlock` — Unlock if you previously locked.\n"
-            f"- `/{command_name} session vote` — Start the voting period (requires a voting form link).\n"
+            f"- `/{command_name} session vote` — Start the voting period (requires a voting form/spreadsheet link).\n"
             f"- `/{command_name} session close` — Close the session."
         )
         info.add_field(
             name="Optional Voting Form",
-            value=f"The `/{command_name} export form` can generate a voting form for you, but this has been disabled for security reasons.",
+            value=f"The `/{command_name} export form` can generate a voting form for you.",
             inline=False,
         )
         info.add_field(
@@ -806,8 +782,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         if not self.is_google_doc_link(voting_form):
             return await ctx.send(
-                f"{config.NO} That does not look like a Google Forms or Google Sheets link.\n"
-                f"{config.HINT} `/{command_name} export form` is still disabled for security reasons.",
+                f"{config.NO} That does not look like a Google Forms or Google Sheets link.",
                 ephemeral=True,
             )
 
@@ -1022,7 +997,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             inline=False,
         )
         embed.set_footer(
-            text=f"{config.HINT} In 80% of cases, you should use bills instead of motions!"
+            text=f"In 80% of cases, you should use bills instead of motions!"
         )
 
         view = discord.ui.View()
@@ -1459,7 +1434,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
     @senate.command(
         name="overview",
-        description="Show the Senate dashboard with links, legislators, and session status.",
+        description="Show the Senate dashboard with links, senators, and session status.",
     )
     async def senate_overview(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(
@@ -1471,7 +1446,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
     @commons.command(
         name="overview",
-        description="Show the Commons dashboard with links, legislators, and session status.",
+        description="Show the Commons dashboard with links and session status.",
     )
     async def commons_overview(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(
@@ -1815,7 +1790,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
     @senate_session.command(name="show", description="Show a Senate session.")
     @app_commands.describe(
-        session_id="Senate session number. Uses open session, prompts if needed, otherwise latest.",
+        session_id="Optional Senate session number.",
         sponsor_filter="Optional sponsor filter such as >=2, =1, or <3.",
     )
     async def senate_session_show(
@@ -1865,7 +1840,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
     @commons_session.command(name="show", description="Show a Commons session.")
     @app_commands.describe(
-        session_id="Commons session number. Uses open session, prompts if needed, otherwise latest.",
+        session_id="Optional Commons session number.",
         sponsor_filter="Optional sponsor filter such as >=2, =1, or <3.",
     )
     async def commons_session_show(

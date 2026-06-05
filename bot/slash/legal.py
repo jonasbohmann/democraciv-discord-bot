@@ -74,7 +74,7 @@ class BillEditModal(forms.ErrorHandledModal):
         )
         current_amendments = cog.format_bill_amendment_ids(bill.amends)
         self.amendments = mixin.make_bill_amendments_input(
-            description="Leave empty to keep the current list of amended bills. Enter `none` to clear them.",
+            description="Leave empty to keep the current list of amended bills. Enter 'none' to clear them.",
             placeholder=current_amendments or "12, 34",
             required=False,
         )
@@ -584,11 +584,7 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
                 else self.parse_bill_amendment_ids(amendments)
             )
 
-        if (
-            not link
-            and not description_changed
-            and amendment_ids is None
-        ):
+        if not link and not description_changed and amendment_ids is None:
             return await ctx.send(f"{config.NO} Nothing changed.", ephemeral=True)
 
         if link:
@@ -737,30 +733,32 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             empty_message="Nothing found.",
         )
         await pages.start(ctx)
-        fts_view = mixin.FullTextSearchView(ctx)
-        index_map = {"law": "bill", "bill": "bill", "motion": "motion"}
-        index = index_map.get(models.Law.model.lower(), "bill")
-        await ctx.send(
-            "Do you want to perform a full-text search via Meilisearch?",
-            view=fts_view,
-        )
-        result = await fts_view.prompt(silent=True)
-        if result:
-            api_result = await self.bot.api_request(
-                "POST",
-                "document/search",
-                json={"question": query, "index": index, "semantic_ratio": 0.0},
+
+        fts_pages = None
+
+        try:
+            fts_pages = await self.prepare_full_text_search_paginator(
+                ctx, query, is_law=True
             )
-            if api_result and "result" in api_result and api_result["result"]:
-                fts_entries = api_result["result"]
-                fts_pages = paginator.SimplePages(
-                    entries=fts_entries,
-                    icon=self.bot.mk.NATION_ICON_URL,
-                    author=f"Full-text search results for '{query}'",
-                    empty_message="Nothing found.",
-                    per_page=12,
-                )
+        except Exception:
+            pass
+
+        if fts_pages:
+            view = mixin.FullTextSearchView(ctx)
+            delete_after = await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all laws too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per law, even if there were more occurrences found.",
+                view=view,
+            )
+
+            yes = await view.prompt(silent=True)
+
+            if yes:
                 await fts_pages.start(ctx)
+
+                try:
+                    await delete_after.delete()
+                except Exception:
+                    pass
 
     @law.command(name="read", description="Read the text of a law.")
     @app_commands.describe(law="Law ID or title")
@@ -784,7 +782,7 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
 
     @bill.command(
         name="synchronize",
-        description="Synchronize a bill with the latest Google Docs title and text.",
+        description="Synchronize a bill with its latest title and text from Google Docs.",
     )
     @slash_checks.is_democraciv_guild()
     @app_commands.describe(bill="Bill ID or title")
@@ -807,6 +805,11 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         description="Bulk edit the Google Docs links of multiple bills.",
     )
     @slash_checks.is_democraciv_guild()
+    @slash_checks.has_any_democraciv_role(
+        mk.DemocracivRole.SPEAKER,
+        mk.DemocracivRole.VICE_SPEAKER,
+        mk.DemocracivRole.MK13_SENATOR_PRESIDING,
+    )
     async def bill_bulkedit(self, interaction: discord.Interaction):
         await interaction.response.send_modal(BillBulkEditModal(self))
 
@@ -845,7 +848,7 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         )
         await pages.start(ctx)
 
-    @bill.command(name="read", description="Read the cached text of a bill.")
+    @bill.command(name="read", description="Read the text of a bill.")
     @app_commands.describe(bill="Bill ID or title")
     async def bill_read(self, interaction: discord.Interaction, bill: BillOption):
         ctx = slash_context.from_interaction(interaction, command_name="bill")
@@ -868,30 +871,29 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             empty_message="Nothing found.",
         )
         await pages.start(ctx)
-        fts_view = mixin.FullTextSearchView(ctx)
-        index_map = {"law": "bill", "bill": "bill", "motion": "motion"}
-        index = index_map.get(models.Bill.model.lower(), "bill")
-        await ctx.send(
-            "Do you want to perform a full-text search via Meilisearch?",
-            view=fts_view,
-        )
-        result = await fts_view.prompt(silent=True)
-        if result:
-            api_result = await self.bot.api_request(
-                "POST",
-                "document/search",
-                json={"question": query, "index": index, "semantic_ratio": 0.0},
+
+        try:
+            fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
+        except Exception:
+            fts_pages = None
+
+        if fts_pages:
+            view = mixin.FullTextSearchView(ctx)
+            delete_after = await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? "
+                f"This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result "
+                f"per bill, even if there were more occurrences found.",
+                view=view,
             )
-            if api_result and "result" in api_result and api_result["result"]:
-                fts_entries = api_result["result"]
-                fts_pages = paginator.SimplePages(
-                    entries=fts_entries,
-                    icon=self.bot.mk.NATION_ICON_URL,
-                    author=f"Full-text search results for '{query}'",
-                    empty_message="Nothing found.",
-                    per_page=12,
-                )
+            yes = await view.prompt(silent=True)
+
+            if yes:
                 await fts_pages.start(ctx)
+
+                try:
+                    await delete_after.delete()
+                except Exception:
+                    pass
 
     @bill.command(name="from", description="List bills submitted by a person or party.")
     @app_commands.describe(
@@ -945,7 +947,7 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
     @slash_checks.is_citizen_if_multiciv()
     @app_commands.describe(
         bill="Bill ID or title",
-        session_type="Target session type if multiple origin-house sessions are open.",
+        session_type="Target session type if both a regular and emergency session are open right now.",
     )
     @app_commands.choices(session_type=SESSION_TYPE_CHOICES)
     async def bill_resubmit(
@@ -999,30 +1001,31 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             empty_message="Nothing found.",
         )
         await pages.start(ctx)
-        fts_view = mixin.FullTextSearchView(ctx)
-        index_map = {"law": "bill", "bill": "bill", "motion": "motion"}
-        index = index_map.get(models.Motion.model.lower(), "bill")
-        await ctx.send(
-            "Do you want to perform a full-text search via Meilisearch?",
-            view=fts_view,
-        )
-        result = await fts_view.prompt(silent=True)
-        if result:
-            api_result = await self.bot.api_request(
-                "POST",
-                "document/search",
-                json={"question": query, "index": index, "semantic_ratio": 0.0},
+
+        try:
+            fts_pages = await self.prepare_full_text_search_paginator(
+                ctx, query, index="motion"
             )
-            if api_result and "result" in api_result and api_result["result"]:
-                fts_entries = api_result["result"]
-                fts_pages = paginator.SimplePages(
-                    entries=fts_entries,
-                    icon=self.bot.mk.NATION_ICON_URL,
-                    author=f"Full-text search results for '{query}'",
-                    empty_message="Nothing found.",
-                    per_page=12,
-                )
+        except Exception:
+            fts_pages = None
+
+        if fts_pages:
+            view = mixin.FullTextSearchView(ctx)
+            delete_after = await ctx.send(
+                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all motions too? "
+                f"This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result "
+                f"per motion, even if there were more occurrences found.",
+                view=view,
+            )
+            yes = await view.prompt(silent=True)
+
+            if yes:
                 await fts_pages.start(ctx)
+
+                try:
+                    await delete_after.delete()
+                except Exception:
+                    pass
 
     @motion.command(
         name="from", description="List motions submitted by a person or party."
@@ -1083,6 +1086,7 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
     @slash_checks.has_any_democraciv_role(
         mk.DemocracivRole.SPEAKER,
         mk.DemocracivRole.VICE_SPEAKER,
+        mk.DemocracivRole.MK13_SENATOR_PRESIDING,
     )
     @app_commands.describe(law="Law ID or title")
     async def law_repeal(self, interaction: discord.Interaction, law: LawOption):

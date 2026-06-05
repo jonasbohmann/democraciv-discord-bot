@@ -47,7 +47,7 @@ logging.basicConfig(
 )
 
 
-BOT_VERSION = "4.0.0-alpha1"
+BOT_VERSION = "4.0.0-beta2"
 
 all_extensions = {
     "bot.module.logs",
@@ -187,10 +187,6 @@ initial_slash_extensions = {
     for extension in slash_extensions
     if slash_extension_requirements.get(extension, set()).issubset(initial_extensions)
 }
-
-if not config.IS_DEBUG:
-    slash_extensions = []
-    initial_slash_extensions = []
 
 # monkey patch dpy's send
 _old_send = discord.abc.Messageable.send
