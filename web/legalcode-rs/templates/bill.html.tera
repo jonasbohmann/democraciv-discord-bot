@@ -64,6 +64,40 @@ Bill #{{ bill.id }} · Democraciv MK13
             </div>
         </dl>
 
+        {% if bill.amends | length > 0 or bill.amended_by | length > 0 %}
+        <section class="stack">
+            <div>
+                <h2 style="margin-top: 0;">Amendments</h2>
+            </div>
+
+            {% if bill.amends | length > 0 %}
+            <div class="record-meta">
+                <span class="detail-meta">Amends</span>
+                <ul class="toc-list">
+                    {% for related in bill.amends %}
+                    <li>
+                        <a href="{{ related.href }}">{{ related.kind_label }} #{{ related.id }} · {{ related.name }}</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if bill.amended_by | length > 0 %}
+            <div class="record-meta">
+                <span class="detail-meta">Amended By</span>
+                <ul class="toc-list">
+                    {% for related in bill.amended_by %}
+                    <li>
+                        <a href="{{ related.href }}">{{ related.kind_label }} #{{ related.id }} · {{ related.name }}</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </section>
+        {% endif %}
+
         <section class="stack">
             <details class="history-details" open>
                 <summary>Bill History</summary>

@@ -6,7 +6,10 @@ use rocket::{State, fs::FileServer};
 use rocket_dyn_templates::{Template, context};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
-use std::{collections::HashMap, sync::Mutex};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Mutex,
+};
 
 const LAW_STATUS: i32 = 10; // siehe bot/utils/modules.py BillIsLaw
 const DEFAULT_AUTHOR_LOOKUP_URL: &str = "http://127.0.0.1:8081/discord-user";
@@ -39,6 +42,8 @@ struct MotionListItem {
     title: String,
     body: String,
     excerpt: String,
+    submitter: i64,
+    author: DiscordAuthor,
 }
 
 #[derive(Serialize, Clone)]
@@ -50,6 +55,8 @@ struct BillListItem {
     excerpt: String,
     link: String,
     submitter_description: String,
+    submitter: i64,
+    author: DiscordAuthor,
     origin_house: String,
     origin_house_label: String,
     type_label: String,
@@ -86,6 +93,22 @@ struct BillDetail {
     author: DiscordAuthor,
     sponsor_count: i64,
     history: Vec<BillHistoryItem>,
+    amends: Vec<RelatedBillItem>,
+    amended_by: Vec<RelatedBillItem>,
+}
+
+#[derive(Serialize, Clone)]
+struct RelatedBillItem {
+    id: i32,
+    name: String,
+    href: String,
+    kind_label: String,
+}
+
+#[derive(Serialize, Clone)]
+struct AuthorFilterOption {
+    user_id: i64,
+    label: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -180,12 +203,134 @@ async fn resolve_author(lookup: &DiscordAuthorLookupClient, user_id: i64) -> Dis
         .unwrap_or_else(|_| fallback_author(user_id))
 }
 
+fn detail_href_for_status(id: i32, status: i32) -> String {
+    if status == LAW_STATUS {
+        format!("/law/{id}")
+    } else {
+        format!("/bill/{id}")
+    }
+}
+
+fn detail_kind_label_for_status(status: i32) -> &'static str {
+    if status == LAW_STATUS { "Law" } else { "Bill" }
+}
+
+fn author_filter_label(author: &DiscordAuthor) -> String {
+    format!("{} (@{})", author.display_name, author.username)
+}
+
+fn build_author_filter_options(
+    authors: impl IntoIterator<Item = DiscordAuthor>,
+) -> Vec<AuthorFilterOption> {
+    let mut unique = HashMap::<i64, AuthorFilterOption>::new();
+
+    for author in authors {
+        unique
+            .entry(author.user_id)
+            .or_insert_with(|| AuthorFilterOption {
+                user_id: author.user_id,
+                label: author_filter_label(&author),
+            });
+    }
+
+    let mut options = unique.into_values().collect::<Vec<_>>();
+    options.sort_by(|left, right| {
+        left.label
+            .to_lowercase()
+            .cmp(&right.label.to_lowercase())
+            .then_with(|| left.user_id.cmp(&right.user_id))
+    });
+    options
+}
+
+async fn resolve_authors_for_user_ids(
+    lookup: &DiscordAuthorLookupClient,
+    user_ids: &[i64],
+) -> HashMap<i64, DiscordAuthor> {
+    let mut authors = HashMap::new();
+    let mut seen = HashSet::new();
+
+    for user_id in user_ids {
+        if seen.insert(*user_id) {
+            authors.insert(*user_id, resolve_author(lookup, *user_id).await);
+        }
+    }
+
+    authors
+}
+
+fn author_for_submitter(authors: &HashMap<i64, DiscordAuthor>, submitter: i64) -> DiscordAuthor {
+    authors
+        .get(&submitter)
+        .cloned()
+        .unwrap_or_else(|| fallback_author(submitter))
+}
+
+#[derive(Clone, Copy)]
+enum RelatedBillDirection {
+    Amends,
+    AmendedBy,
+}
+
 #[derive(Serialize, Clone)]
-struct LegalCodeItem {
+struct LegalCodeLaw {
     id: i32,
     name: String,
     content: String,
     link: String,
+}
+
+#[derive(Serialize, Clone)]
+struct LegalCodeAmendmentEntry {
+    href: String,
+    context_label: String,
+    law: LegalCodeLaw,
+}
+
+#[derive(Serialize, Clone)]
+struct LegalCodeJumpLink {
+    href: String,
+    id: i32,
+    name: String,
+}
+
+#[derive(Serialize, Clone)]
+struct LegalCodeSection {
+    anchor_id: String,
+    href: String,
+    law: LegalCodeLaw,
+    amendments: Vec<LegalCodeAmendmentEntry>,
+    amends: Vec<LegalCodeJumpLink>,
+}
+
+#[derive(Serialize, Clone)]
+struct LegalCodeIndexEntry {
+    href: String,
+    id: i32,
+    name: String,
+    context_label: Option<String>,
+}
+
+#[derive(Serialize, Clone)]
+struct LegalCodeIndexSection {
+    href: String,
+    id: i32,
+    name: String,
+    amendments: Vec<LegalCodeIndexEntry>,
+}
+
+struct LegalCodePageData {
+    sections: Vec<LegalCodeSection>,
+    index_sections: Vec<LegalCodeIndexSection>,
+    total_count: usize,
+}
+
+fn law_anchor_id(id: i32) -> String {
+    format!("law-{id}")
+}
+
+fn law_anchor_href(id: i32) -> String {
+    format!("#{}", law_anchor_id(id))
 }
 
 fn title_case(value: &str) -> String {
@@ -276,6 +421,14 @@ fn motion_search_keys() -> Vec<SearchKey> {
             weight: 4,
         },
         SearchKey {
+            name: "author.display_name",
+            weight: 4,
+        },
+        SearchKey {
+            name: "author.username",
+            weight: 3,
+        },
+        SearchKey {
             name: "id",
             weight: 2,
         },
@@ -297,6 +450,14 @@ fn bill_search_keys() -> Vec<SearchKey> {
             weight: 4,
         },
         SearchKey {
+            name: "author.display_name",
+            weight: 4,
+        },
+        SearchKey {
+            name: "author.username",
+            weight: 3,
+        },
+        SearchKey {
             name: "id",
             weight: 2,
         },
@@ -310,11 +471,20 @@ fn bill_status_options() -> Vec<String> {
         .collect()
 }
 
-async fn load_motion_list(db: &PgPool) -> Result<Vec<MotionListItem>, String> {
-    let rows = sqlx::query("SELECT id, title, description FROM motion ORDER BY id")
+async fn load_motion_list(
+    db: &PgPool,
+    author_lookup: &DiscordAuthorLookupClient,
+) -> Result<Vec<MotionListItem>, String> {
+    let rows = sqlx::query("SELECT id, title, description, submitter FROM motion ORDER BY id")
         .fetch_all(db)
         .await
         .map_err(|error| error.to_string())?;
+
+    let submitter_ids = rows
+        .iter()
+        .map(|row| row.try_get("submitter").unwrap_or_default())
+        .collect::<Vec<i64>>();
+    let authors = resolve_authors_for_user_ids(author_lookup, &submitter_ids).await;
 
     Ok(rows
         .into_iter()
@@ -322,6 +492,7 @@ async fn load_motion_list(db: &PgPool) -> Result<Vec<MotionListItem>, String> {
             let id: i32 = row.try_get("id").unwrap_or_default();
             let title: String = row.try_get("title").unwrap_or_default();
             let body: String = row.try_get("description").unwrap_or_default();
+            let submitter: i64 = row.try_get("submitter").unwrap_or_default();
 
             MotionListItem {
                 row_id: format!("motion-{id}"),
@@ -329,6 +500,8 @@ async fn load_motion_list(db: &PgPool) -> Result<Vec<MotionListItem>, String> {
                 title,
                 excerpt: make_excerpt(&body, 50),
                 body,
+                submitter,
+                author: author_for_submitter(&authors, submitter),
             }
         })
         .collect())
@@ -356,7 +529,11 @@ async fn load_motion_detail(db: &PgPool, id: i32) -> Result<Option<MotionDetail>
     }))
 }
 
-async fn load_bill_list(db: &PgPool, laws_only: bool) -> Result<Vec<BillListItem>, String> {
+async fn load_bill_list(
+    db: &PgPool,
+    author_lookup: &DiscordAuthorLookupClient,
+    laws_only: bool,
+) -> Result<Vec<BillListItem>, String> {
     let query = if laws_only {
         "SELECT
             bill.id,
@@ -364,6 +541,7 @@ async fn load_bill_list(db: &PgPool, laws_only: bool) -> Result<Vec<BillListItem
             bill.content,
             bill.link,
             bill.submitter_description,
+            bill.submitter,
             bill.origin_house,
             bill.is_procedure,
             bill.status,
@@ -380,6 +558,7 @@ async fn load_bill_list(db: &PgPool, laws_only: bool) -> Result<Vec<BillListItem
             bill.content,
             bill.link,
             bill.submitter_description,
+            bill.submitter,
             bill.origin_house,
             bill.is_procedure,
             bill.status,
@@ -395,6 +574,12 @@ async fn load_bill_list(db: &PgPool, laws_only: bool) -> Result<Vec<BillListItem
         .await
         .map_err(|error| error.to_string())?;
 
+    let submitter_ids = rows
+        .iter()
+        .map(|row| row.try_get("submitter").unwrap_or_default())
+        .collect::<Vec<i64>>();
+    let authors = resolve_authors_for_user_ids(author_lookup, &submitter_ids).await;
+
     Ok(rows
         .into_iter()
         .map(|row| {
@@ -404,10 +589,12 @@ async fn load_bill_list(db: &PgPool, laws_only: bool) -> Result<Vec<BillListItem
             let link: String = row.try_get("link").unwrap_or_default();
             let submitter_description: String =
                 row.try_get("submitter_description").unwrap_or_default();
+            let submitter: i64 = row.try_get("submitter").unwrap_or_default();
             let origin_house: String = row.try_get("origin_house").unwrap_or_default();
             let origin_house_label = display_house_name(&origin_house);
             let is_procedure: bool = row.try_get("is_procedure").unwrap_or_default();
             let status: i32 = row.try_get("status").unwrap_or_default();
+            let type_label = display_type_label(&origin_house, is_procedure);
 
             BillListItem {
                 row_id: format!("bill-{id}"),
@@ -417,14 +604,60 @@ async fn load_bill_list(db: &PgPool, laws_only: bool) -> Result<Vec<BillListItem
                 content,
                 link,
                 submitter_description,
+                submitter,
+                author: author_for_submitter(&authors, submitter),
                 origin_house,
                 origin_house_label: origin_house_label.clone(),
-                type_label: display_type_label(&origin_house_label, is_procedure),
+                type_label,
                 is_procedure,
                 status,
                 status_label: display_bill_status(status).to_string(),
                 is_law: status == LAW_STATUS,
                 sponsor_count: row.try_get("sponsor_count").unwrap_or_default(),
+            }
+        })
+        .collect())
+}
+
+async fn load_related_bills(
+    db: &PgPool,
+    bill_id: i32,
+    direction: RelatedBillDirection,
+) -> Result<Vec<RelatedBillItem>, String> {
+    let query = match direction {
+        RelatedBillDirection::Amends => {
+            "SELECT related.id, related.name, related.status
+            FROM bill_amendment
+            JOIN bill AS related ON related.id = bill_amendment.amended_bill_id
+            WHERE bill_amendment.amending_bill_id = $1
+            ORDER BY related.id"
+        }
+        RelatedBillDirection::AmendedBy => {
+            "SELECT related.id, related.name, related.status
+            FROM bill_amendment
+            JOIN bill AS related ON related.id = bill_amendment.amending_bill_id
+            WHERE bill_amendment.amended_bill_id = $1
+            ORDER BY related.id"
+        }
+    };
+
+    let rows = sqlx::query(query)
+        .bind(bill_id)
+        .fetch_all(db)
+        .await
+        .map_err(|error| error.to_string())?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            let id: i32 = row.try_get("id").unwrap_or_default();
+            let status: i32 = row.try_get("status").unwrap_or_default();
+
+            RelatedBillItem {
+                id,
+                name: row.try_get("name").unwrap_or_default(),
+                href: detail_href_for_status(id, status),
+                kind_label: detail_kind_label_for_status(status).to_string(),
             }
         })
         .collect())
@@ -516,14 +749,16 @@ async fn load_bill_detail(
     let is_procedure: bool = row.try_get("is_procedure").unwrap_or_default();
     let status: i32 = row.try_get("status").unwrap_or_default();
     let submitter: i64 = row.try_get("submitter").unwrap_or_default();
+    let type_label = display_type_label(&origin_house, is_procedure);
 
     let history = if include_history {
         load_bill_history(db, id).await?
     } else {
         Vec::new()
     };
-
     let author = resolve_author(author_lookup, submitter).await;
+    let amends = load_related_bills(db, id, RelatedBillDirection::Amends).await?;
+    let amended_by = load_related_bills(db, id, RelatedBillDirection::AmendedBy).await?;
 
     Ok(Some(BillDetail {
         id: row.try_get("id").unwrap_or_default(),
@@ -533,7 +768,7 @@ async fn load_bill_detail(
         submitter_description: row.try_get("submitter_description").unwrap_or_default(),
         origin_house,
         origin_house_label: origin_house_label.clone(),
-        type_label: display_type_label(&origin_house_label, is_procedure),
+        type_label,
         is_procedure,
         is_procedure_label: bool_label(is_procedure),
         status,
@@ -543,25 +778,119 @@ async fn load_bill_detail(
         author,
         sponsor_count: row.try_get("sponsor_count").unwrap_or_default(),
         history,
+        amends,
+        amended_by,
     }))
 }
 
-async fn load_legal_code(db: &PgPool) -> Result<Vec<LegalCodeItem>, String> {
-    let rows =
-        sqlx::query("SELECT id, name, content, link FROM bill WHERE status = 10 ORDER BY id")
+async fn load_legal_code(db: &PgPool) -> Result<LegalCodePageData, String> {
+    let law_rows =
+        sqlx::query("SELECT id, name, content, link FROM bill WHERE status = $1 ORDER BY id")
+            .bind(LAW_STATUS)
             .fetch_all(db)
             .await
             .map_err(|error| error.to_string())?;
 
-    Ok(rows
+    let laws = law_rows
         .into_iter()
-        .map(|row| LegalCodeItem {
+        .map(|row| LegalCodeLaw {
             id: row.try_get("id").unwrap_or_default(),
             name: row.try_get("name").unwrap_or_default(),
             content: row.try_get("content").unwrap_or_default(),
             link: row.try_get("link").unwrap_or_default(),
         })
-        .collect())
+        .collect::<Vec<_>>();
+
+    let amendment_rows = sqlx::query(
+        "SELECT
+            parent.id AS parent_id,
+            parent.name AS parent_name,
+            child.id,
+            child.name,
+            child.content,
+            child.link
+        FROM bill_amendment
+        JOIN bill AS child ON child.id = bill_amendment.amending_bill_id
+        JOIN bill AS parent ON parent.id = bill_amendment.amended_bill_id
+        WHERE child.status = $1 AND parent.status = $1
+        ORDER BY parent.id, child.id",
+    )
+    .bind(LAW_STATUS)
+    .fetch_all(db)
+    .await
+    .map_err(|error| error.to_string())?;
+
+    let mut amendments_by_parent = HashMap::<i32, Vec<LegalCodeAmendmentEntry>>::new();
+    let mut amends_by_child = HashMap::<i32, Vec<LegalCodeJumpLink>>::new();
+
+    for row in amendment_rows {
+        let parent_id: i32 = row.try_get("parent_id").unwrap_or_default();
+        let parent_name: String = row.try_get("parent_name").unwrap_or_default();
+        let child_id: i32 = row.try_get("id").unwrap_or_default();
+
+        amendments_by_parent
+            .entry(parent_id)
+            .or_default()
+            .push(LegalCodeAmendmentEntry {
+                href: law_anchor_href(child_id),
+                context_label: format!("Amendment to Law #{parent_id}"),
+                law: LegalCodeLaw {
+                    id: child_id,
+                    name: row.try_get("name").unwrap_or_default(),
+                    content: row.try_get("content").unwrap_or_default(),
+                    link: row.try_get("link").unwrap_or_default(),
+                },
+            });
+
+        amends_by_child
+            .entry(child_id)
+            .or_default()
+            .push(LegalCodeJumpLink {
+                href: law_anchor_href(parent_id),
+                id: parent_id,
+                name: parent_name,
+            });
+    }
+
+    let mut sections = Vec::with_capacity(laws.len());
+    let mut index_sections = Vec::with_capacity(laws.len());
+
+    for law in laws {
+        let anchor_id = law_anchor_id(law.id);
+        let href = law_anchor_href(law.id);
+        let amendments = amendments_by_parent.remove(&law.id).unwrap_or_default();
+        let amends = amends_by_child.remove(&law.id).unwrap_or_default();
+        let index_amendments = amendments
+            .iter()
+            .map(|amendment| LegalCodeIndexEntry {
+                href: amendment.href.clone(),
+                id: amendment.law.id,
+                name: amendment.law.name.clone(),
+                context_label: Some(amendment.context_label.clone()),
+            })
+            .collect::<Vec<_>>();
+
+        index_sections.push(LegalCodeIndexSection {
+            href: href.clone(),
+            id: law.id,
+            name: law.name.clone(),
+            amendments: index_amendments,
+        });
+
+        sections.push(LegalCodeSection {
+            anchor_id,
+            href,
+            law,
+            amendments,
+            amends,
+        });
+    }
+
+    Ok(LegalCodePageData {
+        total_count: sections.len(),
+        sections,
+        index_sections,
+    })
 }
 
 #[get("/")]
@@ -571,8 +900,10 @@ async fn index() -> Result<Template, String> {
 
 #[get("/motion")]
 async fn motion_index(state: &State<AppState>) -> Result<Template, String> {
-    let motions = load_motion_list(&state.db).await?;
+    let motions = load_motion_list(&state.db, &state.author_lookup).await?;
     let total_count = motions.len();
+    let author_options =
+        build_author_filter_options(motions.iter().map(|motion| motion.author.clone()));
     let search_items_b64 = encode_json_base64(&motions)?;
     let search_keys_b64 = encode_json_base64(&motion_search_keys())?;
 
@@ -581,6 +912,7 @@ async fn motion_index(state: &State<AppState>) -> Result<Template, String> {
         context! {
             motions,
             total_count,
+            author_options,
             search_items_b64,
             search_keys_b64,
         },
@@ -605,8 +937,9 @@ async fn motion(id: i32, state: &State<AppState>) -> Result<Option<Template>, St
 
 #[get("/bill")]
 async fn bill_index(state: &State<AppState>) -> Result<Template, String> {
-    let bills = load_bill_list(&state.db, false).await?;
+    let bills = load_bill_list(&state.db, &state.author_lookup, false).await?;
     let total_count = bills.len();
+    let author_options = build_author_filter_options(bills.iter().map(|bill| bill.author.clone()));
     let status_options = bill_status_options();
     let search_items_b64 = encode_json_base64(&bills)?;
     let search_keys_b64 = encode_json_base64(&bill_search_keys())?;
@@ -617,6 +950,7 @@ async fn bill_index(state: &State<AppState>) -> Result<Template, String> {
             bills,
             total_count,
             status_options,
+            author_options,
             search_items_b64,
             search_keys_b64,
         },
@@ -640,8 +974,9 @@ async fn bill(id: i32, state: &State<AppState>) -> Result<Option<Template>, Stri
 
 #[get("/law")]
 async fn law_index(state: &State<AppState>) -> Result<Template, String> {
-    let laws = load_bill_list(&state.db, true).await?;
+    let laws = load_bill_list(&state.db, &state.author_lookup, true).await?;
     let total_count = laws.len();
+    let author_options = build_author_filter_options(laws.iter().map(|law| law.author.clone()));
     let search_items_b64 = encode_json_base64(&laws)?;
     let search_keys_b64 = encode_json_base64(&bill_search_keys())?;
 
@@ -650,6 +985,7 @@ async fn law_index(state: &State<AppState>) -> Result<Template, String> {
         context! {
             laws,
             total_count,
+            author_options,
             search_items_b64,
             search_keys_b64,
         },
@@ -673,13 +1009,16 @@ async fn law(id: i32, state: &State<AppState>) -> Result<Option<Template>, Strin
 
 #[get("/legal-code")]
 async fn legal_code(state: &State<AppState>) -> Result<Template, String> {
-    let laws = load_legal_code(&state.db).await?;
-    let total_count = laws.len();
+    let legal_code = load_legal_code(&state.db).await?;
+    let total_count = legal_code.total_count;
+    let sections = legal_code.sections;
+    let index_sections = legal_code.index_sections;
 
     Ok(Template::render(
         "legal_code",
         context! {
-            laws,
+            sections,
+            index_sections,
             total_count,
         },
     ))

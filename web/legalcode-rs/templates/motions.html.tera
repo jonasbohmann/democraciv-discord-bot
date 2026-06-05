@@ -25,15 +25,27 @@ Motions · Democraciv MK13
     data-search-label="motions"
 >
     <div class="search-toolbar">
-        <div class="search-form">
-            <label for="motion-search"></label>
-            <input
-                id="motion-search"
-                type="search"
-                placeholder="Search by name and content..."
-                autocomplete="off"
-                data-search-input
-            >
+        <div class="search-controls">
+            <div class="search-form">
+                <label for="motion-search"></label>
+                <input
+                    id="motion-search"
+                    type="search"
+                    placeholder="Search by title, summary, or author..."
+                    autocomplete="off"
+                    data-search-input
+                >
+            </div>
+
+            <div class="search-filter">
+                <label for="motion-author-filter">Author</label>
+                <select id="motion-author-filter" data-search-filter="author">
+                    <option value="">All authors</option>
+                    {% for author in author_options %}
+                    <option value="{{ author.user_id }}">{{ author.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
 
         <fieldset class="search-toggle">
@@ -63,17 +75,27 @@ Motions · Democraciv MK13
             <thead>
                 <tr>
                     <th scope="col">Motion</th>
+                    <th scope="col">Author</th>
                     <th scope="col">Summary</th>
                     <th scope="col"></th>
                 </tr>
             </thead>
             <tbody data-search-body>
                 {% for motion in motions %}
-                <tr data-search-row="{{ motion.row_id }}">
+                <tr
+                    data-search-row="{{ motion.row_id }}"
+                    data-search-author="{{ motion.author.user_id }}"
+                >
                     <td class="record-main" data-label="Motion">
                         <a href="/motion/{{ motion.id }}" class="record-title">
                             Motion #{{ motion.id }} · {{ motion.title }}
                         </a>
+                    </td>
+                    <td data-label="Author">
+                        <div class="record-meta">
+                            <span>{{ motion.author.display_name }}</span>
+                            <span class="record-subtle">@{{ motion.author.username }}</span>
+                        </div>
                     </td>
                     <td data-label="Summary">
                         <p class="record-subtle">{{ motion.excerpt }}</p>

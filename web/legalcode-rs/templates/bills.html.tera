@@ -26,7 +26,7 @@ Bills · Democraciv MK13
                 <input
                     id="bill-search"
                     type="search"
-                    placeholder="Search by name and content..."
+                    placeholder="Search by name, content, or author..."
                     autocomplete="off"
                     data-search-input
                 >
@@ -60,6 +60,16 @@ Bills · Democraciv MK13
                     <option value="Commons">Commons</option>
                 </select>
             </div>
+
+            <div class="search-filter">
+                <label for="bill-author-filter">Author</label>
+                <select id="bill-author-filter" data-search-filter="author">
+                    <option value="">All authors</option>
+                    {% for author in author_options %}
+                    <option value="{{ author.user_id }}">{{ author.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
 
         <fieldset class="search-toggle">
@@ -89,6 +99,7 @@ Bills · Democraciv MK13
             <thead>
                 <tr>
                     <th scope="col">Bill</th>
+                    <th scope="col">Author</th>
                     <th scope="col">Status</th>
                     <th scope="col">Type / Orig. Chamber</th>
                     <th scope="col"></th>
@@ -101,12 +112,19 @@ Bills · Democraciv MK13
                     data-search-status="{{ bill.status_label }}"
                     data-search-type="{{ bill.type_label }}"
                     data-search-house="{{ bill.origin_house_label }}"
+                    data-search-author="{{ bill.author.user_id }}"
                 >
                     <td class="record-main" data-label="Bill">
                         <a href="/bill/{{ bill.id }}" class="record-title">
                             Bill #{{ bill.id }} · {{ bill.name }}
                         </a>
                         <p class="mobile-hide record-subtle">{{ bill.excerpt }}</p>
+                    </td>
+                    <td data-label="Author">
+                        <div class="record-meta">
+                            <span>{{ bill.author.display_name }}</span>
+                            <span class="record-subtle">@{{ bill.author.username }}</span>
+                        </div>
                     </td>
                     <td data-label="Status">
                         <div class="record-meta">

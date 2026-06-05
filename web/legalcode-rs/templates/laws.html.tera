@@ -26,7 +26,7 @@ Laws · Democraciv MK13
                     <input
                         id="law-search"
                         type="search"
-                        placeholder="Search by name and content..."
+                        placeholder="Search by name, content, or author..."
                         autocomplete="off"
                         data-search-input
                     >
@@ -48,6 +48,16 @@ Laws · Democraciv MK13
                         <option value="">Both chambers</option>
                         <option value="Senate">Senate</option>
                         <option value="Commons">Commons</option>
+                    </select>
+                </div>
+
+                <div class="search-filter">
+                    <label for="law-author-filter">Author</label>
+                    <select id="law-author-filter" data-search-filter="author">
+                        <option value="">All authors</option>
+                        {% for author in author_options %}
+                        <option value="{{ author.user_id }}">{{ author.label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>
@@ -79,6 +89,7 @@ Laws · Democraciv MK13
             <thead>
                 <tr>
                     <th scope="col">Law</th>
+                    <th scope="col">Author</th>
                     <th scope="col">Type</th>
                     <th scope="col"></th>
                 </tr>
@@ -89,12 +100,19 @@ Laws · Democraciv MK13
                     data-search-row="{{ law.row_id }}"
                     data-search-type="{{ law.type_label }}"
                     data-search-house="{{ law.origin_house_label }}"
+                    data-search-author="{{ law.author.user_id }}"
                 >
                     <td class="record-main" data-label="Law">
                         <a href="/law/{{ law.id }}" class="record-title">
                             Law #{{ law.id }} · {{ law.name }}
                         </a>
                         <p class="mobile-hide record-subtle">{{ law.excerpt }}</p>
+                    </td>
+                    <td data-label="Author">
+                        <div class="record-meta">
+                            <span>{{ law.author.display_name }}</span>
+                            <span class="record-subtle">@{{ law.author.username }}</span>
+                        </div>
                     </td>
                     <td data-label="Type">
                         <div class="record-meta">

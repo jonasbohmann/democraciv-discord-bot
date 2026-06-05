@@ -17,9 +17,19 @@ Legal Code · Democraciv MK13
         <div style="margin-top: 1rem;">
             <div class="eyebrow">Index</div>
             <ul class="toc-list">
-                {% for law in laws %}
+                {% for section in index_sections %}
                 <li>
-                    <a href="#law-{{ law.id }}">Law #{{ law.id }} · {{ law.name }}</a>
+                    <a href="{{ section.href }}">Law #{{ section.id }} · {{ section.name }}</a>
+                    {% if section.amendments | length > 0 %}
+                    <ul class="toc-list">
+                        {% for amendment in section.amendments %}
+                        <li>
+                            <span class="record-subtle">Amendment: </span>
+                            <a href="{{ amendment.href }}">Law #{{ amendment.id }} · {{ amendment.name }}</a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
                 </li>
                 {% endfor %}
             </ul>
@@ -30,7 +40,7 @@ Legal Code · Democraciv MK13
     </article> -->
 </section>
 
-{% if laws | length == 0 %}
+{% if sections | length == 0 %}
 <article class="empty-state">
     <div class="eyebrow">Nothing Here Yet</div>
     <h2>No active laws are available.</h2>
@@ -39,17 +49,45 @@ Legal Code · Democraciv MK13
 {% else %}
 <section class="stack">
     <section class="code-list" aria-label="Legal code">
-    {% for law in laws %}
-    <article class="code-entry" id="law-{{ law.id }}">
+    {% for section in sections %}
+    <article class="code-entry" id="{{ section.anchor_id }}">
         <header>
-            <small class="detail-meta">Law #{{ law.id }}</small>
-            <h2>{{ law.name }}</h2>
+            <small class="detail-meta">Law #{{ section.law.id }}</small>
+            <h2>{{ section.law.name }}</h2>
             <p class="record-subtle">
-                <a href="{{ law.link }}" target="_blank" rel="noopener noreferrer">Google Docs</a>
+                <a href="/law/{{ section.law.id }}">Show details</a>
+                ·
+                <a href="{{ section.law.link }}" target="_blank" rel="noopener noreferrer">Read on Google Docs</a>
             </p>
+
+            {% if section.amends | length > 0 %}
+            <div style="margin-top: 0.5rem;">
+                <small class="detail-meta">Amends</small>
+                <ul class="toc-list">
+                    {% for amended_law in section.amends %}
+                    <li>
+                        <a href="{{ amended_law.href }}">Law #{{ amended_law.id }} · {{ amended_law.name }}</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if section.amendments | length > 0 %}
+            <div style="margin-top: 0.5rem;">
+                <small class="detail-meta">Amended By</small>
+                <ul class="toc-list">
+                    {% for amendment in section.amendments %}
+                    <li>
+                        <a href="{{ amendment.href }}">Law #{{ amendment.law.id }} · {{ amendment.law.name }}</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
         </header>
 
-        <div class="content-block">{{ law.content }}</div>
+        <div class="content-block">{{ section.law.content }}</div>
     </article>
     {% endfor %}
     </section>
