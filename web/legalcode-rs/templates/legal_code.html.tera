@@ -48,6 +48,13 @@ Legal Code · Democraciv MK13
 </article>
 {% else %}
 <section class="stack">
+    {% if has_gdoc_html %}
+    <div class="gdoc-font-toggle-row">
+        <button type="button" class="primary gdoc-font-toggle" data-gdoc-font-toggle>
+            Use default font
+        </button>
+    </div>
+    {% endif %}
     <section class="code-list" aria-label="Legal code">
     {% for section in sections %}
     <article class="code-entry" id="{{ section.anchor_id }}">
@@ -87,7 +94,7 @@ Legal Code · Democraciv MK13
             {% endif %}
         </header>
 
-        <div class="content-block content-markdown">{{ section.law.content_html | safe }}</div>
+        <div class="{{ section.law.content_class }}">{{ section.law.content_html | safe }}</div>
     </article>
     {% endfor %}
     </section>

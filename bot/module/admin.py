@@ -157,8 +157,10 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
                 return
 
             bill_id = await self.bot.db.fetchval(
-                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, submitter_description, content, markdown, origin_house) "
-                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
+                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, "
+                "submitter_description, content, markdown, html, html_zip, pdf, "
+                "origin_house) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, "
+                "$12) RETURNING id",
                 leg_session_id,
                 document.name,
                 google_docs_url,
@@ -167,6 +169,9 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
                 bill_description,
                 document.content,
                 document.markdown,
+                document.html,
+                document.html_zip,
+                document.pdf,
                 session_house or "senate",
             )
 

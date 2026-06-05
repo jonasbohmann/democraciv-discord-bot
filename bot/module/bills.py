@@ -1,4 +1,5 @@
 import collections
+import io
 
 import discord
 
@@ -299,6 +300,37 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
         """Read the content of a bill."""
 
         await self._show_bill_text(ctx, bill_id)
+
+    @bill.command(name="download", hidden=True)
+    @commands.is_owner()
+    async def download(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill]):
+        """Download the stored PDF and HTML ZIP exports for a bill."""
+
+        bill = bill_id
+        files = []
+
+        if bill.pdf:
+            files.append(
+                discord.File(io.BytesIO(bill.pdf), filename=f"bill-{bill.id}.pdf")
+            )
+
+        if bill.html_zip:
+            files.append(
+                discord.File(
+                    io.BytesIO(bill.html_zip),
+                    filename=f"bill-{bill.id}-html.zip",
+                )
+            )
+
+        if not files:
+            return await ctx.send(
+                f"{config.NO} Bill #{bill.id} does not have a stored PDF or HTML ZIP export."
+            )
+
+        await ctx.send(
+            content=f"Downloads for **{bill.name}** (#{bill.id})",
+            files=files,
+        )
 
     @bill.command(name="search", aliases=["s"])
     async def search(self, ctx: context.CustomContext, *, query: str):

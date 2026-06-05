@@ -683,6 +683,73 @@ textarea {
     font-size: 0.9rem;
 }
 
+.content-rendered {
+    color: var(--text-main);
+    line-height: 1.82;
+    font-size: 1rem;
+    word-break: break-word;
+}
+
+.content-gdoc-host {
+    overflow-x: auto;
+}
+
+.content-gdoc-host .gdoc-rendered {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    color: var(--text-main) !important;
+}
+
+.content-gdoc-host .gdoc-rendered * {
+    color: inherit !important;
+}
+
+.content-gdoc-host .gdoc-rendered a,
+.content-gdoc-host .gdoc-rendered a * {
+    color: var(--pico-primary) !important;
+}
+
+.content-gdoc-host .gdoc-rendered a:hover,
+.content-gdoc-host .gdoc-rendered a:hover *,
+.content-gdoc-host .gdoc-rendered a:focus-visible,
+.content-gdoc-host .gdoc-rendered a:focus-visible * {
+    color: var(--pico-primary-hover) !important;
+}
+
+.content-gdoc-host .gdoc-rendered > :first-child {
+    margin-top: 0 !important;
+}
+
+.content-gdoc-host .gdoc-rendered > :last-child {
+    margin-bottom: 0 !important;
+}
+
+.content-gdoc-host .gdoc-rendered img {
+    max-width: 100%;
+    height: auto;
+}
+
+.content-gdoc-host .gdoc-rendered table {
+    max-width: 100%;
+}
+
+.gdoc-font-toggle-row {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 1.2rem;
+}
+
+.gdoc-font-toggle {
+    min-height: 2.1rem;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.88rem;
+}
+
+.gdoc-use-default-font .content-gdoc-host .gdoc-rendered,
+.gdoc-use-default-font .content-gdoc-host .gdoc-rendered * {
+    font-family: var(--pico-font-family, inherit) !important;
+}
+
 .detail-fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

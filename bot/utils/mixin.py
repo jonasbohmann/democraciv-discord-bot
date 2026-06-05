@@ -795,8 +795,9 @@ class GovernmentMixin:
             async with con.transaction():
                 bill_id = await con.fetchval(
                     "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, "
-                    "is_procedure, submitter_description, content, markdown, origin_house) "
-                    "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id",
+                    "is_procedure, submitter_description, content, markdown, html, "
+                    "html_zip, pdf, origin_house) VALUES ($1, $2, $3, $4, $5, $6, $7, "
+                    "$8, $9, $10, $11, $12, $13) RETURNING id",
                     session.id,
                     document.name,
                     google_docs_url,
@@ -806,12 +807,18 @@ class GovernmentMixin:
                     bill_description,
                     document.content,
                     document.markdown,
+                    document.html,
+                    document.html_zip,
+                    document.pdf,
                     house,
                 )
                 bill.id = bill_id
                 bill.name = document.name
                 bill.content = document.content
                 bill.markdown = document.markdown
+                bill.html = document.html
+                bill.html_zip = document.html_zip
+                bill.pdf = document.pdf
                 bill.description = bill_description
                 bill.is_vetoable = not is_procedure
                 bill.is_procedure = is_procedure
@@ -864,10 +871,14 @@ class GovernmentMixin:
                 return False
 
             await self.bot.db.execute(
-                "UPDATE bill SET name = $1, content = $2, markdown = $3 WHERE id = $4",
+                "UPDATE bill SET name = $1, content = $2, markdown = $3, html = $4, "
+                "html_zip = $5, pdf = $6 WHERE id = $7",
                 document.name,
                 document.content,
                 document.markdown,
+                document.html,
+                document.html_zip,
+                document.pdf,
                 bill.id,
             )
             await self.bot.db.execute(

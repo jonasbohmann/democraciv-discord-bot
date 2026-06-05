@@ -113,6 +113,9 @@ CREATE TABLE IF NOT EXISTS bill(
     name text NOT NULL,
     content text NOT NULL,
     markdown text,
+    html text,
+    html_zip bytea,
+    pdf bytea,
     link text NOT NULL,
     submitter bigint NOT NULL,
     submitter_description text NOT NULL,
@@ -125,6 +128,15 @@ CREATE TABLE IF NOT EXISTS bill(
 
 ALTER TABLE bill
     ADD COLUMN IF NOT EXISTS markdown text;
+
+ALTER TABLE bill
+    ADD COLUMN IF NOT EXISTS html text;
+
+ALTER TABLE bill
+    ADD COLUMN IF NOT EXISTS html_zip bytea;
+
+ALTER TABLE bill
+    ADD COLUMN IF NOT EXISTS pdf bytea;
 
 
 CREATE TABLE IF NOT EXISTS bill_session(

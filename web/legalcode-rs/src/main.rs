@@ -3,18 +3,40 @@ extern crate rocket;
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use comrak::{Options as MarkdownOptions, markdown_to_html};
-use rocket::{State, fs::FileServer};
+use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
+use regex::{Captures, Regex};
+use rocket::{State, fs::FileServer, http::ContentType};
 use rocket_dyn_templates::{Template, context};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use std::{
     collections::{HashMap, HashSet},
-    sync::Mutex,
+    io::Cursor,
+    path::{Component, PathBuf},
+    sync::{Mutex, OnceLock},
 };
+use zip::ZipArchive;
 
 const LAW_STATUS: i32 = 10; // siehe bot/utils/modules.py BillIsLaw
 const DEFAULT_AUTHOR_LOOKUP_URL: &str = "http://127.0.0.1:8081/discord-user";
 const DEFAULT_AUTHOR_LOOKUP_TOKEN: &str = "";
+const GDOC_FONT_SIZE_SCALE: f32 = 1.1;
+const ASSET_PATH_ENCODE_SET: &AsciiSet = &CONTROLS
+    .add(b' ')
+    .add(b'"')
+    .add(b'#')
+    .add(b'%')
+    .add(b'<')
+    .add(b'>')
+    .add(b'?')
+    .add(b'[')
+    .add(b'\\')
+    .add(b']')
+    .add(b'^')
+    .add(b'`')
+    .add(b'{')
+    .add(b'|')
+    .add(b'}');
 
 struct AppState {
     db: PgPool,
@@ -80,6 +102,8 @@ struct BillDetail {
     id: i32,
     name: String,
     content_html: String,
+    content_class: &'static str,
+    uses_gdoc_html: bool,
     link: String,
     submitter_description: String,
     origin_house: String,
@@ -278,6 +302,8 @@ struct LegalCodeLaw {
     id: i32,
     name: String,
     content_html: String,
+    content_class: &'static str,
+    uses_gdoc_html: bool,
     link: String,
 }
 
@@ -324,6 +350,7 @@ struct LegalCodePageData {
     sections: Vec<LegalCodeSection>,
     index_sections: Vec<LegalCodeIndexSection>,
     total_count: usize,
+    has_gdoc_html: bool,
 }
 
 fn law_anchor_id(id: i32) -> String {
@@ -406,6 +433,12 @@ fn make_excerpt(text: &str, max_chars: usize) -> String {
     format!("{clipped}…")
 }
 
+struct RenderedDocumentContent {
+    html: String,
+    css_class: &'static str,
+    uses_gdoc_html: bool,
+}
+
 fn pick_markdown_source<'a>(markdown: &'a str, content: &'a str) -> &'a str {
     if markdown.trim().is_empty() {
         content
@@ -425,6 +458,482 @@ fn render_bill_markdown(markdown: &str, content: &str) -> String {
     options.render.r#unsafe = false;
 
     markdown_to_html(pick_markdown_source(markdown, content), &options)
+}
+
+fn body_re() -> &'static Regex {
+    static BODY_RE: OnceLock<Regex> = OnceLock::new();
+    BODY_RE.get_or_init(|| Regex::new(r"(?is)<body([^>]*)>(.*)</body>").unwrap())
+}
+
+fn style_tag_re() -> &'static Regex {
+    static STYLE_TAG_RE: OnceLock<Regex> = OnceLock::new();
+    STYLE_TAG_RE.get_or_init(|| Regex::new(r"(?is)<style[^>]*>(.*?)</style>").unwrap())
+}
+
+fn class_attr_re() -> &'static Regex {
+    static CLASS_ATTR_RE: OnceLock<Regex> = OnceLock::new();
+    CLASS_ATTR_RE.get_or_init(|| Regex::new(r#"(?i)\bclass\s*=\s*(?:"[^"]*"|'[^']*')"#).unwrap())
+}
+
+fn src_attr_re() -> &'static Regex {
+    static SRC_ATTR_RE: OnceLock<Regex> = OnceLock::new();
+    SRC_ATTR_RE.get_or_init(|| Regex::new(r#"(?is)\bsrc\s*=\s*(?:"[^"]*"|'[^']*')"#).unwrap())
+}
+
+fn css_url_re() -> &'static Regex {
+    static CSS_URL_RE: OnceLock<Regex> = OnceLock::new();
+    CSS_URL_RE.get_or_init(|| Regex::new(r#"(?is)url\(\s*([^)]*?)\s*\)"#).unwrap())
+}
+
+fn font_size_decl_re() -> &'static Regex {
+    static FONT_SIZE_DECL_RE: OnceLock<Regex> = OnceLock::new();
+    FONT_SIZE_DECL_RE.get_or_init(|| {
+        Regex::new(r"(?i)\bfont-size\s*:\s*(-?\d*\.?\d+)\s*(pt|px|em|rem|%)\b").unwrap()
+    })
+}
+
+fn event_attr_re() -> &'static Regex {
+    static EVENT_ATTR_RE: OnceLock<Regex> = OnceLock::new();
+    EVENT_ATTR_RE.get_or_init(|| {
+        Regex::new(r#"(?is)\s+on[a-z0-9:_-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)"#).unwrap()
+    })
+}
+
+fn dangerous_block_re() -> &'static Regex {
+    static DANGEROUS_BLOCK_RE: OnceLock<Regex> = OnceLock::new();
+    DANGEROUS_BLOCK_RE.get_or_init(|| {
+        Regex::new(
+            r"(?is)<(?:script|iframe|object|embed|frame|frameset)[^>]*>.*?</(?:script|iframe|object|embed|frame|frameset)\s*>",
+        )
+        .unwrap()
+    })
+}
+
+fn dangerous_single_re() -> &'static Regex {
+    static DANGEROUS_SINGLE_RE: OnceLock<Regex> = OnceLock::new();
+    DANGEROUS_SINGLE_RE.get_or_init(|| {
+        Regex::new(r"(?is)<(?:script|iframe|object|embed|frame|frameset|meta|link|base)[^>]*?/?>")
+            .unwrap()
+    })
+}
+
+fn css_comment_re() -> &'static Regex {
+    static CSS_COMMENT_RE: OnceLock<Regex> = OnceLock::new();
+    CSS_COMMENT_RE.get_or_init(|| Regex::new(r"(?s)/\*.*?\*/").unwrap())
+}
+
+fn quoted_attr_value(attribute: &str) -> Option<&str> {
+    let (_, raw_value) = attribute.split_once('=')?;
+    let trimmed = raw_value.trim();
+
+    if trimmed.len() < 2 {
+        return None;
+    }
+
+    let quote = trimmed.chars().next()?;
+    if quote != '"' && quote != '\'' {
+        return None;
+    }
+
+    trimmed.strip_prefix(quote)?.strip_suffix(quote)
+}
+
+fn body_classes(body_attributes: &str) -> Vec<String> {
+    let Some(class_attribute) = class_attr_re().find(body_attributes) else {
+        return Vec::new();
+    };
+
+    quoted_attr_value(class_attribute.as_str())
+        .unwrap_or_default()
+        .split_whitespace()
+        .filter(|class_name| {
+            !class_name.is_empty()
+                && class_name.chars().all(|character| {
+                    character.is_ascii_alphanumeric() || character == '-' || character == '_'
+                })
+        })
+        .map(ToString::to_string)
+        .collect()
+}
+
+fn encode_asset_path(path: &str) -> String {
+    path.split('/')
+        .map(|segment| utf8_percent_encode(segment, ASSET_PATH_ENCODE_SET).to_string())
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+fn asset_route_href(id: i32, path: &str) -> String {
+    format!("/_bill-asset/{id}/{}", encode_asset_path(path))
+}
+
+fn normalize_zip_path(path: &str) -> Option<String> {
+    let trimmed = path.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let without_fragment = trimmed.split(['#', '?']).next().unwrap_or_default();
+    let normalized = without_fragment.replace('\\', "/");
+    let mut cleaned = Vec::new();
+
+    for segment in normalized.split('/') {
+        match segment {
+            "" | "." => continue,
+            ".." => return None,
+            value => cleaned.push(value),
+        }
+    }
+
+    if cleaned.is_empty() {
+        None
+    } else {
+        Some(cleaned.join("/"))
+    }
+}
+
+fn relative_asset_path(reference: &str) -> Option<String> {
+    let trimmed = reference.trim();
+    if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with('/') {
+        return None;
+    }
+
+    let lowered = trimmed.to_ascii_lowercase();
+    if lowered.starts_with("http://")
+        || lowered.starts_with("https://")
+        || lowered.starts_with("data:")
+        || lowered.starts_with("mailto:")
+        || lowered.starts_with("tel:")
+        || lowered.starts_with("javascript:")
+        || lowered.starts_with("blob:")
+        || lowered.starts_with("about:")
+    {
+        return None;
+    }
+
+    normalize_zip_path(trimmed)
+}
+
+fn rewrite_css_urls(input: &str, bill_id: i32) -> String {
+    css_url_re()
+        .replace_all(input, |captures: &Captures| {
+            let Some(raw_reference) = captures.get(1) else {
+                return captures[0].to_string();
+            };
+
+            let reference = raw_reference.as_str().trim().trim_matches(['"', '\'']);
+            match relative_asset_path(reference) {
+                Some(path) => format!("url(\"{}\")", asset_route_href(bill_id, &path)),
+                None => captures[0].to_string(),
+            }
+        })
+        .into_owned()
+}
+
+fn format_scaled_css_number(value: f32) -> String {
+    let rounded = (value * 100.0).round() / 100.0;
+    let mut formatted = format!("{rounded:.2}");
+
+    while formatted.contains('.') && formatted.ends_with('0') {
+        formatted.pop();
+    }
+
+    if formatted.ends_with('.') {
+        formatted.pop();
+    }
+
+    formatted
+}
+
+fn scale_font_sizes(input: &str) -> String {
+    font_size_decl_re()
+        .replace_all(input, |captures: &Captures| {
+            let raw_value = captures
+                .get(1)
+                .map(|value| value.as_str())
+                .unwrap_or_default();
+            let unit = captures
+                .get(2)
+                .map(|value| value.as_str())
+                .unwrap_or_default();
+
+            let scaled = raw_value
+                .parse::<f32>()
+                .map(|value| format_scaled_css_number(value * GDOC_FONT_SIZE_SCALE))
+                .unwrap_or_else(|_| raw_value.to_string());
+
+            format!("font-size:{scaled}{unit}")
+        })
+        .into_owned()
+}
+
+fn rewrite_html_asset_references(input: &str, bill_id: i32) -> String {
+    let with_src_rewritten = src_attr_re()
+        .replace_all(input, |captures: &Captures| {
+            let attribute = captures
+                .get(0)
+                .map(|match_| match_.as_str())
+                .unwrap_or_default();
+            let Some(reference) = quoted_attr_value(attribute) else {
+                return attribute.to_string();
+            };
+
+            match relative_asset_path(reference) {
+                Some(path) => format!("src=\"{}\"", asset_route_href(bill_id, &path)),
+                None => attribute.to_string(),
+            }
+        })
+        .into_owned();
+
+    rewrite_css_urls(&with_src_rewritten, bill_id)
+}
+
+fn sanitize_google_doc_body_html(input: &str) -> String {
+    let without_dangerous_blocks = dangerous_block_re().replace_all(input, "");
+    let without_dangerous_tags = dangerous_single_re().replace_all(&without_dangerous_blocks, "");
+    event_attr_re()
+        .replace_all(&without_dangerous_tags, "")
+        .into_owned()
+}
+
+fn split_selector_list(selector_list: &str) -> Vec<String> {
+    let mut selectors = Vec::new();
+    let mut current = String::new();
+    let mut paren_depth: usize = 0;
+    let mut bracket_depth: usize = 0;
+
+    for character in selector_list.chars() {
+        match character {
+            '(' => {
+                paren_depth += 1;
+                current.push(character);
+            }
+            ')' => {
+                paren_depth = paren_depth.saturating_sub(1);
+                current.push(character);
+            }
+            '[' => {
+                bracket_depth += 1;
+                current.push(character);
+            }
+            ']' => {
+                bracket_depth = bracket_depth.saturating_sub(1);
+                current.push(character);
+            }
+            ',' if paren_depth == 0 && bracket_depth == 0 => {
+                selectors.push(current.trim().to_string());
+                current.clear();
+            }
+            _ => current.push(character),
+        }
+    }
+
+    if !current.trim().is_empty() {
+        selectors.push(current.trim().to_string());
+    }
+
+    selectors
+}
+
+fn scope_selector(selector: &str, scope: &str) -> Option<String> {
+    let trimmed = selector.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    if trimmed.starts_with('@') {
+        return Some(trimmed.to_string());
+    }
+
+    let scoped =
+        if trimmed.contains("body") || trimmed.contains("html") || trimmed.contains(":root") {
+            trimmed
+                .replace(":root", scope)
+                .replace("body", scope)
+                .replace("html", scope)
+        } else {
+            format!("{scope} {trimmed}")
+        };
+
+    Some(scoped)
+}
+
+fn scope_css_block(css: &str, scope: &str) -> String {
+    let mut output = String::new();
+    let mut selector_buffer = String::new();
+    let mut characters = css.chars();
+
+    while let Some(character) = characters.next() {
+        if character != '{' {
+            selector_buffer.push(character);
+            continue;
+        }
+
+        let selector = selector_buffer.trim().to_string();
+        selector_buffer.clear();
+
+        let mut block = String::new();
+        let mut depth = 1usize;
+        let mut quote: Option<char> = None;
+        let mut escaped = false;
+
+        for block_character in characters.by_ref() {
+            if let Some(current_quote) = quote {
+                block.push(block_character);
+                if escaped {
+                    escaped = false;
+                } else if block_character == '\\' {
+                    escaped = true;
+                } else if block_character == current_quote {
+                    quote = None;
+                }
+                continue;
+            }
+
+            match block_character {
+                '"' | '\'' => {
+                    quote = Some(block_character);
+                    block.push(block_character);
+                }
+                '{' => {
+                    depth += 1;
+                    block.push(block_character);
+                }
+                '}' => {
+                    depth = depth.saturating_sub(1);
+                    if depth == 0 {
+                        break;
+                    }
+                    block.push(block_character);
+                }
+                _ => block.push(block_character),
+            }
+        }
+
+        if selector.starts_with('@') {
+            if selector.starts_with("@media") || selector.starts_with("@supports") {
+                output.push_str(&selector);
+                output.push('{');
+                output.push_str(&scope_css_block(&block, scope));
+                output.push('}');
+            } else if !selector.starts_with("@page") {
+                output.push_str(&selector);
+                output.push('{');
+                output.push_str(&block);
+                output.push('}');
+            }
+            continue;
+        }
+
+        let scoped_selectors = split_selector_list(&selector)
+            .into_iter()
+            .filter_map(|entry| scope_selector(&entry, scope))
+            .collect::<Vec<_>>();
+
+        if scoped_selectors.is_empty() {
+            continue;
+        }
+
+        output.push_str(&scoped_selectors.join(", "));
+        output.push('{');
+        output.push_str(&block);
+        output.push('}');
+    }
+
+    output
+}
+
+fn extract_google_doc_styles(document_html: &str) -> Vec<String> {
+    style_tag_re()
+        .captures_iter(document_html)
+        .filter_map(|captures| captures.get(1).map(|value| value.as_str().to_string()))
+        .collect()
+}
+
+fn extract_google_doc_body(document_html: &str) -> (String, String) {
+    if let Some(captures) = body_re().captures(document_html) {
+        let attributes = captures
+            .get(1)
+            .map(|value| value.as_str().to_string())
+            .unwrap_or_default();
+        let body_html = captures
+            .get(2)
+            .map(|value| value.as_str().to_string())
+            .unwrap_or_default();
+
+        return (attributes, body_html);
+    }
+
+    (String::new(), document_html.to_string())
+}
+
+fn render_google_doc_html(document_id: i32, document_html: &str) -> Option<String> {
+    let styles = extract_google_doc_styles(document_html);
+    let (body_attributes, body_html) = extract_google_doc_body(document_html);
+    let body_without_style_tags = style_tag_re().replace_all(&body_html, "").into_owned();
+    let rewritten_body = rewrite_html_asset_references(&body_without_style_tags, document_id);
+    let scaled_body = scale_font_sizes(&rewritten_body);
+    let sanitized_body = sanitize_google_doc_body_html(&scaled_body);
+
+    if sanitized_body.trim().is_empty() {
+        return None;
+    }
+
+    let scope_id = format!("gdoc-doc-{document_id}");
+    let scope_selector = format!("#{scope_id}");
+    let wrapper_classes = body_classes(&body_attributes);
+    let mut class_names = vec!["gdoc-rendered".to_string()];
+    class_names.extend(wrapper_classes);
+
+    let scoped_styles = styles
+        .into_iter()
+        .map(|stylesheet| rewrite_css_urls(&stylesheet, document_id))
+        .map(|stylesheet| scale_font_sizes(&stylesheet))
+        .map(|stylesheet| css_comment_re().replace_all(&stylesheet, "").into_owned())
+        .map(|stylesheet| scope_css_block(&stylesheet, &scope_selector))
+        .filter(|stylesheet| !stylesheet.trim().is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    let mut rendered = String::new();
+
+    if !scoped_styles.trim().is_empty() {
+        rendered.push_str("<style>");
+        rendered.push_str(&scoped_styles);
+        rendered.push_str("</style>");
+    }
+
+    rendered.push_str(&format!(
+        "<div id=\"{scope_id}\" class=\"{}\">{}</div>",
+        class_names.join(" "),
+        sanitized_body
+    ));
+
+    Some(rendered)
+}
+
+fn render_bill_content(
+    bill_id: i32,
+    html: &str,
+    markdown: &str,
+    content: &str,
+) -> RenderedDocumentContent {
+    if let Some(rendered_html) = (!html.trim().is_empty())
+        .then(|| render_google_doc_html(bill_id, html))
+        .flatten()
+    {
+        return RenderedDocumentContent {
+            html: rendered_html,
+            css_class: "content-rendered content-gdoc-host",
+            uses_gdoc_html: true,
+        };
+    }
+
+    RenderedDocumentContent {
+        html: render_bill_markdown(markdown, content),
+        css_class: "content-rendered content-markdown",
+        uses_gdoc_html: false,
+    }
 }
 
 fn encode_json_base64<T: Serialize>(value: &T) -> Result<String, String> {
@@ -728,6 +1237,7 @@ async fn load_bill_detail(
             bill.name,
             bill.content,
             bill.markdown,
+            bill.html,
             bill.link,
             bill.submitter_description,
             bill.submitter,
@@ -745,6 +1255,7 @@ async fn load_bill_detail(
             bill.name,
             bill.content,
             bill.markdown,
+            bill.html,
             bill.link,
             bill.submitter_description,
             bill.submitter,
@@ -785,11 +1296,15 @@ async fn load_bill_detail(
     let amended_by = load_related_bills(db, id, RelatedBillDirection::AmendedBy).await?;
     let content: String = row.try_get("content").unwrap_or_default();
     let markdown: String = row.try_get("markdown").unwrap_or_default();
+    let html: String = row.try_get("html").unwrap_or_default();
+    let rendered_content = render_bill_content(id, &html, &markdown, &content);
 
     Ok(Some(BillDetail {
         id: row.try_get("id").unwrap_or_default(),
         name: row.try_get("name").unwrap_or_default(),
-        content_html: render_bill_markdown(&markdown, &content),
+        content_html: rendered_content.html,
+        content_class: rendered_content.css_class,
+        uses_gdoc_html: rendered_content.uses_gdoc_html,
         link: row.try_get("link").unwrap_or_default(),
         submitter_description: row.try_get("submitter_description").unwrap_or_default(),
         origin_house,
@@ -811,7 +1326,7 @@ async fn load_bill_detail(
 
 async fn load_legal_code(db: &PgPool) -> Result<LegalCodePageData, String> {
     let law_rows = sqlx::query(
-        "SELECT id, name, content, markdown, link FROM bill WHERE status = $1 ORDER BY id",
+        "SELECT id, name, content, markdown, html, link FROM bill WHERE status = $1 ORDER BY id",
     )
     .bind(LAW_STATUS)
     .fetch_all(db)
@@ -823,11 +1338,16 @@ async fn load_legal_code(db: &PgPool) -> Result<LegalCodePageData, String> {
         .map(|row| {
             let content: String = row.try_get("content").unwrap_or_default();
             let markdown: String = row.try_get("markdown").unwrap_or_default();
+            let html: String = row.try_get("html").unwrap_or_default();
+            let id: i32 = row.try_get("id").unwrap_or_default();
+            let rendered_content = render_bill_content(id, &html, &markdown, &content);
 
             LegalCodeLaw {
-                id: row.try_get("id").unwrap_or_default(),
+                id,
                 name: row.try_get("name").unwrap_or_default(),
-                content_html: render_bill_markdown(&markdown, &content),
+                content_html: rendered_content.html,
+                content_class: rendered_content.css_class,
+                uses_gdoc_html: rendered_content.uses_gdoc_html,
                 link: row.try_get("link").unwrap_or_default(),
             }
         })
@@ -841,6 +1361,7 @@ async fn load_legal_code(db: &PgPool) -> Result<LegalCodePageData, String> {
             child.name,
             child.content,
             child.markdown,
+            child.html,
             child.link
         FROM bill_amendment
         JOIN bill AS child ON child.id = bill_amendment.amending_bill_id
@@ -862,6 +1383,9 @@ async fn load_legal_code(db: &PgPool) -> Result<LegalCodePageData, String> {
         let child_id: i32 = row.try_get("id").unwrap_or_default();
         let child_content: String = row.try_get("content").unwrap_or_default();
         let child_markdown: String = row.try_get("markdown").unwrap_or_default();
+        let child_html: String = row.try_get("html").unwrap_or_default();
+        let rendered_content =
+            render_bill_content(child_id, &child_html, &child_markdown, &child_content);
 
         amendments_by_parent
             .entry(parent_id)
@@ -872,7 +1396,9 @@ async fn load_legal_code(db: &PgPool) -> Result<LegalCodePageData, String> {
                 law: LegalCodeLaw {
                     id: child_id,
                     name: row.try_get("name").unwrap_or_default(),
-                    content_html: render_bill_markdown(&child_markdown, &child_content),
+                    content_html: rendered_content.html,
+                    content_class: rendered_content.css_class,
+                    uses_gdoc_html: rendered_content.uses_gdoc_html,
                     link: row.try_get("link").unwrap_or_default(),
                 },
             });
@@ -921,11 +1447,120 @@ async fn load_legal_code(db: &PgPool) -> Result<LegalCodePageData, String> {
         });
     }
 
+    let has_gdoc_html = sections.iter().any(|section| section.law.uses_gdoc_html);
+
     Ok(LegalCodePageData {
         total_count: sections.len(),
         sections,
         index_sections,
+        has_gdoc_html,
     })
+}
+
+fn normalize_requested_asset_path(path: &PathBuf) -> Option<String> {
+    let mut cleaned = Vec::new();
+
+    for component in path.components() {
+        match component {
+            Component::Normal(segment) => {
+                let value = segment.to_string_lossy();
+                if value.is_empty() {
+                    continue;
+                }
+                cleaned.push(value.into_owned());
+            }
+            Component::CurDir => continue,
+            Component::ParentDir | Component::RootDir | Component::Prefix(_) => return None,
+        }
+    }
+
+    if cleaned.is_empty() {
+        None
+    } else {
+        Some(cleaned.join("/"))
+    }
+}
+
+fn content_type_for_asset_path(path: &str) -> ContentType {
+    let extension = path
+        .rsplit('.')
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+
+    match extension.as_str() {
+        "css" => ContentType::CSS,
+        "gif" => ContentType::GIF,
+        "htm" | "html" => ContentType::HTML,
+        "jpeg" | "jpg" => ContentType::JPEG,
+        "js" => ContentType::JavaScript,
+        "json" => ContentType::JSON,
+        "pdf" => ContentType::PDF,
+        "png" => ContentType::PNG,
+        "svg" => ContentType::parse_flexible("image/svg+xml").unwrap_or(ContentType::Binary),
+        "txt" => ContentType::Plain,
+        "webp" => ContentType::parse_flexible("image/webp").unwrap_or(ContentType::Binary),
+        _ => ContentType::Binary,
+    }
+}
+
+async fn load_bill_pdf(db: &PgPool, id: i32, laws_only: bool) -> Result<Option<Vec<u8>>, String> {
+    let query = if laws_only {
+        "SELECT pdf FROM bill WHERE id = $1 AND status = $2"
+    } else {
+        "SELECT pdf FROM bill WHERE id = $1"
+    };
+
+    let mut statement = sqlx::query(query).bind(id);
+    if laws_only {
+        statement = statement.bind(LAW_STATUS);
+    }
+
+    let row = statement
+        .fetch_optional(db)
+        .await
+        .map_err(|error| error.to_string())?;
+
+    let Some(row) = row else {
+        return Ok(None);
+    };
+
+    Ok(row.try_get::<Option<Vec<u8>>, _>("pdf").unwrap_or_default())
+}
+
+// todo: do it once
+async fn load_bill_asset(
+    db: &PgPool,
+    id: i32,
+    asset_path: &str,
+) -> Result<Option<(ContentType, Vec<u8>)>, String> {
+    let row = sqlx::query("SELECT html_zip FROM bill WHERE id = $1")
+        .bind(id)
+        .fetch_optional(db)
+        .await
+        .map_err(|error| error.to_string())?;
+
+    let Some(row) = row else {
+        return Ok(None);
+    };
+
+    let Some(html_zip) = row
+        .try_get::<Option<Vec<u8>>, _>("html_zip")
+        .unwrap_or_default()
+    else {
+        return Ok(None);
+    };
+
+    let cursor = Cursor::new(html_zip);
+    let mut archive = ZipArchive::new(cursor).map_err(|error| error.to_string())?;
+    let Ok(mut file) = archive.by_name(asset_path) else {
+        return Ok(None);
+    };
+
+    let mut bytes = Vec::new();
+    std::io::Read::read_to_end(&mut file, &mut bytes).map_err(|error| error.to_string())?;
+
+    Ok(Some((content_type_for_asset_path(asset_path), bytes)))
 }
 
 #[get("/")]
@@ -1007,6 +1642,16 @@ async fn bill(id: i32, state: &State<AppState>) -> Result<Option<Template>, Stri
     )))
 }
 
+#[get("/bill/<id>/pdf")]
+async fn bill_pdf(
+    id: i32,
+    state: &State<AppState>,
+) -> Result<Option<(ContentType, Vec<u8>)>, String> {
+    Ok(load_bill_pdf(&state.db, id, false)
+        .await?
+        .map(|pdf| (ContentType::PDF, pdf)))
+}
+
 #[get("/law")]
 async fn law_index(state: &State<AppState>) -> Result<Template, String> {
     let laws = load_bill_list(&state.db, &state.author_lookup, true).await?;
@@ -1042,12 +1687,23 @@ async fn law(id: i32, state: &State<AppState>) -> Result<Option<Template>, Strin
     )))
 }
 
+#[get("/law/<id>/pdf")]
+async fn law_pdf(
+    id: i32,
+    state: &State<AppState>,
+) -> Result<Option<(ContentType, Vec<u8>)>, String> {
+    Ok(load_bill_pdf(&state.db, id, true)
+        .await?
+        .map(|pdf| (ContentType::PDF, pdf)))
+}
+
 #[get("/legal-code")]
 async fn legal_code(state: &State<AppState>) -> Result<Template, String> {
     let legal_code = load_legal_code(&state.db).await?;
     let total_count = legal_code.total_count;
     let sections = legal_code.sections;
     let index_sections = legal_code.index_sections;
+    let has_gdoc_html = legal_code.has_gdoc_html;
 
     Ok(Template::render(
         "legal_code",
@@ -1055,8 +1711,22 @@ async fn legal_code(state: &State<AppState>) -> Result<Template, String> {
             sections,
             index_sections,
             total_count,
+            has_gdoc_html,
         },
     ))
+}
+
+#[get("/_bill-asset/<id>/<path..>")]
+async fn bill_asset(
+    id: i32,
+    path: PathBuf,
+    state: &State<AppState>,
+) -> Result<Option<(ContentType, Vec<u8>)>, String> {
+    let Some(asset_path) = normalize_requested_asset_path(&path) else {
+        return Ok(None);
+    };
+
+    load_bill_asset(&state.db, id, &asset_path).await
 }
 
 #[catch(404)]
@@ -1086,9 +1756,12 @@ async fn rocket() -> _ {
                 motion,
                 bill_index,
                 bill,
+                bill_pdf,
                 law_index,
                 law,
-                legal_code
+                law_pdf,
+                legal_code,
+                bill_asset
             ],
         )
         .attach(Template::fairing())

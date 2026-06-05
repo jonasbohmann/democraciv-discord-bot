@@ -127,7 +127,14 @@ Bill #{{ bill.id }} · Democraciv MK13
         <div class="keyline" aria-hidden="true"></div>
 
         <section class="stack">
-            <div class="content-block content-markdown" style="margin-top: 2rem;">{{ bill.content_html | safe }}</div>
+            {% if bill.uses_gdoc_html %}
+            <div class="gdoc-font-toggle-row">
+                <button type="button" class="primary gdoc-font-toggle" data-gdoc-font-toggle>
+                    Use default font
+                </button>
+            </div>
+            {% endif %}
+            <div class="{{ bill.content_class }}" style="margin-top: 2rem;">{{ bill.content_html | safe }}</div>
         </section>
     </article>
 </section>

@@ -1,8 +1,12 @@
+import base64
 import datetime
 import enum
+import io
+import pathlib
 import re
 import textwrap
 import typing
+import zipfile
 import yake
 import discord
 
@@ -242,6 +246,9 @@ class BillDocumentPayload(typing.NamedTuple):
     keywords: typing.List[str]
     content: str
     markdown: str
+    html: str
+    html_zip: bytes
+    pdf: bytes
 
 
 class Bill(commands.Converter, FuzzyableMixin):
@@ -269,6 +276,9 @@ class Bill(commands.Converter, FuzzyableMixin):
         self.status: BillStatus = kwargs.get("status")
         self.content: str = kwargs.get("content")
         self.markdown: str = kwargs.get("markdown")
+        self.html: str = kwargs.get("html") or ""
+        self.html_zip: bytes = kwargs.get("html_zip") or b""
+        self.pdf: bytes = kwargs.get("pdf") or b""
         self.submitter_id: int = kwargs.get("submitter")
         self._bot = kwargs.get("bot")
         self.sponsor_ids: typing.List[int] = kwargs.get("sponsors", [])
@@ -332,10 +342,14 @@ class Bill(commands.Converter, FuzzyableMixin):
             )
 
         await self._bot.db.execute(
-            "UPDATE bill SET name = $1, content = $2, markdown = $3, link = $4 WHERE id = $5",
+            "UPDATE bill SET name = $1, content = $2, markdown = $3, html = $4, "
+            "html_zip = $5, pdf = $6, link = $7 WHERE id = $8",
             document.name,
             document.content,
             document.markdown,
+            document.html,
+            document.html_zip,
+            document.pdf,
             new_link,
             self.id,
         )
@@ -371,6 +385,71 @@ class Bill(commands.Converter, FuzzyableMixin):
         keywords = kw_extractor.extract_keywords(content)
         return [kw[0] for kw in keywords if kw[0]]
 
+    def _decode_apps_script_binary(
+        self, data: typing.Any, field_name: str
+    ) -> bytes:
+        if not data:
+            return b""
+
+        if isinstance(data, memoryview):
+            return data.tobytes()
+
+        if isinstance(data, (bytes, bytearray)):
+            return bytes(data)
+
+        if isinstance(data, str):
+            try:
+                return base64.b64decode(data, validate=True)
+            except (TypeError, ValueError) as exc:
+                raise DemocracivBotException(
+                    f"Apps Script returned an unsupported {field_name} payload."
+                ) from exc
+
+        if isinstance(data, (list, tuple)):
+            try:
+                return bytes((int(item) + 256) % 256 for item in data)
+            except (TypeError, ValueError) as exc:
+                raise DemocracivBotException(
+                    f"Apps Script returned an unsupported {field_name} payload."
+                ) from exc
+
+        raise DemocracivBotException(
+            f"Apps Script returned an unsupported {field_name} payload."
+        )
+
+    def _extract_html_from_zip(self, html_zip: bytes) -> str:
+        if not html_zip:
+            return ""
+
+        try:
+            with zipfile.ZipFile(io.BytesIO(html_zip)) as archive:
+                html_entries = sorted(
+                    (
+                        info
+                        for info in archive.infolist()
+                        if not info.is_dir()
+                        and info.filename.lower().endswith((".html", ".htm"))
+                    ),
+                    key=lambda info: (
+                        len(
+                            tuple(
+                                part
+                                for part in pathlib.PurePosixPath(info.filename).parent.parts
+                                if part not in (".", "")
+                            )
+                        ),
+                        info.filename.lower(),
+                    ),
+                )
+
+                if not html_entries:
+                    return ""
+
+                with archive.open(html_entries[0]) as entry:
+                    return entry.read().decode("utf-8-sig", errors="replace")
+        except (OSError, zipfile.BadZipFile):
+            return ""
+
     async def fetch_name_and_keywords(self) -> BillDocumentPayload:
 
         try:
@@ -383,6 +462,17 @@ class Bill(commands.Converter, FuzzyableMixin):
             self.name = name = response["response"]["result"]["title"]
             self.content = content = response["response"]["result"]["content"]
             self.markdown = markdown = response["response"]["result"].get("markdown") or ""
+            self.html_zip = html_zip = self._decode_apps_script_binary(
+                response["response"]["result"].get("html"), "html"
+            )
+
+            self.html = html = await self._bot.loop.run_in_executor(
+                None, self._extract_html_from_zip, html_zip
+            )
+
+            self.pdf = pdf = self._decode_apps_script_binary(
+                response["response"]["result"].get("pdf"), "pdf"
+            )
             keywords = await self._bot.loop.run_in_executor(
                 None, self.extract_keywords, content
             )
@@ -392,6 +482,9 @@ class Bill(commands.Converter, FuzzyableMixin):
             self.name = name = ""
             self.content = content = ""
             self.markdown = markdown = ""
+            self.html = html = ""
+            self.html_zip = html_zip = b""
+            self.pdf = pdf = b""
 
         name_abbreviation = "".join([c[0].lower() for c in self.name.split()])
 
@@ -404,6 +497,9 @@ class Bill(commands.Converter, FuzzyableMixin):
             keywords=list(set(keywords)),
             content=content,
             markdown=markdown,
+            html=html,
+            html_zip=html_zip,
+            pdf=pdf,
         )
 
     async def _auto_sync(self):
@@ -413,10 +509,14 @@ class Bill(commands.Converter, FuzzyableMixin):
                 return
 
             await self._bot.db.execute(
-                "UPDATE bill SET name = $1, content = $2, markdown = $3 WHERE id = $4",
+                "UPDATE bill SET name = $1, content = $2, markdown = $3, html = $4, "
+                "html_zip = $5, pdf = $6 WHERE id = $7",
                 document.name,
                 document.content,
                 document.markdown,
+                document.html,
+                document.html_zip,
+                document.pdf,
                 self.id,
             )
             await self._bot.db.execute(
