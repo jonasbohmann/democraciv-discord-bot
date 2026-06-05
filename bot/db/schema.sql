@@ -138,6 +138,15 @@ CREATE TABLE IF NOT EXISTS bill_sponsor(
     UNIQUE (bill_id, sponsor)
 );
 
+CREATE TABLE IF NOT EXISTS bill_amendment(
+    id serial UNIQUE PRIMARY KEY,
+    amending_bill_id integer references bill(id) ON DELETE CASCADE NOT NULL,
+    amended_bill_id integer references bill(id) ON DELETE CASCADE NOT NULL,
+    linked_on timestamp WITHOUT TIME ZONE DEFAULT NOW() NOT NULL,
+    UNIQUE (amending_bill_id, amended_bill_id),
+    CHECK (amending_bill_id <> amended_bill_id)
+);
+
 CREATE TABLE IF NOT EXISTS bill_history(
     id serial UNIQUE PRIMARY KEY,
     bill_id serial references bill(id) ON DELETE CASCADE,
@@ -175,6 +184,8 @@ CREATE INDEX IF NOT EXISTS bill_lookup_tag_tag_trgm_idx ON bill_lookup_tag USING
 CREATE INDEX IF NOT EXISTS bill_name_lower_idx ON bill (LOWER(name));
 CREATE INDEX IF NOT EXISTS bill_session_leg_session_idx ON bill_session (leg_session);
 CREATE INDEX IF NOT EXISTS bill_session_bill_id_idx ON bill_session (bill_id);
+CREATE INDEX IF NOT EXISTS bill_amendment_amending_bill_id_idx ON bill_amendment (amending_bill_id);
+CREATE INDEX IF NOT EXISTS bill_amendment_amended_bill_id_idx ON bill_amendment (amended_bill_id);
 CREATE UNIQUE INDEX IF NOT EXISTS legislature_session_open_kind_idx
     ON legislature_session (house, session_kind)
     WHERE status != 'Closed'::session_status AND house IS NOT NULL;

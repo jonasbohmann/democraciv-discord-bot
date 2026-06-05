@@ -152,7 +152,7 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
     @bill.command(name="edit", aliases=["update", "e", "change"])
     @checks.is_democraciv_guild()
     async def edit(self, ctx: context.CustomContext, *, bill_id: Fuzzy[Bill]):
-        """Edit the Google Docs link or summary of a bill."""
+        """Edit the Google Docs link, summary, or amendments of a bill."""
 
         bill = bill_id
         house = self.get_house_for_object(bill)
@@ -168,6 +168,7 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
             choices_with_formatted_explanation={
                 "link": "Google Docs Link",
                 "description": "Short Summary",
+                "amendments": "List of bills this bill is an amendment to",
             },
             title=f"{config.USER_INTERACTION_REQUIRED} What about {bill.name} (#{bill.id}) do you want to change?",
         )
@@ -180,6 +181,7 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
 
         link = None
         description = None
+        amendment_ids = None
 
         if to_change["link"]:
             if (
@@ -214,10 +216,28 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
             if not description:
                 description = "*No summary provided by submitter.*"
 
+        if to_change["amendments"]:
+            current_amendments = self.format_bill_amendment_ids(bill.amends) or "none"
+            amendments = await ctx.input(
+                f"{config.USER_INTERACTION_REQUIRED} Reply with the bill IDs this bill amends.\n"
+                f"{config.HINT} Separate IDs with commas, spaces, or new lines. "
+                f"Reply with `none` to clear the current list of amended bills.\n"
+                f"{config.HINT} Current amended bill IDs: {current_amendments}",
+                timeout=400,
+                return_cleaned=True,
+            )
+            amendment_ids = (
+                []
+                if amendments.lower() == "none"
+                else self.parse_bill_amendment_ids(amendments)
+            )
+
         if not await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want to edit `{bill.name}` (#{bill.id})?"
         ):
             return await ctx.send("Cancelled.")
+
+        changed = False
 
         if link:
             changed_bill = models.Bill(
@@ -227,6 +247,7 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
                 submitter_description=description or bill.description,
             )
             await changed_bill.update_link(link)
+            changed = True
 
         if description:
             await self.bot.db.execute(
@@ -234,6 +255,18 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
                 description,
                 bill.id,
             )
+            bill.description = description
+            changed = True
+
+        if amendment_ids is not None:
+            amendments_changed = await self.update_bill_amendments(
+                bill=bill,
+                amendment_ids=amendment_ids,
+            )
+            changed = changed or amendments_changed
+
+        if not changed:
+            return await ctx.send(f"{config.HINT} Nothing was changed.")
 
         await ctx.send(f"{config.YES} Bill #{bill.id} `{bill.name}` was updated.")
 

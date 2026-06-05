@@ -83,6 +83,7 @@ class SubmitBillModal(discord.ui.Modal):
                 max_length=500,
             ),
         )
+
         self.is_procedure = discord.ui.Label(
             text=f"Bill or {models.display_house_name(house)} Procedure",
             description=(
@@ -105,10 +106,13 @@ class SubmitBillModal(discord.ui.Modal):
                 ],
             ),
         )
+        
+        self.amendments = mixin.make_bill_amendments_input()
 
         self.add_item(self.google_docs_url)
         self.add_item(self.bill_description)
         self.add_item(self.is_procedure)
+        self.add_item(self.amendments)
 
     async def on_submit(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(
@@ -131,6 +135,7 @@ class SubmitBillModal(discord.ui.Modal):
             google_docs_url=self.google_docs_url.component.value,
             bill_description=self.bill_description.component.value,
             is_procedure=self.is_procedure.component.values[0] == "true",
+            amendment_input=self.amendments.component.value,
         )
 
     async def on_error(
@@ -347,42 +352,14 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         self,
         ctx: slash_context.InteractionContext,
         *,
-        house: str,
         session: models.Session,
-        bill_id: int,
-        name: str,
-        google_docs_url: str,
-        bill_description: str,
-        is_procedure: bool,
+        bill: models.Bill,
     ):
-        house_name = models.display_house_name(house)
-        embed = text.SafeEmbed(
-            title=f"{name} (#{bill_id})",
-            url=google_docs_url,
-            description=f"Hey! A new **bill** was just submitted to {session.display_name}.",
+        return self.build_bill_submission_embed(
+            ctx,
+            session=session,
+            bill=bill,
         )
-        embed.add_field(
-            name="Type",
-            value=f"{house_name} Procedure" if is_procedure else "Bill",
-            inline=False,
-        )
-        embed.add_field(name="Description", value=bill_description, inline=False)
-        embed.add_field(
-            name="Author", value=f"{ctx.author.mention} {ctx.author}", inline=False
-        )
-        embed.add_field(
-            name="Google Docs Document", value=google_docs_url, inline=False
-        )
-        embed.add_field(
-            name="Exact Time of Submission",
-            value=f"<t:{int(discord.utils.utcnow().timestamp())}:F>",
-            inline=False,
-        )
-        embed.set_author(
-            icon_url=ctx.author_icon,
-            name=f"Submitted by {ctx.author.display_name}",
-        )
-        return embed
 
     def _motion_submission_embed(
         self,
@@ -438,8 +415,8 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             embed.add_field(
                 name="Editing",
                 value="During the Submission Period, keep working in the Google Docs "
-                "document. Use `/bill edit` if the document link or summary needs "
-                "to change.",
+                "document. Use `/bill edit` if the document link, summary, or "
+                "amendment links need to change.",
                 inline=False,
             )
             embed.add_field(
@@ -628,9 +605,13 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             session_kind.value,
         )
         new_session_obj = await models.Session.convert(ctx, new_session["id"])
-        queued_bill_count = await self.attach_pending_bills_to_session(
-            house=house, session_id=new_session["id"]
-        )
+
+        queued_bill_count = 0
+        if session_kind is models.SessionKind.REGULAR:
+            queued_bill_count = await self.attach_pending_bills_to_session(
+                house=house, session_id=new_session["id"]
+            )
+
         display_name = new_session_obj.display_name
 
         new_session_name = f"{house_name} Session #{new_session['mk13_house_id']}"
@@ -1082,6 +1063,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         google_docs_url: str,
         bill_description: str,
         is_procedure: bool,
+        amendment_input: str,
     ):
         if not self._can_submit_kind(ctx, kind="bill"):
             return await ctx.send(
@@ -1095,85 +1077,34 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
                 f"{config.NO} Missing Google Docs URL.", ephemeral=True
             )
 
-        bill_description = bill_description or "*No summary provided by submitter.*"
-        is_vetoable = not is_procedure
-        house_name = models.display_house_name(house)
-
-        bill = models.Bill(
-            bot=self.bot,
-            link=google_docs_url,
-            submitter_description=bill_description,
-        )
-        name, tags, content = await bill.fetch_name_and_keywords()
-
-        if not name:
-            return await ctx.send(
-                f"{config.NO} Something went wrong. Are you sure the Google Docs "
-                "document is public?\n"
-                f"{config.HINT} Word (.docx) documents on Google Docs are not supported.",
-                ephemeral=True,
+        try:
+            bill = await self.create_submitted_bill(
+                ctx=ctx,
+                session=session,
+                house=house,
+                google_docs_url=google_docs_url,
+                bill_description=bill_description,
+                is_procedure=is_procedure,
+                amendment_input=amendment_input,
             )
-
-        bill_id = await self.bot.db.fetchval(
-            "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, "
-            "is_procedure, submitter_description, content, origin_house) "
-            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
-            session.id,
-            name,
-            google_docs_url,
-            ctx.author.id,
-            is_vetoable,
-            is_procedure,
-            bill_description,
-            content,
-            house,
-        )
-        bill.id = bill_id
-        await self.bot.db.execute(
-            "INSERT INTO bill_session (bill_id, leg_session) VALUES ($1, $2) "
-            "ON CONFLICT DO NOTHING",
-            bill_id,
-            session.id,
-        )
-        await bill.status.log_history(
-            old_status=models.BillSubmitted.flag,
-            new_status=models.BillSubmitted.flag,
-            note=f"Submitted to {session.display_name}",
-        )
-
-        if tags:
-            self.bot.loop.create_task(
-                self.bot.db.executemany(
-                    "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) "
-                    "ON CONFLICT DO NOTHING",
-                    [(bill_id, tag) for tag in tags],
-                )
-            )
-
-        await self.bot.api_request(
-            "POST", "document/add", silent=True, json={"id": bill_id, "type": "bill"}
-        )
+        except exceptions.DemocracivBotException as error:
+            return await ctx.send(error.message, ephemeral=True)
 
         submission_embed = self._bill_submission_embed(
             ctx,
-            house=house,
             session=session,
-            bill_id=bill_id,
-            name=name,
-            google_docs_url=google_docs_url,
-            bill_description=bill_description,
-            is_procedure=is_procedure,
+            bill=bill,
         )
 
         await ctx.send(
-            f"{config.YES} Your bill `{name}` (#{bill_id}) was submitted for "
+            f"{config.YES} Your bill `{bill.name}` (#{bill.id}) was submitted for "
             f"{session.display_name}."
         )
         await self._send_submission_help(
             ctx,
             house=house,
             item_type="bill",
-            item_id=bill_id,
+            item_id=bill.id,
         )
 
         if not self.is_cabinet_for_house(ctx.author, house):

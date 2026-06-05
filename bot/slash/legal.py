@@ -72,8 +72,15 @@ class BillEditModal(forms.ErrorHandledModal):
             max_length=500,
             style=discord.TextStyle.long,
         )
+        current_amendments = cog.format_bill_amendment_ids(bill.amends)
+        self.amendments = mixin.make_bill_amendments_input(
+            description="Leave empty to keep the current list of amended bills. Enter `none` to clear them.",
+            placeholder=current_amendments or "12, 34",
+            required=False,
+        )
         self.add_item(self.link)
         self.add_item(self.description)
+        self.add_item(self.amendments)
 
     async def on_submit(self, interaction: discord.Interaction):
         ctx = slash_context.from_interaction(interaction, command_name="bill edit")
@@ -83,6 +90,7 @@ class BillEditModal(forms.ErrorHandledModal):
             self.bill,
             link=self.link.component.value,
             description=self.description.component.value,
+            amendments=self.amendments.component.value,
         )
 
 
@@ -551,6 +559,7 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         *,
         link: str,
         description: str,
+        amendments: str,
     ):
         house = self.get_house_for_object(bill)
         is_house_leadership = self.is_cabinet_for_house(ctx.author, house)
@@ -563,10 +572,23 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
 
         link = (link or "").strip()
         description = (description or "").strip()
+        amendments = (amendments or "").strip()
         current_description = bill.description or ""
         description_changed = bool(description) and description != current_description
+        amendment_ids = None
 
-        if not link and not description_changed:
+        if amendments:
+            amendment_ids = (
+                []
+                if amendments.lower() == "none"
+                else self.parse_bill_amendment_ids(amendments)
+            )
+
+        if (
+            not link
+            and not description_changed
+            and amendment_ids is None
+        ):
             return await ctx.send(f"{config.NO} Nothing changed.", ephemeral=True)
 
         if link:
@@ -600,6 +622,17 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
                 description or "*No summary provided by submitter.*",
                 bill.id,
             )
+            bill.description = description or "*No summary provided by submitter.*"
+
+        amendments_changed = False
+        if amendment_ids is not None:
+            amendments_changed = await self.update_bill_amendments(
+                bill=bill,
+                amendment_ids=amendment_ids,
+            )
+
+        if not link and not description_changed and not amendments_changed:
+            return await ctx.send(f"{config.HINT} Nothing was changed.", ephemeral=True)
 
         await ctx.send(f"{config.YES} Bill #{bill.id} `{bill.name}` was updated.")
 
@@ -778,7 +811,8 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         await interaction.response.send_modal(BillBulkEditModal(self))
 
     @bill.command(
-        name="edit", description="Edit the Google Docs link or summary of a bill."
+        name="edit",
+        description="Edit the Google Docs link, summary, or amended bills of a bill.",
     )
     @slash_checks.is_democraciv_guild()
     @app_commands.describe(bill="Bill ID or title")
@@ -1125,64 +1159,9 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         *,
         obj: models.Bill | models.Motion | models.Law,
     ):
-        embed = text.SafeEmbed(
-            title=f"{obj.name} (#{obj.id})",
-            description=obj.description or "*No summary provided.*",
-            url=obj.link,
-        )
-
-        if obj.submitter is not None:
-            embed.set_author(
-                name=f"Submitted by {obj.submitter.name}",
-                icon_url=obj.submitter.display_avatar.url,
-            )
-            submitted_by_value = f"{obj.submitter.mention} {obj.submitter}"
-        else:
-            submitted_by_value = "*Unknown Person*"
-
-        embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
-
-        if isinstance(obj, models.Bill) and not isinstance(obj, models.Law):
-            if obj.session.house in models.HOUSE_NAMES:
-                embed.add_field(
-                    name="Orig. in Chamber", value=obj.origin_house_name, inline=True
-                )
-                embed.add_field(name="Type", value=obj.type_name, inline=True)
-            else:
-                is_vetoable = "Yes" if obj.is_vetoable else "No"
-                embed.add_field(name="Vetoable", value=is_vetoable, inline=True)
-
-            embed.add_field(
-                name="Status",
-                value=obj.status.emojified_status(verbose=True),
-                inline=False,
-            )
-
-            if obj.executive_deadline_at is not None:
-                embed.add_field(
-                    name="Executive Deadline",
-                    value=f"<t:{int(obj.executive_deadline_at.replace(tzinfo=datetime.timezone.utc).timestamp())}:R> ",
-                    inline=True,
-                )
-
-            if obj.sponsors:
-                fmt_sponsors = "\n".join(
-                    f"{sponsor.mention} {sponsor}" for sponsor in obj.sponsors
-                )
-                embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
+        embed = self._build_legal_detail_embed(obj)
 
         if not isinstance(obj, models.Motion):
-            history = [
-                f"* <t:{int(entry.date.timestamp())}:D> - {entry.note if entry.note else entry.after}"
-                for entry in obj.history[:10]
-            ]
-
-            if history:
-                embed.add_field(name="History", value="\n".join(history), inline=False)
-
-            if not isinstance(obj, models.Law) and obj.status.is_law:
-                embed.set_footer(text="This is an active law.")
-
             context_hint = (
                 f"-# {config.HINT} Check out [laws.democraciv.com]"
                 f"(<https://laws.democraciv.com/{obj.model.lower()}/{obj.id}>) as well!"
@@ -1195,12 +1174,6 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
                 await self._show_bill_text(ctx, obj)
                 return
         else:
-            if obj.sponsors:
-                fmt_sponsors = "\n".join(
-                    f"{sponsor.mention} {sponsor}" for sponsor in obj.sponsors
-                )
-                embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
-
             context_hint = (
                 f"-# {config.HINT} Check out [laws.democraciv.com]"
                 f"(<https://laws.democraciv.com/{obj.model.lower()}/{obj.id}>) as well!"

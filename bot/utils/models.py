@@ -39,6 +39,12 @@ def display_house_name(house: typing.Optional[str]) -> str:
     return HOUSE_NAMES.get(house, house.title())
 
 
+class RelatedBillSummary(typing.NamedTuple):
+    id: int
+    name: str
+    link: str
+
+
 class Session(commands.Converter):
     """
     Represents a session of the Legislature.
@@ -262,6 +268,10 @@ class Bill(commands.Converter, FuzzyableMixin):
         self.executive_deadline_at: typing.Optional[datetime.datetime] = kwargs.get(
             "executive_deadline_at"
         )
+        self.amends: typing.List[RelatedBillSummary] = kwargs.get("amends") or []
+        self.amended_by: typing.List[RelatedBillSummary] = (
+            kwargs.get("amended_by") or []
+        )
 
         self.history = kwargs.get("history")
 
@@ -460,7 +470,29 @@ class Bill(commands.Converter, FuzzyableMixin):
         )
         sponsors = [record["sponsor"] for record in sponsors]
 
-        obj = cls(**bill, session=session, bot=ctx.bot, sponsors=sponsors)
+        amends_records = await ctx.bot.db.fetch(
+            "SELECT bill.id, bill.name, bill.link FROM bill_amendment "
+            "JOIN bill ON bill_amendment.amended_bill_id = bill.id "
+            "WHERE bill_amendment.amending_bill_id = $1 ORDER BY bill.id",
+            bill["id"],
+        )
+        amended_by_records = await ctx.bot.db.fetch(
+            "SELECT bill.id, bill.name, bill.link FROM bill_amendment "
+            "JOIN bill ON bill_amendment.amending_bill_id = bill.id "
+            "WHERE bill_amendment.amended_bill_id = $1 ORDER BY bill.id",
+            bill["id"],
+        )
+
+        obj = cls(
+            **bill,
+            session=session,
+            bot=ctx.bot,
+            sponsors=sponsors,
+            amends=[RelatedBillSummary(**dict(record)) for record in amends_records],
+            amended_by=[
+                RelatedBillSummary(**dict(record)) for record in amended_by_records
+            ],
+        )
 
         status = BillStatus.from_flag_value(bill["status"])(ctx.bot, obj)
         obj.status = status
@@ -814,10 +846,16 @@ class BillStatus:
         return f"<{self.__class__.__name__} flag={self.flag}"
 
     async def log_history(
-        self, old_status: _BillStatusFlag, new_status: _BillStatusFlag, *, note=None
+        self,
+        old_status: _BillStatusFlag,
+        new_status: _BillStatusFlag,
+        *,
+        note=None,
+        connection=None,
     ):
         logged_at = datetime.datetime.utcnow()
-        await self._bot.db.execute(
+        con = connection or self._bot.db
+        await con.execute(
             "INSERT INTO bill_history (bill_id, date, before_status, after_status, note) VALUES ($1, $2, $3, $4, $5)",
             self._bill.id,
             logged_at,

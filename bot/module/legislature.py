@@ -284,6 +284,8 @@ class SubmitBillModal(discord.ui.Modal, title=f"Submit a Bill to the Senate"):
         ),
     )
 
+    amendments = mixin.make_bill_amendments_input()
+
     """ is_vetoable = discord.ui.Label(
         text="Veto",
         description=f"Is the {mk.MarkConfig.MINISTRY_NAME} legally allowed to vote on and veto this bill?",
@@ -666,9 +668,13 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             session_kind.value,
         )
         new_session_obj = await Session.convert(ctx, new_session["id"])
-        queued_bill_count = await self.attach_pending_bills_to_session(
-            house="senate", session_id=new_session["id"]
-        )
+
+        queued_bill_count = 0
+        if session_kind is models.SessionKind.REGULAR:
+            queued_bill_count = await self.attach_pending_bills_to_session(
+                house="senate", session_id=new_session["id"]
+            )
+
         new_session_name = new_session_obj.display_name
 
         p = config.BOT_PREFIX
@@ -1475,107 +1481,33 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
     async def submit_bill(
         self,
         ctx: context.CustomContext,
-        current_leg_session_id: int,
-        current_leg_session_display_id: int,
+        session: Session,
         bill_modal: SubmitBillModal,
-        current_leg_session_name: str = None,
     ) -> typing.Optional[discord.Embed]:
-        current_leg_session_name = (
-            current_leg_session_name
-            or f"Senate Session #{current_leg_session_display_id}"
-        )
-
         google_docs_url = bill_modal.google_docs_url.component.value
-
-        if not google_docs_url:
-            await ctx.send(f"{config.NO} Something went wrong.")
-            return
-
-        is_procedure = (
-            True if bill_modal.is_procedure.component.values[0] == "true" else False
-        )
-        is_vetoable = not is_procedure
-        bill_description = (
-            bill_modal.bill_description.component.value
-            or "*No summary provided by submitter.*"
-        )
+        is_procedure = bill_modal.is_procedure.component.values[0] == "true"
+        bill_description = bill_modal.bill_description.component.value
+        amendment_input = bill_modal.amendments.component.value
 
         async with ctx.typing():
-            bill = models.Bill(
-                bot=self.bot,
-                link=google_docs_url,
-                submitter_description=bill_description,
-            )
-            name, tags, content = await bill.fetch_name_and_keywords()
-
-            if not name:
-                await ctx.send(
-                    f"{config.NO} Something went wrong. Are you sure you made your "
-                    f"Google Docs document public for everyone to view?\n"
-                    f"{config.HINT} Word (.docx) documents on Google Docs are not supported."
+            try:
+                bill = await self.create_submitted_bill(
+                    ctx=ctx,
+                    session=session,
+                    house="senate",
+                    google_docs_url=google_docs_url,
+                    bill_description=bill_description,
+                    is_procedure=is_procedure,
+                    amendment_input=amendment_input,
                 )
+            except exceptions.DemocracivBotException as error:
+                await ctx.send(error.message)
                 return
 
-            bill_id = await self.bot.db.fetchval(
-                "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, is_procedure, submitter_description, content, origin_house) "
-                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
-                current_leg_session_id,
-                name,
-                google_docs_url,
-                ctx.author.id,
-                is_vetoable,
-                is_procedure,
-                bill_description,
-                content,
-                "senate",
-            )
-
-            bill.id = bill_id
-            await self.bot.db.execute(
-                "INSERT INTO bill_session (bill_id, leg_session) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-                bill_id,
-                current_leg_session_id,
-            )
-            await bill.status.log_history(
-                old_status=models.BillSubmitted.flag,
-                new_status=models.BillSubmitted.flag,
-                note=f"Submitted to {current_leg_session_name}",
-            )
-
-            id_with_tags = [(bill_id, tag) for tag in tags]
-            self.bot.loop.create_task(
-                self.bot.db.executemany(
-                    "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES "
-                    "($1, $2) ON CONFLICT DO NOTHING ",
-                    id_with_tags,
-                )
-            )
-
-        embed = text.SafeEmbed(
-            title=f"{name} (#{bill_id})",
-            url=google_docs_url,
-            description=f"Hey! A new **bill** was just submitted to {current_leg_session_name}.",
-        )
-        embed.add_field(
-            name="Type",
-            value="Senate Procedure" if is_procedure else "Bill",
-            inline=False,
-        )
-        embed.add_field(name="Description", value=bill_description, inline=False)
-        embed.add_field(
-            name="Author", value=f"{ctx.author.mention} {ctx.author}", inline=False
-        )
-        embed.add_field(
-            name="Google Docs Document", value=google_docs_url, inline=False
-        )
-
-        embed.add_field(
-            name="Exact Time of Submission",
-            value=f"<t:{int(discord.utils.utcnow().timestamp())}:F>",
-        )
-
-        embed.set_author(
-            icon_url=ctx.author_icon, name=f"Submitted by {ctx.author.display_name}"
+        embed = self.build_bill_submission_embed(
+            ctx,
+            session=session,
+            bill=bill,
         )
 
         p = config.BOT_PREFIX
@@ -1590,8 +1522,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             name="Sponsors",
             value="Depending on current legislative procedures or laws, your bill might need a specific "
             f"amount of sponsors before the {self.bot.mk.senator_presiding_term} allows a vote on it. "
-            f"Tell your supporters to sponsor your bill with `{p}bill sponsor {bill_id}`. The list "
-            f"of sponsors will be displayed on your bill's detail page, `{p}bill {bill_id}`.",
+            f"Tell your supporters to sponsor your bill with `{p}bill sponsor {bill.id}`. The list "
+            f"of sponsors will be displayed on your bill's detail page, `{p}bill {bill.id}`.",
             inline=False,
         )
 
@@ -1601,16 +1533,17 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             f"as a new bill again if you want to keep working on your bill and do some changes, "
             f"based on feedback for example.\n\nUntil the Voting Period, just make your changes in "
             f"the Google Docs document. It would be fair to your colleagues to inform them on any "
-            f"changes to your bill, though.\n\nDo __not__ edit your bill if the session is already in "
-            f"Voting Period and people are already voting on it, as a way to mislead them or "
-            f"to sneak anything secret in.",
+            f"changes to your bill, though.\n\nUse `{p}bill edit {bill.id}` if the Google Docs "
+            f"link, summary, or amendments need to change.\n\nDo __not__ edit your bill if "
+            f"the session is already in Voting Period and people are already voting on it, as a "
+            f"way to mislead them or to sneak anything secret in.",
             inline=False,
         )
 
         info.add_field(
             name="Withdrawing a Bill",
             value=f"If, for whatever reason, you want to withdraw your bill from this "
-            f"session, use the `{p}{l} withdraw {bill_id}` or `{p}bill withdraw {bill_id}` command.\n\n"
+            f"session, use the `{p}{l} withdraw {bill.id}` or `{p}bill withdraw {bill.id}` command.\n\n"
             f"You can only withdraw your bills during the Submission Period of a legislative session, "
             f"while the {self.bot.mk.senator_presiding_term} can withdraw _every_ bill, at any time.",
             inline=False,
@@ -1626,13 +1559,10 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             f"with `{p}bill search <keyword>`.",
         )
         await ctx.send(
-            f"{config.YES} Your bill `{name}` (#{bill_id}) was submitted for {current_leg_session_name}.",
+            f"{config.YES} Your bill `{bill.name}` (#{bill.id}) was submitted for {session.display_name}.",
         )
 
         self.bot.loop.create_task(ctx.send_with_timed_delete(embed=info))
-        await self.bot.api_request(
-            "POST", "document/add", silent=True, json={"id": bill_id, "type": "bill"}
-        )
         return embed
 
     async def submit_motion(
@@ -1801,10 +1731,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
 
                 embed = await self.submit_bill(
                     ctx,
-                    current_leg_session.id,
-                    current_leg_session.display_id,
+                    current_leg_session,
                     bill_modal,
-                    current_leg_session.display_name,
                 )
 
             elif result == "motion":
@@ -1853,10 +1781,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
 
             embed = await self.submit_bill(
                 ctx,
-                current_leg_session.id,
-                current_leg_session.display_id,
+                current_leg_session,
                 bill_modal,
-                current_leg_session.display_name,
             )
 
         if embed is None:
@@ -1921,9 +1847,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
                     ctx,
                     sessions=open_commons_sessions,
                     action="send these bills to",
+                    allow_none=True
                 )
-                if target_session is None:
-                    return await ctx.send("Cancelled.")
 
         reaction = await ctx.confirm(
             f"{config.USER_INTERACTION_REQUIRED} Are you sure that you want "

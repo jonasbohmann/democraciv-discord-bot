@@ -1,5 +1,6 @@
 import collections
 import datetime
+import re
 import typing
 import asyncpg
 import discord
@@ -73,13 +74,28 @@ class SessionChoiceButton(discord.ui.Button):
         self.view.result = self.session
         self.view.stop()
 
+class SessionChoiceNoneButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(
+            label="Skip this for now. Bills will be added to the next new non-emergency session.",
+            style=(
+                discord.ButtonStyle.secondary
+            ),
+        )
+
+    async def callback(self, interaction):
+        await interaction.response.defer()
+        self.view.result = None
+        self.view.stop()
 
 class SessionChooseView(text.PromptView):
-    def __init__(self, ctx, *, sessions: typing.Sequence[models.Session]):
+    def __init__(self, ctx, *, sessions: typing.Sequence[models.Session], allow_none: bool = False):
         super().__init__(ctx)
         for session in sessions:
             self.add_item(SessionChoiceButton(session))
 
+        if allow_none:
+            self.add_item(SessionChoiceNoneButton())
 
 def add_submit_session_choice(
     modal: discord.ui.Modal, sessions: typing.Sequence[models.Session]
@@ -116,6 +132,30 @@ def get_submit_session_choice_id(modal: discord.ui.Modal) -> typing.Optional[int
         return None
 
     return int(values[0])
+
+
+_BILL_AMENDMENT_SPLIT_RE = re.compile(r"[\s,]+")
+
+
+def make_bill_amendments_input(
+    *,
+    default: str = None,
+    description: str = None,
+    placeholder: str = "12, 34, 37",
+    required: bool = False,
+):
+    return discord.ui.Label(
+        text="Does this amend any existing bill or bills?",
+        description=description
+        or "Optional. Enter existing bill IDs separated by commas, spaces, or new lines.",
+        component=discord.ui.TextInput(
+            style=discord.TextStyle.long,
+            default=default,
+            placeholder=placeholder,
+            required=required,
+            max_length=500,
+        ),
+    )
 
 
 class GovernmentMixin:
@@ -167,14 +207,52 @@ class GovernmentMixin:
         )
         await pages.start(ctx)
 
-    async def _detail_view(
+    @staticmethod
+    def _related_bills_field_value(
+        related_bills: typing.Sequence[models.RelatedBillSummary],
+    ) -> str:
+        lines = []
+        current_length = 0
+
+        for bill in related_bills:
+            line = (
+                f"Bill #{bill.id} - "
+                f"[{discord.utils.escape_markdown(bill.name)}]({bill.link})"
+            )
+            added_length = len(line) + (1 if lines else 0)
+
+            if current_length + added_length > 1020:
+                lines.append("...")
+                break
+
+            lines.append(line)
+            current_length += added_length
+
+        return "\n".join(lines)
+
+    def _add_bill_amendment_fields(self, embed: discord.Embed, bill: models.Bill):
+        if bill.amends:
+            embed.add_field(
+                name="Amends",
+                value=self._related_bills_field_value(bill.amends),
+                inline=False,
+            )
+
+        if bill.amended_by:
+            embed.add_field(
+                name="Amended By",
+                value=self._related_bills_field_value(bill.amended_by),
+                inline=False,
+            )
+
+    def _build_legal_detail_embed(
         self,
-        ctx: context.CustomContext,
-        *,
         obj: typing.Union[models.Bill, models.Motion, models.Law],
-    ):
+    ) -> text.SafeEmbed:
         embed = text.SafeEmbed(
-            title=f"{obj.name} (#{obj.id})", description=obj.description, url=obj.link
+            title=f"{obj.name} (#{obj.id})",
+            description=obj.description or "*No summary provided.*",
+            url=obj.link,
         )
 
         if obj.submitter is not None:
@@ -184,10 +262,9 @@ class GovernmentMixin:
             )
             submitted_by_value = f"{obj.submitter.mention} {obj.submitter}"
         else:
-            submitted_by_value = f"*Unknown Person*"
+            submitted_by_value = "*Unknown Person*"
 
         embed.add_field(name="Submitter", value=submitted_by_value, inline=True)
-        # embed.add_field(name="laws.democraciv.com", value=f"[Link](https://laws.democraciv.com/{obj.model.lower()}/{obj.id})", inline=True)
 
         if isinstance(obj, models.Bill) and not isinstance(obj, models.Law):
             if obj.session.house in models.HOUSE_NAMES:
@@ -195,7 +272,6 @@ class GovernmentMixin:
                     name="Orig. in Chamber", value=obj.origin_house_name, inline=True
                 )
                 embed.add_field(name="Type", value=obj.type_name, inline=True)
-                # embed.add_field(name="laws.democraciv.com", value=f"[Link](https://laws.democraciv.com/bill/{obj.id})", inline=True)
             else:
                 is_vetoable = "Yes" if obj.is_vetoable else "No"
                 embed.add_field(name="Vetoable", value=is_vetoable, inline=True)
@@ -215,13 +291,14 @@ class GovernmentMixin:
 
             if obj.sponsors:
                 fmt_sponsors = "\n".join(
-                    [f"{sponsor.mention} {sponsor}" for sponsor in obj.sponsors]
+                    f"{sponsor.mention} {sponsor}" for sponsor in obj.sponsors
                 )
                 embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
 
-        if not isinstance(obj, models.Motion):
-            # embed.add_field(name="laws.democraciv.com", value=f"[Link](https://laws.democraciv.com/motion/{obj.id})", inline=True)
+        if isinstance(obj, models.Bill):
+            self._add_bill_amendment_fields(embed, obj)
 
+        if not isinstance(obj, models.Motion):
             history = [
                 f"* <t:{int(entry.date.timestamp())}:D> - {entry.note if entry.note else entry.after}"
                 for entry in obj.history[:10]
@@ -232,7 +309,23 @@ class GovernmentMixin:
 
             if not isinstance(obj, models.Law) and obj.status.is_law:
                 embed.set_footer(text="This is an active law.")
+        elif obj.sponsors:
+            fmt_sponsors = "\n".join(
+                f"{sponsor.mention} {sponsor}" for sponsor in obj.sponsors
+            )
+            embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
 
+        return embed
+
+    async def _detail_view(
+        self,
+        ctx: context.CustomContext,
+        *,
+        obj: typing.Union[models.Bill, models.Motion, models.Law],
+    ):
+        embed = self._build_legal_detail_embed(obj)
+
+        if not isinstance(obj, models.Motion):
             view = ReadDocumentView(ctx=ctx)
             await ctx.send(
                 f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/{obj.model.lower()}/{obj.id}>) as well!"
@@ -251,12 +344,6 @@ class GovernmentMixin:
                 return
 
         else:
-            if obj.sponsors:
-                fmt_sponsors = "\n".join(
-                    [f"{sponsor.mention} {sponsor}" for sponsor in obj.sponsors]
-                )
-                embed.add_field(name="Sponsors", value=fmt_sponsors, inline=False)
-
             await ctx.send(
                 f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/{obj.model.lower()}/{obj.id}>) as well!"
             )
@@ -283,6 +370,295 @@ class GovernmentMixin:
             f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/bill/{bill.id}>) as well!"
         )
         await pages.start(ctx)
+
+    @staticmethod
+    def _bill_amendment_history_note(
+        related_bills: typing.Sequence[models.RelatedBillSummary],
+    ) -> str:
+        if not related_bills:
+            return "Cleared amendment links."
+
+        ids = ", ".join(f"#{bill.id}" for bill in related_bills)
+        noun = "bill" if len(related_bills) == 1 else "bills"
+        return f"Recorded that this bill amends {noun} {ids}."
+
+    @staticmethod
+    def format_bill_amendment_ids(
+        related_bills: typing.Sequence[models.RelatedBillSummary],
+    ) -> str:
+        return ", ".join(str(bill.id) for bill in related_bills)
+
+    @staticmethod
+    def parse_bill_amendment_ids(raw_value: str) -> typing.List[int]:
+        value = (raw_value or "").strip()
+        if not value:
+            return []
+
+        tokens = [
+            token.removeprefix("#")
+            for token in _BILL_AMENDMENT_SPLIT_RE.split(value)
+            if token
+        ]
+        amendment_ids = []
+        seen = set()
+        duplicate_ids = []
+        invalid_tokens = []
+
+        for token in tokens:
+            try:
+                bill_id = int(token)
+            except ValueError:
+                invalid_tokens.append(token)
+                continue
+
+            if bill_id <= 0:
+                invalid_tokens.append(token)
+                continue
+
+            if bill_id in seen:
+                duplicate_ids.append(bill_id)
+                continue
+
+            seen.add(bill_id)
+            amendment_ids.append(bill_id)
+
+        if invalid_tokens:
+            formatted = ", ".join(f"`{token}`" for token in invalid_tokens)
+            raise exceptions.InvalidUserInputError(
+                f"{config.NO} Amendment bill IDs must be numbers. Invalid values: {formatted}."
+            )
+
+        if duplicate_ids:
+            formatted = ", ".join(f"#{bill_id}" for bill_id in duplicate_ids)
+            raise exceptions.InvalidUserInputError(
+                f"{config.NO} You listed the same amended bill more than once: {formatted}."
+            )
+
+        return amendment_ids
+
+    async def resolve_bill_amendment_targets(
+        self,
+        amendment_ids: typing.Sequence[int],
+        *,
+        bill_id: int,
+        connection=None,
+    ) -> typing.List[models.RelatedBillSummary]:
+        if bill_id in amendment_ids:
+            raise exceptions.InvalidUserInputError(
+                f"{config.NO} A bill cannot amend itself."
+            )
+
+        if not amendment_ids:
+            return []
+
+        con = connection or self.bot.db
+        rows = await con.fetch(
+            "SELECT id, name, link FROM bill WHERE id = ANY($1::int[])",
+            amendment_ids,
+        )
+        found = {
+            row["id"]: models.RelatedBillSummary(**dict(row))
+            for row in rows
+        }
+        missing_ids = [candidate for candidate in amendment_ids if candidate not in found]
+
+        if missing_ids:
+            formatted = ", ".join(f"#{bill_id}" for bill_id in missing_ids)
+            raise exceptions.InvalidUserInputError(
+                f"{config.NO} I couldn't find the amended bill(s) {formatted}."
+            )
+
+        return [found[candidate] for candidate in amendment_ids]
+
+    async def replace_bill_amendments(
+        self,
+        *,
+        bill: models.Bill,
+        amendment_ids: typing.Sequence[int],
+        connection=None,
+    ) -> typing.List[models.RelatedBillSummary]:
+        con = connection or self.bot.db
+        related_bills = await self.resolve_bill_amendment_targets(
+            amendment_ids,
+            bill_id=bill.id,
+            connection=con,
+        )
+        await con.execute(
+            "DELETE FROM bill_amendment WHERE amending_bill_id = $1",
+            bill.id,
+        )
+
+        if related_bills:
+            await con.executemany(
+                "INSERT INTO bill_amendment (amending_bill_id, amended_bill_id) "
+                "VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                [(bill.id, related_bill.id) for related_bill in related_bills],
+            )
+
+        bill.amends = list(related_bills)
+        return bill.amends
+
+    async def update_bill_amendments(
+        self,
+        *,
+        bill: models.Bill,
+        amendment_ids: typing.Sequence[int],
+    ) -> bool:
+        if list(amendment_ids) == [related_bill.id for related_bill in bill.amends]:
+            return False
+
+        async with self.bot.db.acquire() as con:
+            async with con.transaction():
+                related_bills = await self.replace_bill_amendments(
+                    bill=bill,
+                    amendment_ids=amendment_ids,
+                    connection=con,
+                )
+
+        await bill.status.log_history(
+            old_status=bill.status.flag,
+            new_status=bill.status.flag,
+            note=self._bill_amendment_history_note(related_bills),
+        )
+        return True
+
+    def build_bill_submission_embed(
+        self,
+        ctx,
+        *,
+        session: models.Session,
+        bill: models.Bill,
+    ) -> text.SafeEmbed:
+        house_name = models.display_house_name(bill.origin_house)
+        embed = text.SafeEmbed(
+            title=f"{bill.name} (#{bill.id})",
+            url=bill.link,
+            description=f"Hey! A new **bill** was just submitted to {session.display_name}.",
+        )
+        embed.add_field(
+            name="Type",
+            value=f"{house_name} Procedure" if bill.is_procedure else "Bill",
+            inline=False,
+        )
+        embed.add_field(name="Description", value=bill.description, inline=False)
+        embed.add_field(
+            name="Author", value=f"{ctx.author.mention} {ctx.author}", inline=False
+        )
+        embed.add_field(
+            name="Google Docs Document", value=bill.link, inline=False
+        )
+        if bill.amends:
+            embed.add_field(
+                name="Amends",
+                value=self._related_bills_field_value(bill.amends),
+                inline=False,
+            )
+        embed.add_field(
+            name="Exact Time of Submission",
+            value=f"<t:{int(discord.utils.utcnow().timestamp())}:F>",
+            inline=False,
+        )
+        embed.set_author(
+            icon_url=ctx.author_icon,
+            name=f"Submitted by {ctx.author.display_name}",
+        )
+        return embed
+
+    async def create_submitted_bill(
+        self,
+        *,
+        ctx,
+        session: models.Session,
+        house: str,
+        google_docs_url: str,
+        bill_description: str,
+        is_procedure: bool,
+        amendment_input: str = "",
+    ) -> models.Bill:
+        if not google_docs_url:
+            raise exceptions.InvalidUserInputError(
+                f"{config.NO} Missing Google Docs URL."
+            )
+
+        bill_description = bill_description or "*No summary provided by submitter.*"
+        bill = models.Bill(
+            bot=self.bot,
+            link=google_docs_url,
+            submitter_description=bill_description,
+        )
+        name, tags, content = await bill.fetch_name_and_keywords()
+
+        if not name:
+            raise exceptions.InvalidUserInputError(
+                f"{config.NO} Something went wrong. Are you sure the Google Docs document is public?\n"
+                f"{config.HINT} Word (.docx) documents on Google Docs are not supported."
+            )
+
+        amendment_ids = self.parse_bill_amendment_ids(amendment_input)
+
+        async with self.bot.db.acquire() as con:
+            async with con.transaction():
+                bill_id = await con.fetchval(
+                    "INSERT INTO bill (leg_session, name, link, submitter, is_vetoable, "
+                    "is_procedure, submitter_description, content, origin_house) "
+                    "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id",
+                    session.id,
+                    name,
+                    google_docs_url,
+                    ctx.author.id,
+                    not is_procedure,
+                    is_procedure,
+                    bill_description,
+                    content,
+                    house,
+                )
+                bill.id = bill_id
+                bill.name = name
+                bill.content = content
+                bill.description = bill_description
+                bill.is_vetoable = not is_procedure
+                bill.is_procedure = is_procedure
+                bill.origin_house = house
+                bill.session = session
+                bill.submitter_id = ctx.author.id
+
+                await con.execute(
+                    "INSERT INTO bill_session (bill_id, leg_session) VALUES ($1, $2) "
+                    "ON CONFLICT DO NOTHING",
+                    bill_id,
+                    session.id,
+                )
+                await bill.status.log_history(
+                    old_status=models.BillSubmitted.flag,
+                    new_status=models.BillSubmitted.flag,
+                    note=f"Submitted to {session.display_name}",
+                    connection=con,
+                )
+
+                if tags:
+                    await con.executemany(
+                        "INSERT INTO bill_lookup_tag (bill_id, tag) VALUES ($1, $2) "
+                        "ON CONFLICT DO NOTHING",
+                        [(bill_id, tag) for tag in tags],
+                    )
+
+                related_bills = await self.replace_bill_amendments(
+                    bill=bill,
+                    amendment_ids=amendment_ids,
+                    connection=con,
+                )
+                if related_bills:
+                    await bill.status.log_history(
+                        old_status=bill.status.flag,
+                        new_status=bill.status.flag,
+                        note=self._bill_amendment_history_note(related_bills),
+                        connection=con,
+                    )
+
+        await self.bot.api_request(
+            "POST", "document/add", silent=True, json={"id": bill.id, "type": "bill"}
+        )
+        return bill
 
     async def _synchronize_bill(self, bill: models.Bill) -> bool:
         try:
@@ -724,8 +1100,10 @@ class GovernmentMixin:
         action: str,
         ephemeral: typing.Optional[bool] = None,
         silent: bool = False,
+        allow_none: bool = False
     ) -> typing.Optional[models.Session]:
-        view = SessionChooseView(ctx, sessions=sessions)
+        
+        view = SessionChooseView(ctx, sessions=sessions, allow_none=allow_none)
         kwargs = {"view": view}
         if ephemeral is not None:
             kwargs["ephemeral"] = ephemeral
