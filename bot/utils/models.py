@@ -62,6 +62,24 @@ class RelatedBillSummary(typing.NamedTuple):
     id: int
     name: str
     link: str
+    status: int
+    house: typing.Optional[str]
+    origin_house: str
+    is_procedure: bool
+    is_vetoable: bool
+
+    @property
+    def formatted(self) -> str:
+        return format_bill_reference(
+            id=self.id,
+            name=self.name,
+            link=self.link,
+            status=self.status,
+            house=self.house,
+            origin_house=self.origin_house,
+            is_procedure=self.is_procedure,
+            is_vetoable=self.is_vetoable,
+        )
 
 
 class Session(commands.Converter):
@@ -264,6 +282,29 @@ class BillDocumentPayload(typing.NamedTuple):
     html: str
     html_zip: bytes
     pdf: bytes
+
+
+def format_bill_reference(
+    *,
+    id: int,
+    name: str,
+    link: str,
+    status: int,
+    house: typing.Optional[str],
+    origin_house: str,
+    is_procedure: bool,
+    is_vetoable: bool,
+) -> str:
+    return (
+        f"Bill #{id} - [{discord.utils.escape_markdown(name)}]({link}) "
+        f"{compact_bill_status_emojis(
+            status=status,
+            house=house,
+            origin_house=origin_house,
+            is_procedure=is_procedure,
+            is_vetoable=is_vetoable,
+        )}"
+    )
 
 
 class Bill(commands.Converter, FuzzyableMixin):
@@ -582,7 +623,16 @@ class Bill(commands.Converter, FuzzyableMixin):
 
     @property
     def formatted(self):
-        return f"Bill #{self.id} - [{self.name}]({self.link}) {self.status.emojified_status(verbose=False)}"
+        return format_bill_reference(
+            id=self.id,
+            name=self.name,
+            link=self.link,
+            status=self.status.flag.value,
+            house=self.session.house if self.session else None,
+            origin_house=self.origin_house,
+            is_procedure=self.is_procedure,
+            is_vetoable=self.is_vetoable,
+        )
 
     @classmethod
     async def convert(cls, ctx, argument: typing.Union[int, str]):
@@ -614,14 +664,18 @@ class Bill(commands.Converter, FuzzyableMixin):
         sponsors = [record["sponsor"] for record in sponsors]
 
         amends_records = await ctx.bot.db.fetch(
-            "SELECT bill.id, bill.name, bill.link FROM bill_amendment "
+            "SELECT bill.id, bill.name, bill.link, bill.status, legislature_session.house, "
+            "bill.origin_house, bill.is_procedure, bill.is_vetoable FROM bill_amendment "
             "JOIN bill ON bill_amendment.amended_bill_id = bill.id "
+            "LEFT JOIN legislature_session ON bill.leg_session = legislature_session.id "
             "WHERE bill_amendment.amending_bill_id = $1 ORDER BY bill.id",
             bill["id"],
         )
         amended_by_records = await ctx.bot.db.fetch(
-            "SELECT bill.id, bill.name, bill.link FROM bill_amendment "
+            "SELECT bill.id, bill.name, bill.link, bill.status, legislature_session.house, "
+            "bill.origin_house, bill.is_procedure, bill.is_vetoable FROM bill_amendment "
             "JOIN bill ON bill_amendment.amending_bill_id = bill.id "
+            "LEFT JOIN legislature_session ON bill.leg_session = legislature_session.id "
             "WHERE bill_amendment.amended_bill_id = $1 ORDER BY bill.id",
             bill["id"],
         )
@@ -949,6 +1003,106 @@ class _BillStatusFlag(enum.Enum):
     PASSED_COMMONS_PENDING_SENATE = 23
     AWAITING_EXECUTIVE = 24
     EXECUTIVE_VETOED = 25
+
+
+def compact_bill_status_emojis(
+    *,
+    status: int,
+    house: typing.Optional[str],
+    origin_house: str,
+    is_procedure: bool,
+    is_vetoable: bool,
+) -> str:
+    green = config.LEG_BILL_STATUS_GREEN
+    yellow = config.LEG_BILL_STATUS_YELLOW
+    red = config.LEG_BILL_STATUS_RED
+    gray = config.LEG_BILL_STATUS_GRAY
+    uses_bicameral = house in HOUSE_NAMES
+    uses_procedure = uses_bicameral and is_procedure
+
+    def render_bicameral(senate: str, commons: str, executive: str, law: str) -> str:
+        return f"{senate}{commons}{executive}{law}"
+
+    def render_procedure(
+        *,
+        senate: typing.Optional[str] = None,
+        commons: typing.Optional[str] = None,
+        law: str,
+    ) -> str:
+        return render_bicameral(senate or gray, commons or gray, gray, law)
+
+    if status == _BillStatusFlag.SUBMITTED.value:
+        if uses_procedure:
+            if origin_house == "senate":
+                return render_procedure(senate=yellow, law=gray)
+
+            return render_procedure(commons=yellow, law=gray)
+
+        if uses_bicameral:
+            senate = yellow if house == "senate" else gray
+            commons = yellow if house == "commons" else gray
+            return render_bicameral(senate, commons, gray, gray)
+
+        return f"{yellow}{yellow if is_vetoable else gray}{gray}"
+
+    if status == _BillStatusFlag.FAILED_SENATE.value:
+        if uses_procedure:
+            return render_procedure(senate=red, law=gray)
+
+        return render_bicameral(red, green if origin_house == "commons" else gray, gray, gray)
+
+    if status == _BillStatusFlag.FAILED_COMMONS.value:
+        if uses_procedure:
+            return render_procedure(commons=red, law=gray)
+
+        return render_bicameral(green if origin_house == "senate" else gray, red, gray, gray)
+
+    if status == _BillStatusFlag.PASSED_SENATE_PENDING_COMMONS.value:
+        return render_bicameral(green, yellow, gray, gray)
+
+    if status == _BillStatusFlag.PASSED_COMMONS_PENDING_SENATE.value:
+        return render_bicameral(yellow, green, gray, gray)
+
+    if status == _BillStatusFlag.LEG_FAILED.value:
+        return f"{red}{gray}{gray}"
+
+    if status == _BillStatusFlag.LEG_PASSED.value:
+        return f"{green}{yellow}{gray}"
+
+    if status == _BillStatusFlag.MIN_FAILED.value:
+        return f"{green}{red}{gray}"
+
+    if status == _BillStatusFlag.AWAITING_EXECUTIVE.value:
+        return render_bicameral(green, green, yellow, gray)
+
+    if status == _BillStatusFlag.EXECUTIVE_VETOED.value:
+        return render_bicameral(green, green, red, gray)
+
+    if status == _BillStatusFlag.LAW.value:
+        if uses_procedure:
+            if origin_house == "senate":
+                return render_procedure(senate=green, law=green)
+
+            return render_procedure(commons=green, law=green)
+
+        if uses_bicameral:
+            return render_bicameral(green, green, green, green)
+
+        return f"{green}{green if is_vetoable else gray}{green}"
+
+    if status == _BillStatusFlag.REPEALED.value:
+        if uses_procedure:
+            if origin_house == "senate":
+                return render_procedure(senate=green, law=red)
+
+            return render_procedure(commons=green, law=red)
+
+        if uses_bicameral:
+            return render_bicameral(green, green, green, red)
+
+        return f"{green}{green}{red}"
+
+    raise ValueError(f"Unknown bill status flag: {status}")
 
 
 class IllegalOperation(DemocracivBotException):

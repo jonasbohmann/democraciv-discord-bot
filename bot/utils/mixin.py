@@ -408,18 +408,12 @@ class GovernmentMixin:
         )
         await pages.start(ctx)
 
-    @staticmethod
-    def _related_bills_field_value(
-        related_bills: typing.Sequence[models.RelatedBillSummary],
-    ) -> str:
+    def _related_bills_field_value(self, related_bills: typing.Sequence[models.RelatedBillSummary]) -> str:
         lines = []
         current_length = 0
 
         for bill in related_bills:
-            line = (
-                f"Bill #{bill.id} - "
-                f"[{discord.utils.escape_markdown(bill.name)}]({bill.link})"
-            )
+            line = bill.formatted
             added_length = len(line) + (1 if lines else 0)
 
             if current_length + added_length > 1020:
@@ -661,7 +655,10 @@ class GovernmentMixin:
 
         con = connection or self.bot.db
         rows = await con.fetch(
-            "SELECT id, name, link FROM bill WHERE id = ANY($1::int[])",
+            "SELECT bill.id, bill.name, bill.link, bill.status, legislature_session.house, "
+            "bill.origin_house, bill.is_procedure, bill.is_vetoable "
+            "FROM bill LEFT JOIN legislature_session ON bill.leg_session = legislature_session.id "
+            "WHERE bill.id = ANY($1::int[])",
             amendment_ids,
         )
         found = {row["id"]: models.RelatedBillSummary(**dict(row)) for row in rows}
