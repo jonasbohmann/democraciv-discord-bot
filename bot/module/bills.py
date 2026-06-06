@@ -345,7 +345,7 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
             entries=results,
             icon=self.bot.mk.NATION_ICON_URL,
             author=f"Bills matching '{query}'",
-            empty_message="Nothing found.",
+            empty_message="Nothing found with title or keyword search.",
         )
         await ctx.send(
             f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/bill>) as well!"
@@ -354,22 +354,9 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
 
         try:
             fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
+            fts_pages.start(ctx)
         except Exception:
-            fts_pages = None
-
-        if fts_pages:
-            view = mixin.FullTextSearchView(ctx)
-            delete_after = await ctx.send(
-                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? "
-                f"This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result "
-                f"per bill, even if there were more occurrences found.",
-                view=view,
-            )
-            yes = await view.prompt(silent=True)
-
-            if yes:
-                await fts_pages.start(ctx)
-                await delete_after.delete()
+            pass
 
     @bill.command(name="advanced-search", aliases=["semantic-search", "asearch", "as"])
     async def aisearch(self, ctx, *, query):
@@ -381,56 +368,26 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
             )
 
         await ctx.send(
-            f":warning: This is a work in progress. The search on [laws.democraciv.com](<https://laws.democraciv.com/bill>) will probably work a lot better."
+            f":warning: This is a work in progress. The search on "
+            f"[laws.democraciv.com](<https://laws.democraciv.com/bill>) will "
+            f"potentially work better."
         )
 
         async with ctx.typing():
-            response = await self.bot.api_request(
-                "POST",
-                "document/search",
-                json={
-                    "question": query,
-                    "index": "bill",
-                    "is_law": False,
-                    "semantic_ratio": 1.0,
-                },
+            pages = await self.prepare_full_text_search_paginator(
+                ctx,
+                query,
+                semantic_ratio=1.0,
+                author=f"[BETA] Semantic search results for '{query}'",
             )
 
-        if not response or not response["result"]["hits"]:
+        if not pages:
             return await ctx.send(
                 f"{config.NO} I couldn't find anything that matches `{query}`. Sorry!"
             )
 
-        formatted = [
-            "This feature is a work-in-progress.\nKnown issue: This only shows 1 search result per bill, even if there were more occurrences found.\n"
-        ]
-
-        for hit in response["result"]["hits"]:
-            try:
-                bill = await models.Bill.convert(ctx, hit["id"])
-            except Exception:
-                continue
-
-            trimmed = hit["_formatted"]["content"].strip()
-            txt = discord.utils.escape_markdown(trimmed)
-            txt = txt.replace("<DBS>", "[**")
-            txt = txt.replace(
-                "<DBE>", "**](https://this-is-not-a-real-url.democraciv.com)"
-            )
-            formatted.append(f"**__{bill.formatted}__**")
-            formatted.append(f"{txt}\n")
-
-        pages = paginator.SimplePages(
-            entries=formatted,
-            icon=self.bot.mk.NATION_ICON_URL,
-            author=f"[BETA] Advanced search results for '{query}'",
-        )
-
         await ctx.send(
             f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com/bill>) as well!"
-        )
-        await ctx.send(
-            ":warning: This only shows 1 search result per bill, even if there were more occurrences found in that bill."
         )
         await pages.start(ctx)
 

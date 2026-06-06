@@ -1460,8 +1460,37 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         await ctx.defer()
         results = await self._search_model(ctx, model=models.Bill, query=query)
         results += await self._search_model(ctx, model=models.Motion, query=query)
-        if not results:
-            return await ctx.send(f"Nothing found matching '{query}'.", ephemeral=True)
+        unique = list(dict.fromkeys(results))
+        unique.sort(
+            key=lambda e: difflib.SequenceMatcher(
+                None, query.lower(), e.lower()
+            ).ratio(),
+            reverse=True,
+        )
+        pages = paginator.SimplePages(
+            entries=unique,
+            icon=self.bot.mk.NATION_ICON_URL,
+            author=f"Bills & Motions matching '{query}'",
+            empty_message="Nothing found with title or keyword search.",
+        )
+        await pages.start(ctx)
+
+        try:
+            fts_pages = await self.prepare_full_text_search_paginator(
+                ctx, query, index="all"
+            )
+            await fts_pages.start(ctx)
+        except Exception:
+            pass
+
+    @commons.command(name="search", description="Search bills and motions together.")
+    async def commons_search(self, interaction: discord.Interaction, query: str):
+        ctx = slash_context.from_interaction(
+            interaction, command_name="commons search"
+        )
+        await ctx.defer()
+        results = await self._search_model(ctx, model=models.Bill, query=query)
+        results += await self._search_model(ctx, model=models.Motion, query=query)
         unique = list(dict.fromkeys(results))
         unique.sort(
             key=lambda e: difflib.SequenceMatcher(
@@ -1477,28 +1506,13 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
         )
         await pages.start(ctx)
 
-    @commons.command(name="search", description="Search bills and motions together.")
-    async def commons_search(self, interaction: discord.Interaction, query: str):
-        ctx = slash_context.from_interaction(interaction, command_name="commons search")
-        await ctx.defer()
-        results = await self._search_model(ctx, model=models.Bill, query=query)
-        results += await self._search_model(ctx, model=models.Motion, query=query)
-        if not results:
-            return await ctx.send(f"Nothing found matching '{query}'.", ephemeral=True)
-        unique = list(dict.fromkeys(results))
-        unique.sort(
-            key=lambda e: difflib.SequenceMatcher(
-                None, query.lower(), e.lower()
-            ).ratio(),
-            reverse=True,
-        )
-        pages = paginator.SimplePages(
-            entries=unique,
-            icon=self.bot.mk.NATION_ICON_URL,
-            author=f"Bills & Motions matching '{query}'",
-            empty_message="Nothing found.",
-        )
-        await pages.start(ctx)
+        try:
+            fts_pages = await self.prepare_full_text_search_paginator(
+                ctx, query, index="all"
+            )
+            await fts_pages.start(ctx)
+        except Exception:
+            pass
 
     @senate.command(
         name="from",

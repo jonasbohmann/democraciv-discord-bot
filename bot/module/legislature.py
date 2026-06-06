@@ -475,31 +475,21 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             entries=matches,
             icon=self.bot.mk.NATION_ICON_URL,
             author=f"Bills & Motions matching '{query}'",
-            empty_message="Nothing found.",
+            empty_message="Nothing found with title or keyword search.",
         )
 
         await ctx.send(
             f"-# {config.HINT} Check out [laws.democraciv.com](<https://laws.democraciv.com>) as well!"
         )
         await pages.start(ctx)
-        fts_pages = None
 
         try:
-            fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
+            fts_pages = await self.prepare_full_text_search_paginator(
+                ctx, query, index="all"
+            )
+            await fts_pages.start(ctx)
         except Exception:
             pass
-
-        if fts_pages:
-            view = mixin.FullTextSearchView(ctx)
-            delete_after = await ctx.send(
-                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per bill, even if there were more occurrences found.",
-                view=view,
-            )
-            yes = await view.prompt(silent=True)
-
-            if yes:
-                await fts_pages.start(ctx)
-                await delete_after.delete()
 
     @legislature.command(name="from", aliases=["f", "by"])
     async def _from(

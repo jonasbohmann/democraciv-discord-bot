@@ -1025,46 +1025,136 @@ class GovernmentMixin:
                 json={"question": query, "index": "bill", "is_law": True},
             )
 
+    def _full_text_search_model_for_hit(self, hit, *, index, is_law):
+        hit_type = hit.get("type")
+
+        if hit_type == "motion" or index == "motion":
+            return models.Motion
+
+        if is_law:
+            return models.Law
+
+        return models.Bill
+
+    def _full_text_search_hit_key(self, hit, *, index):
+        hit_type = hit.get("type") or ("motion" if index == "motion" else "bill")
+        return hit_type, hit["id"]
+
+    def _full_text_search_hit_snippets(self, hit):
+        snippets = hit.get("snippets") or []
+
+        if not snippets:
+            formatted = (hit.get("_formatted") or {}).get("content")
+            if formatted:
+                snippets = [formatted]
+
+        return [
+            snippet.strip() for snippet in snippets if snippet and snippet.strip()
+        ]
+
+    def _format_full_text_search_snippet(self, snippet):
+        txt = discord.utils.escape_markdown(snippet)
+        txt = txt.replace("<DBS>", "[**")
+        return txt.replace(
+            "<DBE>", "**](https://this-is-not-a-real-url.democraciv.com)"
+        )
+
+    async def _append_full_text_search_group(self, ctx, entries, group):
+        model = group["model"]
+
+        try:
+            obj = await model.convert(ctx, group["id"])
+        except Exception:
+            return
+
+        entries.append(f"**__{obj.formatted}__**")
+        for snippet in group["snippets"][:3]:
+            entries.append(f"{self._format_full_text_search_snippet(snippet)}\n")
+
     async def prepare_full_text_search_paginator(
-        self, ctx, query, *, index="bill", is_law=False
+        self,
+        ctx,
+        query,
+        *,
+        index="bill",
+        is_law=False,
+        semantic_ratio=0,
+        author=None,
     ):
         if index == "bill":
             model = models.Law if is_law else models.Bill
-        else:
+        elif index == "motion":
             model = models.Motion
+        else:
+            model = None
 
         response = await self.bot.api_request(
             "POST",
             "document/search",
-            json={"question": query, "index": index, "is_law": is_law},
+            json={
+                "question": query,
+                "index": index,
+                "is_law": is_law,
+                "semantic_ratio": semantic_ratio,
+            },
         )
 
-        if not response or not response["result"]["hits"]:
+        if (
+            not response
+            or response["result"].get("error")
+            or not response["result"]["hits"]
+        ):
             return None
 
-        fmt = [
-            f"Full-text search is a work-in-progress.\nKnown issue: This **only shows 1 search result per {model.model}**, even if there were more occurrences found.\n"
-        ]
+        fmt = []
+
+        current_group = None
 
         for hit in response["result"]["hits"]:
-            try:
-                obj = await model.convert(ctx, hit["id"])
-            except Exception:
+            key = self._full_text_search_hit_key(hit, index=index)
+            snippets = self._full_text_search_hit_snippets(hit)
+
+            if not snippets:
                 continue
 
-            trimmed = hit["_formatted"]["content"].strip()
-            txt = discord.utils.escape_markdown(trimmed)
-            txt = txt.replace("<DBS>", "[**")
-            txt = txt.replace(
-                "<DBE>", "**](https://this-is-not-a-real-url.democraciv.com)"
+            if current_group and current_group["key"] == key:
+                remaining = 3 - len(current_group["snippets"])
+                if remaining > 0:
+                    current_group["snippets"].extend(snippets[:remaining])
+                continue
+
+            if current_group:
+                await self._append_full_text_search_group(ctx, fmt, current_group)
+
+            current_group = {
+                "key": key,
+                "id": hit["id"],
+                "model": self._full_text_search_model_for_hit(
+                    hit, index=index, is_law=is_law
+                ),
+                "snippets": snippets[:3],
+            }
+
+        if current_group:
+            await self._append_full_text_search_group(ctx, fmt, current_group)
+
+        if len(fmt) == 1:
+            return None
+
+        if author is None:
+            if model:
+                search_type = f"{model.model.lower()}s"
+            else:
+                search_type = "bills and motions"
+            author = (
+                f"[BETA] Full-text search results for {search_type} "
+                f"matching '{query}'"
             )
-            fmt.append(f"**__{obj.formatted}__**")
-            fmt.append(f"{txt}\n")
 
         return paginator.SimplePages(
             entries=fmt,
             icon=self.bot.mk.NATION_ICON_URL,
-            author=f"[BETA] Full-text search results for '{query}'",
+            author=author,
         )
 
     async def _from_person_model(self, ctx, *, member_or_party, model, paginate=True):

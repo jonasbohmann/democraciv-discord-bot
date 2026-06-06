@@ -727,35 +727,17 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             entries=results,
             icon=self.bot.mk.NATION_ICON_URL,
             author=f"Laws matching '{query}'",
-            empty_message="Nothing found.",
+            empty_message="Nothing found with title or keyword search.",
         )
         await pages.start(ctx)
-
-        fts_pages = None
 
         try:
             fts_pages = await self.prepare_full_text_search_paginator(
                 ctx, query, is_law=True
             )
+            await fts_pages.start(ctx)
         except Exception:
             pass
-
-        if fts_pages:
-            view = mixin.FullTextSearchView(ctx)
-            delete_after = await ctx.send(
-                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all laws too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per law, even if there were more occurrences found.",
-                view=view,
-            )
-
-            yes = await view.prompt(silent=True)
-
-            if yes:
-                await fts_pages.start(ctx)
-
-                try:
-                    await delete_after.delete()
-                except Exception:
-                    pass
 
     @law.command(name="read", description="Read the text of a law.")
     @app_commands.describe(law="Law ID or title")
@@ -871,26 +853,9 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
 
         try:
             fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
+            await fts_pages.start(ctx)
         except Exception:
-            fts_pages = None
-
-        if fts_pages:
-            view = mixin.FullTextSearchView(ctx)
-            delete_after = await ctx.send(
-                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all bills too? "
-                f"This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result "
-                f"per bill, even if there were more occurrences found.",
-                view=view,
-            )
-            yes = await view.prompt(silent=True)
-
-            if yes:
-                await fts_pages.start(ctx)
-
-                try:
-                    await delete_after.delete()
-                except Exception:
-                    pass
+           pass
 
     @bill.command(name="from", description="List bills submitted by a person or party.")
     @app_commands.describe(
@@ -1003,26 +968,9 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             fts_pages = await self.prepare_full_text_search_paginator(
                 ctx, query, index="motion"
             )
+            await fts_pages.start(ctx)
         except Exception:
-            fts_pages = None
-
-        if fts_pages:
-            view = mixin.FullTextSearchView(ctx)
-            delete_after = await ctx.send(
-                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all motions too? "
-                f"This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result "
-                f"per motion, even if there were more occurrences found.",
-                view=view,
-            )
-            yes = await view.prompt(silent=True)
-
-            if yes:
-                await fts_pages.start(ctx)
-
-                try:
-                    await delete_after.delete()
-                except Exception:
-                    pass
+            pass
 
     @motion.command(
         name="from", description="List motions submitted by a person or party."

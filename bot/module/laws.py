@@ -203,7 +203,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             entries=results,
             icon=self.bot.mk.NATION_ICON_URL,
             author=f"Laws matching '{query}'",
-            empty_message="Nothing found.",
+            empty_message="Nothing found with title or keyword search.",
         )
 
         await ctx.send(
@@ -211,27 +211,13 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
         )
         await pages.start(ctx)
 
-        fts_pages = None
-
         try:
             fts_pages = await self.prepare_full_text_search_paginator(
                 ctx, query, is_law=True
             )
+            await fts_pages.start(ctx)
         except Exception:
-            pass
-
-        if fts_pages:
-            view = mixin.FullTextSearchView(ctx)
-            delete_after = await ctx.send(
-                f"{config.USER_INTERACTION_REQUIRED} Do you want to perform a full-text search across all laws too? This feature is a work-in-progress.\n{config.HINT} Known issue: This only shows 1 search result per law, even if there were more occurrences found.",
-                view=view,
-            )
-
-            yes = await view.prompt(silent=True)
-
-            if yes:
-                await fts_pages.start(ctx)
-                await delete_after.delete()
+            pass            
 
     @law.command(name="repeal", aliases=["r"])
     @checks.has_any_democraciv_role(

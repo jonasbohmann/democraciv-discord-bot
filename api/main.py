@@ -417,7 +417,7 @@ def roll_dice(dice_to_roll: Dice, auth: str = Depends(ensure_auth)):
 
 @app.post("/document/search")
 async def search_bill(question: Question, auth: str = Depends(ensure_auth)):
-    result = app.search_client.search(question)
+    result = await app.search_client.search(question)
     return {"ok": "ok", "result": result}
 
 
@@ -435,7 +435,7 @@ async def update_bill(document: Document, auth: str = Depends(ensure_auth)):
 
 @app.post("/document/delete")
 async def delete_bill(document: Document, auth: str = Depends(ensure_auth)):
-    app.search_client.delete_document(document.type, document.id)
+    await app.search_client.delete_document(document.type, document.id)
     return {"ok": "ok"}
 
 
