@@ -354,7 +354,8 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
 
         try:
             fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
-            fts_pages.start(ctx)
+            if fts_pages:
+                await fts_pages.start(ctx)
         except Exception:
             pass
 

@@ -259,7 +259,8 @@ class Motions(context.CustomCog, mixin.GovernmentMixin, name="Motion"):
             fts_pages = await self.prepare_full_text_search_paginator(
                 ctx, query, index="motion"
             )
-            await fts_pages.start(ctx)
+            if fts_pages:
+                await fts_pages.start(ctx)
         except Exception:
             pass
 

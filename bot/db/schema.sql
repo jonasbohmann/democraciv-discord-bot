@@ -196,12 +196,18 @@ CREATE TABLE IF NOT EXISTS motion_sponsor(
     UNIQUE (motion_id, sponsor)
 );
 
-CREATE INDEX IF NOT EXISTS bill_lookup_tag_tag_trgm_idx ON bill_lookup_tag USING gin (tag gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS bill_lookup_tag_tag_trgm_idx ON bill_lookup_tag USING gin (LOWER(tag) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS bill_name_lower_trgm_idx ON bill USING gin (LOWER(name) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS motion_title_trgm_idx ON motion USING gin (LOWER(title) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS motion_desc_trgm_idx ON motion USING gin (LOWER(description) gin_trgm_ops);
+
 CREATE INDEX IF NOT EXISTS bill_name_lower_idx ON bill (LOWER(name));
+
 CREATE INDEX IF NOT EXISTS bill_session_leg_session_idx ON bill_session (leg_session);
 CREATE INDEX IF NOT EXISTS bill_session_bill_id_idx ON bill_session (bill_id);
 CREATE INDEX IF NOT EXISTS bill_amendment_amending_bill_id_idx ON bill_amendment (amending_bill_id);
 CREATE INDEX IF NOT EXISTS bill_amendment_amended_bill_id_idx ON bill_amendment (amended_bill_id);
+
 CREATE UNIQUE INDEX IF NOT EXISTS legislature_session_open_kind_idx
     ON legislature_session (house, session_kind)
     WHERE status != 'Closed'::session_status AND house IS NOT NULL;

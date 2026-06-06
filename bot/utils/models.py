@@ -1049,13 +1049,17 @@ def compact_bill_status_emojis(
         if uses_procedure:
             return render_procedure(senate=red, law=gray)
 
-        return render_bicameral(red, green if origin_house == "commons" else gray, gray, gray)
+        return render_bicameral(
+            red, green if origin_house == "commons" else gray, gray, gray
+        )
 
     if status == _BillStatusFlag.FAILED_COMMONS.value:
         if uses_procedure:
             return render_procedure(commons=red, law=gray)
 
-        return render_bicameral(green if origin_house == "senate" else gray, red, gray, gray)
+        return render_bicameral(
+            green if origin_house == "senate" else gray, red, gray, gray
+        )
 
     if status == _BillStatusFlag.PASSED_SENATE_PENDING_COMMONS.value:
         return render_bicameral(green, yellow, gray, gray)

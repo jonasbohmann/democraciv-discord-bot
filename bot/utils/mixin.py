@@ -408,7 +408,9 @@ class GovernmentMixin:
         )
         await pages.start(ctx)
 
-    def _related_bills_field_value(self, related_bills: typing.Sequence[models.RelatedBillSummary]) -> str:
+    def _related_bills_field_value(
+        self, related_bills: typing.Sequence[models.RelatedBillSummary]
+    ) -> str:
         lines = []
         current_length = 0
 
@@ -1048,9 +1050,7 @@ class GovernmentMixin:
             if formatted:
                 snippets = [formatted]
 
-        return [
-            snippet.strip() for snippet in snippets if snippet and snippet.strip()
-        ]
+        return [snippet.strip() for snippet in snippets if snippet and snippet.strip()]
 
     def _format_full_text_search_snippet(self, snippet):
         txt = discord.utils.escape_markdown(snippet)
@@ -1138,7 +1138,7 @@ class GovernmentMixin:
         if current_group:
             await self._append_full_text_search_group(ctx, fmt, current_group)
 
-        if len(fmt) == 1:
+        if not fmt:
             return None
 
         if author is None:
@@ -2301,9 +2301,7 @@ class GovernmentMixin:
                 f"WHERE ls.house = $1"
             )
 
-            amounts = await self.bot.db.fetch(
-                query, house, models.BillIsLaw.flag.value
-            )
+            amounts = await self.bot.db.fetch(query, house, models.BillIsLaw.flag.value)
 
             submitter = await self.bot.db.fetch(
                 "SELECT submitter FROM bill WHERE origin_house = $1", house

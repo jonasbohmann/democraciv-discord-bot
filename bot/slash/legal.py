@@ -735,7 +735,8 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             fts_pages = await self.prepare_full_text_search_paginator(
                 ctx, query, is_law=True
             )
-            await fts_pages.start(ctx)
+            if fts_pages:
+                await fts_pages.start(ctx)
         except Exception:
             pass
 
@@ -853,9 +854,10 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
 
         try:
             fts_pages = await self.prepare_full_text_search_paginator(ctx, query)
-            await fts_pages.start(ctx)
+            if fts_pages:
+                await fts_pages.start(ctx)
         except Exception:
-           pass
+            pass
 
     @bill.command(name="from", description="List bills submitted by a person or party.")
     @app_commands.describe(
@@ -968,7 +970,8 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             fts_pages = await self.prepare_full_text_search_paginator(
                 ctx, query, index="motion"
             )
-            await fts_pages.start(ctx)
+            if fts_pages:
+                await fts_pages.start(ctx)
         except Exception:
             pass
 

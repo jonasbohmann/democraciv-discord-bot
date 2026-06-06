@@ -215,9 +215,10 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             fts_pages = await self.prepare_full_text_search_paginator(
                 ctx, query, is_law=True
             )
-            await fts_pages.start(ctx)
+            if fts_pages:
+                await fts_pages.start(ctx)
         except Exception:
-            pass            
+            pass
 
     @law.command(name="repeal", aliases=["r"])
     @checks.has_any_democraciv_role(

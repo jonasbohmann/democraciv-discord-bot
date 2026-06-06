@@ -1479,15 +1479,14 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             fts_pages = await self.prepare_full_text_search_paginator(
                 ctx, query, index="all"
             )
-            await fts_pages.start(ctx)
+            if fts_pages:
+                await fts_pages.start(ctx)
         except Exception:
             pass
 
     @commons.command(name="search", description="Search bills and motions together.")
     async def commons_search(self, interaction: discord.Interaction, query: str):
-        ctx = slash_context.from_interaction(
-            interaction, command_name="commons search"
-        )
+        ctx = slash_context.from_interaction(interaction, command_name="commons search")
         await ctx.defer()
         results = await self._search_model(ctx, model=models.Bill, query=query)
         results += await self._search_model(ctx, model=models.Motion, query=query)
@@ -1510,7 +1509,8 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             fts_pages = await self.prepare_full_text_search_paginator(
                 ctx, query, index="all"
             )
-            await fts_pages.start(ctx)
+            if fts_pages:
+                await fts_pages.start(ctx)
         except Exception:
             pass
 

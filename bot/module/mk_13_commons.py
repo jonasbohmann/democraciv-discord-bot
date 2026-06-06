@@ -405,7 +405,8 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             fts_pages = await self.prepare_full_text_search_paginator(
                 ctx, query, index="all"
             )
-            await fts_pages.start(ctx)
+            if fts_pages:
+                await fts_pages.start(ctx)
         except Exception:
             pass
 

@@ -333,9 +333,7 @@ class SearchClient:
         expected_hashes = {doc["uid"]: doc["content_hash"] for doc in expected}
         stale_uids = [uid for uid in existing if uid not in expected_hashes]
         changed_documents = [
-            doc
-            for doc in expected
-            if existing.get(doc["uid"]) != doc["content_hash"]
+            doc for doc in expected if existing.get(doc["uid"]) != doc["content_hash"]
         ]
 
         if stale_uids:
@@ -477,15 +475,16 @@ class SearchClient:
                 "is_law",
             ],
             "showRankingScore": True,
-            "rankingScoreThreshold": 0.2,
+            "matchingStrategy": "frequency",
             "limit": 20,
         }
 
         if question.semantic_ratio:
+            parameters["rankingScoreThreshold"] = 0.2
             parameters["hybrid"] = {
                 "embedder": "default",
                 "semanticRatio": question.semantic_ratio,
-            },
+            }
 
         if question.index in {"bill", "all"} and question.is_law:
             parameters["filter"] = "is_law = true"

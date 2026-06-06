@@ -54,9 +54,7 @@ class Meta(context.CustomCog):
     async def sync_slash_global(self, ctx):
         synced = await self.bot.tree.sync()
 
-        await ctx.send(
-            f"{config.YES} Synced {len(synced)} global slash command(s)."
-        )
+        await ctx.send(f"{config.YES} Synced {len(synced)} global slash command(s).")
 
     @commands.command(
         name="slashcommands",

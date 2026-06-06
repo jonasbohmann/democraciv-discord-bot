@@ -718,12 +718,11 @@ class DemocracivBot(commands.Bot):
             await self.log_error(
                 ctx, error, to_log_channel=False, to_owner=True, to_context=True
             )
-    
+
     async def on_app_command_completion(self, interaction, command):
         logging.info(
             f"[slash] /{command.qualified_name} used by {interaction.user} in #{interaction.channel} on {interaction.guild}"
         )
-
 
     async def on_app_command_error(
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
