@@ -5,61 +5,371 @@ Democraciv MK13
 {% endblock title %}
 
 {% block content %}
-<section class="stack">
-    <article class="page-header-card" style="padding: 2rem;">
-        <h1>Legislative Records</h1>
-        <p>
-            Bills & motions are submitted through the Democraciv Discord Bot on our Discord server. Voting takes place outside the bot.
-            The Speaker, Vice Speaker and Senator Presiding mark bills as passed to turn them into laws with special bot commands exclusive to them.
-        </p>
+<section class="dashboard-page stack">
+    <article class="page-header-card dashboard-recent-laws">
+        <header class="dashboard-card-header">
+            <div>
+                <span class="eyebrow">Legislative Records</span>
+                <h1>Recently Passed Laws</h1>
+            </div>
+            <a href="/law" class="dashboard-card-action">All Laws</a>
+        </header>
 
-        <p style="margin-bottom: 2rem;">
-            The records on this site are the same records as found in the -law, -bill & -motion commands from the Democraciv Discord Bot.
-        </p>
-
-        <div class="feature-grid">
-            <a href="/law" class="surface-panel feature-card">
-                <h2>Laws</h2>
-                <p class="field-note">Browse, search and filter the list of currently active laws.</p>
-            </a>
-
-            <a href="/legal-code" class="surface-panel feature-card">
-                <h2>Legal Code</h2>
-                <p class="field-note">All current active laws on one page.</p>
-            </a>
-
-            <a href="/bill" class="surface-panel feature-card">
-                <h2>Bills</h2>
-                <p class="field-note">All submitted Bills from both the Senate & the Commons.</p>
-            </a>
-
-            <a href="/motion" class="surface-panel feature-card">
-                <h2>Motions</h2>
-                <p class="field-note">All submitted Motions from both the Senate & the Commons.</p>
-            </a>
-
-        </div>
+        {% if recent_laws | length > 0 %}
+        <ol class="dashboard-record-list dashboard-law-list">
+            {% for law in recent_laws %}
+            <li>
+                <a href="{{ law.href }}" class="dashboard-record-title">Law #{{ law.id }} &middot; {{ law.name }}</a>
+                {% if law.passed_date_label %}
+                <span class="record-subtle">Passed {{ law.passed_date_label }}</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ol>
+        {% else %}
+        <p class="dashboard-empty-copy">No laws have been recorded yet.</p>
+        {% endif %}
     </article>
 
+    <section class="dashboard-grid" aria-label="Legislative dashboard">
+        <article class="surface-panel dashboard-card dashboard-session-card" data-dashboard-card="{{ senate.key }}">
+            <header class="dashboard-card-header">
+                <div>
+                    <span class="eyebrow">Current Session</span>
+                    <h2>{{ senate.title }}</h2>
+                </div>
+            </header>
 
-    <article class="page-header-card" style="padding: 2rem; margin-top: 1rem;">
-        <h1>Additional Links</h1>
-        <div class="feature-grid">
-            <a href="https://discord.com/invite/wVtbDKBpuA" target="_blank" rel="noopener noreferrer" class="surface-panel feature-card">
-                <h2>Discord</h2>
-                <p class="field-note">Everything happens here.</p>
-            </a>
+            {% if senate.has_sessions %}
+                {% if senate.has_tabs %}
+                <div class="dashboard-tabs" role="tablist" aria-label="Senate session types" data-dashboard-tabs>
+                    {% for session in senate.sessions %}
+                    <button
+                        type="button"
+                        id="{{ session.tab_id }}"
+                        class="dashboard-tab{% if loop.first %} is-active{% endif %}"
+                        role="tab"
+                        aria-controls="{{ session.panel_id }}"
+                        aria-selected="{% if loop.first %}true{% else %}false{% endif %}"
+                        tabindex="{% if loop.first %}0{% else %}-1{% endif %}"
+                    >
+                        {{ session.session_kind_label }}
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
 
-            <a href="https://reddit.com/r/democraciv/wiki" target="_blank" rel="noopener noreferrer" class="surface-panel feature-card">
-                <h2>Wiki</h2>
-                <p class="field-note">Also includes the archive of our previous games.</p>
-            </a>
+                <div class="dashboard-session-panels">
+                    {% for session in senate.sessions %}
+                    <section
+                        id="{{ session.panel_id }}"
+                        class="dashboard-session-panel{% if senate.has_tabs and not loop.first %} is-hidden{% endif %}"
+                        {% if senate.has_tabs %}role="tabpanel" aria-labelledby="{{ session.tab_id }}"{% endif %}
+                        {% if senate.has_tabs and not loop.first %}hidden{% endif %}
+                    >
+                        <header class="dashboard-session-header">
+                            <h3>{{ session.display_name }}</h3>
+                            <span class="badge">{{ session.session_kind_label }}</span>
+                        </header>
 
-            <a href="https://docs.google.com/document/d/1ywV_F70odxHh5fLcqcghpFOToPao85CjfT5Y_mYcml0/edit?usp=sharing" target="_blank" rel="noopener noreferrer" class="surface-panel feature-card">
-                <h2>Legal Code on Google Docs</h2>
-                <p class="field-note">This is generated by the Democraciv Discord Bot and automatically kept up-to-date.</p>
-            </a>
-        </div>
-    </article>
+                        <dl class="dashboard-field-list">
+                            <div class="field">
+                                <dt>{{ session.presider_label }}</dt>
+                                <dd>
+                                    <span>{{ session.presider.display_name }}</span>
+                                    <span class="record-subtle">@{{ session.presider.username }}</span>
+                                </dd>
+                            </div>
+
+                            <div class="field">
+                                <dt>Status</dt>
+                                <dd>{{ session.status_label }}</dd>
+                            </div>
+
+                            {% if session.vote_form %}
+                            <div class="field">
+                                <dt>Vote Form</dt>
+                                <dd><a href="{{ session.vote_form }}" target="_blank" rel="noopener noreferrer">Open Vote Form</a></dd>
+                            </div>
+                            {% endif %}
+                        </dl>
+
+                        <section class="dashboard-subsection">
+                            <h4>Submitted Bills</h4>
+                            {% if session.bills | length > 0 %}
+                            <ul class="dashboard-record-list">
+                                {% for bill in session.bills %}
+                                <li>
+                                    <a href="{{ bill.href }}" class="dashboard-record-title">Bill #{{ bill.id }} &middot; {{ bill.name }}</a>
+                                    <span class="dashboard-author-line">
+                                        <span>{{ bill.author.display_name }}</span>
+                                        <span class="record-subtle">@{{ bill.author.username }}</span>
+                                    </span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="dashboard-empty-copy">No bills submitted.</p>
+                            {% endif %}
+                        </section>
+
+                        <section class="dashboard-subsection">
+                            <h4>Submitted Motions</h4>
+                            {% if session.motions | length > 0 %}
+                            <ul class="dashboard-record-list">
+                                {% for motion in session.motions %}
+                                <li>
+                                    <a href="{{ motion.href }}" class="dashboard-record-title">Motion #{{ motion.id }} &middot; {{ motion.title }}</a>
+                                    <span class="dashboard-author-line">
+                                        <span>{{ motion.author.display_name }}</span>
+                                        <span class="record-subtle">@{{ motion.author.username }}</span>
+                                    </span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="dashboard-empty-copy">No motions submitted.</p>
+                            {% endif %}
+                        </section>
+                    </section>
+                    {% endfor %}
+                </div>
+            {% else %}
+            <p class="dashboard-empty-copy">{{ senate.empty_message }}</p>
+            {% endif %}
+        </article>
+
+        <article class="surface-panel dashboard-card dashboard-session-card" data-dashboard-card="{{ commons.key }}">
+            <header class="dashboard-card-header">
+                <div>
+                    <span class="eyebrow">Current Session</span>
+                    <h2>{{ commons.title }}</h2>
+                </div>
+            </header>
+
+            {% if commons.has_sessions %}
+                {% if commons.has_tabs %}
+                <div class="dashboard-tabs" role="tablist" aria-label="Commons session types" data-dashboard-tabs>
+                    {% for session in commons.sessions %}
+                    <button
+                        type="button"
+                        id="{{ session.tab_id }}"
+                        class="dashboard-tab{% if loop.first %} is-active{% endif %}"
+                        role="tab"
+                        aria-controls="{{ session.panel_id }}"
+                        aria-selected="{% if loop.first %}true{% else %}false{% endif %}"
+                        tabindex="{% if loop.first %}0{% else %}-1{% endif %}"
+                    >
+                        {{ session.session_kind_label }}
+                    </button>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="dashboard-session-panels">
+                    {% for session in commons.sessions %}
+                    <section
+                        id="{{ session.panel_id }}"
+                        class="dashboard-session-panel{% if commons.has_tabs and not loop.first %} is-hidden{% endif %}"
+                        {% if commons.has_tabs %}role="tabpanel" aria-labelledby="{{ session.tab_id }}"{% endif %}
+                        {% if commons.has_tabs and not loop.first %}hidden{% endif %}
+                    >
+                        <header class="dashboard-session-header">
+                            <h3>{{ session.display_name }}</h3>
+                            <span class="badge">{{ session.session_kind_label }}</span>
+                        </header>
+
+                        <dl class="dashboard-field-list">
+                            <div class="field">
+                                <dt>{{ session.presider_label }}</dt>
+                                <dd>
+                                    <span>{{ session.presider.display_name }}</span>
+                                    <span class="record-subtle">@{{ session.presider.username }}</span>
+                                </dd>
+                            </div>
+
+                            <div class="field">
+                                <dt>Status</dt>
+                                <dd>{{ session.status_label }}</dd>
+                            </div>
+
+                            {% if session.vote_form %}
+                            <div class="field">
+                                <dt>Vote Form</dt>
+                                <dd><a href="{{ session.vote_form }}" target="_blank" rel="noopener noreferrer">Open Vote Form</a></dd>
+                            </div>
+                            {% endif %}
+                        </dl>
+
+                        <section class="dashboard-subsection">
+                            <h4>Submitted Bills</h4>
+                            {% if session.bills | length > 0 %}
+                            <ul class="dashboard-record-list">
+                                {% for bill in session.bills %}
+                                <li>
+                                    <a href="{{ bill.href }}" class="dashboard-record-title">Bill #{{ bill.id }} &middot; {{ bill.name }}</a>
+                                    <span class="dashboard-author-line">
+                                        <span>{{ bill.author.display_name }}</span>
+                                        <span class="record-subtle">@{{ bill.author.username }}</span>
+                                    </span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="dashboard-empty-copy">No bills submitted.</p>
+                            {% endif %}
+                        </section>
+
+                        <section class="dashboard-subsection">
+                            <h4>Submitted Motions</h4>
+                            {% if session.motions | length > 0 %}
+                            <ul class="dashboard-record-list">
+                                {% for motion in session.motions %}
+                                <li>
+                                    <a href="{{ motion.href }}" class="dashboard-record-title">Motion #{{ motion.id }} &middot; {{ motion.title }}</a>
+                                    <span class="dashboard-author-line">
+                                        <span>{{ motion.author.display_name }}</span>
+                                        <span class="record-subtle">@{{ motion.author.username }}</span>
+                                    </span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            <p class="dashboard-empty-copy">No motions submitted.</p>
+                            {% endif %}
+                        </section>
+                    </section>
+                    {% endfor %}
+                </div>
+            {% else %}
+            <p class="dashboard-empty-copy">{{ commons.empty_message }}</p>
+            {% endif %}
+        </article>
+
+        <article class="surface-panel dashboard-card">
+            <header class="dashboard-card-header">
+                <div>
+                    <span class="eyebrow">Executive</span>
+                    <h2>Awaiting Action</h2>
+                </div>
+            </header>
+
+            {% if executive_bills | length > 0 %}
+            <ul class="dashboard-record-list">
+                {% for bill in executive_bills %}
+                <li>
+                    <a href="{{ bill.href }}" class="dashboard-record-title">Bill #{{ bill.id }} &middot; {{ bill.name }}</a>
+                    <span class="dashboard-author-line">
+                        <span>{{ bill.author.display_name }}</span>
+                        <span class="record-subtle">@{{ bill.author.username }}</span>
+                    </span>
+                    <span class="record-subtle">Deadline: {{ bill.executive_deadline_label }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="dashboard-empty-copy">There are no bills awaiting Executive action.</p>
+            {% endif %}
+        </article>
+
+        <article class="surface-panel dashboard-card">
+            <header class="dashboard-card-header">
+                <div>
+                    <span class="eyebrow">Navigation</span>
+                    <h2>Links</h2>
+                </div>
+            </header>
+
+            <div class="dashboard-link-list">
+                <a href="/law" class="dashboard-link-row">
+                    <strong>Laws</strong>
+                    <span>Browse, search and filter the list of currently active laws.</span>
+                </a>
+
+                <a href="/legal-code" class="dashboard-link-row">
+                    <strong>Legal Code</strong>
+                    <span>All current active laws on one page.</span>
+                </a>
+
+                <a href="/bill" class="dashboard-link-row">
+                    <strong>Bills</strong>
+                    <span>All submitted Bills from both the Senate and the Commons.</span>
+                </a>
+
+                <a href="/motion" class="dashboard-link-row">
+                    <strong>Motions</strong>
+                    <span>All submitted Motions from both the Senate and the Commons.</span>
+                </a>
+
+                <a href="https://discord.com/invite/wVtbDKBpuA" target="_blank" rel="noopener noreferrer" class="dashboard-link-row">
+                    <strong>Discord</strong>
+                    <span>Everything happens here.</span>
+                </a>
+
+                <a href="https://reddit.com/r/democraciv/wiki" target="_blank" rel="noopener noreferrer" class="dashboard-link-row">
+                    <strong>Wiki</strong>
+                    <span>Also includes the archive of previous games.</span>
+                </a>
+
+                <a href="https://docs.google.com/document/d/1ywV_F70odxHh5fLcqcghpFOToPao85CjfT5Y_mYcml0/edit?usp=sharing" target="_blank" rel="noopener noreferrer" class="dashboard-link-row">
+                    <strong>Legal Code on Google Docs</strong>
+                    <span>Generated by the Democraciv Discord Bot and kept up-to-date.</span>
+                </a>
+            </div>
+        </article>
+    </section>
 </section>
 {% endblock content %}
+
+{% block extra_scripts %}
+<script>
+    (() => {
+        const tabLists = Array.from(document.querySelectorAll("[data-dashboard-tabs]"));
+
+        for (const tabList of tabLists) {
+            const tabs = Array.from(tabList.querySelectorAll('[role="tab"]'));
+
+            const activateTab = (selectedTab) => {
+                for (const tab of tabs) {
+                    const isSelected = tab === selectedTab;
+                    const panelId = tab.getAttribute("aria-controls");
+                    const panel = panelId ? document.getElementById(panelId) : null;
+
+                    tab.classList.toggle("is-active", isSelected);
+                    tab.setAttribute("aria-selected", String(isSelected));
+                    tab.tabIndex = isSelected ? 0 : -1;
+
+                    if (panel) {
+                        panel.hidden = !isSelected;
+                        panel.classList.toggle("is-hidden", !isSelected);
+                    }
+                }
+            };
+
+            for (const tab of tabs) {
+                tab.addEventListener("click", () => activateTab(tab));
+                tab.addEventListener("keydown", (event) => {
+                    const currentIndex = tabs.indexOf(tab);
+                    let nextIndex = currentIndex;
+
+                    if (event.key === "ArrowRight") {
+                        nextIndex = (currentIndex + 1) % tabs.length;
+                    } else if (event.key === "ArrowLeft") {
+                        nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+                    } else if (event.key === "Home") {
+                        nextIndex = 0;
+                    } else if (event.key === "End") {
+                        nextIndex = tabs.length - 1;
+                    } else {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    tabs[nextIndex].focus();
+                    activateTab(tabs[nextIndex]);
+                });
+            }
+        }
+    })();
+</script>
+{% endblock extra_scripts %}

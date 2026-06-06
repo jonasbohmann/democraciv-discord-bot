@@ -18,6 +18,7 @@ use std::{
 use zip::ZipArchive;
 
 const LAW_STATUS: i32 = 10; // siehe bot/utils/modules.py BillIsLaw
+const AWAITING_EXECUTIVE_STATUS: i32 = 24; // siehe bot/utils/models.py BillAwaitingExecutive
 const DEFAULT_AUTHOR_LOOKUP_URL: &str = "http://127.0.0.1:8081/discord-user";
 const DEFAULT_AUTHOR_LOOKUP_TOKEN: &str = "";
 const GDOC_FONT_SIZE_SCALE: f32 = 1.1;
@@ -88,6 +89,64 @@ struct BillListItem {
     status_label: String,
     is_law: bool,
     sponsor_count: i64,
+}
+
+#[derive(Serialize, Clone)]
+struct DashboardLawItem {
+    id: i32,
+    name: String,
+    href: String,
+    passed_date_label: Option<String>,
+}
+
+#[derive(Serialize, Clone)]
+struct DashboardSessionBillItem {
+    id: i32,
+    name: String,
+    href: String,
+    author: DiscordAuthor,
+}
+
+#[derive(Serialize, Clone)]
+struct DashboardSessionMotionItem {
+    id: i32,
+    title: String,
+    href: String,
+    author: DiscordAuthor,
+}
+
+#[derive(Serialize, Clone)]
+struct DashboardSession {
+    id: i32,
+    display_name: String,
+    session_kind_label: String,
+    status_label: String,
+    vote_form: Option<String>,
+    presider_label: &'static str,
+    presider: DiscordAuthor,
+    tab_id: String,
+    panel_id: String,
+    bills: Vec<DashboardSessionBillItem>,
+    motions: Vec<DashboardSessionMotionItem>,
+}
+
+#[derive(Serialize, Clone)]
+struct DashboardChamber {
+    key: &'static str,
+    title: &'static str,
+    empty_message: &'static str,
+    has_sessions: bool,
+    has_tabs: bool,
+    sessions: Vec<DashboardSession>,
+}
+
+#[derive(Serialize, Clone)]
+struct DashboardExecutiveBillItem {
+    id: i32,
+    name: String,
+    href: String,
+    author: DiscordAuthor,
+    executive_deadline_label: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -973,6 +1032,10 @@ fn is_neutral_text_color(value: &str) -> bool {
         return true;
     }
 
+    if trimmed == "#0c343d" {
+        return false;
+    }
+
     if let Some((red, green, blue, alpha)) = parse_hex_color(trimmed) {
         return alpha.unwrap_or(1.0) > 0.0 && is_neutral_rgb(red, green, blue);
     }
@@ -1385,6 +1448,268 @@ fn bill_status_options() -> Vec<String> {
         .into_iter()
         .map(|status| display_bill_status(status).to_string())
         .collect()
+}
+
+fn display_session_name(house_name: &str, session_kind: &str, display_id: i32) -> String {
+    let kind = if session_kind == "Emergency" {
+        " Emergency"
+    } else {
+        ""
+    };
+
+    format!("{house_name}{kind} Session #{display_id}")
+}
+
+async fn load_recent_dashboard_laws(db: &PgPool) -> Result<Vec<DashboardLawItem>, String> {
+    let rows = sqlx::query(
+        "SELECT
+            bill.id,
+            bill.name,
+            CASE
+                WHEN MAX(bill_history.date) FILTER (WHERE bill_history.after_status = $1) IS NULL
+                    THEN NULL
+                ELSE TO_CHAR(
+                    MAX(bill_history.date) FILTER (WHERE bill_history.after_status = $1),
+                    'YYYY-MM-DD HH24:MI'
+                ) || ' UTC'
+            END AS passed_date_label
+        FROM bill
+        LEFT JOIN bill_history ON bill_history.bill_id = bill.id
+        WHERE bill.status = $1
+        GROUP BY bill.id
+        ORDER BY
+            MAX(bill_history.date) FILTER (WHERE bill_history.after_status = $1) DESC NULLS LAST,
+            bill.id DESC
+        LIMIT 3",
+    )
+    .bind(LAW_STATUS)
+    .fetch_all(db)
+    .await
+    .map_err(|error| error.to_string())?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            let id: i32 = row.try_get("id").unwrap_or_default();
+
+            DashboardLawItem {
+                id,
+                name: row.try_get("name").unwrap_or_default(),
+                href: format!("/law/{id}"),
+                passed_date_label: row.try_get("passed_date_label").unwrap_or_default(),
+            }
+        })
+        .collect())
+}
+
+async fn load_dashboard_session_bills(
+    db: &PgPool,
+    author_lookup: &DiscordAuthorLookupClient,
+    session_id: i32,
+) -> Result<Vec<DashboardSessionBillItem>, String> {
+    let mut rows = sqlx::query(
+        "SELECT
+            bill.id,
+            bill.name,
+            bill.submitter,
+            bill.status
+        FROM bill_session
+        JOIN bill ON bill.id = bill_session.bill_id
+        WHERE bill_session.leg_session = $1
+        ORDER BY bill.id",
+    )
+    .bind(session_id)
+    .fetch_all(db)
+    .await
+    .map_err(|error| error.to_string())?;
+
+    if rows.is_empty() {
+        rows = sqlx::query(
+            "SELECT id, name, submitter, status
+            FROM bill
+            WHERE leg_session = $1
+            ORDER BY id",
+        )
+        .bind(session_id)
+        .fetch_all(db)
+        .await
+        .map_err(|error| error.to_string())?;
+    }
+
+    let submitter_ids = rows
+        .iter()
+        .map(|row| row.try_get("submitter").unwrap_or_default())
+        .collect::<Vec<i64>>();
+    let authors = resolve_authors_for_user_ids(author_lookup, &submitter_ids).await;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            let id: i32 = row.try_get("id").unwrap_or_default();
+            let submitter: i64 = row.try_get("submitter").unwrap_or_default();
+            let status: i32 = row.try_get("status").unwrap_or_default();
+
+            DashboardSessionBillItem {
+                id,
+                name: row.try_get("name").unwrap_or_default(),
+                href: detail_href_for_status(id, status),
+                author: author_for_submitter(&authors, submitter),
+            }
+        })
+        .collect())
+}
+
+async fn load_dashboard_session_motions(
+    db: &PgPool,
+    author_lookup: &DiscordAuthorLookupClient,
+    session_id: i32,
+) -> Result<Vec<DashboardSessionMotionItem>, String> {
+    let rows = sqlx::query(
+        "SELECT id, title, submitter
+        FROM motion
+        WHERE leg_session = $1
+        ORDER BY id",
+    )
+    .bind(session_id)
+    .fetch_all(db)
+    .await
+    .map_err(|error| error.to_string())?;
+
+    let submitter_ids = rows
+        .iter()
+        .map(|row| row.try_get("submitter").unwrap_or_default())
+        .collect::<Vec<i64>>();
+    let authors = resolve_authors_for_user_ids(author_lookup, &submitter_ids).await;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            let id: i32 = row.try_get("id").unwrap_or_default();
+            let submitter: i64 = row.try_get("submitter").unwrap_or_default();
+
+            DashboardSessionMotionItem {
+                id,
+                title: row.try_get("title").unwrap_or_default(),
+                href: format!("/motion/{id}"),
+                author: author_for_submitter(&authors, submitter),
+            }
+        })
+        .collect())
+}
+
+async fn load_dashboard_chamber(
+    db: &PgPool,
+    author_lookup: &DiscordAuthorLookupClient,
+    key: &'static str,
+    title: &'static str,
+    presider_label: &'static str,
+    empty_message: &'static str,
+) -> Result<DashboardChamber, String> {
+    let rows = sqlx::query(
+        "SELECT
+            id,
+            speaker,
+            status::text AS status,
+            vote_form,
+            mk13_house_id,
+            session_kind::text AS session_kind
+        FROM legislature_session
+        WHERE status != 'Closed'::session_status AND house = $1
+        ORDER BY CASE session_kind::text WHEN 'Regular' THEN 0 ELSE 1 END, id",
+    )
+    .bind(key)
+    .fetch_all(db)
+    .await
+    .map_err(|error| error.to_string())?;
+
+    let has_tabs = rows.len() > 1;
+    let mut sessions = Vec::with_capacity(rows.len());
+
+    for row in rows {
+        let id: i32 = row.try_get("id").unwrap_or_default();
+        let display_id: Option<i32> = row.try_get("mk13_house_id").unwrap_or_default();
+        let session_kind_label: String = row
+            .try_get("session_kind")
+            .unwrap_or_else(|_| "Regular".to_string());
+        let speaker: i64 = row.try_get("speaker").unwrap_or_default();
+        let tab_key = session_kind_label.to_lowercase().replace(' ', "-");
+
+        sessions.push(DashboardSession {
+            id,
+            display_name: display_session_name(
+                title,
+                &session_kind_label,
+                display_id.unwrap_or(id),
+            ),
+            session_kind_label,
+            status_label: row.try_get("status").unwrap_or_default(),
+            vote_form: row.try_get("vote_form").unwrap_or_default(),
+            presider_label,
+            presider: resolve_author(author_lookup, speaker).await,
+            tab_id: format!("dashboard-{key}-{tab_key}-tab"),
+            panel_id: format!("dashboard-{key}-{tab_key}-panel"),
+            bills: load_dashboard_session_bills(db, author_lookup, id).await?,
+            motions: load_dashboard_session_motions(db, author_lookup, id).await?,
+        });
+    }
+
+    Ok(DashboardChamber {
+        key,
+        title,
+        empty_message,
+        has_sessions: !sessions.is_empty(),
+        has_tabs,
+        sessions,
+    })
+}
+
+async fn load_dashboard_executive_bills(
+    db: &PgPool,
+    author_lookup: &DiscordAuthorLookupClient,
+) -> Result<Vec<DashboardExecutiveBillItem>, String> {
+    let rows = sqlx::query(
+        "SELECT
+            id,
+            name,
+            submitter,
+            status,
+            CASE
+                WHEN executive_deadline_at IS NULL THEN 'No deadline recorded'
+                ELSE TO_CHAR(executive_deadline_at, 'YYYY-MM-DD HH24:MI') || ' UTC'
+            END AS executive_deadline_label
+        FROM bill
+        WHERE status = $1
+        ORDER BY executive_deadline_at ASC NULLS LAST, id",
+    )
+    .bind(AWAITING_EXECUTIVE_STATUS)
+    .fetch_all(db)
+    .await
+    .map_err(|error| error.to_string())?;
+
+    let submitter_ids = rows
+        .iter()
+        .map(|row| row.try_get("submitter").unwrap_or_default())
+        .collect::<Vec<i64>>();
+    let authors = resolve_authors_for_user_ids(author_lookup, &submitter_ids).await;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            let id: i32 = row.try_get("id").unwrap_or_default();
+            let submitter: i64 = row.try_get("submitter").unwrap_or_default();
+            let status: i32 = row.try_get("status").unwrap_or_default();
+
+            DashboardExecutiveBillItem {
+                id,
+                name: row.try_get("name").unwrap_or_default(),
+                href: detail_href_for_status(id, status),
+                author: author_for_submitter(&authors, submitter),
+                executive_deadline_label: row
+                    .try_get("executive_deadline_label")
+                    .unwrap_or_else(|_| "No deadline recorded".to_string()),
+            }
+        })
+        .collect())
 }
 
 async fn load_motion_list(
@@ -1949,8 +2274,37 @@ async fn load_bill_asset(
 }
 
 #[get("/")]
-async fn index() -> Result<Template, String> {
-    Ok(Template::render("index", context! {}))
+async fn index(state: &State<AppState>) -> Result<Template, String> {
+    let recent_laws = load_recent_dashboard_laws(&state.db).await?;
+    let senate = load_dashboard_chamber(
+        &state.db,
+        &state.author_lookup,
+        "senate",
+        "Senate",
+        "Senator Presiding",
+        "There is no open session in the Senate right now.",
+    )
+    .await?;
+    let commons = load_dashboard_chamber(
+        &state.db,
+        &state.author_lookup,
+        "commons",
+        "Commons",
+        "Speaker",
+        "There is no open session in the Commons right now.",
+    )
+    .await?;
+    let executive_bills = load_dashboard_executive_bills(&state.db, &state.author_lookup).await?;
+
+    Ok(Template::render(
+        "index",
+        context! {
+            recent_laws,
+            senate,
+            commons,
+            executive_bills,
+        },
+    ))
 }
 
 #[get("/motion")]
