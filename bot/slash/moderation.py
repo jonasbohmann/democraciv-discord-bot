@@ -13,7 +13,7 @@ class ModerationSlash(commands.Cog):
         name="moderation",
         description="Moderation links and tools.",
         guild_only=True,
-        guild_ids=config.DEMOCRACIV_GUILD_ID
+        guild_ids=[config.DEMOCRACIV_GUILD_ID]
     )
 
     def __init__(self, bot):
@@ -50,7 +50,8 @@ class ModerationSlash(commands.Cog):
             ),
             ephemeral=True,
         )
-
+        
+    """
     @moderation.command(name="hub", description="Link to the Moderation Hub.")
     @slash_checks.has_democraciv_role(mk.DemocracivRole.MODERATION)
     async def hub(self, interaction: discord.Interaction):
@@ -100,6 +101,7 @@ class ModerationSlash(commands.Cog):
             title="DerJonas' Democraciv Moderation Guidelines & Procedures",
             url=token.MOD_GUIDELINES,
         )
+    """
 
     async def archive_channel_impl(
         self,

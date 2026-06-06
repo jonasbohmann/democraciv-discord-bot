@@ -1,10 +1,11 @@
 import enum
 
+from discord import app_commands
 from discord.ext import commands
 from bot.config import config
 
 
-class DemocracivBotException(commands.CommandError):
+class DemocracivBotException(commands.CommandError, app_commands.AppCommandError):
     """Generic CommandError exception"""
 
     message = f"{config.NO} Something went wrong."

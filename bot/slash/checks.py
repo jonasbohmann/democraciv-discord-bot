@@ -20,7 +20,7 @@ def is_democraciv_guild():
             raise app_commands.NoPrivateMessage()
 
         if config.DEMOCRACIV_GUILD_ID != interaction.guild.id:
-            raise exceptions.NotDemocracivGuildError()
+            raise app_commands.CheckFailure(f"{config.NO} You can only use this command on the Democraciv server.")
 
         return True
 
@@ -35,7 +35,7 @@ def has_democraciv_role(role: mk.DemocracivRole):
             raise app_commands.NoPrivateMessage()
 
         if config.DEMOCRACIV_GUILD_ID != interaction.guild.id:
-            raise exceptions.NotDemocracivGuildError()
+            raise app_commands.CheckFailure(f"{config.NO} You can only use this command on the Democraciv server.")
 
         if interaction.user.id == interaction.client.owner_id:
             return True
@@ -57,7 +57,7 @@ def has_any_democraciv_role(*roles: mk.DemocracivRole):
             raise app_commands.NoPrivateMessage()
 
         if config.DEMOCRACIV_GUILD_ID != interaction.guild.id:
-            raise exceptions.NotDemocracivGuildError()
+            raise app_commands.CheckFailure(f"{config.NO} You can only use this command on the Democraciv server.")
 
         if interaction.user.id == interaction.client.owner_id:
             return True
