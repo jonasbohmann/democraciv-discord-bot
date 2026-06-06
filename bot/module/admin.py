@@ -385,5 +385,4 @@ class Experiments(context.CustomCog):
 
 
 async def setup(bot):
-    await bot.add_cog(Experiments(bot))
     await bot.add_cog(Admin(bot=bot))

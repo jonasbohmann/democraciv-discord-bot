@@ -2040,7 +2040,6 @@ class BillFailedLegislature(BillStatus):
         return f"{self.RED}{self.GRAY}{self.GRAY}"
 
 
-# todo: auto pass after 48h
 class BillPassedLegislature(BillStatus):
     is_law = False
     flag = _BillStatusFlag.LEG_PASSED

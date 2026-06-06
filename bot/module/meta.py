@@ -49,6 +49,15 @@ class Meta(context.CustomCog):
             f"{config.YES} Synced {len(synced)} slash command(s) to guild `{target_id}`."
         )
 
+    @commands.command(name="syncslashglobal", hidden=True)
+    @commands.is_owner()
+    async def sync_slash_global(self, ctx):
+        synced = await self.bot.tree.sync()
+
+        await ctx.send(
+            f"{config.YES} Synced {len(synced)} global slash command(s)."
+        )
+
     @commands.command(
         name="slashcommands",
         aliases=["appcommands", "slashpreview"],
