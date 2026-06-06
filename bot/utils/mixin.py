@@ -1052,12 +1052,19 @@ class GovernmentMixin:
 
         return [snippet.strip() for snippet in snippets if snippet and snippet.strip()]
 
-    def _format_full_text_search_snippet(self, snippet):
-        txt = discord.utils.escape_markdown(snippet)
-        txt = txt.replace("<DBS>", "[**")
-        return txt.replace(
-            "<DBE>", "**](https://this-is-not-a-real-url.democraciv.com)"
+    def _format_full_text_search_snippet(self, snippet, *, model):
+        highlight_start = "%%DBS_HIGHLIGHT%%"
+        highlight_end = "%%DBE_HIGHLIGHT%%"
+        txt = snippet.replace("<DBS>", highlight_start).replace(
+            "<DBE>", highlight_end
         )
+
+        if model is not models.Motion:
+            txt = _normalize_markdown_for_discord(txt)
+
+        txt = discord.utils.escape_mentions(txt)
+        txt = txt.replace(highlight_start, "**")
+        return txt.replace(highlight_end, "**")
 
     async def _append_full_text_search_group(self, ctx, entries, group):
         model = group["model"]
@@ -1069,7 +1076,9 @@ class GovernmentMixin:
 
         entries.append(f"**__{obj.formatted}__**")
         for snippet in group["snippets"][:3]:
-            entries.append(f"{self._format_full_text_search_snippet(snippet)}\n")
+            entries.append(
+                f"{self._format_full_text_search_snippet(snippet, model=model)}\n"
+            )
 
     async def prepare_full_text_search_paginator(
         self,

@@ -2,7 +2,6 @@ import asyncio
 import hashlib
 import json
 import re
-import textwrap
 
 import aiohttp
 import meilisearch
@@ -208,33 +207,39 @@ class SearchClient:
 
         if document_type == "bill":
             doc = await self.db.pool.fetchrow(
-                "SELECT id, name, content, status FROM bill WHERE id = $1", document_id
+                "SELECT id, name, content, markdown, status FROM bill WHERE id = $1",
+                document_id,
             )
 
             is_law = True if doc["status"] == 10 else False  # todo
-            as_json = {
+            legacy_json = {
                 "id": document_id,
                 "title": doc["name"],
                 "content": doc["content"] or "",
                 "is_law": is_law,
+            }
+            passage_json = {
+                **legacy_json,
+                "content": doc["markdown"] or doc["content"] or "",
             }
 
         elif document_type == "motion":
             doc = await self.db.pool.fetchrow(
                 "SELECT id, title, description FROM motion WHERE id = $1", document_id
             )
-            as_json = {
+            legacy_json = {
                 "id": document_id,
                 "title": doc["title"],
                 "content": f"{doc['title']}\n\n{doc['description'] or ''}",
                 "is_law": False,
             }
+            passage_json = legacy_json
 
         else:
             return "invalid label"
 
-        await self._add_documents(self.LEGACY_INDEXES[document_type], [as_json])
-        return await self._sync_passage_documents(document_type, as_json)
+        await self._add_documents(self.LEGACY_INDEXES[document_type], [legacy_json])
+        return await self._sync_passage_documents(document_type, passage_json)
 
     async def _add_documents(self, index_uid, documents):
         if not documents:
@@ -393,15 +398,25 @@ class SearchClient:
 
         return content
 
-    def _collapse_snippet(self, snippet):
-        return " ".join(snippet.split())
+    def _tidy_snippet(self, snippet):
+        value = (snippet or "").replace("\r\n", "\n").replace("\r", "\n")
+        value = "\n".join(line.rstrip() for line in value.splitlines())
+        return re.sub(r"\n{3,}", "\n\n", value).strip()
+
+    def _truncate_snippet(self, snippet):
+        snippet = self._tidy_snippet(snippet)
+        if len(snippet) <= self.SNIPPET_MAX_CHARS:
+            return snippet
+
+        cutoff = max(1, self.SNIPPET_MAX_CHARS - 3)
+        break_at = max(snippet.rfind("\n", 0, cutoff), snippet.rfind(" ", 0, cutoff))
+        if break_at < int(cutoff * 0.7):
+            break_at = cutoff
+
+        return f"{snippet[:break_at].rstrip()}..."
 
     def _semantic_snippet(self, content):
-        return textwrap.shorten(
-            self._collapse_snippet(content or ""),
-            width=self.SNIPPET_MAX_CHARS,
-            placeholder="...",
-        )
+        return self._truncate_snippet(content or "")
 
     def _build_snippets(self, content, positions):
         if not content or not positions:
@@ -442,12 +457,7 @@ class SearchClient:
             if window_end < len(content):
                 snippet = f"{snippet}..."
 
-            snippet = self._collapse_snippet(snippet)
-            if len(snippet) > self.SNIPPET_MAX_CHARS:
-                snippet = textwrap.shorten(
-                    snippet, width=self.SNIPPET_MAX_CHARS, placeholder="..."
-                )
-            snippets.append(snippet)
+            snippets.append(self._truncate_snippet(snippet))
 
         return snippets
 

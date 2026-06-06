@@ -139,6 +139,59 @@ ALTER TABLE bill
     ADD COLUMN IF NOT EXISTS pdf bytea;
 
 
+CREATE TABLE IF NOT EXISTS bill_sync_log(
+    id serial UNIQUE PRIMARY KEY,
+    bill_id integer NOT NULL,
+    name text NOT NULL,
+    content text NOT NULL,
+    markdown text,
+    html text,
+    html_zip bytea,
+    pdf bytea,
+    logged_at timestamp WITHOUT TIME ZONE DEFAULT NOW() NOT NULL
+);
+
+CREATE OR REPLACE FUNCTION log_bill_sync_update()
+RETURNS trigger AS $$
+BEGIN
+    INSERT INTO bill_sync_log (
+        bill_id,
+        name,
+        content,
+        markdown,
+        html,
+        html_zip,
+        pdf
+    ) VALUES (
+        OLD.id,
+        OLD.name,
+        OLD.content,
+        OLD.markdown,
+        OLD.html,
+        OLD.html_zip,
+        OLD.pdf
+    );
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS bill_sync_log_before_update ON bill;
+
+CREATE TRIGGER bill_sync_log_before_update
+    BEFORE UPDATE OF name, content, markdown, html, html_zip, pdf ON bill
+    FOR EACH ROW
+    WHEN (
+        OLD.name IS DISTINCT FROM NEW.name
+        OR OLD.content IS DISTINCT FROM NEW.content
+        OR OLD.markdown IS DISTINCT FROM NEW.markdown
+        OR OLD.html IS DISTINCT FROM NEW.html
+        OR OLD.html_zip IS DISTINCT FROM NEW.html_zip
+        OR OLD.pdf IS DISTINCT FROM NEW.pdf
+    )
+    EXECUTE FUNCTION log_bill_sync_update();
+
+
 CREATE TABLE IF NOT EXISTS bill_session(
     id serial UNIQUE PRIMARY KEY,
     bill_id integer references bill(id) ON DELETE CASCADE NOT NULL,
