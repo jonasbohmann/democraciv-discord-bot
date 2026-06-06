@@ -2199,32 +2199,43 @@ class GovernmentMixin:
         house: str = "senate",
         target=None,
     ) -> text.SafeEmbed:
+        house_name = models.display_house_name(house)
+
         if target is None:
-            query = f"""SELECT COUNT(id) FROM legislature_session WHERE house = '{house}'
-                       UNION ALL
-                       SELECT COUNT(id) FROM bill
-                       UNION ALL
-                       SELECT COUNT(id) FROM bill WHERE status = $1
-                       UNION ALL
-                       SELECT COUNT(id) FROM motion"""
+            query = (
+                f"SELECT COUNT(id) FROM legislature_session WHERE house = $1 "
+                "UNION ALL "
+                f"SELECT COUNT(id) FROM bill WHERE origin_house = $1 "
+                "UNION ALL "
+                f"SELECT COUNT(id) FROM bill WHERE status = $2 AND origin_house = $1 "
+                "UNION ALL "
+                "SELECT COUNT(m.id) FROM motion m "
+                "JOIN legislature_session ls ON m.leg_session = ls.id "
+                f"WHERE ls.house = $1"
+            )
 
-            amounts = await self.bot.db.fetch(query, models.BillIsLaw.flag.value)
+            amounts = await self.bot.db.fetch(
+                query, house, models.BillIsLaw.flag.value
+            )
 
-            submitter = await self.bot.db.fetch("SELECT submitter from bill")
+            submitter = await self.bot.db.fetch(
+                "SELECT submitter FROM bill WHERE origin_house = $1", house
+            )
             pretty_top_submitter = self.format_stats(
                 record=submitter, record_key="submitter", stats_name="bills"
             )
 
             speaker = await self.bot.db.fetch(
-                f"SELECT speaker from legislature_session WHERE house = '{house}'"
+                "SELECT speaker FROM legislature_session WHERE house = $1", house
             )
             pretty_top_speaker = self.format_stats(
                 record=speaker, record_key="speaker", stats_name="sessions"
             )
 
             lawmaker = await self.bot.db.fetch(
-                "SELECT submitter from bill WHERE status = $1",
+                "SELECT submitter FROM bill WHERE status = $1 AND origin_house = $2",
                 models.BillIsLaw.flag.value,
+                house,
             )
             pretty_top_lawmaker = self.format_stats(
                 record=lawmaker, record_key="submitter", stats_name="laws"
@@ -2249,8 +2260,10 @@ class GovernmentMixin:
             )
 
             general_value = (
-                f"Sessions: {amounts[0]['count']}\nSubmitted Bills: {amounts[1]['count']}\n"
-                f"Submitted Motions: {amounts[3]['count']}\nActive Laws: {amounts[2]['count']}"
+                f"Sessions: {amounts[0]['count']}\n"
+                f"Submitted Bills from the {house_name}: {amounts[1]['count']}\n"
+                f"Submitted Motions in {house_name} Sessions: {amounts[3]['count']}\n"
+                f"Active Laws Originating in the {house_name}: {amounts[2]['count']}"
             )
 
             embed.add_field(name="General Statistics", value=general_value)
@@ -2260,10 +2273,14 @@ class GovernmentMixin:
                 inline=False,
             )
             embed.add_field(
-                name="Top Bill Submitters", value=pretty_top_submitter, inline=False
+                name=f"Top Bill Submitters in the {house_name}",
+                value=pretty_top_submitter,
+                inline=False,
             )
             embed.add_field(
-                name="Top Lawmakers", value=pretty_top_lawmaker, inline=False
+                name=f"Top Lawmakers Originating in the {house_name}",
+                value=pretty_top_lawmaker,
+                inline=False,
             )
             return embed
 
