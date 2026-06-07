@@ -2039,18 +2039,7 @@ class GovernmentMixin:
             value="\n".join(legislators),
             inline=False,
         )
-
-        try:
-            members_of_gov = self.bot.get_democraciv_role(mk.DemocracivRole.GOVERNMENT)
-            members_of_gov = [
-                f"{mg.mention} {discord.utils.escape_markdown(str(mg))}"
-                for mg in members_of_gov.members
-            ] or ["-"]
-        except exceptions.RoleNotFoundError:
-            members_of_gov = ["-"]
-
-        embed.description = f"There are {len(members_of_gov) if members_of_gov[0] != "-" else "0"} members of government in total."
-
+        
         return embed
 
     def _build_court_overview_embed(self) -> text.SafeEmbed:

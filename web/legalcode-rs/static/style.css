@@ -742,8 +742,25 @@ textarea {
     touch-action: manipulation;
 }
 
+/*
 .content-gdoc-host .gdoc-rendered[data-gdoc-font-mode="default"] {
     --gdoc-font-family-override: var(--pico-font-family);
+}
+*/
+/*
+.content-gdoc-host .gdoc-rendered[data-gdoc-font-mode="default"],
+.content-gdoc-host .gdoc-rendered[data-gdoc-font-mode="default"] * {
+  --gdoc-font-family-override: var(--pico-font-family);
+  font-family: var(--pico-font-family) !important;
+}*/
+
+.content-gdoc-host .gdoc-rendered[data-gdoc-font-mode="default"] {
+  --gdoc-font-family-override: var(--pico-font-family);
+}
+
+.content-gdoc-host .gdoc-rendered[data-gdoc-font-mode="default"],
+.content-gdoc-host .gdoc-rendered[data-gdoc-font-mode="default"] * {
+  font-family: var(--gdoc-font-family-override) !important;
 }
 
 .detail-fields {
