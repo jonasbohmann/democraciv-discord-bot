@@ -629,19 +629,19 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             description=f"The cabinet has opened the Submission Period for {display_name}."
         )
         announcement.set_author(
-            name=f"Submission Period open for {display_name}",
+            name=f"{house_name} - Submission Period open for {display_name}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
-        announcement.add_field(
-            name="Submissions",
-            value=f"Bills and motions can be submitted with `/{command_name} submit`.\nYou can see all submissions with `/{command_name} session show`.",
-            inline=False,
-        )
-        announcement.add_field(
-            name="Sponsors",
-            value=f"Bills and motions can be sponsored with `/bill sponsor` and `/motion sponsor`.\n\nThe list of submissions can be filtered by the amount of sponsors they have. For example, `/{command_name} session show >=1` will only show bills & motions with 1 or more sponsors.",
-            inline=False,
-        )
+        # announcement.add_field(
+        #     name="Submissions",
+        #     value=f"Bills and motions can be submitted with `/{command_name} submit`.\nYou can see all submissions with `/{command_name} session show`.",
+        #     inline=False,
+        # )
+        # announcement.add_field(
+        #     name="Sponsors",
+        #     value=f"Bills and motions can be sponsored with `/bill sponsor` and `/motion sponsor`.\n\nThe list of submissions can be filtered by the amount of sponsors they have. For example, `/{command_name} session show >=1` will only show bills & motions with 1 or more sponsors.",
+        #     inline=False,
+        # )
         await self.gov_announcements_channel.send(embed=announcement)
 
         if notify_legislators:
@@ -690,9 +690,9 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             active_session.id,
         )
 
-        await self.gov_announcements_channel.send(
-            f"The {self.leader_term(house)} has locked submissions for {active_session.display_name}. Nothing can be submitted until the {self.leader_term(house)} decides to unlock the session again."
-        )
+        # await self.gov_announcements_channel.send(
+        #     f"The {self.leader_term(house)} has locked submissions for {active_session.display_name}. Nothing can be submitted until the {self.leader_term(house)} decides to unlock the session again."
+        # )
         l = self.house_command(house)
         p = config.BOT_PREFIX
         await ctx.send(
@@ -741,9 +741,9 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             active_session.id,
         )
 
-        await self.gov_announcements_channel.send(
-            f"The {self.leader_term(house)} has unlocked submissions for {active_session.display_name}, meaning you can now submit bills & motions with `/{command_name} submit` again."
-        )
+        # await self.gov_announcements_channel.send(
+        #     f"The {self.leader_term(house)} has unlocked submissions for {active_session.display_name}, meaning you can now submit bills & motions with `/{command_name} submit` again."
+        # )
         await ctx.send(
             f"{config.YES} Submissions for {active_session.display_name} have been unlocked."
         )
@@ -791,7 +791,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             description=f"{voters} can vote here:\n{voting_form}"
         )
         announcement.set_author(
-            name=f"Voting has started for {active_session.display_name}",
+            name=f"{house_name} - Voting has started for {active_session.display_name}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         await self.gov_announcements_channel.send(embed=announcement)
@@ -870,7 +870,7 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
 
         announcement = text.SafeEmbed()
         announcement.set_author(
-            name=f"{active_session.display_name} has been closed",
+            name=f"{house_name} - {active_session.display_name} has been closed",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
         await self.gov_announcements_channel.send(embed=announcement)
@@ -1176,8 +1176,8 @@ class LegislatureSlash(commands.Cog, mixin.GovernmentMixin):
             if target_bill.session is None or target_bill.session.house != house:
                 return f"You can only mark bills from a {house_name} session as passed here."
 
-            if target_bill.session.status is not models.SessionStatus.CLOSED:
-                return "You can only mark bills as passed if their session is closed."
+            # if target_bill.session.status is models.SessionStatus.SUBMISSION_PERIOD:
+            #     return "You can't pass a bill while its session is still in Submission Period."
 
         consumer = models.LegalConsumer(
             ctx=ctx, objects=[bill], action=models.BillStatus.pass_from_legislature

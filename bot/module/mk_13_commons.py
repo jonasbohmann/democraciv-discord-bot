@@ -655,21 +655,21 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             f"The cabinet has opened the Submission Period for {new_session_name}."
         )
         announcement.set_author(
-            name=f"Submission Period open for {new_session_name}",
+            name=f"Commons - Submission Period open for {new_session_name}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
-        announcement.add_field(
-            name="Submissions",
-            value="Bills and motions can be "
-            f"submitted with `{config.BOT_PREFIX}commons submit`.\nYou can see all submissions with `{config.BOT_PREFIX}commons session`.",
-            inline=False,
-        )
-        announcement.add_field(
-            name="Sponsors",
-            value="Bills and motions can be "
-            f"sponsored with `{config.BOT_PREFIX}bill sponsor` and `{config.BOT_PREFIX}motion sponsor`.\n\nThe list of submissions can be filtered by the amount of sponsors they have. For example, `{config.BOT_PREFIX}commons session >=1` will only show bills & motions with 1 or more sponsors.",
-            inline=False,
-        )
+        # announcement.add_field(
+        #     name="Submissions",
+        #     value="Bills and motions can be "
+        #     f"submitted with `{config.BOT_PREFIX}commons submit`.\nYou can see all submissions with `{config.BOT_PREFIX}commons session`.",
+        #     inline=False,
+        # )
+        # announcement.add_field(
+        #     name="Sponsors",
+        #     value="Bills and motions can be "
+        #     f"sponsored with `{config.BOT_PREFIX}bill sponsor` and `{config.BOT_PREFIX}motion sponsor`.\n\nThe list of submissions can be filtered by the amount of sponsors they have. For example, `{config.BOT_PREFIX}commons session >=1` will only show bills & motions with 1 or more sponsors.",
+        #     inline=False,
+        # )
 
         await self.gov_announcements_channel.send(embed=announcement)
 
@@ -703,11 +703,11 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             active_leg_session.id,
         )
 
-        await self.gov_announcements_channel.send(
-            f"The Speaker has locked submissions for "
-            f"{active_leg_session.display_name}. Nothing can be submitted until the Speaker decides "
-            f"to unlock the session again."
-        )
+        # await self.gov_announcements_channel.send(
+        #     f"The Speaker has locked submissions for "
+        #     f"{active_leg_session.display_name}. Nothing can be submitted until the Speaker decides "
+        #     f"to unlock the session again."
+        # )
 
         await ctx.send(
             f"{config.YES} Submissions for "
@@ -749,11 +749,11 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             active_leg_session.id,
         )
 
-        await self.gov_announcements_channel.send(
-            f"The Speaker has unlocked submissions for "
-            f"{active_leg_session.display_name}, meaning you can now submit bills & motions with "
-            f"`{p}{l} submit` again."
-        )
+        # await self.gov_announcements_channel.send(
+        #     f"The Speaker has unlocked submissions for "
+        #     f"{active_leg_session.display_name}, meaning you can now submit bills & motions with "
+        #     f"`{p}{l} submit` again."
+        # )
 
         await ctx.send(
             f"{config.YES} Submissions for "
@@ -810,7 +810,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
         announcement = text.SafeEmbed()
         announcement.description = f"Everyone can vote here:\n{voting_form}"
         announcement.set_author(
-            name=f"Voting has started for {active_leg_session.display_name}",
+            name=f"Commons - Voting has started for {active_leg_session.display_name}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
 
@@ -921,7 +921,7 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
 
         announcement = text.SafeEmbed()
         announcement.set_author(
-            name=f"{active_leg_session.display_name} has been closed",
+            name=f"Commons - {active_leg_session.display_name} has been closed",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
 
@@ -1709,8 +1709,8 @@ class Commons(context.CustomCog, mixin.GovernmentMixin, name="Commons"):
             if b.session is None or b.session.house != "commons":
                 return "You can only mark bills from a Commons session as passed here."
 
-            if b.session.status is not SessionStatus.CLOSED:
-                return "You can only mark bills as passed if their session is closed."
+            # if b.session.status is SessionStatus.SUBMISSION_PERIOD:
+            #     return "You can't pass a bill while its session is still in Submission Period."
 
         consumer = models.LegalConsumer(
             ctx=ctx, objects=bill_ids, action=models.BillStatus.pass_from_legislature

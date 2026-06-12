@@ -741,21 +741,21 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             f"The cabinet has opened the Submission Period for {new_session_name}."
         )
         announcement.set_author(
-            name=f"Submission Period open for {new_session_name}",
+            name=f"Senate - Submission Period open for {new_session_name}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
-        announcement.add_field(
-            name="Submissions",
-            value="Bills and motions can be "
-            f"submitted with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit`.\nYou can see all submissions with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session`.",
-            inline=False,
-        )
-        announcement.add_field(
-            name="Sponsors",
-            value="Bills and motions can be "
-            f"sponsored with `{config.BOT_PREFIX}bill sponsor` and `{config.BOT_PREFIX}motion sponsor`.\n\nThe list of submissions can be filtered by the amount of sponsors they have. For example, `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session >=1` will only show bills & motions with 1 or more sponsors.",
-            inline=False,
-        )
+        # announcement.add_field(
+        #     name="Submissions",
+        #     value="Bills and motions can be "
+        #     f"submitted with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} submit`.\nYou can see all submissions with `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session`.",
+        #     inline=False,
+        # )
+        # announcement.add_field(
+        #     name="Sponsors",
+        #     value="Bills and motions can be "
+        #     f"sponsored with `{config.BOT_PREFIX}bill sponsor` and `{config.BOT_PREFIX}motion sponsor`.\n\nThe list of submissions can be filtered by the amount of sponsors they have. For example, `{config.BOT_PREFIX}{self.bot.mk.LEGISLATURE_COMMAND} session >=1` will only show bills & motions with 1 or more sponsors.",
+        #     inline=False,
+        # ) 
 
         await self.gov_announcements_channel.send(embed=announcement)
 
@@ -796,11 +796,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             active_leg_session.id,
         )
 
-        await self.gov_announcements_channel.send(
-            f"The {self.bot.mk.senator_presiding_term} has locked submissions for "
-            f"{active_leg_session.display_name}. Nothing can be submitted until the {self.bot.mk.senator_presiding_term} decides "
-            f"to unlock the session again."
-        )
+        # await self.gov_announcements_channel.send(
+        #     f"The {self.bot.mk.senator_presiding_term} has locked submissions for "
+        #     f"{active_leg_session.display_name}. Nothing can be submitted until the {self.bot.mk.senator_presiding_term} decides "
+        #     f"to unlock the session again."
+        # )
 
         await ctx.send(
             f"{config.YES} Submissions for "
@@ -840,11 +840,11 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             active_leg_session.id,
         )
 
-        await self.gov_announcements_channel.send(
-            f"The {self.bot.mk.senator_presiding_term} has unlocked submissions for "
-            f"{active_leg_session.display_name}, meaning you can now submit bills & motions with "
-            f"`{p}{l} submit` again."
-        )
+        # await self.gov_announcements_channel.send(
+        #     f"The {self.bot.mk.senator_presiding_term} has unlocked submissions for "
+        #     f"{active_leg_session.display_name}, meaning you can now submit bills & motions with "
+        #     f"`{p}{l} submit` again."
+        # )
 
         await ctx.send(
             f"{config.YES} Submissions for "
@@ -905,7 +905,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
         announcement = text.SafeEmbed()
         announcement.description = f"{self.bot.mk.LEGISLATURE_LEGISLATOR_NAME_PLURAL} can vote here:\n{voting_form}"
         announcement.set_author(
-            name=f"Voting has started for {active_leg_session.display_name}",
+            name=f"Senate - Voting has started for {active_leg_session.display_name}",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
 
@@ -1021,7 +1021,7 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
 
         announcement = text.SafeEmbed()
         announcement.set_author(
-            name=f"{active_leg_session.display_name} has been closed",
+            name=f"Senate - {active_leg_session.display_name} has been closed",
             icon_url=self.bot.mk.NATION_ICON_URL or self.bot.dciv.icon.url or None,
         )
 
@@ -1803,8 +1803,8 @@ class Legislature(context.CustomCog, mixin.GovernmentMixin, name="Senate"):
             if b.session is None or b.session.house != "senate":
                 return "You can only mark bills from a Senate session as passed here."
 
-            if b.session.status is not SessionStatus.CLOSED:
-                return "You can only mark bills as passed if their session is closed."
+            # if b.session.status is SessionStatus.SUBMISSION_PERIOD:
+            #     return "You can't pass a bill while its session is still in Submission Period."
 
         consumer = models.LegalConsumer(
             ctx=ctx, objects=bill_ids, action=models.BillStatus.pass_from_legislature
