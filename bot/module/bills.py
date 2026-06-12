@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import Greedy
 
-from bot.config import config
+from bot.config import config, mk
 from bot.utils import (
     checks,
     context,
@@ -560,6 +560,85 @@ class Bills(context.CustomCog, mixin.GovernmentMixin, name="Bill"):
                     reason="leg_session_withdraw",
                     message=message,
                 )
+
+    @bill.command(name="move")
+    @checks.has_any_democraciv_role(
+        mk.DemocracivRole.SPEAKER,
+        mk.DemocracivRole.VICE_SPEAKER,
+        mk.DemocracivRole.MK13_SENATOR_PRESIDING,
+    )
+    async def move(self, ctx: context.CustomContext, bill_ids: Greedy[Bill]):
+        """Move one or multiple chamber-pending bills to another open session."""
+
+        if not bill_ids:
+            return await ctx.send_help(ctx.command)
+
+        consumer = models.LegalConsumer(
+            ctx=ctx, objects=bill_ids, action=models.BillStatus.move_to_session
+        )
+        await consumer.filter(moved_by=ctx.author)
+
+        if consumer.failed:
+            await ctx.send(
+                f":warning: The following bills cannot be moved.\n{consumer.failed_formatted}"
+            )
+
+        if not consumer.passed:
+            return
+
+        target_houses = {bill.status.move_target_house for bill in consumer.passed}
+        if len(target_houses) > 1:
+            return await ctx.send(
+                f"{config.NO} These bills are not all waiting on the same chamber. "
+                "Run this command separately for Senate-pending and Commons-pending bills."
+            )
+
+        target_house = target_houses.pop()
+        target_house_name = models.display_house_name(target_house)
+        target_sessions = await self.get_open_leg_sessions(house=target_house)
+
+        if not target_sessions:
+            return await ctx.send(
+                f"{config.NO} There is no open {target_house_name} session to move these bills to."
+            )
+
+        target_session = await self.prompt_for_leg_session(
+            ctx,
+            sessions=target_sessions,
+            action="move these bills to",
+        )
+        if target_session is None:
+            return
+
+        target_consumer = models.LegalConsumer(
+            ctx=ctx,
+            objects=consumer.passed,
+            action=models.BillStatus.move_to_session,
+        )
+        await target_consumer.filter(
+            target_session=target_session,
+            moved_by=ctx.author,
+        )
+
+        if target_consumer.failed:
+            await ctx.send(
+                f":warning: The following bills cannot be moved.\n"
+                f"{target_consumer.failed_formatted}"
+            )
+
+        if not target_consumer.passed:
+            return
+
+        await target_consumer.consume(
+            target_session=target_session,
+            moved_by=ctx.author,
+        )
+
+        count = len(target_consumer.passed)
+        await ctx.send(
+            f"{config.YES} Moved {count} bill{'s' if count != 1 else ''} to "
+            f"{target_session.display_name}."
+        )
 
     @bill.command(name="resubmit", aliases=["rs"])
     @checks.is_citizen_if_multiciv()

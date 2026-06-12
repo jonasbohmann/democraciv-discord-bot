@@ -1229,6 +1229,11 @@ class BillStatus:
     async def pass_from_legislature(self, dry=False, **kwargs):
         raise IllegalBillOperation()
 
+    async def move_to_session(self, dry=False, **kwargs):
+        raise IllegalBillOperation(
+            "Only bills that are waiting on another chamber can be moved."
+        )
+
     async def fail_in_legislature(self, dry=False, **kwargs):
         raise IllegalBillOperation()
 
@@ -1243,6 +1248,12 @@ class BillStatus:
 
     async def superpass(self, *, dry=False, **kwargs):
         raise IllegalBillOperation()
+
+    @property
+    def move_target_house(self) -> str:
+        raise IllegalBillOperation(
+            "Only bills that are waiting on another chamber can be moved."
+        )
 
     async def sponsor(self, *, dry=False, sponsor: discord.Member, **kwargs):
         raise IllegalBillOperation(
@@ -1290,7 +1301,7 @@ class BillStatus:
 
     def _hidden_resubmitter(self, resubmitter: discord.Member) -> str:
         return (
-            f"[{resubmitter}](https://democracivbank.com/u/{resubmitter.id} "
+            f"[{resubmitter}](https://laws.democraciv.com/u/{resubmitter.id} "
             f'"{resubmitter.id}")'
         )
 
@@ -1428,6 +1439,74 @@ class BillStatus:
             self._bill.executive_deadline_at = executive_deadline_at
 
         await self.log_history(old_status, new_status, note=note)
+
+    async def _move_to_session(
+        self,
+        *,
+        target_house: str,
+        target_session: typing.Optional[Session] = None,
+        moved_by: typing.Optional[typing.Union[discord.Member, discord.User]] = None,
+        dry=False,
+    ):
+        if target_session is not None:
+            if (
+                target_session.house != target_house
+                or target_session.status is SessionStatus.CLOSED
+            ):
+                raise IllegalBillOperation(
+                    f"This bill cannot be moved to {target_session.display_name}."
+                )
+
+            if self._bill.session and self._bill.session.id == target_session.id:
+                raise IllegalBillOperation(
+                    f"This bill is already in {target_session.display_name}."
+                )
+
+        if dry:
+            return
+
+        if target_session is None:
+            raise IllegalBillOperation("Choose a target session to move this bill to.")
+
+        note = (
+            f"Moved from {self._format_session_name()} to "
+            f"{target_session.display_name}"
+        )
+        if moved_by is not None:
+            note = f"{note} by {self._hidden_resubmitter(moved_by)}"
+
+        async with self._bot.db.acquire() as con:
+            async with con.transaction():
+                await con.execute(
+                    "UPDATE bill SET leg_session = $1 WHERE id = $2",
+                    target_session.id,
+                    self._bill.id,
+                )
+                await con.execute(
+                    "DELETE FROM bill_session USING legislature_session "
+                    "WHERE bill_session.leg_session = legislature_session.id "
+                    "AND bill_session.bill_id = $1 "
+                    "AND legislature_session.house = $2 "
+                    "AND legislature_session.status != 'Closed' "
+                    "AND bill_session.leg_session != $3",
+                    self._bill.id,
+                    target_house,
+                    target_session.id,
+                )
+                await con.execute(
+                    "INSERT INTO bill_session (bill_id, leg_session) VALUES ($1, $2) "
+                    "ON CONFLICT DO NOTHING",
+                    self._bill.id,
+                    target_session.id,
+                )
+                await self.log_history(
+                    self.flag,
+                    self.flag,
+                    note=note,
+                    connection=con,
+                )
+
+        self._bill.session = target_session
 
     async def _delete_matching_history(
         self, *, after_status: _BillStatusFlag, note: str
@@ -1885,6 +1964,18 @@ class BillPassedSenatePendingCommons(BillStatus):
     flag = _BillStatusFlag.PASSED_SENATE_PENDING_COMMONS
     verbose_name = "Passed the Senate"
 
+    @property
+    def move_target_house(self) -> str:
+        return "commons"
+
+    async def move_to_session(self, dry=False, **kwargs):
+        await self._move_to_session(
+            dry=dry,
+            target_house=self.move_target_house,
+            target_session=kwargs.get("target_session"),
+            moved_by=kwargs.get("moved_by"),
+        )
+
     async def fail_in_legislature(self, dry=False, **kwargs):
         acting_house = kwargs.get("acting_house")
 
@@ -1930,6 +2021,18 @@ class BillPassedCommonsPendingSenate(BillStatus):
     is_law = False
     flag = _BillStatusFlag.PASSED_COMMONS_PENDING_SENATE
     verbose_name = "Passed the Commons"
+
+    @property
+    def move_target_house(self) -> str:
+        return "senate"
+
+    async def move_to_session(self, dry=False, **kwargs):
+        await self._move_to_session(
+            dry=dry,
+            target_house=self.move_target_house,
+            target_session=kwargs.get("target_session"),
+            moved_by=kwargs.get("moved_by"),
+        )
 
     async def fail_in_legislature(self, dry=False, **kwargs):
         acting_house = kwargs.get("acting_house")

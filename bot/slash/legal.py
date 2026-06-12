@@ -360,6 +360,63 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
             f"{config.YES} Bill #{bill.id} was resubmitted to its origin-house submission session."
         )
 
+    async def _move_bill(self, ctx, bill: models.Bill):
+        consumer = models.LegalConsumer(
+            ctx=ctx, objects=[bill], action=models.BillStatus.move_to_session
+        )
+        await consumer.filter(moved_by=ctx.author)
+
+        if consumer.failed:
+            return await ctx.send(
+                f":warning: This bill cannot be moved.\n{consumer.failed_formatted}",
+                ephemeral=True,
+            )
+
+        target_house = bill.status.move_target_house
+        target_house_name = models.display_house_name(target_house)
+        target_sessions = await self.get_open_leg_sessions(house=target_house)
+
+        if not target_sessions:
+            return await ctx.send(
+                f"{config.NO} There is no open {target_house_name} session to move this bill to.",
+                ephemeral=True,
+            )
+
+        target_session = await self.prompt_for_leg_session(
+            ctx,
+            sessions=target_sessions,
+            action="move this bill to",
+            ephemeral=True,
+            silent=True,
+        )
+        if target_session is None:
+            return
+
+        target_consumer = models.LegalConsumer(
+            ctx=ctx,
+            objects=consumer.passed,
+            action=models.BillStatus.move_to_session,
+        )
+        await target_consumer.filter(
+            target_session=target_session,
+            moved_by=ctx.author,
+        )
+
+        if target_consumer.failed:
+            return await ctx.send(
+                f":warning: This bill cannot be moved.\n"
+                f"{target_consumer.failed_formatted}",
+                ephemeral=True,
+            )
+
+        await target_consumer.consume(
+            target_session=target_session,
+            moved_by=ctx.author,
+        )
+        await ctx.send(
+            f"{config.YES} Bill #{bill.id} was moved to {target_session.display_name}."
+        )
+
     async def _sponsor_motion(self, ctx, motion: models.Motion):
         house = self.get_house_for_object(motion)
         failed = None
@@ -902,6 +959,21 @@ class LegalSlash(commands.Cog, mixin.GovernmentMixin):
         ctx = slash_context.from_interaction(interaction, command_name="bill")
         await ctx.defer()
         await self._withdraw_bill(ctx, bill)
+
+    @bill.command(
+        name="move",
+        description="Move one chamber-pending bill to another open session.",
+    )
+    @slash_checks.has_any_democraciv_role(
+        mk.DemocracivRole.SPEAKER,
+        mk.DemocracivRole.VICE_SPEAKER,
+        mk.DemocracivRole.MK13_SENATOR_PRESIDING,
+    )
+    @app_commands.describe(bill="Bill ID or title")
+    async def bill_move(self, interaction: discord.Interaction, bill: BillOption):
+        ctx = slash_context.from_interaction(interaction, command_name="bill move")
+        await ctx.defer()
+        await self._move_bill(ctx, bill)
 
     @bill.command(
         name="resubmit",
