@@ -3,7 +3,11 @@ extern crate rocket;
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use comrak::{Options as MarkdownOptions, markdown_to_html};
-use lopdf::{Dictionary as PdfDictionary, Document as PdfDocument, Object as PdfObject};
+use lopdf::{
+    Dictionary as PdfDictionary, Document as PdfDocument, Object as PdfObject,
+    ObjectId as PdfObjectId, Stream as PdfStream,
+    content::{Content as PdfContent, Operation as PdfOperation},
+};
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use regex::{Captures, Regex};
 use rocket::{State, fs::FileServer, http::ContentType};
@@ -2243,6 +2247,27 @@ struct ActiveLawPdf {
     id: i32,
     name: String,
     bytes: Vec<u8>,
+    amendments: Vec<ActiveLawAmendment>,
+}
+
+struct ActiveLawAmendment {
+    id: i32,
+    name: String,
+}
+
+struct PreparedLawPdf {
+    id: i32,
+    name: String,
+    amendments: Vec<ActiveLawAmendment>,
+    document: PdfDocument,
+    source_pages_id: PdfObjectId,
+    first_page_id: PdfObjectId,
+    page_count: usize,
+}
+
+struct LegalCodeTocEntry {
+    label: String,
+    target_page_id: PdfObjectId,
 }
 
 async fn load_active_law_pdfs(db: &PgPool) -> Result<Vec<ActiveLawPdf>, String> {
@@ -2252,7 +2277,8 @@ async fn load_active_law_pdfs(db: &PgPool) -> Result<Vec<ActiveLawPdf>, String> 
         .await
         .map_err(|error| error.to_string())?;
 
-    rows.into_iter()
+    let mut laws = rows
+        .into_iter()
         .map(|row| {
             let id: i32 = row.try_get("id").map_err(|error| error.to_string())?;
             let name: String = row.try_get("name").map_err(|error| error.to_string())?;
@@ -2263,9 +2289,249 @@ async fn load_active_law_pdfs(db: &PgPool) -> Result<Vec<ActiveLawPdf>, String> 
                 name,
                 bytes: bytes
                     .ok_or_else(|| format!("active law #{id} does not have a stored PDF"))?,
+                amendments: Vec::new(),
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>, String>>()?;
+
+    let amendment_rows = sqlx::query(
+        "SELECT
+            parent.id AS parent_id,
+            child.id,
+            child.name
+        FROM bill_amendment
+        JOIN bill AS child ON child.id = bill_amendment.amending_bill_id
+        JOIN bill AS parent ON parent.id = bill_amendment.amended_bill_id
+        WHERE parent.status = $1 AND child.status = $1
+        ORDER BY parent.id, child.id",
+    )
+    .bind(LAW_STATUS)
+    .fetch_all(db)
+    .await
+    .map_err(|error| error.to_string())?;
+
+    let mut amendments_by_parent = HashMap::<i32, Vec<ActiveLawAmendment>>::new();
+    for row in amendment_rows {
+        let parent_id: i32 = row
+            .try_get("parent_id")
+            .map_err(|error| error.to_string())?;
+        let id: i32 = row.try_get("id").map_err(|error| error.to_string())?;
+        let name: String = row.try_get("name").map_err(|error| error.to_string())?;
+
+        amendments_by_parent
+            .entry(parent_id)
+            .or_default()
+            .push(ActiveLawAmendment { id, name });
+    }
+
+    for law in &mut laws {
+        law.amendments = amendments_by_parent.remove(&law.id).unwrap_or_default();
+    }
+
+    Ok(laws)
+}
+
+const TOC_ENTRIES_PER_PAGE: usize = 40;
+const TOC_LINE_HEIGHT: i64 = 16;
+
+fn truncate_pdf_text(value: &str, max_chars: usize) -> String {
+    let normalized = value.split_whitespace().collect::<Vec<_>>().join(" ");
+    if normalized.chars().count() <= max_chars {
+        return normalized;
+    }
+
+    let clipped = normalized
+        .chars()
+        .take(max_chars.saturating_sub(3))
+        .collect::<String>()
+        .trim_end()
+        .to_string();
+
+    format!("{clipped}...")
+}
+
+fn format_toc_label(id: i32, name: &str, amendment: bool, page_number: usize) -> String {
+    let prefix = if amendment {
+        format!("    Amendment: Law #{id} - ")
+    } else {
+        format!("Law #{id} - ")
+    };
+    let page_label = format!("p. {page_number}");
+    let max_name_chars =
+        88usize.saturating_sub(prefix.chars().count() + page_label.chars().count() + 4);
+    let name = truncate_pdf_text(name, max_name_chars);
+    let padding = " ".repeat(88usize.saturating_sub(
+        prefix.chars().count() + name.chars().count() + page_label.chars().count(),
+    ));
+
+    format!("{prefix}{name}{padding}{page_label}")
+}
+
+fn build_toc_entries(
+    laws: &[PreparedLawPdf],
+    toc_page_count: usize,
+) -> Result<Vec<LegalCodeTocEntry>, String> {
+    let mut targets = HashMap::<i32, (PdfObjectId, usize)>::new();
+    let mut page_number = toc_page_count + 1;
+
+    for law in laws {
+        targets.insert(law.id, (law.first_page_id, page_number));
+        page_number = page_number
+            .checked_add(law.page_count)
+            .ok_or_else(|| "combined legal code has too many pages".to_string())?;
+    }
+
+    let mut entries = Vec::new();
+    for law in laws {
+        let Some(&(target_page_id, page_number)) = targets.get(&law.id) else {
+            return Err(format!(
+                "could not locate the first page of Law #{}",
+                law.id
+            ));
+        };
+
+        entries.push(LegalCodeTocEntry {
+            label: format_toc_label(law.id, &law.name, false, page_number),
+            target_page_id,
+        });
+
+        for amendment in &law.amendments {
+            let Some(&(target_page_id, page_number)) = targets.get(&amendment.id) else {
+                return Err(format!(
+                    "could not locate the first page of Amendment Law #{}",
+                    amendment.id
+                ));
+            };
+
+            entries.push(LegalCodeTocEntry {
+                label: format_toc_label(amendment.id, &amendment.name, true, page_number),
+                target_page_id,
+            });
+        }
+    }
+
+    Ok(entries)
+}
+
+fn add_pdf_text(
+    operations: &mut Vec<PdfOperation>,
+    text: impl Into<String>,
+    x: i64,
+    y: i64,
+    font_size: i64,
+) {
+    operations.push(PdfOperation::new("BT", vec![]));
+    operations.push(PdfOperation::new(
+        "Tf",
+        vec![
+            PdfObject::Name(b"F1".to_vec()),
+            PdfObject::Integer(font_size),
+        ],
+    ));
+    operations.push(PdfOperation::new(
+        "Td",
+        vec![PdfObject::Integer(x), PdfObject::Integer(y)],
+    ));
+    operations.push(PdfOperation::new(
+        "Tj",
+        vec![PdfObject::string_literal(text.into())],
+    ));
+    operations.push(PdfOperation::new("ET", vec![]));
+}
+
+fn add_toc_page(
+    document: &mut PdfDocument,
+    merged_pages_id: PdfObjectId,
+    resources_id: PdfObjectId,
+    entries: &[LegalCodeTocEntry],
+    page_index: usize,
+) -> Result<PdfObjectId, String> {
+    let mut operations = Vec::new();
+    add_pdf_text(
+        &mut operations,
+        if page_index == 0 {
+            "Legal Code - Table of Contents"
+        } else {
+            "Legal Code - Table of Contents (continued)"
+        },
+        50,
+        780,
+        18,
+    );
+
+    if page_index == 0 {
+        add_pdf_text(
+            &mut operations,
+            "Links open the first page of each law or amendment.",
+            50,
+            758,
+            10,
+        );
+    }
+
+    let first_entry_y = 730;
+    let mut annotations = Vec::with_capacity(entries.len());
+    for (index, entry) in entries.iter().enumerate() {
+        let y = first_entry_y - (index as i64) * TOC_LINE_HEIGHT;
+        add_pdf_text(&mut operations, &entry.label, 50, y, 10);
+
+        let mut annotation = PdfDictionary::new();
+        annotation.set("Type", PdfObject::Name(b"Annot".to_vec()));
+        annotation.set("Subtype", PdfObject::Name(b"Link".to_vec()));
+        annotation.set(
+            "Rect",
+            PdfObject::Array(vec![
+                PdfObject::Integer(45),
+                PdfObject::Integer(y - 4),
+                PdfObject::Integer(550),
+                PdfObject::Integer(y + 11),
+            ]),
+        );
+        annotation.set(
+            "Border",
+            PdfObject::Array(vec![
+                PdfObject::Integer(0),
+                PdfObject::Integer(0),
+                PdfObject::Integer(0),
+            ]),
+        );
+        annotation.set(
+            "Dest",
+            PdfObject::Array(vec![
+                PdfObject::Reference(entry.target_page_id),
+                PdfObject::Name(b"Fit".to_vec()),
+            ]),
+        );
+        annotations.push(PdfObject::Reference(
+            document.add_object(PdfObject::Dictionary(annotation)),
+        ));
+    }
+
+    let content = PdfContent { operations }
+        .encode()
+        .map_err(|error| format!("failed to encode the legal code table of contents: {error}"))?;
+    let content_id = document.add_object(PdfObject::Stream(PdfStream::new(
+        PdfDictionary::new(),
+        content,
+    )));
+
+    let mut page = PdfDictionary::new();
+    page.set("Type", PdfObject::Name(b"Page".to_vec()));
+    page.set("Parent", PdfObject::Reference(merged_pages_id));
+    page.set(
+        "MediaBox",
+        PdfObject::Array(vec![
+            PdfObject::Integer(0),
+            PdfObject::Integer(0),
+            PdfObject::Integer(595),
+            PdfObject::Integer(842),
+        ]),
+    );
+    page.set("Resources", PdfObject::Reference(resources_id));
+    page.set("Contents", PdfObject::Reference(content_id));
+    page.set("Annots", PdfObject::Array(annotations));
+
+    Ok(document.add_object(PdfObject::Dictionary(page)))
 }
 
 fn merge_active_law_pdfs(laws: Vec<ActiveLawPdf>) -> Result<Vec<u8>, String> {
@@ -2276,12 +2542,27 @@ fn merge_active_law_pdfs(laws: Vec<ActiveLawPdf>) -> Result<Vec<u8>, String> {
     let mut merged = PdfDocument::with_version("1.7");
     let merged_pages_id = merged.new_object_id();
     let merged_catalog_id = merged.new_object_id();
+    let font_id = merged.add_object({
+        let mut font = PdfDictionary::new();
+        font.set("Type", PdfObject::Name(b"Font".to_vec()));
+        font.set("Subtype", PdfObject::Name(b"Type1".to_vec()));
+        font.set("BaseFont", PdfObject::Name(b"Helvetica".to_vec()));
+        PdfObject::Dictionary(font)
+    });
+    let resources_id = merged.add_object({
+        let mut fonts = PdfDictionary::new();
+        fonts.set("F1", PdfObject::Reference(font_id));
+
+        let mut resources = PdfDictionary::new();
+        resources.set("Font", PdfObject::Dictionary(fonts));
+        PdfObject::Dictionary(resources)
+    });
     let mut next_object_id = merged
         .max_id
         .checked_add(1)
         .ok_or_else(|| "PDF object ID space is exhausted".to_string())?;
-    let mut source_pages = Vec::with_capacity(laws.len());
-    let mut page_count = 0usize;
+    let mut prepared_laws = Vec::with_capacity(laws.len());
+    let mut total_law_page_count = 0usize;
 
     for law in laws {
         if law.bytes.is_empty() {
@@ -2317,6 +2598,10 @@ fn merge_active_law_pdfs(laws: Vec<ActiveLawPdf>) -> Result<Vec<u8>, String> {
                     law.id, law.name
                 )
             })?;
+        let first_page_id =
+            source.get_pages().into_values().next().ok_or_else(|| {
+                format!("active law #{} ({}) has no first page", law.id, law.name)
+            })?;
 
         source
             .get_object_mut(source_pages_id)
@@ -2329,25 +2614,69 @@ fn merge_active_law_pdfs(laws: Vec<ActiveLawPdf>) -> Result<Vec<u8>, String> {
             })?
             .set("Parent", PdfObject::Reference(merged_pages_id));
 
-        source_pages.push(PdfObject::Reference(source_pages_id));
-        page_count = page_count
-            .checked_add(source_page_count)
-            .ok_or_else(|| "combined legal code has too many pages".to_string())?;
-
         next_object_id = source
             .max_id
             .checked_add(1)
             .ok_or_else(|| "PDF object ID space is exhausted".to_string())?;
-        merged.objects.extend(source.objects);
+        total_law_page_count = total_law_page_count
+            .checked_add(source_page_count)
+            .ok_or_else(|| "combined legal code has too many pages".to_string())?;
+        prepared_laws.push(PreparedLawPdf {
+            id: law.id,
+            name: law.name,
+            amendments: law.amendments,
+            document: source,
+            source_pages_id,
+            first_page_id,
+            page_count: source_page_count,
+        });
     }
 
-    let page_count = i64::try_from(page_count)
+    let toc_entry_count = prepared_laws
+        .iter()
+        .map(|law| 1 + law.amendments.len())
+        .sum::<usize>();
+    let toc_page_count = toc_entry_count.div_ceil(TOC_ENTRIES_PER_PAGE).max(1);
+    let toc_entries = build_toc_entries(&prepared_laws, toc_page_count)?;
+
+    for law in prepared_laws.iter_mut() {
+        merged
+            .objects
+            .extend(std::mem::take(&mut law.document.objects));
+    }
+    merged.max_id = next_object_id.saturating_sub(1);
+
+    let mut toc_page_ids = Vec::with_capacity(toc_page_count);
+    for (page_index, entries) in toc_entries.chunks(TOC_ENTRIES_PER_PAGE).enumerate() {
+        toc_page_ids.push(add_toc_page(
+            &mut merged,
+            merged_pages_id,
+            resources_id,
+            entries,
+            page_index,
+        )?);
+    }
+
+    let mut page_tree_kids = toc_page_ids
+        .into_iter()
+        .map(PdfObject::Reference)
+        .collect::<Vec<_>>();
+    page_tree_kids.extend(
+        prepared_laws
+            .iter()
+            .map(|law| PdfObject::Reference(law.source_pages_id)),
+    );
+
+    let total_page_count = toc_page_count
+        .checked_add(total_law_page_count)
+        .ok_or_else(|| "combined legal code has too many pages".to_string())?;
+    let total_page_count = i64::try_from(total_page_count)
         .map_err(|_| "combined legal code has too many pages".to_string())?;
 
     let mut pages = PdfDictionary::new();
     pages.set("Type", PdfObject::Name(b"Pages".to_vec()));
-    pages.set("Kids", source_pages);
-    pages.set("Count", PdfObject::Integer(page_count));
+    pages.set("Kids", PdfObject::Array(page_tree_kids));
+    pages.set("Count", PdfObject::Integer(total_page_count));
     merged
         .objects
         .insert(merged_pages_id, PdfObject::Dictionary(pages));
@@ -2361,7 +2690,6 @@ fn merge_active_law_pdfs(laws: Vec<ActiveLawPdf>) -> Result<Vec<u8>, String> {
     merged
         .trailer
         .set("Root", PdfObject::Reference(merged_catalog_id));
-    merged.max_id = next_object_id.saturating_sub(1);
 
     let mut output = Vec::new();
     merged
