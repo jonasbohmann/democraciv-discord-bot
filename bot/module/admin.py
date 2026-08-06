@@ -81,6 +81,111 @@ class Admin(*STANDARD_FEATURES, command_attrs=dict(hidden=True)):
         await ctx.send(str(response))
         await ctx.send(f"{config.YES} Ok.")
 
+    @Feature.Command(
+        parent="jsk",
+        name="syncmissingdocuments",
+        aliases=["fixmissingdocuments", "fixdocs"],
+    )
+    @commands.is_owner()
+    async def jsk_sync_missing_documents(self, ctx):
+        """Fetch missing PDF and HTML exports for bills from Google Docs."""
+
+        rows = await self.bot.db.fetch(
+            "SELECT id, name, link, "
+            "(COALESCE(octet_length(pdf), 0) = 0) AS missing_pdf, "
+            "(NULLIF(BTRIM(html), '') IS NULL) AS missing_html, "
+            "(COALESCE(octet_length(html_zip), 0) = 0) AS missing_html_zip "
+            "FROM bill "
+            "WHERE COALESCE(octet_length(pdf), 0) = 0 "
+            "OR NULLIF(BTRIM(html), '') IS NULL "
+            "OR COALESCE(octet_length(html_zip), 0) = 0 "
+            "ORDER BY id"
+        )
+
+        if not rows:
+            return await ctx.send(
+                f"{config.YES} Every bill already has PDF and HTML data."
+            )
+
+        repaired = []
+        failed = []
+
+        async with ctx.typing():
+            for row in rows:
+                bill_id = row["id"]
+                bill_name = row["name"]
+
+                try:
+                    bill = models.Bill(
+                        id=bill_id,
+                        name=bill_name,
+                        link=row["link"],
+                        bot=self.bot,
+                    )
+                    document = await bill.fetch_name_and_keywords()
+
+                    assignments = []
+                    values = []
+
+                    if row["missing_html"] and document.html:
+                        assignments.append(f"html = ${len(values) + 1}")
+                        values.append(document.html)
+
+                    if row["missing_html_zip"] and document.html_zip:
+                        assignments.append(f"html_zip = ${len(values) + 1}")
+                        values.append(document.html_zip)
+
+                    if row["missing_pdf"] and document.pdf:
+                        assignments.append(f"pdf = ${len(values) + 1}")
+                        values.append(document.pdf)
+
+                    if assignments:
+                        values.append(bill_id)
+                        await self.bot.db.execute(
+                            f"UPDATE bill SET {', '.join(assignments)} "
+                            f"WHERE id = ${len(values)}",
+                            *values,
+                        )
+
+                    remaining = await self.bot.db.fetchrow(
+                        "SELECT "
+                        "(COALESCE(octet_length(pdf), 0) = 0) AS missing_pdf, "
+                        "(NULLIF(BTRIM(html), '') IS NULL) AS missing_html, "
+                        "(COALESCE(octet_length(html_zip), 0) = 0) AS missing_html_zip "
+                        "FROM bill WHERE id = $1",
+                        bill_id,
+                    )
+
+                    missing = []
+                    if remaining["missing_pdf"]:
+                        missing.append("PDF")
+                    if remaining["missing_html"] or remaining["missing_html_zip"]:
+                        missing.append("HTML")
+
+                    if missing:
+                        failed.append(
+                            f"Bill #{bill_id} `{bill_name}` still missing {', '.join(missing)}."
+                        )
+                    else:
+                        repaired.append(f"Bill #{bill_id} `{bill_name}`")
+                except Exception as error:
+                    failed.append(
+                        f"Bill #{bill_id} `{bill_name}` failed with "
+                        f"`{error.__class__.__name__}: {error}`."
+                    )
+
+        message = [
+            f"{config.YES} Repaired {len(repaired)}/{len(rows)} bills with missing document data."
+        ]
+
+        if repaired:
+            message.append("\nRepaired:\n" + "\n".join(f"- {bill}" for bill in repaired))
+
+        if failed:
+            message.append("\nFailed:\n" + "\n".join(f"- {bill}" for bill in failed))
+
+        await ctx.send("\n".join(message))
+
     @Feature.Command(parent="jsk", name="legopen")
     async def jsk_opensession(self, ctx, speaker: discord.User):
         return await ctx.send(f"noch nicht für mk13 support geupdated.")
