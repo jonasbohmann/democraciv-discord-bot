@@ -14,4 +14,5 @@ rocket_dyn_templates = { version = "0.2", features = ["tera"] }
 comrak = "0.52"
 percent-encoding = "2"
 regex = "1"
+lopdf = { version = "0.44", default-features = false }
 zip = { version = "8", default-features = false, features = ["deflate"] }

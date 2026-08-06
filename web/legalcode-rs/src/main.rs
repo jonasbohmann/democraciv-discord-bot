@@ -3,6 +3,7 @@ extern crate rocket;
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use comrak::{Options as MarkdownOptions, markdown_to_html};
+use lopdf::{Dictionary as PdfDictionary, Document as PdfDocument, Object as PdfObject};
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use regex::{Captures, Regex};
 use rocket::{State, fs::FileServer, http::ContentType};
@@ -2238,6 +2239,138 @@ async fn load_bill_pdf(db: &PgPool, id: i32, laws_only: bool) -> Result<Option<V
     Ok(row.try_get::<Option<Vec<u8>>, _>("pdf").unwrap_or_default())
 }
 
+struct ActiveLawPdf {
+    id: i32,
+    name: String,
+    bytes: Vec<u8>,
+}
+
+async fn load_active_law_pdfs(db: &PgPool) -> Result<Vec<ActiveLawPdf>, String> {
+    let rows = sqlx::query("SELECT id, name, pdf FROM bill WHERE status = $1 ORDER BY id")
+        .bind(LAW_STATUS)
+        .fetch_all(db)
+        .await
+        .map_err(|error| error.to_string())?;
+
+    rows.into_iter()
+        .map(|row| {
+            let id: i32 = row.try_get("id").map_err(|error| error.to_string())?;
+            let name: String = row.try_get("name").map_err(|error| error.to_string())?;
+            let bytes: Option<Vec<u8>> = row.try_get("pdf").map_err(|error| error.to_string())?;
+
+            Ok(ActiveLawPdf {
+                id,
+                name,
+                bytes: bytes
+                    .ok_or_else(|| format!("active law #{id} does not have a stored PDF"))?,
+            })
+        })
+        .collect()
+}
+
+fn merge_active_law_pdfs(laws: Vec<ActiveLawPdf>) -> Result<Vec<u8>, String> {
+    if laws.is_empty() {
+        return Err("cannot merge an empty legal code".to_string());
+    }
+
+    let mut merged = PdfDocument::with_version("1.7");
+    let merged_pages_id = merged.new_object_id();
+    let merged_catalog_id = merged.new_object_id();
+    let mut next_object_id = merged
+        .max_id
+        .checked_add(1)
+        .ok_or_else(|| "PDF object ID space is exhausted".to_string())?;
+    let mut source_pages = Vec::with_capacity(laws.len());
+    let mut page_count = 0usize;
+
+    for law in laws {
+        if law.bytes.is_empty() {
+            return Err(format!(
+                "active law #{} ({}) has an empty PDF",
+                law.id, law.name
+            ));
+        }
+
+        let mut source = PdfDocument::load_mem(&law.bytes).map_err(|error| {
+            format!(
+                "failed to parse the PDF for active law #{} ({}): {error}",
+                law.id, law.name
+            )
+        })?;
+
+        let source_page_count = source.get_pages().len();
+        if source_page_count == 0 {
+            return Err(format!(
+                "active law #{} ({}) has a PDF without pages",
+                law.id, law.name
+            ));
+        }
+
+        source.renumber_objects_with(next_object_id);
+        let source_pages_id = source
+            .catalog()
+            .and_then(|catalog| catalog.get(b"Pages"))
+            .and_then(PdfObject::as_reference)
+            .map_err(|error| {
+                format!(
+                    "the PDF for active law #{} ({}) has no usable page tree after renumbering: {error}",
+                    law.id, law.name
+                )
+            })?;
+
+        source
+            .get_object_mut(source_pages_id)
+            .and_then(PdfObject::as_dict_mut)
+            .map_err(|error| {
+                format!(
+                    "the PDF for active law #{} ({}) has an invalid page tree: {error}",
+                    law.id, law.name
+                )
+            })?
+            .set("Parent", PdfObject::Reference(merged_pages_id));
+
+        source_pages.push(PdfObject::Reference(source_pages_id));
+        page_count = page_count
+            .checked_add(source_page_count)
+            .ok_or_else(|| "combined legal code has too many pages".to_string())?;
+
+        next_object_id = source
+            .max_id
+            .checked_add(1)
+            .ok_or_else(|| "PDF object ID space is exhausted".to_string())?;
+        merged.objects.extend(source.objects);
+    }
+
+    let page_count = i64::try_from(page_count)
+        .map_err(|_| "combined legal code has too many pages".to_string())?;
+
+    let mut pages = PdfDictionary::new();
+    pages.set("Type", PdfObject::Name(b"Pages".to_vec()));
+    pages.set("Kids", source_pages);
+    pages.set("Count", PdfObject::Integer(page_count));
+    merged
+        .objects
+        .insert(merged_pages_id, PdfObject::Dictionary(pages));
+
+    let mut catalog = PdfDictionary::new();
+    catalog.set("Type", PdfObject::Name(b"Catalog".to_vec()));
+    catalog.set("Pages", PdfObject::Reference(merged_pages_id));
+    merged
+        .objects
+        .insert(merged_catalog_id, PdfObject::Dictionary(catalog));
+    merged
+        .trailer
+        .set("Root", PdfObject::Reference(merged_catalog_id));
+    merged.max_id = next_object_id.saturating_sub(1);
+
+    let mut output = Vec::new();
+    merged
+        .save_to(&mut output)
+        .map_err(|error| format!("failed to serialize the combined legal code PDF: {error}"))?;
+
+    Ok(output)
+}
+
 // todo: do it once
 async fn load_bill_asset(
     db: &PgPool,
@@ -2436,6 +2569,16 @@ async fn law_pdf(
         .map(|pdf| (ContentType::PDF, pdf)))
 }
 
+#[get("/legal-code/pdf")]
+async fn legal_code_pdf(state: &State<AppState>) -> Result<Option<(ContentType, Vec<u8>)>, String> {
+    let laws = load_active_law_pdfs(&state.db).await?;
+    if laws.is_empty() {
+        return Ok(None);
+    }
+
+    Ok(Some((ContentType::PDF, merge_active_law_pdfs(laws)?)))
+}
+
 #[get("/legal-code")]
 async fn legal_code(state: &State<AppState>) -> Result<Template, String> {
     let legal_code = load_legal_code(&state.db).await?;
@@ -2499,6 +2642,7 @@ async fn rocket() -> _ {
                 law_index,
                 law,
                 law_pdf,
+                legal_code_pdf,
                 legal_code,
                 bill_asset
             ],

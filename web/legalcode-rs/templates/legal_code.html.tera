@@ -14,6 +14,10 @@ Legal Code · Democraciv MK13
             There are {{ total_count }} active law{% if total_count != 1 %}s{% endif %} or procedures in total.
         </p>
 
+        <p>
+            <a href="/legal-code/pdf" role="button" class="primary">View Legal Code as PDF</a>
+        </p>
+
         <div style="margin-top: 1rem;">
             <div class="eyebrow">Index</div>
             <ul class="toc-list">

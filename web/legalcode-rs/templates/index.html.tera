@@ -291,6 +291,11 @@ Democraciv MK13
                     <span>All current active laws on one page.</span>
                 </a>
 
+                <a href="/legal-code/pdf" class="dashboard-link-row">
+                    <strong>Legal Code as PDF</strong>
+                    <span>All current active laws as one PDF.</span>
+                </a>
+
                 <a href="/bill" class="dashboard-link-row">
                     <strong>Bills</strong>
                     <span>All submitted Bills from both the Senate and the Commons.</span>
