@@ -15,4 +15,5 @@ comrak = "0.52"
 percent-encoding = "2"
 regex = "1"
 lopdf = { version = "0.44", default-features = false }
+time = { version = "0.3", features = ["formatting", "macros"] }
 zip = { version = "8", default-features = false, features = ["deflate"] }

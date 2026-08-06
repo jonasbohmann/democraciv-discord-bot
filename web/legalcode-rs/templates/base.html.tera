@@ -15,7 +15,7 @@
     <title>{% block title %}Democraciv MK13{% endblock title %}</title>
 
     <link rel="stylesheet" href="/static/pico.jade.min.css">
-    <link rel="stylesheet" href="/static/style.min.css">
+    <link rel="stylesheet" href="/static/style.css">
 
     {% block extra_head %}{% endblock extra_head %}
 </head>
@@ -51,8 +51,13 @@
 
             <div class="top-links" id="site-menu">
                 <a href="/law">Laws</a>
-                <a href="/legal-code">Legal Code</a>
-                <a href="/legal-code/pdf">Legal Code (PDF)</a>
+                <details class="nav-dropdown">
+                    <summary>Legal Code</summary>
+                    <div class="nav-dropdown-menu">
+                        <a href="/legal-code">View</a>
+                        <a href="/legal-code/pdf">View as PDF</a>
+                    </div>
+                </details>
                 <a href="/bill">Bills</a>
                 <a href="/motion">Motions</a>
             </div>

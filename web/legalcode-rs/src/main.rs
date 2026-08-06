@@ -10,7 +10,8 @@ use lopdf::{
 };
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use regex::{Captures, Regex};
-use rocket::{State, fs::FileServer, http::ContentType};
+use rocket::response::{self, Responder};
+use rocket::{Request, Response, State, fs::FileServer, http::ContentType};
 use rocket_dyn_templates::{Template, context};
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
@@ -20,6 +21,7 @@ use std::{
     path::{Component, PathBuf},
     sync::{Mutex, OnceLock},
 };
+use time::{OffsetDateTime, macros::format_description};
 use zip::ZipArchive;
 
 const LAW_STATUS: i32 = 10; // siehe bot/utils/modules.py BillIsLaw
@@ -2267,7 +2269,37 @@ struct PreparedLawPdf {
 
 struct LegalCodeTocEntry {
     label: String,
+    is_amendment: bool,
     target_page_id: PdfObjectId,
+    page_number: usize,
+}
+
+struct LegalCodePdfResponse {
+    bytes: Vec<u8>,
+    filename: String,
+}
+
+impl<'r> Responder<'r, 'static> for LegalCodePdfResponse {
+    fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
+        Response::build()
+            .header(ContentType::PDF)
+            .raw_header(
+                "Content-Disposition",
+                format!("inline; filename=\"{}\"", self.filename),
+            )
+            .sized_body(self.bytes.len(), Cursor::new(self.bytes))
+            .ok()
+    }
+}
+
+fn legal_code_pdf_filename() -> String {
+    let timestamp = OffsetDateTime::now_utc()
+        .format(format_description!(
+            "[year]-[month]-[day]_[hour]-[minute]-[second]"
+        ))
+        .unwrap_or_else(|_| "unknown-time".to_string());
+
+    format!("democraciv_mk13_legal_code_{timestamp}.pdf")
 }
 
 async fn load_active_law_pdfs(db: &PgPool) -> Result<Vec<ActiveLawPdf>, String> {
@@ -2350,21 +2382,14 @@ fn truncate_pdf_text(value: &str, max_chars: usize) -> String {
     format!("{clipped}...")
 }
 
-fn format_toc_label(id: i32, name: &str, amendment: bool, page_number: usize) -> String {
+fn format_toc_label(id: i32, name: &str, amendment: bool) -> String {
     let prefix = if amendment {
-        format!("    Amendment: Law #{id} - ")
+        format!("Amendment: Law #{id} - ")
     } else {
         format!("Law #{id} - ")
     };
-    let page_label = format!("p. {page_number}");
-    let max_name_chars =
-        88usize.saturating_sub(prefix.chars().count() + page_label.chars().count() + 4);
-    let name = truncate_pdf_text(name, max_name_chars);
-    let padding = " ".repeat(88usize.saturating_sub(
-        prefix.chars().count() + name.chars().count() + page_label.chars().count(),
-    ));
-
-    format!("{prefix}{name}{padding}{page_label}")
+    let max_name_chars = 68usize.saturating_sub(prefix.chars().count());
+    format!("{prefix}{}", truncate_pdf_text(name, max_name_chars))
 }
 
 fn build_toc_entries(
@@ -2391,8 +2416,10 @@ fn build_toc_entries(
         };
 
         entries.push(LegalCodeTocEntry {
-            label: format_toc_label(law.id, &law.name, false, page_number),
+            label: format_toc_label(law.id, &law.name, false),
+            is_amendment: false,
             target_page_id,
+            page_number,
         });
 
         for amendment in &law.amendments {
@@ -2404,8 +2431,10 @@ fn build_toc_entries(
             };
 
             entries.push(LegalCodeTocEntry {
-                label: format_toc_label(amendment.id, &amendment.name, true, page_number),
+                label: format_toc_label(amendment.id, &amendment.name, true),
+                is_amendment: true,
                 target_page_id,
+                page_number,
             });
         }
     }
@@ -2413,18 +2442,19 @@ fn build_toc_entries(
     Ok(entries)
 }
 
-fn add_pdf_text(
+fn add_pdf_text_with_font(
     operations: &mut Vec<PdfOperation>,
     text: impl Into<String>,
     x: i64,
     y: i64,
     font_size: i64,
+    font_name: &[u8],
 ) {
     operations.push(PdfOperation::new("BT", vec![]));
     operations.push(PdfOperation::new(
         "Tf",
         vec![
-            PdfObject::Name(b"F1".to_vec()),
+            PdfObject::Name(font_name.to_vec()),
             PdfObject::Integer(font_size),
         ],
     ));
@@ -2439,6 +2469,85 @@ fn add_pdf_text(
     operations.push(PdfOperation::new("ET", vec![]));
 }
 
+fn add_pdf_text(
+    operations: &mut Vec<PdfOperation>,
+    text: impl Into<String>,
+    x: i64,
+    y: i64,
+    font_size: i64,
+) {
+    add_pdf_text_with_font(operations, text, x, y, font_size, b"F1");
+}
+
+fn add_pdf_bold_text(
+    operations: &mut Vec<PdfOperation>,
+    text: impl Into<String>,
+    x: i64,
+    y: i64,
+    font_size: i64,
+) {
+    add_pdf_text_with_font(operations, text, x, y, font_size, b"F2");
+}
+
+fn add_pdf_link_text(
+    operations: &mut Vec<PdfOperation>,
+    text: &str,
+    x: i64,
+    y: i64,
+    font_size: i64,
+) {
+    let width = (text.chars().count() as i64) * 6;
+    let green = || {
+        vec![
+            PdfObject::Real(0.16),
+            PdfObject::Real(0.62),
+            PdfObject::Real(0.32),
+        ]
+    };
+
+    operations.push(PdfOperation::new("q", vec![]));
+    operations.push(PdfOperation::new("rg", green()));
+    operations.push(PdfOperation::new("RG", green()));
+    add_pdf_text_with_font(operations, text, x, y, font_size, b"F2");
+    operations.push(PdfOperation::new("w", vec![PdfObject::Real(0.7)]));
+    operations.push(PdfOperation::new(
+        "m",
+        vec![PdfObject::Real(x as f32), PdfObject::Real((y - 2) as f32)],
+    ));
+    operations.push(PdfOperation::new(
+        "l",
+        vec![
+            PdfObject::Real((x + width) as f32),
+            PdfObject::Real((y - 2) as f32),
+        ],
+    ));
+    operations.push(PdfOperation::new("S", vec![]));
+    operations.push(PdfOperation::new("Q", vec![]));
+}
+
+fn add_pdf_rule(operations: &mut Vec<PdfOperation>, x1: i64, x2: i64, y: i64) {
+    operations.push(PdfOperation::new("q", vec![]));
+    operations.push(PdfOperation::new(
+        "RG",
+        vec![
+            PdfObject::Real(0.65),
+            PdfObject::Real(0.68),
+            PdfObject::Real(0.72),
+        ],
+    ));
+    operations.push(PdfOperation::new("w", vec![PdfObject::Real(0.6)]));
+    operations.push(PdfOperation::new(
+        "m",
+        vec![PdfObject::Real(x1 as f32), PdfObject::Real(y as f32)],
+    ));
+    operations.push(PdfOperation::new(
+        "l",
+        vec![PdfObject::Real(x2 as f32), PdfObject::Real(y as f32)],
+    ));
+    operations.push(PdfOperation::new("S", vec![]));
+    operations.push(PdfOperation::new("Q", vec![]));
+}
+
 fn add_toc_page(
     document: &mut PdfDocument,
     merged_pages_id: PdfObjectId,
@@ -2447,33 +2556,35 @@ fn add_toc_page(
     page_index: usize,
 ) -> Result<PdfObjectId, String> {
     let mut operations = Vec::new();
-    add_pdf_text(
+    add_pdf_bold_text(
         &mut operations,
         if page_index == 0 {
-            "Legal Code - Table of Contents"
+            "Legal Code of the Celtic Nation - Table of Contents"
         } else {
-            "Legal Code - Table of Contents (continued)"
+            "Legal Code of the Celtic Nation - Table of Contents (continued)"
         },
         50,
         780,
         18,
     );
 
-    if page_index == 0 {
-        add_pdf_text(
-            &mut operations,
-            "Links open the first page of each law or amendment.",
-            50,
-            758,
-            10,
-        );
-    }
+    add_pdf_bold_text(&mut operations, "Law", 50, 730, 10);
+    add_pdf_bold_text(&mut operations, "Page", 500, 730, 10);
+    add_pdf_rule(&mut operations, 50, 550, 720);
 
-    let first_entry_y = 730;
+    let first_entry_y = 705;
     let mut annotations = Vec::with_capacity(entries.len());
     for (index, entry) in entries.iter().enumerate() {
         let y = first_entry_y - (index as i64) * TOC_LINE_HEIGHT;
-        add_pdf_text(&mut operations, &entry.label, 50, y, 10);
+        let label_x = if entry.is_amendment { 68 } else { 50 };
+        add_pdf_text(&mut operations, &entry.label, label_x, y, 10);
+        add_pdf_link_text(
+            &mut operations,
+            &format!("Page {}", entry.page_number),
+            500,
+            y,
+            10,
+        );
 
         let mut annotation = PdfDictionary::new();
         annotation.set("Type", PdfObject::Name(b"Annot".to_vec()));
@@ -2481,9 +2592,9 @@ fn add_toc_page(
         annotation.set(
             "Rect",
             PdfObject::Array(vec![
-                PdfObject::Integer(45),
+                PdfObject::Integer(490),
                 PdfObject::Integer(y - 4),
-                PdfObject::Integer(550),
+                PdfObject::Integer(560),
                 PdfObject::Integer(y + 11),
             ]),
         );
@@ -2549,9 +2660,17 @@ fn merge_active_law_pdfs(laws: Vec<ActiveLawPdf>) -> Result<Vec<u8>, String> {
         font.set("BaseFont", PdfObject::Name(b"Helvetica".to_vec()));
         PdfObject::Dictionary(font)
     });
+    let bold_font_id = merged.add_object({
+        let mut font = PdfDictionary::new();
+        font.set("Type", PdfObject::Name(b"Font".to_vec()));
+        font.set("Subtype", PdfObject::Name(b"Type1".to_vec()));
+        font.set("BaseFont", PdfObject::Name(b"Helvetica-Bold".to_vec()));
+        PdfObject::Dictionary(font)
+    });
     let resources_id = merged.add_object({
         let mut fonts = PdfDictionary::new();
         fonts.set("F1", PdfObject::Reference(font_id));
+        fonts.set("F2", PdfObject::Reference(bold_font_id));
 
         let mut resources = PdfDictionary::new();
         resources.set("Font", PdfObject::Dictionary(fonts));
@@ -2681,15 +2800,40 @@ fn merge_active_law_pdfs(laws: Vec<ActiveLawPdf>) -> Result<Vec<u8>, String> {
         .objects
         .insert(merged_pages_id, PdfObject::Dictionary(pages));
 
+    let info_id = merged.add_object({
+        let mut info = PdfDictionary::new();
+        info.set(
+            "Title",
+            PdfObject::string_literal("Legal Code of the Celtic Nation"),
+        );
+        info.set(
+            "Author",
+            PdfObject::string_literal("Democraciv Discord Bot"),
+        );
+        info.set(
+            "Subject",
+            PdfObject::string_literal("Democraciv MK13 - Legal Code"),
+        );
+        info.set(
+            "Creator",
+            PdfObject::string_literal(
+                "Democraciv Discord Bot - https://github.com/jonasbohmann/democraciv-discord-bot",
+            ),
+        );
+        PdfObject::Dictionary(info)
+    });
+
     let mut catalog = PdfDictionary::new();
     catalog.set("Type", PdfObject::Name(b"Catalog".to_vec()));
     catalog.set("Pages", PdfObject::Reference(merged_pages_id));
+    catalog.set("Lang", PdfObject::string_literal("en-US"));
     merged
         .objects
         .insert(merged_catalog_id, PdfObject::Dictionary(catalog));
     merged
         .trailer
         .set("Root", PdfObject::Reference(merged_catalog_id));
+    merged.trailer.set("Info", PdfObject::Reference(info_id));
 
     let mut output = Vec::new();
     merged
@@ -2898,13 +3042,16 @@ async fn law_pdf(
 }
 
 #[get("/legal-code/pdf")]
-async fn legal_code_pdf(state: &State<AppState>) -> Result<Option<(ContentType, Vec<u8>)>, String> {
+async fn legal_code_pdf(state: &State<AppState>) -> Result<Option<LegalCodePdfResponse>, String> {
     let laws = load_active_law_pdfs(&state.db).await?;
     if laws.is_empty() {
         return Ok(None);
     }
 
-    Ok(Some((ContentType::PDF, merge_active_law_pdfs(laws)?)))
+    Ok(Some(LegalCodePdfResponse {
+        bytes: merge_active_law_pdfs(laws)?,
+        filename: legal_code_pdf_filename(),
+    }))
 }
 
 #[get("/legal-code")]

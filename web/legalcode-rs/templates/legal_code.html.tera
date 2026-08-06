@@ -14,10 +14,6 @@ Legal Code · Democraciv MK13
             There are {{ total_count }} active law{% if total_count != 1 %}s{% endif %} or procedures in total.
         </p>
 
-        <p>
-            <a href="/legal-code/pdf" role="button" class="primary">View Legal Code as PDF</a>
-        </p>
-
         <div style="margin-top: 1rem;">
             <div class="eyebrow">Index</div>
             <ul class="toc-list">
@@ -52,13 +48,14 @@ Legal Code · Democraciv MK13
 </article>
 {% else %}
 <section class="stack">
-    {% if has_gdoc_html %}
     <div class="gdoc-font-toggle-row">
+        {% if has_gdoc_html %}
         <button type="button" class="primary gdoc-font-toggle" data-gdoc-font-toggle>
             Use default font
         </button>
+        {% endif %}
+        <a href="/legal-code/pdf" role="button" class="primary gdoc-font-toggle">View Legal Code as PDF</a>
     </div>
-    {% endif %}
     <section class="code-list" aria-label="Legal code">
     {% for section in sections %}
     <article class="code-entry" id="{{ section.anchor_id }}">
