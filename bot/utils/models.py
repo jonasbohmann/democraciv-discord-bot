@@ -520,7 +520,7 @@ class Bill(commands.Converter, FuzzyableMixin):
 
         try:
             response: typing.Dict = await self._bot.run_apps_script(
-                script_id="MtyscpHHIi0Ck1h8XfuBIn2qnXKElby-M",
+                script_id="AKfycby0RcTZ0qI3wNe7cGzwp1ySGBV-fvmQDnF_L7m-AGS8A4EHGxlIxciRzYN6bGyEXuRd",
                 function="main",
                 parameters=[self.link],
             )

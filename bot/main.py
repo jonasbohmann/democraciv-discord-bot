@@ -328,6 +328,7 @@ class DemocracivBot(commands.Bot):
 
         # for Google Apps Script
         socket.setdefaulttimeout(600)
+        self._apps_script_semaphore = asyncio.Semaphore(3)
 
     async def setup_hook(self) -> None:
         self.loop.create_task(self.initialize_aiohttp_session())
@@ -1031,19 +1032,27 @@ class DemocracivBot(commands.Bot):
         return self.get_guild(self.democraciv_guild_id)
 
     async def run_apps_script(self, script_id, function, parameters):
-        try:
-            result = await self.loop.run_in_executor(
-                None, self._execute_apps_script, script_id, function, parameters
-            )
+        for attempt in range(3):
+            try:
+                async with self._apps_script_semaphore:
+                    result = await self.loop.run_in_executor(
+                        None, self._execute_apps_script, script_id, function, parameters
+                    )
 
-            if "error" in result:
-                raise exceptions.GoogleAPIError()
+                if "error" in result:
+                    raise exceptions.GoogleAPIError()
 
-            return result
+                return result
 
-        except errors.HttpError as e:
-            logging.error(f"Error while executing Apps Script {script_id}: {e.content}")
-            raise exceptions.GoogleAPIError() from e
+            except errors.HttpError as e:
+                if attempt < 2 and b"could not be opened" in e.content:
+                    await asyncio.sleep(2**attempt)
+                    continue
+
+                logging.error(
+                    f"Error while executing Apps Script {script_id}: {e.content}"
+                )
+                raise exceptions.GoogleAPIError() from e
 
     def _execute_apps_script(self, script_id, function, parameters):
         google_credentials = None
@@ -1073,7 +1082,7 @@ class DemocracivBot(commands.Bot):
         service = build(
             "script", "v1", credentials=google_credentials, cache_discovery=False
         )
-        request = {"function": function, "parameters": parameters, "devMode": True}
+        request = {"function": function, "parameters": parameters, "devMode": False}
         return service.scripts().run(body=request, scriptId=script_id).execute()
 
     async def safe_send_dm(

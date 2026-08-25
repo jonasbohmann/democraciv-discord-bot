@@ -146,7 +146,7 @@ class Laws(context.CustomCog, mixin.GovernmentMixin, name="Law"):
             date = discord.utils.utcnow().strftime("%B %d, %Y at %H:%M")
 
             result = await self.bot.run_apps_script(
-                script_id="MMV-pGVACMhaf_DjTn8jfEGqnXKElby-M",
+                script_id="AKfycbyFurmuAF38FzwaVh6wDbAJVEEw0wvWHdaHMVy62U1HlH4hNlxYJ3iVvY5zPlz76P-S",
                 function="generate_legal_code",
                 parameters=[
                     doc_url,
