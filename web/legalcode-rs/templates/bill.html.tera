@@ -64,6 +64,12 @@ Bill #{{ bill.id }} · Democraciv MK13
             </div>
         </dl>
 
+        <div class="detail-action-row">
+            <a href="/bill/{{ bill.id }}/pdf" target="_blank" rel="noopener noreferrer" role="button" class="primary detail-action">
+                View as PDF
+            </a>
+        </div>
+
         {% if bill.amends | length > 0 or bill.amended_by | length > 0 %}
         <section class="stack">
             <div>

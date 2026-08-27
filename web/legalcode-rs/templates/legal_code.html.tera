@@ -54,7 +54,7 @@ Legal Code · Democraciv MK13
             Use default font
         </button>
         {% endif %}
-        <a href="/legal-code/pdf" role="button" class="primary gdoc-font-toggle">View Legal Code as PDF</a>
+        <a href="/legal-code/pdf?timestamp={{ now(utc=true, timestamp=true) }}" role="button" class="primary gdoc-font-toggle">View Legal Code as PDF</a>
     </div>
     <section class="code-list" aria-label="Legal code">
     {% for section in sections %}

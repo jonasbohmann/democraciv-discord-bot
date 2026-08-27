@@ -2221,11 +2221,16 @@ fn content_type_for_asset_path(path: &str) -> ContentType {
     }
 }
 
-async fn load_bill_pdf(db: &PgPool, id: i32, laws_only: bool) -> Result<Option<Vec<u8>>, String> {
+struct BillPdf {
+    name: String,
+    bytes: Vec<u8>,
+}
+
+async fn load_bill_pdf(db: &PgPool, id: i32, laws_only: bool) -> Result<Option<BillPdf>, String> {
     let query = if laws_only {
-        "SELECT pdf FROM bill WHERE id = $1 AND status = $2"
+        "SELECT name, pdf FROM bill WHERE id = $1 AND status = $2"
     } else {
-        "SELECT pdf FROM bill WHERE id = $1"
+        "SELECT name, pdf FROM bill WHERE id = $1"
     };
 
     let mut statement = sqlx::query(query).bind(id);
@@ -2242,7 +2247,10 @@ async fn load_bill_pdf(db: &PgPool, id: i32, laws_only: bool) -> Result<Option<V
         return Ok(None);
     };
 
-    Ok(row.try_get::<Option<Vec<u8>>, _>("pdf").unwrap_or_default())
+    let name: String = row.try_get("name").map_err(|error| error.to_string())?;
+    let bytes = row.try_get::<Option<Vec<u8>>, _>("pdf").unwrap_or_default();
+
+    Ok(bytes.map(|bytes| BillPdf { name, bytes }))
 }
 
 struct ActiveLawPdf {
@@ -2274,12 +2282,12 @@ struct LegalCodeTocEntry {
     page_number: usize,
 }
 
-struct LegalCodePdfResponse {
+struct PdfResponse {
     bytes: Vec<u8>,
     filename: String,
 }
 
-impl<'r> Responder<'r, 'static> for LegalCodePdfResponse {
+impl<'r> Responder<'r, 'static> for PdfResponse {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         Response::build()
             .header(ContentType::PDF)
@@ -2292,12 +2300,40 @@ impl<'r> Responder<'r, 'static> for LegalCodePdfResponse {
     }
 }
 
-fn legal_code_pdf_filename() -> String {
-    let timestamp = OffsetDateTime::now_utc()
+fn pdf_filename_component(input: &str) -> String {
+    let sanitized = input
+        .chars()
+        .map(|character| {
+            if character.is_control() || matches!(character, '/' | '\\' | '"') {
+                '_'
+            } else {
+                character
+            }
+        })
+        .collect::<String>();
+    let sanitized = sanitized.trim();
+
+    if sanitized.is_empty() {
+        "untitled".to_string()
+    } else {
+        sanitized.to_string()
+    }
+}
+
+fn bill_pdf_filename(id: i32, name: &str) -> String {
+    format!("bill_{id}_{}.pdf", pdf_filename_component(name))
+}
+
+fn legal_code_pdf_timestamp() -> String {
+    OffsetDateTime::now_utc()
         .format(format_description!(
             "[year]-[month]-[day]_[hour]-[minute]-[second]"
         ))
-        .unwrap_or_else(|_| "unknown-time".to_string());
+        .unwrap_or_else(|_| "unknown-time".to_string())
+}
+
+fn legal_code_pdf_filename() -> String {
+    let timestamp = legal_code_pdf_timestamp();
 
     format!("democraciv_mk13_legal_code_{timestamp}.pdf")
 }
@@ -2987,13 +3023,13 @@ async fn bill(id: i32, state: &State<AppState>) -> Result<Option<Template>, Stri
 }
 
 #[get("/bill/<id>/pdf")]
-async fn bill_pdf(
-    id: i32,
-    state: &State<AppState>,
-) -> Result<Option<(ContentType, Vec<u8>)>, String> {
+async fn bill_pdf(id: i32, state: &State<AppState>) -> Result<Option<PdfResponse>, String> {
     Ok(load_bill_pdf(&state.db, id, false)
         .await?
-        .map(|pdf| (ContentType::PDF, pdf)))
+        .map(|pdf| PdfResponse {
+            filename: bill_pdf_filename(id, &pdf.name),
+            bytes: pdf.bytes,
+        }))
 }
 
 #[get("/law")]
@@ -3032,23 +3068,23 @@ async fn law(id: i32, state: &State<AppState>) -> Result<Option<Template>, Strin
 }
 
 #[get("/law/<id>/pdf")]
-async fn law_pdf(
-    id: i32,
-    state: &State<AppState>,
-) -> Result<Option<(ContentType, Vec<u8>)>, String> {
+async fn law_pdf(id: i32, state: &State<AppState>) -> Result<Option<PdfResponse>, String> {
     Ok(load_bill_pdf(&state.db, id, true)
         .await?
-        .map(|pdf| (ContentType::PDF, pdf)))
+        .map(|pdf| PdfResponse {
+            filename: bill_pdf_filename(id, &pdf.name),
+            bytes: pdf.bytes,
+        }))
 }
 
 #[get("/legal-code/pdf")]
-async fn legal_code_pdf(state: &State<AppState>) -> Result<Option<LegalCodePdfResponse>, String> {
+async fn legal_code_pdf(state: &State<AppState>) -> Result<Option<PdfResponse>, String> {
     let laws = load_active_law_pdfs(&state.db).await?;
     if laws.is_empty() {
         return Ok(None);
     }
 
-    Ok(Some(LegalCodePdfResponse {
+    Ok(Some(PdfResponse {
         bytes: merge_active_law_pdfs(laws)?,
         filename: legal_code_pdf_filename(),
     }))

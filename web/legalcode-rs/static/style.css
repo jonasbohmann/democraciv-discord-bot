@@ -445,7 +445,8 @@ textarea {
 }
 
 .motion-button,
-.table-button {
+.table-button,
+.detail-action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -460,7 +461,8 @@ textarea {
 
 :is(a[role="button"], button, input[type="submit"], input[type="button"], input[type="reset"]).primary,
 .motion-button,
-.table-button {
+.table-button,
+.detail-action {
     color: white; /* var(--pico-primary-inverse); */
 }
 
@@ -469,7 +471,9 @@ textarea {
 .motion-button:hover,
 .motion-button:focus-visible,
 .table-button:hover,
-.table-button:focus-visible {
+.table-button:focus-visible,
+.detail-action:hover,
+.detail-action:focus-visible {
     color: white; /* var(--pico-primary-inverse); */
     text-decoration: none;
 }
@@ -818,6 +822,14 @@ textarea {
     gap: 0.65rem;
     flex-wrap: wrap;
     margin-top: 1.2rem;
+}
+
+.detail-action-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.65rem;
+    flex-wrap: wrap;
 }
 
 .gdoc-font-toggle {

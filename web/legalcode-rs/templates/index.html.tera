@@ -291,7 +291,7 @@ Democraciv MK13
                     <span>All current active laws on one page.</span>
                 </a>
 
-                <a href="/legal-code/pdf" class="dashboard-link-row">
+                <a href="/legal-code/pdf?timestamp={{ now(utc=true, timestamp=true) }}" class="dashboard-link-row">
                     <strong>Legal Code as PDF</strong>
                     <span>All current active laws as one PDF.</span>
                 </a>

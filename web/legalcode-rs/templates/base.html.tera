@@ -55,7 +55,7 @@
                     <summary>Legal Code</summary>
                     <div class="nav-dropdown-menu">
                         <a href="/legal-code">View</a>
-                        <a href="/legal-code/pdf">View as PDF</a>
+                        <a href="/legal-code/pdf?timestamp={{ now(utc=true, timestamp=true) }}">View as PDF</a>
                     </div>
                 </details>
                 <a href="/bill">Bills</a>

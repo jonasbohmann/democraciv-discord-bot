@@ -50,6 +50,12 @@ Law #{{ law.id }} · Democraciv MK13
             </div>
         </dl>
 
+        <div class="detail-action-row">
+            <a href="/law/{{ law.id }}/pdf" target="_blank" rel="noopener noreferrer" role="button" class="primary detail-action">
+                View as PDF
+            </a>
+        </div>
+
         {% if law.amends | length > 0 or law.amended_by | length > 0 %}
         <section class="stack">
             <div>
